@@ -1,14 +1,14 @@
 # QuickExcel
 
-Windows x64 桌面表格，基于 WPF、ExcelIO 与 QuickJS-NG，文档扩展名为 `.xlsq`。
+Windows x64 桌面表格，基于 WPF、[ExcelIO](https://github.com/lovespite/ExcelIO) 与 QuickJS-NG，文档扩展名为 `.xlsq`。
 
 ## 仓库边界
 
 QuickExcel 与 ExcelIO 是同级的独立 Git 仓库，分别维护提交、分支与远端配置。
 
 ```text
-D:\Projects\
-├── ExcelIO\             # 文件读写库与公式引擎
+..\Projects\
+├── ExcelIO\             # 文件读写库与公式引擎, See 'https://github.com/lovespite/ExcelIO'
 └── QuickExcel\          # 本仓库：桌面应用、Core、Scripting、测试与文档
 ```
 
