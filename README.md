@@ -1,6 +1,6 @@
-# QuickExcel 0.3 文件预览版
+# QuickExcel 0.4 计算预览版
 
-Windows x64 桌面表格，基于 WPF、同级 ExcelIO 源码库与 QuickJS-NG。当前阶段在 0.2 的文档会话、事务编辑和撤销/重做基础上加入 **M2 文件与类型保真**。
+Windows x64 桌面表格，基于 WPF、同级 ExcelIO 源码库与 QuickJS-NG。当前阶段在 M2 类型化文件基础上加入 **M3 跨表、类型化与增量计算**。
 
 ## 试用
 
@@ -9,10 +9,10 @@ Windows x64 桌面表格，基于 WPF、同级 ExcelIO 源码库与 QuickJS-NG�
 - 新建及保存使用 **XLSQ v2**：数字、文本、布尔、标准错误、空文本、空白和公式缓存分别保存；保留 1900/1904 日期系统、数字格式及稳定工作表身份。
 - v1 打开时迁移，不猜测恢复历史上已丢失的类型；首次保存必须选新路径，保留原文件。
 - 不支持的 XLSX 部件和属性进入兼容报告。工作簿内容未变时保留原 XLSX 字节；编辑后普通保存会阻止不确定的损失，可明确选择另存受支持副本。
-- 导出 XLSX 为类型化结果快照。缺失缓存阻止导出；旧缓存需要用户明确选择。
+- XLSX 导出可选值快照或可移植公式；脚本与跨表传递依赖冻结为值，独立标准公式可保留。缺失的冻结结果阻止导出，旧结果须明确选择。
 - 打开、迁移、保存不执行脚本，不恢复授权。模块源码和绑定可持久化；多模块执行留到 M4。
 
-本版不等于完整 Beta。跨表/增量计算仍属 M3，独立 worker 属 M4，完整桌面交互与自动恢复属 M5/M6。进程内 QuickJS 仅供可信脚本，没有 OS 沙箱。见[支持范围与验收](QuickExcel.Desktop/docs/09-m2-files-and-types.md)及[发布说明](QuickExcel.Desktop/RELEASE-NOTES.md)。
+本版不等于完整 Beta。独立 worker 属 M4，完整桌面交互与自动恢复属 M5/M6。进程内 QuickJS 仅供可信脚本，没有 OS 沙箱。见[支持范围与验收](QuickExcel.Desktop/docs/09-m2-files-and-types.md)及[发布说明](QuickExcel.Desktop/RELEASE-NOTES.md)。
 
 ## 仓库边界
 
@@ -42,3 +42,5 @@ dotnet run --project .\QuickExcel.Scripting\smoke\QuickExcel.Scripting.Smoke.csp
 - [试用操作](QuickExcel.Desktop/README.md)
 - [实施计划](QuickExcel.Desktop/docs/05-implementation-plan.md)
 - [M2 支持矩阵与证据](QuickExcel.Desktop/docs/09-m2-files-and-types.md)
+
+当前计算范围、脚本描述符与验收见 [M3 支持矩阵](QuickExcel.Desktop/docs/10-m3-calculation.md)。

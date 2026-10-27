@@ -21,7 +21,7 @@
     <StackPanel>
      <StackPanel Orientation="Horizontal">
       <TextBlock Text="QuickExcel" FontSize="24" FontWeight="SemiBold"/>
-      <Border Background="#E1ECE4" CornerRadius="4" Margin="12,7,0,4" Padding="6,2"><TextBlock Text="PREVIEW 0.3" FontSize="10" Foreground="#52715E"/></Border>
+      <Border Background="#E1ECE4" CornerRadius="4" Margin="12,7,0,4" Padding="6,2"><TextBlock Text="PREVIEW 0.4" FontSize="10" Foreground="#52715E"/></Border>
      </StackPanel>
      <TextBlock Text="表格，遇见 JavaScript。" Foreground="{StaticResource Muted}" FontSize="12" Margin="1,4,0,0"/>
     </StackPanel>
@@ -38,7 +38,8 @@
     <Button Content="打开…" Click="Open_Click" ToolTip="打开 .xlsx / .xlsq · Ctrl+O"/>
     <Button Content="保存 .xlsq" Click="Save_Click" Style="{StaticResource Primary}" ToolTip="保存工作簿和脚本 · Ctrl+S"/>
     <Button Content="另存为…" Click="SaveAs_Click"/>
-    <Button Content="导出 .xlsx" Click="Export_Click" ToolTip="将所有公式按当前计算结果导出，不包含脚本"/>
+    <Button Content="导出公式" Click="ExportPortable_Click" ToolTip="保留独立标准公式，将脚本及跨表传递依赖冻结为结果"/>
+    <Button Content="导出值快照" Click="Export_Click" ToolTip="将所有公式按当前计算结果导出，不包含脚本"/>
     <Border Width="1" Background="#D7E1DA" Margin="7,5,14,5"/>
     <Button x:Name="UndoButton" Content="撤销" Click="Undo_Click" ToolTip="撤销单元格或工作表操作 · Ctrl+Z"/>
     <Button x:Name="RedoButton" Content="重做" Click="Redo_Click" ToolTip="重做单元格或工作表操作 · Ctrl+Y"/>

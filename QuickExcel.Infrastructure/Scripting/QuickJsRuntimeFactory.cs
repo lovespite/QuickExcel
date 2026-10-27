@@ -13,6 +13,8 @@ public sealed class QuickJsRuntimeFactory : IScriptRuntimeFactory
     {
         private readonly QuickJsSession _session = new(source);
         public IReadOnlyList<string> FunctionNames => _session.FunctionNames;
+        public IReadOnlyList<ScriptFunctionDescriptor> FunctionDescriptors => _session.FunctionDescriptors
+            .Select(d => new ScriptFunctionDescriptor(d.Name, d.ApiVersion, d.MinArguments, d.MaxArguments, d.ReturnType, d.Profile)).ToArray();
         public object? Invoke(string name, IReadOnlyList<object> arguments) => _session.Invoke(name, arguments);
         public IReadOnlyList<string> GetLogs() => _session.GetLogs();
         public void Dispose() => _session.Dispose();

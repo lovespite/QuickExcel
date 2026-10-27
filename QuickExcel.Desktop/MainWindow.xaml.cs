@@ -107,7 +107,7 @@ public partial class MainWindow : Window
             LogText.Text += "\n兼容性报告：\n" + string.Join("\n", fileState.CompatibilityIssues.Take(20));
         if (!document.Snapshot.ScriptModules.CanExecuteLegacy)
             LogText.Text += "\n多模块源码已保留，模块执行尚未提供。";
-        HintText.Text = "0.3 文件预览版 · XLSQ v2 保留类型和日期系统。公式缓存可能过期；可信脚本需手动启用。";
+        HintText.Text = "0.4 计算预览版 · 支持跨表公式和标准公式增量重算；可信脚本需手动启用。";
         if (document.Snapshot.Sheets.Any(sheet => sheet.UsedColumnCount > 256))
             HintText.Text += " 此工作簿超过界面的 256 列显示范围；未显示的受支持数据仍会保存。";
     }
@@ -601,6 +601,29 @@ public partial class MainWindow : Window
         return true;
     }
 
+    private async void ExportPortable_Click(object sender, RoutedEventArgs e)
+    {
+        if (_busy || !await FlushEditsAsync()) return;
+        PortableExportReport? report = null;
+        if (!await WorkAsync("准备可移植公式…", () => report = _document.InspectPortableExport())) return;
+        if (report!.MissingResults > 0)
+        {
+            MessageBox.Show(this, $"{report.MissingResults} 个脚本相关公式缺少结果，请先完成计算。", "不能导出", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+        var losses = _document.Snapshot.FileState?.CompatibilityIssues.ToArray() ?? [];
+        var message = $"保留 {report.RetainedFormulas} 个独立标准公式；将 {report.FrozenFormulas} 个脚本、循环或不支持公式及其传递依赖冻结为值。名称会展开为引用。";
+        if (report.StaleResults > 0) message += $"\n其中 {report.StaleResults} 个结果可能过期，继续将使用已有缓存。";
+        if (losses.Length > 0) message += "\n副本将移除以下未支持内容：\n" + string.Join("\n", losses.Take(15));
+        if (MessageBox.Show(this, message + "\n\n是否导出？", "可移植公式", MessageBoxButton.YesNo,
+            report.StaleResults > 0 || losses.Length > 0 ? MessageBoxImage.Warning : MessageBoxImage.Information) != MessageBoxResult.Yes) return;
+        var dialog = new SaveFileDialog { Filter = "Excel 工作簿 (*.xlsx)|*.xlsx", DefaultExt = ".xlsx", AddExtension = true,
+            FileName = Path.GetFileNameWithoutExtension(_displayName) + "-公式.xlsx", Title = "导出可移植公式" };
+        if (dialog.ShowDialog(this) != true) return;
+        if (await WorkAsync("导出可移植公式…", () => _document.ExportPortableXlsx(dialog.FileName, report.StaleResults > 0, losses.Length > 0)))
+            AppendLog($"已导出 .xlsx：保留 {report.RetainedFormulas} 个公式，冻结 {report.FrozenFormulas} 个结果。");
+    }
+
     private async void Export_Click(object sender, RoutedEventArgs e)
     {
         if (_busy || !await FlushEditsAsync()) return;
@@ -828,6 +851,8 @@ public partial class MainWindow : Window
         if (!await ConfirmDiscardAsync() || failingCalculator.Attempts != beforeCloseAttempts)
             throw new Exception("Closing a saved document retried the failed calculation.");
         await RunStorageSmokeAsync(folder);
+        await RunCalculationSmokeAsync(folder);
+        await RunDateDisplaySmokeAsync(folder);
         InstallDocument(WorkbookDocument.CreateDemo(_services), null, "示例工作簿.xlsq");
         if (!await WorkAsync("界面验收重算…", _document.EnableScriptsAndCalculate)) throw new Exception("Smoke calculation failed.");
         _calculationPending = false;
@@ -863,9 +888,7 @@ public partial class MainWindow : Window
         {
             var snapshot = owner._document.Snapshot;
             var sheet = snapshot.Sheets[owner._sheetIndex];
-            var id = sheet.GetCell(Index, column)?.Content.StyleId ?? 0;
-            if (id == 0 && sheet.Rows.TryGetValue(Index, out var row)) id = row.StyleId;
-            if (id == 0 && sheet.Columns.TryGetValue(column, out var metadata)) id = metadata.StyleId;
+            var id = sheet.GetStyleId(Index, column);
             return snapshot.Styles[id];
         }
         public event PropertyChangedEventHandler? PropertyChanged;

@@ -158,6 +158,13 @@ public sealed class WorksheetSnapshot
         return Cells.GetValueOrDefault(new CellPosition(row, column));
     }
 
+    /// <summary>Stored cells have a resolved style, including an explicit General (0) override.</summary>
+    public int GetStyleId(int row, int column)
+    {
+        if (GetCell(row, column) is { } cell) return cell.Content.StyleId;
+        if (Rows.TryGetValue(row, out var metadata) && metadata.StyleId != 0) return metadata.StyleId;
+        return Columns.GetValueOrDefault(column)?.StyleId ?? 0;
+    }
     public WorksheetSnapshot WithCells(ImmutableDictionary<CellPosition, CellSnapshot> cells)
     {
         ArgumentNullException.ThrowIfNull(cells);
@@ -172,7 +179,7 @@ public sealed class WorksheetSnapshot
 public sealed class WorkbookSnapshot
 {
     public WorkbookSnapshot(Guid documentId, long revision, ExcelDateSystem dateSystem,
-        IEnumerable<WorksheetSnapshot> sheets, string scriptSource = "", IEnumerable<StyleDefinition>? styles = null, ScriptModuleSet? scriptModules = null, WorkbookFileState? fileState = null)
+        IEnumerable<WorksheetSnapshot> sheets, string scriptSource = "", IEnumerable<StyleDefinition>? styles = null, ScriptModuleSet? scriptModules = null, WorkbookFileState? fileState = null, IEnumerable<QuickExcel.Formulas.DefinedName>? definedNames = null)
     {
         if (documentId == Guid.Empty) throw new ArgumentException("A document requires a nonempty identity.", nameof(documentId));
         ArgumentOutOfRangeException.ThrowIfNegative(revision);
@@ -214,6 +221,24 @@ public sealed class WorkbookSnapshot
         if (ScriptModules.PrimarySource != scriptSource) throw new ArgumentException("Script source disagrees with the primary module.", nameof(scriptModules));
         ScriptSource = scriptSource;
         FileState = fileState;
+        DefinedNames = definedNames?.ToImmutableArray() ?? [];
+        if (DefinedNames.Length > 4096) throw new ArgumentException("名称数量超过 4096。", nameof(definedNames));
+        var seenNames = new HashSet<(SheetId?, string)>();
+        foreach (var name in DefinedNames)
+        {
+            if (name is null || name.Formula is null || !name.Formula.StartsWith('=') || string.IsNullOrWhiteSpace(name.Name) || name.Name.Length > 255 ||
+                !System.Text.RegularExpressions.Regex.IsMatch(name.Name, @"^[\p{L}_][\p{L}\p{N}_.]*$") ||
+                QuickExcel.Formulas.FormulaSyntax.IsCellName(name.Name) ||
+                name.Name.Equals("TRUE", StringComparison.OrdinalIgnoreCase) || name.Name.Equals("FALSE", StringComparison.OrdinalIgnoreCase) ||
+                name.Scope is { } scope && !Sheets.Any(s => s.Id == scope) ||
+                !seenNames.Add((name.Scope, name.Name.ToUpperInvariant())))
+                throw new ArgumentException("名称或名称作用域无效。", nameof(definedNames));
+            var expression = QuickExcel.Formulas.FormulaSyntax.Parse(name.Formula);
+            if (QuickExcel.Formulas.FormulaSyntax.Walk(expression).OfType<QuickExcel.Formulas.ReferenceNode>().Any(r =>
+                r.Sheet is null || !r.ColumnAbsolute || !r.WholeColumns && !r.RowAbsolute ||
+                r.IsRange && (!r.EndColumnAbsolute || !r.WholeColumns && !r.EndRowAbsolute)))
+                throw new ArgumentException("名称中的单元格/区域必须使用带表名的绝对引用。", nameof(definedNames));
+        }
     }
 
     public Guid DocumentId { get; }
@@ -224,19 +249,23 @@ public sealed class WorkbookSnapshot
     public string ScriptSource { get; }
     public ScriptModuleSet ScriptModules { get; }
     public WorkbookFileState? FileState { get; }
+    public ImmutableArray<QuickExcel.Formulas.DefinedName> DefinedNames { get; }
 
     public WorksheetSnapshot GetSheet(SheetId id) => Sheets.FirstOrDefault(sheet => sheet.Id == id)
         ?? throw new KeyNotFoundException($"Sheet {id} does not exist.");
 
+    public WorkbookSnapshot WithDefinedNames(IEnumerable<QuickExcel.Formulas.DefinedName> names) =>
+        new(DocumentId, Revision, DateSystem, Sheets, ScriptSource, Styles, ScriptModules, FileState, names);
+
     public WorkbookSnapshot WithSheets(IEnumerable<WorksheetSnapshot> sheets) =>
-        new(DocumentId, Revision, DateSystem, sheets, ScriptSource, Styles, ScriptModules, FileState);
+        new(DocumentId, Revision, DateSystem, sheets, ScriptSource, Styles, ScriptModules, FileState, DefinedNames);
 
     public WorkbookSnapshot WithRevision(long revision) =>
-        new(DocumentId, revision, DateSystem, Sheets, ScriptSource, Styles, ScriptModules, FileState);
+        new(DocumentId, revision, DateSystem, Sheets, ScriptSource, Styles, ScriptModules, FileState, DefinedNames);
 
     public WorkbookSnapshot WithScriptModules(ScriptModuleSet modules) =>
-        new(DocumentId, Revision, DateSystem, Sheets, modules.PrimarySource, Styles, modules, FileState);
+        new(DocumentId, Revision, DateSystem, Sheets, modules.PrimarySource, Styles, modules, FileState, DefinedNames);
 
     public WorkbookSnapshot WithScriptSource(string scriptSource) =>
-        new(DocumentId, Revision, DateSystem, Sheets, scriptSource, Styles, ScriptModules.WithPrimarySource(scriptSource), FileState);
+        new(DocumentId, Revision, DateSystem, Sheets, scriptSource, Styles, ScriptModules.WithPrimarySource(scriptSource), FileState, DefinedNames);
 }

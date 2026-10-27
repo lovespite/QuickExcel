@@ -1,5 +1,7 @@
 # QuickExcel 系统架构
 
+> 2026-10-27 更新：M3 计算支持已落地。以下保留历史与长期目标，当前公式/结构/脚本参数桥/导出范围以 [M3 支持矩阵](10-m3-calculation.md) 和 ADR-018 为准。
+
 当前为 **0.3 文件预览**：M1 文档会话与 M2 类型化文件路径已接入。WPF 组合根使用 TypedWorkbookStorage，核心依然不引用 ExcelIO；XLSQ v2 的 workbook.xlsx 是值/公式/缓存/样式的唯一权威。LegacyWorkbookStorage 保留为 v1 回归适配。下文注明 0.2 的段落为历史，M4 worker/动作及完整 Beta 仍未交付。实现范围见 [M2 记录](09-m2-files-and-types.md)。
 
 ## 当前实现与演进起点

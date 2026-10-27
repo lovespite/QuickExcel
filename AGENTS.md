@@ -20,7 +20,7 @@ Always supply `--artifacts-path` for managed builds, tests, runs, and publishes 
 ## Structure
 
 - `QuickExcel.Core`: pure .NET domain model, document session, commands, history, facade and ports; no ExcelIO, WPF or native runtime references.
-- `QuickExcel.Infrastructure`: typed XLSX/XLSQ v2 storage, retained legacy v1 regression adapter, ExcelIO calculation adapter and the QuickJS runtime factory. Current file support and limits are in `QuickExcel.Desktop/docs/09-m2-files-and-types.md`.
+- `QuickExcel.Infrastructure`: typed XLSX/XLSQ v2 storage, retained legacy v1 regression adapter, typed workbook calculator with sparse dependencies and incremental evaluation and the QuickJS runtime factory. Current file support and limits are in `QuickExcel.Desktop/docs/09-m2-files-and-types.md`.
 - `QuickExcel.Core.Test`: domain/session, typed/legacy storage and native scripting integration tests. File-format fixtures are constructed inline, including malformed ZIP/XML/JSON; keep prior v1 regressions.
 - `QuickExcel.Scripting`: managed QuickJS bridge, native sources, and runtime smoke checks.
 - `QuickExcel.Desktop`: WPF application and product/architecture documentation.
@@ -28,3 +28,5 @@ Always supply `--artifacts-path` for managed builds, tests, runs, and publishes 
 - `Start-QuickExcel.cmd`: launch the published app or build/run from source.
 
 Keep `artifacts`, managed build caches, and native downloaded sources/build output out of Git. Preserve the native source version, SHA-256 verification, and license.
+
+M3 syntax/binding/structure commands live in Core/Formulas and StructureCommands; WorkbookCalculator and TypedEvaluator live in Infrastructure/Calculation. LegacyWorkbookCalculator remains only for historical regression. Current calculation/bridge/export limits are documented in QuickExcel.Desktop/docs/10-m3-calculation.md.

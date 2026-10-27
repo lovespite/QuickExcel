@@ -15,11 +15,18 @@ public sealed class QuickJsSession : IDisposable
     private const string Bootstrap = """
         (() => {
             const registry = Object.create(null);
+            const descriptors = Object.create(null);
             const ownKeys = Object.keys;
             const freeze = Object.freeze;
             const makeFunction = Function;
             const upper = Function.prototype.call.bind(String.prototype.toUpperCase);
             const validName = Function.prototype.call.bind(RegExp.prototype.test, /^[A-Z]+$/);
+            const validV2Name = Function.prototype.call.bind(RegExp.prototype.test, /^JS\.[A-Z_][A-Z0-9_]*(\.[A-Z_][A-Z0-9_]*)*$/);
+            const isArray = Array.isArray;
+            const deepFreeze = value => {
+                if (value && typeof value === 'object') { for (const key of ownKeys(value)) deepFreeze(value[key]); freeze(value); }
+                return value;
+            };
             const isFiniteNumber = Number.isFinite;
             const TypeErrorCtor = TypeError;
             let loaded = false;
@@ -31,12 +38,33 @@ public sealed class QuickJsSession : IDisposable
             const quickExcel = freeze({ functions: freeze({
                 register(name, fn) {
                     if (loaded) throw new TypeErrorCtor('Functions can only be registered while loading the script.');
-                    if (typeof name !== 'string') throw new TypeErrorCtor('Function name must be a string.');
-                    name = upper(name);
-                    if (!validName(name)) throw new TypeErrorCtor('Function names must contain letters A-Z only.');
+                    let descriptor = { apiVersion: 1, minArguments: 0, maxArguments: 255, returnType: 'any', profile: 'conservative', parameters: [] };
+                    if (typeof name === 'object' && name !== null) {
+                        const input = name;
+                        if (input.apiVersion !== 2 || typeof input.name !== 'string') throw new TypeErrorCtor('A v2 descriptor requires apiVersion: 2 and a name.');
+                        name = upper(input.name);
+                        if (!validV2Name(name)) throw new TypeErrorCtor('V2 functions must use the JS namespace.');
+                        const parameters = input.parameters ?? [];
+                        if (!isArray(parameters) || parameters.length > 255) throw new TypeErrorCtor('Invalid parameter descriptors.');
+                        const types = ['any', 'number', 'text', 'boolean', 'blank', 'range'];
+                        for (const p of parameters)
+                            if (!p || typeof p.name !== 'string' || !types.includes(p.type ?? 'any')) throw new TypeErrorCtor('Invalid parameter type.');
+                        descriptor = { name, apiVersion: 2, minArguments: parameters.length, maxArguments: parameters.length,
+                            returnType: input.returns ?? 'any', profile: input.profile ?? 'conservative',
+                            parameters: parameters.map(p => ({ name: p.name, type: p.type ?? 'any' })) };
+                        if (!['any', 'number', 'text', 'boolean', 'blank'].includes(descriptor.returnType) || descriptor.profile !== 'conservative')
+                            throw new TypeErrorCtor('M3 supports scalar returns and conservative execution only.');
+                    } else {
+                        if (typeof name !== 'string') throw new TypeErrorCtor('Function name must be a string.');
+                        name = upper(name);
+                        if (!validName(name)) throw new TypeErrorCtor('V1 function names must contain letters A-Z only.');
+                    }
+                    descriptor.name = name;
+
                     if (typeof fn !== 'function') throw new TypeErrorCtor('A registered formula must be a function.');
                     if (registry[name]) throw new TypeErrorCtor('Duplicate function: ' + name);
                     registry[name] = fn;
+                    descriptors[name] = deepFreeze(descriptor);
                 }
             }) });
             return freeze({
@@ -49,18 +77,32 @@ public sealed class QuickJsSession : IDisposable
                 invoke(name, args) {
                     const fn = registry[name];
                     if (!fn) throw new TypeErrorCtor('Unknown function: ' + name);
+                    const descriptor = descriptors[name];
+                    if (descriptor.apiVersion === 2) {
+                        if (args.length !== descriptor.parameters.length) throw new TypeErrorCtor('Argument count disagrees with descriptor.');
+                        for (let i = 0; i < args.length; i++) {
+                            const value = args[i];
+                            const type = value === null ? 'blank' : typeof value === 'string' ? 'text'
+                                : typeof value === 'object' && value.kind === 'range' ? 'range' : typeof value;
+                            if (descriptor.parameters[i].type !== 'any' && descriptor.parameters[i].type !== type)
+                                throw new TypeErrorCtor('Argument type disagrees with descriptor: ' + descriptor.parameters[i].name);
+                        }
+                        deepFreeze(args);
+                    }
                     const value = fn(...args);
                     if (value === null || value === undefined) return null;
                     if (typeof value === 'string' || typeof value === 'boolean') return value;
                     if (typeof value === 'number' && isFiniteNumber(value)) return value;
                     throw new TypeErrorCtor('Formula functions must return a finite number, string, boolean, or null; objects and promises are not supported.');
                 },
+                descriptors() { return ownKeys(descriptors).map(name => descriptors[name]); },
                 logs() { return logs.slice(); }
             });
         })()
         """;
 
     public IReadOnlyList<string> FunctionNames { get; }
+    public IReadOnlyList<JsFunctionDescriptor> FunctionDescriptors { get; }
 
     public QuickJsSession(string source)
     {
@@ -73,6 +115,8 @@ public sealed class QuickJsSession : IDisposable
         {
             var result = Call("load", new object?[] { source });
             FunctionNames = Array.AsReadOnly(JsonSerializer.Deserialize<string[]>(result) ?? []);
+            FunctionDescriptors = Array.AsReadOnly(JsonSerializer.Deserialize<JsFunctionDescriptor[]>(Call("descriptors", []),
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? []);
         }
         catch
         {

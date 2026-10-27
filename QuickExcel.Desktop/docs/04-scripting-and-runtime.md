@@ -1,5 +1,7 @@
 # 04 · 脚本与运行时
 
+> 2026-10-27 更新：M3 计算支持已落地。以下保留历史与长期目标，当前公式/结构/脚本参数桥/导出范围以 [M3 支持矩阵](10-m3-calculation.md) 和 ADR-018 为准。
+
 本文定义 QuickExcel 的 JavaScript 执行边界、值协议、工作进程和操作脚本提交机制。
 “当前”指 **0.2 试用版 M1** 的实际代码；“目标”及所有标注为“拟议”的 API 都需要后续实现。当前没有 ScriptWorker、IPC、动作脚本或 OS 隔离，不能视为 M4/M6 已交付。
 整体职责见 [系统架构](02-system-architecture.md)，文件持久化见 [文件格式与兼容性](03-file-format-and-compatibility.md)。

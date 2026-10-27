@@ -1,6 +1,6 @@
 # QuickExcel 架构与实施文档
 
-设计基线：2026-10-22；最新阶段：2026-10-27 的 **0.3 文件预览 / M2 支持子集**。产品为 QuickExcel，文档为 .xlsq。先读 [M2 实现与证据](09-m2-files-and-types.md)；M3–M6 和完整 Beta 继续按计划推进。
+设计基线：2026-10-22；最新阶段：2026-10-27 的 **0.4 计算预览 / M3 支持子集**。产品为 QuickExcel，文档为 .xlsq。先读 [M3 实现与证据](10-m3-calculation.md)；M4–M6 和完整 Beta 继续按计划推进。
 
 0.2 已将桌面编辑接入独立稀疏领域快照、DocumentSession、事务命令和撤销历史，计算与保存通过端口使用同一版本状态。Core 为纯 .NET 程序集，ExcelIO 与 QuickJS 适配位于 Infrastructure。仍使用 XLSQ v1、同表兼容计算和进程内可信脚本执行。
 
@@ -16,6 +16,7 @@
 | [质量性能与交付](06-quality-performance-and-delivery.md) | 已有证据、候选包验收和未来质量门禁 |
 | [架构决策](07-architecture-decisions.md) | 已选方向、取舍及待验证事项 |
 | [基线与实施记录](08-baseline-and-progress.md) | 初始 102 例基线和 0.2 新验证分别记载 |
+| [M3 跨表与增量计算](10-m3-calculation.md) | 0.4 语义矩阵、脚本桥、结构命令、导出与验收 |
 | [M2 文件与类型](09-m2-files-and-types.md) | 0.3 支持矩阵、实现、验证与下一阶段 |
 
 用户操作见[试用说明](../README.md)，公开限制和运行时要求见[发布说明](../RELEASE-NOTES.md)。开发时先读系统架构与实施计划，再进入专题。

@@ -214,3 +214,11 @@ QuickJS 许可证随包提供，ExcelIO 两个 .NET 项目声明 MIT；依赖 no
 Release build 0 警告/0 错误；Core 266/266；native、发布版及最终 ZIP 解压后的 WPF smoke 全部通过。新增 WPF 场景验证真实保存入口的数字/文本/布尔/空文本、v2 manifest、稳定身份和 v1 原件保护；没有自动操作原生文件选择对话框。
 
 最终包及完整支持范围见 [M2 文件与类型](09-m2-files-and-types.md)。证据为 `artifacts/validation/release-0.3-preview`，默认启动目录已更新。后续阶段为 M3 跨表与增量计算；本版不是完整 Beta。
+
+## 9. 0.4 计算预览 / M3（2026-10-27）
+
+在 M2 的 813e91d 上完成支持矩阵内的跨表/名称 typed evaluator、稀疏工作簿依赖和 SCC、增量求值闭包、可撤销结构命令、JS 描述符/二维参数桥及可移植公式导出。桌面组合根已切换；旧适配器和既有回归保留。
+
+最终 Release solution 0 警告/0 错误；Core 331/331（新增 65）；native、发布版 WPF、最终 ZIP 独立解压 WPF 全部通过。默认启动目录已更新。支持范围、不可移植闭包规则、脚本版本选择、实际证据和最终 ZIP/hash 见 [M3 记录](10-m3-calculation.md)。
+
+本轮未创建提交，未修改同级 ExcelIO 源码。下一阶段为 M4 worker/脚本动作；0.4 不等于完整 Beta。

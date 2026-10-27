@@ -110,6 +110,18 @@ public sealed class WorkbookDocument : IDisposable
         }
     }
 
+    public PortableExportReport InspectPortableExport() => _services.Storage is IPortableWorkbookStorage portable
+        ? portable.InspectPortableExport(Snapshot) : throw new NotSupportedException("Storage does not support portable formulas.");
+
+    public void ExportPortableXlsx(string path, bool allowStaleCaches = false, bool discardUnsupported = false)
+    {
+        lock (_saveGate)
+        {
+            if (_services.Storage is not IPortableWorkbookStorage portable) throw new NotSupportedException("Storage does not support portable formulas.");
+            portable.ExportPortable(path, Snapshot, allowStaleCaches, discardUnsupported);
+        }
+    }
+
     public WorksheetSnapshot AddSheet(string? name = null)
     {
         var snapshot = Snapshot;
@@ -131,14 +143,19 @@ public sealed class WorkbookDocument : IDisposable
         var snapshot = Snapshot;
         var sheet = snapshot.Sheets[sheetIndex];
         var edits = values.Select(value => new CellEdit(new(sheet.Id, value.Row, value.Column),
-            CellInput.Parse(value.Value, sheet.GetCell(value.Row, value.Column)?.Content.StyleId ?? 0)));
+            CellInput.Parse(value.Value, sheet.GetStyleId(value.Row, value.Column))));
         return Session.Execute(new SetCellsCommand(edits), snapshot.Revision);
     }
 
     public string GetCellInput(int sheetIndex, int row, int column) =>
         Snapshot.Sheets[sheetIndex].GetCell(row, column) is { } cell ? CellInput.EditText(cell.Content) : "";
-    public string GetCellValue(int sheetIndex, int row, int column) =>
-        CellInput.DisplayText(Snapshot.Sheets[sheetIndex].GetCell(row, column)?.Value ?? CellValue.Blank);
+    public string GetCellValue(int sheetIndex, int row, int column)
+    {
+        var snapshot = Snapshot;
+        var sheet = snapshot.Sheets[sheetIndex];
+        return CellDisplayFormatter.Format(sheet.GetCell(row, column)?.Value ?? CellValue.Blank,
+            snapshot.Styles[sheet.GetStyleId(row, column)], snapshot.DateSystem);
+    }
     public bool Undo() => Session.Undo();
     public bool Redo() => Session.Redo();
 

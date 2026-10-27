@@ -322,6 +322,8 @@ public sealed class DocumentSession : IDisposable
         // Unchanged immutable input and metadata are shared. Count changed payloads and copied formula caches.
         public long Bytes => 1024L + Changes.Sum(change => Estimate(change.Before) + Estimate(change.After) + 256L)
             + FormulaCaches(Before) + FormulaCaches(After)
+            + Before.DefinedNames.Sum(n => 128L + 2L * (n.Name.Length + n.Formula.Length))
+            + After.DefinedNames.Sum(n => 128L + 2L * (n.Name.Length + n.Formula.Length))
             + (StructureChanged ? 512L * Math.Abs(After.Sheets.Length - Before.Sheets.Length) : 0);
         private static long FormulaCaches(WorkbookSnapshot snapshot) => snapshot.Sheets.Sum(sheet => sheet.Cells.Values
             .Where(cell => cell.Content.Kind == CellContentKind.Formula).Sum(cell => 256L

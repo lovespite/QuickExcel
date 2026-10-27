@@ -15,7 +15,7 @@ public sealed class WorkbookCompatibilityException(IEnumerable<string> issues) :
 }
 
 /// <summary>M2 typed XLSX and XLSQ v2 boundary. Legacy storage remains available for explicit v1 regression.</summary>
-public sealed class TypedWorkbookStorage : IWorkbookStorageOptions
+public sealed partial class TypedWorkbookStorage : IWorkbookStorageOptions
 {
     private static readonly string[] Features = ["typed-workbook", "stable-sheet-ids", "script-modules"];
     public WorkbookSnapshot Open(string path) => Open(path, CancellationToken.None);
@@ -140,12 +140,14 @@ public sealed class TypedWorkbookStorage : IWorkbookStorageOptions
                 if (view.TryGetProperty("zoom", out var zoom) && (zoom.ValueKind != JsonValueKind.Number || !zoom.TryGetDouble(out var number) || !double.IsFinite(number) || number <= 0))
                     throw new InvalidDataException("缩放值无效。");
             }
-            var snapshot = new WorkbookSnapshot(documentId, revision, model.DateSystem, sheets, modules.PrimarySource, model.Styles, modules);
+            var names = model.DefinedNames.Select(n => n.Scope is { } scope
+                ? n with { Scope = sheets[model.Sheets.IndexOf(model.GetSheet(scope))].Id } : n).ToArray();
+            var snapshot = new WorkbookSnapshot(documentId, revision, model.DateSystem, sheets, modules.PrimarySource, model.Styles, modules, definedNames: names);
             var issues = read.Issues.ToList();
             // An original package can be retained byte-for-byte even for unsupported workbook features.
             var fileState = new WorkbookFileState(sourcePath, version, workbookBytes, snapshot, read.Bindings, issues,
                 version == 2 ? manifest!.RootElement.GetRawText() : null, state?.RootElement.GetRawText());
-            return new(documentId, revision, model.DateSystem, sheets, modules.PrimarySource, model.Styles, modules, fileState);
+            return new(documentId, revision, model.DateSystem, sheets, modules.PrimarySource, model.Styles, modules, fileState, names);
         }
         catch (Exception exception) when (exception is JsonException or System.Xml.XmlException or FormatException or OverflowException or ArgumentException or InvalidOperationException && exception is not WorkbookCompatibilityException)
         { throw new InvalidDataException("工作簿结构或字段无效：" + exception.Message, exception); }
@@ -176,9 +178,9 @@ public sealed class TypedWorkbookStorage : IWorkbookStorageOptions
         document["bindingRevision"] = snapshot.ScriptModules.BindingRevision;
         document["sheets"] = MergeByKey(document["sheets"], JsonSerializer.SerializeToNode(snapshot.Sheets.Select((s, i) => new { id = s.Id.ToString(), workbookSheetId = sheetParts[i].WorkbookSheetId, part = sheetParts[i].Part }))!.AsArray(), "id");
         document["scriptBindings"] = MergeByKey(document["scriptBindings"], JsonSerializer.SerializeToNode(snapshot.ScriptModules.EntryModules.Select(id => new { module = id, scope = "workbook", kind = "formula-functions" }))!.AsArray(), "module");
-        document["calculation"] = Merge(document["calculation"], JsonSerializer.SerializeToNode(new { state = "unknown", contentRevision = snapshot.Revision,
+        document["calculation"] = Merge(document["calculation"], JsonSerializer.SerializeToNode(new { state = CacheState(snapshot), contentRevision = snapshot.Revision,
             scriptRevision = snapshot.ScriptModules.Revision, bindingRevision = snapshot.ScriptModules.BindingRevision,
-            engineVersion = "QuickExcel-M2", scriptSetSha256 = ScriptHash(snapshot.ScriptModules) })!);
+            engineVersion = "QuickExcel-M3", scriptSetSha256 = ScriptHash(snapshot.ScriptModules) })!);
         if (document["view"] is JsonObject view && view["activeSheetId"] is { } active && !snapshot.Sheets.Any(s => s.Id.ToString() == active.GetValue<string>()))
         { view["activeSheetId"] = snapshot.Sheets[0].Id.ToString(); view["selection"] = "A1"; }
         parts["state/document.json"] = JsonSerializer.SerializeToUtf8Bytes(document);
@@ -213,7 +215,7 @@ public sealed class TypedWorkbookStorage : IWorkbookStorageOptions
         if (!allowStaleCaches && formulas.Any(c => c.Calculation!.State is not (CalculationState.Fresh or CalculationState.Error) || c.Calculation.InputRevision != snapshot.Revision))
             throw new InvalidOperationException("部分公式结果可能过期；请重算或明确选择导出已有结果。");
         if (!discardUnsupported && snapshot.FileState?.CompatibilityIssues.Length > 0) throw new WorkbookCompatibilityException(snapshot.FileState.CompatibilityIssues);
-        var bytes = TypedWorkbookXml.Write(snapshot, true, CancellationToken.None);
+        var bytes = TypedWorkbookXml.Write(snapshot.WithDefinedNames([]), true, CancellationToken.None);
         PackageIO.AtomicWrite(path, bytes, temp =>
         {
             var read = TypedWorkbookXml.Read(ReadFile(temp, new(CancellationToken.None)), new(CancellationToken.None));
@@ -223,7 +225,7 @@ public sealed class TypedWorkbookStorage : IWorkbookStorageOptions
                 if (value.Kind == CellValueKind.Error && value.ErrorCode is CellErrorCode.Script or CellErrorCode.Cycle) value = CellValue.FromError(CellErrorCode.Value);
                 return new CellSnapshot(CellContent.FromLiteral(value, pair.Value.Content.StyleId));
             })));
-            if (!ContentEquals(snapshot.WithSheets(expectedSheets), read.Snapshot)) throw new InvalidDataException("导出后类型/结构校验未通过。");
+            if (!ContentEquals(snapshot.WithDefinedNames([]).WithSheets(expectedSheets), read.Snapshot)) throw new InvalidDataException("导出后类型/结构校验未通过。");
         }, CancellationToken.None);
     }
 
@@ -238,6 +240,9 @@ public sealed class TypedWorkbookStorage : IWorkbookStorageOptions
 
     internal static bool ContentEquals(WorkbookSnapshot left, WorkbookSnapshot right)
     {
+        string NameKey(WorkbookSnapshot book, QuickExcel.Formulas.DefinedName name) =>
+            (name.Scope is { } scope ? book.GetSheet(scope).Name : "") + "\0" + name.Name + "\0" + name.Formula;
+        if (!left.DefinedNames.Select(n => NameKey(left, n)).Order().SequenceEqual(right.DefinedNames.Select(n => NameKey(right, n)).Order())) return false;
         if (left.DateSystem != right.DateSystem || !left.Styles.SequenceEqual(right.Styles) || left.Sheets.Length != right.Sheets.Length) return false;
         for (var i = 0; i < left.Sheets.Length; i++)
         {
@@ -256,6 +261,16 @@ public sealed class TypedWorkbookStorage : IWorkbookStorageOptions
         }
         return true;
     }
+    private static string CacheState(WorkbookSnapshot snapshot)
+    {
+        var formulas = snapshot.Sheets.SelectMany(s => s.Cells.Values).Where(c => c.Content.Kind == CellContentKind.Formula).ToArray();
+        if (formulas.Length == 0) return "fresh";
+        var fresh = formulas.Count(c => c.Calculation is { } result && result.InputRevision == snapshot.Revision
+            && result.State is CalculationState.Fresh or CalculationState.Error);
+        return fresh == formulas.Length ? "fresh" : fresh > 0 ? "partial"
+            : formulas.Any(c => c.Calculation?.Value is not null) ? "stale" : "unknown";
+    }
+
     private static JsonNode Merge(JsonNode? previous, JsonNode current)
     {
         if (previous is not JsonObject oldObject || current is not JsonObject newObject) return current.DeepClone();

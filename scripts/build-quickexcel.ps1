@@ -95,6 +95,15 @@ try {
             if (-not (Test-Path -LiteralPath $resultPath -PathType Leaf)) { throw "QuickExcel WPF smoke exited without its result file: $smokePath" }
             $smokeResult = (Get-Content -LiteralPath $resultPath -Raw).Trim()
             if (-not $smokeResult.StartsWith('PASS:', [StringComparison]::Ordinal)) { throw "QuickExcel WPF smoke did not report PASS: $smokePath" }
+            foreach ($resultName in @('storage-smoke-result.txt', 'close-smoke-result.txt', 'calculation-smoke-result.txt', 'date-display-smoke-result.txt')) {
+                $resultFile = Join-Path $smokePath $resultName
+                if (-not (Test-Path -LiteralPath $resultFile -PathType Leaf) -or
+                    -not (Get-Content -LiteralPath $resultFile -Raw).StartsWith('PASS:', [StringComparison]::Ordinal)) {
+                    throw "Missing fresh smoke result: $resultName"
+                }
+            }
+            $smokeResult += ' ' + (Get-Content -LiteralPath (Join-Path $smokePath 'calculation-smoke-result.txt') -Raw).Trim()
+            $smokeResult += ' ' + (Get-Content -LiteralPath (Join-Path $smokePath 'date-display-smoke-result.txt') -Raw).Trim()
             $desktopSmoke = 'passed'
         }
         finally {
@@ -143,6 +152,7 @@ try {
     $supportDocsPath = Join-Path $publishPath 'docs'
     New-Item -ItemType Directory -Force -Path $supportDocsPath | Out-Null
     Copy-Item -LiteralPath (Join-Path $projectRoot 'QuickExcel.Desktop\docs\09-m2-files-and-types.md') -Destination (Join-Path $supportDocsPath '09-m2-files-and-types.md')
+    Copy-Item -LiteralPath (Join-Path $projectRoot 'QuickExcel.Desktop\docs\10-m3-calculation.md') -Destination (Join-Path $supportDocsPath '10-m3-calculation.md')
     Copy-Item -LiteralPath (Join-Path $projectRoot 'QuickExcel.Scripting\native\SOURCES.md') -Destination (Join-Path $publishPath 'QUICKJS-SOURCES.md')
     $notices = @"
 QuickExcel third-party component provenance

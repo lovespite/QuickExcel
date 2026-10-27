@@ -29,12 +29,15 @@ public interface IScriptRuntimeFactory
 public interface IScriptRuntime : IDisposable
 {
     IReadOnlyList<string> FunctionNames { get; }
+    IReadOnlyList<ScriptFunctionDescriptor> FunctionDescriptors => FunctionNames.Select(n => new ScriptFunctionDescriptor(n)).ToArray();
     object? Invoke(string name, IReadOnlyList<object> arguments);
     IReadOnlyList<string> GetLogs();
 }
 
 public readonly record struct CalculationStamp(Guid SessionId, long InputRevision, long CalculationGeneration, long ScriptGeneration);
-public sealed record CalculationRequest(CalculationStamp Stamp, WorkbookSnapshot Snapshot, bool ScriptsEnabled);
+public sealed record CalculationRequest(CalculationStamp Stamp, WorkbookSnapshot Snapshot, bool ScriptsEnabled)
+{ public bool ForceFull { get; init; } }
+public sealed record CalculationStatistics(int FormulaCount, int EvaluatedCount, int ReusedCount, bool FullRecalculation, TimeSpan Elapsed);
 
 public sealed class CalculationResult
 {
@@ -46,6 +49,7 @@ public sealed class CalculationResult
         Diagnostics = (diagnostics ?? []).Take(100).Select(message => message.Length > 4000 ? message[..4000] : message).ToImmutableArray();
     }
 
+    public CalculationStatistics? Statistics { get; init; }
     public CalculationStamp Stamp { get; }
     public ImmutableDictionary<CellAddress, CellCalculation> Cells { get; }
     public ImmutableArray<string> Diagnostics { get; }
@@ -53,3 +57,10 @@ public sealed class CalculationResult
 
 /// <summary>Instances are supplied by the desktop/test composition root. Core never creates a native runtime.</summary>
 public sealed record WorkbookServices(IWorkbookStorage Storage, IWorkbookCalculator Calculator);
+
+public sealed record PortableExportReport(int RetainedFormulas, int FrozenFormulas, int MissingResults, int StaleResults);
+public interface IPortableWorkbookStorage
+{
+    PortableExportReport InspectPortableExport(WorkbookSnapshot snapshot);
+    void ExportPortable(string path, WorkbookSnapshot snapshot, bool allowStaleCaches = false, bool discardUnsupported = false);
+}
