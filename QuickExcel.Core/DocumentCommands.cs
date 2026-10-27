@@ -84,7 +84,7 @@ public sealed class UpdateScriptSourceCommand : DocumentCommand
     public string Source { get; }
     internal override CommandDraft Prepare(WorkbookSnapshot snapshot)
     {
-        if (Encoding.UTF8.GetByteCount(Source) > 1024 * 1024) throw new ArgumentException("脚本大小不能超过 1 MiB。");
+        if ((long)Encoding.UTF8.GetByteCount(Source) + snapshot.ScriptModules.Modules.Where(m => m.Key != snapshot.ScriptModules.EntryModules[0]).Sum(m => (long)Encoding.UTF8.GetByteCount(m.Value.Source)) > 1024 * 1024) throw new ArgumentException("脚本大小不能超过 1 MiB。");
         return new(snapshot.ScriptSource == Source ? snapshot : snapshot.WithScriptSource(Source), [], false);
     }
 }

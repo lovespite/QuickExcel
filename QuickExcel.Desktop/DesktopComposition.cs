@@ -9,6 +9,6 @@ namespace QuickExcel.Desktop;
 internal static class DesktopComposition
 {
     public static WorkbookServices CreateServices() =>
-        new(new LegacyWorkbookStorage(), new LegacyWorkbookCalculator(new QuickJsRuntimeFactory()));
+        new(new TypedWorkbookStorage(), new LegacyWorkbookCalculator(new QuickJsRuntimeFactory()));
 }
 

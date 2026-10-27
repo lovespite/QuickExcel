@@ -85,22 +85,29 @@ public sealed class WorkbookDocument : IDisposable
 
     public static WorkbookDocument Open(string path, WorkbookServices services) => new(services.Storage.Open(path), services);
 
-    public void Save(string path)
+    public void Save(string path, bool discardUnsupported = false)
     {
         // Capture after acquiring the writer so queued saves cannot overwrite a newer capture with an older one.
         WorkbookSnapshot captured;
         lock (_saveGate)
         {
             captured = Snapshot;
-            _services.Storage.Save(path, captured);
+            if (_services.Storage is IWorkbookStorageOptions options) options.Save(path, captured, discardUnsupported);
+            else if (discardUnsupported) throw new NotSupportedException("Storage does not support compatibility choices.");
+            else _services.Storage.Save(path, captured);
         }
         // Notifications run outside the IO gate; a subscriber may request another save.
         Session.MarkSaved(Session.SessionId, captured.Revision);
     }
 
-    public void ExportXlsx(string path)
+    public void ExportXlsx(string path, bool allowStaleCaches = false, bool discardUnsupported = false)
     {
-        lock (_saveGate) _services.Storage.Export(path, Snapshot);
+        lock (_saveGate)
+        {
+            if (_services.Storage is IWorkbookStorageOptions options) options.Export(path, Snapshot, allowStaleCaches, discardUnsupported);
+            else if (allowStaleCaches || discardUnsupported) throw new NotSupportedException("Storage does not support export choices.");
+            else _services.Storage.Export(path, Snapshot);
+        }
     }
 
     public WorksheetSnapshot AddSheet(string? name = null)
@@ -137,6 +144,7 @@ public sealed class WorkbookDocument : IDisposable
 
     public void EnableScriptsAndCalculate()
     {
+        if (!Snapshot.ScriptModules.CanExecuteLegacy) throw new NotSupportedException("多模块源码已保留；模块执行将在 M4 提供。");
         Session.SetScriptsEnabled(true);
         Calculate();
     }

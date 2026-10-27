@@ -10,6 +10,12 @@ public interface IWorkbookStorage
     void Export(string path, WorkbookSnapshot snapshot);
 }
 
+public interface IWorkbookStorageOptions : IWorkbookStorage
+{
+    void Save(string path, WorkbookSnapshot snapshot, bool discardUnsupported);
+    void Export(string path, WorkbookSnapshot snapshot, bool allowStaleCaches, bool discardUnsupported);
+}
+
 public interface IWorkbookCalculator
 {
     CalculationResult Calculate(CalculationRequest request, CancellationToken cancellationToken = default);

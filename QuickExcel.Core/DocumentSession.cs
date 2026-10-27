@@ -28,7 +28,7 @@ public sealed class DocumentSession : IDisposable
         ArgumentNullException.ThrowIfNull(snapshot);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(historyBudgetBytes);
         _snapshot = snapshot;
-        _savedRevision = snapshot.Revision;
+        _savedRevision = snapshot.FileState?.RequiresMigration == true ? -1 : snapshot.Revision;
         HistoryBudgetBytes = historyBudgetBytes;
     }
 
@@ -112,7 +112,7 @@ public sealed class DocumentSession : IDisposable
             var entry = redo ? _redo.Pop() : _undo.Last!.Value;
             if (!redo) _undo.RemoveLast();
             // Script text has its own editor history. Cell undo never reverts source or grants execution.
-            var restored = (redo ? entry.After : entry.Before).WithScriptSource(before.ScriptSource)
+            var restored = (redo ? entry.After : entry.Before).WithScriptModules(before.ScriptModules)
                 .WithRevision(checked(before.Revision + 1));
             _snapshot = Invalidate(restored);
             _calculationGeneration = checked(_calculationGeneration + 1);
@@ -131,6 +131,7 @@ public sealed class DocumentSession : IDisposable
         lock (_gate)
         {
             ThrowIfClosed();
+            if (enabled && !_snapshot.ScriptModules.CanExecuteLegacy) throw new NotSupportedException("多模块运行需要 M4 模块加载器。");
             // Reapply also invalidates an in-flight compile of the same source.
             _scriptsEnabled = enabled;
             _scriptGeneration = checked(_scriptGeneration + 1);

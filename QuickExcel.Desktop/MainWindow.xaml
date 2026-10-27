@@ -21,7 +21,7 @@
     <StackPanel>
      <StackPanel Orientation="Horizontal">
       <TextBlock Text="QuickExcel" FontSize="24" FontWeight="SemiBold"/>
-      <Border Background="#E1ECE4" CornerRadius="4" Margin="12,7,0,4" Padding="6,2"><TextBlock Text="PREVIEW 0.2.1" FontSize="10" Foreground="#52715E"/></Border>
+      <Border Background="#E1ECE4" CornerRadius="4" Margin="12,7,0,4" Padding="6,2"><TextBlock Text="PREVIEW 0.3" FontSize="10" Foreground="#52715E"/></Border>
      </StackPanel>
      <TextBlock Text="表格，遇见 JavaScript。" Foreground="{StaticResource Muted}" FontSize="12" Margin="1,4,0,0"/>
     </StackPanel>
@@ -89,7 +89,7 @@
     <Grid>
      <Grid.RowDefinitions><RowDefinition Height="62"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/><RowDefinition Height="160"/></Grid.RowDefinitions>
      <Grid Margin="17,14">
-      <StackPanel><TextBlock Text="工作簿脚本" FontSize="16" FontWeight="SemiBold"/><TextBlock Text="functions.js · 随 .xlsq 一起保存" FontSize="10" Foreground="{StaticResource Muted}" Margin="0,4,0,0"/></StackPanel>
+      <StackPanel><TextBlock Text="工作簿脚本" FontSize="16" FontWeight="SemiBold"/><TextBlock Text="源码随 .xlsq 一起保存" FontSize="10" Foreground="{StaticResource Muted}" Margin="0,4,0,0"/></StackPanel>
       <Border HorizontalAlignment="Right" VerticalAlignment="Top" Background="#E9EFE7" CornerRadius="4" Padding="6,3"><TextBlock Text="JavaScript" Foreground="#60734F" FontFamily="Consolas" FontSize="10"/></Border>
      </Grid>
      <TextBlock Grid.Row="1" Text="注册函数后，可在单元格公式中直接调用。" FontSize="11" Foreground="{StaticResource Muted}" Margin="17,0,17,12"/>

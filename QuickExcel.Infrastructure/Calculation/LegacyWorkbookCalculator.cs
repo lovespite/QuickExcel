@@ -29,6 +29,8 @@ public sealed class LegacyWorkbookCalculator(IScriptRuntimeFactory runtimeFactor
     {
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(request.Snapshot);
+        if (request.ScriptsEnabled && !request.Snapshot.ScriptModules.CanExecuteLegacy)
+            throw new NotSupportedException("多模块运行需要 M4 模块加载器。");
         var round = new Round(request, cancellationToken);
         round.Check();
         var previousCulture = CultureInfo.CurrentCulture;

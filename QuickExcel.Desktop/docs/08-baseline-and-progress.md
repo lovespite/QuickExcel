@@ -206,3 +206,11 @@ QuickJS 许可证随包提供，ExcelIO 两个 .NET 项目声明 MIT；依赖 no
 验证已完成：源码构建 0 警告、0 错误；Core 221/221 通过；native smoke 通过；发布包和 ZIP 解压后的 WPF smoke 均以 0 退出，上述 8 类真实关闭场景及既有编辑/保存回归全部通过。证据位于 `artifacts/validation/release-0.2.1/release.log`、`archive-validation.json`，发布 smoke 目录为 `artifacts/smoke/20261022-031511-ba477dd9`，解压复验目录为 `artifacts/validation/release-0.2.1/extracted-smoke-364b785b62a24c84ab784cdbf3608cd7`；均包含新生成的 `close-smoke-result.txt`。
 
 修复包：`artifacts/releases/QuickExcel-0.2.1-win-x64-20261022-031511-ba477dd9.zip`（1,127,145 字节），SHA-256：`675B1C33E2F88A6BB528304C859805FDAFE2D23A1465328B08837264BA3760AD`。默认 `artifacts/QuickExcel` 已更新，应用 DLL 与 ZIP 内一致；`Start-QuickExcel.cmd` 继续启动这个已更新目录。该证据仅用于本修复版，不改写 0.2.0 历史。
+
+## 8. 0.3 文件预览 / M2（2026-10-27）
+
+从 QuickExcel `82381fe` 继续实现类型化 XLSX/XLSQ v2、无猜测 v1 迁移、稳定身份/修订、模块元数据、文件预算与关系校验、兼容报告和写后重开验证，并接入桌面。源码尚未提交，ExcelIO 源码未改。
+
+Release build 0 警告/0 错误；Core 266/266；native、发布版及最终 ZIP 解压后的 WPF smoke 全部通过。新增 WPF 场景验证真实保存入口的数字/文本/布尔/空文本、v2 manifest、稳定身份和 v1 原件保护；没有自动操作原生文件选择对话框。
+
+最终包及完整支持范围见 [M2 文件与类型](09-m2-files-and-types.md)。证据为 `artifacts/validation/release-0.3-preview`，默认启动目录已更新。后续阶段为 M3 跨表与增量计算；本版不是完整 Beta。

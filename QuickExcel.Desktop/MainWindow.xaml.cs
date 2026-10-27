@@ -100,8 +100,14 @@ public partial class MainWindow : Window
         RefreshSheet(true);
         UpdateChrome();
         ScriptState.Text = "● 脚本未启用";
-        LogText.Text = "工作簿已载入。点击「应用脚本并重算」启用此工作簿的 JavaScript。\n" + LegacyWorkbookStorage.LegacyTypeWarning;
-        HintText.Text = "0.2 试用版 · XLSQ v1 保存字面量为文本，重开不恢复其原始类型。公式缓存可能过期；脚本需手动启用。";
+        LogText.Text = "工作簿已载入。脚本尚未启用。XLSQ v2 保存类型、日期系统和稳定表身份。";
+        if (document.Snapshot.FileState?.RequiresMigration == true)
+            LogText.Text += "\n已导入 v1：历史文本不会被猜测转换类型。首次保存必须另存为 v2，原文件保留。";
+        if (document.Snapshot.FileState is { CompatibilityIssues.Length: > 0 } fileState)
+            LogText.Text += "\n兼容性报告：\n" + string.Join("\n", fileState.CompatibilityIssues.Take(20));
+        if (!document.Snapshot.ScriptModules.CanExecuteLegacy)
+            LogText.Text += "\n多模块源码已保留，模块执行尚未提供。";
+        HintText.Text = "0.3 文件预览版 · XLSQ v2 保留类型和日期系统。公式缓存可能过期；可信脚本需手动启用。";
         if (document.Snapshot.Sheets.Any(sheet => sheet.UsedColumnCount > 256))
             HintText.Text += " 此工作簿超过界面的 256 列显示范围；未显示的受支持数据仍会保存。";
     }
@@ -566,15 +572,28 @@ public partial class MainWindow : Window
     private async Task<bool> SaveAsync(bool saveAs)
     {
         if (_busy || !await FlushEditsAsync()) return false;
-        string? path = saveAs ? null : _filePath;
+        var snapshot = _document.Snapshot;
+        var issues = TypedWorkbookStorage.SaveIssues(snapshot);
+        var discardUnsupported = false;
+        if (issues.Count > 0)
+        {
+            var choice = MessageBox.Show(this, "以下内容不能在编辑后可靠保留：\n" + string.Join("\n", issues.Take(15)) +
+                "\n\n是否另存受支持副本？原文件将保留，副本会移除上述内容。选择“否”取消保存。", "另存兼容副本", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+            if (choice != MessageBoxResult.Yes) return false;
+            discardUnsupported = true;
+            saveAs = true;
+        }
+        var migration = snapshot.FileState is { RequiresMigration: true } provenance &&
+            (_filePath is null || string.Equals(Path.GetFullPath(_filePath), provenance.SourcePath, StringComparison.OrdinalIgnoreCase));
+        string? path = saveAs || migration ? null : _filePath;
         if (path is null)
         {
             var dialog = new SaveFileDialog { Filter = "QuickExcel 工作簿 (*.xlsq)|*.xlsq", DefaultExt = ".xlsq", AddExtension = true,
-                FileName = Path.GetFileNameWithoutExtension(_displayName) + ".xlsq", Title = "保存工作簿和 JavaScript" };
+                FileName = Path.GetFileNameWithoutExtension(_displayName) + (migration ? "-v2" : discardUnsupported ? "-受支持副本" : "") + ".xlsq", Title = "保存 XLSQ v2 工作簿和 JavaScript" };
             if (dialog.ShowDialog(this) != true) return false;
             path = dialog.FileName;
         }
-        if (!await WorkAsync("保存 .xlsq…", () => _document.Save(path))) return false;
+        if (!await WorkAsync("保存 .xlsq…", () => _document.Save(path, discardUnsupported))) return false;
         _filePath = path;
         _displayName = Path.GetFileName(path);
         UpdateChrome();
@@ -587,8 +606,20 @@ public partial class MainWindow : Window
         if (_busy || !await FlushEditsAsync()) return;
         var dialog = new SaveFileDialog { Filter = "Excel 工作簿 (*.xlsx)|*.xlsx", DefaultExt = ".xlsx", AddExtension = true,
             FileName = Path.GetFileNameWithoutExtension(_displayName) + "-结果.xlsx", Title = "导出当前结果（所有公式转为值，不含脚本）" };
-        if (dialog.ShowDialog(this) == true && await WorkAsync("导出当前结果…", () => _document.ExportXlsx(dialog.FileName)))
-            AppendLog("已导出 .xlsx：所有公式已转为当前结果。" + LegacyWorkbookStorage.LegacyTypeWarning);
+        if (dialog.ShowDialog(this) != true) return;
+        var formulas = _document.Snapshot.Sheets.SelectMany(sheet => sheet.Cells.Values).Where(cell => cell.Content.Kind == CellContentKind.Formula).ToArray();
+        var stale = formulas.Count(cell => cell.Calculation?.Value is not null &&
+            (cell.Calculation.State is not (CalculationState.Fresh or CalculationState.Error) || cell.Calculation.InputRevision != _document.Snapshot.Revision));
+        var losses = _document.Snapshot.FileState?.CompatibilityIssues.ToArray() ?? [];
+        var hostErrors = formulas.Count(cell => cell.Value.Kind == CellValueKind.Error && cell.Value.ErrorCode is CellErrorCode.Script or CellErrorCode.Cycle);
+        if (stale > 0 || losses.Length > 0 || hostErrors > 0)
+        {
+            var message = $"将导出已有结果：{stale} 个公式缓存可能过期，{hostErrors} 个宿主错误将映射为 #VALUE!。" +
+                (losses.Length == 0 ? "" : "\n副本将移除以下未支持内容：\n" + string.Join("\n", losses.Take(15))) + "\n\n是否继续？";
+            if (MessageBox.Show(this, message, "确认导出已有结果", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
+        }
+        if (await WorkAsync("导出当前结果…", () => _document.ExportXlsx(dialog.FileName, allowStaleCaches: stale > 0, discardUnsupported: losses.Length > 0)))
+            AppendLog("已导出 .xlsx：公式转为类型化缓存值，原工作簿和脚本保持不变。");
     }
 
     private async void Window_KeyDown(object sender, KeyEventArgs e)
@@ -796,6 +827,7 @@ public partial class MainWindow : Window
         var beforeCloseAttempts = failingCalculator.Attempts;
         if (!await ConfirmDiscardAsync() || failingCalculator.Attempts != beforeCloseAttempts)
             throw new Exception("Closing a saved document retried the failed calculation.");
+        await RunStorageSmokeAsync(folder);
         InstallDocument(WorkbookDocument.CreateDemo(_services), null, "示例工作簿.xlsq");
         if (!await WorkAsync("界面验收重算…", _document.EnableScriptsAndCalculate)) throw new Exception("Smoke calculation failed.");
         _calculationPending = false;

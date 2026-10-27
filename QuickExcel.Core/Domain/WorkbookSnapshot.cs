@@ -33,6 +33,8 @@ public sealed record CellSnapshot
 /// <summary>Value-only style definition. Alignment and border integer values match the storage adapter's supported enums.</summary>
 public sealed record StyleDefinition
 {
+    public int NumberFormatId { get; init; }
+    public string? NumberFormatCode { get; init; }
     public string? FontName { get; init; }
     public double? FontSize { get; init; }
     public string? FontColor { get; init; }
@@ -170,7 +172,7 @@ public sealed class WorksheetSnapshot
 public sealed class WorkbookSnapshot
 {
     public WorkbookSnapshot(Guid documentId, long revision, ExcelDateSystem dateSystem,
-        IEnumerable<WorksheetSnapshot> sheets, string scriptSource = "", IEnumerable<StyleDefinition>? styles = null)
+        IEnumerable<WorksheetSnapshot> sheets, string scriptSource = "", IEnumerable<StyleDefinition>? styles = null, ScriptModuleSet? scriptModules = null, WorkbookFileState? fileState = null)
     {
         if (documentId == Guid.Empty) throw new ArgumentException("A document requires a nonempty identity.", nameof(documentId));
         ArgumentOutOfRangeException.ThrowIfNegative(revision);
@@ -208,7 +210,10 @@ public sealed class WorkbookSnapshot
         DocumentId = documentId;
         Revision = revision;
         DateSystem = dateSystem;
+        ScriptModules = scriptModules ?? ScriptModuleSet.Single(scriptSource);
+        if (ScriptModules.PrimarySource != scriptSource) throw new ArgumentException("Script source disagrees with the primary module.", nameof(scriptModules));
         ScriptSource = scriptSource;
+        FileState = fileState;
     }
 
     public Guid DocumentId { get; }
@@ -217,16 +222,21 @@ public sealed class WorkbookSnapshot
     public ImmutableArray<WorksheetSnapshot> Sheets { get; }
     public ImmutableArray<StyleDefinition> Styles { get; }
     public string ScriptSource { get; }
+    public ScriptModuleSet ScriptModules { get; }
+    public WorkbookFileState? FileState { get; }
 
     public WorksheetSnapshot GetSheet(SheetId id) => Sheets.FirstOrDefault(sheet => sheet.Id == id)
         ?? throw new KeyNotFoundException($"Sheet {id} does not exist.");
 
     public WorkbookSnapshot WithSheets(IEnumerable<WorksheetSnapshot> sheets) =>
-        new(DocumentId, Revision, DateSystem, sheets, ScriptSource, Styles);
+        new(DocumentId, Revision, DateSystem, sheets, ScriptSource, Styles, ScriptModules, FileState);
 
     public WorkbookSnapshot WithRevision(long revision) =>
-        new(DocumentId, revision, DateSystem, Sheets, ScriptSource, Styles);
+        new(DocumentId, revision, DateSystem, Sheets, ScriptSource, Styles, ScriptModules, FileState);
+
+    public WorkbookSnapshot WithScriptModules(ScriptModuleSet modules) =>
+        new(DocumentId, Revision, DateSystem, Sheets, modules.PrimarySource, Styles, modules, FileState);
 
     public WorkbookSnapshot WithScriptSource(string scriptSource) =>
-        new(DocumentId, Revision, DateSystem, Sheets, scriptSource, Styles);
+        new(DocumentId, Revision, DateSystem, Sheets, scriptSource, Styles, ScriptModules.WithPrimarySource(scriptSource), FileState);
 }
