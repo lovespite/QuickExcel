@@ -2,7 +2,7 @@
 
 ## Repository scope
 
-This is the independent QuickExcel repository. Keep desktop, Core, scripting, tests, documentation, and generated artifacts here. The sibling `../ExcelIO` is a separate repository containing the ExcelIO libraries. It is a source dependency, not part of this repository. Do not edit, stage, commit, or copy sibling library sources as part of ordinary QuickExcel changes. Library changes require a separately scoped task.
+This is the independent QuickExcel repository. Keep desktop, Core, infrastructure adapters, scripting, tests, documentation, and generated artifacts here. The sibling `../ExcelIO` is a separate repository containing the ExcelIO libraries. It is a source dependency, not part of this repository. Do not edit, stage, commit, or copy sibling library sources as part of ordinary QuickExcel changes. Library changes require a separately scoped task.
 
 ## Build and verification
 
@@ -19,11 +19,12 @@ Always supply `--artifacts-path` for managed builds, tests, runs, and publishes 
 
 ## Structure
 
-- `QuickExcel.Core`: workbook document operations and XLSQ packaging.
+- `QuickExcel.Core`: pure .NET domain model, document session, commands, history, facade and ports; no ExcelIO, WPF or native runtime references.
+- `QuickExcel.Infrastructure`: ExcelIO storage/calculation adapters, XLSQ packaging and the QuickJS runtime factory.
 - `QuickExcel.Core.Test`: document and native scripting integration tests.
 - `QuickExcel.Scripting`: managed QuickJS bridge, native sources, and runtime smoke checks.
 - `QuickExcel.Desktop`: WPF application and product/architecture documentation.
-- `scripts/build-quickexcel.ps1`: test and publish the desktop app.
+- `scripts/build-quickexcel.ps1`: test and publish the desktop app; `-RunSmoke -CreateArchive` validates the fresh package and creates a uniquely named ZIP plus SHA-256. `-OutputDirectory` must remain under this repository artifacts directory.
 - `Start-QuickExcel.cmd`: launch the published app or build/run from source.
 
 Keep `artifacts`, managed build caches, and native downloaded sources/build output out of Git. Preserve the native source version, SHA-256 verification, and license.

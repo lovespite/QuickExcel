@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <Version>0.2.0</Version>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\QuickExcel.Core\QuickExcel.Core.csproj" />
+    <ProjectReference Include="..\..\ExcelIO\ExcelIO\ExcelIO.csproj" />
+    <ProjectReference Include="..\..\ExcelIO\ExcelIO.Formula\ExcelIO.Formula.csproj" />
+    <ProjectReference Include="..\QuickExcel.Scripting\QuickExcel.Scripting.csproj" />
+  </ItemGroup>
+</Project>

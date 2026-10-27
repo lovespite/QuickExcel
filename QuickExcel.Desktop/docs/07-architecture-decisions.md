@@ -12,7 +12,7 @@
 
 ## ADR-002：ExcelIO 保持独立，编辑器使用带类型的领域模型
 
-**状态：已选方向；M1/M2 实施。**
+**状态：M1 内存模型已接入；M2 文件类型保真待实施。**
 
 现有 `XlCell.Value` 以字符串为主，不足以区分文本、数值、布尔、错误和空白。新文档模型使用显式 `CellValue`，将输入内容、公式计算结果和显示文本分开。日期以 Excel 数值序列、日期系统和格式组合表达，不自动给全部数值附加 DateTime 身份。
 
@@ -22,23 +22,23 @@ ExcelIO 继续承担文件读写；需要增强类型读写时，以兼容既有
 
 ## ADR-003：模块先分边界，再按需要拆程序集
 
-**状态：已选方向；M1 开始。**
+**状态：M1 已建立 Core / Infrastructure 编译边界；后续模块按需要继续拆分。**
 
 采用 Domain、Core、Calculation、Storage、Scripting、ScriptContracts、Desktop 的职责划分。Core 定义端口，具体适配器在启动组合根注入；Worker 只依赖协议和原生适配子模块，不反向引用桌面客户端。
 
-首先用命名空间、接口和依赖检查建立边界，出现独立发布或编译约束时再拆项目。代价是需要持续检查内部依赖，不能仅以目录名代表隔离。未来模块需要独立复用、测试或分发时，依据实际引用图拆分，不默认每个服务一个程序集。
+0.2 因 APP-003 的编译约束建立了 `QuickExcel.Infrastructure`：Core 的项目文件不引用 ExcelIO、Formula 或 Scripting；具体存储、计算和运行时工厂由 DesktopComposition 注入。Domain 仍在 Core 程序集内。代价是需要持续检查内部依赖，不能仅以目录名代表隔离。未来模块需要独立复用、测试或分发时，依据实际引用图拆分，不默认每个服务一个程序集。
 
 ## ADR-004：文档会话单写入队列，修改通过事务命令
 
-**状态：已选方向；M1 实施。**
+**状态：M1 同步串行写入门禁与内容事务已实现；完整异步队列、结构和动作命令待后续实施。**
 
-每个打开实例有独立 `DocumentSession`。用户输入、粘贴、结构编辑、撤销及脚本动作都先预检，再原子提交 `ChangeSet`。短写操作串行；昂贵计算和 I/O 使用快照并在后台执行。
+每个打开实例有独立 `DocumentSession`。0.2 的单元格编辑/粘贴/清除、新增表和撤销先预检再原子提交；同步锁构成唯一写入门禁，`ExecuteAsync` 不代表已经有专用异步执行队列。计算和 I/O 在写锁外使用不可变快照。完整行列结构命令与脚本动作沿用同一原则，尚未实现。
 
 这让撤销、保存与脚本动作共享一致语义。代价是复制/持久化快照和历史占用内存，需要结构共享或局部快照以及明确预算。不能为减少内存而让后台任务读取正在修改的可变对象。未来若确需协同编辑，应另立操作合并协议；当前单写入规则不能直接假装成为分布式一致性方案。
 
 ## ADR-005：统一计算调度器，用修订和代次防止旧结果覆盖
 
-**状态：已选方向；M1 建立门禁，M3 完成计算迁移。**
+**状态：M1 四元组提交门禁和同表快照适配已实现；M3 完成跨表/增量迁移。**
 
 工作簿级调度器维护跨表依赖，使用类型化求值和增量失效。每个结果关联会话、输入修订、计算代次和脚本代次。取消仅节省资源，结果有效性由提交时核验保证；撤销同样提升修订，不恢复历史修订号。
 
@@ -111,6 +111,42 @@ UDF 接收显式参数，返回受支持的标量或错误，不直接读写活�
 当前 Windows x64 包依赖 .NET 10 Windows Desktop Runtime。Beta 比较 framework-dependent 的体积与运行时前置条件，以及 self-contained 的体积与运行时更新责任。两者都必须提供完整目录、native DLL、许可证及版本信息，不能只交付单个 EXE 并假设其可运行。
 
 默认不把安装器、自动更新服务或文件关联作为核心正确性的前置要求。若提供安装器，检查卸载不会删除用户文档；若提供更新，先单独定义校验、回退和运行时升级机制。发布候选必须在无 SDK 的干净 Windows 环境实测，编译成功不代替安装验收。
+
+## ADR-014：DOM-001 的值、缓存与日期边界
+
+**状态：M1 首个实施切片已完成；后续 facade/快照/会话接入见 ADR-015。**
+
+在现有 Core 项目的 `QuickExcel.Domain` 命名空间实现不可变值对象，不新增空程序集。`CellValue` 默认值是 Blank；显式构造文本、有限 double、布尔或错误，不提供字符串猜型和隐式转换。非有限 double 产生 `CellErrorCode.Number`；错误代码与诊断文字分开，文本 `#VALUE!` 仍是文本。
+
+`CellContent` 只保存字面量或原始公式及样式编号；公式以 `=` 开头，非空但允许尚不能解析的表达式。`CellCalculation` 单独保存可空缓存、状态、输入修订和两种代次；无缓存和缓存值为 Blank 不同。Fresh 必须有非错误值，Error 必须有错误值；Dirty/Running/Stale/Blocked 可以保留旧值（含旧错误）。版本均为非负数；本切片仅定义元数据，提交门禁仍属 APP-002。
+
+日期仍是 Number，`ExcelSerialDate` 只是显式转换辅助对象。保留原始有限序列值和日期系统；1900 系统的 `[60,61)` 标识虚构闰日，不能转换成真实 `DateTime` 或 1904 日期。日期转换只接受/返回 `DateTimeKind.Unspecified`，不隐式处理时区。负序列按历法延伸：1900 序列 0 对应 1899-12-31、1904 序列 0 对应 1904-01-01；这是 QuickExcel 辅助 API 的明确策略，不承诺 Excel 会显示负日期。超出 .NET 日期范围时转换失败，原数值仍可保留；double 小数日期不承诺 tick 级往返精度。
+
+接近 `DateTime.MaxValue` 的合法日期也可能因 double 舍入越界而被 `FromDateTime` 拒绝，不返回无法转换回日期范围的序列。
+
+两种日期系统和虚构闰日的兼容背景见 [Microsoft 日期系统说明](https://support.microsoft.com/en-gb/excel/date-systems-in-excel)与 [1900 闰年说明](https://learn.microsoft.com/en-us/office/troubleshoot/excel/wrongly-assumes-1900-is-leap-year)。文件类型保真、格式化和日期函数仍由 M2/M3 分别验收。
+
+## ADR-015：0.2 试用版的 M1 落地边界
+
+**状态：2026-10-22 已实现；交付范围是 0.2 可信脚本试用版，不是 M2–M6 完整 Beta。**
+
+用户选择先交付统一会话、事务撤销、可靠保存和回归组成的第一版。沿用 XLSQ v1、DataGrid、旧公式解析器及进程内 QuickJS，同时把这些兼容适配器移出纯 Core，避免一次版本同时扩大文件、公式和运行时隔离承诺。
+
+**编译边界。** [QuickExcel.Core.csproj](../../QuickExcel.Core/QuickExcel.Core.csproj) 仅依赖 .NET，拥有 `QuickExcel.Domain` 不可变类型、命令、`DocumentSession` 和端口。[QuickExcel.Infrastructure.csproj](../../QuickExcel.Infrastructure/QuickExcel.Infrastructure.csproj) 引用 Core、ExcelIO、ExcelIO.Formula 及 QuickExcel.Scripting，承载 `QuickExcel.Storage`、`QuickExcel.Calculation`、`QuickExcel.Runtime`。DesktopComposition 选择并注入具体服务；本次不修改独立 ExcelIO 仓库。
+
+**稀疏快照与唯一写入者。** `WorkbookSnapshot` / `WorksheetSnapshot` 使用不可变集合与稳定 SheetId，远端编辑不展开空矩形；外部样式、图片和旧库对象不得反向修改领域快照。会话通过同步写锁原子替换快照；全部输入事务先验证，任何一格失败都不写入。计算结果也只能通过同一门禁发布，通知在锁外带着对应提交快照发出。不存在另一个可变 XlWorkbook 作为编辑事实来源。
+
+**计算完整身份。** `CalculationStamp` 包含 `SessionId`、`InputRevision`、`CalculationGeneration`、`ScriptGeneration`。提交时四项必须同时等于当前会话且会话未关闭；每个公式缓存的修订/代次和目标也整批验证。成功提交消费计算代次，因此迟到、旧会话、重复或混合代次的结果都不能覆盖现状。撤销推进新 Revision，不倒退输入版本；授权启停只改变执行代次，不使未变化的源码产生 dirty。
+
+**历史与源码。** 默认历史预算为 32 MiB 的估算成本，内容及缓存保持类型、公式与样式。单次操作超过预算先拒绝；累计超限释放最早记录并显示已丢弃记录数。源码使用编辑控件自身历史：源码修改仍推进文档修订并撤销脚本授权，但保留单元格 undo/redo。单元格历史恢复时保留当前源码，不恢复旧授权，也不重跑历史脚本。结构命令当前只交付新增表，完整行列插删/引用重写留待后续。
+
+**计算和运行时兼容路径。** 同表稀疏 AST 求值与完整重算保持原型函数范围；真实错误按类型传播，错误形状文本保持 Text，JS null 返回 Blank。每轮已授权计算创建、加载并释放独立 QuickJS 上下文，按稳定顺序调用；跨表和禁用函数及下游保持 Blocked 缓存。v1 JS 范围为包含空位置的一维行主序数组，最多 1,000,000 个位置；元素反映当前数字/文本/布尔类型，Blank 输入仍为 `""`。整轮 5 秒预算或取消导致本轮不提交；原生单次调用仍依靠约 1 秒中断期限，取消令牌不能抢占正在执行的 native 调用。
+
+**保存边界。** `WorkbookDocument` 串行捕获保存快照并交给存储端口；同目录临时写入、容量检查和刷新后原子替换成功，才标记该快照修订已保存。保存 R 时出现 R+1，R+1 仍为 dirty；失败不破坏旧文件。导出独立值快照，不修改原文档、不推进 SavedRevision。旧库稠密转换预检累计占位行/格预算，因此内存可稀疏编辑并不保证任意跨度可存入旧格式。
+
+**保留的明确限制。** v1 字面量写为文本，重开不猜测恢复类型，空白/空文本及公式缓存类型仍可能损失；SheetId 和缓存新鲜度不跨 v1 文件保留。导入不恢复来源日期系统，按 Windows1900 接入；保存/导出 Mac1904 快照明确拒绝，不能称为完整 1904 导入拒绝或日期保真。旧公式解析器、数字文本转换、日期函数文本结果和静态全分支依赖图仍有限制。没有 ScriptWorker、IPC、OS 隔离、动作脚本、v2 格式、自动恢复或外部文件冲突检测；原生崩溃仍可能影响桌面进程。
+
+M1 证据由 [快照测试](../../QuickExcel.Core.Test/WorkbookSnapshotTests.cs)、[会话测试](../../QuickExcel.Core.Test/DocumentSessionTests.cs)、[适配计算测试](../../QuickExcel.Core.Test/CalculationAdapterTests.cs)、[存储适配测试](../../QuickExcel.Core.Test/StorageAdapterTests.cs)、[facade 测试](../../QuickExcel.Core.Test/WorkbookFacadeTests.cs) 及现有 WPF/native smoke 共同提供。实际放行结果以 [实施记录](08-baseline-and-progress.md) 为准；这些测试不替代 M5 大表/IME/无障碍或 M6 净环境及安全验收。
 
 ## 决策维护
 

@@ -11,18 +11,20 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
-using ExcelIO;
 using Microsoft.Win32;
 using QuickExcel.Core;
+using QuickExcel.Domain;
+using QuickExcel.Storage;
 
 namespace QuickExcel.Desktop;
 
 public partial class MainWindow : Window
 {
-    private WorkbookDocument _document = WorkbookDocument.CreateDemo();
+    private readonly WorkbookServices _services = DesktopComposition.CreateServices();
+    private WorkbookDocument _document = null!;
+    private DocumentViewModel _viewModel = null!;
+    private EditorController _editor = null!;
     private readonly ObservableCollection<SheetRow> _rows = [];
-    private readonly Stack<EditBatch> _undo = new();
-    private readonly Stack<EditBatch> _redo = new();
     private int _sheetIndex;
     private int _rowCount = 100;
     private int _columnCount = 12;
@@ -30,10 +32,19 @@ public partial class MainWindow : Window
     private int _selectedColumn;
     private bool _refreshing;
     private bool _busy;
-    private bool _dirty;
     private bool _closingApproved;
+    private bool _closeRequestPending;
+    private bool _windowClosed;
+    private bool _smokeMode;
+    private MessageBoxResult? _smokeDiscardDecision;
     private bool _calculationPending;
     private bool _suppressAutoCalculation;
+    private bool _cellCommitFailed;
+    private bool _updatingFormula;
+    private bool _formulaPending;
+    private int _formulaSheet;
+    private int _formulaRow;
+    private int _formulaColumn;
     private string? _filePath;
     private string _displayName = "示例工作簿.xlsq";
 
@@ -41,13 +52,14 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         SheetGrid.ItemsSource = _rows;
-        InstallDocument(_document, null, "示例工作簿.xlsq", disposePrevious: false);
+        InstallDocument(WorkbookDocument.CreateDemo(_services), null, "示例工作簿.xlsq", disposePrevious: false);
     }
 
     public async Task StartAsync(string[] args)
     {
         if (args.Length > 0 && args[0] == "--smoke-test")
         {
+            _smokeMode = true;
             try
             {
                 await RunSmokeTestAsync(args.Length > 1 ? args[1] : Path.Combine(AppContext.BaseDirectory, "smoke"));
@@ -71,38 +83,39 @@ public partial class MainWindow : Window
     {
         if (disposePrevious) _document.Dispose();
         _document = document;
+        _viewModel = new DocumentViewModel(document);
+        _editor = new EditorController(document);
+        DataContext = _viewModel;
         _filePath = path != null && Path.GetExtension(path).Equals(".xlsq", StringComparison.OrdinalIgnoreCase) ? path : null;
         _displayName = displayName;
-        _sheetIndex = 0;
-        _selectedRow = _selectedColumn = 0;
+        _sheetIndex = _selectedRow = _selectedColumn = 0;
         _rowCount = 100;
         _columnCount = 12;
-        _undo.Clear();
-        _redo.Clear();
-        _dirty = false;
-        _calculationPending = false;
+        _formulaPending = _calculationPending = false;
         _refreshing = true;
         ScriptEditor.Text = document.ScriptSource;
-        SheetPicker.ItemsSource = document.Workbook.Worksheets.Select(s => s.Name).ToList();
+        SheetPicker.ItemsSource = document.Snapshot.Sheets.Select(sheet => sheet.Name).ToList();
         SheetPicker.SelectedIndex = 0;
         _refreshing = false;
         RefreshSheet(true);
         UpdateChrome();
         ScriptState.Text = "● 脚本未启用";
-        LogText.Text = "工作簿已载入。\n点击「应用脚本并重算」启用此工作簿的 JavaScript。";
-        HintText.Text = document.Workbook.Worksheets.Any(s => s.Rows.Any(r => r.Cells.Count > 256))
-            ? "此工作簿超过界面的 256 列显示范围；未显示的受支持数据仍会保存。脚本需手动启用。"
-            : "开始试用：点击右侧「应用脚本并重算」，再修改价格或数量。双击单元格编辑；公式栏可查看公式。";
+        LogText.Text = "工作簿已载入。点击「应用脚本并重算」启用此工作簿的 JavaScript。\n" + LegacyWorkbookStorage.LegacyTypeWarning;
+        HintText.Text = "0.2 试用版 · XLSQ v1 保存字面量为文本，重开不恢复其原始类型。公式缓存可能过期；脚本需手动启用。";
+        if (document.Snapshot.Sheets.Any(sheet => sheet.UsedColumnCount > 256))
+            HintText.Text += " 此工作簿超过界面的 256 列显示范围；未显示的受支持数据仍会保存。";
     }
 
     private void RefreshSheet(bool rebuild = false)
     {
-        var sheet = _document.Workbook.Worksheets[_sheetIndex];
+        var sheet = _document.Snapshot.Sheets[_sheetIndex];
         if (rebuild)
         {
-            _rowCount = Math.Clamp(Math.Max(_rowCount, sheet.Rows.Count + 20), 100, 100000);
-            _columnCount = Math.Clamp(Math.Max(_columnCount, sheet.Rows.Select(r => r.Cells.Count).DefaultIfEmpty().Max() + 2), 12, 256);
+            _rowCount = Math.Clamp(Math.Max(_rowCount, sheet.UsedRowCount + 20), 100, WorkbookLimits.MaxRows);
+            _columnCount = Math.Clamp(Math.Max(_columnCount, sheet.UsedColumnCount + 2), 12, 256);
+            _refreshing = true;
             SheetGrid.Columns.Clear();
+            SheetGrid.GridLinesVisibility = sheet.ShowGridLines ? DataGridGridLinesVisibility.All : DataGridGridLinesVisibility.None;
             for (var c = 0; c < _columnCount; c++)
             {
                 var textStyle = new Style(typeof(TextBlock));
@@ -112,49 +125,78 @@ public partial class MainWindow : Window
                 textStyle.Setters.Add(new Setter(TextBlock.BackgroundProperty, new Binding { Converter = new AppearanceConverter(c, "background") }));
                 textStyle.Setters.Add(new Setter(TextBlock.FontWeightProperty, new Binding { Converter = new AppearanceConverter(c, "weight") }));
                 var width = c == 0 ? 160d : 112d;
-                if (sheet.Columns.TryGetValue(c, out var column) && column.Width.HasValue)
-                    width = Math.Clamp(column.Width.Value * 7 + 5, 55, 400);
+                sheet.Columns.TryGetValue(c, out var column);
+                if (column?.Width is { } storedWidth) width = Math.Clamp(storedWidth * 7 + 5, 55, 400);
                 SheetGrid.Columns.Add(new DataGridTextColumn
                 {
-                    Header = ColumnName(c),
-                    Width = width,
+                    Header = ColumnName(c), Width = width,
+                    Visibility = column?.Hidden == true ? Visibility.Collapsed : Visibility.Visible,
                     Binding = new Binding($"[{c}]") { Mode = BindingMode.TwoWay, UpdateSourceTrigger = UpdateSourceTrigger.Explicit },
                     ElementStyle = textStyle,
                     EditingElementStyle = new Style(typeof(TextBox))
-                    {
-                        Setters = { new Setter(TextBox.PaddingProperty, new Thickness(5, 3, 4, 2)) }
-                    }
+                    { Setters = { new Setter(TextBox.PaddingProperty, new Thickness(5, 3, 4, 2)) } }
                 });
             }
             _rows.Clear();
             for (var r = 0; r < _rowCount; r++) _rows.Add(new SheetRow(this, r));
+            _refreshing = false;
         }
-        else
-        {
-            foreach (var row in _rows) row.Refresh();
-        }
+        else foreach (var row in _rows) row.Refresh();
         UpdateFormulaBar();
-        SelectionText.Text = $"{sheet.Rows.Count:N0} 行数据  ·  {(_document.ScriptsEnabled ? "QuickJS 已启用" : "缓存预览")}  ·  本地运行";
+        _viewModel.Refresh();
+        var stale = _viewModel.StaleCacheCount;
+        SelectionText.Text = $"{sheet.Cells.Count:N0} 个单元格 · {(stale > 0 ? $"{stale} 个缓存待重算" : "结果已更新")} · 本地运行";
     }
 
     private void UpdateChrome()
     {
-        FileTitle.Text = _displayName + (_dirty ? "  •" : "");
-        Title = $"{(_dirty ? "* " : "")}{_displayName} — QuickExcel";
-        FileSubtitle.Text = _filePath == null ? "本地工作簿 · 保存为 .xlsq 保留脚本" : _filePath;
-        UndoButton.IsEnabled = _undo.Count > 0 && !_busy;
-        RedoButton.IsEnabled = _redo.Count > 0 && !_busy;
+        _viewModel.Refresh();
+        FileTitle.Text = _displayName + (_viewModel.IsDirty ? "  •" : "");
+        Title = $"{(_viewModel.IsDirty ? "* " : "")}{_displayName} — QuickExcel";
+        FileSubtitle.Text = _filePath ?? "本地工作簿 · 保存为 .xlsq 保留脚本";
+        if (_viewModel.DiscardedHistoryCount > 0) FileSubtitle.Text += $" · 已释放 {_viewModel.DiscardedHistoryCount} 条较早撤销记录";
+        UndoButton.IsEnabled = _viewModel.CanUndo && !_busy;
+        RedoButton.IsEnabled = _viewModel.CanRedo && !_busy;
     }
 
     private void UpdateFormulaBar()
     {
+        if (_formulaPending) return; // A selection/refresh must not overwrite an unsubmitted edit.
         CellAddress.Text = ColumnName(_selectedColumn) + (_selectedRow + 1);
+        _updatingFormula = true;
         FormulaBar.Text = _document.GetCellInput(_sheetIndex, _selectedRow, _selectedColumn);
+        _updatingFormula = false;
+    }
+
+    private void FormulaBar_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        if (_updatingFormula || _refreshing || _document is null) return;
+        if (!_formulaPending)
+        {
+            _formulaSheet = _sheetIndex;
+            _formulaRow = _selectedRow;
+            _formulaColumn = _selectedColumn;
+        }
+        _formulaPending = true;
+    }
+
+    private bool CommitFormulaBar()
+    {
+        if (!_formulaPending) return true;
+        try
+        {
+            var result = _editor.SetCell(_formulaSheet, _formulaRow, _formulaColumn, FormulaBar.Text);
+            _calculationPending |= result.Changed;
+            _formulaPending = false;
+            UpdateChrome();
+            return true;
+        }
+        catch (Exception ex) { ReportEditFailure(ex); return false; }
     }
 
     private async Task<bool> WorkAsync(string message, Action operation)
     {
-        if (_busy) return false;
+        if (_busy || _windowClosed) return false;
         _busy = true;
         Toolbar.IsEnabled = Workspace.IsEnabled = false;
         StatusText.Text = message;
@@ -169,7 +211,7 @@ public partial class MainWindow : Window
         {
             StatusText.Text = "操作未完成";
             AppendLog(ex.Message);
-            MessageBox.Show(this, ex.Message, "QuickExcel", MessageBoxButton.OK, MessageBoxImage.Warning);
+            if (!_smokeMode) MessageBox.Show(this, ex.Message, "QuickExcel", MessageBoxButton.OK, MessageBoxImage.Warning);
             return false;
         }
         finally
@@ -183,8 +225,7 @@ public partial class MainWindow : Window
     private void ShowDiagnostics()
     {
         ScriptState.Text = _document.ScriptsEnabled ? "● 脚本已启用" : "● 脚本未启用";
-        if (_document.ScriptErrors.Count > 0)
-            AppendLog(string.Join("\n", _document.ScriptErrors.Take(8)));
+        if (_document.ScriptErrors.Count > 0) AppendLog(string.Join("\n", _document.ScriptErrors.Take(8)));
         RefreshSheet();
     }
 
@@ -195,81 +236,94 @@ public partial class MainWindow : Window
         LogText.ScrollToEnd();
     }
 
-    private async Task RecalculateAsync()
+    private void ReportEditFailure(Exception exception)
     {
-        if (_busy) return;
+        StatusText.Text = "编辑尚未提交，请修正输入后重试。";
+        AppendLog(exception.Message);
+    }
+
+    private async Task<bool> RecalculateAsync()
+    {
+        if (_busy) return false;
         _calculationPending = false;
-        await WorkAsync("重新计算…", _document.Calculate);
+        var ok = await WorkAsync("重新计算…", _document.Calculate);
+        if (!ok) _calculationPending = true;
         ShowDiagnostics();
+        return ok;
     }
 
-    private EditBatch CreateBatch(IEnumerable<(int Row, int Column, string Value)> values)
+    private bool ApplyValues(IEnumerable<(int Row, int Column, string Value)> values)
     {
-        var edits = values.Select(v => new CellEdit(v.Row, v.Column,
-            _document.GetCellInput(_sheetIndex, v.Row, v.Column), v.Value,
-            _document.GetCellValue(_sheetIndex, v.Row, v.Column))).Where(e => e.Before != e.After).ToList();
-        return new EditBatch(_sheetIndex, edits);
-    }
-
-    private void ApplyBatch(EditBatch batch, bool undo = false, bool record = true)
-    {
-        // Preflight the entire rectangle before the first mutation so a rejected paste is atomic.
-        var sheet = _document.Workbook[batch.Sheet];
-        long newCells = 0;
-        foreach (var group in batch.Cells.GroupBy(c => c.Row))
-        {
-            if (group.Key < 0 || group.Key >= WorkbookDocument.MaxRows) throw new ArgumentOutOfRangeException(nameof(batch));
-            var count = group.Max(c => c.Column) + 1;
-            if (count > 256 || group.Any(c => c.Column < 0)) throw new ArgumentException("编辑范围不能超过 256 列。");
-            newCells += Math.Max(0, count - (sheet.Rows.ElementAtOrDefault(group.Key)?.Cells.Count ?? 0));
-        }
-        if (_document.Workbook.Sum(s => s.Rows.Sum(r => (long)r.Cells.Count)) + newCells > WorkbookDocument.MaxCells)
-            throw new InvalidOperationException("编辑后的工作簿超过原型的单元格容量限制。");
-        if (batch.Cells.Any(c => (undo ? c.Before : c.After).Length > 32767))
-            throw new ArgumentException("单元格最多支持 32767 个字符，整批编辑尚未应用。");
-        foreach (var edit in batch.Cells)
-        {
-            if (undo) edit.AfterCache = _document.GetCellValue(batch.Sheet, edit.Row, edit.Column);
-            _document.SetCell(batch.Sheet, edit.Row, edit.Column, undo ? edit.Before : edit.After);
-            var cache = undo ? edit.BeforeCache : edit.AfterCache;
-            var cell = sheet.Rows[edit.Row].Cells[edit.Column];
-            if (cell.HasFormula && cache != null) cell.SetCalculatedValue(cache);
-        }
-        if (record && batch.Cells.Count > 0)
-        {
-            _undo.Push(batch);
-            _redo.Clear();
-        }
-        if (batch.Cells.Count > 0) { _dirty = true; _calculationPending = true; }
+        var result = _editor.SetCells(_sheetIndex, values);
+        _calculationPending |= result.Changed;
         UpdateChrome();
+        return result.Changed;
     }
+
+    private void QueueRecalculation() => Dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(async () =>
+    {
+        if (_calculationPending && !_busy && !_suppressAutoCalculation &&
+            !_closeRequestPending && !_closingApproved && !_windowClosed) await RecalculateAsync();
+    }));
 
     private async Task ApplyFormulaBarAsync()
     {
-        if (_busy) return;
-        var batch = CreateBatch([(_selectedRow, _selectedColumn, FormulaBar.Text)]);
-        ApplyBatch(batch);
-        if (batch.Cells.Count > 0) await RecalculateAsync();
+        // Finish the older grid editor before applying the newer formula-bar draft.
+        if (_busy || !CommitGridEdit() || !CommitFormulaBar()) return;
+        if (_calculationPending) await RecalculateAsync();
+        else UpdateFormulaBar();
     }
 
     private async void ApplyCell_Click(object sender, RoutedEventArgs e) => await ApplyFormulaBarAsync();
     private async void FormulaBar_KeyDown(object sender, KeyEventArgs e)
     {
-        if (e.Key == Key.Enter) { e.Handled = true; await ApplyFormulaBarAsync(); SheetGrid.Focus(); }
-        else if (e.Key == Key.Escape) { e.Handled = true; UpdateFormulaBar(); SheetGrid.Focus(); }
+        if (e.Key == Key.Enter) { e.Handled = true; await ApplyFormulaBarAsync(); if (!_formulaPending) SheetGrid.Focus(); }
+        else if (e.Key == Key.Escape) { e.Handled = true; _formulaPending = false; UpdateFormulaBar(); SheetGrid.Focus(); }
     }
 
     private void Grid_LoadingRow(object sender, DataGridRowEventArgs e)
     {
-        if (e.Row.Item is SheetRow row) e.Row.Header = (row.Index + 1).ToString(CultureInfo.InvariantCulture);
+        if (e.Row.Item is not SheetRow row) return;
+        e.Row.Header = (row.Index + 1).ToString(CultureInfo.InvariantCulture);
+        var sheet = _document.Snapshot.Sheets[_sheetIndex];
+        sheet.Rows.TryGetValue(row.Index, out var metadata);
+        e.Row.Height = metadata?.Hidden == true ? 0 : Math.Clamp(metadata?.Height ?? sheet.DefaultRowHeight ?? 31, 0, 400);
     }
 
     private void Grid_CurrentCellChanged(object? sender, EventArgs e)
     {
-        if (SheetGrid.CurrentCell.Item is not SheetRow row || SheetGrid.CurrentCell.Column == null) return;
+        if (_refreshing || _busy || SheetGrid.CurrentCell.Item is not SheetRow row || SheetGrid.CurrentCell.Column is null) return;
+        if (!CommitFormulaBar())
+        {
+            // Keep the actual grid selection aligned with the pending edit's address.
+            _refreshing = true;
+            try
+            {
+                var previous = new DataGridCellInfo(_rows[_selectedRow], SheetGrid.Columns[_selectedColumn]);
+                SheetGrid.CurrentCell = previous;
+                SheetGrid.SelectedCells.Clear();
+                SheetGrid.SelectedCells.Add(previous);
+            }
+            finally { _refreshing = false; }
+            FormulaBar.Focus();
+            return;
+        }
         _selectedRow = row.Index;
         _selectedColumn = SheetGrid.CurrentCell.Column.DisplayIndex;
         UpdateFormulaBar();
+        QueueRecalculation();
+    }
+
+    private void Grid_BeginningEdit(object sender, DataGridBeginningEditEventArgs e)
+    {
+        // Switching editors in the same cell does not raise CurrentCellChanged.
+        // Commit the older formula-bar input before loading the newer grid editor.
+        if (_busy || !CommitFormulaBar()) { e.Cancel = true; return; }
+        if (e.Row.Item is SheetRow row)
+        {
+            _selectedRow = row.Index;
+            _selectedColumn = e.Column.DisplayIndex;
+        }
     }
 
     private void Grid_PreparingCellForEdit(object sender, DataGridPreparingCellForEditEventArgs e)
@@ -284,123 +338,147 @@ public partial class MainWindow : Window
     private void Grid_CellEditEnding(object sender, DataGridCellEditEndingEventArgs e)
     {
         if (_busy || e.EditAction != DataGridEditAction.Commit || e.Row.Item is not SheetRow row || e.EditingElement is not TextBox editor) return;
-        var batch = CreateBatch([(row.Index, e.Column.DisplayIndex, editor.Text)]);
-        try { ApplyBatch(batch); }
-        catch (Exception ex) { e.Cancel = true; AppendLog(ex.Message); return; }
-        if (batch.Cells.Count > 0)
-            Dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(async () =>
-            {
-                if (_calculationPending && !_busy && !_suppressAutoCalculation) await RecalculateAsync();
-            }));
+        try
+        {
+            if (ApplyValues([(row.Index, e.Column.DisplayIndex, editor.Text)])) QueueRecalculation();
+        }
+        catch (Exception ex) { _cellCommitFailed = true; e.Cancel = true; ReportEditFailure(ex); }
     }
 
     private async void Grid_KeyDown(object sender, KeyEventArgs e)
     {
         if (_busy || e.OriginalSource is TextBox) return;
-        var ctrl = Keyboard.Modifiers.HasFlag(ModifierKeys.Control);
-        if (ctrl && e.Key == Key.V)
+        try
         {
-            e.Handled = true;
-            if (!Clipboard.ContainsText()) return;
-            var input = Clipboard.GetText().Replace("\r\n", "\n").TrimEnd('\n');
-            var values = new List<(int Row, int Column, string Value)>();
-            var lines = input.Split('\n');
-            for (var r = 0; r < lines.Length; r++)
+            var ctrl = Keyboard.Modifiers.HasFlag(ModifierKeys.Control);
+            if (ctrl && e.Key == Key.V)
             {
-                var fields = lines[r].Split('\t');
-                for (var c = 0; c < fields.Length; c++) values.Add((_selectedRow + r, _selectedColumn + c, fields[c]));
-            }
-            if (values.Count > 20000 || values.Any(v => v.Row >= 100000 || v.Column >= 256))
-            {
-                MessageBox.Show(this, "原型单次粘贴上限为 20,000 个单元格，编辑范围为 100,000 行 × 256 列。", "QuickExcel");
-                return;
-            }
-            ApplyBatch(CreateBatch(values));
-            RefreshSheet(true);
-            await RecalculateAsync();
-        }
-        else if (ctrl && e.Key == Key.C)
-        {
-            e.Handled = true;
-            var cells = SheetGrid.SelectedCells.Where(c => c.Item is SheetRow).ToList();
-            if (cells.Count == 0) return;
-            var minRow = cells.Min(c => ((SheetRow)c.Item).Index);
-            var maxRow = cells.Max(c => ((SheetRow)c.Item).Index);
-            var minCol = cells.Min(c => c.Column.DisplayIndex);
-            var maxCol = cells.Max(c => c.Column.DisplayIndex);
-            if ((long)(maxRow - minRow + 1) * (maxCol - minCol + 1) > 100000)
-            { StatusText.Text = "复制范围过大，请缩小选择范围。"; return; }
-            var sb = new StringBuilder();
-            for (var r = minRow; r <= maxRow; r++)
-            {
-                if (r > minRow) sb.AppendLine();
-                for (var c = minCol; c <= maxCol; c++)
+                e.Handled = true;
+                if (!Clipboard.ContainsText() || !CommitEdit()) return;
+                var input = Clipboard.GetText().Replace("\r\n", "\n").TrimEnd('\n');
+                if (input.Length > 4 * 1024 * 1024) throw new ArgumentException("单次粘贴文本不能超过 4 MiB。");
+                var values = new List<(int Row, int Column, string Value)>();
+                var lines = input.Split('\n');
+                for (var r = 0; r < lines.Length; r++)
                 {
-                    if (c > minCol) sb.Append('\t');
-                    sb.Append(_document.GetCellValue(_sheetIndex, r, c));
+                    var fields = lines[r].Split('\t');
+                    if (values.Count + fields.Length > 20_000) throw new ArgumentException("单次粘贴上限为 20,000 个单元格。");
+                    for (var c = 0; c < fields.Length; c++) values.Add((_selectedRow + r, _selectedColumn + c, fields[c]));
                 }
+                ApplyValues(values);
+                RefreshSheet(true);
+                await RecalculateAsync();
             }
-            Clipboard.SetText(sb.ToString());
-            StatusText.Text = "已复制计算结果。";
+            else if (ctrl && e.Key == Key.C)
+            {
+                e.Handled = true;
+                var cells = SheetGrid.SelectedCells.Where(cell => cell.Item is SheetRow).ToList();
+                if (cells.Count == 0) return;
+                var minRow = cells.Min(cell => ((SheetRow)cell.Item).Index);
+                var maxRow = cells.Max(cell => ((SheetRow)cell.Item).Index);
+                var minCol = cells.Min(cell => cell.Column.DisplayIndex);
+                var maxCol = cells.Max(cell => cell.Column.DisplayIndex);
+                if ((long)(maxRow - minRow + 1) * (maxCol - minCol + 1) > 100000)
+                { StatusText.Text = "复制范围过大，请缩小选择范围。"; return; }
+                var text = new StringBuilder();
+                for (var row = minRow; row <= maxRow; row++)
+                {
+                    if (row > minRow) text.AppendLine();
+                    for (var column = minCol; column <= maxCol; column++)
+                    {
+                        if (column > minCol) text.Append('\t');
+                        text.Append(_document.GetCellValue(_sheetIndex, row, column));
+                    }
+                }
+                Clipboard.SetText(text.ToString());
+                StatusText.Text = "已复制计算结果。";
+            }
+            else if (e.Key == Key.Delete)
+            {
+                e.Handled = true;
+                if (!CommitEdit()) return;
+                var result = _editor.ClearCells(_sheetIndex, SheetGrid.SelectedCells.Where(cell => cell.Item is SheetRow)
+                    .Select(cell => (((SheetRow)cell.Item).Index, cell.Column.DisplayIndex)));
+                _calculationPending |= result.Changed;
+                UpdateChrome();
+                if (_calculationPending) await RecalculateAsync();
+            }
         }
-        else if (e.Key == Key.Delete)
-        {
-            e.Handled = true;
-            ApplyBatch(CreateBatch(SheetGrid.SelectedCells.Where(c => c.Item is SheetRow)
-                .Select(c => (((SheetRow)c.Item).Index, c.Column.DisplayIndex, ""))));
-            await RecalculateAsync();
-        }
+        catch (Exception ex) { ReportEditFailure(ex); }
     }
 
     private async void Undo_Click(object sender, RoutedEventArgs e) => await UndoAsync(false);
     private async void Redo_Click(object sender, RoutedEventArgs e) => await UndoAsync(true);
     private async Task UndoAsync(bool redo)
     {
-        if (_busy) return;
-        var source = redo ? _redo : _undo;
-        if (source.Count == 0) return;
-        var batch = source.Pop();
-        ApplyBatch(batch, undo: !redo, record: false);
-        (redo ? _undo : _redo).Push(batch);
-        if (_sheetIndex != batch.Sheet) SheetPicker.SelectedIndex = batch.Sheet;
+        if (_busy || !CommitEditors()) return;
+        var sheetId = _document.Snapshot.Sheets[_sheetIndex].Id;
+        if (!(redo ? _editor.Redo() : _editor.Undo())) return;
+        var sheets = _document.Snapshot.Sheets;
+        var index = Array.FindIndex(sheets.ToArray(), sheet => sheet.Id == sheetId);
+        _sheetIndex = index >= 0 ? index : Math.Min(_sheetIndex, sheets.Length - 1);
+        SynchronizeSheets();
+        _calculationPending = true;
         await RecalculateAsync();
+    }
+
+    private void SynchronizeSheets()
+    {
+        _refreshing = true;
+        SheetPicker.ItemsSource = _document.Snapshot.Sheets.Select(sheet => sheet.Name).ToList();
+        SheetPicker.SelectedIndex = _sheetIndex;
+        _refreshing = false;
+        RefreshSheet(true);
+        UpdateChrome();
     }
 
     private void SheetPicker_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (_refreshing || SheetPicker.SelectedIndex < 0 || _busy) return;
-        CommitEdit();
+        if (!CommitEdit())
+        {
+            _refreshing = true;
+            SheetPicker.SelectedIndex = _sheetIndex;
+            _refreshing = false;
+            return;
+        }
         _sheetIndex = SheetPicker.SelectedIndex;
         _selectedColumn = _selectedRow = 0;
         _columnCount = 12;
         _rowCount = 100;
         RefreshSheet(true);
+        QueueRecalculation();
     }
 
-    private void MoreRows_Click(object sender, RoutedEventArgs e) { _rowCount = Math.Min(100000, _rowCount + 100); RefreshSheet(true); }
-    private void MoreColumns_Click(object sender, RoutedEventArgs e) { _columnCount = Math.Min(256, _columnCount + 8); RefreshSheet(true); }
+    private void MoreRows_Click(object sender, RoutedEventArgs e) { if (!CommitEdit()) return; _rowCount = Math.Min(100000, _rowCount + 100); RefreshSheet(true); }
+    private void MoreColumns_Click(object sender, RoutedEventArgs e) { if (!CommitEdit()) return; _columnCount = Math.Min(256, _columnCount + 8); RefreshSheet(true); }
     private void AddSheet_Click(object sender, RoutedEventArgs e)
     {
-        CommitEdit();
-        var number = _document.Workbook.Worksheets.Count + 1;
-        while (_document.Workbook.Worksheets.Any(s => s.Name == $"工作表{number}")) number++;
-        _document.Workbook.NewWorksheet($"工作表{number}");
-        _dirty = true;
-        _refreshing = true;
-        SheetPicker.ItemsSource = _document.Workbook.Worksheets.Select(s => s.Name).ToList();
-        _refreshing = false;
-        SheetPicker.SelectedIndex = _document.Workbook.Worksheets.Count - 1;
-        UpdateChrome();
+        if (_busy || !CommitEdit()) return;
+        try
+        {
+            var number = _document.Snapshot.Sheets.Length + 1;
+            while (_document.Snapshot.Sheets.Any(sheet => sheet.Name == $"工作表{number}")) number++;
+            _editor.AddSheet($"工作表{number}");
+            _sheetIndex = _document.Snapshot.Sheets.Length - 1;
+            _selectedRow = _selectedColumn = 0;
+            SynchronizeSheets();
+        }
+        catch (Exception ex) { ReportEditFailure(ex); }
     }
 
     private void ScriptEditor_TextChanged(object sender, TextChangedEventArgs e)
     {
-        if (_refreshing || ScriptState == null) return;
-        _document.ScriptSource = ScriptEditor.Text;
+        if (_refreshing || ScriptState is null || _editor is null) return;
+        // Even rejected source edits must revoke the old source's authorization.
         _document.DisableScripts();
-        _dirty = true;
         ScriptState.Text = "● 已修改，等待应用";
-        UpdateChrome();
+        try
+        {
+            _editor.UpdateScriptSource(ScriptEditor.Text);
+            UpdateChrome();
+        }
+        catch (Exception ex) { ReportEditFailure(ex); }
     }
 
     private async void Run_Click(object sender, RoutedEventArgs e) => await RunScriptsAsync();
@@ -408,55 +486,67 @@ public partial class MainWindow : Window
     {
         if (_busy) return;
         _suppressAutoCalculation = true;
-        try { CommitEdit(); }
+        try { if (!CommitEdit()) return; }
         finally { _suppressAutoCalculation = false; }
         _calculationPending = false;
-        _document.ScriptSource = ScriptEditor.Text;
         var ok = await WorkAsync("应用 JavaScript 并计算…", _document.EnableScriptsAndCalculate);
-        if (ok) { _dirty = true; AppendLog("脚本已应用，工作簿已重新计算。"); }
+        if (ok) AppendLog("脚本已应用，工作簿已重新计算。");
         ShowDiagnostics();
         UpdateChrome();
     }
 
     private void Disable_Click(object sender, RoutedEventArgs e)
     {
+        if (_busy) return;
         _document.DisableScripts();
         ScriptState.Text = "● 脚本未启用";
         AppendLog("脚本已停用；自定义公式保留上次计算结果。");
         RefreshSheet();
+        UpdateChrome();
     }
 
-    private void CommitEdit()
+    private bool CommitGridEdit()
     {
-        SheetGrid.CommitEdit(DataGridEditingUnit.Cell, true);
-        SheetGrid.CommitEdit(DataGridEditingUnit.Row, true);
+        _cellCommitFailed = false;
+        return SheetGrid.CommitEdit(DataGridEditingUnit.Cell, true) && !_cellCommitFailed &&
+            SheetGrid.CommitEdit(DataGridEditingUnit.Row, true) && !_cellCommitFailed;
     }
 
-    private async Task FlushEditsAsync()
+    private bool CommitEdit()
+    {
+        if (!CommitGridEdit() || !CommitFormulaBar()) return false;
+        try { _editor.UpdateScriptSource(ScriptEditor.Text); return true; }
+        catch (Exception ex) { ReportEditFailure(ex); return false; }
+    }
+
+    private bool CommitEditors()
     {
         _suppressAutoCalculation = true;
-        try { CommitEdit(); }
+        try { return CommitEdit(); }
         finally { _suppressAutoCalculation = false; }
-        if (_calculationPending) await RecalculateAsync();
+    }
+
+    private async Task<bool> FlushEditsAsync()
+    {
+        if (!CommitEditors()) return false;
+        if (_calculationPending && !await RecalculateAsync())
+            AppendLog("重算未完成，将保存已提交的输入和上次缓存；部分结果需要重新计算。");
+        return true;
     }
 
     private async Task<bool> ConfirmDiscardAsync()
     {
-        await FlushEditsAsync();
-        if (!_dirty) return true;
-        var result = MessageBox.Show(this, "保存当前工作簿和脚本后再继续？", "QuickExcel",
-            MessageBoxButton.YesNoCancel, MessageBoxImage.Question);
+        if (!CommitEditors()) return false;
+        if (!_document.IsDirty) return true;
+        var result = _smokeMode && _smokeDiscardDecision is { } decision ? decision :
+            MessageBox.Show(this, "保存当前工作簿和脚本后再继续？", "QuickExcel", MessageBoxButton.YesNoCancel, MessageBoxImage.Question);
         return result == MessageBoxResult.No || result == MessageBoxResult.Yes && await SaveAsync(false);
     }
 
     private async void New_Click(object sender, RoutedEventArgs e)
-    {
-        if (!_busy && await ConfirmDiscardAsync()) InstallDocument(WorkbookDocument.CreateBlank(), null, "未命名.xlsq");
-    }
+    { if (!_busy && await ConfirmDiscardAsync()) InstallDocument(WorkbookDocument.CreateBlank(_services), null, "未命名.xlsq"); }
     private async void Demo_Click(object sender, RoutedEventArgs e)
-    {
-        if (!_busy && await ConfirmDiscardAsync()) InstallDocument(WorkbookDocument.CreateDemo(), null, "示例工作簿.xlsq");
-    }
+    { if (!_busy && await ConfirmDiscardAsync()) InstallDocument(WorkbookDocument.CreateDemo(_services), null, "示例工作簿.xlsq"); }
     private async void Open_Click(object sender, RoutedEventArgs e)
     {
         if (_busy) return;
@@ -467,41 +557,38 @@ public partial class MainWindow : Window
     private async Task OpenPathAsync(string path)
     {
         WorkbookDocument? next = null;
-        if (await WorkAsync("打开工作簿…", () => next = WorkbookDocument.Open(path)))
-        {
+        if (await WorkAsync("打开工作簿…", () => next = WorkbookDocument.Open(path, _services)))
             InstallDocument(next!, path, Path.GetFileName(path));
-        }
     }
 
     private async void Save_Click(object sender, RoutedEventArgs e) => await SaveAsync(false);
     private async void SaveAs_Click(object sender, RoutedEventArgs e) => await SaveAsync(true);
     private async Task<bool> SaveAsync(bool saveAs)
     {
-        if (_busy) return false;
-        await FlushEditsAsync();
+        if (_busy || !await FlushEditsAsync()) return false;
         string? path = saveAs ? null : _filePath;
-        if (path == null)
+        if (path is null)
         {
-            var dialog = new SaveFileDialog { Filter = "QuickExcel 工作簿 (*.xlsq)|*.xlsq", DefaultExt = ".xlsq", AddExtension = true, FileName = Path.GetFileNameWithoutExtension(_displayName) + ".xlsq", Title = "保存工作簿和 JavaScript" };
+            var dialog = new SaveFileDialog { Filter = "QuickExcel 工作簿 (*.xlsq)|*.xlsq", DefaultExt = ".xlsq", AddExtension = true,
+                FileName = Path.GetFileNameWithoutExtension(_displayName) + ".xlsq", Title = "保存工作簿和 JavaScript" };
             if (dialog.ShowDialog(this) != true) return false;
             path = dialog.FileName;
         }
-        _document.ScriptSource = ScriptEditor.Text;
         if (!await WorkAsync("保存 .xlsq…", () => _document.Save(path))) return false;
         _filePath = path;
         _displayName = Path.GetFileName(path);
-        _dirty = false;
         UpdateChrome();
+        if (_viewModel.StaleCacheCount > 0) StatusText.Text = "已保存输入和上次缓存；部分公式结果仍待重算。";
         return true;
     }
 
     private async void Export_Click(object sender, RoutedEventArgs e)
     {
-        if (_busy) return;
-        await FlushEditsAsync();
-        var dialog = new SaveFileDialog { Filter = "Excel 工作簿 (*.xlsx)|*.xlsx", DefaultExt = ".xlsx", AddExtension = true, FileName = Path.GetFileNameWithoutExtension(_displayName) + "-结果.xlsx", Title = "导出当前结果（所有公式转为值，不含脚本）" };
+        if (_busy || !await FlushEditsAsync()) return;
+        var dialog = new SaveFileDialog { Filter = "Excel 工作簿 (*.xlsx)|*.xlsx", DefaultExt = ".xlsx", AddExtension = true,
+            FileName = Path.GetFileNameWithoutExtension(_displayName) + "-结果.xlsx", Title = "导出当前结果（所有公式转为值，不含脚本）" };
         if (dialog.ShowDialog(this) == true && await WorkAsync("导出当前结果…", () => _document.ExportXlsx(dialog.FileName)))
-            AppendLog("已导出 .xlsx：所有公式已转为当前结果，原工作簿和脚本保持完整。");
+            AppendLog("已导出 .xlsx：所有公式已转为当前结果。" + LegacyWorkbookStorage.LegacyTypeWarning);
     }
 
     private async void Window_KeyDown(object sender, KeyEventArgs e)
@@ -520,12 +607,42 @@ public partial class MainWindow : Window
         }
     }
 
-    private async void Window_Closing(object? sender, CancelEventArgs e)
+    private void Window_Closing(object? sender, CancelEventArgs e)
     {
-        if (_closingApproved) { _document.Dispose(); return; }
-        if (_busy) { e.Cancel = true; StatusText.Text = "请等待当前操作结束。"; return; }
+        if (_closingApproved) return;
         e.Cancel = true;
-        if (await ConfirmDiscardAsync()) { _closingApproved = true; Close(); }
+        if (_closeRequestPending) return;
+        if (_busy) { StatusText.Text = "请等待当前操作结束。"; return; }
+        _closeRequestPending = true;
+        // Even an async confirmation can complete synchronously. Leave Closing
+        // before showing owned dialogs or requesting the approved second close.
+        Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(async () => await CompleteCloseRequestAsync()));
+    }
+
+    private async Task CompleteCloseRequestAsync()
+    {
+        try
+        {
+            if (_busy || _windowClosed || !await ConfirmDiscardAsync()) return;
+            _closingApproved = true;
+            Close();
+        }
+        finally
+        {
+            _closeRequestPending = false;
+            if (!_windowClosed)
+            {
+                _closingApproved = false;
+                QueueRecalculation();
+            }
+        }
+    }
+
+    protected override void OnClosed(EventArgs e)
+    {
+        _windowClosed = true;
+        _document.Dispose();
+        base.OnClosed(e);
     }
 
     public static string ColumnName(int index)
@@ -538,11 +655,13 @@ public partial class MainWindow : Window
     private async Task RunSmokeTestAsync(string folder)
     {
         Directory.CreateDirectory(folder);
+        await RunCloseSmokeTestsAsync(folder);
         // Drive the same editing, undo and formula-bar paths used by the window.
-        InstallDocument(WorkbookDocument.CreateBlank(), null, "界面验收.xlsq");
+        InstallDocument(WorkbookDocument.CreateBlank(_services), null, "界面验收.xlsq");
         ScriptEditor.Text = "quickExcel.functions.register(\"DOUBLE\", x => x * 2);";
-        ApplyBatch(CreateBatch([(0, 0, "21"), (0, 1, "=DOUBLE(A1)")]));
-        await Task.Run(_document.EnableScriptsAndCalculate);
+        ApplyValues([(0, 0, "21"), (0, 1, "=DOUBLE(A1)")]);
+        if (!await WorkAsync("界面验收重算…", _document.EnableScriptsAndCalculate)) throw new Exception("Smoke calculation failed.");
+        _calculationPending = false;
         if (_document.GetCellValue(0, 0, 1) != "42") throw new Exception("JS formula integration failed.");
         _selectedRow = 0; _selectedColumn = 0;
         FormulaBar.Text = "25";
@@ -553,18 +672,19 @@ public partial class MainWindow : Window
         await UndoAsync(true);
         if (_document.GetCellValue(0, 0, 1) != "50") throw new Exception("Redo recalculation failed.");
         _document.DisableScripts();
-        ApplyBatch(CreateBatch([(0, 1, "99")]));
+        ApplyValues([(0, 1, "99")]);
         await UndoAsync(false);
         if (_document.GetCellValue(0, 0, 1) != "50") throw new Exception("Disabled formula cache was lost on undo.");
         var beforeRejected = _document.GetCellValue(0, 0, 0);
         try
         {
-            ApplyBatch(CreateBatch([(0, 0, "999"), (1, 0, new string('x', 32768))]));
+            ApplyValues([(0, 0, "999"), (1, 0, new string('x', 32768))]);
             throw new Exception("Oversized paste was accepted.");
         }
         catch (ArgumentException) { }
         if (_document.GetCellValue(0, 0, 0) != beforeRejected) throw new Exception("Rejected paste partially changed workbook.");
-        await Task.Run(_document.EnableScriptsAndCalculate);
+        if (!await WorkAsync("界面验收重算…", _document.EnableScriptsAndCalculate)) throw new Exception("Smoke calculation failed.");
+        _calculationPending = false;
         RefreshSheet();
         var path = Path.Combine(folder, "smoke.xlsq");
         _filePath = path;
@@ -575,7 +695,7 @@ public partial class MainWindow : Window
         if (SheetGrid.Columns[0].GetCellContent(_rows[0]) is not TextBox editBox) throw new Exception("DataGrid editor missing.");
         editBox.Text = "30";
         if (!await SaveAsync(false)) throw new Exception("Saving an active cell edit failed.");
-        using (var reopened = WorkbookDocument.Open(path))
+        using (var reopened = WorkbookDocument.Open(path, _services))
         {
             if (reopened.ScriptsEnabled) throw new Exception("Opened scripts ran automatically.");
             if (reopened.GetCellValue(0, 0, 1) != "60") throw new Exception("Saved formula cache did not include the pending edit.");
@@ -583,8 +703,102 @@ public partial class MainWindow : Window
             if (reopened.GetCellValue(0, 0, 1) != "60") throw new Exception("Package roundtrip failed.");
             reopened.ExportXlsx(Path.Combine(folder, "smoke.xlsx"));
         }
-        InstallDocument(WorkbookDocument.CreateDemo(), null, "示例工作簿.xlsq");
-        await Task.Run(_document.EnableScriptsAndCalculate);
+        // Saving without Enter must commit the formula bar to its original cell address.
+        _selectedRow = 0; _selectedColumn = 0;
+        UpdateFormulaBar();
+        FormulaBar.Focus();
+        FormulaBar.Text = "35";
+        var beforeFormulaSaveRevision = _document.Snapshot.Revision;
+        if (!await SaveAsync(false)) throw new Exception("Saving a pending formula bar failed.");
+        if (_document.Snapshot.Revision != beforeFormulaSaveRevision + 1) throw new Exception("Formula save did not commit exactly one command revision.");
+        using (var formulaSaved = WorkbookDocument.Open(path, _services))
+            if (formulaSaved.GetCellValue(0, 0, 1) != "70") throw new Exception("Formula bar pending edit was omitted from saved cache.");
+        if (_document.IsDirty) throw new Exception("Successful save did not mark the session revision saved.");
+        // Entering the grid in the same cell must not let an older formula-bar draft overwrite it.
+        SheetGrid.CurrentCell = new DataGridCellInfo(_rows[0], SheetGrid.Columns[0]);
+        SheetGrid.SelectedCells.Clear();
+        SheetGrid.SelectedCells.Add(SheetGrid.CurrentCell);
+        SheetGrid.ScrollIntoView(_rows[0], SheetGrid.Columns[0]);
+        FormulaBar.Text = "36";
+        SheetGrid.Focus();
+        if (!SheetGrid.BeginEdit()) throw new Exception($"Same-cell editor switch failed (busy={_busy}, enabled={SheetGrid.IsEnabled}, valid={SheetGrid.CurrentCell.IsValid}).");
+        if (SheetGrid.Columns[0].GetCellContent(_rows[0]) is not TextBox switchedEditor) throw new Exception("Switched grid editor missing.");
+        switchedEditor.Text = "37";
+        if (!await SaveAsync(false)) throw new Exception("Saving the latest editor failed.");
+        using (var latestEditor = WorkbookDocument.Open(path, _services))
+            if (latestEditor.GetCellValue(0, 0, 0) != "37" || latestEditor.GetCellValue(0, 0, 1) != "74")
+                throw new Exception("An older formula draft overwrote the latest grid edit.");
+        FormulaBar.Text = new string('x', WorkbookLimits.MaxCellTextLength + 1);
+        var invalidRevision = _document.Snapshot.Revision;
+        SheetGrid.CurrentCell = new DataGridCellInfo(_rows[0], SheetGrid.Columns[1]);
+        // Moving focus back to the formula editor can clear WPF's CurrentCell.
+        // It must never leave another valid grid address beside the pending A1 edit.
+        if ((SheetGrid.CurrentCell.IsValid && SheetGrid.CurrentCell.Column != SheetGrid.Columns[0]) ||
+            _selectedColumn != 0 || !_formulaPending || _formulaColumn != 0 || _formulaRow != 0)
+            throw new Exception($"Rejected formula input left selection and edit address out of sync (grid={SheetGrid.CurrentCell.Column?.DisplayIndex}, selected={_selectedColumn}, formula={_formulaColumn}, pending={_formulaPending}, busy={_busy}).");
+        if (await SaveAsync(false) || _document.Snapshot.Revision != invalidRevision)
+            throw new Exception("Invalid pending input changed or saved the document.");
+        using (var previousSave = WorkbookDocument.Open(path, _services))
+            if (previousSave.GetCellValue(0, 0, 1) != "74") throw new Exception("Rejected edit changed the saved file.");
+        FormulaBar.Text = "37";
+        if (!CommitFormulaBar()) throw new Exception("Corrected formula input was rejected.");
+        var authorizedRevision = _document.Snapshot.Revision;
+        await RunScriptsAsync();
+        if (_document.IsDirty || _document.Snapshot.Revision != authorizedRevision) throw new Exception("Script authorization changed document dirty state.");
+        var acceptedSource = _document.ScriptSource;
+        ScriptEditor.Text = new string('x', 1024 * 1024 + 1);
+        if (_document.ScriptsEnabled || _document.ScriptSource != acceptedSource)
+            throw new Exception("Rejected script edit retained authorization or changed the accepted source.");
+        ApplyValues([(0, 0, "38")]);
+        if (!await RecalculateAsync() || _document.GetCellValue(0, 0, 1) != "74" || _document.ScriptsEnabled)
+            throw new Exception("Rejected script source allowed the previous authorized function to run.");
+        ScriptEditor.Text = acceptedSource;
+        await RunScriptsAsync();
+        if (_document.GetCellValue(0, 0, 1) != "76") throw new Exception("Corrected script could not be explicitly reauthorized.");
+        var beforeSheetCount = _document.Snapshot.Sheets.Length;
+        AddSheet_Click(this, new RoutedEventArgs());
+        if (_document.Snapshot.Sheets.Length != beforeSheetCount + 1) throw new Exception("Add sheet command failed.");
+        await UndoAsync(false);
+        if (_document.Snapshot.Sheets.Length != beforeSheetCount) throw new Exception("Add sheet undo failed.");
+        await UndoAsync(true);
+        if (_document.Snapshot.Sheets.Length != beforeSheetCount + 1) throw new Exception("Add sheet redo failed.");
+        var reversePath = Path.Combine(folder, "reverse-editor.xlsq");
+        InstallDocument(WorkbookDocument.CreateBlank(_services), reversePath, "reverse-editor.xlsq");
+        SheetGrid.CurrentCell = new DataGridCellInfo(_rows[0], SheetGrid.Columns[0]);
+        SheetGrid.SelectedCells.Clear();
+        SheetGrid.SelectedCells.Add(SheetGrid.CurrentCell);
+        SheetGrid.ScrollIntoView(_rows[0], SheetGrid.Columns[0]);
+        SheetGrid.Focus();
+        if (!SheetGrid.BeginEdit() || SheetGrid.Columns[0].GetCellContent(_rows[0]) is not TextBox olderGridEditor)
+            throw new Exception("Reverse editor switch could not start grid editing.");
+        olderGridEditor.Text = "11";
+        FormulaBar.Focus();
+        FormulaBar.Text = "=1+2";
+        await ApplyFormulaBarAsync();
+        if (!await SaveAsync(false)) throw new Exception("Reverse editor switch could not save.");
+        using (var reverseSaved = WorkbookDocument.Open(reversePath, _services))
+            if (reverseSaved.GetCellInput(0, 0, 0) != "=1+2" || reverseSaved.GetCellValue(0, 0, 0) != "3")
+                throw new Exception("An older grid editor overwrote the newer formula-bar expression.");
+        // A failed calculation must leave the user able to undo, save inputs, and close.
+        var failingCalculator = new SmokeFailingCalculator();
+        var failingServices = new WorkbookServices(_services.Storage, failingCalculator);
+        var recoveryPath = Path.Combine(folder, "recovery.xlsq");
+        InstallDocument(WorkbookDocument.CreateBlank(failingServices), recoveryPath, "recovery.xlsq");
+        ApplyValues([(0, 0, "1"), (0, 1, "=A1*2")]);
+        ApplyValues([(0, 0, "2")]);
+        if (await RecalculateAsync()) throw new Exception("The failing calculator unexpectedly succeeded.");
+        await UndoAsync(false);
+        if (_document.GetCellValue(0, 0, 0) != "1") throw new Exception("Failed recalculation prevented undo.");
+        if (!await SaveAsync(false) || _document.IsDirty) throw new Exception("Failed recalculation prevented saving inputs.");
+        using (var recoverySaved = WorkbookDocument.Open(recoveryPath, _services))
+            if (recoverySaved.GetCellValue(0, 0, 0) != "1" || recoverySaved.GetCellInput(0, 0, 1) != "=A1*2")
+                throw new Exception("Recovery save did not preserve inputs and formulas.");
+        var beforeCloseAttempts = failingCalculator.Attempts;
+        if (!await ConfirmDiscardAsync() || failingCalculator.Attempts != beforeCloseAttempts)
+            throw new Exception("Closing a saved document retried the failed calculation.");
+        InstallDocument(WorkbookDocument.CreateDemo(_services), null, "示例工作簿.xlsq");
+        if (!await WorkAsync("界面验收重算…", _document.EnableScriptsAndCalculate)) throw new Exception("Smoke calculation failed.");
+        _calculationPending = false;
         ShowDiagnostics();
         AppendLog("界面验收通过：JS 计算、公式栏编辑、撤销/重做、.xlsq 往返、.xlsx 导出。");
         _document.Save(Path.Combine(folder, "QuickExcel-示例.xlsq"));
@@ -596,24 +810,31 @@ public partial class MainWindow : Window
         var encoder = new PngBitmapEncoder();
         encoder.Frames.Add(BitmapFrame.Create(bitmap));
         using (var file = File.Create(Path.Combine(folder, "QuickExcel-preview.png"))) encoder.Save(file);
-        File.WriteAllText(Path.Combine(folder, "smoke-result.txt"), "PASS: native QuickJS, formula-bar edit/recalculate, undo/redo with cached formulas, atomic rejected paste, save active DataGrid edit with fresh formula caches, XLSQ roundtrip, values-only XLSX export, WPF render.");
+        File.WriteAllText(Path.Combine(folder, "smoke-result.txt"), "PASS: actual WPF close lifecycle (8 scenarios, including cancel/save/failure/duplicate requests), native QuickJS, formula-bar edit/recalculate, undo/redo with cached formulas, atomic rejected paste, save active DataGrid and formula-bar edits with fresh caches, bidirectional same-cell editor switch, rejected pending input preserves selection and saved file, session revisions and clean script authorization, rejected script edit revokes authorization, failed calculation allows undo/save/close, add-sheet undo/redo, XLSQ roundtrip, values-only XLSX export, WPF render.");
     }
 
-    private sealed record CellEdit(int Row, int Column, string Before, string After, string BeforeCache)
+    private sealed class SmokeFailingCalculator : IWorkbookCalculator
     {
-        public string? AfterCache { get; set; }
+        public int Attempts { get; private set; }
+        public CalculationResult Calculate(CalculationRequest request, CancellationToken cancellationToken = default)
+        {
+            Attempts++;
+            throw new TimeoutException("Smoke: simulated calculation deadline.");
+        }
     }
-    private sealed record EditBatch(int Sheet, List<CellEdit> Cells);
 
     private sealed class SheetRow(MainWindow owner, int index) : INotifyPropertyChanged
     {
         public int Index { get; } = index;
         public string this[int column] { get => owner._document.GetCellValue(owner._sheetIndex, Index, column); set { } }
-        public XlStyle? GetStyle(int column)
+        public StyleDefinition? GetStyle(int column)
         {
-            var sheet = owner._document.Workbook.Worksheets[owner._sheetIndex];
-            var row = sheet.Rows.ElementAtOrDefault(Index);
-            return row?.Cells.ElementAtOrDefault(column)?.Style ?? row?.Style ?? (sheet.Columns.TryGetValue(column, out var col) ? col.Style : null);
+            var snapshot = owner._document.Snapshot;
+            var sheet = snapshot.Sheets[owner._sheetIndex];
+            var id = sheet.GetCell(Index, column)?.Content.StyleId ?? 0;
+            if (id == 0 && sheet.Rows.TryGetValue(Index, out var row)) id = row.StyleId;
+            if (id == 0 && sheet.Columns.TryGetValue(column, out var metadata)) id = metadata.StyleId;
+            return snapshot.Styles[id];
         }
         public event PropertyChangedEventHandler? PropertyChanged;
         public void Refresh() => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs("Item[]"));

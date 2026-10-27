@@ -1,32 +1,33 @@
 # 06 · 质量、性能与交付
 
-本章定义 QuickExcel 从 0.1 原型到 Beta 的验证方法和放行条件。基线日期为 2026-10-22。
+本章定义 QuickExcel 从 0.1 原型、0.2 M1 试用版到后续 Beta 的验证与放行条件。基线日期为 2026-10-22。
 “当前证据”仅描述已存在的代码、用例或已有运行记录；“目标”与性能预算都是待实现、待测量的要求。
-本轮为文档工作，没有重新执行构建、测试或性能测量。
+首切片的 102 例及历史 native/WPF smoke 证据完整保留。0.2 Release solution 构建 0 警告/0 错误、Core 221 例通过；最终发布包 native/WPF smoke、ZIP 校验及解压后 WPF 复验均通过。详见[实施记录](08-baseline-and-progress.md)第 6 节，不据此关闭 M2–M6。
 
 相关设计见 [系统架构](02-system-architecture.md)、[文件格式](03-file-format-and-compatibility.md)、[脚本运行时](04-scripting-and-runtime.md)及[实施计划](05-implementation-plan.md)。
-单元格以独立、稀疏、带类型的领域模型为目标，ExcelIO 是存储适配器；计算只保留一个领域调度器。
+0.2 单元格已使用独立、稀疏、带类型的领域模型；Core 是纯 .NET 程序集，ExcelIO 和 QuickJS 位于 Infrastructure 适配器，计算结果统一通过 Session 门禁。
 XLSQ v2 的单元格权威数据仍在内嵌 `workbook.xlsx`，`state/document.json` 保存补充元数据，测试不得制造两套单元格真源。
 
 ## 1. 当前证据与尚未证明的事项
 
 | 范围 | 当前可核查证据 | 不能据此声称 |
 | --- | --- | --- |
-| Core 用例 | [WorkbookDocumentTests.cs](../../QuickExcel.Core.Test/WorkbookDocumentTests.cs) 有 19 个 Fact、1 个含 2 组 InlineData 的 Theory，共 21 个用例 | 本轮已重新跑过 21 个用例，或测试数量代表兼容性完整 |
-| 领域与计算 | 用例覆盖编辑、同表依赖、循环、异常公式、区域性、自定义函数、停用时保留缓存 | 跨表重算、完整 Excel 语义和独立类型模型已完成 |
-| 文件 | 有 XLSQ 往返、结果导出、稀疏坐标、失败保存、重复条目和尺寸限制用例 | 数字/日期/错误类型已完整保真，任意 XLSX 可无损往返 |
-| 原生运行时 | [smoke/Program.cs](../../QuickExcel.Scripting/smoke/Program.cs) 覆盖标量/数组参数、中文、中断后恢复、跨线程串行调用、栈和内存限制 | 在独立受限进程执行，或已隔离原生崩溃 |
-| WPF 集成 | [MainWindow.xaml.cs](../MainWindow.xaml.cs) 的 `--smoke-test` 驱动公式栏、撤销/重做、缓存恢复、拒绝粘贴及编辑中保存 | 覆盖真实键盘、IME、读屏、所有焦点变化或所有竞态 |
-| 发布 | [build-quickexcel.ps1](../../scripts/build-quickexcel.ps1) 运行 Core.Test 后发布 WPF 程序 | 已执行全部 ExcelIO 回归、native smoke、UI smoke 或干净机器验收 |
+| Core 回归 | `artifacts/validation/release-0.2/core.trx`：221 通过、0 失败、0 跳过；包含原型、领域、会话、facade、存储和计算适配 | 测试数量代表 Excel 兼容性完整，或后续变更无需复跑 |
+| 稀疏领域 | [WorkbookSnapshotTests.cs](../../QuickExcel.Core.Test/WorkbookSnapshotTests.cs)：远端单格、随机参考模型、稳定身份、快照与元数据隔离 | 格式 v1 已保留完整类型、日期或会话身份 |
+| 事务与会话 | [DocumentSessionTests.cs](../../QuickExcel.Core.Test/DocumentSessionTests.cs)、[WorkbookFacadeTests.cs](../../QuickExcel.Core.Test/WorkbookFacadeTests.cs)：预检/历史/通知、乱序结果、保存期间编辑与失败修订 | 已具备 worker 六元组协议或完整自动恢复 |
+| 计算与文件 | [CalculationAdapterTests.cs](../../QuickExcel.Core.Test/CalculationAdapterTests.cs)、[StorageAdapterTests.cs](../../QuickExcel.Core.Test/StorageAdapterTests.cs)：typed 输入边界、缓存阻塞、深复制、原子替换失败 | 跨表重算、增量计算、数字/日期类型往返或任意 XLSX 无损保真 |
+| 原生运行时 | [smoke/Program.cs](../../QuickExcel.Scripting/smoke/Program.cs) 覆盖标量/数组、中文、中断恢复、跨线程串行调用、栈/内存限制 | 独立进程、原生崩溃隔离或 OS 沙箱；旧 smoke 等于新包通过 |
+| WPF 集成 | [MainWindow.xaml.cs](../MainWindow.xaml.cs) 采用控制器并扩展 `--smoke-test`：待编辑保存、双向编辑器切换、撤销、新增表、脚本授权和计算失败恢复；发布版与 ZIP 解压后新目录复验通过 | 真实键盘、IME、读屏、所有焦点与竞态均已覆盖 |
+| 发布 | [build-quickexcel.ps1](../../scripts/build-quickexcel.ps1) 支持 fresh publish、native/WPF smoke、45 秒看门狗、metadata 和 ZIP/hash | 全部 ExcelIO 独立回归、原生干净重建或无 SDK 干净机器已通过 |
 
 当前 GUI smoke 会写出结果文本、示例 XLSQ、导出 XLSX 和预览 PNG；失败时写出 `smoke-error.txt`。
 已有测试结果必须关联提交/工作树摘要、命令、时间和产物，不能用旧 `smoke-result.txt` 为新代码背书。
-此前开发机曾记录 10,000 次简单 JS 调用约 **139 ms**；这是单次原型样本，硬件与预热口径未形成发布基线，本轮未复测。
+历史开发机记录过 10,000 次简单 JS 调用约 139 ms，首切片记录 135 ms；均为单次探索样本，不是固定机器/预热口径下的 p95，也不是 0.2 的性能承诺。
 当前 Core.Test 禁用并行执行；解除全局状态依赖、提供独立测试目录之后，才逐组启用并行。
 
-当前资源限制可从 [WorkbookDocument.cs](../../QuickExcel.Core/WorkbookDocument.cs)、[DocumentPackage.cs](../../QuickExcel.Core/DocumentPackage.cs) 和 [native/SOURCES.md](../../QuickExcel.Scripting/native/SOURCES.md) 核查：
+当前资源限制可从 [WorkbookDocument.cs](../../QuickExcel.Core/WorkbookDocument.cs)、[DocumentPackage.cs](../../QuickExcel.Infrastructure/DocumentPackage.cs) 和 [native/SOURCES.md](../../QuickExcel.Scripting/native/SOURCES.md) 核查：
 
-- Core：100,000 行、1,024 列、1,000,000 个计入限制的单元格；当前稠密列表会把部分空洞计入容量。
+- Core：64 张表、100,000 行、1,024 列、总计 1,000,000 个实际存储格。旧 IO 适配另有 1,000,000 个占位行/单元格预算；领域稀疏编辑不分配这些空洞。
 - UI：100,000 行 × 256 列；单次粘贴 20,000 格；模型允许的列数不等于界面可见列数。
 - 文件：输入/输出 64 MiB，ZIP 声明展开总量 256 MiB；XLSQ 外层最多 16 项，内嵌 XLSX 最多 2,048 项。
 - 脚本：源码 1 MiB；QuickJS 分配上限 64 MiB、JS 栈 256 KiB、每次载入或调用约 1 秒中断期限。
@@ -66,14 +67,14 @@ Undo/Redo 保存足够的前后状态；停用 JS 时撤销公式编辑，也必
 
 **QA-SES-01：会话与过期结果。** 用可控制的假调度器安排 A 请求慢于 B 请求返回，不使用 sleep 猜测竞争窗口。
 分别修改单元格、脚本、工作表结构，再切换/关闭/重开文档，验证旧结果不会写入新状态。
-结果匹配使用运行时文档的完整六元组 `(sessionId, workerInstanceId, requestId, revision, calculationGeneration, scriptGeneration)`。
+0.2 进程内路径实际匹配四元组 `(sessionId, inputRevision, calculationGeneration, scriptGeneration)`，由确定性假端口控制返回顺序。M4 worker 路径再扩展为完整六元组 `(sessionId, workerInstanceId, requestId, revision, calculationGeneration, scriptGeneration)`；当前没有虚构 worker 身份。
 另测输入 `revision` 不变时连续两轮重算倒序返回：后一轮计算代次发布后，前一轮必须被拒绝。
 文件的 `scriptRevision` / `bindingRevision` 不能替代会话 `scriptGeneration`；非计算请求的代次空值按协议严格匹配，不作通配。
 取消后到达的成功结果也必须丢弃；拒绝过期结果不应把当前文档误标为已计算或已保存。
 门禁：所有确定性乱序场景通过，事件订阅与会话资源随文档关闭释放。
 
 **QA-UI-01：提交契约。** 保留现有“正在编辑 DataGrid 时保存”的回归，并扩展公式栏、IME 组合输入、Tab/Enter、切表及关闭。
-保存应先完成有效编辑提交，再等待适用版本的计算/快照策略；失败必须保留用户输入并给出可恢复状态。
+保存应先完成有效编辑提交；输入验证失败必须保留编辑器内容并阻止保存。0.2 重算失败不能阻止有效输入落盘：保留旧缓存、提示其可能过期，再保存一致快照；不把旧结果标成 Fresh。任何脚本编辑先撤销授权，即使新源码未通过校验，也不能继续用旧授权。
 撤销快捷键应作用于当前编辑区；脚本编辑器文本历史与表格命令历史不能串用。
 门禁：Ctrl+S、另存为、关闭后保存、取消关闭、切表、打开新文档六条链路产生同一正确状态。
 
@@ -234,19 +235,15 @@ dotnet test .\QuickExcel.Core.Test\QuickExcel.Core.Test.csproj -c Release --arti
 dotnet run --project .\QuickExcel.Scripting\smoke\QuickExcel.Scripting.Smoke.csproj -c Release --artifacts-path .\artifacts\build
 ```
 
-UI smoke 是 GUI 进程，CI 要等待退出并检查 `ExitCode`，不能启动后立即读取上次留下的文件：
+UI smoke 是 GUI 进程；0.2 发布脚本已统一看门狗与证据检查，可从仓库根目录执行：
 
 ```powershell
-dotnet build .\QuickExcel.Desktop\QuickExcel.Desktop.csproj -c Release --artifacts-path .\artifacts\build -v minimal
-.\scripts\build-quickexcel.ps1
-$qaRun = Join-Path $PWD ("artifacts\qa-" + [Guid]::NewGuid().ToString('N'))
-$qaProcess = Start-Process -FilePath .\artifacts\QuickExcel\QuickExcel.exe `
-    -ArgumentList @('--smoke-test', ('"' + $qaRun + '"')) -PassThru -Wait -WindowStyle Hidden
-if ($qaProcess.ExitCode -ne 0) { throw "WPF smoke failed: $qaRun" }
+.\scripts\build-quickexcel.ps1 -RunSmoke -CreateArchive -OutputDirectory .\artifacts\QuickExcel-0.2
 ```
 
-脚本示例仅说明未来自动化入口；正式 CI 应加任务超时并同时校验新生成的 `smoke-result.txt`，截图仅作辅助证据。
-需要真实交互桌面的测试不得通过无 GUI 服务环境的“进程能启动”冒充通过。
+脚本为每次发布和 smoke 使用新的唯一目录，以 Hidden 方式启动本次发布的进程；最多等待 45 秒，只终止它自己创建的测试进程。退出码必须为 0，且本次目录的 `smoke-result.txt` 必须存在并以 PASS 开头。截图仅作辅助证据，真实交互桌面的验收不能被无 GUI 服务环境中的“能启动”替代。
+
+`-CreateArchive` 隐含 WPF smoke；`-SkipTests` 跳过状态会如实写入 metadata。发布固定使用 `-r win-x64 --self-contained false`，不能由开发机已有 Runtime 推导无需 Runtime。ZIP 从全新 publish tree 生成，避免混入旧输出目录的用户文件；版本、UTC 与随机后缀防止覆盖旧归档，旁边生成 SHA-256 文件。
 
 ## 9. 原生来源与发布验收
 
@@ -263,7 +260,7 @@ if ($qaProcess.ExitCode -ne 0) { throw "WPF smoke failed: $qaRun" }
 在无 SDK、无 Visual Studio、无 CMake 的干净标准用户环境测试；仅安装声明的 Desktop Runtime 后应可完整运行。
 缺失/错误架构 DLL、缺失 Runtime、无写权限和非 ASCII 路径应给出可理解错误，不破坏用户文件。
 后续若采用 self-contained，另测更大的包、补丁更新与 Runtime 安全维护，不混淆两种交付模式。
-Beta 前建立带 hash 的版本 ZIP；Windows 可执行文件/DLL 与安装器签名纳入发布阶段，ZIP 另附签名清单。
+0.2 已提供版本 ZIP/hash、BUILD-METADATA、release notes 与依赖来源的生成脚本，当前具体产物验收状态见实施记录。Windows 可执行文件/DLL 与安装器签名仍待后续发布阶段；哈希文件不等于数字签名。
 升级/回滚测试覆盖文件关联、用户设置、恢复副本和新旧格式；卸载不能删除用户工作簿。
 门禁：最终下载包在干净机器上跑完打开→编辑→JS→保存→重开→导出流程，签名/清单和发布说明一致。
 
@@ -272,7 +269,7 @@ Beta 前建立带 hash 的版本 ZIP；Windows 可执行文件/DLL 与安装器�
 | 阶段 | 交付内容 | 必须通过的质量门禁 |
 | --- | --- | --- |
 | M0 当前原型 | Windows WPF、ExcelIO 适配、同表计算、进程内 QuickJS、XLSQ v1 | 固定当前 21 用例/native/UI smoke 的证据；公布类型、跨表、沙箱边界 |
-| M1 领域/会话/命令 | 稀疏类型模型骨架、修订、事务、历史、统一命令入口 | QA-DOM-01、QA-CMD-01、QA-SES-01；UI 保存/撤销回归不退化 |
+| M1 / 0.2 试用版 | 稀疏类型模型、修订、事务、历史、适配端口和统一编辑入口 | 核心 QA-DOM/CMD/SES 与扩展 UI 保存/撤销/授权/失败计算回归通过；最终候选包待独立复验 |
 | M2 格式/类型 | 类型适配、XLSQ v2、迁移、兼容性报告 | QA-TYP-01、QA-FMT-01、QA-ZIP-01；QA-SAVE-01 基础失败路径 |
 | M3 跨表计算 | 单一领域调度器、跨表依赖、增量计算、缓存有效性 | QA-CALC-01 与过期结果门禁；所有现有 Formula 回归可解释 |
 | M4 worker 脚本 | IPC、取消、崩溃隔离、OS 隔离策略原型、授权边界 | QA-JS-01、QA-WRK-01；QA-OS-01 原型证据及 QA-PRIV-01 已交付路径验证 |

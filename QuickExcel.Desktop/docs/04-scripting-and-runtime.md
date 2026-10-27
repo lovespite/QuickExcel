@@ -1,32 +1,32 @@
 # 04 · 脚本与运行时
 
 本文定义 QuickExcel 的 JavaScript 执行边界、值协议、工作进程和操作脚本提交机制。
-“当前”指 M0 原型中已经存在的代码；“目标”及所有标注为“拟议”的 API 都需要后续实现。
+“当前”指 **0.2 试用版 M1** 的实际代码；“目标”及所有标注为“拟议”的 API 都需要后续实现。当前没有 ScriptWorker、IPC、动作脚本或 OS 隔离，不能视为 M4/M6 已交付。
 整体职责见 [系统架构](02-system-architecture.md)，文件持久化见 [文件格式与兼容性](03-file-format-and-compatibility.md)。
 
 ## 1. 当前实现与目标边界
 
-当前实现入口是 [QuickJsSession](../../QuickExcel.Scripting/QuickJsSession.cs) 与 [原生桥接](../../QuickExcel.Scripting/native/quickexcel-js.c)。
+当前端口定义在纯 Core 的 [WorkbookPorts.cs](../../QuickExcel.Core/WorkbookPorts.cs)。具体实现位于 Infrastructure 的 [QuickJsRuntimeFactory](../../QuickExcel.Infrastructure/Scripting/QuickJsRuntimeFactory.cs) 和 [LegacyWorkbookCalculator](../../QuickExcel.Infrastructure/Calculation/LegacyWorkbookCalculator.cs)，分别使用 `QuickExcel.Runtime`、`QuickExcel.Calculation` 命名空间；它们封装 [QuickJsSession](../../QuickExcel.Scripting/QuickJsSession.cs) 与 [原生桥接](../../QuickExcel.Scripting/native/quickexcel-js.c)。Core 不引用 ExcelIO、QuickExcel.Scripting 或 native DLL。
 
-| 项目 | M0 当前实现 | 目标实现 |
+| 项目 | 0.2 当前实现 | 目标实现 |
 | --- | --- | --- |
 | 引擎 | QuickJS-NG 0.17.0，Windows x64 原生 DLL | 继续使用固定版本、可复现构建的 QuickJS 引擎 |
-| 生命周期 | 每个启用脚本的文档一个进程内会话 | 每个启用脚本的文档一个专用工作进程 |
+| 生命周期 | 每轮已获授权的完整重算新建独立进程内上下文，结束或失败后释放 | 每文档专用工作进程；继续保持每轮运行上下文隔离 |
 | 串行化 | 托管锁串行调用，每次更新 QuickJS 栈顶 | 工作进程内单一执行线程、单一请求队列 |
-| 执行上限 | 每次原生调用约 1 秒中断期限 | 保留引擎中断，增加宿主看门狗与进程终止 |
+| 执行上限 | 每次原生调用约 1 秒；整轮 5 秒预算，取消/整轮超限不提交部分结果 | 保留引擎中断，增加宿主看门狗与进程终止 |
 | 引擎内存 | 64 MiB QuickJS 分配上限 | 保留引擎限额，增加独立的进程资源预算 |
 | JS 栈 | 256 KiB | 保持可配置、有版本的宿主策略 |
 | 输入/输出 | 输入检查序列化字符串长度约 4 MiB；输出 4 MiB UTF-8 字节 | 按 UTF-8 字节严格限制 IPC 帧、嵌套深度与集合数量 |
-| 调用结果 | 有限数字、文本、布尔、null；undefined 归一为 null | 带类型的 Number/Text/Boolean/Error/Blank 协议 |
-| 区域参数 | 兼容层传递一维原始字符串数组 | v1 保持兼容，v2 显式传递二维区域形状 |
+| 调用结果 | 有限数字、文本、布尔、null；undefined 归一为 null，宿主 null 转 Blank；文本错误拼写仍为 Text | 版本化 Number/Text/Boolean/Error/Blank IPC 协议 |
+| 区域参数 | 一维行主序数组，包含矩形内空格；元素保留数字/文本/布尔，Blank 输入为 `""` | 保留 v1 一维形状，v2 显式传递二维区域形状 |
 | 运行日志 | 最多保存 100 条，每条截断至 4,000 个 JS 字符 | 按请求关联、限流、可定位源码的结构化诊断 |
 | 工作簿访问 | 未暴露读写对象 | UDF 只接收参数；操作脚本接收快照并生成变更集 |
-| 脚本授权 | 打开不执行；用户应用后运行；源码变化停用旧会话 | 本地显式授权绑定文档会话、源码摘要与运行策略 |
+| 脚本授权 | 打开不执行；用户应用后运行；源码变化撤销授权并使旧代次失效 | 增加源码摘要与运行策略绑定 |
 | 操作脚本 | 尚未实现 | 变更集经文档命令队列原子提交，支持一次撤销 |
 
 当前 `QuickJsSession` 已提供构造、`FunctionNames`、`Invoke`、`GetLogs`、`Dispose`。
-当前 Core 将 JS 的 null 结果转为空字符串，将执行失败显示为 `#SCRIPT!`；这还不是完整的类型化错误模型。
-当前没有 `CancellationToken`、版本化 IPC、工作进程恢复、脚本断点或 OS 访问隔离。
+当前适配器将 JS 的 null 结果转为领域 Blank，执行异常转为 `CellErrorCode.Script` 并附诊断；返回的 `"#SCRIPT!"` 或 `"#VALUE!"` 字符串保持 Text。默认先传播真实 Error，不把它作为普通字符串调用 JS。
+计算端口已有 `CancellationToken`，在操作边界检查；原生调用期间依靠约 1 秒 native 期限返回，令牌不能直接抢占正在执行的 QuickJS。当前没有版本化 IPC、工作进程恢复、脚本断点或 OS 访问隔离。
 已有锁和 `JS_UpdateStackTop` 允许顺序切换托管线程，但不允许同一运行时并发执行。
 核心不链接 `quickjs-libc`，未注册 `std`、`os`、文件、网络、模块加载器或 CLR 桥接。
 
@@ -36,26 +36,20 @@
 Desktop 脚本编辑器 / 运行记录
         │ 用户意图、取消请求
         ▼
-DocumentSession / 文档命令队列  ← 唯一可提交文档变更的入口
-        │ 不可变参数快照、revision、calculationGeneration、scriptGeneration
+DocumentSession / 串行写入门禁  ← 唯一可提交文档变更的入口
+        │ 不可变快照、Stamp(SessionId, InputRevision, CalculationGeneration, ScriptGeneration)
         ▼
-CalculationCoordinator / ScriptCoordinator
-        │ IScriptRuntime
-        ├── InProcessQuickJsRuntime（M1 过渡适配器）
-        └── WorkerScriptRuntime（M4 默认）
-                   │ 有界、版本化 IPC
-                   ▼
-          QuickExcel.ScriptWorker
-                   │ 串行请求、资源预算
-                   ▼
-            QuickJS 原生桥接
+IWorkbookCalculator → LegacyWorkbookCalculator（Infrastructure）
+        │ IScriptRuntimeFactory / IScriptRuntime
+        ▼
+QuickJsRuntimeFactory → QuickJsSession → QuickJS 原生桥接（进程内）
 ```
 
 文档领域层持有工作簿、类型、命令历史和修订号；运行时不能拥有这些状态的权威副本。
 计算协调器决定需要哪些输入、何时重算以及结果是否仍然有效；运行时只执行明确的请求。
-脚本协调器管理源码、授权、注册表、工作进程和诊断，不直接写入 `XlWorkbook`。
-工作进程仅接收必要数据的复制快照；禁止跨 IPC 传递托管对象引用、文件句柄或活动工作簿代理。
-UI 不持有原生指针，也不在 UI 线程执行脚本、等待工作进程退出或序列化大块区域。
+当前会话管理源码、授权和代次，适配器管理每轮注册表与原生资源，不写入 `XlWorkbook`。没有独立 ScriptCoordinator 或 worker。
+M4 目标工作进程仅接收必要数据的复制快照；禁止跨 IPC 传递托管对象引用、文件句柄或活动工作簿代理。
+UI 不持有原生指针；0.2 在后台任务执行计算与 I/O，期间禁用工作区/工具栏。工作进程生命周期与边计算边编辑体验仍待后续实现。
 
 ## 3. 脚本 API：先保持现有函数可用
 
@@ -72,7 +66,7 @@ quickExcel.functions.register("TOTAL", values =>
 包升级为 `scripts/main.js` 与模块映射，不会自动改变函数注册写法或区域参数语义。
 当前函数名只允许英文字母，不区分大小写，注册后转为大写；重复名称在同一脚本中报错。
 不能在 M1 或 M2 提前宣传 `JS.DISCOUNT`：当前公式解析器尚未支持这种函数命名。
-后续注册表必须明确定义与内置名称冲突的错误；不允许无提示覆盖 `SUM` 等内置函数。
+0.2 沿用原型规则：脚本可覆盖 `SUM` 等内置名称，启用时优先调用该脚本函数；停用后恢复内置函数。后续注册表要通过版本化契约明确冲突处理，不能把 M3 的禁止冲突规则误称为当前行为。
 
 以下描述符接口是拟议的 v2 API，必须等到 M3 支持命名空间解析后再开放：
 
@@ -95,7 +89,7 @@ v1 函数名保持可解析，不自动改写用户现有公式；命名空间�
 
 ## 4. 类型桥接与区域版本
 
-目标 IPC 使用判别联合表示值，避免把 `"00123"`、`123`、空值和错误都压成字符串。
+0.2 进程内计算已经区分 Number/Text/Boolean/Error/Blank，直接单元格引用及脚本返回值不按文本外观猜型。内置数学函数和运算仍保留旧数字文本转换规则；这不是完整 Excel 类型语义。目标 IPC 使用下述判别联合表示值，避免把 `"00123"`、`123`、空值和错误都压成字符串。
 
 | 类型 | 拟议载荷 | JS v2 侧语义 |
 | --- | --- | --- |
@@ -111,8 +105,9 @@ v1 函数名保持可解析，不自动改写用户现有公式；命名空间�
 日期在领域层采用数值序列、格式和工作簿 1900/1904 日期系统标志；此阶段不会隐式转换为 JS `Date`。
 需要日期语义的函数显式接收序列和约定，后续辅助 API 再定义时区、闰年兼容与舍入规则。
 
-v1 兼容模式保持当前区域行为：按既定顺序展开为一维原始字符串数组，由脚本自行转换。
-此模式不能区分区域中的空单元格与空字符串，也不承诺恢复二维坐标，迁移时必须保留该限制。
+0.2 保留 v1 的一维数组形状，按矩形行主序传递，A1/A3 有值而 A2 为空时仍传三个位置。元素使用当前内存中的数字、文本或布尔类型，空位置及 Blank 输入转为 `""`；因此区域中的 Blank 与空字符串仍无法区分。与旧原型“区域元素全部字符串”不同，脚本应显式使用 `Number(value)` 处理数字文本，不能依赖所有元素均有字符串方法。
+显式范围最多展开 1,000,000 个位置（包括空格），超量在调用 JS 前拒绝；旧解析器支持的整列写法如 `TOTAL(A)` 只展开到该表最后实际存储行。二维尺寸没有作为参数提供。原生调用仍另受输入约 4 MiB 限制；满足格数限制不保证满足字节限制。
+文件 v1 仍会丢失部分类型；重新打开字面量为 Text，公式缓存为 Stale。内存 typed bridge 不等于文件类型保真，具体见[文件限制](03-file-format-and-compatibility.md#2-02-沿用的-xlsq-v1)。
 v2 区域显式携带 `rows`、`columns` 与行主序 `values`，并可带只读的来源坐标描述。
 例如 2×2 区域的拟议载荷为：
 
@@ -139,11 +134,10 @@ UDF 的契约是仅依赖显式参数、返回一个值；没有修改文档、�
 目标严格执行策略必须明确：禁用或替换非确定时间/随机源，限制可变共享状态，约束动态代码入口。
 若提供时间或随机数，使用宿主显式注入的计算批次时间/种子，并把它们纳入输入和缓存键。
 严格策略需要专门的实现与反例测试；完成之前不宣称“任意 JS 函数天然确定”。
-M3 必须先定义保守调度契约，再实现增量计算；该契约是 `CALC-003` 的前置条件，不能等到 M4 才决定。
-在尚未证明 UDF 纯度时，含 JS 的工作簿每轮重建运行上下文，重新加载当前已授权源码，按稳定顺序完整重算。
+M1 已先落实保守路径，M3 的 `CALC-003` 必须继承这一前置契约：含 JS 的工作簿每轮重建运行上下文，重新加载当前已授权源码，按稳定顺序完整重算。
 即使某个 UDF 的显式输入没有变化，也不复用该 UDF 或其下游在上一轮的结果；不以局部脏标记跳过它们。
 超时或能力不支持导致未完成时，保存结果仅供过期预览，不能算作该轮完整重算成功。
-无 JS 的确定性公式子集可以使用增量调度；全量/增量等价证明仅覆盖受支持的确定性公式子集。
+无 JS 的确定性公式子集未来可使用增量调度；0.2 同样完整重算，尚无增量结果等价承诺。
 每轮重建消除跨轮闭包残留，但无法证明任意 JS 的数学纯度；同轮全局状态、时间和随机仍按上述策略处理。
 M4 worker 实现继承此契约；严格策略的实现与反例测试未通过前，不开放 JS UDF 结果复用。
 缓存新鲜度只表示给定源码、绑定、输入与执行策略下该轮计算已完成，不保证函数满足数学纯度。
@@ -153,24 +147,28 @@ M4 worker 实现继承此契约；严格策略的实现与反例测试未通过�
 
 ## 6. 运行时门面与生命周期
 
-M1 引入拟议的 `IScriptRuntime`，先用适配器封装现有 `QuickJsSession`，避免计算层依赖 P/Invoke。
-接口形状如下；具体类型与命名在 M1 契约测试中冻结，目前均未实现：
+M1 已实现的同步端口如下；定义位于 Core，唯一 `QuickJsSession` 构造适配器位于 Infrastructure。工厂每轮创建新实例，计算结束或抛错通过 `Dispose` 释放。
 
 ```csharp
-public interface IScriptRuntime : IAsyncDisposable
+public interface IScriptRuntimeFactory
 {
-    Task<ScriptLoadResult> LoadAsync(ScriptLoadRequest request, CancellationToken cancellationToken);
-    Task<ScriptBatchResult> InvokeBatchAsync(ScriptBatchRequest request, CancellationToken cancellationToken);
-    Task<ScriptActionResult> RunActionAsync(ScriptActionRequest request, CancellationToken cancellationToken);
+    IScriptRuntime Create(string source);
+}
+
+public interface IScriptRuntime : IDisposable
+{
+    IReadOnlyList<string> FunctionNames { get; }
+    object? Invoke(string name, IReadOnlyList<object> arguments);
+    IReadOnlyList<string> GetLogs();
 }
 ```
 
-取消令牌是门面契约；进程内适配器必须如实报告它只能在请求边界取消或依靠现有原生期限结束。
+取消令牌位于 `IWorkbookCalculator.Calculate(request, cancellationToken)`，不在原生 `Invoke` 上；进程内适配器只能在操作边界取消或依靠现有原生期限结束。整轮 5 秒预算到期和取消均不返回部分结果，现有缓存保留为过期；单个 UDF 执行失败则作为该格 Script 错误参与完整结果。
 不得通过 `Task.Run` 外层取消后返回来假装原生执行已经停止，更不能让仍在执行的会话参与下一次计算。
-工作进程实现通过中断信号和宿主终止能力完成真正的执行取消。
+M4 的异步批处理/动作接口、工作进程中断信号和宿主终止能力尚未实现。
 
 目标状态包括 `Disabled → Starting → Loading → Ready → Executing`，以及 `Faulted/Stopping/Disposed`。
-源码编辑、函数绑定变化、启用状态变化、关闭文档均使旧注册表失效，取消排队任务，并提升 `scriptGeneration`。
+0.2 源码编辑和启停使旧代次失效；重新应用同一源码也提升 `ScriptGeneration` 与 `CalculationGeneration`。源码修改推进输入 Revision 并撤销授权，同时保留单元格撤销/重做历史；单元格撤销不恢复旧源码或旧授权。脚本编辑控件管理自己的源码历史。启停本身不推进输入 Revision、不改变 dirty；关闭会话拒绝所有后续提交。
 加载成功后一次性发布新注册表；加载失败不保留部分注册的函数，也不默默回退执行旧源码。
 脚本禁用时保留可展示的保存结果，但将其标记为未重算/过期；这不允许继续执行旧运行时。
 每次重新打开文档生成新的文档会话 ID；进程重启生成新的 worker 实例 ID，防止旧回复混入新实例。
@@ -185,7 +183,7 @@ public interface IScriptRuntime : IAsyncDisposable
 | `CalculationGeneration` / IPC `calculationGeneration` | 当前会话的重算请求代次；同一文档修订再次重算也获得新代次 |
 
 文件的 `contentRevision`、`scriptRevision`、`bindingRevision` 用于持久化内容和缓存来源核验，不能恢复运行授权。
-重新打开时建立新的运行代次；不得直接把保存的 `scriptRevision` 当作 `ScriptGeneration`，或接受旧会话的消息。
+重新打开时建立新的会话与运行代次；不得直接把保存的 `scriptRevision` 当作 `ScriptGeneration`，或接受旧会话的消息。表中的文件脚本/绑定修订属于 v2 目标，0.2 v1 尚未持久化它们。
 
 ## 7. 工作进程协议与资源预算
 
@@ -236,13 +234,13 @@ UDF 批次的 `calculationGeneration` 必填；动作、加载及非计算控制
 
 ## 8. UDF 结果提交与崩溃恢复
 
-计算开始时捕获文档 `revision`、`calculationGeneration`、`scriptGeneration`、函数注册表快照与显式输入。
-工作进程返回结果包后，计算协调器核对完整身份元组，领域层在命令队列中再次核对全部代次后发布。
+0.2 计算开始捕获 `CalculationStamp(SessionId, InputRevision, CalculationGeneration, ScriptGeneration)` 和不可变快照。`TryCommitCalculation` 在唯一写入门禁内同时核对完整四元组、会话未关闭及每格代次；整批验证后才发布，接受后消费代次，重复结果也被拒绝。
+M4 工作进程还需在该门禁之外核对 worker/request 身份；这些 IPC 字段并未出现在当前进程内结果协议中。
 同一 revision 下后发重算也会使前一次计算代次过期；不能只比较输入修订和脚本代次。
-过期结果被丢弃并安排新的计算；不能凭单元格坐标相同就覆盖用户后来的编辑。
+过期结果被丢弃；当前 Core 不自动排队重试，由调用方发起新的计算，不能凭单元格坐标相同就覆盖用户后来的编辑。
 计算结果更新与用户编辑的修订规则由领域层统一定义，避免计算自身无限触发重算。
 
-进程退出、管道断开或协议失效时，待处理请求全部结束为受控错误，UI 和文档会话保持可用。
+以下为 M4 目标恢复机制，0.2 原生崩溃仍可能影响桌面进程：进程退出、管道断开或协议失效时，待处理请求全部结束为受控错误，UI 和文档会话保持可用。
 保存和编辑不依赖 worker 存活；未提交的计算结果和操作变更集全部丢弃。
 恢复时重建空运行时，仅在当前源码的本地授权仍有效时加载相同 generation 的源码。
 原请求不自动重放；用户发起重新计算后产生新的请求，操作脚本必须重新显式运行。
@@ -288,7 +286,7 @@ M4 动作持久化使用 `formatVersion: 2`、`scriptApiVersion: 2`，并在 `re
 `.xlsq` 中保存源码和兼容性元数据，不保存可使宿主自动授权的有效许可。
 manifest 中的作者、来源、能力声明或 `trusted` 字段不能赋予文件、网络或脚本执行权限。
 打开、预览、导入、保存、导出、索引和生成缩略图均不得隐式执行嵌入脚本。
-启用操作由本地用户明确发起，绑定源码摘要；源码变化撤销已有授权并停用旧代码。
+启用操作由本地用户明确发起；0.2 绑定当前会话源码和代次，源码变化撤销已有授权并停用旧代码。源码摘要与运行策略绑定是后续目标。
 在禁用状态展示已有缓存结果与明确的过期状态，不通过显示单元格间接启动脚本。
 
 进程隔离提供崩溃隔离和可终止执行；同权限进程并不因此失去用户文件或网络访问权限。
@@ -328,15 +326,15 @@ M2 只保存和验证 v2 的 `scripts.entryModules`、`scripts.modules` 内容�
 | 任务 | 阶段 | 交付与完成条件 |
 | --- | --- | --- |
 | JS-001 | M0 当前 | 固定引擎、原生限额、v1 注册/调用及 smoke；保留事实基线 |
-| JS-002 | M1 领域/会话 | IScriptRuntime 门面与进程内适配器；领域层不再依赖 QuickJsSession |
-| JS-003 | M1 领域/会话 | 会话/请求身份、revision、两类 generation 与文件脚本/绑定修订分离；变更撤销旧请求 |
+| JS-002 | M1 已实现 | Core 同步运行时端口；Infrastructure 每轮创建/释放进程内适配器；Core 无 native/旧库引用 |
+| JS-003 | M1 已实现 | SessionId/InputRevision/CalculationGeneration/ScriptGeneration 整体提交门禁；源码/启停/失败使旧请求失效；v2 文件修订留待 M2 |
 | JS-004 | M2 文件 | 持久化脚本 API/兼容元数据；打开不运行；迁移不导入授权；只存源码 |
 | JS-005 | M3 计算 | 类型化值与 Error 传播、v1 区域兼容、v2 二维区域契约测试 |
 | JS-006 | M3 计算 | 命名空间解析完成后开放描述符；注册冲突、元数据和代次失效规则 |
 | JS-007 | M4 worker/脚本/动作 | 专用 worker、包内模块加载、握手、帧限额、串行执行、反压与完整身份核验 |
 | JS-008 | M4 worker/脚本/动作 | 取消、中断、看门狗、终止、退出处理与有界恢复；桌面不崩溃 |
 | JS-009 | M4 worker/脚本/动作 | 快照动作、分离上下文、patch/CAS/撤销；动作绑定保存重开不执行的往返验收 |
-| JS-010 | M3 契约 / M4 实现 | M3 在 CALC-003 前定义含 JS 每轮重建与完整重算契约；M4 落地 worker 严格策略及反例测试 |
+| JS-010 | M1 保守路径 / M3–M4 扩展 | M1 已每轮重建且完整重算；M3 继承契约，M4 落地 worker 严格策略及反例测试 |
 | JS-011 | M5 桌面体验 | 显式启用、过期状态、运行/停止、源码定位、错误及日志界面 |
 | JS-012 | M6 Beta | 复核 M4 隔离策略；执行 OS I/O 越界与净环境质量放行测试，确定发布声明 |
 | JS-013 | M6 Beta | 引擎升级流程、许可证/来源清单、崩溃与性能回归、净环境安装验证 |

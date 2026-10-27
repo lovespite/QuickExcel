@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Xml;
 using System.Xml.Linq;
 using ExcelIO;
+using QuickExcel.Storage;
 
 namespace QuickExcel.Core;
 
@@ -30,7 +31,7 @@ internal static class DocumentPackage
         ValidateArchive(archive, maxEntries: 16);
         using var manifest = JsonDocument.Parse(ReadEntry(archive, "manifest.json", 64 * 1024));
         if (!manifest.RootElement.TryGetProperty("formatVersion", out var version) || !version.TryGetInt32(out var versionNumber) || versionNumber != 1)
-            throw new InvalidDataException("不支持此 XLSQ 文件版本，当前原型仅支持 formatVersion 1。");
+            throw new InvalidDataException("不支持此 XLSQ 文件版本，0.2 试用版仅支持 formatVersion 1。");
         if (manifest.RootElement.TryGetProperty("format", out var format) && format.GetString() != "QuickExcel")
             throw new InvalidDataException("文件不是 QuickExcel XLSQ 工作簿。");
         var script = Utf8.GetString(ReadEntry(archive, "scripts/functions.js", MaxScriptBytes));
@@ -124,6 +125,7 @@ internal static class DocumentPackage
             }
             row.Cells = cells;
         }
+        LegacyWorkbookAdapter.RegisterLayout(workbook, layouts);
         return workbook;
     }
 
@@ -177,6 +179,7 @@ internal static class DocumentPackage
     private static List<Dictionary<int, List<int>>> ValidateWorksheetDimensions(ZipArchive archive)
     {
         long totalCells = 0;
+        long totalRows = 0;
         var layouts = new List<Dictionary<int, List<int>>>();
         var settings = new XmlReaderSettings { DtdProcessing = DtdProcessing.Prohibit, XmlResolver = null, MaxCharactersInDocument = MaxFileBytes };
         foreach (var entry in ResolveWorksheets(archive, settings))
@@ -195,6 +198,8 @@ internal static class DocumentPackage
                     var index = reader.GetAttribute("r");
                     var nextRow = index is null ? 0 : ParsePositive(index, WorkbookDocument.MaxRows);
                     if (nextRow <= currentRow) throw new InvalidDataException("工作表的行地址缺失、重复或未按顺序排列。");
+                    totalRows += nextRow - currentRow;
+                    if (totalRows > WorkbookDocument.MaxCells) throw new InvalidDataException("工作簿需要过多占位行，超过旧版适配器容量限制。");
                     currentRow = nextRow;
                     if (currentRow > WorkbookDocument.MaxRows) throw new InvalidDataException("工作表行数超过原型限制。");
                     layout[currentRow - 1] = [];
@@ -277,6 +282,7 @@ internal static class DocumentPackage
 
     private static XlWorkbook Clone(XlWorkbook workbook, bool valuesOnly)
     {
+        LegacyWorkbookAdapter.ValidateLegacyBudget(workbook);
         var clone = new XlWorkbook();
         foreach (var sheet in workbook)
         {
@@ -285,17 +291,17 @@ internal static class DocumentPackage
             target.Options.DefaultRowHeight = sheet.Options.DefaultRowHeight;
             target.Options.TabColor = sheet.Options.TabColor;
             foreach (var (index, column) in sheet.Columns)
-                target.Columns[index] = new XlColumn { Width = column.Width, Hidden = column.Hidden, Style = column.Style };
+                target.Columns[index] = new XlColumn { Width = column.Width, Hidden = column.Hidden, Style = LegacyWorkbookAdapter.CloneStyle(column.Style) };
             target.MergedCells.AddRange(sheet.MergedCells);
             foreach (var row in sheet.Rows)
             {
                 var targetRow = target.NewRow();
                 targetRow.Height = row.Height;
                 targetRow.Hidden = row.Hidden;
-                targetRow.Style = row.Style;
+                targetRow.Style = LegacyWorkbookAdapter.CloneStyle(row.Style);
                 foreach (var cell in row.Cells)
                 {
-                    var targetCell = new XlCell(targetRow) { Style = cell.Style };
+                    var targetCell = new XlCell(targetRow) { Style = LegacyWorkbookAdapter.CloneStyle(cell.Style) };
                     // SetFormula(null) is not used: assigning cached text must not accidentally retain formulas.
                     if (!valuesOnly && cell.HasFormula) targetCell.SetFormula(cell.Formula!, cell.Value);
                     else targetCell.SetCalculatedValue(cell.Value);
@@ -303,9 +309,10 @@ internal static class DocumentPackage
                 }
             }
             foreach (var image in sheet.Images)
-                target.AddImage(image.Bytes, image.Extension, image.RowIndex, image.ColumnIndex, image.RowSpan, image.ColumnSpan, image.PlaceInCell);
+                target.AddImage(image.Bytes.ToArray(), image.Extension, image.RowIndex, image.ColumnIndex, image.RowSpan, image.ColumnSpan, image.PlaceInCell);
         }
         if (clone.Count == 0) clone.NewWorksheet("Sheet1");
         return clone;
     }
 }
+

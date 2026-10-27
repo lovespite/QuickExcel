@@ -21,7 +21,7 @@
     <StackPanel>
      <StackPanel Orientation="Horizontal">
       <TextBlock Text="QuickExcel" FontSize="24" FontWeight="SemiBold"/>
-      <Border Background="#E1ECE4" CornerRadius="4" Margin="12,7,0,4" Padding="6,2"><TextBlock Text="PREVIEW 0.1" FontSize="10" Foreground="#52715E"/></Border>
+      <Border Background="#E1ECE4" CornerRadius="4" Margin="12,7,0,4" Padding="6,2"><TextBlock Text="PREVIEW 0.2.1" FontSize="10" Foreground="#52715E"/></Border>
      </StackPanel>
      <TextBlock Text="表格，遇见 JavaScript。" Foreground="{StaticResource Muted}" FontSize="12" Margin="1,4,0,0"/>
     </StackPanel>
@@ -40,8 +40,8 @@
     <Button Content="另存为…" Click="SaveAs_Click"/>
     <Button Content="导出 .xlsx" Click="Export_Click" ToolTip="将所有公式按当前计算结果导出，不包含脚本"/>
     <Border Width="1" Background="#D7E1DA" Margin="7,5,14,5"/>
-    <Button x:Name="UndoButton" Content="撤销" Click="Undo_Click" ToolTip="撤销单元格编辑 · Ctrl+Z"/>
-    <Button x:Name="RedoButton" Content="重做" Click="Redo_Click" ToolTip="重做单元格编辑 · Ctrl+Y"/>
+    <Button x:Name="UndoButton" Content="撤销" Click="Undo_Click" ToolTip="撤销单元格或工作表操作 · Ctrl+Z"/>
+    <Button x:Name="RedoButton" Content="重做" Click="Redo_Click" ToolTip="重做单元格或工作表操作 · Ctrl+Y"/>
    </WrapPanel>
    <Button Grid.Column="1" Content="载入示例" Click="Demo_Click" Margin="0"/>
   </Grid>
@@ -57,14 +57,14 @@
       <Grid.ColumnDefinitions><ColumnDefinition Width="66"/><ColumnDefinition Width="28"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
       <Border Background="#F1F5F1" CornerRadius="4"><TextBlock x:Name="CellAddress" Text="A1" FontFamily="Consolas" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
       <TextBlock Grid.Column="1" Text="ƒx" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#187553" FontSize="16"/>
-      <TextBox Grid.Column="2" x:Name="FormulaBar" BorderThickness="0" VerticalContentAlignment="Center" FontFamily="Consolas, Microsoft YaHei UI" KeyDown="FormulaBar_KeyDown" ToolTip="输入值或以 = 开头的公式，按 Enter 应用"/>
+      <TextBox Grid.Column="2" x:Name="FormulaBar" BorderThickness="0" VerticalContentAlignment="Center" FontFamily="Consolas, Microsoft YaHei UI" KeyDown="FormulaBar_KeyDown" TextChanged="FormulaBar_TextChanged" ToolTip="输入值或以 = 开头的公式，按 Enter 应用"/>
       <Button Grid.Column="3" Content="↵" Padding="10,3" Margin="3,0,0,0" Click="ApplyCell_Click" ToolTip="应用公式栏内容"/>
      </Grid>
      <DataGrid Grid.Row="1" x:Name="SheetGrid" AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False" CanUserReorderColumns="False" CanUserSortColumns="False"
        SelectionUnit="Cell" SelectionMode="Extended" HeadersVisibility="All" RowHeaderWidth="45" RowHeight="31" ColumnHeaderHeight="32"
        GridLinesVisibility="All" HorizontalGridLinesBrush="#E7ECE8" VerticalGridLinesBrush="#E7ECE8" Background="White" BorderThickness="0,1,0,1" BorderBrush="#DCE5DF"
        EnableRowVirtualization="True" EnableColumnVirtualization="True" VirtualizingPanel.VirtualizationMode="Recycling" ScrollViewer.CanContentScroll="True"
-       LoadingRow="Grid_LoadingRow" CurrentCellChanged="Grid_CurrentCellChanged" PreparingCellForEdit="Grid_PreparingCellForEdit" CellEditEnding="Grid_CellEditEnding" PreviewKeyDown="Grid_KeyDown">
+       LoadingRow="Grid_LoadingRow" CurrentCellChanged="Grid_CurrentCellChanged" BeginningEdit="Grid_BeginningEdit" PreparingCellForEdit="Grid_PreparingCellForEdit" CellEditEnding="Grid_CellEditEnding" PreviewKeyDown="Grid_KeyDown">
       <DataGrid.Resources>
        <Style TargetType="DataGridColumnHeader"><Setter Property="Background" Value="#F3F6F3"/><Setter Property="Foreground" Value="#75847A"/><Setter Property="HorizontalContentAlignment" Value="Center"/><Setter Property="BorderThickness" Value="0,0,1,0"/><Setter Property="BorderBrush" Value="#DCE5DF"/><Setter Property="FontSize" Value="11"/></Style>
        <Style TargetType="DataGridRowHeader"><Setter Property="Background" Value="#F3F6F3"/><Setter Property="Foreground" Value="#75847A"/><Setter Property="HorizontalContentAlignment" Value="Center"/><Setter Property="FontSize" Value="11"/></Style>

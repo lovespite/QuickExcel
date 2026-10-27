@@ -1,48 +1,51 @@
 # QuickExcel 架构与实施文档
 
-设计基线：2026-10-22。适用范围：从当前 Windows 桌面原型演进到可供日常试用的 Beta。产品名称为 **QuickExcel**，专属文件扩展名为 **`.xlsq`**。
+设计基线：2026-10-22。产品为 **QuickExcel**，工作簿扩展名为 **`.xlsq`**。长期目标是 Windows x64 Beta；本次明确交付 **0.2 试用版、M1 范围**，不把 M2–M6 的目标能力算入已完成范围。
 
-QuickExcel 提供本地表格编辑、Excel 文件交换和随工作簿保存的 JavaScript 计算与操作能力。采用 WPF 桌面界面、C# 文档与计算层、QuickJS 脚本运行时。首先解决数据类型、重算正确性和保存可靠性，再扩展编辑体验与自动化。
+0.2 已将桌面编辑接入独立稀疏领域快照、DocumentSession、事务命令和撤销历史，计算与保存通过端口使用同一版本状态。Core 为纯 .NET 程序集，ExcelIO 与 QuickJS 适配位于 Infrastructure。仍使用 XLSQ v1、同表兼容计算和进程内可信脚本执行。
 
 ## 阅读顺序
 
 | 文档 | 解决的问题 |
 | --- | --- |
-| [产品范围](01-product-and-scope.md) | 为谁服务，Beta 包含什么，哪些功能暂缓 |
-| [系统架构](02-system-architecture.md) | 模块依赖、数据模型、编辑事务、线程与重算流程 |
-| [文件格式与兼容性](03-file-format-and-compatibility.md) | XLSQ v1/v2、迁移、XLSX 导入导出和保存恢复 |
-| [脚本与运行时](04-scripting-and-runtime.md) | QuickJS、公式函数、操作脚本、进程通信与权限边界 |
-| [实施计划](05-implementation-plan.md) | M0–M6 依赖、任务清单、交付顺序和退出条件 |
-| [质量性能与交付](06-quality-performance-and-delivery.md) | 回归、故障注入、性能预算、CI 与发布验证 |
-| [架构决策](07-architecture-decisions.md) | 已选方向、取舍、待验证选项及重新评估条件 |
+| [产品范围](01-product-and-scope.md) | 长期 Beta 的产品边界和暂缓功能 |
+| [系统架构](02-system-architecture.md) | 当前模块依赖及后续数据/计算设计 |
+| [文件格式与兼容性](03-file-format-and-compatibility.md) | 当前 XLSQ v1、目标 v2、类型与保存协议 |
+| [脚本与运行时](04-scripting-and-runtime.md) | 当前 QuickJS 适配、目标 worker/动作/权限边界 |
+| [实施计划](05-implementation-plan.md) | M1 进展、M2–M6 依赖与退出条件 |
+| [质量性能与交付](06-quality-performance-and-delivery.md) | 已有证据、候选包验收和未来质量门禁 |
+| [架构决策](07-architecture-decisions.md) | 已选方向、取舍及待验证事项 |
+| [基线与实施记录](08-baseline-and-progress.md) | 初始 102 例基线和 0.2 新验证分别记载 |
 
-开发时先读系统架构与实施计划，再进入对应专题。格式、脚本协议和质量指标分别以对应专题为准，避免把同一份契约复制到多个位置。
+用户操作见[试用说明](../README.md)，公开限制和运行时要求见[发布说明](../RELEASE-NOTES.md)。开发时先读系统架构与实施计划，再进入专题。
+
+最新修复版为 0.2.1：关闭确认延后到 WPF Closing 事件返回后执行，并新增真实窗口关闭回归。0.2.0 的发布记录保留在实施记录第 6 节，关闭缺陷与 0.2.1 验证见第 7 节。
 
 ## 状态约定
 
-- **当前实现**：现有源码中的行为，范围以原型说明和测试为准。
-- **目标设计**：本轮确定的实现方向，尚不能当成已支持的功能。
-- **待验证决策**：有明确验证任务和截止里程碑，验证后更新决策记录。
-- **后续范围**：不阻挡本次 Beta，例如跨平台桌面、云协作、动态数组和异步公式。
+- **当前实现**：已在源码中接入的行为；验证状态以实施记录为准。
+- **目标设计**：尚待实施的格式、worker、完整桌面和 Beta 能力。
+- **待验证决策**：有明确实验或里程碑，未完成取证前不视为通过。
+- **后续范围**：本次 0.2 交付不包含的功能，不因已有基础类或局部测试而关闭整个任务。
 
-除明确标为“当前实现”的段落外，架构、API 示例、目录拆分、格式 v2 和里程碑任务均属于目标设计。M0 已有原型；M1–M6 尚未因本次文档编写而开始或完成。性能数字是验收目标，不能作为当前产品性能宣传。
+DOM-001/002、APP-001/002/003、CMD-001/002、UI-001 的 M1 实现与交付验收已完成。Release solution 构建 0 警告、0 错误，Core 221 例通过，最终发布包 native/WPF smoke 和 ZIP 解压后 WPF 复验均通过；包与 SHA-256 见实施记录第 6 节。M2–M6 未完成，性能数字仍是目标。
 
-## 当前基线
+## 0.2 当前实现
 
-| 项目 | 当前实现 |
+| 项目 | 实现与边界 |
 | --- | --- |
-| 平台 | Windows x64，WPF，.NET 10；发布包依赖 Windows Desktop Runtime |
-| 表格 | 单元格编辑、公式栏、矩形粘贴、内容撤销重做、工作表切换与新增 |
-| 计算 | 同表依赖排序；跨表公式保留缓存；尚无完整增量重算 |
-| 脚本 | QuickJS-NG 0.17.0，进程内同步自定义函数，显式启用 |
-| 存储 | XLSQ v1 包含 `manifest.json`、`workbook.xlsx`、`scripts/functions.js` |
-| XLSX | 可导入；导出全部公式的当前值；单元格类型尚未完整保真 |
-| 验证基线 | 21 个 Core 用例，以及原生运行时和 WPF 集成 smoke 流程；证据范围见质量文档 |
+| 平台与发布 | Windows x64、WPF、.NET 10；framework-dependent，需要 .NET 10 Windows Desktop Runtime x64 |
+| 领域与会话 | 类型值、稀疏不可变快照、稳定会话内 SheetId、单写入门禁、单调 Revision |
+| 编辑与历史 | 单格/公式栏/粘贴/清空统一提交，新增表可撤销，默认 32 MiB 历史预算 |
+| 计算 | 同表依赖和错误诊断；结果须匹配会话/输入修订/计算代次/脚本代次，跨表及依赖保持 Blocked 缓存 |
+| 脚本 | QuickJS-NG 0.17.0，每轮新 runtime，显式启用；任何脚本编辑撤销授权；无 worker/OS 隔离 |
+| 保存 | 不可变快照、串行写入和原子替换；待编辑输入先提交，重算失败时允许保存输入与旧缓存并提示 |
+| 格式 | XLSQ v1 三条目；literal 保存为文本，重开保持 Text；XLSX 导出全部公式的当前值 |
+| 兼容元数据 | 保留原型受支持的样式、尺寸、隐藏、合并与图片；界面呈现与完整类型保真尚不完整 |
+| 验证与产物 | 本轮 build/Core 日志位于 `artifacts/validation/release-0.2`；最终包 smoke、ZIP/hash 记录见实施记录 |
 
-源码入口：[桌面界面](../MainWindow.xaml.cs)、[文档服务](../../QuickExcel.Core/WorkbookDocument.cs)、[文件封装](../../QuickExcel.Core/DocumentPackage.cs)、[脚本宿主](../../QuickExcel.Scripting/QuickJsSession.cs)。
+源码入口：[桌面组合根](../DesktopComposition.cs)、[编辑控制器](../EditorController.cs)、[文档 facade](../../QuickExcel.Core/WorkbookDocument.cs)、[会话](../../QuickExcel.Core/DocumentSession.cs)、[存储适配](../../QuickExcel.Infrastructure/Storage/LegacyWorkbookStorage.cs)、[包封装](../../QuickExcel.Infrastructure/DocumentPackage.cs)、[原生桥](../../QuickExcel.Scripting/QuickJsSession.cs)。
 
 ## 文档维护
 
-任务完成时同时更新实现状态、对应契约和回归证据。发生格式版本变化、权限模型变化或项目依赖变化时，先补充架构决策，再更新专题与实施计划。使用任务 ID 关联提交或后续 PR；任务 ID 只用于跟踪，不等于完成承诺。
-
-现有原型的运行方法见 [试用说明](../README.md)。本目录只定义设计与计划，不修改运行时代码、迁移现有文件或执行发布。
+任务状态、契约和验证证据一起更新。保留初始 102 例与原型 smoke 的历史结论，新增记录不冒充历史测试。修改格式、授权或编译边界时同步 ADR 与专题。发布包元数据记录 Git HEAD 和工作树状态；本次实现尚未提交，不能只用旧 HEAD 表示实际构建源码。

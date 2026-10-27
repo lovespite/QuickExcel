@@ -1,17 +1,26 @@
-# QuickExcel 0.1 原型
+# QuickExcel 0.2 试用版
 
-Windows x64 桌面表格，基于 WPF、ExcelIO 和实际的 QuickJS 引擎。专属扩展名为 **`.xlsq`**。
+Windows x64 桌面表格，基于 WPF、ExcelIO 和 QuickJS-NG。工作簿扩展名为 **`.xlsq`**。本版交付 M1 的统一会话、稀疏类型模型、事务编辑、撤销/重做和保存整合；M2–M6 的完整 Beta 能力仍在计划中。
 
 ## 开始试用
 
-在仓库根目录双击 `Start-QuickExcel.cmd`，或直接运行发布目录中的 `artifacts/QuickExcel/QuickExcel.exe`。当前发布包依赖 .NET 10 Windows Desktop Runtime；本机已经安装。复制给另一台机器时，需要复制整个发布目录并安装相应运行时。
+运行完整发布目录中的 `QuickExcel.exe`，或在源码仓库根目录双击 `Start-QuickExcel.cmd`。需要 **.NET 10 Windows Desktop Runtime（x64）**；程序采用 framework-dependent 发布，复制单个 exe 无法替代完整目录。
 
-1. 启动后会展示示例工作簿和 JavaScript 源码。
-2. 点击右侧 **应用脚本并重算**（Ctrl+Enter）。
-3. 双击价格、数量等单元格修改数据，观察自定义公式和合计更新。也可以在公式栏输入内容并按 Enter。
-4. 修改脚本，再点击应用；支持同步的数字、字符串、布尔值或空结果。
-5. **保存 .xlsq**（Ctrl+S）保存数据、公式、缓存结果和脚本。重新打开时脚本默认停用，确认源码后可再次应用。
-6. **导出 .xlsx** 将所有公式转换为当前缓存结果，供其他表格软件查看。原 `.xlsq` 文档不受影响。
+1. 启动后展示示例工作簿与 JavaScript 源码。打开文件时脚本默认停用，单元格可能显示旧缓存。
+2. 检查源码，只在信任它时点击 **应用脚本并重算**（Ctrl+Enter）。
+3. 双击价格、数量等单元格编辑，也可在公式栏输入后按 Enter。数值与布尔输入在内存中有独立类型；前置单引号表示文本，`00123` 保留为文本。
+4. 修改脚本后授权立即撤销；即使新源码暂时无效，也不会继续使用旧授权。确认编辑后再次点击应用。
+5. **保存 .xlsq**（Ctrl+S）先提交正在编辑的单元格与公式栏，再保存源码、公式和结果缓存。无效输入阻止保存；若输入有效但重算失败，仍可保存输入和旧缓存，界面提示结果可能过期。
+6. **导出 .xlsx** 将所有公式转换为当前缓存值，不带脚本。先检查缓存状态与运行记录；导出不修改原文档公式和已保存修订。
+
+## 编辑与撤销
+
+- Ctrl+O 打开，Ctrl+N 新建，Ctrl+S 保存，Ctrl+Shift+S 另存为。
+- 表格中 Ctrl+C 复制显示值，Ctrl+V 粘贴制表符分隔的矩形数据；Delete 清空选择内容。
+- 一次粘贴或清空是一个事务；任一目标非法，整批不提交。Ctrl+Z / Ctrl+Y 撤销或重做单元格编辑、粘贴、清空和新增工作表。
+- 脚本编辑器使用自身文本撤销，不与表格命令历史混用。脚本授权或重算不会把已保存文档标为未保存。
+- 撤销历史默认预算 32 MiB，释放较早记录时界面会提示；单次操作超过预算则在修改前拒绝。
+- 底部可切换/新增工作表、扩展显示行列。保存前无需专门按 Enter 提交公式栏。
 
 ## 脚本 API
 
@@ -20,50 +29,35 @@ quickExcel.functions.register("DISCOUNT", (price, rate) => price * (1 - rate));
 quickExcel.functions.register("DOUBLE", value => value * 2);
 ```
 
-单元格公式：`=DISCOUNT(B2,D2)`、`=DOUBLE(A1)`、`=SUM(E2:E5)`。
+单元格可使用 `=DISCOUNT(B2,D2)`、`=DOUBLE(A1)`、`=SUM(E2:E5)`。函数名不区分大小写，当前支持同步数字、字符串、布尔或空结果与一维区域参数；不支持 Promise、对象、动态数组溢出。
 
-函数名使用英文字母，不区分大小写。首版仅支持同步标量返回；不支持 Promise、对象、动态数组溢出。自定义函数只应使用显式参数；脚本不提供工作簿写入、文件系统、网络或 .NET 反射接口。运行时设有执行时间和内存限制，但此原型没有提供操作系统级进程沙箱。
+脚本不提供文件系统、网络、工作簿写入或 .NET 反射接口。QuickJS 有内存、栈和执行时间限制，但仍在应用进程内运行，**没有独立 worker 或操作系统沙箱，只应启用可信脚本**。每轮完整计算创建新运行时，不依赖上一轮的可变 JavaScript 状态。
 
-脚本源代码在文档内保存，打开文件不会自动执行它。不要启用不了解的脚本。编辑脚本后会停用旧版本，点击应用后才执行新版本。
+## 文件与兼容性
 
-## 编辑操作
+XLSQ 仍为 `formatVersion: 1`，包含 `manifest.json`、`workbook.xlsx` 和 `scripts/functions.js`。只保存源码，不保存字节码、脚本授权或会话身份。保存从不可变快照开始，写同目录临时文件后替换；失败保留上次成功文件，只有成功保存才更新已保存修订。
 
-- Ctrl+O 打开；Ctrl+N 新建；Ctrl+S 保存；Ctrl+Shift+S 另存为。
-- 表格中 Ctrl+C 复制当前值、Ctrl+V 粘贴制表符分隔的矩形数据。
-- Delete 清空选中内容；Ctrl+Z / Ctrl+Y 撤销或重做单元格编辑和粘贴。
-- 脚本编辑区使用自己的文本撤销历史。
-- 底部可切换/新增工作表，以及扩展可见行列。
+**内存类型不等于文件类型保真。** v1 保存和 `.xlsx` 结果导出仍沿用旧文本格式；重新打开字面量为 Text，不猜测恢复数字、布尔或错误身份。空白与空文本可能合并，公式缓存重新载入时视为可能过期。完整日期系统和类型往返属于 M2；当前适配器不支持保存 Mac1904 快照。
 
-## 文件格式
+原型已支持的样式、行列尺寸、隐藏状态、合并和图片在受支持格式范围内保留；合并/图片的完整界面呈现和编辑仍待后续。复杂 Excel 文件、未知部件、数字格式和图表不承诺无损往返。
 
-`.xlsq` 是一个 ZIP 包：
+## 当前边界
 
-```text
-manifest.json
-workbook.xlsx
-scripts/functions.js
-```
-
-manifest 记录格式标识和版本。只保存 JavaScript 源码，不保存 QuickJS 字节码。脚本启用状态不会写入文档。保存使用同目录临时文件再替换，避免直接截断现有文件。
-
-## 原型边界
-
-- xlsx 导入导出支持现有 ExcelIO 模型覆盖的特性，并不保证任意 Excel 文件无损往返。请使用工作副本试用。
-- 当前底层模型以字符串保存单元格值；导出的字面值沿用文本类型，尚未实现数字、日期与文本的完整类型保真。
-- 导出 xlsx 是**当前结果快照**：所有公式转为值。脚本停用时可能包含旧的缓存结果，请先应用脚本并检查运行记录。
-- 支持同表公式依赖重算。跨表计算、完整 Excel 函数语义、合并单元格/图片在界面中的呈现、高级数字格式、筛选和图表不在本原型验收范围。
-- 表格界面最多显示/编辑 100,000 行 × 256 列，单次粘贴不超过 20,000 格。导入模型中界面未展示的受支持内容仍随文档保存。
-- 当前撤销仅覆盖单元格内容，不覆盖新增工作表和整个脚本应用操作。
-- 脚本批量修改工作簿、异步函数和插件机制待后续版本。
+- 同表公式可重算；跨表公式及其依赖为 Blocked，保留缓存和诊断。没有完整增量计算、跨表引用变换或完整 Excel 函数兼容。
+- 界面最多显示/编辑 100,000 行 × 256 列，单次粘贴 20,000 格。领域最多 64 张表、1,024 列和总计 1,000,000 个存储格；未显示的受支持内容仍会保存。
+- IO 旧库转换另有 1,000,000 个占位行/单元格预算，跨度过大的稀疏数据保存会明确拒绝，不会无限扩展稠密列表。
+- 计算/IO 期间暂时锁定界面。排序、筛选、冻结、完整 IME/无障碍验收、恢复、签名安装器和自动更新仍属后续范围。
 
 ## 构建与验证
 
+从仓库根目录运行：
+
 ```powershell
-dotnet build .\QuickExcel.Desktop\QuickExcel.Desktop.csproj --artifacts-path .\artifacts\build -v minimal
-dotnet test .\QuickExcel.Core.Test\QuickExcel.Core.Test.csproj --artifacts-path .\artifacts\build -v minimal
-.\scripts\build-quickexcel.ps1
-# GUI 集成验收（创建测试输出并自动退出）：
-.\artifacts\QuickExcel\QuickExcel.exe --smoke-test .\artifacts\quickexcel-smoke
+dotnet build .\QuickExcel.slnx -c Release --artifacts-path .\artifacts\build -v minimal
+dotnet test .\QuickExcel.Core.Test\QuickExcel.Core.Test.csproj -c Release --artifacts-path .\artifacts\build -v minimal
+.\scripts\build-quickexcel.ps1 -RunSmoke -CreateArchive
 ```
 
-首次从源码构建原生引擎所需的工具及版本见 `QuickExcel.Scripting/native` 下的说明。QuickExcel 使用独立 Git 仓库，不依赖 Web/WASM 工作负载；ExcelIO 库保留在同级 `../ExcelIO` 仓库，目录布局与构建输出隔离说明见[仓库说明](../README.md)。
+脚本使用 `-r win-x64 --self-contained false`，发布前验证 Core 和 native，按参数在新目录运行带看门狗的 WPF smoke。ZIP、SHA-256 及包内 `BUILD-METADATA.json` 标识本次产物和实际验收结果；最终包复验进度见[实施记录](docs/08-baseline-and-progress.md)。没有通过无 SDK 干净机器验收的声明。
+
+Core 现在是纯 .NET 程序集；ExcelIO、文件封装与 QuickJS 工厂由 `QuickExcel.Infrastructure` 实现，WPF 的组合根注入这些端口。仓库边界和原生构建要求见[仓库说明](../README.md)，完整公开范围见[发布说明](RELEASE-NOTES.md)。

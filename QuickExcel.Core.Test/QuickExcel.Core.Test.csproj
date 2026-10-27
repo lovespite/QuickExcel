@@ -11,5 +11,6 @@
     <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
     <Using Include="Xunit" />
     <ProjectReference Include="..\QuickExcel.Core\QuickExcel.Core.csproj" />
+    <ProjectReference Include="..\QuickExcel.Infrastructure\QuickExcel.Infrastructure.csproj" />
   </ItemGroup>
 </Project>

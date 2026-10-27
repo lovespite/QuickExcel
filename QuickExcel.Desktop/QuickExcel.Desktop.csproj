@@ -7,11 +7,12 @@
     <Nullable>enable</Nullable>
     <PlatformTarget>x64</PlatformTarget>
     <AssemblyName>QuickExcel</AssemblyName>
-    <Version>0.1.0</Version>
+    <Version>0.2.1</Version>
     <Product>QuickExcel</Product>
     <Description>A programmable desktop spreadsheet powered by ExcelIO and QuickJS.</Description>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../QuickExcel.Core/QuickExcel.Core.csproj" />
+    <ProjectReference Include="../QuickExcel.Infrastructure/QuickExcel.Infrastructure.csproj" />
   </ItemGroup>
 </Project>
