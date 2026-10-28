@@ -106,8 +106,10 @@ public partial class MainWindow : Window
             LogText.Text += "\n已导入 v1：历史文本不会被猜测转换类型。首次保存必须另存为 v2，原文件保留。";
         if (document.Snapshot.FileState is { CompatibilityIssues.Length: > 0 } fileState)
             LogText.Text += "\n兼容性报告：\n" + string.Join("\n", fileState.CompatibilityIssues.Take(20));
-        if (!document.Snapshot.ScriptModules.CanExecuteLegacy)
-            LogText.Text += "\n多模块源码已保留，模块执行尚未提供。";
+        if (!document.Snapshot.ScriptModules.CanExecute)
+            LogText.Text += "\n多模块源码已保留；执行需要显式声明脚本 API v2。";
+        else if (document.Snapshot.ScriptModules.ScriptApiVersion == 2)
+            LogText.Text += $"\n包内模块：{document.Snapshot.ScriptModules.Modules.Count} 个；编辑器显示首入口 {document.Snapshot.ScriptModules.EntryModules[0]}。应用时执行全部声明入口。";
         HintText.Text = "0.5 脚本进程预览版 · 计算中可点击「停止计算」；可信脚本需手动启用。";
         if (document.Snapshot.Sheets.Any(sheet => sheet.UsedColumnCount > 256))
             HintText.Text += " 此工作簿超过界面的 256 列显示范围；未显示的受支持数据仍会保存。";

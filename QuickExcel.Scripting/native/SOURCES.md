@@ -26,7 +26,9 @@ tools, and internet access for the first source download. The published desktop
 app includes the built DLL and does not require these build tools.
 
 The bridge compiles only the core engine, without `quickjs-libc`, OS modules,
-module loaders, filesystem, network, or CLR bindings. Each session caps engine
+filesystem/network loaders, or CLR bindings. API v2 uses an in-memory ES module
+loader that resolves only declared logical IDs, with no path or URL resolution.
+Each session caps engine
 allocation at 64 MiB and JS stack use at 256 KiB; each load and invocation has a
 one second native interrupt deadline. Requests/results are limited to roughly
 4 MiB. The desktop runs this bridge in a separate disposable worker; native smoke
@@ -46,6 +48,13 @@ Windows PowerShell's built-in module path, and removes inherited dotnet MSBuild
 path overrides before invoking Visual Studio. Restricted build environments may
 need access to Visual Studio FileTracker's system paths. Upstream compiler warnings
 are preserved, not suppressed or patched out of vendored sources.
+
+The 2026-10-28 module slice adds `qx_load_modules`. The complete reachable graph
+shares one native one-second deadline; the host still bounds the entire round.
+The engine owns static linking, cycles and once-only evaluation. Initialization
+must complete synchronously; no Promise job loop is run. The module map is held
+privately by the native session and released with it. The upstream version,
+archive SHA-256 and license remain unchanged; no vendored engine source is edited.
 
 Run the runtime smoke checks with:
 

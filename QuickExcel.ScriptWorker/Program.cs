@@ -31,23 +31,37 @@ try
             await WorkerProtocol.WriteAsync(output, WorkerProtocol.Message(round, "hello", hello));
             continue;
         }
-        if (request.Kind == "load" && runtime is null)
+        if (request.Kind is "load" or "loadModules" && runtime is null)
         {
-            var load = WorkerProtocol.Payload<LoadScript>(request);
-            if (Encoding.UTF8.GetByteCount(load.Source) > 1024 * 1024 ||
-                Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(load.Source))) != load.Sha256)
-                throw new ProtocolException("Invalid source digest or source budget.");
-            try { runtime = new QuickJsSession(load.Source); }
+            string digest;
+            Func<QuickJsSession> create;
+            if (request.Kind == "loadModules")
+            {
+                var bundle = WorkerProtocol.Payload<LoadModules>(request);
+                bundle.Validate();
+                digest = bundle.Sha256;
+                create = () => new QuickJsSession(bundle.Modules.ToDictionary(m => m.Id, m => m.Source, StringComparer.Ordinal), bundle.EntryModules);
+            }
+            else
+            {
+                var load = WorkerProtocol.Payload<LoadScript>(request);
+                if (Encoding.UTF8.GetByteCount(load.Source) > 1024 * 1024 ||
+                    Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(load.Source))) != load.Sha256)
+                    throw new ProtocolException("Invalid source digest or source budget.");
+                digest = load.Sha256;
+                create = () => new QuickJsSession(load.Source);
+            }
+            try { runtime = create(); }
             catch (Exception)
             {
                 await WorkerProtocol.WriteAsync(output, WorkerProtocol.Message(request.Identity, "failure",
-                    new WorkerFailure("Load", "脚本加载失败；请检查语法、注册及资源限额。")));
+                    new WorkerFailure("Load", "脚本加载失败；请检查语法、包内模块 ID、同步初始化、注册及资源限额。")));
                 return 3;
             }
             if (runtime.FunctionDescriptors.Count > WorkerProtocol.MaxFunctions) throw new ProtocolException("Too many functions.");
             var descriptors = runtime.FunctionDescriptors.Select(d => new FunctionInfo(d.Name, d.ApiVersion,
                 d.MinArguments, d.MaxArguments, d.ReturnType, d.Profile)).ToArray();
-            await WorkerProtocol.WriteAsync(output, WorkerProtocol.Message(request.Identity, "load", new LoadedScript(load.Sha256, descriptors)));
+            await WorkerProtocol.WriteAsync(output, WorkerProtocol.Message(request.Identity, request.Kind, new LoadedScript(digest, descriptors)));
         }
         else if (request.Kind == "invokeBatch" && runtime is not null)
         {

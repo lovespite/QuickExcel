@@ -52,7 +52,8 @@ public sealed partial class TypedWorkbookStorage : IWorkbookStorageOptions
                 }
                 else
                 {
-                    if (String(root, "format") != "QuickExcel" || Integer(root, "minReaderVersion", 2) != 2 || Integer(root, "scriptApiVersion", 1) != 1)
+                    var scriptApiVersion = checked((int)Integer(root, "scriptApiVersion", 2));
+                    if (String(root, "format") != "QuickExcel" || Integer(root, "minReaderVersion", 2) != 2 || scriptApiVersion is not (1 or 2))
                         throw new InvalidDataException("XLSQ 格式、读取器版本或脚本 API 不受支持。");
                     var features = Array(root, "requiredFeatures").Select(e => e.GetString() ?? throw new InvalidDataException("能力名称必须为字符串。")).ToArray();
                     if (features.Length != Features.Length || features.Distinct().Count() != features.Length || features.Except(Features).Any())
@@ -83,7 +84,7 @@ public sealed partial class TypedWorkbookStorage : IWorkbookStorageOptions
                         moduleList.Add(new(module.Name, new ScriptModule(String(module.Value, "path"), Utf8.GetString(content))));
                     }
                     modules = new(moduleList, Array(scripts, "entryModules").Select(e => e.GetString() ?? throw new InvalidDataException("入口名无效。")),
-                        Integer(state.RootElement, "scriptRevision"), Integer(state.RootElement, "bindingRevision"));
+                        Integer(state.RootElement, "scriptRevision"), Integer(state.RootElement, "bindingRevision"), scriptApiVersion);
                     if (referenced.Count != parts.Count) throw new InvalidDataException("XLSQ 包含未声明条目。");
                     var bindings = Array(state.RootElement, "scriptBindings").ToArray();
                     var bound = new HashSet<string>();
@@ -185,7 +186,7 @@ public sealed partial class TypedWorkbookStorage : IWorkbookStorageOptions
         { view["activeSheetId"] = snapshot.Sheets[0].Id.ToString(); view["selection"] = "A1"; }
         parts["state/document.json"] = JsonSerializer.SerializeToUtf8Bytes(document);
         var manifest = Object(snapshot.FileState?.ManifestJson);
-        manifest["format"] = "QuickExcel"; manifest["formatVersion"] = 2; manifest["minReaderVersion"] = 2; manifest["scriptApiVersion"] = 1;
+        manifest["format"] = "QuickExcel"; manifest["formatVersion"] = 2; manifest["minReaderVersion"] = 2; manifest["scriptApiVersion"] = snapshot.ScriptModules.ScriptApiVersion;
         manifest["requiredFeatures"] = JsonSerializer.SerializeToNode(Features);
         JsonNode Reference(string name) => JsonSerializer.SerializeToNode(new { path = name, sha256 = Hash(parts[name]) })!;
         manifest["workbook"] = Merge(manifest["workbook"], Reference("workbook.xlsx")); manifest["state"] = Merge(manifest["state"], Reference("state/document.json"));
@@ -200,7 +201,7 @@ public sealed partial class TypedWorkbookStorage : IWorkbookStorageOptions
         {
             var checkedSnapshot = OpenBytes(ReadFile(temp, new(cancellationToken)), path, true, new(cancellationToken));
             if (!ContentEquals(snapshot, checkedSnapshot) || snapshot.DocumentId != checkedSnapshot.DocumentId || snapshot.Revision != checkedSnapshot.Revision ||
-                !snapshot.Sheets.Select(s => s.Id).SequenceEqual(checkedSnapshot.Sheets.Select(s => s.Id)) || ScriptHash(snapshot.ScriptModules) != ScriptHash(checkedSnapshot.ScriptModules))
+                !snapshot.Sheets.Select(s => s.Id).SequenceEqual(checkedSnapshot.Sheets.Select(s => s.Id)) || snapshot.ScriptModules.ScriptApiVersion != checkedSnapshot.ScriptModules.ScriptApiVersion || ScriptHash(snapshot.ScriptModules) != ScriptHash(checkedSnapshot.ScriptModules))
                 throw new InvalidDataException("保存后重开校验未能还原完整快照。");
         }, cancellationToken);
     }
@@ -289,8 +290,14 @@ public sealed partial class TypedWorkbookStorage : IWorkbookStorageOptions
         return result;
     }
     private static string Hash(byte[] content) => Convert.ToHexStringLower(SHA256.HashData(content));
-    private static string ScriptHash(ScriptModuleSet modules) => Hash(JsonSerializer.SerializeToUtf8Bytes(new
-    { entries = modules.EntryModules, modules = modules.Modules.OrderBy(m => m.Key, StringComparer.Ordinal).Select(m => new { id = m.Key, path = m.Value.Path, sha256 = Hash(Utf8.GetBytes(m.Value.Source)) }) }));
+    private static string ScriptHash(ScriptModuleSet modules)
+    {
+        var sources = modules.Modules.OrderBy(m => m.Key, StringComparer.Ordinal).Select(m => new { id = m.Key, path = m.Value.Path, sha256 = Hash(Utf8.GetBytes(m.Value.Source)) });
+        // Preserve existing API v1 digests; module-mode digests also bind the execution semantics.
+        return modules.ScriptApiVersion == 1
+            ? Hash(JsonSerializer.SerializeToUtf8Bytes(new { entries = modules.EntryModules, modules = sources }))
+            : Hash(JsonSerializer.SerializeToUtf8Bytes(new { scriptApiVersion = 2, entries = modules.EntryModules, modules = sources }));
+    }
     private static JsonElement Property(JsonElement parent, string name) => parent.ValueKind == JsonValueKind.Object && parent.TryGetProperty(name, out var value)
         ? value : throw new InvalidDataException($"缺少字段 {name}。");
     private static string String(JsonElement parent, string name) => Property(parent, name).ValueKind == JsonValueKind.String

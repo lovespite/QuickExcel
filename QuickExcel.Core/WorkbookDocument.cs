@@ -162,7 +162,7 @@ public sealed class WorkbookDocument : IDisposable
     public void EnableScriptsAndCalculate() => EnableScriptsAndCalculate(CancellationToken.None);
     public void EnableScriptsAndCalculate(CancellationToken cancellationToken)
     {
-        if (!Snapshot.ScriptModules.CanExecuteLegacy) throw new NotSupportedException("多模块源码已保留；模块执行将在 M4 提供。");
+        if (!Snapshot.ScriptModules.CanExecute) throw new NotSupportedException("多模块源码已保留；执行需要显式声明脚本 API v2。");
         Session.SetScriptsEnabled(true);
         Calculate(cancellationToken);
     }

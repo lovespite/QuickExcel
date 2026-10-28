@@ -60,7 +60,7 @@ public sealed class DocumentSession : IDisposable
             var before = _snapshot;
             var draft = command.Prepare(before); // No session state is changed until every check succeeds.
             if (ReferenceEquals(draft.Snapshot, before)) return new(false, before.Revision);
-            var sourceChanged = command is UpdateScriptSourceCommand;
+            var sourceChanged = command is UpdateScriptSourceCommand or UpdateScriptModulesCommand;
             var after = Invalidate(draft.Snapshot.WithRevision(checked(before.Revision + 1)));
             var entry = sourceChanged ? null : new HistoryEntry(before, after, draft.Changes, draft.StructureChanged);
             if (entry is not null && entry.Bytes > HistoryBudgetBytes)
@@ -132,7 +132,7 @@ public sealed class DocumentSession : IDisposable
         lock (_gate)
         {
             ThrowIfClosed();
-            if (enabled && !_snapshot.ScriptModules.CanExecuteLegacy) throw new NotSupportedException("多模块运行需要 M4 模块加载器。");
+            if (enabled && !_snapshot.ScriptModules.CanExecute) throw new NotSupportedException("多模块执行需要显式声明脚本 API v2。");
             // Reapply also invalidates an in-flight compile of the same source.
             _scriptsEnabled = enabled;
             _scriptGeneration = checked(_scriptGeneration + 1);

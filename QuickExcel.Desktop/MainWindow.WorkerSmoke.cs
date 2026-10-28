@@ -4,6 +4,7 @@ using System.Windows;
 using System.Windows.Controls;
 using QuickExcel.Calculation;
 using QuickExcel.Core;
+using QuickExcel.Domain;
 using QuickExcel.Runtime;
 
 namespace QuickExcel.Desktop;
@@ -45,8 +46,27 @@ public partial class MainWindow
         ScriptEditor.Text = "quickExcel.functions.register('VALUE',()=>84);";
         await RunScriptsAsync();
         if (_document.GetCellValue(0, 0, 0) != "84") throw new Exception("Explicit restart after worker exit failed.");
+        var modules = new ScriptModuleSet(new Dictionary<string, ScriptModule>
+        {
+            ["main"] = new("scripts/main.js", "import { value } from 'helper'; quickExcel.functions.register('VALUE',()=>value);"),
+            ["helper"] = new("scripts/lib/helper.js", "export const value = 123;")
+        }, ["main"], scriptApiVersion: 2);
+        var modulePath = Path.Combine(folder, "worker-modules.xlsq");
+        _services.Storage.Save(modulePath, _document.Snapshot.WithScriptModules(modules));
+        InstallDocument(WorkbookDocument.Open(modulePath, _services), modulePath, "worker-modules.xlsq");
+        if (_document.ScriptsEnabled || _document.GetCellValue(0, 0, 0) != "84")
+            throw new Exception("Opening modules executed source or changed cached values.");
+        await RunScriptsAsync();
+        if (_document.GetCellValue(0, 0, 0) != "123") throw new Exception("Desktop package module calculation failed.");
+        ScriptEditor.Text += "\n// primary entry edit";
+        if (_document.ScriptsEnabled || _document.Snapshot.ScriptModules.ScriptApiVersion != 2)
+            throw new Exception("Editing an entry retained authorization or lost module mode.");
+        if (!await SaveAsync(false)) throw new Exception("Saving module package failed.");
+        using var reopened = WorkbookDocument.Open(modulePath, _services);
+        if (reopened.ScriptsEnabled || reopened.Snapshot.ScriptModules.Modules["helper"] != modules.Modules["helper"])
+            throw new Exception("Module roundtrip lost helpers or restored authorization.");
         File.WriteAllText(Path.Combine(folder, "worker-smoke-result.txt"),
-            $"PASS: separate worker; actual WPF Stop button returns in {timer.ElapsedMilliseconds} ms; strong-kill preserves cache; editing/saving and explicit restart recover.");
+            $"PASS: separate worker; actual WPF Stop button returns in {timer.ElapsedMilliseconds} ms; strong-kill preserves cache; editing/saving and explicit restart recover; API v2 package module open/apply/edit/save/reopen through desktop composition.");
     }
 
     private sealed class SmokeWorkerFactory : IScriptRuntimeFactory

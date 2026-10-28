@@ -9,10 +9,11 @@ public sealed record ScriptModule(string Path, string Source);
 public sealed class ScriptModuleSet
 {
     public ScriptModuleSet(IEnumerable<KeyValuePair<string, ScriptModule>> modules, IEnumerable<string> entryModules,
-        long revision = 0, long bindingRevision = 0)
+        long revision = 0, long bindingRevision = 0, int scriptApiVersion = 1)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(revision);
         ArgumentOutOfRangeException.ThrowIfNegative(bindingRevision);
+        if (scriptApiVersion is not (1 or 2)) throw new ArgumentException("Unsupported script API version.");
         Modules = modules.ToImmutableDictionary(StringComparer.Ordinal);
         EntryModules = entryModules.ToImmutableArray();
         if (Modules.Count is < 1 or > 64 || EntryModules.Length is < 1 or > 64 ||
@@ -21,26 +22,29 @@ public sealed class ScriptModuleSet
         var paths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var (id, module) in Modules)
         {
-            if (string.IsNullOrEmpty(id) || id.Length > 128 || id.Any(c => !char.IsAsciiLetterOrDigit(c) && c is not ('_' or '-' or '.')) ||
-                module is null || module.Source is null || !module.Path.StartsWith("scripts/", StringComparison.Ordinal) ||
+            if (string.IsNullOrEmpty(id) || id.Length > 128 || id is "." or ".." || id.Any(c => !char.IsAsciiLetterOrDigit(c) && c is not ('_' or '-' or '.')) ||
+                module is null || module.Source is null || module.Path is null || module.Path.Length > 512 || module.Path.Any(char.IsControl) || !module.Path.StartsWith("scripts/", StringComparison.Ordinal) ||
                 module.Path.Split('/').Any(s => s.Length == 0 || s is "." or "..") ||
                 module.Path.IndexOfAny(['\\', ':', '%', '?', '#']) >= 0 || !paths.Add(module.Path))
                 throw new ArgumentException("Invalid script module identity or path.");
         }
         Revision = revision;
         BindingRevision = bindingRevision;
+        ScriptApiVersion = scriptApiVersion;
     }
     public ImmutableDictionary<string, ScriptModule> Modules { get; }
     public ImmutableArray<string> EntryModules { get; }
     public long Revision { get; }
     public long BindingRevision { get; }
+    public int ScriptApiVersion { get; }
     public string PrimarySource => Modules[EntryModules[0]].Source;
-    public bool CanExecuteLegacy => Modules.Count == 1 && EntryModules.Length == 1;
+    public bool CanExecuteLegacy => ScriptApiVersion == 1 && Modules.Count == 1 && EntryModules.Length == 1;
+    public bool CanExecute => CanExecuteLegacy || ScriptApiVersion == 2;
     public static ScriptModuleSet Single(string source) => new(
         [new KeyValuePair<string, ScriptModule>("main", new("scripts/main.js", source))], ["main"]);
     public ScriptModuleSet WithPrimarySource(string source) => source == PrimarySource ? this : new(
         Modules.SetItem(EntryModules[0], Modules[EntryModules[0]] with { Source = source }), EntryModules,
-        checked(Revision + 1), BindingRevision);
+        checked(Revision + 1), BindingRevision, ScriptApiVersion);
 }
 
 public sealed record WorkbookPartBinding(string WorkbookSheetId, string Part);

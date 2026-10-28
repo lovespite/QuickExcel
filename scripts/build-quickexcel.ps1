@@ -152,7 +152,7 @@ try {
             publishedDllSha256 = (Get-FileHash -LiteralPath (Join-Path $publishPath 'quickexcel-js.dll') -Algorithm SHA256).Hash
         }
         verification = [ordered]@{ coreTests = $unitTests; nativeSmoke = $nativeSmoke; wpfSmoke = $desktopSmoke; wpfResult = $smokeResult }
-        scriptWorker = [ordered]@{ protocolVersion = 1; policy = 'conservative-worker-v1'; osAccessIsolationValidated = $false }
+        scriptWorker = [ordered]@{ protocolVersion = 2; policy = 'conservative-worker-v1'; osAccessIsolationValidated = $false }
     }
     $metadata | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $publishPath 'BUILD-METADATA.json') -Encoding UTF8
     Copy-Item -LiteralPath (Join-Path $projectRoot 'QuickExcel.Desktop\RELEASE-NOTES.md') -Destination (Join-Path $publishPath 'RELEASE-NOTES.md')
@@ -161,6 +161,7 @@ try {
     Copy-Item -LiteralPath (Join-Path $projectRoot 'QuickExcel.Desktop\docs\09-m2-files-and-types.md') -Destination (Join-Path $supportDocsPath '09-m2-files-and-types.md')
     Copy-Item -LiteralPath (Join-Path $projectRoot 'QuickExcel.Desktop\docs\10-m3-calculation.md') -Destination (Join-Path $supportDocsPath '10-m3-calculation.md')
     Copy-Item -LiteralPath (Join-Path $projectRoot 'QuickExcel.Desktop\docs\11-m4-worker.md') -Destination (Join-Path $supportDocsPath '11-m4-worker.md')
+    Copy-Item -LiteralPath (Join-Path $projectRoot 'QuickExcel.Desktop\docs\12-m4-modules.md') -Destination (Join-Path $supportDocsPath '12-m4-modules.md')
     Copy-Item -LiteralPath (Join-Path $projectRoot 'QuickExcel.Scripting\native\SOURCES.md') -Destination (Join-Path $publishPath 'QUICKJS-SOURCES.md')
     $notices = @"
 QuickExcel third-party component provenance

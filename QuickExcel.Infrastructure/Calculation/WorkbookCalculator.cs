@@ -25,8 +25,8 @@ public sealed class WorkbookCalculator(IScriptRuntimeFactory runtimeFactory) : I
             if (timer.Elapsed > TimeLimit) throw new TimeoutException("重算达到 5 秒限制，本轮结果未提交。");
         }
         Check();
-        if (request.ScriptsEnabled && !request.Snapshot.ScriptModules.CanExecuteLegacy)
-            throw new NotSupportedException("多模块运行需要 M4 模块加载器。");
+        if (request.ScriptsEnabled && !request.Snapshot.ScriptModules.CanExecute)
+            throw new NotSupportedException("多模块执行需要显式声明脚本 API v2。");
         var index = new WorkbookDependencyIndex(request.Snapshot, Check);
         Cache? prior; lock (_gate) prior = _cache;
         var reusable = !request.ForceFull && !request.ScriptsEnabled && !index.Nodes.Values.Any(n => n.Script)
@@ -56,7 +56,7 @@ public sealed class WorkbookCalculator(IScriptRuntimeFactory runtimeFactory) : I
                 diagnostics.Add($"{sheet.Name}!{FormulaSyntax.ColumnName(address.Column)}{address.Row + 1}：{note}");
             }
         }
-        using var runtime = request.ScriptsEnabled ? _factory.Create(new ScriptRuntimeRequest(request.Snapshot.ScriptSource,
+        using var runtime = request.ScriptsEnabled ? _factory.Create(new ScriptRuntimeRequest(request.Snapshot.ScriptModules,
             request.Stamp, TimeLimit - timer.Elapsed, cancellationToken)) : null;
         Check();
         var functions = new Dictionary<string, ScriptFunctionDescriptor>(StringComparer.OrdinalIgnoreCase);

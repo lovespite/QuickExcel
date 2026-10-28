@@ -48,7 +48,8 @@ public sealed class ScriptWorkerRuntime : IScriptRuntime
         if (request.TimeLimit <= TimeSpan.Zero) throw new TimeoutException("重算已达到时间限制。");
         if (!OperatingSystem.IsWindows() || !Environment.Is64BitProcess) throw new PlatformNotSupportedException("Worker requires Windows x64.");
         if (!File.Exists(executable)) throw new ScriptRuntimeFailureException("WorkerMissing", "找不到脚本 worker，请重新构建或安装完整发布包。");
-        if (Encoding.UTF8.GetByteCount(request.Source) > 1024 * 1024)
+        if (!request.Modules.CanExecute) throw new NotSupportedException("多模块执行需要显式声明脚本 API v2。");
+        if (request.Modules.Modules.Sum(m => (long)Encoding.UTF8.GetByteCount(m.Value.Source)) > 1024 * 1024)
             throw new ScriptRuntimeFailureException("SourceLimit", "脚本源码超过 1 MiB UTF-8 限额。");
         var runtime = new ScriptWorkerRuntime(request);
         try
@@ -73,8 +74,20 @@ public sealed class ScriptWorkerRuntime : IScriptRuntime
             if (accepted.Engine != hello.Engine || accepted.Policy != hello.Policy ||
                 !accepted.ApiVersions.SequenceEqual(hello.ApiVersions) || accepted.MaxFrameBytes != hello.MaxFrameBytes)
                 throw new ProtocolException("Worker handshake is incompatible.");
-            var digest = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(request.Source)));
-            var loaded = runtime.Exchange<LoadScript, LoadedScript>("load", new(request.Source, digest));
+            string digest;
+            LoadedScript loaded;
+            if (request.Modules.ScriptApiVersion == 2)
+            {
+                var bundle = new LoadModules(request.Modules.Modules.Select(m => new ModuleSource(m.Key, m.Value.Path, m.Value.Source)).ToArray(),
+                    request.Modules.EntryModules.ToArray(), "");
+                digest = bundle.ComputeDigest();
+                loaded = runtime.Exchange<LoadModules, LoadedScript>("loadModules", bundle with { Sha256 = digest });
+            }
+            else
+            {
+                digest = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(request.Source)));
+                loaded = runtime.Exchange<LoadScript, LoadedScript>("load", new(request.Source, digest));
+            }
             if (loaded.Sha256 != digest || loaded.Functions.Length > WorkerProtocol.MaxFunctions)
                 throw new ProtocolException("Worker loaded a different script or an invalid function table.");
             var descriptors = loaded.Functions.Select(d => d is null ? throw new ProtocolException("Missing function.") :

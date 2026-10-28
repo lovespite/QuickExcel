@@ -135,7 +135,7 @@ public sealed class TypedStorageTests : IDisposable
     [InlineData("formatVersion", "3")]
     [InlineData("formatVersion", "\"2\"")]
     [InlineData("minReaderVersion", "3")]
-    [InlineData("scriptApiVersion", "2")]
+    [InlineData("scriptApiVersion", "3")]
     [InlineData("requiredFeatures", "[\"typed-workbook\",\"stable-sheet-ids\",\"script-actions\"]")]
     [InlineData("workbook", "{\"path\":\"../workbook.xlsx\",\"sha256\":\"bad\"}")]
     public void UnsupportedAndMalformedManifestFieldsAreRejected(string field, string json)
@@ -192,6 +192,34 @@ public sealed class TypedStorageTests : IDisposable
         var changed = result.WithScriptSource("// edited main").WithRevision(13);
         _storage.Save(path, changed);
         Assert.Equal(modules.Modules["price"], _storage.Open(path).ScriptModules.Modules["price"]);
+    }
+
+    [Theory]
+    [InlineData("version")] [InlineData("source")] [InlineData("actions-feature")] [InlineData("actions-binding")]
+    public void ModuleModeRejectsTamperingAndUnimplementedActions(string change)
+    {
+        var modules = new ScriptModuleSet(new Dictionary<string, ScriptModule>
+        {
+            ["main"] = new("scripts/main.js", "import 'price';"),
+            ["price"] = new("scripts/lib/price.js", "throw new Error('opening never executes');")
+        }, ["main"], scriptApiVersion: 2);
+        var path = PathFor("module-mode.xlsq"); _storage.Save(path, Model().WithScriptModules(modules));
+        Assert.Equal(2, _storage.Open(path).ScriptModules.ScriptApiVersion);
+        var parts = ReadZip(File.ReadAllBytes(path));
+        var manifest = JsonNode.Parse(parts["manifest.json"])!;
+        if (change == "version") manifest["scriptApiVersion"] = 1;
+        if (change == "source") parts["scripts/lib/price.js"] = Encoding.UTF8.GetBytes("// tampered helper");
+        if (change == "actions-feature") manifest["requiredFeatures"]!.AsArray().Add("script-actions");
+        parts["manifest.json"] = Encoding.UTF8.GetBytes(manifest.ToJsonString());
+        if (change == "actions-binding")
+        {
+            var state = JsonNode.Parse(parts["state/document.json"])!;
+            state["scriptBindings"]![0]!["kind"] = "actions";
+            parts["state/document.json"] = Encoding.UTF8.GetBytes(state.ToJsonString());
+            Rehash(parts, "state", "state/document.json");
+        }
+        File.WriteAllBytes(path, Zip(parts));
+        Assert.Throws<InvalidDataException>(() => _storage.Open(path));
     }
 
     [Fact]

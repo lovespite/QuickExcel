@@ -1,6 +1,6 @@
 # QuickExcel 0.5 脚本进程预览版
 
-Windows x64 桌面表格，基于 WPF、同级 ExcelIO 源码库与 QuickJS-NG。M2/M3 文件与计算能力保持；当前进入 **M4 独立脚本 worker 首切片**。
+Windows x64 桌面表格，基于 WPF、同级 ExcelIO 源码库与 QuickJS-NG。M2/M3 文件与计算能力保持；当前推进 **M4 独立脚本 worker 与包内模块执行**。
 
 ## 试用
 
@@ -10,9 +10,9 @@ Windows x64 桌面表格，基于 WPF、同级 ExcelIO 源码库与 QuickJS-NG�
 - v1 打开时迁移，不猜测恢复历史上已丢失的类型；首次保存必须选新路径，保留原文件。
 - 不支持的 XLSX 部件和属性进入兼容报告。工作簿内容未变时保留原 XLSX 字节；编辑后普通保存会阻止不确定的损失，可明确选择另存受支持副本。
 - XLSX 导出可选值快照或可移植公式；脚本与跨表传递依赖冻结为值，独立标准公式可保留。缺失的冻结结果阻止导出，旧结果须明确选择。
-- 打开、迁移、保存不执行脚本，不恢复授权。模块源码和绑定可持久化；多模块执行留到 M4。
+- 打开、迁移、保存不执行脚本，不恢复授权。文件级 API v2 支持包内 ES 模块执行；import 只接受清单声明的逻辑 ID。API v1 保留旧单脚本语义，多模块元数据仍可保存。
 
-脚本每轮在独立 worker 执行，计算期间可「停止计算」，故障不提交半批结果。模块与动作、OS 文件/网络隔离仍待完成；本版仅供可信脚本使用，不等于完整 M4 或 Beta。完整桌面交互与自动恢复属 M5/M6。见 [M4 范围与验收](QuickExcel.Desktop/docs/11-m4-worker.md)及[发布说明](QuickExcel.Desktop/RELEASE-NOTES.md)。
+脚本每轮在独立 worker 执行，计算期间可「停止计算」，故障不提交半批结果。包内模块已接入；动作、计算计划合批、OS 文件/网络隔离仍待完成。本版仅供可信脚本使用，不等于完整 M4 或 Beta。完整桌面交互与自动恢复属 M5/M6。见 [模块契约与验收](QuickExcel.Desktop/docs/12-m4-modules.md)、[worker 范围与验收](QuickExcel.Desktop/docs/11-m4-worker.md)及[发布说明](QuickExcel.Desktop/RELEASE-NOTES.md)。
 
 ## 仓库边界
 

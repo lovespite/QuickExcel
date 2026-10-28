@@ -76,7 +76,7 @@ public sealed class M4ProtocolTests
     public async Task AlternatePropertyCasingCannotOverrideCanonicalIdentity()
     {
         var message = WorkerProtocol.Message(Identity(), "logs", new EmptyPayload());
-        var json = JsonSerializer.Serialize(message, WorkerProtocol.Json).Replace("\"protocolVersion\":1", "\"ProtocolVersion\":99,\"protocolVersion\":1");
+        var json = JsonSerializer.Serialize(message, WorkerProtocol.Json).Replace($"\"protocolVersion\":{WorkerProtocol.Version}", $"\"ProtocolVersion\":99,\"protocolVersion\":{WorkerProtocol.Version}");
         using var stream = Frame(Encoding.UTF8.GetBytes(json));
         await Assert.ThrowsAsync<ProtocolException>(() => WorkerProtocol.ReadAsync(stream));
     }

@@ -8,11 +8,20 @@
 #define QX_RESULT_LIMIT (4 * 1024 * 1024)
 
 typedef struct {
+    const char *id;
+    const char *source;
+    size_t source_length;
+} qx_module;
+
+typedef struct {
     JSRuntime *runtime;
     JSContext *context;
     JSValue bridge;
     ULONGLONG deadline;
     int interrupted;
+    qx_module modules[64];
+    uint32_t module_count;
+    int modules_loading;
 } qx_session;
 
 static char *copy_text(const char *text, size_t length) {
@@ -64,6 +73,10 @@ static void exception_error(qx_session *session, char **error) {
 QX_EXPORT void qx_destroy(qx_session *session) {
     if (!session) return;
     if (session->context) {
+        for (uint32_t i = 0; i < session->module_count; i++) {
+            if (session->modules[i].id) JS_FreeCString(session->context, session->modules[i].id);
+            if (session->modules[i].source) JS_FreeCString(session->context, session->modules[i].source);
+        }
         JS_FreeValue(session->context, session->bridge);
         JS_FreeContext(session->context);
     }
@@ -94,6 +107,136 @@ QX_EXPORT qx_session *qx_create(const char *bootstrap, char **error) {
     return session;
 }
 
+static int valid_module_id(const char *id, size_t length) {
+    if (length == 0 || length > 128 || !strcmp(id, ".") || !strcmp(id, "..")) return 0;
+    for (size_t i = 0; i < length; i++) {
+        char c = id[i];
+        if (!((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '_' || c == '-' || c == '.')) return 0;
+    }
+    return 1;
+}
+
+static qx_module *find_module(qx_session *session, const char *id) {
+    for (uint32_t i = 0; i < session->module_count; i++)
+        if (!strcmp(session->modules[i].id, id)) return &session->modules[i];
+    return NULL;
+}
+
+/* Exact logical IDs only: never use QuickJS's filename normalizer or libc loader. */
+static char *normalize_module(JSContext *ctx, const char *base, const char *name, void *opaque) {
+    (void)base;
+    qx_session *session = opaque;
+    if (!session->modules_loading || !find_module(session, name)) {
+        JS_ThrowReferenceError(ctx, "Import must name a declared package module ID.");
+        return NULL;
+    }
+    return js_strdup(ctx, name);
+}
+
+static int check_import_attributes(JSContext *ctx, void *opaque, JSValueConst attributes) {
+    (void)opaque;
+    if (!JS_IsUndefined(attributes)) {
+        JS_ThrowTypeError(ctx, "Import attributes are not supported.");
+        return -1;
+    }
+    return 0;
+}
+
+static JSModuleDef *load_module(JSContext *ctx, const char *name, void *opaque, JSValueConst attributes) {
+    (void)attributes;
+    qx_session *session = opaque;
+    qx_module *module = find_module(session, name);
+    if (!session->modules_loading || !module) {
+        JS_ThrowReferenceError(ctx, "Package module is unavailable.");
+        return NULL;
+    }
+    JSValue compiled = JS_Eval(ctx, module->source, module->source_length, module->id,
+        JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_COMPILE_ONLY);
+    if (JS_IsException(compiled)) return NULL;
+    JSModuleDef *definition = JS_VALUE_GET_PTR(compiled);
+    JS_FreeValue(ctx, compiled);
+    return definition;
+}
+
+QX_EXPORT int qx_load_modules(qx_session *session, const char *json, char **error) {
+    if (error) *error = NULL;
+    if (!session || session->module_count) { set_error(error, "Module session is closed or already loaded."); return 0; }
+    start_operation(session);
+    JSContext *ctx = session->context;
+    JSValue package = JS_ParseJSON(ctx, json, strlen(json), "package.json");
+    if (JS_IsException(package)) { exception_error(session, error); return 0; }
+    JSValue modules = JS_GetPropertyStr(ctx, package, "modules");
+    JSValue entries = JS_GetPropertyStr(ctx, package, "entries");
+    JSValue count_value = JS_GetPropertyStr(ctx, modules, "length");
+    uint32_t count = 0, entry_count = 0;
+    int ok = 0;
+    JS_ToUint32(ctx, &count, count_value); JS_FreeValue(ctx, count_value);
+    count_value = JS_GetPropertyStr(ctx, entries, "length");
+    JS_ToUint32(ctx, &entry_count, count_value); JS_FreeValue(ctx, count_value);
+    if (count < 1 || count > 64 || entry_count < 1 || entry_count > 64) goto invalid;
+    size_t source_bytes = 0;
+    for (uint32_t i = 0; i < count; i++) {
+        JSValue item = JS_GetPropertyUint32(ctx, modules, i);
+        JSValue id = JS_GetPropertyStr(ctx, item, "id");
+        JSValue source = JS_GetPropertyStr(ctx, item, "source");
+        size_t id_length = 0;
+        qx_module *module = &session->modules[i];
+        session->module_count = i + 1;
+        int strings = JS_IsString(id) && JS_IsString(source);
+        if (strings) {
+            module->id = JS_ToCStringLen(ctx, &id_length, id);
+            module->source = JS_ToCStringLen(ctx, &module->source_length, source);
+        }
+        JS_FreeValue(ctx, source); JS_FreeValue(ctx, id); JS_FreeValue(ctx, item);
+        if (!module->id || !module->source || !valid_module_id(module->id, id_length)) goto invalid;
+        for (uint32_t j = 0; j < i; j++) if (!strcmp(session->modules[j].id, module->id)) goto invalid;
+        source_bytes += module->source_length;
+        if (source_bytes > 1024 * 1024) goto invalid;
+    }
+    /* A single synthetic root lets the engine own linking, cycles and once-only evaluation. */
+    char root[64 * 144 + 1];
+    size_t root_length = 0;
+    for (uint32_t i = 0; i < entry_count; i++) {
+        JSValue entry = JS_GetPropertyUint32(ctx, entries, i);
+        size_t length = 0;
+        const char *id = JS_IsString(entry) ? JS_ToCStringLen(ctx, &length, entry) : NULL;
+        JS_FreeValue(ctx, entry);
+        int valid = id && valid_module_id(id, length) && find_module(session, id);
+        if (valid) {
+            memcpy(root + root_length, "import '", 8); root_length += 8;
+            memcpy(root + root_length, id, length); root_length += length;
+            memcpy(root + root_length, "';\n", 3); root_length += 3;
+        }
+        if (id) JS_FreeCString(ctx, id);
+        if (!valid) goto invalid;
+    }
+    root[root_length] = 0;
+    session->modules_loading = 1;
+    JS_SetModuleLoaderFunc2(session->runtime, normalize_module, load_module, check_import_attributes, session);
+    JSValue result = JS_Eval(ctx, root, root_length, "@quickexcel/entries", JS_EVAL_TYPE_MODULE);
+    session->modules_loading = 0;
+    if (JS_IsException(result)) { exception_error(session, error); goto done; }
+    JSPromiseStateEnum state = JS_PromiseState(ctx, result);
+    if (state == JS_PROMISE_REJECTED) {
+        JS_Throw(ctx, JS_PromiseResult(ctx, result));
+        JS_FreeValue(ctx, result);
+        exception_error(session, error);
+        goto done;
+    }
+    JS_FreeValue(ctx, result);
+    if (state == JS_PROMISE_PENDING || JS_IsJobPending(session->runtime)) {
+        set_error(error, "Package modules require synchronous initialization; dynamic import and pending jobs are unsupported.");
+        goto done;
+    }
+    ok = 1;
+    goto done;
+invalid:
+    set_error(error, "Invalid module mapping or source budget.");
+done:
+    JS_FreeValue(ctx, entries); JS_FreeValue(ctx, modules); JS_FreeValue(ctx, package);
+    return ok;
+}
+
 QX_EXPORT char *qx_call(qx_session *session, const char *method, const char *arguments_json, char **error) {
     if (error) *error = NULL;
     if (!session) { set_error(error, "JavaScript session is closed."); return NULL; }
@@ -109,6 +252,11 @@ QX_EXPORT char *qx_call(qx_session *session, const char *method, const char *arg
     JS_FreeValue(context, function);
     JS_FreeValue(context, arguments);
     if (JS_IsException(result)) { exception_error(session, error); return NULL; }
+    if (session->module_count && JS_IsJobPending(session->runtime)) {
+        JS_FreeValue(context, result);
+        set_error(error, "Asynchronous package module jobs are unsupported.");
+        return NULL;
+    }
     JSValue json = JS_JSONStringify(context, result, JS_UNDEFINED, JS_UNDEFINED);
     JS_FreeValue(context, result);
     if (JS_IsException(json)) { exception_error(session, error); return NULL; }

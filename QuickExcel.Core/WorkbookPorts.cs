@@ -24,10 +24,16 @@ public interface IWorkbookCalculator
 public interface IScriptRuntimeFactory
 {
     IScriptRuntime Create(string source);
-    IScriptRuntime Create(ScriptRuntimeRequest request) => Create(request.Source);
+    IScriptRuntime Create(ScriptRuntimeRequest request) => request.Modules.CanExecuteLegacy
+        ? Create(request.Source) : throw new NotSupportedException("This runtime does not support package modules.");
 }
 
-public sealed record ScriptRuntimeRequest(string Source, CalculationStamp Stamp, TimeSpan TimeLimit, CancellationToken CancellationToken);
+public sealed record ScriptRuntimeRequest(ScriptModuleSet Modules, CalculationStamp Stamp, TimeSpan TimeLimit, CancellationToken CancellationToken)
+{
+    public ScriptRuntimeRequest(string source, CalculationStamp stamp, TimeSpan timeLimit, CancellationToken cancellationToken)
+        : this(ScriptModuleSet.Single(source), stamp, timeLimit, cancellationToken) { }
+    public string Source => Modules.PrimarySource;
+}
 
 /// <summary>Transport/lifecycle faults abort the entire calculation, rather than becoming a single cell error.</summary>
 public sealed class ScriptRuntimeFailureException(string code, string message, Exception? inner = null) : Exception(message, inner)

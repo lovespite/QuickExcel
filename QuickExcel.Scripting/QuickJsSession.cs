@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Text.Json;
 
 namespace QuickExcel.Scripting;
@@ -74,6 +75,15 @@ public sealed class QuickJsSession : IDisposable
                     loaded = true;
                     return ownKeys(registry);
                 },
+                prepareModules() {
+                    if (loaded) throw new TypeErrorCtor('Script has already been loaded.');
+                    Object.defineProperty(globalThis, 'quickExcel', { value: quickExcel });
+                    Object.defineProperty(globalThis, 'console', { value: console });
+                },
+                finishModules() {
+                    loaded = true;
+                    return ownKeys(registry);
+                },
                 invoke(name, args) {
                     const fn = registry[name];
                     if (!fn) throw new TypeErrorCtor('Unknown function: ' + name);
@@ -109,16 +119,39 @@ public sealed class QuickJsSession : IDisposable
         get { lock (_gate) { ObjectDisposedException.ThrowIf(_session == IntPtr.Zero, this); return NativeWasInterrupted(_session) != 0; } }
     }
 
-    public QuickJsSession(string source)
+    public QuickJsSession(string source) : this(source, null, null) { }
+
+    public QuickJsSession(IReadOnlyDictionary<string, string> modules, IReadOnlyList<string> entries)
+        : this(null, modules, entries) { }
+
+    private QuickJsSession(string? source, IReadOnlyDictionary<string, string>? modules, IReadOnlyList<string>? entries)
     {
-        ArgumentNullException.ThrowIfNull(source);
+        if (modules is null) ArgumentNullException.ThrowIfNull(source);
+        else
+        {
+            if (modules.Count is < 1 or > 64 || entries is null || entries.Count is < 1 or > 64 ||
+                entries.Distinct(StringComparer.Ordinal).Count() != entries.Count || entries.Any(id => id is null || !modules.ContainsKey(id)) ||
+                modules.Any(m => string.IsNullOrEmpty(m.Key) || m.Key.Length > 128 || m.Key is "." or ".." ||
+                    m.Key.Any(c => !char.IsAsciiLetterOrDigit(c) && c is not ('_' or '-' or '.')) || m.Value is null) ||
+                modules.Sum(m => (long)Encoding.UTF8.GetByteCount(m.Value)) > 1024 * 1024)
+                throw new ArgumentException("Invalid package module mapping or source budget.");
+        }
         if (!OperatingSystem.IsWindows() || !Environment.Is64BitProcess)
             throw new PlatformNotSupportedException("QuickExcel currently includes a Windows x64 QuickJS runtime.");
         _session = NativeCreate(Bootstrap, out var error);
         if (_session == IntPtr.Zero) throw ReadException(error);
         try
         {
-            var result = Call("load", new object?[] { source });
+            string result;
+            if (modules is null) result = Call("load", new object?[] { source });
+            else
+            {
+                Call("prepareModules", []);
+                var json = JsonSerializer.Serialize(new { modules = modules.Select(m => new { id = m.Key, source = m.Value }), entries });
+                if (Encoding.UTF8.GetByteCount(json) > 4 * 1024 * 1024) throw new ArgumentException("Module payload exceeds 4 MiB UTF-8.");
+                if (NativeLoadModules(_session, json, out var moduleError) == 0) throw ReadException(moduleError);
+                result = Call("finishModules", []);
+            }
             FunctionNames = Array.AsReadOnly(JsonSerializer.Deserialize<string[]>(result) ?? []);
             FunctionDescriptors = Array.AsReadOnly(JsonSerializer.Deserialize<JsFunctionDescriptor[]>(Call("descriptors", []),
                 new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? []);
@@ -193,6 +226,8 @@ public sealed class QuickJsSession : IDisposable
     private static extern IntPtr NativeCreate([MarshalAs(UnmanagedType.LPUTF8Str)] string bootstrap, out IntPtr error);
     [DllImport(NativeLibrary, EntryPoint = "qx_call", CallingConvention = CallingConvention.Cdecl)]
     private static extern IntPtr NativeCall(IntPtr session, [MarshalAs(UnmanagedType.LPUTF8Str)] string method, [MarshalAs(UnmanagedType.LPUTF8Str)] string argumentsJson, out IntPtr error);
+    [DllImport(NativeLibrary, EntryPoint = "qx_load_modules", CallingConvention = CallingConvention.Cdecl)]
+    private static extern int NativeLoadModules(IntPtr session, [MarshalAs(UnmanagedType.LPUTF8Str)] string modulesJson, out IntPtr error);
     [DllImport(NativeLibrary, EntryPoint = "qx_destroy", CallingConvention = CallingConvention.Cdecl)]
     private static extern void NativeDestroy(IntPtr session);
     [DllImport(NativeLibrary, EntryPoint = "qx_free_string", CallingConvention = CallingConvention.Cdecl)]

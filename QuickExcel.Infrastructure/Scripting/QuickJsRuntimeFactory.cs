@@ -7,11 +7,14 @@ namespace QuickExcel.Runtime;
 /// <summary>Creates an isolated native context for one authorized calculation. No runtime is reused.</summary>
 public sealed class QuickJsRuntimeFactory : IScriptRuntimeFactory
 {
-    public IScriptRuntime Create(string source) => new Runtime(source);
+    public IScriptRuntime Create(string source) => new Runtime(new QuickJsSession(source));
+    public IScriptRuntime Create(ScriptRuntimeRequest request) => request.Modules.ScriptApiVersion == 2
+        ? new Runtime(new QuickJsSession(request.Modules.Modules.ToDictionary(m => m.Key, m => m.Value.Source, StringComparer.Ordinal), request.Modules.EntryModules))
+        : request.Modules.CanExecuteLegacy ? Create(request.Source) : throw new NotSupportedException("多模块执行需要显式声明脚本 API v2。");
 
-    private sealed class Runtime(string source) : IScriptRuntime
+    private sealed class Runtime(QuickJsSession session) : IScriptRuntime
     {
-        private readonly QuickJsSession _session = new(source);
+        private readonly QuickJsSession _session = session;
         public IReadOnlyList<string> FunctionNames => _session.FunctionNames;
         public IReadOnlyList<ScriptFunctionDescriptor> FunctionDescriptors => _session.FunctionDescriptors
             .Select(d => new ScriptFunctionDescriptor(d.Name, d.ApiVersion, d.MinArguments, d.MaxArguments, d.ReturnType, d.Profile)).ToArray();
