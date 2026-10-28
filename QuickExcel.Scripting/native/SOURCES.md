@@ -30,8 +30,8 @@ filesystem/network loaders, or CLR bindings. API v2 uses an in-memory ES module
 loader that resolves only declared logical IDs, with no path or URL resolution.
 Each session caps engine
 allocation at 64 MiB and JS stack use at 256 KiB; each load and invocation has a
-one second native interrupt deadline. Requests/results are limited to roughly
-4 MiB. The desktop runs this bridge in a separate disposable worker; native smoke
+one second native interrupt deadline. Managed requests and native JSON results are
+limited to 16 MiB UTF-8 (raised from 4 MiB in the M4 batching slice). The desktop runs this bridge in a separate disposable worker; native smoke
 tests still run it in process. Process/Job containment is not a filesystem/network
 security sandbox. Imported workbook scripts must still be explicitly enabled by the user.
 

@@ -7,6 +7,15 @@ namespace QuickExcel.Core.Test;
 
 public sealed class M4ProtocolTests
 {
+    [Theory]
+    [InlineData(1)] [InlineData(2)] [InlineData(3)]
+    public void PreviousWorkersCannotBeMixedWithProtocolFour(int oldVersion)
+    {
+        var identity = Identity();
+        var reply = WorkerProtocol.Message(identity, "logs", new WorkerLogs([])) with { ProtocolVersion = oldVersion };
+        Assert.Throws<ProtocolException>(() => WorkerProtocol.ValidateReply(reply, identity, "logs"));
+    }
+
     internal static RequestIdentity Identity() => new(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), 1, 2, 3);
 
     [Fact]
@@ -22,7 +31,7 @@ public sealed class M4ProtocolTests
     }
 
     [Theory]
-    [InlineData(0)] [InlineData(-1)] [InlineData(4 * 1024 * 1024 + 1)] [InlineData(int.MaxValue)]
+    [InlineData(0)] [InlineData(-1)] [InlineData(WorkerProtocol.MaxFrameBytes + 1)] [InlineData(int.MaxValue)]
     public async Task LengthIsRejectedBeforeReadingOrAllocatingBody(int length)
     {
         var bytes = new byte[4]; BinaryPrimitives.WriteInt32LittleEndian(bytes, length);
@@ -86,7 +95,7 @@ public sealed class M4ProtocolTests
     {
         using var stream = new MemoryStream();
         await Assert.ThrowsAsync<ProtocolException>(() => WorkerProtocol.WriteAsync(stream,
-            WorkerProtocol.Message(Identity(), "load", new LoadScript(new string('中', 1_500_000), "hash"))));
+            WorkerProtocol.Message(Identity(), "load", new LoadScript(new string('中', 3_000_000), "hash"))));
         Assert.Equal(0, stream.Length); // A rejected outgoing frame writes no partial header or body.
         using var deep = Frame(Encoding.UTF8.GetBytes(new string('[', 30) + "0" + new string(']', 30)));
         await Assert.ThrowsAsync<ProtocolException>(() => WorkerProtocol.ReadAsync(deep));

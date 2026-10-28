@@ -1,4 +1,20 @@
-# 未发布 — M4 actions 操作脚本（2026-10-28）
+# 未发布 — M4 实际 worker AppContainer 隔离（2026-10-28）
+
+- 公式与 actions 的实际 worker 使用无能力 AppContainer：挂起创建、OS token 核验、最小 IPC 句柄、Job 配置完成后恢复执行，失败不回退。
+- 每轮私有只读二进制副本和环境白名单；正常结束、取消及强杀后清理 profile/payload，不改安装目录 ACL。
+- 补齐 IPv4/IPv6 回环、系统/原生 DNS、直接 UDP/TCP DNS 的正向对照与 WFP 拒绝证据，保留原始超时分类。
+- 新增宿主崩溃后的 profile/payload 回收：用户私有持久记录、跨进程租约与串行回收、失败重试、活动 Job 保护；CreateProcess 时加入 Job，关闭宿主崩溃窗口。桌面启动回收不执行脚本。
+- 全套 625 项测试、native smoke 与发布后完整 WPF smoke 通过。新增本机部署矩阵脚本和验证 ZIP；完整部署矩阵、严格策略及 M6 OS 门禁仍待完成，继续仅供可信脚本使用。详情及精确证据见 [回收与部署验证](docs/16-m4-recovery-and-deployment.md)和 [隔离 ADR](docs/15-m4-os-isolation-adr.md)。
+
+# 未发布 — M4 合批与容量（2026-10-28，上一切片）
+
+- 独立整格 UDF 按原拓扑优先顺序合批，保留条件懒求值、嵌套调用、类型与整轮提交；600 次状态性调用使用 8 个 IPC 批次。
+- IPC 与脚本桥消息从 4 MiB 放宽至 16 MiB；长文本回包有最坏大小预算，超长单格仍返回单元格错误。源码、单格、引擎/进程内存及时间预算保持。
+- IPC 当前协议 4，升级须同时替换宿主和 ScriptWorker；文件格式/API 版本不变。
+- 新增开发用 AppContainer/受限令牌/句柄探测和 ADR。实际 worker OS 隔离及严格策略仍未完成，本版继续只运行可信脚本。
+- 详情与验收见 [合批记录](docs/14-m4-batching.md)、[隔离 ADR](docs/15-m4-os-isolation-adr.md)。没有创建新发布 ZIP。
+
+# 未发布 — M4 actions 操作脚本（2026-10-28，上一切片）
 
 - 文件级 API v2 新增 script-actions 能力与 workbook/actions 绑定；可与函数绑定共存。打开/保存不执行脚本、不恢复授权。
 - 动作在独立 worker 中读取不可变工作簿快照、构建值/公式 patch。宿主检查身份、修订、授权、目标、类型、公式及容量后原子提交，一次撤销全部变更；重做不再次调用动作。

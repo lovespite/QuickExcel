@@ -84,6 +84,12 @@ try {
         if (-not (Test-Path -LiteralPath (Join-Path $publishPath "ScriptWorker\$required") -PathType Leaf)) { throw "Published script worker is missing $required" }
     }
     if (Test-Path -LiteralPath (Join-Path $publishPath 'WorkerFixture')) { throw 'Test worker fixture must not be published.' }
+    if (Get-ChildItem -LiteralPath $publishPath -Recurse -File | Where-Object { $_.Name -like '*HostFixture*' -or $_.Name -like 'WorkerFixture*' }) {
+        throw 'Test fixtures must not be published.'
+    }
+    if (Get-ChildItem -LiteralPath $publishPath -Recurse -File | Where-Object { $_.Name -like 'QuickExcel.SandboxProbe*' }) {
+        throw 'Development sandbox probe must not be published.'
+    }
 
     if ($shouldRunSmoke) {
         New-Item -ItemType Directory -Force -Path $smokePath | Out-Null
@@ -152,7 +158,7 @@ try {
             publishedDllSha256 = (Get-FileHash -LiteralPath (Join-Path $publishPath 'quickexcel-js.dll') -Algorithm SHA256).Hash
         }
         verification = [ordered]@{ coreTests = $unitTests; nativeSmoke = $nativeSmoke; wpfSmoke = $desktopSmoke; wpfResult = $smokeResult }
-        scriptWorker = [ordered]@{ protocolVersion = 3; policy = 'conservative-worker-v1'; osAccessIsolationValidated = $false }
+        scriptWorker = [ordered]@{ protocolVersion = 4; policy = 'conservative-worker-v1'; maxMessageBytes = 16777216; maxCalculationBatchCalls = 85; isolationMode = 'appcontainer-no-capabilities-v1'; osAccessIsolationValidated = $false }
     }
     $metadata | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $publishPath 'BUILD-METADATA.json') -Encoding UTF8
     Copy-Item -LiteralPath (Join-Path $projectRoot 'QuickExcel.Desktop\RELEASE-NOTES.md') -Destination (Join-Path $publishPath 'RELEASE-NOTES.md')
@@ -163,6 +169,9 @@ try {
     Copy-Item -LiteralPath (Join-Path $projectRoot 'QuickExcel.Desktop\docs\11-m4-worker.md') -Destination (Join-Path $supportDocsPath '11-m4-worker.md')
     Copy-Item -LiteralPath (Join-Path $projectRoot 'QuickExcel.Desktop\docs\12-m4-modules.md') -Destination (Join-Path $supportDocsPath '12-m4-modules.md')
     Copy-Item -LiteralPath (Join-Path $projectRoot 'QuickExcel.Desktop\docs\13-m4-actions.md') -Destination (Join-Path $supportDocsPath '13-m4-actions.md')
+    Copy-Item -LiteralPath (Join-Path $projectRoot 'QuickExcel.Desktop\docs\14-m4-batching.md') -Destination (Join-Path $supportDocsPath '14-m4-batching.md')
+    Copy-Item -LiteralPath (Join-Path $projectRoot 'QuickExcel.Desktop\docs\15-m4-os-isolation-adr.md') -Destination (Join-Path $supportDocsPath '15-m4-os-isolation-adr.md')
+    Copy-Item -LiteralPath (Join-Path $projectRoot 'QuickExcel.Desktop\docs\16-m4-recovery-and-deployment.md') -Destination (Join-Path $supportDocsPath '16-m4-recovery-and-deployment.md')
     Copy-Item -LiteralPath (Join-Path $projectRoot 'QuickExcel.Scripting\native\SOURCES.md') -Destination (Join-Path $publishPath 'QUICKJS-SOURCES.md')
     $notices = @"
 QuickExcel third-party component provenance

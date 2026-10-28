@@ -7,7 +7,9 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Remove="WorkerFixture\**\*.cs" />
+    <Compile Remove="SandboxHostFixture\**\*.cs" />
     <ProjectReference Include="WorkerFixture\WorkerFixture.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="SandboxHostFixture\SandboxHostFixture.csproj" ReferenceOutputAssembly="false" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
     <PackageReference Include="xunit" Version="2.9.3" />
     <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
@@ -21,5 +23,9 @@
       <Output TaskParameter="TargetOutputs" ItemName="TestFixturePayload" />
     </MSBuild>
     <Copy SourceFiles="@(TestFixturePayload)" DestinationFolder="$(TargetDir)WorkerFixture" SkipUnchangedFiles="true" />
+    <MSBuild Projects="SandboxHostFixture\SandboxHostFixture.csproj" Targets="GetFixturePayload" Properties="Configuration=$(Configuration);RuntimeIdentifier=$(RuntimeIdentifier)">
+      <Output TaskParameter="TargetOutputs" ItemName="SandboxHostFixturePayload" />
+    </MSBuild>
+    <Copy SourceFiles="@(SandboxHostFixturePayload)" DestinationFolder="$(TargetDir)SandboxHostFixture" SkipUnchangedFiles="true" />
   </Target>
 </Project>

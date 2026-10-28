@@ -76,10 +76,51 @@ public sealed class WorkbookCalculator(IScriptRuntimeFactory runtimeFactory) : I
             Store(address, CellValue.FromError(CellErrorCode.Cycle), CalculationState.Error, ["循环引用：此单元格属于循环强连通分量。"]);
         foreach (var (address, node) in index.Nodes)
             if (pending[address] == 0 && !index.CycleMembers.Contains(address)) ready.Enqueue(address, node.Order);
+        IScriptInvocationBatch? batch = null;
+        var queued = new List<(CellAddress Address, TypedEvaluator.PreparedScriptCall Call)>();
+        var queuedAddresses = new HashSet<CellAddress>();
+        void StoreEvaluated(CellAddress address, Func<CellValue> evaluate)
+        {
+            var notes = new List<string>();
+            CellValue value;
+            try
+            {
+                value = evaluate();
+                if (value is { Kind: CellValueKind.Text } text && text.TextValue.Length > WorkbookLimits.MaxCellTextLength)
+                    throw new FormatException("计算结果超过单元格文本长度限制。");
+            }
+            catch (Exception e) when (e is FormulaValueException or FormatException or OverflowException or ArgumentException)
+            {
+                value = CellValue.FromError(e is FormulaValueException formula ? formula.Code : CellErrorCode.Value);
+                notes.Add(e.Message);
+            }
+            if (index.Nodes[address].ParseError is { } parseError) notes.Add(parseError);
+            if (value.Kind == CellValueKind.Error && notes.Count == 0) notes.Add($"计算结果：{CellInput.DisplayText(value)}");
+            Store(address, value, value.Kind == CellValueKind.Error ? CalculationState.Error : CalculationState.Fresh, notes);
+        }
+        void Flush()
+        {
+            if (batch is null || batch.Count == 0) return;
+            Check();
+            var replies = batch.Invoke();
+            Check();
+            if (replies.Count != queued.Count) throw new ScriptRuntimeFailureException("Protocol", "脚本批次结果数量不匹配，本轮未提交。");
+            for (var i = 0; i < queued.Count; i++)
+            {
+                Check();
+                var (address, call) = queued[i];
+                StoreEvaluated(address, () => evaluator.CompleteScript(call, replies[i]));
+            }
+            batch = null; queued.Clear(); queuedAddresses.Clear();
+        }
         while (ready.TryDequeue(out var address, out _))
         {
             Check();
             var node = index.Nodes[address];
+            var canBatch = runtime is IScriptBatchRuntime && evaluator.CanBatch(node.Expression);
+            // Release graph edges in exactly the original priority order, but flush before a
+            // consumer reads a pending result or any non-batchable expression executes.
+            if (!canBatch || node.Dependencies.Overlaps(queuedAddresses)) Flush();
             if (reusable && !affected.Contains(address) && prior!.Result.Cells.TryGetValue(address, out var cached)
                 && cached.State is CalculationState.Fresh or CalculationState.Error)
             {
@@ -105,26 +146,45 @@ public sealed class WorkbookCalculator(IScriptRuntimeFactory runtimeFactory) : I
                 }
                 else
                 {
+                    evaluator.CurrentSheet = address.SheetId;
+                    object? prepared = null;
                     try
                     {
-                        evaluator.CurrentSheet = address.SheetId;
-                        value = evaluator.Scalar(node.Expression);
-                        if (value is { Kind: CellValueKind.Text } text && text.TextValue.Length > WorkbookLimits.MaxCellTextLength)
-                            throw new FormatException("计算结果超过单元格文本长度限制。");
+                        if (canBatch) prepared = evaluator.PrepareScript(node.Expression);
                     }
                     catch (Exception e) when (e is FormulaValueException or FormatException or OverflowException or ArgumentException)
                     {
-                        value = CellValue.FromError(e is FormulaValueException formula ? formula.Code : CellErrorCode.Value);
-                        notes.Add(e.Message);
+                        Flush();
+                        StoreEvaluated(address, () => throw e);
+                        goto ReleaseDependents;
                     }
-                    if (node.ParseError is not null) notes.Add(node.ParseError);
-                    if (value?.Kind == CellValueKind.Error && notes.Count == 0) notes.Add($"计算结果：{CellInput.DisplayText(value.Value)}");
+                    if (prepared is TypedEvaluator.PreparedScriptCall call)
+                    {
+                        batch ??= ((IScriptBatchRuntime)runtime!).CreateBatch();
+                        if (!batch.TryAdd(call.Descriptor.Name, call.Arguments))
+                        {
+                            Flush();
+                            batch = ((IScriptBatchRuntime)runtime!).CreateBatch();
+                            if (!batch.TryAdd(call.Descriptor.Name, call.Arguments))
+                                throw new ScriptRuntimeFailureException("InputLimit", "单次脚本调用超过批次限额。");
+                        }
+                        queued.Add((address, call)); queuedAddresses.Add(address);
+                    }
+                    else
+                    {
+                        Flush();
+                        StoreEvaluated(address, () => prepared is CellValue error ? error : evaluator.Scalar(node.Expression));
+                    }
+                    goto ReleaseDependents;
                 }
+                Flush();
                 Store(address, value, blocked ? CalculationState.Blocked : value?.Kind == CellValueKind.Error ? CalculationState.Error : CalculationState.Fresh, notes);
             }
+        ReleaseDependents:
             foreach (var dependent in node.Dependents)
                 if (--pending[dependent] == 0 && !index.CycleMembers.Contains(dependent)) ready.Enqueue(dependent, index.Nodes[dependent].Order);
         }
+        Flush();
         Check();
         if (cells.Count != index.Nodes.Count) throw new InvalidOperationException("计算计划未完成，拒绝发布部分结果。");
         if (runtime is not null) diagnostics.AddRange(runtime.GetLogs().Take(Math.Max(0, 100 - diagnostics.Count)).Select(l => "JavaScript：" + l));

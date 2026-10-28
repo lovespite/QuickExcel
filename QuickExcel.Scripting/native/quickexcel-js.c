@@ -5,7 +5,7 @@
 #include "quickjs.h"
 
 #define QX_EXPORT __declspec(dllexport)
-#define QX_RESULT_LIMIT (4 * 1024 * 1024)
+#define QX_RESULT_LIMIT (16 * 1024 * 1024)
 
 typedef struct {
     const char *id;
@@ -268,7 +268,7 @@ QX_EXPORT char *qx_call(qx_session *session, const char *method, const char *arg
             output = copy_text(text, length);
             if (!output) set_error(error, "Unable to allocate JavaScript result.");
         } else {
-            set_error(error, "JavaScript result exceeds the 4 MiB result limit.");
+            set_error(error, "JavaScript result exceeds the 16 MiB result limit.");
         }
         JS_FreeCString(context, text);
     } else {

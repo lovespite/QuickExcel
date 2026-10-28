@@ -6,6 +6,9 @@
     <Version>0.2.0</Version>
   </PropertyGroup>
   <ItemGroup>
+    <InternalsVisibleTo Include="QuickExcel.Core.Test" />
+    <InternalsVisibleTo Include="SandboxHostFixture" />
+    <InternalsVisibleTo Include="QuickExcel.SandboxProbe" />
     <ProjectReference Include="..\QuickExcel.Core\QuickExcel.Core.csproj" />
     <ProjectReference Include="..\..\ExcelIO\ExcelIO\ExcelIO.csproj" />
     <ProjectReference Include="..\..\ExcelIO\ExcelIO.Formula\ExcelIO.Formula.csproj" />

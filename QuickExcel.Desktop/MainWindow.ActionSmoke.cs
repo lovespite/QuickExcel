@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
@@ -35,8 +34,8 @@ public partial class MainWindow
             throw new Exception("The action selector is not ready after explicit application.");
         var before = _document.Snapshot.Revision;
         RunActionButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
-        var deadline = Stopwatch.StartNew();
-        while (_busy && deadline.Elapsed < TimeSpan.FromSeconds(6)) await Task.Delay(20);
+        // WorkAsync clears _busy before the button handler appends diagnostics. Await the whole handler operation.
+        await _actionExecution.WaitAsync(TimeSpan.FromSeconds(6));
         if (_busy || _document.Snapshot.Revision != before + 1 || _document.GetCellValue(0, 0, 1) != "Apple" ||
             _document.GetCellValue(0, 1, 1) != "Pear" || _document.Snapshot.Sheets[0].GetCell(0, 2)?.Content.FormulaText != "=1+2")
             throw new Exception("Actual WPF action button did not commit the entire patch once.");

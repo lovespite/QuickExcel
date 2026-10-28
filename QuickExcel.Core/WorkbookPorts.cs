@@ -49,6 +49,22 @@ public interface IScriptRuntime : IDisposable
     IReadOnlyList<string> GetLogs();
 }
 
+/// <summary>Optional ordered batching. Admission must be bounded and must not execute user code.</summary>
+public interface IScriptBatchRuntime : IScriptRuntime
+{
+    IScriptInvocationBatch CreateBatch();
+}
+
+public interface IScriptInvocationBatch
+{
+    int Count { get; }
+    // False means flush this batch first. An individually oversized call must throw.
+    bool TryAdd(string name, IReadOnlyList<object> arguments);
+    IReadOnlyList<ScriptCallResult> Invoke();
+}
+
+public sealed record ScriptCallResult(object? Value, string? Error, bool ValueTooLong = false);
+
 public readonly record struct CalculationStamp(Guid SessionId, long InputRevision, long CalculationGeneration, long ScriptGeneration);
 public sealed record CalculationRequest(CalculationStamp Stamp, WorkbookSnapshot Snapshot, bool ScriptsEnabled)
 {

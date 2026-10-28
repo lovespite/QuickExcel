@@ -1,5 +1,7 @@
 # QuickExcel 0.5 脚本进程预览版
 
+2026-10-28：M4 已补齐宿主崩溃后的 profile/payload 回收及故障测试，本机部署验证五项通过、直接长路径 EXE 启动一项失败；完整结果与后续环境见 [回收与部署验证](QuickExcel.Desktop/docs/16-m4-recovery-and-deployment.md)。
+
 Windows x64 桌面表格，基于 WPF、同级 ExcelIO 源码库与 QuickJS-NG。M2/M3 文件与计算能力保持；当前推进 **M4 独立脚本 worker、包内模块与 actions 操作脚本**。
 
 ## 试用
@@ -12,7 +14,7 @@ Windows x64 桌面表格，基于 WPF、同级 ExcelIO 源码库与 QuickJS-NG�
 - XLSX 导出可选值快照或可移植公式；脚本与跨表传递依赖冻结为值，独立标准公式可保留。缺失的冻结结果阻止导出，旧结果须明确选择。
 - 打开、迁移、保存不执行脚本，不恢复授权。文件级 API v2 支持包内 ES 模块执行；import 只接受清单声明的逻辑 ID。API v1 保留旧单脚本语义，多模块元数据仍可保存。
 
-脚本每轮在独立 worker 执行，可随时停止。已绑定的 actions 读取只读工作簿快照，批量写值或公式；宿主校验全部变更后原子提交，可一次撤销，失败不留部分写入。计算计划合批与 OS 文件/网络隔离仍待完成。本版仅供可信脚本使用，不等于完整 M4 或 Beta。完整桌面交互与自动恢复属 M5/M6。见 [actions 契约与验收](QuickExcel.Desktop/docs/13-m4-actions.md)、[模块契约](QuickExcel.Desktop/docs/12-m4-modules.md)、[worker 范围](QuickExcel.Desktop/docs/11-m4-worker.md)及[发布说明](QuickExcel.Desktop/RELEASE-NOTES.md)。
+脚本每轮在独立 worker 执行，可随时停止。已绑定的 actions 读取只读工作簿快照，批量写值或公式；宿主校验全部变更后原子提交，可一次撤销，失败不留部分写入。独立 UDF 已按原顺序合批，消息上限为 16 MiB；公式与 actions worker 已强制使用无能力 AppContainer，回环与 DNS 拒绝已取得本机 WFP 证据。严格执行策略、部署矩阵及 M6 OS 门禁仍待完成。本版仅供可信脚本使用，不等于完整 M4 或 Beta。完整桌面交互与自动恢复属 M5/M6。见 [合批与容量](QuickExcel.Desktop/docs/14-m4-batching.md)、[隔离 ADR](QuickExcel.Desktop/docs/15-m4-os-isolation-adr.md)、[actions 契约与验收](QuickExcel.Desktop/docs/13-m4-actions.md)及[发布说明](QuickExcel.Desktop/RELEASE-NOTES.md)。
 
 ## 仓库边界
 

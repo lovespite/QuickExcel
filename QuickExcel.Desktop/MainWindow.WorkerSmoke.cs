@@ -65,9 +65,18 @@ public partial class MainWindow
         using var reopened = WorkbookDocument.Open(modulePath, _services);
         if (reopened.ScriptsEnabled || reopened.Snapshot.ScriptModules.Modules["helper"] != modules.Modules["helper"])
             throw new Exception("Module roundtrip lost helpers or restored authorization.");
+        InstallDocument(WorkbookDocument.CreateBlank(new(_services.Storage, new WorkbookCalculator(factory))), null, "worker-batches.xlsq");
+        ScriptEditor.Text = "let n=0; quickExcel.functions.register('NEXT',()=>++n);";
+        ApplyValues(Enumerable.Range(0, 60).Select(row => (row, 0, "=NEXT()")).ToArray());
+        factory.Ready = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        await RunScriptsAsync();
+        var batchRuntime = await factory.Ready.Task;
+        if (_document.GetCellValue(0, 59, 0) != "60" || batchRuntime.InvocationCount != 60 || batchRuntime.InvocationBatchCount != 1)
+            throw new Exception("Desktop UDF batching changed invocation order or did not use bounded batches.");
+        _services.Storage.Save(Path.Combine(folder, "worker-batches.xlsq"), _document.Snapshot);
         await RunActionSmokeTestsAsync(folder);
         File.WriteAllText(Path.Combine(folder, "worker-smoke-result.txt"),
-            $"PASS: separate worker; actual WPF Stop button returns in {timer.ElapsedMilliseconds} ms; strong-kill preserves cache; editing/saving and explicit restart recover; API v2 package module open/apply/edit/save/reopen through desktop composition.");
+            $"PASS: separate worker; actual WPF Stop button returns in {timer.ElapsedMilliseconds} ms; strong-kill preserves cache; editing/saving and explicit restart recover; API v2 package module open/apply/edit/save/reopen; 60 stateful UDF calls in 1 bounded IPC batch through desktop composition.");
     }
 
     private sealed class SmokeWorkerFactory : IScriptRuntimeFactory

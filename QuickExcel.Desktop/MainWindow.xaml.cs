@@ -63,6 +63,7 @@ public partial class MainWindow : Window
             _smokeMode = true;
             try
             {
+                await Task.Run(() => QuickExcel.Runtime.ScriptWorkerRuntimeFactory.RecoverAbandonedSandboxes());
                 await RunSmokeTestAsync(args.Length > 1 ? args[1] : Path.Combine(AppContext.BaseDirectory, "smoke"));
                 Environment.ExitCode = 0;
             }
@@ -78,6 +79,8 @@ public partial class MainWindow : Window
             return;
         }
         if (args.Length > 0 && File.Exists(args[0])) await OpenPathAsync(args[0]);
+        try { await Task.Run(() => QuickExcel.Runtime.ScriptWorkerRuntimeFactory.RecoverAbandonedSandboxes()); }
+        catch (ScriptRuntimeFailureException ex) { LogText.Text += "\n" + ex.Message; }
     }
 
     private void InstallDocument(WorkbookDocument document, string? path, string displayName, bool disposePrevious = true)
@@ -540,7 +543,8 @@ public partial class MainWindow : Window
         StatusText.Text = "正在停止…";
     }
 
-    private async void RunAction_Click(object sender, RoutedEventArgs e) => await RunSelectedActionAsync();
+    private Task _actionExecution = Task.CompletedTask;
+    private async void RunAction_Click(object sender, RoutedEventArgs e) => await (_actionExecution = RunSelectedActionAsync());
     private async Task RunSelectedActionAsync()
     {
         if (_busy || !_document.ScriptsEnabled || ActionPicker.SelectedItem is not ScriptActionDescriptor action) return;

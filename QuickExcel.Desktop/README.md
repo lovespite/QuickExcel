@@ -1,6 +1,10 @@
 # QuickExcel 0.5 脚本进程预览版
 
+2026-10-28：已补齐宿主崩溃后的 profile/payload 回收，625 项测试通过。本机部署矩阵五项通过；直接长路径 EXE 启动失败仍待处理，详见 [回收与部署验证](docs/16-m4-recovery-and-deployment.md)。
+
 本版保留 M2/M3 文件与计算能力，推进 M4 独立脚本 worker、包内模块与 actions 操作脚本。需要 Windows x64 与 .NET 10 Windows Desktop Runtime；保留完整发布目录后运行 QuickExcel.exe。
+
+最新切片已把无能力 AppContainer 接入公式与 actions 的实际 worker，并补齐回环/DNS 的本机 WFP 拒绝证据。详见 [隔离 ADR](docs/15-m4-os-isolation-adr.md)和 [合批及容量](docs/14-m4-batching.md)；部署矩阵、严格策略及 M6 OS 门禁仍未完成，仅供可信脚本使用。
 
 ## 使用
 
@@ -28,7 +32,7 @@ quickExcel.functions.register("DISCOUNT", (price, rate) => price * (1 - rate));
 quickExcel.functions.register("DOUBLE", value => value * 2);
 ```
 
-支持同步标量、v1 一维区域与 v2 显式二维区域参数；没有 Promise、任意对象或动态数组溢出支持。QuickJS 每轮运行于独立 worker，执行期间可点击状态栏「停止计算」。文件级 API v2 支持按清单逻辑 ID 导入 ES 模块、多个入口和共享依赖；初始化必须同步完成。actions 使用独立上下文、只读快照和有界 patch，首版每次最多写 20,000 格；含合并或单元格内图片的工作表暂不接受动作写入。打开、迁移、另存均不会复制运行授权。文件/网络 OS 隔离仍待后续，继续仅供可信脚本使用。发布包的 `ScriptWorker` 目录必须保留；见 [actions 示例与边界](docs/13-m4-actions.md)、[模块契约](docs/12-m4-modules.md)及 [worker 支持范围](docs/11-m4-worker.md)。
+支持同步标量、v1 一维区域与 v2 显式二维区域参数；没有 Promise、任意对象或动态数组溢出支持。QuickJS 每轮运行于 AppContainer worker，执行期间可点击状态栏「停止计算」。文件级 API v2 支持按清单逻辑 ID 导入 ES 模块、多个入口和共享依赖；初始化必须同步完成。actions 使用独立上下文、只读快照和有界 patch，首版每次最多写 20,000 格；含合并或单元格内图片的工作表暂不接受动作写入。打开、迁移、另存均不会复制运行授权。OS 最终发布验收仍待完成，继续仅供可信脚本使用。发布包的 `ScriptWorker` 目录必须保留；见 [actions 示例与边界](docs/13-m4-actions.md)、[模块契约](docs/12-m4-modules.md)及 [worker 支持范围](docs/11-m4-worker.md)。
 
 跨表计算已接入；未授权脚本和依赖仍保留 Blocked 缓存。主题、富文本、图表/透视表、复杂锚点、单元格内图片与数组公式等不在可编辑保真承诺内；完整矩阵见 [M2 文件与类型](docs/09-m2-files-and-types.md)。图片/合并完整界面呈现、排序筛选、恢复和无障碍等留待后续。
 

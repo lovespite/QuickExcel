@@ -8,6 +8,7 @@ namespace QuickExcel.Scripting;
 public sealed class QuickJsSession : IDisposable
 {
     private const string NativeLibrary = "quickexcel-js";
+    public const int MaxMessageBytes = 16 * 1024 * 1024;
     private readonly object _gate = new();
     private IntPtr _session;
 
@@ -244,7 +245,7 @@ public sealed class QuickJsSession : IDisposable
             {
                 Call("prepareModules", [actions]);
                 var json = JsonSerializer.Serialize(new { modules = modules.Select(m => new { id = m.Key, source = m.Value }), entries });
-                if (Encoding.UTF8.GetByteCount(json) > 4 * 1024 * 1024) throw new ArgumentException("Module payload exceeds 4 MiB UTF-8.");
+                if (Encoding.UTF8.GetByteCount(json) > MaxMessageBytes) throw new ArgumentException("Module payload exceeds 16 MiB UTF-8.");
                 if (NativeLoadModules(_session, json, out var moduleError) == 0) throw ReadException(moduleError);
                 result = Call("finishModules", []);
             }
@@ -302,8 +303,8 @@ public sealed class QuickJsSession : IDisposable
     {
         ObjectDisposedException.ThrowIf(_session == IntPtr.Zero, this);
         var json = JsonSerializer.Serialize(arguments);
-        if (json.Length > 4 * 1024 * 1024)
-            throw new InvalidOperationException("JavaScript arguments exceed the 4 MiB input limit.");
+        if (Encoding.UTF8.GetByteCount(json) > MaxMessageBytes)
+            throw new InvalidOperationException("JavaScript arguments exceed the 16 MiB UTF-8 input limit.");
         var result = NativeCall(_session, method, json, out var error);
         if (result == IntPtr.Zero) throw ReadException(error);
         try { return Marshal.PtrToStringUTF8(result) ?? "null"; }

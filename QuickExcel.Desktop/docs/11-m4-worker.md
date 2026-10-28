@@ -1,5 +1,9 @@
 # M4 首切片：独立脚本 worker
 
+> 2026-10-28 最新更新：公式与 actions 的实际 worker 已接入无能力 AppContainer、创建时加入 Job、挂起启动与令牌核验、最小继承句柄、只读私有 payload、环境白名单和 profile 清理；宿主崩溃后由下次启动回收资源，详见 [回收与部署验证](16-m4-recovery-and-deployment.md)。IPv4/IPv6 回环及 DNS 的本机 WFP 拒绝证据见 [隔离 ADR](15-m4-os-isolation-adr.md)。以下 Job-only 安全边界与 250 ms 清理说明为首切片历史；当前等待退出 1 秒，文件删除占用重试最多再 1 秒。M6 最终门禁仍未完成。
+
+> 最新更新：UDF 有界合批和 16 MiB 消息预算已实现，IPC 当前协议 4；见 [合批记录](14-m4-batching.md)与 [OS 原型 ADR](15-m4-os-isolation-adr.md)。下文保留历次切片的版本、预算及验收证据。
+
 > 2026-10-28 更新：包内 ES 模块及 actions 事务已接入，IPC 当前协议 3；见 [actions 契约与验收](13-m4-actions.md)与 [模块契约](12-m4-modules.md)。下文保留 2026-10-27 首切片的协议 1 和发布证据，模块/动作待办以最新记录为准。合批及 OS 访问隔离仍待完成。
 
 2026-10-27，基于已提交的 `2e749ff`（M3 及日期显示修复）。版本 `0.5.0-preview.1` 是 M4 进行中的可信脚本预览，不代表 M4 或 Beta 全部完成。

@@ -239,6 +239,33 @@ internal sealed class TypedEvaluator(WorkbookSnapshot snapshot, IReadOnlyDiction
 
     private CellValue Script(FunctionNode function, ScriptFunctionDescriptor descriptor)
     {
+        var prepared = PrepareScript(function, descriptor);
+        if (prepared is CellValue error) return error;
+        var call = (PreparedScriptCall)prepared;
+        try
+        {
+            check(); var value = runtime!.Invoke(function.Name, call.Arguments); check();
+            return CompleteScript(call, new(value, null));
+        }
+        catch (Exception e) when (e is not OperationCanceledException and not TimeoutException and not ScriptRuntimeFailureException and not FormulaValueException and not FormatException)
+        { throw new FormulaValueException(CellErrorCode.Script, $"{function.Name}：{e.Message}"); }
+    }
+
+    internal sealed record PreparedScriptCall(ScriptFunctionDescriptor Descriptor, IReadOnlyList<object> Arguments);
+
+    // Only a whole-cell call with no nested UDF can be prepared without executing script code.
+    // IF/IFERROR, binary expressions and nested UDFs retain the existing lazy, serial evaluator.
+    public bool CanBatch(FormulaNode node) => node is FunctionNode function && scripts.ContainsKey(function.Name)
+        && !function.Arguments.SelectMany(FormulaSyntax.Walk).OfType<FunctionNode>().Any(f => scripts.ContainsKey(f.Name));
+
+    public object PrepareScript(FormulaNode node)
+    {
+        var function = (FunctionNode)node;
+        return PrepareScript(function, scripts[function.Name]);
+    }
+
+    private object PrepareScript(FunctionNode function, ScriptFunctionDescriptor descriptor)
+    {
         if (function.Arguments.Count < descriptor.MinArguments || function.Arguments.Count > descriptor.MaxArguments)
             return Error(CellErrorCode.Value);
         var bridge = new List<object>();
@@ -265,20 +292,26 @@ internal sealed class TypedEvaluator(WorkbookSnapshot snapshot, IReadOnlyDiction
                 bridge.Add(descriptor.ApiVersion == 1 ? values : new { kind = "range", rows, columns, values });
             }
         }
+        return new PreparedScriptCall(descriptor, bridge);
+    }
+
+    public CellValue CompleteScript(PreparedScriptCall call, ScriptCallResult reply)
+    {
+        if (reply.ValueTooLong) throw new FormatException("计算结果超过单元格文本长度限制。");
         try
         {
-            check(); var value = runtime!.Invoke(function.Name, bridge); check();
-            var result = value switch
+            if (reply.Error is not null) throw new InvalidOperationException(reply.Error);
+            var result = reply.Value switch
             {
                 null => CellValue.Blank, string s => CellValue.FromText(s), bool b => CellValue.FromBoolean(b),
                 double n => CellValue.FromNumber(n), int n => CellValue.FromNumber(n), _ => Error(CellErrorCode.Script)
             };
-            if (descriptor.ReturnType != "any" && descriptor.ReturnType != result.Kind.ToString().ToLowerInvariant())
+            if (call.Descriptor.ReturnType != "any" && call.Descriptor.ReturnType != result.Kind.ToString().ToLowerInvariant())
                 Fail(CellErrorCode.Script, "脚本返回类型不符合描述符。");
             return result;
         }
         catch (Exception e) when (e is not OperationCanceledException and not TimeoutException and not ScriptRuntimeFailureException)
-        { throw new FormulaValueException(CellErrorCode.Script, $"{function.Name}：{e.Message}"); }
+        { throw new FormulaValueException(CellErrorCode.Script, $"{call.Descriptor.Name}：{e.Message}"); }
     }
 
     private static object? ObjectValue(CellValue value, int apiVersion) => value.Kind switch

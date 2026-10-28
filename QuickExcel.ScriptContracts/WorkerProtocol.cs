@@ -24,7 +24,7 @@ public sealed record FunctionInfo(string Name, int ApiVersion, int MinArguments,
 public sealed record LoadedScript(string Sha256, FunctionInfo[] Functions);
 public sealed record FunctionCall(string Name, WireValue[] Arguments);
 public sealed record InvokeBatch(FunctionCall[] Calls);
-public sealed record InvocationResult(WireValue? Value, string? Error);
+public sealed record InvocationResult(WireValue? Value, string? Error, bool ValueTooLong = false);
 public sealed record BatchResult(InvocationResult[] Results);
 public sealed record WorkerFailure(string Code, string Message);
 public sealed record WorkerLogs(string[] Messages);
@@ -33,11 +33,15 @@ public sealed class ProtocolException(string message, Exception? inner = null) :
 
 public static class WorkerProtocol
 {
-    public const int Version = 3;
+    public const int Version = 4;
     public const string Engine = "QuickJS-NG/0.17.0";
     public const string Policy = "conservative-worker-v1";
-    public const int MaxFrameBytes = 4 * 1024 * 1024;
+    public const int MaxFrameBytes = 16 * 1024 * 1024;
     public const int MaxBatchCalls = 256;
+    public const int MaxCellTextLength = 32767;
+    // A UTF-16 code unit can occupy six JSON bytes. Bound the worst-case reply,
+    // including per-result metadata and the envelope, before executing user code.
+    public const int MaxCalculationBatchCalls = (MaxFrameBytes - 1024) / (MaxCellTextLength * 6 + 256);
     public const int MaxFunctions = 4096;
     public const int MaxLogs = 100;
     public const int MaxLogBytes = 4000;

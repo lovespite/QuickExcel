@@ -76,6 +76,14 @@ var identity = mode switch
 await WorkerProtocol.WriteAsync(output, WorkerProtocol.Message(identity, "load", new LoadedScript(load.Sha256,
     [new("F", 1, 0, 255, "any", "conservative")])));
 var invoke = await WorkerProtocol.ReadAsync(input);
+if (mode == "isolation")
+{
+    string result;
+    try { result = IsolationChecks.Run(WorkerProtocol.Payload<InvokeBatch>(invoke).Calls.Single()); }
+    catch (Exception e) { result = System.Text.Json.JsonSerializer.Serialize(new Dictionary<string, bool> { [e.ToString()] = false }); }
+    await WorkerProtocol.WriteAsync(output, WorkerProtocol.Message(invoke.Identity, "invokeBatch", new BatchResult([new(WireValue.FromObject(result), null)])));
+    return;
+}
 if (mode == "hang") { await Task.Delay(30000); return; }
 if (mode == "memory")
 {
@@ -90,5 +98,8 @@ if (mode == "bad-count")
     await WorkerProtocol.WriteAsync(output, WorkerProtocol.Message(invoke.Identity, "invokeBatch", new BatchResult([])));
 else if (mode == "bad-value")
     await WorkerProtocol.WriteAsync(output, WorkerProtocol.Message(invoke.Identity, "invokeBatch", new BatchResult([new(new WireValue("number", System.Text.Json.JsonSerializer.SerializeToElement("wrong")), null)])));
+else if (mode == "bad-limit")
+    await WorkerProtocol.WriteAsync(output, WorkerProtocol.Message(invoke.Identity, "invokeBatch", new BatchResult(
+        WorkerProtocol.Payload<InvokeBatch>(invoke).Calls.Select(_ => new InvocationResult(WireValue.FromObject(1d), null, ValueTooLong: true)).ToArray())));
 else if (mode == "bad-logs")
     await WorkerProtocol.WriteAsync(output, WorkerProtocol.Message(invoke.Identity, "logs", new WorkerLogs(Enumerable.Repeat("x", 101).ToArray())));

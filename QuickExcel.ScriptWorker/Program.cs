@@ -88,7 +88,8 @@ try
                 try
                 {
                     var value = runtime.Invoke(call.Name, call.Arguments.Select(a => a.ToObject()!).ToArray());
-                    results.Add(new(WireValue.FromObject(value), null));
+                    results.Add(value is string text && text.Length > WorkerProtocol.MaxCellTextLength
+                        ? new(null, null, ValueTooLong: true) : new(WireValue.FromObject(value), null));
                 }
                 catch (InvalidOperationException e)
                 {
