@@ -131,3 +131,6 @@ QX_EXPORT char *qx_call(qx_session *session, const char *method, const char *arg
 }
 
 QX_EXPORT void qx_free_string(char *text) { free(text); }
+
+/* Stable status, including an interrupt raised while formatting an exception. */
+QX_EXPORT int qx_was_interrupted(qx_session *session) { return session ? session->interrupted : 0; }

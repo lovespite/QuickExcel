@@ -17,6 +17,7 @@ public sealed class DocumentSession : IDisposable
     private long _savedRevision;
     private long _calculationGeneration;
     private long _scriptGeneration;
+    private CancellationTokenSource? _activeCalculation;
     private bool _scriptsEnabled;
     private bool _closed;
     private ImmutableArray<string> _diagnostics = [];
@@ -80,7 +81,7 @@ public sealed class DocumentSession : IDisposable
                 _scriptsEnabled = false;
                 _scriptGeneration = checked(_scriptGeneration + 1);
             }
-            _calculationGeneration = checked(_calculationGeneration + 1);
+            AdvanceCalculationGeneration();
             _snapshot = after;
             _diagnostics = [];
             change = new(after.Revision, ActualChanges(before, after, draft.Changes), draft.StructureChanged);
@@ -115,7 +116,7 @@ public sealed class DocumentSession : IDisposable
             var restored = (redo ? entry.After : entry.Before).WithScriptModules(before.ScriptModules)
                 .WithRevision(checked(before.Revision + 1));
             _snapshot = Invalidate(restored);
-            _calculationGeneration = checked(_calculationGeneration + 1);
+            AdvanceCalculationGeneration();
             if (redo) _undo.AddLast(entry); else _redo.Push(entry);
             _diagnostics = [];
             change = new(_snapshot.Revision, ActualChanges(before, _snapshot, entry.Changes), entry.StructureChanged, IsUndoOrRedo: true);
@@ -135,7 +136,7 @@ public sealed class DocumentSession : IDisposable
             // Reapply also invalidates an in-flight compile of the same source.
             _scriptsEnabled = enabled;
             _scriptGeneration = checked(_scriptGeneration + 1);
-            _calculationGeneration = checked(_calculationGeneration + 1);
+            AdvanceCalculationGeneration();
             _snapshot = Invalidate(_snapshot);
             _diagnostics = [];
             change = new(_snapshot.Revision, [], false, CalculationOnly: true);
@@ -149,8 +150,10 @@ public sealed class DocumentSession : IDisposable
         lock (_gate)
         {
             ThrowIfClosed();
-            _calculationGeneration = checked(_calculationGeneration + 1);
-            return new(new(SessionId, _snapshot.Revision, _calculationGeneration, _scriptGeneration), _snapshot, _scriptsEnabled);
+            AdvanceCalculationGeneration();
+            _activeCalculation = new CancellationTokenSource();
+            return new(new(SessionId, _snapshot.Revision, _calculationGeneration, _scriptGeneration), _snapshot, _scriptsEnabled)
+            { CancellationToken = _activeCalculation.Token };
         }
     }
 
@@ -184,7 +187,7 @@ public sealed class DocumentSession : IDisposable
                 if (builders.TryGetValue(sheets[index].Id, out var builder)) sheets[index] = sheets[index].WithCells(builder.ToImmutable());
             _snapshot = _snapshot.WithSheets(sheets);
             _diagnostics = result.Diagnostics;
-            _calculationGeneration = checked(_calculationGeneration + 1); // A completed request is single-use.
+            AdvanceCalculationGeneration(); // A completed request is single-use.
             // Keep the latest result for redo, without changing any input revision or execution permission.
             if (_undo.Last is { } last && last.Value.After.Revision == _snapshot.Revision)
             {
@@ -212,7 +215,7 @@ public sealed class DocumentSession : IDisposable
                 _scriptsEnabled = false;
                 _scriptGeneration = checked(_scriptGeneration + 1);
             }
-            _calculationGeneration = checked(_calculationGeneration + 1);
+            AdvanceCalculationGeneration();
             _snapshot = Invalidate(_snapshot);
             change = new(_snapshot.Revision, [], false, CalculationOnly: true);
             QueueNotification(change);
@@ -276,6 +279,22 @@ public sealed class DocumentSession : IDisposable
     {
         if (expected.HasValue && expected != _snapshot.Revision) throw new InvalidOperationException("文档已发生变化，请重新提交操作。");
     }
+    private void AdvanceCalculationGeneration()
+    {
+        _calculationGeneration = checked(_calculationGeneration + 1);
+        CancelActiveCalculation();
+    }
+
+    private void CancelActiveCalculation()
+    {
+        var active = _activeCalculation;
+        _activeCalculation = null;
+        if (active is null) return;
+        try { active.Cancel(); }
+        catch (AggregateException) { System.Diagnostics.Trace.TraceError("Calculation cancellation callback failed."); }
+        finally { active.Dispose(); }
+    }
+
     private void ThrowIfClosed() => ObjectDisposedException.ThrowIf(_closed, this);
     private void QueueNotification(DocumentChange change) => _notifications.Enqueue(change with { Snapshot = _snapshot, SessionId = SessionId });
 
@@ -310,6 +329,7 @@ public sealed class DocumentSession : IDisposable
         {
             if (_closed) return;
             _closed = true;
+            CancelActiveCalculation();
             _scriptsEnabled = false;
             _undo.Clear(); _redo.Clear(); _historyBytes = 0;
             _notifications.Clear();

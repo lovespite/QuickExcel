@@ -1,6 +1,6 @@
-# QuickExcel 0.4 计算预览版
+# QuickExcel 0.5 脚本进程预览版
 
-Windows x64 桌面表格，基于 WPF、同级 ExcelIO 源码库与 QuickJS-NG。当前阶段在 M2 类型化文件基础上加入 **M3 跨表、类型化与增量计算**。
+Windows x64 桌面表格，基于 WPF、同级 ExcelIO 源码库与 QuickJS-NG。M2/M3 文件与计算能力保持；当前进入 **M4 独立脚本 worker 首切片**。
 
 ## 试用
 
@@ -12,7 +12,7 @@ Windows x64 桌面表格，基于 WPF、同级 ExcelIO 源码库与 QuickJS-NG�
 - XLSX 导出可选值快照或可移植公式；脚本与跨表传递依赖冻结为值，独立标准公式可保留。缺失的冻结结果阻止导出，旧结果须明确选择。
 - 打开、迁移、保存不执行脚本，不恢复授权。模块源码和绑定可持久化；多模块执行留到 M4。
 
-本版不等于完整 Beta。独立 worker 属 M4，完整桌面交互与自动恢复属 M5/M6。进程内 QuickJS 仅供可信脚本，没有 OS 沙箱。见[支持范围与验收](QuickExcel.Desktop/docs/09-m2-files-and-types.md)及[发布说明](QuickExcel.Desktop/RELEASE-NOTES.md)。
+脚本每轮在独立 worker 执行，计算期间可「停止计算」，故障不提交半批结果。模块与动作、OS 文件/网络隔离仍待完成；本版仅供可信脚本使用，不等于完整 M4 或 Beta。完整桌面交互与自动恢复属 M5/M6。见 [M4 范围与验收](QuickExcel.Desktop/docs/11-m4-worker.md)及[发布说明](QuickExcel.Desktop/RELEASE-NOTES.md)。
 
 ## 仓库边界
 
@@ -23,6 +23,7 @@ QuickExcel 与同级 `../ExcelIO` 是独立 Git 仓库。ExcelIO 是源码构建
 | `QuickExcel.Core` | 纯 .NET 领域快照、会话、命令、历史和端口 |
 | `QuickExcel.Infrastructure` | 类型化 XLSX/XLSQ v2、保留的 v1 适配、计算与运行时适配 |
 | `QuickExcel.Scripting` | QuickJS 托管桥和固定来源的原生引擎 |
+| `QuickExcel.ScriptContracts` / `QuickExcel.ScriptWorker` | 有界 IPC 协议与独立脚本执行进程 |
 | `QuickExcel.Desktop` | WPF、组合根、编辑控制器和集成 smoke |
 | `QuickExcel.Core.Test` | 领域、会话、存储、计算和格式异常回归 |
 

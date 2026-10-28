@@ -1,6 +1,6 @@
-# QuickExcel 0.4 计算预览版
+# QuickExcel 0.5 脚本进程预览版
 
-本版在 M2 文件支持之上交付 M3 计算子集，支持跨表引用和标准公式增量求值。需要 Windows x64 与 .NET 10 Windows Desktop Runtime；保留完整发布目录后运行 QuickExcel.exe。
+本版保留 M2/M3 文件与计算能力，进入 M4 独立脚本 worker 首切片。需要 Windows x64 与 .NET 10 Windows Desktop Runtime；保留完整发布目录后运行 QuickExcel.exe。
 
 ## 使用
 
@@ -27,7 +27,7 @@ quickExcel.functions.register("DISCOUNT", (price, rate) => price * (1 - rate));
 quickExcel.functions.register("DOUBLE", value => value * 2);
 ```
 
-支持同步标量与一维区域参数；没有 Promise、对象或动态数组溢出支持。QuickJS 仍在应用进程内，仅供可信脚本；没有独立 worker 或 OS 沙箱。打开、迁移、另存均不会复制运行授权。
+支持同步标量、v1 一维区域与 v2 显式二维区域参数；没有 Promise、任意对象或动态数组溢出支持。QuickJS 每轮运行于独立 worker，计算期间可点击状态栏「停止计算」。打开、迁移、另存均不会复制运行授权。仍仅供可信脚本使用，文件/网络 OS 隔离、模块执行与动作事务待后续 M4 切片。发布包的 `ScriptWorker` 目录必须保留；见 [M4 支持范围](docs/11-m4-worker.md)。
 
 跨表计算已接入；未授权脚本和依赖仍保留 Blocked 缓存。主题、富文本、图表/透视表、复杂锚点、单元格内图片与数组公式等不在可编辑保真承诺内；完整矩阵见 [M2 文件与类型](docs/09-m2-files-and-types.md)。图片/合并完整界面呈现、排序筛选、恢复和无障碍等留待后续。
 

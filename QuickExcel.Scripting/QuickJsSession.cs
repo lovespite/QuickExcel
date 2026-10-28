@@ -104,6 +104,11 @@ public sealed class QuickJsSession : IDisposable
     public IReadOnlyList<string> FunctionNames { get; }
     public IReadOnlyList<JsFunctionDescriptor> FunctionDescriptors { get; }
 
+    public bool LastOperationInterrupted
+    {
+        get { lock (_gate) { ObjectDisposedException.ThrowIf(_session == IntPtr.Zero, this); return NativeWasInterrupted(_session) != 0; } }
+    }
+
     public QuickJsSession(string source)
     {
         ArgumentNullException.ThrowIfNull(source);
@@ -192,4 +197,6 @@ public sealed class QuickJsSession : IDisposable
     private static extern void NativeDestroy(IntPtr session);
     [DllImport(NativeLibrary, EntryPoint = "qx_free_string", CallingConvention = CallingConvention.Cdecl)]
     private static extern void NativeFreeString(IntPtr text);
+    [DllImport(NativeLibrary, EntryPoint = "qx_was_interrupted", CallingConvention = CallingConvention.Cdecl)]
+    private static extern int NativeWasInterrupted(IntPtr session);
 }

@@ -16,6 +16,8 @@ public sealed class WorkbookCalculator(IScriptRuntimeFactory runtimeFactory) : I
 
     public CalculationResult Calculate(CalculationRequest request, CancellationToken cancellationToken = default)
     {
+        using var lifetime = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, request.CancellationToken);
+        cancellationToken = lifetime.Token;
         var timer = Stopwatch.StartNew();
         void Check()
         {
@@ -54,7 +56,8 @@ public sealed class WorkbookCalculator(IScriptRuntimeFactory runtimeFactory) : I
                 diagnostics.Add($"{sheet.Name}!{FormulaSyntax.ColumnName(address.Column)}{address.Row + 1}：{note}");
             }
         }
-        using var runtime = request.ScriptsEnabled ? _factory.Create(request.Snapshot.ScriptSource) : null;
+        using var runtime = request.ScriptsEnabled ? _factory.Create(new ScriptRuntimeRequest(request.Snapshot.ScriptSource,
+            request.Stamp, TimeLimit - timer.Elapsed, cancellationToken)) : null;
         Check();
         var functions = new Dictionary<string, ScriptFunctionDescriptor>(StringComparer.OrdinalIgnoreCase);
         if (runtime is not null)

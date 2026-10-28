@@ -24,6 +24,15 @@ public interface IWorkbookCalculator
 public interface IScriptRuntimeFactory
 {
     IScriptRuntime Create(string source);
+    IScriptRuntime Create(ScriptRuntimeRequest request) => Create(request.Source);
+}
+
+public sealed record ScriptRuntimeRequest(string Source, CalculationStamp Stamp, TimeSpan TimeLimit, CancellationToken CancellationToken);
+
+/// <summary>Transport/lifecycle faults abort the entire calculation, rather than becoming a single cell error.</summary>
+public sealed class ScriptRuntimeFailureException(string code, string message, Exception? inner = null) : Exception(message, inner)
+{
+    public string Code { get; } = code;
 }
 
 public interface IScriptRuntime : IDisposable
@@ -36,7 +45,10 @@ public interface IScriptRuntime : IDisposable
 
 public readonly record struct CalculationStamp(Guid SessionId, long InputRevision, long CalculationGeneration, long ScriptGeneration);
 public sealed record CalculationRequest(CalculationStamp Stamp, WorkbookSnapshot Snapshot, bool ScriptsEnabled)
-{ public bool ForceFull { get; init; } }
+{
+    public bool ForceFull { get; init; }
+    public CancellationToken CancellationToken { get; init; }
+}
 public sealed record CalculationStatistics(int FormulaCount, int EvaluatedCount, int ReusedCount, bool FullRecalculation, TimeSpan Elapsed);
 
 public sealed class CalculationResult

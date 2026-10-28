@@ -6,6 +6,8 @@
     <IsPackable>false</IsPackable>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Remove="WorkerFixture\**\*.cs" />
+    <ProjectReference Include="WorkerFixture\WorkerFixture.csproj" ReferenceOutputAssembly="false" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
     <PackageReference Include="xunit" Version="2.9.3" />
     <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
@@ -13,4 +15,11 @@
     <ProjectReference Include="..\QuickExcel.Core\QuickExcel.Core.csproj" />
     <ProjectReference Include="..\QuickExcel.Infrastructure\QuickExcel.Infrastructure.csproj" />
   </ItemGroup>
+  <Import Project="../scripts/ScriptWorker.targets" />
+  <Target Name="CopyWorkerFixture" AfterTargets="Build">
+    <MSBuild Projects="WorkerFixture\WorkerFixture.csproj" Targets="GetFixturePayload" Properties="Configuration=$(Configuration);RuntimeIdentifier=$(RuntimeIdentifier)">
+      <Output TaskParameter="TargetOutputs" ItemName="TestFixturePayload" />
+    </MSBuild>
+    <Copy SourceFiles="@(TestFixturePayload)" DestinationFolder="$(TargetDir)WorkerFixture" SkipUnchangedFiles="true" />
+  </Target>
 </Project>

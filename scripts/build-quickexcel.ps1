@@ -79,6 +79,12 @@ try {
         if (-not (Test-Path -LiteralPath (Join-Path $publishPath $required) -PathType Leaf)) { throw "Published application is missing $required" }
     }
 
+    foreach ($required in @('QuickExcel.ScriptWorker.exe', 'QuickExcel.ScriptWorker.dll', 'QuickExcel.ScriptWorker.runtimeconfig.json',
+        'QuickExcel.ScriptWorker.deps.json', 'QuickExcel.ScriptContracts.dll', 'QuickExcel.Scripting.dll', 'quickexcel-js.dll', 'QUICKJS-LICENSE.txt')) {
+        if (-not (Test-Path -LiteralPath (Join-Path $publishPath "ScriptWorker\$required") -PathType Leaf)) { throw "Published script worker is missing $required" }
+    }
+    if (Test-Path -LiteralPath (Join-Path $publishPath 'WorkerFixture')) { throw 'Test worker fixture must not be published.' }
+
     if ($shouldRunSmoke) {
         New-Item -ItemType Directory -Force -Path $smokePath | Out-Null
         $desktopProcess = $null
@@ -95,7 +101,7 @@ try {
             if (-not (Test-Path -LiteralPath $resultPath -PathType Leaf)) { throw "QuickExcel WPF smoke exited without its result file: $smokePath" }
             $smokeResult = (Get-Content -LiteralPath $resultPath -Raw).Trim()
             if (-not $smokeResult.StartsWith('PASS:', [StringComparison]::Ordinal)) { throw "QuickExcel WPF smoke did not report PASS: $smokePath" }
-            foreach ($resultName in @('storage-smoke-result.txt', 'close-smoke-result.txt', 'calculation-smoke-result.txt', 'date-display-smoke-result.txt')) {
+            foreach ($resultName in @('storage-smoke-result.txt', 'close-smoke-result.txt', 'calculation-smoke-result.txt', 'date-display-smoke-result.txt', 'worker-smoke-result.txt')) {
                 $resultFile = Join-Path $smokePath $resultName
                 if (-not (Test-Path -LiteralPath $resultFile -PathType Leaf) -or
                     -not (Get-Content -LiteralPath $resultFile -Raw).StartsWith('PASS:', [StringComparison]::Ordinal)) {
@@ -146,6 +152,7 @@ try {
             publishedDllSha256 = (Get-FileHash -LiteralPath (Join-Path $publishPath 'quickexcel-js.dll') -Algorithm SHA256).Hash
         }
         verification = [ordered]@{ coreTests = $unitTests; nativeSmoke = $nativeSmoke; wpfSmoke = $desktopSmoke; wpfResult = $smokeResult }
+        scriptWorker = [ordered]@{ protocolVersion = 1; policy = 'conservative-worker-v1'; osAccessIsolationValidated = $false }
     }
     $metadata | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $publishPath 'BUILD-METADATA.json') -Encoding UTF8
     Copy-Item -LiteralPath (Join-Path $projectRoot 'QuickExcel.Desktop\RELEASE-NOTES.md') -Destination (Join-Path $publishPath 'RELEASE-NOTES.md')
@@ -153,6 +160,7 @@ try {
     New-Item -ItemType Directory -Force -Path $supportDocsPath | Out-Null
     Copy-Item -LiteralPath (Join-Path $projectRoot 'QuickExcel.Desktop\docs\09-m2-files-and-types.md') -Destination (Join-Path $supportDocsPath '09-m2-files-and-types.md')
     Copy-Item -LiteralPath (Join-Path $projectRoot 'QuickExcel.Desktop\docs\10-m3-calculation.md') -Destination (Join-Path $supportDocsPath '10-m3-calculation.md')
+    Copy-Item -LiteralPath (Join-Path $projectRoot 'QuickExcel.Desktop\docs\11-m4-worker.md') -Destination (Join-Path $supportDocsPath '11-m4-worker.md')
     Copy-Item -LiteralPath (Join-Path $projectRoot 'QuickExcel.Scripting\native\SOURCES.md') -Destination (Join-Path $publishPath 'QUICKJS-SOURCES.md')
     $notices = @"
 QuickExcel third-party component provenance

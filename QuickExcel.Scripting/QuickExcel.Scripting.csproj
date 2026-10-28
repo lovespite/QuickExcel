@@ -10,7 +10,8 @@
     <None Include="native\bin\quickexcel-js.dll" Link="quickexcel-js.dll" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <None Update="native\QUICKJS-LICENSE.txt" Link="QUICKJS-LICENSE.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
-  <Target Name="BuildQuickJsNative" BeforeTargets="PrepareForBuild" Condition="'$(OS)' == 'Windows_NT' and !Exists('$(MSBuildProjectDirectory)\native\bin\quickexcel-js.dll')">
-    <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\native\build.ps1&quot;" />
+  <Target Name="BuildQuickJsNative" BeforeTargets="PrepareForBuild" Condition="$([MSBuild]::IsOSPlatform('Windows'))"
+          Inputs="$(MSBuildProjectDirectory)\native\quickexcel-js.c;$(MSBuildProjectDirectory)\native\CMakeLists.txt;$(MSBuildProjectDirectory)\native\build.ps1" Outputs="$(MSBuildProjectDirectory)\native\bin\quickexcel-js.dll">
+    <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\native\build.ps1&quot; -Rebuild" />
   </Target>
 </Project>

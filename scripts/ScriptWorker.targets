@@ -1,0 +1,22 @@
+<Project>
+  <ItemGroup>
+    <ProjectReference Include="$(MSBuildThisFileDirectory)..\QuickExcel.ScriptWorker\QuickExcel.ScriptWorker.csproj" ReferenceOutputAssembly="false" />
+  </ItemGroup>
+  <Target Name="CollectScriptWorker" DependsOnTargets="ResolveProjectReferences">
+    <MSBuild Projects="$(MSBuildThisFileDirectory)..\QuickExcel.ScriptWorker\QuickExcel.ScriptWorker.csproj" Targets="GetWorkerPayload" Properties="Configuration=$(Configuration);Platform=AnyCPU;RuntimeIdentifier=$(RuntimeIdentifier)">
+      <Output TaskParameter="TargetOutputs" ItemName="ScriptWorkerPayload" />
+    </MSBuild>
+    <Error Condition="'@(ScriptWorkerPayload)' == ''" Text="ScriptWorker output is missing." />
+  </Target>
+  <Target Name="CopyScriptWorker" AfterTargets="Build" DependsOnTargets="CollectScriptWorker">
+    <Copy SourceFiles="@(ScriptWorkerPayload)" DestinationFolder="$(TargetDir)ScriptWorker" SkipUnchangedFiles="true" />
+  </Target>
+  <Target Name="PublishScriptWorker" BeforeTargets="ComputeFilesToPublish" DependsOnTargets="CollectScriptWorker">
+    <ItemGroup>
+      <ResolvedFileToPublish Include="@(ScriptWorkerPayload)">
+        <RelativePath>ScriptWorker\%(Filename)%(Extension)</RelativePath>
+        <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      </ResolvedFileToPublish>
+    </ItemGroup>
+  </Target>
+</Project>

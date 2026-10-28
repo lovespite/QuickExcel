@@ -277,7 +277,7 @@ internal sealed class TypedEvaluator(WorkbookSnapshot snapshot, IReadOnlyDiction
                 Fail(CellErrorCode.Script, "脚本返回类型不符合描述符。");
             return result;
         }
-        catch (Exception e) when (e is not OperationCanceledException and not TimeoutException)
+        catch (Exception e) when (e is not OperationCanceledException and not TimeoutException and not ScriptRuntimeFailureException)
         { throw new FormulaValueException(CellErrorCode.Script, $"{function.Name}：{e.Message}"); }
     }
 

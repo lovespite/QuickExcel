@@ -32,6 +32,7 @@ public partial class MainWindow : Window
     private int _selectedColumn;
     private bool _refreshing;
     private bool _busy;
+    private CancellationTokenSource? _calculationCancellation;
     private bool _closingApproved;
     private bool _closeRequestPending;
     private bool _windowClosed;
@@ -107,7 +108,7 @@ public partial class MainWindow : Window
             LogText.Text += "\n兼容性报告：\n" + string.Join("\n", fileState.CompatibilityIssues.Take(20));
         if (!document.Snapshot.ScriptModules.CanExecuteLegacy)
             LogText.Text += "\n多模块源码已保留，模块执行尚未提供。";
-        HintText.Text = "0.4 计算预览版 · 支持跨表公式和标准公式增量重算；可信脚本需手动启用。";
+        HintText.Text = "0.5 脚本进程预览版 · 计算中可点击「停止计算」；可信脚本需手动启用。";
         if (document.Snapshot.Sheets.Any(sheet => sheet.UsedColumnCount > 256))
             HintText.Text += " 此工作簿超过界面的 256 列显示范围；未显示的受支持数据仍会保存。";
     }
@@ -200,21 +201,27 @@ public partial class MainWindow : Window
         catch (Exception ex) { ReportEditFailure(ex); return false; }
     }
 
-    private async Task<bool> WorkAsync(string message, Action operation)
+    private Task<bool> WorkAsync(string message, Action operation) => WorkAsync(message, _ => operation(), cancellable: false);
+
+    private async Task<bool> WorkAsync(string message, Action<CancellationToken> operation, bool cancellable)
     {
         if (_busy || _windowClosed) return false;
         _busy = true;
+        using var cancellation = cancellable ? new CancellationTokenSource() : null;
+        _calculationCancellation = cancellation;
+        StopCalculationButton.Visibility = cancellable ? Visibility.Visible : Visibility.Collapsed;
         Toolbar.IsEnabled = Workspace.IsEnabled = false;
         StatusText.Text = message;
         var timer = Stopwatch.StartNew();
         try
         {
-            await Task.Run(operation);
+            await Task.Run(() => operation(cancellation?.Token ?? CancellationToken.None));
             StatusText.Text = $"{message.TrimEnd('…')}完成 · {timer.ElapsedMilliseconds:N0} ms";
             return true;
         }
         catch (Exception ex)
         {
+            if (ex is OperationCanceledException) { StatusText.Text = "计算已停止，保留上次结果。"; return false; }
             StatusText.Text = "操作未完成";
             AppendLog(ex.Message);
             if (!_smokeMode) MessageBox.Show(this, ex.Message, "QuickExcel", MessageBoxButton.OK, MessageBoxImage.Warning);
@@ -223,6 +230,8 @@ public partial class MainWindow : Window
         finally
         {
             _busy = false;
+            _calculationCancellation = null;
+            StopCalculationButton.Visibility = Visibility.Collapsed;
             Toolbar.IsEnabled = Workspace.IsEnabled = true;
             UpdateChrome();
         }
@@ -252,7 +261,7 @@ public partial class MainWindow : Window
     {
         if (_busy) return false;
         _calculationPending = false;
-        var ok = await WorkAsync("重新计算…", _document.Calculate);
+        var ok = await WorkAsync("重新计算…", token => _document.Calculate(token), cancellable: true);
         if (!ok) _calculationPending = true;
         ShowDiagnostics();
         return ok;
@@ -495,7 +504,7 @@ public partial class MainWindow : Window
         try { if (!CommitEdit()) return; }
         finally { _suppressAutoCalculation = false; }
         _calculationPending = false;
-        var ok = await WorkAsync("应用 JavaScript 并计算…", _document.EnableScriptsAndCalculate);
+        var ok = await WorkAsync("应用 JavaScript 并计算…", _document.EnableScriptsAndCalculate, cancellable: true);
         if (ok) AppendLog("脚本已应用，工作簿已重新计算。");
         ShowDiagnostics();
         UpdateChrome();
@@ -509,6 +518,12 @@ public partial class MainWindow : Window
         AppendLog("脚本已停用；自定义公式保留上次计算结果。");
         RefreshSheet();
         UpdateChrome();
+    }
+
+    private void StopCalculation_Click(object sender, RoutedEventArgs e)
+    {
+        _calculationCancellation?.Cancel();
+        StatusText.Text = "正在停止计算…";
     }
 
     private bool CommitGridEdit()
@@ -710,6 +725,7 @@ public partial class MainWindow : Window
     {
         Directory.CreateDirectory(folder);
         await RunCloseSmokeTestsAsync(folder);
+        await RunWorkerSmokeTestsAsync(folder);
         // Drive the same editing, undo and formula-bar paths used by the window.
         InstallDocument(WorkbookDocument.CreateBlank(_services), null, "界面验收.xlsq");
         ScriptEditor.Text = "quickExcel.functions.register(\"DOUBLE\", x => x * 2);";

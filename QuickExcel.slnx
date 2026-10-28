@@ -2,8 +2,11 @@
   <Project Path="../ExcelIO/ExcelIO/ExcelIO.csproj" />
   <Project Path="../ExcelIO/ExcelIO.Formula/ExcelIO.Formula.csproj" />
   <Project Path="QuickExcel.Scripting/QuickExcel.Scripting.csproj" />
+  <Project Path="QuickExcel.ScriptContracts/QuickExcel.ScriptContracts.csproj" />
+  <Project Path="QuickExcel.ScriptWorker/QuickExcel.ScriptWorker.csproj" />
   <Project Path="QuickExcel.Core/QuickExcel.Core.csproj" />
   <Project Path="QuickExcel.Infrastructure/QuickExcel.Infrastructure.csproj" />
   <Project Path="QuickExcel.Core.Test/QuickExcel.Core.Test.csproj" />
+  <Project Path="QuickExcel.Core.Test/WorkerFixture/WorkerFixture.csproj" />
   <Project Path="QuickExcel.Desktop/QuickExcel.Desktop.csproj" />
 </Solution>

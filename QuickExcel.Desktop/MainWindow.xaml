@@ -21,7 +21,7 @@
     <StackPanel>
      <StackPanel Orientation="Horizontal">
       <TextBlock Text="QuickExcel" FontSize="24" FontWeight="SemiBold"/>
-      <Border Background="#E1ECE4" CornerRadius="4" Margin="12,7,0,4" Padding="6,2"><TextBlock Text="PREVIEW 0.4" FontSize="10" Foreground="#52715E"/></Border>
+      <Border Background="#E1ECE4" CornerRadius="4" Margin="12,7,0,4" Padding="6,2"><TextBlock Text="PREVIEW 0.5" FontSize="10" Foreground="#52715E"/></Border>
      </StackPanel>
      <TextBlock Text="表格，遇见 JavaScript。" Foreground="{StaticResource Muted}" FontSize="12" Margin="1,4,0,0"/>
     </StackPanel>
@@ -112,6 +112,7 @@
    </Border>
   </Grid>
   <DockPanel Grid.Row="4" LastChildFill="True">
+   <Button x:Name="StopCalculationButton" DockPanel.Dock="Right" Content="停止计算" Click="StopCalculation_Click" Visibility="Collapsed" Padding="10,2" Margin="8,2,0,2"/>
    <TextBlock x:Name="SelectionText" DockPanel.Dock="Right" Foreground="{StaticResource Muted}" FontSize="11" VerticalAlignment="Center"/>
    <TextBlock x:Name="StatusText" Text="就绪" Foreground="{StaticResource Muted}" FontSize="11" VerticalAlignment="Center"/>
   </DockPanel>

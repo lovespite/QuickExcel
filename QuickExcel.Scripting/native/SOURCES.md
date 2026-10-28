@@ -14,7 +14,7 @@ interpreter. The source is MIT licensed; the complete upstream license is in
 from source using CMake and the installed Visual Studio C++ compiler. Source
 downloads and generated binaries are ignored by Git. No downloaded prebuilt
 executable or binary dependency is used. A normal project build runs the script
-only if the native DLL is missing; after editing native code run:
+when the native DLL is missing or native bridge/build inputs are newer. To force a rebuild run:
 
 ```powershell
 .\QuickExcel.Scripting\native\build.ps1 -Rebuild
@@ -29,13 +29,23 @@ The bridge compiles only the core engine, without `quickjs-libc`, OS modules,
 module loaders, filesystem, network, or CLR bindings. Each session caps engine
 allocation at 64 MiB and JS stack use at 256 KiB; each load and invocation has a
 one second native interrupt deadline. Requests/results are limited to roughly
-4 MiB. This is an in-process prototype runtime, not an operating system security
-sandbox. Imported workbook scripts must still be explicitly enabled by the user.
+4 MiB. The desktop runs this bridge in a separate disposable worker; native smoke
+tests still run it in process. Process/Job containment is not a filesystem/network
+security sandbox. Imported workbook scripts must still be explicitly enabled by the user.
 
 Calls are serialized and `JS_UpdateStackTop` is called before execution, allowing
 sequential access from different managed threads. Each document owns its own
-runtime. The prototype accepts synchronous scalar formula results and array
+runtime per calculation round. The prototype accepts synchronous scalar formula results and array
 arguments; promises and object results are rejected.
+
+M4 adds `qx_was_interrupted` so the worker can discard handles interrupted during
+execution or exception stringification. Engine sources, version, archive hash and
+license are unchanged. CMake uses the x64 host toolchain in `native/build/host-x64`.
+The script gives child tools explicit Windows x64 platform variables, restores
+Windows PowerShell's built-in module path, and removes inherited dotnet MSBuild
+path overrides before invoking Visual Studio. Restricted build environments may
+need access to Visual Studio FileTracker's system paths. Upstream compiler warnings
+are preserved, not suppressed or patched out of vendored sources.
 
 Run the runtime smoke checks with:
 

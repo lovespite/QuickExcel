@@ -159,22 +159,28 @@ public sealed class WorkbookDocument : IDisposable
     public bool Undo() => Session.Undo();
     public bool Redo() => Session.Redo();
 
-    public void EnableScriptsAndCalculate()
+    public void EnableScriptsAndCalculate() => EnableScriptsAndCalculate(CancellationToken.None);
+    public void EnableScriptsAndCalculate(CancellationToken cancellationToken)
     {
         if (!Snapshot.ScriptModules.CanExecuteLegacy) throw new NotSupportedException("多模块源码已保留；模块执行将在 M4 提供。");
         Session.SetScriptsEnabled(true);
-        Calculate();
+        Calculate(cancellationToken);
     }
     public void DisableScripts() => Session.SetScriptsEnabled(false);
     public void Calculate() => Calculate(CancellationToken.None);
     public bool Calculate(CancellationToken cancellationToken)
     {
         var request = Session.BeginCalculation();
+        using var lifetime = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, request.CancellationToken);
         try
         {
-            var result = _services.Calculator.Calculate(request, cancellationToken);
+            var result = _services.Calculator.Calculate(request, lifetime.Token);
             cancellationToken.ThrowIfCancellationRequested();
             return Session.TryCommitCalculation(result);
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested && request.CancellationToken.IsCancellationRequested)
+        {
+            return false; // Superseded/closed session: preserve the existing stale-result contract.
         }
         catch (OperationCanceledException)
         {

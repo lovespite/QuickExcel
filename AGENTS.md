@@ -30,3 +30,5 @@ Always supply `--artifacts-path` for managed builds, tests, runs, and publishes 
 Keep `artifacts`, managed build caches, and native downloaded sources/build output out of Git. Preserve the native source version, SHA-256 verification, and license.
 
 M3 syntax/binding/structure commands live in Core/Formulas and StructureCommands; WorkbookCalculator and TypedEvaluator live in Infrastructure/Calculation. LegacyWorkbookCalculator remains only for historical regression. Current calculation/bridge/export limits are documented in QuickExcel.Desktop/docs/10-m3-calculation.md.
+
+M4 worker contracts live in QuickExcel.ScriptContracts (BCL only), the executable in QuickExcel.ScriptWorker, and the host client/Job in Infrastructure/Scripting. Desktop uses ScriptWorkerRuntimeFactory without in-process fallback. scripts/ScriptWorker.targets copies the complete worker to build/publish output. QuickExcel.Core.Test/WorkerFixture is fault injection only and must never enter a release. M4 progress and pending modules/actions/OS access isolation are in QuickExcel.Desktop/docs/11-m4-worker.md.

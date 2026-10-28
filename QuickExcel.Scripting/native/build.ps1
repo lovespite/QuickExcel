@@ -1,11 +1,15 @@
 param([switch]$Rebuild)
 $ErrorActionPreference = 'Stop'
+# A Windows PowerShell child can inherit only PowerShell 7 module paths from its caller.
+# Prefer this engine's built-in modules before loading hashing/archive cmdlets.
+$env:PSModulePath = (Join-Path $PSHOME 'Modules') + [IO.Path]::PathSeparator + $env:PSModulePath
 # Normalize PATH casing before invoking the .NET Framework MSBuild toolchain.
 $quickExcelPathValue = $env:Path
 Remove-Item Env:PATH -ErrorAction SilentlyContinue
 Remove-Item Env:Path -ErrorAction SilentlyContinue
 $env:Path = $quickExcelPathValue
 $nativeRoot = $PSScriptRoot
+$buildRoot = Join-Path $nativeRoot 'build\host-x64'
 $output = Join-Path $nativeRoot 'bin\quickexcel-js.dll'
 if ((Test-Path -LiteralPath $output) -and -not $Rebuild) { return }
 $version = '0.17.0'
@@ -32,10 +36,15 @@ if (-not $installation) { throw 'No installed Visual Studio C++ compiler was fou
 $vsVersion = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationVersion
 $major = [int]($vsVersion.Split('.')[0])
 $generator = if ($major -ge 18) { 'Visual Studio 18 2026' } else { 'Visual Studio 17 2022' }
-& $cmake -S $nativeRoot -B (Join-Path $nativeRoot 'build') -G $generator -A x64 "-DCMAKE_GENERATOR_INSTANCE=$installation"
+# dotnet build exports SDK MSBuild paths. The native VS toolchain must discover its own props/targets.
+$cleanBuildEnvironment = @('-E', 'env', '--unset=MSBuildExtensionsPath', '--unset=MSBuildExtensionsPath32',
+    '--unset=MSBuildExtensionsPath64', '--unset=MSBuildSDKsPath', '--unset=MSBUILD_EXE_PATH', '--unset=MSBuildToolsPath',
+    'OS=Windows_NT', 'PROCESSOR_ARCHITECTURE=AMD64', $cmake)
+& $cmake @cleanBuildEnvironment -S $nativeRoot -B $buildRoot -G $generator -A x64 -T host=x64 "-DCMAKE_GENERATOR_INSTANCE=$installation"
 if ($LASTEXITCODE -ne 0) { throw 'CMake configuration failed.' }
-& $cmake --build (Join-Path $nativeRoot 'build') --config Release --target quickexcel-js --parallel
+& $cmake @cleanBuildEnvironment --build $buildRoot --config Release --target quickexcel-js --parallel
 if ($LASTEXITCODE -ne 0) { throw 'QuickJS native build failed.' }
 New-Item -ItemType Directory -Force -Path (Join-Path $nativeRoot 'bin') | Out-Null
-Copy-Item -LiteralPath (Join-Path $nativeRoot 'build\Release\quickexcel-js.dll') -Destination $output -Force
+Copy-Item -LiteralPath (Join-Path $buildRoot 'Release\quickexcel-js.dll') -Destination $output -Force
+[IO.File]::SetLastWriteTimeUtc($output, [DateTime]::UtcNow)
 Write-Host "QuickJS-NG $version runtime: $output"
