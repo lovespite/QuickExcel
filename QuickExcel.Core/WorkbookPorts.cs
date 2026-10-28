@@ -74,7 +74,7 @@ public sealed class CalculationResult
 }
 
 /// <summary>Instances are supplied by the desktop/test composition root. Core never creates a native runtime.</summary>
-public sealed record WorkbookServices(IWorkbookStorage Storage, IWorkbookCalculator Calculator);
+public sealed record WorkbookServices(IWorkbookStorage Storage, IWorkbookCalculator Calculator, IScriptActionExecutor? Actions = null);
 
 public sealed record PortableExportReport(int RetainedFormulas, int FrozenFormulas, int MissingResults, int StaleResults);
 public interface IPortableWorkbookStorage

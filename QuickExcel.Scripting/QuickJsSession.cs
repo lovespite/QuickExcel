@@ -31,6 +31,10 @@ public sealed class QuickJsSession : IDisposable
             const isFiniteNumber = Number.isFinite;
             const TypeErrorCtor = TypeError;
             let loaded = false;
+            let actionMode = false;
+            let actionInvoked = false;
+            const actions = Object.create(null);
+            const actionInfo = Object.create(null);
             const logs = [];
             const logger = (...values) => {
                 if (logs.length < 100) logs.push(values.map(String).join(' ').slice(0, 4000));
@@ -38,6 +42,7 @@ public sealed class QuickJsSession : IDisposable
             const console = freeze({ log: logger, info: logger, warn: logger, error: logger });
             const quickExcel = freeze({ functions: freeze({
                 register(name, fn) {
+                    if (actionMode) return;
                     if (loaded) throw new TypeErrorCtor('Functions can only be registered while loading the script.');
                     let descriptor = { apiVersion: 1, minArguments: 0, maxArguments: 255, returnType: 'any', profile: 'conservative', parameters: [] };
                     if (typeof name === 'object' && name !== null) {
@@ -67,7 +72,94 @@ public sealed class QuickJsSession : IDisposable
                     registry[name] = fn;
                     descriptors[name] = deepFreeze(descriptor);
                 }
+            }), actions: freeze({
+                register(input, fn) {
+                    if (!actionMode) return;
+                    if (loaded) throw new TypeErrorCtor('Actions can only be registered while loading.');
+                    const name = typeof input === 'string' ? input : input?.name;
+                    const description = typeof input === 'string' ? '' : (input?.description ?? '');
+                    if (typeof name !== 'string' || !name.trim() || name.length > 128 || /[\x00-\x1f\x7f-\x9f]/.test(name) ||
+                        typeof description !== 'string' || description.length > 1000 || typeof fn !== 'function' || actions[name] || ownKeys(actions).length >= 256)
+                        throw new TypeErrorCtor('Invalid or duplicate action registration.');
+                    actions[name] = fn;
+                    actionInfo[name] = freeze({ name, description });
+                }
             }) });
+            function runAction(name, request) {
+                if (!actionMode || !loaded || actionInvoked || !actions[name]) throw new TypeErrorCtor('Action is unavailable.');
+                actionInvoked = true;
+                const data = deepFreeze(request.snapshot);
+                const sheets = new Map();
+                for (const sheet of data.sheets) {
+                    const cells = new Map();
+                    for (const c of sheet.cells) cells.set(c.row + ':' + c.column, c);
+                    sheets.set(sheet.id, cells);
+                }
+                let reads = 0, active = true, invalidPatch = false;
+                const edits = [], targets = new Set();
+                function range(id, address) {
+                    if (!active || !sheets.has(id) || typeof address !== 'string' || address.length > 40) throw new TypeErrorCtor('Invalid sheet or range.');
+                    const parts = address.split(':');
+                    if (parts.length > 2) throw new TypeErrorCtor('Expected A1 or rectangular A1:B2 range.');
+                    function point(text) {
+                        const m = /^([A-Za-z]+)([1-9][0-9]*)$/.exec(text);
+                        if (!m) throw new TypeErrorCtor('Invalid A1 address.');
+                        let col=0; for (const c of m[1].toUpperCase()) col=col*26+c.charCodeAt(0)-64;
+                        const row=Number(m[2]);
+                        if (!Number.isSafeInteger(row) || row>100000 || col>1024) throw new TypeErrorCtor('Address out of bounds.');
+                        return [row-1,col-1];
+                    }
+                    const a=point(parts[0]), b=point(parts[1] ?? parts[0]);
+                    if (b[0]<a[0] || b[1]<a[1]) throw new TypeErrorCtor('Reversed range.');
+                    return {row:a[0],column:a[1],rows:b[0]-a[0]+1,columns:b[1]-a[1]+1};
+                }
+                function value(v) { return v.kind === 'error' ? freeze({kind:'error',code:v.value}) : v.value; }
+                function cell(id,row,col) {
+                    const c=sheets.get(id).get(row+':'+col);
+                    return c ? freeze({value:value(c.value),formula:c.formula,state:c.state,hasValue:c.hasValue})
+                        : freeze({value:null,formula:null,state:'literal',hasValue:true});
+                }
+                function readBudget(count) { reads+=count; if(reads>100000) throw new TypeErrorCtor('Snapshot read budget exceeded.'); }
+                const snapshot=freeze({baseRevision:data.baseRevision,dateSystem:data.dateSystem,
+                    sheets:freeze(data.sheets.map(s=>freeze({id:s.id,name:s.name}))),
+                    getCell(id,address) { const r=range(id,address); if(r.rows*r.columns!==1) throw new TypeErrorCtor('Expected one cell.'); readBudget(1); return cell(id,r.row,r.column); },
+                    getRange(id,address) { const r=range(id,address); readBudget(r.rows*r.columns); return freeze(Array.from({length:r.rows},(_,i)=>freeze(Array.from({length:r.columns},(_,j)=>cell(id,r.row+i,r.column+j).value)))); }
+                });
+                function scalar(v) {
+                    if(v===null) return {kind:'blank',value:null};
+                    if(typeof v==='string' && v.length<=32767) return {kind:'text',value:v};
+                    if(typeof v==='number' && isFiniteNumber(v)) return {kind:'number',value:v};
+                    if(typeof v==='boolean') return {kind:'boolean',value:v};
+                    if(v && typeof v==='object' && v.kind==='error' && typeof v.code==='string') return {kind:'error',value:v.code};
+                    throw new TypeErrorCtor('Unsupported patch value.');
+                }
+                function write(id,address,values,formulas) {
+                    try { writeChecked(id,address,values,formulas); }
+                    catch(error) { invalidPatch=true; throw error; }
+                }
+                function writeChecked(id,address,values,formulas) {
+                    const r=range(id,address);
+                    if(r.rows*r.columns+edits.length>20000 || !isArray(values) || values.length!==r.rows) throw new TypeErrorCtor('Patch size or shape is invalid.');
+                    for(let i=0;i<r.rows;i++) {
+                        if(!isArray(values[i]) || values[i].length!==r.columns) throw new TypeErrorCtor('Patch shape is invalid.');
+                        for(let j=0;j<r.columns;j++) {
+                            const key=id+':'+(r.row+i)+':'+(r.column+j), v=values[i][j];
+                            if(targets.has(key)) throw new TypeErrorCtor('Overlapping patch writes.');
+                            if(formulas && (typeof v!=='string' || v.length<2 || v.length>8192 || v[0]!=='=')) throw new TypeErrorCtor('Invalid formula.');
+                            targets.add(key);
+                            edits.push({sheetId:id,row:r.row+i,column:r.column+j,value:formulas?null:scalar(v),formula:formulas?v:null});
+                        }
+                    }
+                }
+                const patch=freeze({setValues:(id,r,v)=>write(id,r,v,false),setFormulas:(id,r,v)=>write(id,r,v,true),
+                    setValue:(id,a,v)=>write(id,a,[[v]],false),setFormula:(id,a,v)=>write(id,a,[[v]],true)});
+                try {
+                    const returned=actions[name](freeze({snapshot,patch}));
+                    if(invalidPatch) throw new TypeErrorCtor('An invalid write rejected the entire patch.');
+                    if(returned!==undefined && returned!==null) throw new TypeErrorCtor('Actions must complete synchronously without a return value.');
+                    return {operationId:request.operationId,baseRevision:data.baseRevision,name,edits};
+                } finally { active=false; }
+            }
             return freeze({
                 load(source) {
                     if (loaded) throw new TypeErrorCtor('Script has already been loaded.');
@@ -75,8 +167,9 @@ public sealed class QuickJsSession : IDisposable
                     loaded = true;
                     return ownKeys(registry);
                 },
-                prepareModules() {
+                prepareModules(useActions) {
                     if (loaded) throw new TypeErrorCtor('Script has already been loaded.');
+                    actionMode = useActions === true;
                     Object.defineProperty(globalThis, 'quickExcel', { value: quickExcel });
                     Object.defineProperty(globalThis, 'console', { value: console });
                 },
@@ -106,6 +199,8 @@ public sealed class QuickJsSession : IDisposable
                     throw new TypeErrorCtor('Formula functions must return a finite number, string, boolean, or null; objects and promises are not supported.');
                 },
                 descriptors() { return ownKeys(descriptors).map(name => descriptors[name]); },
+                actionDescriptors() { return ownKeys(actionInfo).map(name => actionInfo[name]); },
+                runAction,
                 logs() { return logs.slice(); }
             });
         })()
@@ -113,18 +208,19 @@ public sealed class QuickJsSession : IDisposable
 
     public IReadOnlyList<string> FunctionNames { get; }
     public IReadOnlyList<JsFunctionDescriptor> FunctionDescriptors { get; }
+    public IReadOnlyList<JsActionDescriptor> ActionDescriptors { get; }
 
     public bool LastOperationInterrupted
     {
         get { lock (_gate) { ObjectDisposedException.ThrowIf(_session == IntPtr.Zero, this); return NativeWasInterrupted(_session) != 0; } }
     }
 
-    public QuickJsSession(string source) : this(source, null, null) { }
+    public QuickJsSession(string source) : this(source, null, null, false) { }
 
-    public QuickJsSession(IReadOnlyDictionary<string, string> modules, IReadOnlyList<string> entries)
-        : this(null, modules, entries) { }
+    public QuickJsSession(IReadOnlyDictionary<string, string> modules, IReadOnlyList<string> entries, bool actions = false)
+        : this(null, modules, entries, actions) { }
 
-    private QuickJsSession(string? source, IReadOnlyDictionary<string, string>? modules, IReadOnlyList<string>? entries)
+    private QuickJsSession(string? source, IReadOnlyDictionary<string, string>? modules, IReadOnlyList<string>? entries, bool actions)
     {
         if (modules is null) ArgumentNullException.ThrowIfNull(source);
         else
@@ -146,7 +242,7 @@ public sealed class QuickJsSession : IDisposable
             if (modules is null) result = Call("load", new object?[] { source });
             else
             {
-                Call("prepareModules", []);
+                Call("prepareModules", [actions]);
                 var json = JsonSerializer.Serialize(new { modules = modules.Select(m => new { id = m.Key, source = m.Value }), entries });
                 if (Encoding.UTF8.GetByteCount(json) > 4 * 1024 * 1024) throw new ArgumentException("Module payload exceeds 4 MiB UTF-8.");
                 if (NativeLoadModules(_session, json, out var moduleError) == 0) throw ReadException(moduleError);
@@ -154,6 +250,8 @@ public sealed class QuickJsSession : IDisposable
             }
             FunctionNames = Array.AsReadOnly(JsonSerializer.Deserialize<string[]>(result) ?? []);
             FunctionDescriptors = Array.AsReadOnly(JsonSerializer.Deserialize<JsFunctionDescriptor[]>(Call("descriptors", []),
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? []);
+            ActionDescriptors = Array.AsReadOnly(JsonSerializer.Deserialize<JsActionDescriptor[]>(Call("actionDescriptors", []),
                 new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? []);
         }
         catch
@@ -189,6 +287,15 @@ public sealed class QuickJsSession : IDisposable
     {
         lock (_gate)
             return JsonSerializer.Deserialize<string[]>(Call("logs", [])) ?? [];
+    }
+
+    public JsonElement RunAction(string name, object request)
+    {
+        lock (_gate)
+        {
+            using var json = JsonDocument.Parse(Call("runAction", [name, request]));
+            return json.RootElement.Clone();
+        }
     }
 
     private string Call(string method, object?[] arguments)

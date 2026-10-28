@@ -65,6 +65,7 @@ public partial class MainWindow
         using var reopened = WorkbookDocument.Open(modulePath, _services);
         if (reopened.ScriptsEnabled || reopened.Snapshot.ScriptModules.Modules["helper"] != modules.Modules["helper"])
             throw new Exception("Module roundtrip lost helpers or restored authorization.");
+        await RunActionSmokeTestsAsync(folder);
         File.WriteAllText(Path.Combine(folder, "worker-smoke-result.txt"),
             $"PASS: separate worker; actual WPF Stop button returns in {timer.ElapsedMilliseconds} ms; strong-kill preserves cache; editing/saving and explicit restart recover; API v2 package module open/apply/edit/save/reopen through desktop composition.");
     }

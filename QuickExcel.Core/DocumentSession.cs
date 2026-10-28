@@ -18,6 +18,7 @@ public sealed class DocumentSession : IDisposable
     private long _calculationGeneration;
     private long _scriptGeneration;
     private CancellationTokenSource? _activeCalculation;
+    private Guid _activeActionId;
     private bool _scriptsEnabled;
     private bool _closed;
     private ImmutableArray<string> _diagnostics = [];
@@ -48,7 +49,9 @@ public sealed class DocumentSession : IDisposable
     public bool IsClosed { get { lock (_gate) return _closed; } }
     public ImmutableArray<string> Diagnostics { get { lock (_gate) return _diagnostics; } }
 
-    public CommandResult Execute(DocumentCommand command, long? expectedRevision = null)
+    public CommandResult Execute(DocumentCommand command, long? expectedRevision = null) => ExecuteCore(command, expectedRevision);
+
+    private CommandResult ExecuteCore(DocumentCommand command, long? expectedRevision, ScriptActionRequest? action = null, CancellationToken cancellationToken = default, ImmutableArray<string> diagnostics = default)
     {
         ArgumentNullException.ThrowIfNull(command);
         DocumentChange? change = null;
@@ -56,15 +59,28 @@ public sealed class DocumentSession : IDisposable
         lock (_gate)
         {
             ThrowIfClosed();
+            if (action is not null)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                action.CancellationToken.ThrowIfCancellationRequested();
+                if (!_scriptsEnabled || !Matches(action.Stamp) || _activeActionId != action.OperationId || !_snapshot.ScriptModules.HasActions)
+                    throw new InvalidOperationException("动作已过期或未授权，请重新运行。");
+            }
             CheckRevision(expectedRevision);
             var before = _snapshot;
             var draft = command.Prepare(before); // No session state is changed until every check succeeds.
-            if (ReferenceEquals(draft.Snapshot, before)) return new(false, before.Revision);
+            cancellationToken.ThrowIfCancellationRequested();
+            if (ReferenceEquals(draft.Snapshot, before))
+            {
+                if (action is not null) { AdvanceCalculationGeneration(); _diagnostics = diagnostics; }
+                return new(false, before.Revision);
+            }
             var sourceChanged = command is UpdateScriptSourceCommand or UpdateScriptModulesCommand;
             var after = Invalidate(draft.Snapshot.WithRevision(checked(before.Revision + 1)));
             var entry = sourceChanged ? null : new HistoryEntry(before, after, draft.Changes, draft.StructureChanged);
             if (entry is not null && entry.Bytes > HistoryBudgetBytes)
                 throw new InvalidOperationException("此操作超过撤销历史容量，尚未修改工作簿。请缩小操作范围。");
+            cancellationToken.ThrowIfCancellationRequested();
             if (!sourceChanged)
             {
                 foreach (var redo in _redo) _historyBytes -= redo.Bytes;
@@ -83,7 +99,7 @@ public sealed class DocumentSession : IDisposable
             }
             AdvanceCalculationGeneration();
             _snapshot = after;
-            _diagnostics = [];
+            _diagnostics = diagnostics.IsDefault ? [] : diagnostics;
             change = new(after.Revision, ActualChanges(before, after, draft.Changes), draft.StructureChanged);
             QueueNotification(change);
             result = new(true, after.Revision);
@@ -96,6 +112,50 @@ public sealed class DocumentSession : IDisposable
     {
         cancellationToken.ThrowIfCancellationRequested();
         return Task.FromResult(Execute(command, expectedRevision));
+    }
+
+    public ScriptActionRequest BeginAction(string? name)
+    {
+        lock (_gate)
+        {
+            ThrowIfClosed();
+            if (!_scriptsEnabled || !_snapshot.ScriptModules.HasActions) throw new InvalidOperationException("请先启用包含 actions 绑定的脚本。");
+            if (name is not null && (string.IsNullOrWhiteSpace(name) || name.Length > 128 || name.Any(char.IsControl))) throw new ArgumentException("动作名称无效。");
+            AdvanceCalculationGeneration();
+            _activeCalculation = new CancellationTokenSource();
+            _activeActionId = Guid.NewGuid();
+            return new(new(SessionId, _snapshot.Revision, _calculationGeneration, _scriptGeneration), _activeActionId, name, _snapshot, _activeCalculation.Token);
+        }
+    }
+
+    public bool CompleteActionDiscovery(ScriptActionRequest request)
+    {
+        lock (_gate)
+        {
+            if (!_scriptsEnabled || !Matches(request.Stamp) || _activeActionId != request.OperationId || request.Name is not null) return false;
+            AdvanceCalculationGeneration();
+            return true;
+        }
+    }
+
+    public CommandResult CommitAction(ScriptActionRequest request, ScriptActionResult result, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentNullException.ThrowIfNull(result);
+        if (request.Name is null) throw new InvalidOperationException("动作发现请求不能提交变更。");
+        try { return ExecuteCore(new ApplyActionPatchCommand(request, result), request.Stamp.InputRevision, request, cancellationToken, result.Logs); }
+        catch (Exception error)
+        {
+            lock (_gate)
+            {
+                if (Matches(request.Stamp) && _activeActionId == request.OperationId)
+                {
+                    AdvanceCalculationGeneration();
+                    _diagnostics = [error.Message];
+                }
+            }
+            throw;
+        }
     }
 
     public bool Undo(long? expectedRevision = null) => MoveHistory(redo: false, expectedRevision);
@@ -281,6 +341,7 @@ public sealed class DocumentSession : IDisposable
     }
     private void AdvanceCalculationGeneration()
     {
+        _activeActionId = Guid.Empty;
         _calculationGeneration = checked(_calculationGeneration + 1);
         CancelActiveCalculation();
     }

@@ -56,7 +56,7 @@ public sealed class WorkbookCalculator(IScriptRuntimeFactory runtimeFactory) : I
                 diagnostics.Add($"{sheet.Name}!{FormulaSyntax.ColumnName(address.Column)}{address.Row + 1}：{note}");
             }
         }
-        using var runtime = request.ScriptsEnabled ? _factory.Create(new ScriptRuntimeRequest(request.Snapshot.ScriptModules,
+        using var runtime = request.ScriptsEnabled && !request.Snapshot.ScriptModules.EntriesFor("formula-functions").IsEmpty ? _factory.Create(new ScriptRuntimeRequest(request.Snapshot.ScriptModules,
             request.Stamp, TimeLimit - timer.Elapsed, cancellationToken)) : null;
         Check();
         var functions = new Dictionary<string, ScriptFunctionDescriptor>(StringComparer.OrdinalIgnoreCase);

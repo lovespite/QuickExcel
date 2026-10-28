@@ -9,6 +9,8 @@ if (args.Length != 0 || !Console.IsInputRedirected || !Console.IsOutputRedirecte
 using var input = Console.OpenStandardInput();
 using var output = Console.OpenStandardOutput();
 QuickJsSession? runtime = null;
+var actionsMode = false;
+var actionRan = false;
 RequestIdentity? round = null;
 var requests = new HashSet<Guid>();
 var timer = Stopwatch.StartNew();
@@ -31,16 +33,18 @@ try
             await WorkerProtocol.WriteAsync(output, WorkerProtocol.Message(round, "hello", hello));
             continue;
         }
-        if (request.Kind is "load" or "loadModules" && runtime is null)
+        if (request.Kind is "load" or "loadModules" or "loadActions" && runtime is null)
         {
+            actionsMode = request.Kind == "loadActions";
+            if (actionsMode != (request.Identity.CalculationGeneration is null)) throw new ProtocolException("Context identity disagrees with load kind.");
             string digest;
             Func<QuickJsSession> create;
-            if (request.Kind == "loadModules")
+            if (request.Kind is "loadModules" or "loadActions")
             {
                 var bundle = WorkerProtocol.Payload<LoadModules>(request);
                 bundle.Validate();
                 digest = bundle.Sha256;
-                create = () => new QuickJsSession(bundle.Modules.ToDictionary(m => m.Id, m => m.Source, StringComparer.Ordinal), bundle.EntryModules);
+                create = () => new QuickJsSession(bundle.Modules.ToDictionary(m => m.Id, m => m.Source, StringComparer.Ordinal), bundle.EntryModules, actionsMode);
             }
             else
             {
@@ -61,9 +65,12 @@ try
             if (runtime.FunctionDescriptors.Count > WorkerProtocol.MaxFunctions) throw new ProtocolException("Too many functions.");
             var descriptors = runtime.FunctionDescriptors.Select(d => new FunctionInfo(d.Name, d.ApiVersion,
                 d.MinArguments, d.MaxArguments, d.ReturnType, d.Profile)).ToArray();
-            await WorkerProtocol.WriteAsync(output, WorkerProtocol.Message(request.Identity, request.Kind, new LoadedScript(digest, descriptors)));
+            if (actionsMode)
+                await WorkerProtocol.WriteAsync(output, WorkerProtocol.Message(request.Identity, request.Kind,
+                    new LoadedActions(digest, runtime.ActionDescriptors.Select(a => new ActionInfo(a.Name, a.Description)).ToArray())));
+            else await WorkerProtocol.WriteAsync(output, WorkerProtocol.Message(request.Identity, request.Kind, new LoadedScript(digest, descriptors)));
         }
-        else if (request.Kind == "invokeBatch" && runtime is not null)
+        else if (request.Kind == "invokeBatch" && runtime is not null && !actionsMode)
         {
             var batch = WorkerProtocol.Payload<InvokeBatch>(request);
             if (batch.Calls.Length is < 1 or > WorkerProtocol.MaxBatchCalls) throw new ProtocolException("Invalid batch size.");
@@ -102,6 +109,27 @@ try
                 }
             }
             await WorkerProtocol.WriteAsync(output, WorkerProtocol.Message(request.Identity, "invokeBatch", new BatchResult(results.ToArray())));
+        }
+        else if (request.Kind == "runAction" && runtime is not null && actionsMode && !actionRan)
+        {
+            actionRan = true;
+            var action = WorkerProtocol.Payload<RunAction>(request);
+            ActionProtocol.Name(action.Name);
+            ActionProtocol.ValidateSnapshot(action.Snapshot);
+            if (action.OperationId == Guid.Empty || action.Snapshot.BaseRevision != request.Identity.Revision) throw new ProtocolException("Action revision mismatch.");
+            try
+            {
+                var raw = runtime.RunAction(action.Name, WorkerProtocol.EncodePayload(action));
+                var patch = WorkerProtocol.Payload<ActionPatch>(request with { Payload = raw });
+                ActionProtocol.ValidatePatch(patch, action);
+                await WorkerProtocol.WriteAsync(output, WorkerProtocol.Message(request.Identity, "runAction", patch));
+            }
+            catch (InvalidOperationException)
+            {
+                await WorkerProtocol.WriteAsync(output, WorkerProtocol.Message(request.Identity, "failure",
+                    new WorkerFailure(runtime.LastOperationInterrupted ? "Timeout" : "Action", "操作脚本失败或超出资源/变更限制，本次变更未提交。")));
+                return 7;
+            }
         }
         else if (request.Kind == "logs" && runtime is not null)
         {

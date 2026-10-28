@@ -8,6 +8,50 @@ using var output = Console.OpenStandardOutput();
 var hello = await WorkerProtocol.ReadAsync(input);
 await WorkerProtocol.WriteAsync(output, hello);
 var loadEnvelope = await WorkerProtocol.ReadAsync(input);
+if (loadEnvelope.Kind == "loadActions")
+{
+    var modules = WorkerProtocol.Payload<LoadModules>(loadEnvelope);
+    var fault = modules.Modules[0].Source;
+    await WorkerProtocol.WriteAsync(output, WorkerProtocol.Message(loadEnvelope.Identity, "loadActions", new LoadedActions(modules.Sha256, [new("A", "")])));
+    var envelope = await WorkerProtocol.ReadAsync(input);
+    var action = WorkerProtocol.Payload<RunAction>(envelope);
+    var good = new ActionWrite(action.Snapshot.Sheets[0].Id, 0, 0, WireValue.FromObject(1d), null);
+    var bad = good with { Row = 1 };
+    bad = fault switch
+    {
+        "duplicate" => good,
+        "sheet" => bad with { SheetId = Guid.NewGuid().ToString() },
+        "coordinate" => bad with { Column = 1024 },
+        "type" => bad with { Value = new WireValue("number", System.Text.Json.JsonSerializer.SerializeToElement("wrong")) },
+        "both" => bad with { Formula = "=1" },
+        "formula" => bad with { Value = null, Formula = "=1+" },
+        "error" => bad with { Value = new WireValue("error", System.Text.Json.JsonSerializer.SerializeToElement("unknown")) },
+        _ => bad
+    };
+    var patch = new ActionPatch(action.OperationId, action.Snapshot.BaseRevision, action.Name, [good, bad]);
+    patch = fault switch
+    {
+        "operation" => patch with { OperationId = Guid.NewGuid() },
+        "base" => patch with { BaseRevision = patch.BaseRevision + 1 },
+        "name" => patch with { Name = "wrong" },
+        "count" => patch with { Edits = Enumerable.Repeat(good, 20001).ToArray() },
+        _ => patch
+    };
+    var peer = fault switch
+    {
+        "session" => envelope.Identity with { SessionId = Guid.NewGuid() },
+        "worker" => envelope.Identity with { WorkerInstanceId = Guid.NewGuid() },
+        "request" => envelope.Identity with { RequestId = Guid.NewGuid() },
+        "revision" => envelope.Identity with { Revision = envelope.Identity.Revision + 1 },
+        "generation" => envelope.Identity with { ScriptGeneration = envelope.Identity.ScriptGeneration + 1 },
+        "calculation" => envelope.Identity with { CalculationGeneration = 1 },
+        _ => envelope.Identity
+    };
+    await WorkerProtocol.WriteAsync(output, WorkerProtocol.Message(peer, "runAction", patch));
+    var logRequest = await WorkerProtocol.ReadAsync(input);
+    await WorkerProtocol.WriteAsync(output, WorkerProtocol.Message(logRequest.Identity, "logs", new WorkerLogs([])));
+    return;
+}
 var load = WorkerProtocol.Payload<LoadScript>(loadEnvelope);
 var mode = load.Source;
 if (mode == "duplicate") { await WorkerProtocol.WriteAsync(output, hello); return; }

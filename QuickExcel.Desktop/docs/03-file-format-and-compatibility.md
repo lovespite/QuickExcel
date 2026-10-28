@@ -1,6 +1,6 @@
 # 文件格式与兼容性设计
 
-> 2026-10-28 更新：文件级 `scriptApiVersion: 2` 已用于包内 ES 模块执行；`script-actions`/actions 仍拒绝。API v1 多模块元数据保持只保存语义，v2 明确选择执行模式。最新版本与摘要契约见 [M4 模块记录](12-m4-modules.md)。以下保留历史与长期目标，公式/结构/脚本参数桥/导出范围见 [M3 支持矩阵](10-m3-calculation.md)。
+> 2026-10-28 更新：文件级 `scriptApiVersion: 2` 已用于包内 ES 模块与 actions；动作包必须声明 `script-actions` 并提供 workbook/actions 绑定。API v1 多模块元数据保持只保存语义。版本、绑定及摘要契约见 [M4 actions 记录](13-m4-actions.md)与 [模块记录](12-m4-modules.md)。以下保留历史与长期目标，公式/结构/脚本参数桥/导出范围见 [M3 支持矩阵](10-m3-calculation.md)。
 
 [返回文档索引](README.md) · [系统架构](02-system-architecture.md) · [脚本运行时](04-scripting-and-runtime.md) · [实施计划](05-implementation-plan.md) · [原型使用说明](../README.md)
 

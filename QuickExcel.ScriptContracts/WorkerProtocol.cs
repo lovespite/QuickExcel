@@ -11,7 +11,7 @@ public sealed record RequestIdentity(Guid SessionId, Guid WorkerInstanceId, Guid
     public void Validate()
     {
         if (SessionId == Guid.Empty || WorkerInstanceId == Guid.Empty || RequestId == Guid.Empty ||
-            Revision < 0 || CalculationGeneration is null or < 0 || ScriptGeneration < 0)
+            Revision < 0 || CalculationGeneration is < 0 || ScriptGeneration < 0)
             throw new ProtocolException("Invalid request identity.");
     }
     public bool SameRound(RequestIdentity other) => this with { RequestId = other.RequestId } == other;
@@ -33,7 +33,7 @@ public sealed class ProtocolException(string message, Exception? inner = null) :
 
 public static class WorkerProtocol
 {
-    public const int Version = 2;
+    public const int Version = 3;
     public const string Engine = "QuickJS-NG/0.17.0";
     public const string Policy = "conservative-worker-v1";
     public const int MaxFrameBytes = 4 * 1024 * 1024;
@@ -111,7 +111,7 @@ public static class WorkerProtocol
     private static void Validate(WorkerEnvelope message)
     {
         if (message.ProtocolVersion != Version || message.Identity is null ||
-            message.Kind is not ("hello" or "load" or "loadModules" or "invokeBatch" or "logs" or "shutdown" or "failure") ||
+            message.Kind is not ("hello" or "load" or "loadModules" or "loadActions" or "runAction" or "invokeBatch" or "logs" or "shutdown" or "failure") ||
             message.Payload.ValueKind != JsonValueKind.Object)
             throw new ProtocolException("Unsupported protocol message.");
         message.Identity.Validate();

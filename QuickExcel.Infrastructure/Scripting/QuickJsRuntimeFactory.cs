@@ -9,7 +9,7 @@ public sealed class QuickJsRuntimeFactory : IScriptRuntimeFactory
 {
     public IScriptRuntime Create(string source) => new Runtime(new QuickJsSession(source));
     public IScriptRuntime Create(ScriptRuntimeRequest request) => request.Modules.ScriptApiVersion == 2
-        ? new Runtime(new QuickJsSession(request.Modules.Modules.ToDictionary(m => m.Key, m => m.Value.Source, StringComparer.Ordinal), request.Modules.EntryModules))
+        ? new Runtime(new QuickJsSession(request.Modules.Modules.ToDictionary(m => m.Key, m => m.Value.Source, StringComparer.Ordinal), request.Modules.EntriesFor("formula-functions")))
         : request.Modules.CanExecuteLegacy ? Create(request.Source) : throw new NotSupportedException("多模块执行需要显式声明脚本 API v2。");
 
     private sealed class Runtime(QuickJsSession session) : IScriptRuntime

@@ -56,7 +56,8 @@ public sealed partial class TypedWorkbookStorage : IWorkbookStorageOptions
                     if (String(root, "format") != "QuickExcel" || Integer(root, "minReaderVersion", 2) != 2 || scriptApiVersion is not (1 or 2))
                         throw new InvalidDataException("XLSQ 格式、读取器版本或脚本 API 不受支持。");
                     var features = Array(root, "requiredFeatures").Select(e => e.GetString() ?? throw new InvalidDataException("能力名称必须为字符串。")).ToArray();
-                    if (features.Length != Features.Length || features.Distinct().Count() != features.Length || features.Except(Features).Any())
+                    if (features.Distinct().Count() != features.Length || Features.Except(features).Any() || features.Except(Features.Append("script-actions")).Any() ||
+                        features.Contains("script-actions") && scriptApiVersion != 2)
                         throw new InvalidDataException("XLSQ 缺少必要能力或包含未知必需能力。");
                     var referenced = new HashSet<string>(StringComparer.Ordinal) { "manifest.json" };
                     byte[] Reference(JsonElement reference, string? expectedPath = null)
@@ -83,16 +84,13 @@ public sealed partial class TypedWorkbookStorage : IWorkbookStorageOptions
                         if ((sourceBytes += content.Length) > 1024 * 1024) throw new InvalidDataException("脚本总量超过 1 MiB。");
                         moduleList.Add(new(module.Name, new ScriptModule(String(module.Value, "path"), Utf8.GetString(content))));
                     }
-                    modules = new(moduleList, Array(scripts, "entryModules").Select(e => e.GetString() ?? throw new InvalidDataException("入口名无效。")),
-                        Integer(state.RootElement, "scriptRevision"), Integer(state.RootElement, "bindingRevision"), scriptApiVersion);
-                    if (referenced.Count != parts.Count) throw new InvalidDataException("XLSQ 包含未声明条目。");
                     var bindings = Array(state.RootElement, "scriptBindings").ToArray();
-                    var bound = new HashSet<string>();
-                    foreach (var binding in bindings)
-                        if (String(binding, "scope") != "workbook" || String(binding, "kind") != "formula-functions" ||
-                            !modules.EntryModules.Contains(String(binding, "module")) || !bound.Add(String(binding, "module")))
-                            throw new InvalidDataException("脚本绑定无效或需要尚未支持的能力。");
-                    if (bound.Count != modules.EntryModules.Length) throw new InvalidDataException("脚本入口绑定不完整。");
+                    if (bindings.Any(b => String(b, "scope") != "workbook")) throw new InvalidDataException("脚本绑定作用域无效。");
+                    modules = new(moduleList, Array(scripts, "entryModules").Select(e => e.GetString() ?? throw new InvalidDataException("入口名无效。")),
+                        Integer(state.RootElement, "scriptRevision"), Integer(state.RootElement, "bindingRevision"), scriptApiVersion,
+                        bindings.Select(b => new ScriptBinding(String(b, "module"), String(b, "kind"))));
+                    if (modules.HasActions != features.Contains("script-actions")) throw new InvalidDataException("动作绑定与必需能力不一致。");
+                    if (referenced.Count != parts.Count) throw new InvalidDataException("XLSQ 包含未声明条目。");
                     var calculation = Property(state.RootElement, "calculation");
                     _ = String(calculation, "engineVersion");
                     if (String(calculation, "state") is not ("unknown" or "fresh" or "stale" or "partial")) throw new InvalidDataException("计算状态无效。");
@@ -178,7 +176,13 @@ public sealed partial class TypedWorkbookStorage : IWorkbookStorageOptions
         document["scriptRevision"] = snapshot.ScriptModules.Revision;
         document["bindingRevision"] = snapshot.ScriptModules.BindingRevision;
         document["sheets"] = MergeByKey(document["sheets"], JsonSerializer.SerializeToNode(snapshot.Sheets.Select((s, i) => new { id = s.Id.ToString(), workbookSheetId = sheetParts[i].WorkbookSheetId, part = sheetParts[i].Part }))!.AsArray(), "id");
-        document["scriptBindings"] = MergeByKey(document["scriptBindings"], JsonSerializer.SerializeToNode(snapshot.ScriptModules.EntryModules.Select(id => new { module = id, scope = "workbook", kind = "formula-functions" }))!.AsArray(), "module");
+        var savedBindings = new JsonArray();
+        foreach (var binding in snapshot.ScriptModules.Bindings)
+        {
+            var prior = (document["scriptBindings"] as JsonArray)?.FirstOrDefault(b => b?["module"]?.GetValue<string>() == binding.Module && b?["kind"]?.GetValue<string>() == binding.Kind);
+            savedBindings.Add(Merge(prior, JsonSerializer.SerializeToNode(new { module = binding.Module, scope = "workbook", kind = binding.Kind })!));
+        }
+        document["scriptBindings"] = savedBindings;
         document["calculation"] = Merge(document["calculation"], JsonSerializer.SerializeToNode(new { state = CacheState(snapshot), contentRevision = snapshot.Revision,
             scriptRevision = snapshot.ScriptModules.Revision, bindingRevision = snapshot.ScriptModules.BindingRevision,
             engineVersion = "QuickExcel-M3", scriptSetSha256 = ScriptHash(snapshot.ScriptModules) })!);
@@ -187,7 +191,7 @@ public sealed partial class TypedWorkbookStorage : IWorkbookStorageOptions
         parts["state/document.json"] = JsonSerializer.SerializeToUtf8Bytes(document);
         var manifest = Object(snapshot.FileState?.ManifestJson);
         manifest["format"] = "QuickExcel"; manifest["formatVersion"] = 2; manifest["minReaderVersion"] = 2; manifest["scriptApiVersion"] = snapshot.ScriptModules.ScriptApiVersion;
-        manifest["requiredFeatures"] = JsonSerializer.SerializeToNode(Features);
+        manifest["requiredFeatures"] = JsonSerializer.SerializeToNode(snapshot.ScriptModules.HasActions ? [.. Features, "script-actions"] : Features);
         JsonNode Reference(string name) => JsonSerializer.SerializeToNode(new { path = name, sha256 = Hash(parts[name]) })!;
         manifest["workbook"] = Merge(manifest["workbook"], Reference("workbook.xlsx")); manifest["state"] = Merge(manifest["state"], Reference("state/document.json"));
         var modules = new JsonObject();
@@ -293,6 +297,8 @@ public sealed partial class TypedWorkbookStorage : IWorkbookStorageOptions
     private static string ScriptHash(ScriptModuleSet modules)
     {
         var sources = modules.Modules.OrderBy(m => m.Key, StringComparer.Ordinal).Select(m => new { id = m.Key, path = m.Value.Path, sha256 = Hash(Utf8.GetBytes(m.Value.Source)) });
+        if (modules.HasActions) return Hash(JsonSerializer.SerializeToUtf8Bytes(new { scriptApiVersion = 2, entries = modules.EntryModules, modules = sources,
+            bindings = modules.Bindings.OrderBy(b => b.Module, StringComparer.Ordinal).ThenBy(b => b.Kind, StringComparer.Ordinal).Select(b => new { module = b.Module, kind = b.Kind }) }));
         // Preserve existing API v1 digests; module-mode digests also bind the execution semantics.
         return modules.ScriptApiVersion == 1
             ? Hash(JsonSerializer.SerializeToUtf8Bytes(new { entries = modules.EntryModules, modules = sources }))

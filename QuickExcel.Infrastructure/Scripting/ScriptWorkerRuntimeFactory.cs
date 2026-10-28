@@ -28,12 +28,14 @@ public sealed class ScriptWorkerRuntime : IScriptRuntime
     private WorkerJob? _job;
     private bool _started, _stopped, _disposed;
     private readonly RequestIdentity _identity;
+    private readonly bool _actionsMode;
 
-    private ScriptWorkerRuntime(ScriptRuntimeRequest request)
+    private ScriptWorkerRuntime(ScriptRuntimeRequest request, bool actionsMode)
     {
         _request = request;
+        _actionsMode = actionsMode;
         _identity = new(request.Stamp.SessionId, Guid.NewGuid(), Guid.NewGuid(), request.Stamp.InputRevision,
-            request.Stamp.CalculationGeneration, request.Stamp.ScriptGeneration);
+            actionsMode ? null : request.Stamp.CalculationGeneration, request.Stamp.ScriptGeneration);
         _lifetime = CancellationTokenSource.CreateLinkedTokenSource(request.CancellationToken, _deadline.Token);
     }
 
@@ -41,8 +43,9 @@ public sealed class ScriptWorkerRuntime : IScriptRuntime
     public Guid WorkerInstanceId => _identity.WorkerInstanceId;
     public IReadOnlyList<string> FunctionNames { get; private set; } = [];
     public IReadOnlyList<ScriptFunctionDescriptor> FunctionDescriptors { get; private set; } = [];
+    public IReadOnlyList<ScriptActionDescriptor> ActionDescriptors { get; private set; } = [];
 
-    internal static ScriptWorkerRuntime Start(string executable, ScriptRuntimeRequest request)
+    internal static ScriptWorkerRuntime Start(string executable, ScriptRuntimeRequest request, bool actionsMode = false)
     {
         request.CancellationToken.ThrowIfCancellationRequested();
         if (request.TimeLimit <= TimeSpan.Zero) throw new TimeoutException("重算已达到时间限制。");
@@ -51,7 +54,8 @@ public sealed class ScriptWorkerRuntime : IScriptRuntime
         if (!request.Modules.CanExecute) throw new NotSupportedException("多模块执行需要显式声明脚本 API v2。");
         if (request.Modules.Modules.Sum(m => (long)Encoding.UTF8.GetByteCount(m.Value.Source)) > 1024 * 1024)
             throw new ScriptRuntimeFailureException("SourceLimit", "脚本源码超过 1 MiB UTF-8 限额。");
-        var runtime = new ScriptWorkerRuntime(request);
+        if (actionsMode && !request.Modules.HasActions) throw new InvalidOperationException("没有 actions 绑定。");
+        var runtime = new ScriptWorkerRuntime(request, actionsMode);
         try
         {
             runtime._identity.Validate();
@@ -79,8 +83,21 @@ public sealed class ScriptWorkerRuntime : IScriptRuntime
             if (request.Modules.ScriptApiVersion == 2)
             {
                 var bundle = new LoadModules(request.Modules.Modules.Select(m => new ModuleSource(m.Key, m.Value.Path, m.Value.Source)).ToArray(),
-                    request.Modules.EntryModules.ToArray(), "");
+                    request.Modules.EntriesFor(actionsMode ? "actions" : "formula-functions").ToArray(), "");
                 digest = bundle.ComputeDigest();
+                if (actionsMode)
+                {
+                    var actions = runtime.Exchange<LoadModules, LoadedActions>("loadActions", bundle with { Sha256 = digest });
+                    if (actions.Sha256 != digest || actions.Actions.Length > 256) throw new ProtocolException("Invalid action registry.");
+                    var names = new HashSet<string>(StringComparer.Ordinal);
+                    foreach (var action in actions.Actions)
+                    {
+                        if (action is null || !names.Add(action.Name) || action.Description is null || action.Description.Length > 1000) throw new ProtocolException("Invalid action descriptor.");
+                        ActionProtocol.Name(action.Name);
+                    }
+                    runtime.ActionDescriptors = Array.AsReadOnly(actions.Actions.Select(a => new ScriptActionDescriptor(a.Name, a.Description)).ToArray());
+                    return runtime;
+                }
                 loaded = runtime.Exchange<LoadModules, LoadedScript>("loadModules", bundle with { Sha256 = digest });
             }
             else
@@ -116,6 +133,7 @@ public sealed class ScriptWorkerRuntime : IScriptRuntime
 
     public IReadOnlyList<InvocationResult> InvokeBatch(IReadOnlyList<FunctionCall> calls)
     {
+        if (_actionsMode) throw new InvalidOperationException("Action workers cannot invoke formula functions.");
         if (calls.Count is < 1 or > WorkerProtocol.MaxBatchCalls) throw new ArgumentException("Invalid batch size.");
         foreach (var call in calls)
         {
@@ -146,6 +164,17 @@ public sealed class ScriptWorkerRuntime : IScriptRuntime
         return Array.AsReadOnly(logs);
     }
 
+    public ActionPatch RunAction(RunAction request)
+    {
+        if (!_actionsMode) throw new InvalidOperationException("Formula workers cannot run actions.");
+        ActionProtocol.Name(request.Name);
+        ActionProtocol.ValidateSnapshot(request.Snapshot);
+        if (request.OperationId == Guid.Empty || request.Snapshot.BaseRevision != _request.Stamp.InputRevision) throw new ProtocolException("Action input identity mismatch.");
+        var patch = Exchange<RunAction, ActionPatch>("runAction", request);
+        try { ActionProtocol.ValidatePatch(patch, request); return patch; }
+        catch (ProtocolException e) { Abort(); throw new ScriptRuntimeFailureException("Protocol", "动作变更校验失败，本次未提交。", e); }
+    }
+
     private TReply Exchange<TRequest, TReply>(string kind, TRequest payload)
     {
         // One in-flight request, zero waiting requests. Reject overload instead of growing a queue.
@@ -161,7 +190,7 @@ public sealed class ScriptWorkerRuntime : IScriptRuntime
             if (reply.Kind == "failure")
             {
                 var error = WorkerProtocol.Payload<WorkerFailure>(reply);
-                if (error.Code is not ("Load" or "Timeout" or "ResourceLimit") || Encoding.UTF8.GetByteCount(error.Message) > 4000)
+                if (error.Code is not ("Load" or "Timeout" or "ResourceLimit" or "Action") || Encoding.UTF8.GetByteCount(error.Message) > 4000)
                     throw new ProtocolException("Invalid worker failure.");
                 Abort();
                 if (error.Code == "Timeout") throw new TimeoutException("脚本达到时间限制，本轮结果未提交。");

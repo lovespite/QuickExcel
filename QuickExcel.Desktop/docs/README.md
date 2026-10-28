@@ -1,6 +1,6 @@
 # QuickExcel 架构与实施文档
 
-设计基线：2026-10-22；最新阶段：2026-10-28 的 **M4 包内模块执行切片**。产品为 QuickExcel，文档为 .xlsq。先读 [模块实现与证据](12-m4-modules.md)及 [worker 实现与证据](11-m4-worker.md)；M4 后续及 M5/M6 和完整 Beta 继续按计划推进。
+设计基线：2026-10-22；最新阶段：2026-10-28 的 **M4 actions 事务切片**。产品为 QuickExcel，文档为 .xlsq。先读 [actions 实现与证据](13-m4-actions.md)、[模块实现](12-m4-modules.md)及 [worker 实现](11-m4-worker.md)；M4 合批与 OS 访问隔离、M5/M6 和完整 Beta 继续按计划推进。
 
 0.2 已将桌面编辑接入独立稀疏领域快照、DocumentSession、事务命令和撤销历史，计算与保存通过端口使用同一版本状态。Core 为纯 .NET 程序集，ExcelIO 与 QuickJS 适配位于 Infrastructure。仍使用 XLSQ v1、同表兼容计算和进程内可信脚本执行。
 
@@ -9,7 +9,8 @@
 | 文档 | 解决的问题 |
 | --- | --- |
 | [M4 包内模块](12-m4-modules.md) | API v2、逻辑 ID 导入、同步初始化、版本兼容与模块验证 |
-| [M4 独立脚本进程](11-m4-worker.md) | 当前 worker、取消、故障边界及尚未完成的模块/动作/OS 隔离 |
+| [M4 actions 操作脚本](13-m4-actions.md) | 只读快照、二次校验、原子提交、一次撤销、桌面运行与验证 |
+| [M4 独立脚本进程](11-m4-worker.md) | worker 首切片的取消、故障和资源边界；保留历史发布证据 |
 | [产品范围](01-product-and-scope.md) | 长期 Beta 的产品边界和暂缓功能 |
 | [系统架构](02-system-architecture.md) | 当前模块依赖及后续数据/计算设计 |
 | [文件格式与兼容性](03-file-format-and-compatibility.md) | 当前 XLSQ v1、目标 v2、类型与保存协议 |

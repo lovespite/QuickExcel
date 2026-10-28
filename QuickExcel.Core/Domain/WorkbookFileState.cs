@@ -4,12 +4,13 @@ using System.Text;
 namespace QuickExcel.Domain;
 
 public sealed record ScriptModule(string Path, string Source);
+public sealed record ScriptBinding(string Module, string Kind);
 
 /// <summary>Source metadata only. It never carries execution authorization.</summary>
 public sealed class ScriptModuleSet
 {
     public ScriptModuleSet(IEnumerable<KeyValuePair<string, ScriptModule>> modules, IEnumerable<string> entryModules,
-        long revision = 0, long bindingRevision = 0, int scriptApiVersion = 1)
+        long revision = 0, long bindingRevision = 0, int scriptApiVersion = 1, IEnumerable<ScriptBinding>? bindings = null)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(revision);
         ArgumentOutOfRangeException.ThrowIfNegative(bindingRevision);
@@ -19,6 +20,12 @@ public sealed class ScriptModuleSet
         if (Modules.Count is < 1 or > 64 || EntryModules.Length is < 1 or > 64 ||
             EntryModules.Distinct(StringComparer.Ordinal).Count() != EntryModules.Length || EntryModules.Any(id => !Modules.ContainsKey(id)))
             throw new ArgumentException("Invalid script module/entry mapping.");
+        Bindings = (bindings ?? EntryModules.Select(id => new ScriptBinding(id, "formula-functions"))).ToImmutableArray();
+        if (Bindings.Length is < 1 or > 128 || Bindings.Distinct().Count() != Bindings.Length ||
+            Bindings.Any(b => b is null || !EntryModules.Contains(b.Module) || b.Kind is not ("formula-functions" or "actions")) ||
+            EntryModules.Any(id => !Bindings.Any(b => b.Module == id)) ||
+            scriptApiVersion != 2 && Bindings.Any(b => b.Kind == "actions"))
+            throw new ArgumentException("Invalid script bindings or action API version.");
         var paths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var (id, module) in Modules)
         {
@@ -37,6 +44,9 @@ public sealed class ScriptModuleSet
     public long Revision { get; }
     public long BindingRevision { get; }
     public int ScriptApiVersion { get; }
+    public ImmutableArray<ScriptBinding> Bindings { get; }
+    public bool HasActions => Bindings.Any(b => b.Kind == "actions");
+    public ImmutableArray<string> EntriesFor(string kind) => EntryModules.Where(id => Bindings.Any(b => b.Module == id && b.Kind == kind)).ToImmutableArray();
     public string PrimarySource => Modules[EntryModules[0]].Source;
     public bool CanExecuteLegacy => ScriptApiVersion == 1 && Modules.Count == 1 && EntryModules.Length == 1;
     public bool CanExecute => CanExecuteLegacy || ScriptApiVersion == 2;
@@ -44,7 +54,7 @@ public sealed class ScriptModuleSet
         [new KeyValuePair<string, ScriptModule>("main", new("scripts/main.js", source))], ["main"]);
     public ScriptModuleSet WithPrimarySource(string source) => source == PrimarySource ? this : new(
         Modules.SetItem(EntryModules[0], Modules[EntryModules[0]] with { Source = source }), EntryModules,
-        checked(Revision + 1), BindingRevision, ScriptApiVersion);
+        checked(Revision + 1), BindingRevision, ScriptApiVersion, Bindings);
 }
 
 public sealed record WorkbookPartBinding(string WorkbookSheetId, string Part);

@@ -95,6 +95,7 @@ public partial class MainWindow : Window
         _formulaPending = _calculationPending = false;
         _refreshing = true;
         ScriptEditor.Text = document.ScriptSource;
+        ActionPicker.ItemsSource = null;
         SheetPicker.ItemsSource = document.Snapshot.Sheets.Select(sheet => sheet.Name).ToList();
         SheetPicker.SelectedIndex = 0;
         _refreshing = false;
@@ -166,6 +167,8 @@ public partial class MainWindow : Window
         if (_viewModel.DiscardedHistoryCount > 0) FileSubtitle.Text += $" · 已释放 {_viewModel.DiscardedHistoryCount} 条较早撤销记录";
         UndoButton.IsEnabled = _viewModel.CanUndo && !_busy;
         RedoButton.IsEnabled = _viewModel.CanRedo && !_busy;
+        ActionsPanel.Visibility = _document.Snapshot.ScriptModules.HasActions ? Visibility.Visible : Visibility.Collapsed;
+        RunActionButton.IsEnabled = !_busy && _document.ScriptsEnabled && ActionPicker.Items.Count > 0;
     }
 
     private void UpdateFormulaBar()
@@ -223,7 +226,7 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            if (ex is OperationCanceledException) { StatusText.Text = "计算已停止，保留上次结果。"; return false; }
+            if (ex is OperationCanceledException) { StatusText.Text = "操作已停止，保留已提交的数据与结果。"; return false; }
             StatusText.Text = "操作未完成";
             AppendLog(ex.Message);
             if (!_smokeMode) MessageBox.Show(this, ex.Message, "QuickExcel", MessageBoxButton.OK, MessageBoxImage.Warning);
@@ -489,6 +492,7 @@ public partial class MainWindow : Window
         if (_refreshing || ScriptState is null || _editor is null) return;
         // Even rejected source edits must revoke the old source's authorization.
         _document.DisableScripts();
+        ActionPicker.ItemsSource = null;
         ScriptState.Text = "● 已修改，等待应用";
         try
         {
@@ -506,7 +510,14 @@ public partial class MainWindow : Window
         try { if (!CommitEdit()) return; }
         finally { _suppressAutoCalculation = false; }
         _calculationPending = false;
-        var ok = await WorkAsync("应用 JavaScript 并计算…", _document.EnableScriptsAndCalculate, cancellable: true);
+        IReadOnlyList<ScriptActionDescriptor> actions = [];
+        ActionPicker.ItemsSource = null;
+        var ok = await WorkAsync("应用 JavaScript 并计算…", token =>
+        {
+            _document.EnableScriptsAndCalculate(token);
+            if (_document.Snapshot.ScriptModules.HasActions) actions = _document.ListActions(token);
+        }, cancellable: true);
+        if (ok) { ActionPicker.ItemsSource = actions; ActionPicker.SelectedIndex = actions.Count > 0 ? 0 : -1; }
         if (ok) AppendLog("脚本已应用，工作簿已重新计算。");
         ShowDiagnostics();
         UpdateChrome();
@@ -516,6 +527,7 @@ public partial class MainWindow : Window
     {
         if (_busy) return;
         _document.DisableScripts();
+        ActionPicker.ItemsSource = null;
         ScriptState.Text = "● 脚本未启用";
         AppendLog("脚本已停用；自定义公式保留上次计算结果。");
         RefreshSheet();
@@ -525,7 +537,25 @@ public partial class MainWindow : Window
     private void StopCalculation_Click(object sender, RoutedEventArgs e)
     {
         _calculationCancellation?.Cancel();
-        StatusText.Text = "正在停止计算…";
+        StatusText.Text = "正在停止…";
+    }
+
+    private async void RunAction_Click(object sender, RoutedEventArgs e) => await RunSelectedActionAsync();
+    private async Task RunSelectedActionAsync()
+    {
+        if (_busy || !_document.ScriptsEnabled || ActionPicker.SelectedItem is not ScriptActionDescriptor action) return;
+        _suppressAutoCalculation = true;
+        try { if (!CommitEdit()) return; }
+        finally { _suppressAutoCalculation = false; }
+        CommandResult? result = null;
+        var ok = await WorkAsync("运行操作脚本…", token => result = _document.RunAction(action.Name, token), cancellable: true);
+        if (ok)
+        {
+            _calculationPending |= result!.Changed;
+            AppendLog(result.Changed ? $"动作「{action.Name}」已提交，可一次撤销。公式缓存等待重算。" : $"动作「{action.Name}」未产生变更。");
+        }
+        ShowDiagnostics();
+        UpdateChrome();
     }
 
     private bool CommitGridEdit()

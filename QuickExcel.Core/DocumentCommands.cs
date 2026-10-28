@@ -99,10 +99,11 @@ public sealed class UpdateScriptModulesCommand(ScriptModuleSet modules) : Docume
             throw new ArgumentException("脚本总量不能超过 1 MiB。");
         var prior = snapshot.ScriptModules;
         var sameBindings = prior.ScriptApiVersion == modules.ScriptApiVersion && prior.EntryModules.SequenceEqual(modules.EntryModules)
+            && prior.Bindings.ToHashSet().SetEquals(modules.Bindings)
             && prior.Modules.Count == modules.Modules.Count && prior.Modules.All(m => modules.Modules.TryGetValue(m.Key, out var value) && value.Path == m.Value.Path);
         if (sameBindings && prior.Modules.All(m => modules.Modules[m.Key].Source == m.Value.Source)) return new(snapshot, [], false);
         var updated = new ScriptModuleSet(modules.Modules, modules.EntryModules, checked(prior.Revision + 1),
-            sameBindings ? prior.BindingRevision : checked(prior.BindingRevision + 1), modules.ScriptApiVersion);
+            sameBindings ? prior.BindingRevision : checked(prior.BindingRevision + 1), modules.ScriptApiVersion, modules.Bindings);
         return new(snapshot.WithScriptModules(updated), [], false);
     }
 }

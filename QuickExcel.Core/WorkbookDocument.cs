@@ -193,5 +193,34 @@ public sealed class WorkbookDocument : IDisposable
             throw;
         }
     }
+    public IReadOnlyList<ScriptActionDescriptor> ListActions(CancellationToken cancellationToken = default)
+    {
+        var executor = _services.Actions ?? throw new NotSupportedException("未配置动作执行器。");
+        var request = Session.BeginAction(null);
+        using var lifetime = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, request.CancellationToken);
+        try
+        {
+            var actions = executor.List(request, lifetime.Token);
+            lifetime.Token.ThrowIfCancellationRequested();
+            if (!Session.CompleteActionDiscovery(request)) throw new InvalidOperationException("动作列表已过期，请重新应用脚本。");
+            return actions;
+        }
+        catch (Exception e) { Session.TryFailCalculation(request.Stamp, e.Message, disableScripts: false); throw; }
+    }
+
+    public CommandResult RunAction(string name, CancellationToken cancellationToken = default)
+    {
+        var executor = _services.Actions ?? throw new NotSupportedException("未配置动作执行器。");
+        var request = Session.BeginAction(name);
+        using var lifetime = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, request.CancellationToken);
+        try
+        {
+            var result = executor.Run(request, lifetime.Token);
+            lifetime.Token.ThrowIfCancellationRequested();
+            return Session.CommitAction(request, result, lifetime.Token);
+        }
+        catch (Exception e) { Session.TryFailCalculation(request.Stamp, e.Message, disableScripts: false); throw; }
+    }
+
     public void Dispose() => Session.Dispose();
 }

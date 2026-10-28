@@ -196,7 +196,7 @@ public sealed class TypedStorageTests : IDisposable
 
     [Theory]
     [InlineData("version")] [InlineData("source")] [InlineData("actions-feature")] [InlineData("actions-binding")]
-    public void ModuleModeRejectsTamperingAndUnimplementedActions(string change)
+    public void ModuleModeRejectsTamperingAndMismatchedActionCapability(string change)
     {
         var modules = new ScriptModuleSet(new Dictionary<string, ScriptModule>
         {
@@ -220,6 +220,52 @@ public sealed class TypedStorageTests : IDisposable
         }
         File.WriteAllBytes(path, Zip(parts));
         Assert.Throws<InvalidDataException>(() => _storage.Open(path));
+    }
+
+    [Theory]
+    [InlineData("feature")] [InlineData("api")] [InlineData("kind")] [InlineData("scope")]
+    [InlineData("duplicate")] [InlineData("module")] [InlineData("removed-action")]
+    public void ActionPackageRejectsInconsistentCapabilitiesBindingsAndDigest(string fault)
+    {
+        var path = PathFor("action-tamper.xlsq");
+        _storage.Save(path, Model().WithScriptModules(M4ActionTests.Actions("throw new Error('never execute on open');", true)));
+        var parts = ReadZip(File.ReadAllBytes(path));
+        var manifest = JsonNode.Parse(parts["manifest.json"])!;
+        if (fault == "feature") manifest["requiredFeatures"]!.AsArray().RemoveAt(3);
+        if (fault == "api") manifest["scriptApiVersion"] = 1;
+        parts["manifest.json"] = Encoding.UTF8.GetBytes(manifest.ToJsonString());
+        if (fault is not ("feature" or "api"))
+        {
+            var state = JsonNode.Parse(parts["state/document.json"])!;
+            var bindings = state["scriptBindings"]!.AsArray();
+            if (fault == "kind") bindings[1]!["kind"] = "unknown";
+            if (fault == "scope") bindings[1]!["scope"] = "worksheet";
+            if (fault == "duplicate") bindings.Add(bindings[1]!.DeepClone());
+            if (fault == "module") bindings[1]!["module"] = "missing";
+            if (fault == "removed-action") bindings.RemoveAt(1);
+            parts["state/document.json"] = Encoding.UTF8.GetBytes(state.ToJsonString());
+            Rehash(parts, "state", "state/document.json");
+        }
+        File.WriteAllBytes(path, Zip(parts));
+        Assert.Throws<InvalidDataException>(() => _storage.Open(path));
+    }
+
+    [Fact]
+    public void TwoKindsOnOneModulePreserveTheirOwnOptionalMetadata()
+    {
+        var path = PathFor("action-metadata.xlsq");
+        _storage.Save(path, Model().WithScriptModules(M4ActionTests.Actions("", true)));
+        EditJson(path, "state/document.json", root =>
+        {
+            root["scriptBindings"]![0]!["note"] = "functions";
+            root["scriptBindings"]![1]!["note"] = "actions";
+        });
+        var parts = ReadZip(File.ReadAllBytes(path));
+        Rehash(parts, "state", "state/document.json"); File.WriteAllBytes(path, Zip(parts));
+        _storage.Save(path, _storage.Open(path).WithScriptSource("// changed"));
+        var state = JsonNode.Parse(ReadZip(File.ReadAllBytes(path))["state/document.json"])!;
+        Assert.Equal("functions", state["scriptBindings"]![0]!["note"]!.GetValue<string>());
+        Assert.Equal("actions", state["scriptBindings"]![1]!["note"]!.GetValue<string>());
     }
 
     [Fact]

@@ -1,6 +1,6 @@
 # 04 · 脚本与运行时
 
-> 2026-10-28 更新：独立 worker、取消/故障恢复及包内 ES 模块执行已接入；actions 与 OS 访问隔离仍待后续。当前事实以 [模块记录](12-m4-modules.md)、[worker 记录](11-m4-worker.md) 和 ADR-020 为准，下面 M1/M3 现状及 M4 目标保留用于追踪。文件级 API v2 现在可用于模块执行，仍不支持动作绑定。
+> 2026-10-28 更新：独立 worker、包内 ES 模块及 actions 的只读快照/patch/原子提交/一次撤销已接入，IPC 当前协议 3。当前事实以 [actions 记录](13-m4-actions.md)、[模块记录](12-m4-modules.md)、[worker 记录](11-m4-worker.md) 和 ADR-021 为准；合批与 OS 访问隔离仍待后续。下面 M1/M3 现状及 M4 目标保留用于追踪，实际 API 与限制见最新记录。
 
 本文定义 QuickExcel 的 JavaScript 执行边界、值协议、工作进程和操作脚本提交机制。
 “当前”指 **0.2 试用版 M1** 的实际代码；“目标”及所有标注为“拟议”的 API 都需要后续实现。当前没有 ScriptWorker、IPC、动作脚本或 OS 隔离，不能视为 M4/M6 已交付。
