@@ -48,6 +48,7 @@ $outputPath = Resolve-ArtifactDirectory $OutputDirectory
 $runId = [DateTime]::UtcNow.ToString('yyyyMMdd-HHmmss') + '-' + [Guid]::NewGuid().ToString('N').Substring(0, 8)
 $publishPath = Resolve-ArtifactDirectory (Join-Path $artifactsRoot "publish\$runId")
 $smokePath = Resolve-ArtifactDirectory (Join-Path $artifactsRoot "smoke\$runId")
+$testResultsPath = Resolve-ArtifactDirectory (Join-Path $artifactsRoot "test-results\$runId")
 $releasePath = Resolve-ArtifactDirectory (Join-Path $artifactsRoot 'releases')
 $desktopProject = Join-Path $projectRoot 'QuickExcel.Desktop\QuickExcel.Desktop.csproj'
 [xml]$desktopProjectXml = Get-Content -LiteralPath $desktopProject -Raw
@@ -63,7 +64,7 @@ Push-Location $projectRoot
 try {
     New-Item -ItemType Directory -Force -Path $publishPath | Out-Null
     if (-not $SkipTests) {
-        dotnet test .\QuickExcel.Core.Test\QuickExcel.Core.Test.csproj -c $Configuration --artifacts-path $artifactsPath -v minimal
+        dotnet test .\QuickExcel.Core.Test\QuickExcel.Core.Test.csproj -c $Configuration --artifacts-path $artifactsPath -v minimal --logger 'trx;LogFileName=core-tests.trx' --results-directory $testResultsPath
         if ($LASTEXITCODE -ne 0) { throw 'QuickExcel tests failed.' }
         $unitTests = 'passed'
     }
@@ -107,7 +108,7 @@ try {
             if (-not (Test-Path -LiteralPath $resultPath -PathType Leaf)) { throw "QuickExcel WPF smoke exited without its result file: $smokePath" }
             $smokeResult = (Get-Content -LiteralPath $resultPath -Raw).Trim()
             if (-not $smokeResult.StartsWith('PASS:', [StringComparison]::Ordinal)) { throw "QuickExcel WPF smoke did not report PASS: $smokePath" }
-            foreach ($resultName in @('storage-smoke-result.txt', 'close-smoke-result.txt', 'calculation-smoke-result.txt', 'date-display-smoke-result.txt', 'worker-smoke-result.txt', 'actions-smoke-result.txt')) {
+            foreach ($resultName in @('storage-smoke-result.txt', 'close-smoke-result.txt', 'calculation-smoke-result.txt', 'date-display-smoke-result.txt', 'worker-smoke-result.txt', 'actions-smoke-result.txt', 'interaction-smoke-result.txt', 'workspace-smoke-result.txt')) {
                 $resultFile = Join-Path $smokePath $resultName
                 if (-not (Test-Path -LiteralPath $resultFile -PathType Leaf) -or
                     -not (Get-Content -LiteralPath $resultFile -Raw).StartsWith('PASS:', [StringComparison]::Ordinal)) {
@@ -157,7 +158,7 @@ try {
             sourceArchiveSha256 = $nativeHashMatch.Groups[1].Value.ToUpperInvariant()
             publishedDllSha256 = (Get-FileHash -LiteralPath (Join-Path $publishPath 'quickexcel-js.dll') -Algorithm SHA256).Hash
         }
-        verification = [ordered]@{ coreTests = $unitTests; nativeSmoke = $nativeSmoke; wpfSmoke = $desktopSmoke; wpfResult = $smokeResult }
+        verification = [ordered]@{ coreTests = $unitTests; coreTestResults = $(if ($unitTests -eq 'passed') { Join-Path $testResultsPath 'core-tests.trx' } else { $null }); nativeSmoke = $nativeSmoke; wpfSmoke = $desktopSmoke; wpfResult = $smokeResult }
         scriptWorker = [ordered]@{ protocolVersion = 4; policy = 'conservative-worker-v1'; maxMessageBytes = 16777216; maxCalculationBatchCalls = 85; isolationMode = 'appcontainer-no-capabilities-v1'; osAccessIsolationValidated = $false }
     }
     $metadata | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $publishPath 'BUILD-METADATA.json') -Encoding UTF8
@@ -172,6 +173,8 @@ try {
     Copy-Item -LiteralPath (Join-Path $projectRoot 'QuickExcel.Desktop\docs\14-m4-batching.md') -Destination (Join-Path $supportDocsPath '14-m4-batching.md')
     Copy-Item -LiteralPath (Join-Path $projectRoot 'QuickExcel.Desktop\docs\15-m4-os-isolation-adr.md') -Destination (Join-Path $supportDocsPath '15-m4-os-isolation-adr.md')
     Copy-Item -LiteralPath (Join-Path $projectRoot 'QuickExcel.Desktop\docs\16-m4-recovery-and-deployment.md') -Destination (Join-Path $supportDocsPath '16-m4-recovery-and-deployment.md')
+    Copy-Item -LiteralPath (Join-Path $projectRoot 'QuickExcel.Desktop\docs\17-m5-grid-and-input.md') -Destination (Join-Path $supportDocsPath '17-m5-grid-and-input.md')
+    Copy-Item -LiteralPath (Join-Path $projectRoot 'QuickExcel.Desktop\docs\18-m5-structure-and-workspace.md') -Destination (Join-Path $supportDocsPath '18-m5-structure-and-workspace.md')
     Copy-Item -LiteralPath (Join-Path $projectRoot 'QuickExcel.Scripting\native\SOURCES.md') -Destination (Join-Path $publishPath 'QUICKJS-SOURCES.md')
     $notices = @"
 QuickExcel third-party component provenance

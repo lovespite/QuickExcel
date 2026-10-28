@@ -1,5 +1,9 @@
 # QuickExcel 系统架构
 
+M5 UI-004/UI-005 的结构/排序/样式/尺寸命令在 Core，由 EditorController 提交。筛选/冻结属于按 SheetId 隔离的临时视图，最近文件属于用户配置。桌面保存使用 IVersionedWorkbookStorage 的指纹检查；Core 只传递令牌，Infrastructure 读取并在替换前核对文件。具体边界见 [结构与工作区](18-m5-structure-and-workspace.md)。
+
+> 2026-10-28 M5 更新：桌面新增 IGridSurface / WpfGridSurface，按需行对象、可见行刷新和独立输入规则；写入继续经过 EditorController / DocumentSession。UI-002/003 实现与验收以 [M5 记录](17-m5-grid-and-input.md) 为准。下方旧阶段描述保留为历史。
+
 > 2026-10-27 更新：当前 M4 首切片已增加 ScriptContracts、ScriptWorker 和桌面客户端。每轮一个专用进程，取消与代次失效结合；模块/动作尚未接入。见 [M4 记录](11-m4-worker.md) 和 ADR-019，以下旧阶段架构保留为历史。
 
 当前为 **0.3 文件预览**：M1 文档会话与 M2 类型化文件路径已接入。WPF 组合根使用 TypedWorkbookStorage，核心依然不引用 ExcelIO；XLSQ v2 的 workbook.xlsx 是值/公式/缓存/样式的唯一权威。LegacyWorkbookStorage 保留为 v1 回归适配。下文注明 0.2 的段落为历史，M4 worker/动作及完整 Beta 仍未交付。实现范围见 [M2 记录](09-m2-files-and-types.md)。

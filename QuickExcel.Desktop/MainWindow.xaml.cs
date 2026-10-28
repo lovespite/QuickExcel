@@ -1,4 +1,3 @@
-using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
@@ -24,7 +23,10 @@ public partial class MainWindow : Window
     private WorkbookDocument _document = null!;
     private DocumentViewModel _viewModel = null!;
     private EditorController _editor = null!;
-    private readonly ObservableCollection<SheetRow> _rows = [];
+    private readonly WpfGridSurface _grid;
+    private IGridSurface GridSurface => _grid;
+    private VirtualRowList<SheetRow> _rows => _grid.Rows;
+    private readonly CellEditState _editState = new();
     private int _sheetIndex;
     private int _rowCount = 100;
     private int _columnCount = 12;
@@ -42,29 +44,39 @@ public partial class MainWindow : Window
     private bool _suppressAutoCalculation;
     private bool _cellCommitFailed;
     private bool _updatingFormula;
-    private bool _formulaPending;
-    private int _formulaSheet;
-    private int _formulaRow;
-    private int _formulaColumn;
+    private bool _formulaPending => _editState.Formula != null;
+    private int _formulaSheet => _editState.Formula!.Sheet;
+    private int _formulaRow => _editState.Formula!.Row;
+    private int _formulaColumn => _editState.Formula!.Column;
     private string? _filePath;
     private string _displayName = "示例工作簿.xlsq";
 
     public MainWindow()
     {
         InitializeComponent();
-        SheetGrid.ItemsSource = _rows;
+        _grid = new WpfGridSurface(SheetGrid);
+        InstallInputHandlers();
+        InstallWorkspaceHandlers();
         InstallDocument(WorkbookDocument.CreateDemo(_services), null, "示例工作簿.xlsq", disposePrevious: false);
     }
 
     public async Task StartAsync(string[] args)
     {
-        if (args.Length > 0 && args[0] == "--smoke-test")
+        if (args.Length > 0 && args[0] is "--smoke-test" or "--interaction-smoke" or "--workspace-smoke" or "--grid-benchmark")
         {
             _smokeMode = true;
+            _recentFiles = new(Path.Combine(args.Length > 1 ? args[1] : AppContext.BaseDirectory, "recent-files.json"));
             try
             {
-                await Task.Run(() => QuickExcel.Runtime.ScriptWorkerRuntimeFactory.RecoverAbandonedSandboxes());
-                await RunSmokeTestAsync(args.Length > 1 ? args[1] : Path.Combine(AppContext.BaseDirectory, "smoke"));
+                var folder = args.Length > 1 ? args[1] : Path.Combine(AppContext.BaseDirectory, "smoke");
+                if (args[0] == "--grid-benchmark") await RunGridBenchmarkAsync(folder);
+                else if (args[0] == "--interaction-smoke") await RunInteractionSmokeAsync(folder);
+                else if (args[0] == "--workspace-smoke") await RunWorkspaceSmokeAsync(folder);
+                else
+                {
+                    await Task.Run(() => QuickExcel.Runtime.ScriptWorkerRuntimeFactory.RecoverAbandonedSandboxes());
+                    await RunSmokeTestAsync(folder);
+                }
                 Environment.ExitCode = 0;
             }
             catch (Exception ex)
@@ -78,12 +90,13 @@ public partial class MainWindow : Window
             Close();
             return;
         }
-        if (args.Length > 0 && File.Exists(args[0])) await OpenPathAsync(args[0]);
+        _recentFiles.Load();
+        if (args.Length > 0) await OpenPathAsync(args[0]);
         try { await Task.Run(() => QuickExcel.Runtime.ScriptWorkerRuntimeFactory.RecoverAbandonedSandboxes()); }
         catch (ScriptRuntimeFailureException ex) { LogText.Text += "\n" + ex.Message; }
     }
 
-    private void InstallDocument(WorkbookDocument document, string? path, string displayName, bool disposePrevious = true)
+    private void InstallDocument(WorkbookDocument document, string? path, string displayName, bool disposePrevious = true, FileVersion? fileVersion = null)
     {
         if (disposePrevious) _document.Dispose();
         _document = document;
@@ -91,11 +104,16 @@ public partial class MainWindow : Window
         _editor = new EditorController(document);
         DataContext = _viewModel;
         _filePath = path != null && Path.GetExtension(path).Equals(".xlsq", StringComparison.OrdinalIgnoreCase) ? path : null;
+        _versionPath = _filePath is null ? null : Path.GetFullPath(_filePath);
+        _fileVersion = fileVersion;
+        _sheetViews.Clear();
         _displayName = displayName;
         _sheetIndex = _selectedRow = _selectedColumn = 0;
         _rowCount = 100;
         _columnCount = 12;
-        _formulaPending = _calculationPending = false;
+        _editState.Reset();
+        _gridEditorArmed = false;
+        _calculationPending = false;
         _refreshing = true;
         ScriptEditor.Text = document.ScriptSource;
         ActionPicker.ItemsSource = null;
@@ -103,6 +121,7 @@ public partial class MainWindow : Window
         SheetPicker.SelectedIndex = 0;
         _refreshing = false;
         RefreshSheet(true);
+        if (IsLoaded) GridSurface.Select(new(0, 0));
         UpdateChrome();
         ScriptState.Text = "● 脚本未启用";
         LogText.Text = "工作簿已载入。脚本尚未启用。XLSQ v2 保存类型、日期系统和稳定表身份。";
@@ -114,7 +133,7 @@ public partial class MainWindow : Window
             LogText.Text += "\n多模块源码已保留；执行需要显式声明脚本 API v2。";
         else if (document.Snapshot.ScriptModules.ScriptApiVersion == 2)
             LogText.Text += $"\n包内模块：{document.Snapshot.ScriptModules.Modules.Count} 个；编辑器显示首入口 {document.Snapshot.ScriptModules.EntryModules[0]}。应用时执行全部声明入口。";
-        HintText.Text = "0.5 脚本进程预览版 · 计算中可点击「停止计算」；可信脚本需手动启用。";
+        HintText.Text = "单击选中，再次单击编辑 · F2 编辑 · Enter/Tab 提交并移动 · Shift+方向键扩选 · Ctrl+V 粘贴值";
         if (document.Snapshot.Sheets.Any(sheet => sheet.UsedColumnCount > 256))
             HintText.Text += " 此工作簿超过界面的 256 列显示范围；未显示的受支持数据仍会保存。";
     }
@@ -122,39 +141,27 @@ public partial class MainWindow : Window
     private void RefreshSheet(bool rebuild = false)
     {
         var sheet = _document.Snapshot.Sheets[_sheetIndex];
+        _grid.View = CurrentView;
         if (rebuild)
         {
             _rowCount = Math.Clamp(Math.Max(_rowCount, sheet.UsedRowCount + 20), 100, WorkbookLimits.MaxRows);
             _columnCount = Math.Clamp(Math.Max(_columnCount, sheet.UsedColumnCount + 2), 12, 256);
             _refreshing = true;
-            SheetGrid.Columns.Clear();
-            SheetGrid.GridLinesVisibility = sheet.ShowGridLines ? DataGridGridLinesVisibility.All : DataGridGridLinesVisibility.None;
-            for (var c = 0; c < _columnCount; c++)
-            {
-                var textStyle = new Style(typeof(TextBlock));
-                textStyle.Setters.Add(new Setter(TextBlock.PaddingProperty, new Thickness(8, 4, 5, 3)));
-                textStyle.Setters.Add(new Setter(TextBlock.TextTrimmingProperty, TextTrimming.CharacterEllipsis));
-                textStyle.Setters.Add(new Setter(TextBlock.ForegroundProperty, new Binding { Converter = new AppearanceConverter(c, "foreground") }));
-                textStyle.Setters.Add(new Setter(TextBlock.BackgroundProperty, new Binding { Converter = new AppearanceConverter(c, "background") }));
-                textStyle.Setters.Add(new Setter(TextBlock.FontWeightProperty, new Binding { Converter = new AppearanceConverter(c, "weight") }));
-                var width = c == 0 ? 160d : 112d;
-                sheet.Columns.TryGetValue(c, out var column);
-                if (column?.Width is { } storedWidth) width = Math.Clamp(storedWidth * 7 + 5, 55, 400);
-                SheetGrid.Columns.Add(new DataGridTextColumn
-                {
-                    Header = ColumnName(c), Width = width,
-                    Visibility = column?.Hidden == true ? Visibility.Collapsed : Visibility.Visible,
-                    Binding = new Binding($"[{c}]") { Mode = BindingMode.TwoWay, UpdateSourceTrigger = UpdateSourceTrigger.Explicit },
-                    ElementStyle = textStyle,
-                    EditingElementStyle = new Style(typeof(TextBox))
-                    { Setters = { new Setter(TextBox.PaddingProperty, new Thickness(5, 3, 4, 2)) } }
-                });
-            }
-            _rows.Clear();
-            for (var r = 0; r < _rowCount; r++) _rows.Add(new SheetRow(this, r));
-            _refreshing = false;
+            try { GridSurface.Bind(_document.Snapshot, _sheetIndex, _rowCount, _columnCount); }
+            finally { _refreshing = false; }
         }
-        else foreach (var row in _rows) row.Refresh();
+        else GridSurface.Refresh(_document.Snapshot);
+        RefreshWorkspaceView();
+        if (_gridEditorArmed && SheetGrid.CurrentColumn?.GetCellContent(SheetGrid.CurrentItem) is TextBox readyEditor)
+        {
+            _gridEditorArmed = false;
+            GridInputColumn.InitializeText(readyEditor, _document.GetCellValue(_sheetIndex, _selectedRow, _selectedColumn));
+            readyEditor.SelectAll();
+            _gridEditorArmed = true;
+        }
+        if (!_editState.GridEditing && !_formulaPending && CurrentView.FilterRange is { } filter &&
+            CurrentView.IsFilteredOut(_document.Snapshot, _sheetIndex, _selectedRow))
+            GridSurface.Select(new(filter.Top, _selectedColumn));
         UpdateFormulaBar();
         _viewModel.Refresh();
         var stale = _viewModel.StaleCacheCount;
@@ -179,30 +186,25 @@ public partial class MainWindow : Window
         if (_formulaPending) return; // A selection/refresh must not overwrite an unsubmitted edit.
         CellAddress.Text = ColumnName(_selectedColumn) + (_selectedRow + 1);
         _updatingFormula = true;
-        FormulaBar.Text = _document.GetCellInput(_sheetIndex, _selectedRow, _selectedColumn);
+        GridInputColumn.InitializeText(FormulaBar, _document.GetCellInput(_sheetIndex, _selectedRow, _selectedColumn));
         _updatingFormula = false;
     }
 
     private void FormulaBar_TextChanged(object sender, TextChangedEventArgs e)
     {
         if (_updatingFormula || _refreshing || _document is null) return;
-        if (!_formulaPending)
-        {
-            _formulaSheet = _sheetIndex;
-            _formulaRow = _selectedRow;
-            _formulaColumn = _selectedColumn;
-        }
-        _formulaPending = true;
+        _editState.BeginFormula(_sheetIndex, _selectedRow, _selectedColumn);
     }
 
     private bool CommitFormulaBar()
     {
+        if (!CanCommitComposition()) return false;
         if (!_formulaPending) return true;
         try
         {
             var result = _editor.SetCell(_formulaSheet, _formulaRow, _formulaColumn, FormulaBar.Text);
             _calculationPending |= result.Changed;
-            _formulaPending = false;
+            _editState.EndFormula();
             UpdateChrome();
             return true;
         }
@@ -214,6 +216,7 @@ public partial class MainWindow : Window
     private async Task<bool> WorkAsync(string message, Action<CancellationToken> operation, bool cancellable)
     {
         if (_busy || _windowClosed) return false;
+        var inputFocus = Keyboard.FocusedElement as UIElement;
         _busy = true;
         using var cancellation = cancellable ? new CancellationTokenSource() : null;
         _calculationCancellation = cancellation;
@@ -242,6 +245,11 @@ public partial class MainWindow : Window
             StopCalculationButton.Visibility = Visibility.Collapsed;
             Toolbar.IsEnabled = Workspace.IsEnabled = true;
             UpdateChrome();
+            // Disabling the workspace drops native TSF focus. Restore a still-attached
+            // editor so the next IME key cannot target an obsolete DataGrid editor.
+            if (IsActive && inputFocus is { IsVisible: true, IsEnabled: true } &&
+                PresentationSource.FromVisual(inputFocus) is not null)
+                Keyboard.Focus(inputFocus);
         }
     }
 
@@ -261,7 +269,7 @@ public partial class MainWindow : Window
 
     private void ReportEditFailure(Exception exception)
     {
-        StatusText.Text = "编辑尚未提交，请修正输入后重试。";
+        StatusText.Text = exception.Message.Length <= 180 ? exception.Message : exception.Message[..180] + "…";
         AppendLog(exception.Message);
     }
 
@@ -285,7 +293,7 @@ public partial class MainWindow : Window
 
     private void QueueRecalculation() => Dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(async () =>
     {
-        if (_calculationPending && !_busy && !_suppressAutoCalculation &&
+        if (_calculationPending && !_busy && !_suppressAutoCalculation && !_editState.GridEditing && !_formulaPending && !_editState.IsComposing &&
             !_closeRequestPending && !_closingApproved && !_windowClosed) await RecalculateAsync();
     }));
 
@@ -298,21 +306,6 @@ public partial class MainWindow : Window
     }
 
     private async void ApplyCell_Click(object sender, RoutedEventArgs e) => await ApplyFormulaBarAsync();
-    private async void FormulaBar_KeyDown(object sender, KeyEventArgs e)
-    {
-        if (e.Key == Key.Enter) { e.Handled = true; await ApplyFormulaBarAsync(); if (!_formulaPending) SheetGrid.Focus(); }
-        else if (e.Key == Key.Escape) { e.Handled = true; _formulaPending = false; UpdateFormulaBar(); SheetGrid.Focus(); }
-    }
-
-    private void Grid_LoadingRow(object sender, DataGridRowEventArgs e)
-    {
-        if (e.Row.Item is not SheetRow row) return;
-        e.Row.Header = (row.Index + 1).ToString(CultureInfo.InvariantCulture);
-        var sheet = _document.Snapshot.Sheets[_sheetIndex];
-        sheet.Rows.TryGetValue(row.Index, out var metadata);
-        e.Row.Height = metadata?.Hidden == true ? 0 : Math.Clamp(metadata?.Height ?? sheet.DefaultRowHeight ?? 31, 0, 400);
-    }
-
     private void Grid_CurrentCellChanged(object? sender, EventArgs e)
     {
         if (_refreshing || _busy || SheetGrid.CurrentCell.Item is not SheetRow row || SheetGrid.CurrentCell.Column is null) return;
@@ -341,7 +334,9 @@ public partial class MainWindow : Window
     {
         // Switching editors in the same cell does not raise CurrentCellChanged.
         // Commit the older formula-bar input before loading the newer grid editor.
-        if (_busy || !CommitFormulaBar()) { e.Cancel = true; return; }
+        // IME may start a grid editor from a focused cell before its first committed text.
+        if (_busy || (_editState.IsComposing ? _formulaPending : !CommitFormulaBar())) { e.Cancel = true; return; }
+        _editState.BeginGrid();
         if (e.Row.Item is SheetRow row)
         {
             _selectedRow = row.Index;
@@ -349,85 +344,24 @@ public partial class MainWindow : Window
         }
     }
 
-    private void Grid_PreparingCellForEdit(object sender, DataGridPreparingCellForEditEventArgs e)
-    {
-        if (e.Row.Item is SheetRow row && e.EditingElement is TextBox editor)
-        {
-            editor.Text = _document.GetCellInput(_sheetIndex, row.Index, e.Column.DisplayIndex);
-            editor.SelectAll();
-        }
-    }
-
     private void Grid_CellEditEnding(object sender, DataGridCellEditEndingEventArgs e)
     {
-        if (_busy || e.EditAction != DataGridEditAction.Commit || e.Row.Item is not SheetRow row || e.EditingElement is not TextBox editor) return;
+        if (_editState.IsComposing) { e.Cancel = true; return; }
+        if (_gridEditorArmed)
+        {
+            _gridEditorArmed = false;
+            _editState.EndGrid();
+            return; // Merely focusing a formatted value must never replace its formula/raw input.
+        }
+        _gridEditorArmed = false;
+        if (e.EditAction == DataGridEditAction.Cancel) { _editState.EndGrid(); return; }
+        if (_busy || e.Row.Item is not SheetRow row || e.EditingElement is not TextBox editor) return;
         try
         {
             if (ApplyValues([(row.Index, e.Column.DisplayIndex, editor.Text)])) QueueRecalculation();
+            _editState.EndGrid();
         }
         catch (Exception ex) { _cellCommitFailed = true; e.Cancel = true; ReportEditFailure(ex); }
-    }
-
-    private async void Grid_KeyDown(object sender, KeyEventArgs e)
-    {
-        if (_busy || e.OriginalSource is TextBox) return;
-        try
-        {
-            var ctrl = Keyboard.Modifiers.HasFlag(ModifierKeys.Control);
-            if (ctrl && e.Key == Key.V)
-            {
-                e.Handled = true;
-                if (!Clipboard.ContainsText() || !CommitEdit()) return;
-                var input = Clipboard.GetText().Replace("\r\n", "\n").TrimEnd('\n');
-                if (input.Length > 4 * 1024 * 1024) throw new ArgumentException("单次粘贴文本不能超过 4 MiB。");
-                var values = new List<(int Row, int Column, string Value)>();
-                var lines = input.Split('\n');
-                for (var r = 0; r < lines.Length; r++)
-                {
-                    var fields = lines[r].Split('\t');
-                    if (values.Count + fields.Length > 20_000) throw new ArgumentException("单次粘贴上限为 20,000 个单元格。");
-                    for (var c = 0; c < fields.Length; c++) values.Add((_selectedRow + r, _selectedColumn + c, fields[c]));
-                }
-                ApplyValues(values);
-                RefreshSheet(true);
-                await RecalculateAsync();
-            }
-            else if (ctrl && e.Key == Key.C)
-            {
-                e.Handled = true;
-                var cells = SheetGrid.SelectedCells.Where(cell => cell.Item is SheetRow).ToList();
-                if (cells.Count == 0) return;
-                var minRow = cells.Min(cell => ((SheetRow)cell.Item).Index);
-                var maxRow = cells.Max(cell => ((SheetRow)cell.Item).Index);
-                var minCol = cells.Min(cell => cell.Column.DisplayIndex);
-                var maxCol = cells.Max(cell => cell.Column.DisplayIndex);
-                if ((long)(maxRow - minRow + 1) * (maxCol - minCol + 1) > 100000)
-                { StatusText.Text = "复制范围过大，请缩小选择范围。"; return; }
-                var text = new StringBuilder();
-                for (var row = minRow; row <= maxRow; row++)
-                {
-                    if (row > minRow) text.AppendLine();
-                    for (var column = minCol; column <= maxCol; column++)
-                    {
-                        if (column > minCol) text.Append('\t');
-                        text.Append(_document.GetCellValue(_sheetIndex, row, column));
-                    }
-                }
-                Clipboard.SetText(text.ToString());
-                StatusText.Text = "已复制计算结果。";
-            }
-            else if (e.Key == Key.Delete)
-            {
-                e.Handled = true;
-                if (!CommitEdit()) return;
-                var result = _editor.ClearCells(_sheetIndex, SheetGrid.SelectedCells.Where(cell => cell.Item is SheetRow)
-                    .Select(cell => (((SheetRow)cell.Item).Index, cell.Column.DisplayIndex)));
-                _calculationPending |= result.Changed;
-                UpdateChrome();
-                if (_calculationPending) await RecalculateAsync();
-            }
-        }
-        catch (Exception ex) { ReportEditFailure(ex); }
     }
 
     private async void Undo_Click(object sender, RoutedEventArgs e) => await UndoAsync(false);
@@ -440,6 +374,8 @@ public partial class MainWindow : Window
         var sheets = _document.Snapshot.Sheets;
         var index = Array.FindIndex(sheets.ToArray(), sheet => sheet.Id == sheetId);
         _sheetIndex = index >= 0 ? index : Math.Min(_sheetIndex, sheets.Length - 1);
+        CurrentView.FilterRange = null;
+        CurrentView.FrozenRows = CurrentView.FrozenColumns = 0;
         SynchronizeSheets();
         _calculationPending = true;
         await RecalculateAsync();
@@ -470,6 +406,7 @@ public partial class MainWindow : Window
         _columnCount = 12;
         _rowCount = 100;
         RefreshSheet(true);
+        GridSurface.Select(new(0, 0));
         QueueRecalculation();
     }
 
@@ -565,8 +502,7 @@ public partial class MainWindow : Window
     private bool CommitGridEdit()
     {
         _cellCommitFailed = false;
-        return SheetGrid.CommitEdit(DataGridEditingUnit.Cell, true) && !_cellCommitFailed &&
-            SheetGrid.CommitEdit(DataGridEditingUnit.Row, true) && !_cellCommitFailed;
+        return CanCommitComposition() && GridSurface.Commit() && !_cellCommitFailed;
     }
 
     private bool CommitEdit()
@@ -578,9 +514,10 @@ public partial class MainWindow : Window
 
     private bool CommitEditors()
     {
+        var previous = _suppressAutoCalculation;
         _suppressAutoCalculation = true;
         try { return CommitEdit(); }
-        finally { _suppressAutoCalculation = false; }
+        finally { _suppressAutoCalculation = previous; }
     }
 
     private async Task<bool> FlushEditsAsync()
@@ -606,7 +543,7 @@ public partial class MainWindow : Window
     { if (!_busy && await ConfirmDiscardAsync()) InstallDocument(WorkbookDocument.CreateDemo(_services), null, "示例工作簿.xlsq"); }
     private async void Open_Click(object sender, RoutedEventArgs e)
     {
-        if (_busy) return;
+        if (_busy || !CommitEditors()) return;
         var dialog = new OpenFileDialog { Filter = "工作簿 (*.xlsq;*.xlsx)|*.xlsq;*.xlsx|QuickExcel (*.xlsq)|*.xlsq|Excel (*.xlsx)|*.xlsx", Title = "打开工作簿" };
         if (dialog.ShowDialog(this) == true && await ConfirmDiscardAsync()) await OpenPathAsync(dialog.FileName);
     }
@@ -614,8 +551,18 @@ public partial class MainWindow : Window
     private async Task OpenPathAsync(string path)
     {
         WorkbookDocument? next = null;
-        if (await WorkAsync("打开工作簿…", () => next = WorkbookDocument.Open(path, _services)))
-            InstallDocument(next!, path, Path.GetFileName(path));
+        FileVersion? version = null;
+        if (await WorkAsync("打开工作簿…", () =>
+        {
+            // Deny write/delete while both the fingerprint and model are read.
+            using var lease = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+            version = FileVersions.Read(lease);
+            next = WorkbookDocument.Open(path, _services);
+        }))
+        {
+            InstallDocument(next!, Path.GetFullPath(path), Path.GetFileName(path), fileVersion: version);
+            RememberFile(Path.GetFullPath(path));
+        }
     }
 
     private async void Save_Click(object sender, RoutedEventArgs e) => await SaveAsync(false);
@@ -644,10 +591,10 @@ public partial class MainWindow : Window
             if (dialog.ShowDialog(this) != true) return false;
             path = dialog.FileName;
         }
-        if (!await WorkAsync("保存 .xlsq…", () => _document.Save(path, discardUnsupported))) return false;
-        _filePath = path;
-        _displayName = Path.GetFileName(path);
-        UpdateChrome();
+        FileVersion? expected = null;
+        if (!await WorkAsync("检查文件版本…", () => expected = _filePath is not null && Path.GetFullPath(path).Equals(Path.GetFullPath(_filePath), StringComparison.OrdinalIgnoreCase)
+            ? (string.Equals(_versionPath, Path.GetFullPath(path), StringComparison.OrdinalIgnoreCase) ? _fileVersion : null) ?? new FileVersion(null) : FileVersions.Read(path))) return false;
+        if (!await SaveToPathAsync(path, discardUnsupported, expected!)) return false;
         if (_viewModel.StaleCacheCount > 0) StatusText.Text = "已保存输入和上次缓存；部分公式结果仍待重算。";
         return true;
     }
@@ -698,16 +645,17 @@ public partial class MainWindow : Window
 
     private async void Window_KeyDown(object sender, KeyEventArgs e)
     {
-        if (_busy || !Keyboard.Modifiers.HasFlag(ModifierKeys.Control)) return;
+        if (_busy || _editState.IsComposing || !Keyboard.Modifiers.HasFlag(ModifierKeys.Control)) return;
         switch (e.Key)
         {
             case Key.S: e.Handled = true; await SaveAsync(Keyboard.Modifiers.HasFlag(ModifierKeys.Shift)); break;
             case Key.O: e.Handled = true; Open_Click(sender, e); break;
             case Key.N: e.Handled = true; New_Click(sender, e); break;
+            case Key.W: e.Handled = true; CloseDocument_Click(sender, e); break;
             case Key.Enter: e.Handled = true; await RunScriptsAsync(); break;
-            case Key.Z when !ScriptEditor.IsKeyboardFocusWithin && !FormulaBar.IsKeyboardFocusWithin && e.OriginalSource is not TextBox:
+            case Key.Z when !ScriptEditor.IsKeyboardFocusWithin && !FormulaBar.IsKeyboardFocusWithin && (e.OriginalSource is not TextBox || _gridEditorArmed):
                 e.Handled = true; await UndoAsync(false); break;
-            case Key.Y when !ScriptEditor.IsKeyboardFocusWithin && !FormulaBar.IsKeyboardFocusWithin && e.OriginalSource is not TextBox:
+            case Key.Y when !ScriptEditor.IsKeyboardFocusWithin && !FormulaBar.IsKeyboardFocusWithin && (e.OriginalSource is not TextBox || _gridEditorArmed):
                 e.Handled = true; await UndoAsync(true); break;
         }
     }
@@ -905,6 +853,8 @@ public partial class MainWindow : Window
         await RunStorageSmokeAsync(folder);
         await RunCalculationSmokeAsync(folder);
         await RunDateDisplaySmokeAsync(folder);
+        await RunInteractionSmokeAsync(folder);
+        await RunWorkspaceSmokeAsync(folder);
         InstallDocument(WorkbookDocument.CreateDemo(_services), null, "示例工作簿.xlsq");
         if (!await WorkAsync("界面验收重算…", _document.EnableScriptsAndCalculate)) throw new Exception("Smoke calculation failed.");
         _calculationPending = false;
@@ -932,38 +882,4 @@ public partial class MainWindow : Window
         }
     }
 
-    private sealed class SheetRow(MainWindow owner, int index) : INotifyPropertyChanged
-    {
-        public int Index { get; } = index;
-        public string this[int column] { get => owner._document.GetCellValue(owner._sheetIndex, Index, column); set { } }
-        public StyleDefinition? GetStyle(int column)
-        {
-            var snapshot = owner._document.Snapshot;
-            var sheet = snapshot.Sheets[owner._sheetIndex];
-            var id = sheet.GetStyleId(Index, column);
-            return snapshot.Styles[id];
-        }
-        public event PropertyChangedEventHandler? PropertyChanged;
-        public void Refresh() => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs("Item[]"));
-    }
-
-    private sealed class AppearanceConverter(int column, string property) : IValueConverter
-    {
-        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
-        {
-            var style = (value as SheetRow)?.GetStyle(column);
-            return property switch
-            {
-                "weight" => style?.Bold == true ? FontWeights.SemiBold : FontWeights.Normal,
-                "background" => ColorBrush(style?.FillColor, Brushes.Transparent),
-                _ => ColorBrush(style?.FontColor, new SolidColorBrush(Color.FromRgb(34, 53, 46)))
-            };
-        }
-        private static Brush ColorBrush(string? color, Brush fallback)
-        {
-            try { return string.IsNullOrEmpty(color) ? fallback : (Brush)new BrushConverter().ConvertFromString("#" + color.TrimStart('#'))!; }
-            catch { return fallback; }
-        }
-        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => Binding.DoNothing;
-    }
 }

@@ -14,6 +14,10 @@ public static class CellDisplayFormatter
     public static string Format(CellValue value, StyleDefinition style, ExcelDateSystem dateSystem, CultureInfo? culture = null)
     {
         if (value.Kind != CellValueKind.Number) return CellInput.DisplayText(value);
+        var numeric = style.NumberFormatCode ?? style.NumberFormatId switch
+        { 1 => "0", 2 => "0.00", 3 => "#,##0", 4 => "#,##0.00", 9 => "0%", 10 => "0.00%", _ => null };
+        if (numeric is "0" or "0.00" or "#,##0" or "#,##0.00" or "0%" or "0.00%")
+            return value.NumberValue.ToString(numeric, culture ?? CultureInfo.CurrentCulture);
         var format = Formats.GetValue(style, s => Parse(s.NumberFormatCode ?? BuiltIn(s.NumberFormatId)));
         var section = format.Select(value.NumberValue);
         if (section is null || !section.Supported || !format.HasDate) return CellInput.DisplayText(value);

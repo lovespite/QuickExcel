@@ -26,7 +26,7 @@ public partial class MainWindow
             seed.SetCell(0, 0, 0, "  Apple  "); seed.SetCell(0, 1, 0, "  Pear  ");
             seed.Session.Execute(new UpdateScriptModulesCommand(modules)); seed.Save(path);
         }
-        InstallDocument(WorkbookDocument.Open(path, _services), path, "worker-actions.xlsq");
+        InstallDocument(WorkbookDocument.Open(path, _services), path, "worker-actions.xlsq", fileVersion: QuickExcel.Storage.FileVersions.Read(path));
         if (_document.ScriptsEnabled || RunActionButton.IsEnabled || ActionPicker.Items.Count != 0)
             throw new Exception("Opening an action package restored authorization or a live registry.");
         await RunScriptsAsync();
@@ -48,7 +48,7 @@ public partial class MainWindow
         if (_document.GetCellValue(0, 0, 1) != "Apple" || _document.GetCellValue(0, 0, 2) != "3" || _document.ScriptsEnabled)
             throw new Exception("Redo failed to restore recorded content with scripts disabled.");
         if (!await SaveAsync(false)) throw new Exception("Saving action package failed.");
-        InstallDocument(WorkbookDocument.Open(path, _services), path, "worker-actions.xlsq");
+        InstallDocument(WorkbookDocument.Open(path, _services), path, "worker-actions.xlsq", fileVersion: QuickExcel.Storage.FileVersions.Read(path));
         if (!_document.Snapshot.ScriptModules.HasActions || _document.ScriptsEnabled || _document.GetCellValue(0, 0, 1) != "Apple")
             throw new Exception("Action package roundtrip changed bindings, data or authorization.");
 

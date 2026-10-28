@@ -1,8 +1,14 @@
-# QuickExcel 0.5 脚本进程预览版
+# QuickExcel 0.6 交互预览版
+
+最新 `0.6.0-preview.2` 已完成 UI-004/UI-005 当前范围，测试与限制见 [结构与工作区](docs/18-m5-structure-and-workspace.md)。结构菜单操作选区所在整行/整列；排序选不含表头的矩形，按当前列；筛选选含表头的矩形。B2 冻结第一行/列，顶部最多 10 行为可点击定位的只读参照区。格式菜单修改样式，可一次撤销，原始输入不变。
+
+文件菜单提供最近 10 文件、清空记录、关闭工作簿（Ctrl+W）和脚本面板开关。保存发现外部修改/删除时保留编辑并阻止覆盖，请另存新路径或重新打开。筛选/冻结仅本次工作区有效，重开复位；筛选下复制可见行、粘贴跨隐藏行拒绝、Delete 只清可见格，排序前先清除筛选。
+
+2026-10-28 M5 首切片：UI-002 / UI-003 本切片完成，按需行对象、可见行刷新和统一键盘/选区/粘贴规则已接入；本机中文拼音、编辑器焦点及保存重开验收通过。具体实现、测试证据、性能数据与 IME 验收边界见 [M5 记录](docs/17-m5-grid-and-input.md)。
 
 2026-10-28：已补齐宿主崩溃后的 profile/payload 回收，625 项测试通过。本机部署矩阵五项通过；直接长路径 EXE 启动失败仍待处理，详见 [回收与部署验证](docs/16-m4-recovery-and-deployment.md)。
 
-本版保留 M2/M3 文件与计算能力，推进 M4 独立脚本 worker、包内模块与 actions 操作脚本。需要 Windows x64 与 .NET 10 Windows Desktop Runtime；保留完整发布目录后运行 QuickExcel.exe。
+本版保留 M2/M3 文件与计算及 M4 worker/模块/actions 能力，开始推进 M5 桌面交互。需要 Windows x64 与 .NET 10 Windows Desktop Runtime；保留完整发布目录后运行 QuickExcel.exe。
 
 最新切片已把无能力 AppContainer 接入公式与 actions 的实际 worker，并补齐回环/DNS 的本机 WFP 拒绝证据。详见 [隔离 ADR](docs/15-m4-os-isolation-adr.md)和 [合批及容量](docs/14-m4-batching.md)；部署矩阵、严格策略及 M6 OS 门禁仍未完成，仅供可信脚本使用。
 
@@ -19,7 +25,11 @@
 
 ## 编辑和快捷键
 
-Ctrl+O 打开，Ctrl+N 新建，Ctrl+Shift+S 另存；表格 Ctrl+C 复制显示值、Ctrl+V 粘贴矩形数据、Delete 清空。Ctrl+Z/Y 撤销/重做单元格事务及新增工作表；脚本编辑器使用自己的文本历史。默认历史预算 32 MiB，截断时显示提示。
+Ctrl+O 打开，Ctrl+N 新建，Ctrl+Shift+S 另存。首次单击单元格只选中，再次单击同一格进入编辑；选中时显示计算结果和绿色边框，编辑时显示原始输入与光标。也可按 F2 编辑，或直接键入替换。Enter/Shift+Enter 提交后向下/上，Tab/Shift+Tab 提交后向右/左，Escape 取消草稿；Shift+方向键扩展矩形选区。输入法组合期间请先确认或取消候选，再保存或切换。
+
+Ctrl+C 复制矩形显示结果，非连续选区拒绝复制。Ctrl+V 粘贴值，`=` 开头保留为文本；Ctrl+Shift+V 显式按输入解析公式。单值填充选区，矩阵需选左上角或同尺寸矩形；支持引号包裹的多行/Tab 文本。Delete 清空实际选中位置。一次粘贴/清空可整体撤销。
+
+Ctrl+Z/Y 在文本编辑中作用于当前文本框，退出编辑后作用于工作簿事务。默认历史预算 32 MiB，截断时显示提示。键盘扩选和 Ctrl+A 最多 20,000 格；复制最多 100,000 格、4 Mi 个字符。导入的隐藏行列属于逻辑矩形，复制/粘贴仍包含它们。
 
 一次粘贴最多 20,000 格，任一目标非法则整批不写。界面最多显示 100,000 行 × 256 列；模型最多 64 表、1,024 列、全簿 1,000,000 存储格，文件还须满足解压与解析预算。远端空洞不展开为密集矩形。
 
@@ -42,6 +52,7 @@ quickExcel.functions.register("DOUBLE", value => value * 2);
 dotnet build .\QuickExcel.slnx -c Release --artifacts-path .\artifacts\build -v minimal
 dotnet test .\QuickExcel.Core.Test\QuickExcel.Core.Test.csproj -c Release --artifacts-path .\artifacts\build -v minimal
 .\scripts\build-quickexcel.ps1 -RunSmoke -CreateArchive
+.\scripts\test-m5-grid.ps1 -PackageDirectory artifacts\QuickExcel -Mode All
 ```
 
 从仓库根目录执行。所有引用项目输出也留在本仓库 artifacts。发布脚本执行 Core/native/WPF 检查并生成 ZIP、SHA-256 和 BUILD-METADATA；未声称无 SDK 干净机器、签名或安装器验收已完成。详见[发布说明](RELEASE-NOTES.md)。

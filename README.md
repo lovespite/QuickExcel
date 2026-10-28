@@ -1,8 +1,12 @@
-# QuickExcel 0.5 脚本进程预览版
+# QuickExcel 0.6 交互预览版
+
+最新 `0.6.0-preview.2`：UI-004/UI-005 当前范围完成，加入结构菜单、排序/筛选、冻结、基础样式、最近文件及保存外部冲突检测；操作语义、验收和边界见 [M5 结构与工作区](QuickExcel.Desktop/docs/18-m5-structure-and-workspace.md)。候选程序位于 `artifacts/m5-workspace-candidate/QuickExcel.exe`。
+
+2026-10-28 M5 首切片：UI-002 / UI-003 本切片完成，网格适配、按需行/可见行刷新、键盘导航/矩形选择及 TSV 粘贴已接入；32 项 WPF 交互断言与本机中文拼音实机验收通过。测试、性能探索及验收范围见 [M5 网格与输入](QuickExcel.Desktop/docs/17-m5-grid-and-input.md)。M5 整体与 Beta 尚未完成。
 
 2026-10-28：M4 已补齐宿主崩溃后的 profile/payload 回收及故障测试，本机部署验证五项通过、直接长路径 EXE 启动一项失败；完整结果与后续环境见 [回收与部署验证](QuickExcel.Desktop/docs/16-m4-recovery-and-deployment.md)。
 
-Windows x64 桌面表格，基于 WPF、同级 ExcelIO 源码库与 QuickJS-NG。M2/M3 文件与计算能力保持；当前推进 **M4 独立脚本 worker、包内模块与 actions 操作脚本**。
+Windows x64 桌面表格，基于 WPF、同级 ExcelIO 源码库与 QuickJS-NG。M2/M3 文件与计算能力及 M4 worker/模块/actions 保持；当前推进 **M5 桌面交互**，同时跟踪 M4 未关闭项。
 
 ## 试用
 

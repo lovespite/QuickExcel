@@ -16,6 +16,14 @@ public interface IWorkbookStorageOptions : IWorkbookStorage
     void Export(string path, WorkbookSnapshot snapshot, bool allowStaleCaches, bool discardUnsupported);
 }
 
+/// <summary>A null digest means the destination must still be absent.</summary>
+public sealed record FileVersion(string? Sha256);
+public sealed class WorkbookFileConflictException() : IOException("文件已被其他程序修改、替换或删除。请重新打开，或另存到其他文件；当前编辑仍保留。");
+public interface IVersionedWorkbookStorage : IWorkbookStorageOptions
+{
+    FileVersion SaveChecked(string path, WorkbookSnapshot snapshot, bool discardUnsupported, FileVersion expected);
+}
+
 public interface IWorkbookCalculator
 {
     CalculationResult Calculate(CalculationRequest request, CancellationToken cancellationToken = default);

@@ -21,7 +21,7 @@
     <StackPanel>
      <StackPanel Orientation="Horizontal">
       <TextBlock Text="QuickExcel" FontSize="24" FontWeight="SemiBold"/>
-      <Border Background="#E1ECE4" CornerRadius="4" Margin="12,7,0,4" Padding="6,2"><TextBlock Text="PREVIEW 0.5" FontSize="10" Foreground="#52715E"/></Border>
+      <Border Background="#E1ECE4" CornerRadius="4" Margin="12,7,0,4" Padding="6,2"><TextBlock Text="PREVIEW 0.6" FontSize="10" Foreground="#52715E"/></Border>
      </StackPanel>
      <TextBlock Text="表格，遇见 JavaScript。" Foreground="{StaticResource Muted}" FontSize="12" Margin="1,4,0,0"/>
     </StackPanel>
@@ -34,6 +34,57 @@
   <Grid Grid.Row="1" x:Name="Toolbar" Margin="0,0,0,12">
    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
    <WrapPanel>
+    <Menu Background="Transparent" VerticalAlignment="Center" Margin="0,0,8,0">
+     <MenuItem Header="文件">
+      <MenuItem x:Name="RecentFilesMenu" Header="最近文件" SubmenuOpened="RecentFiles_Opened"/>
+      <MenuItem Header="关闭工作簿" InputGestureText="Ctrl+W" Click="CloseDocument_Click"/>
+      <MenuItem Header="显示/隐藏脚本面板" Click="ToggleScriptPanel_Click"/>
+     </MenuItem>
+     <MenuItem Header="结构">
+      <MenuItem Header="在选区前插入行" Tag="insertRow" Click="Structure_Click"/>
+      <MenuItem Header="删除选区所在行" Tag="deleteRow" Click="Structure_Click"/>
+      <MenuItem Header="移动选区所在行…" Tag="moveRow" Click="Structure_Click"/>
+      <MenuItem Header="在选区前插入列" Tag="insertColumn" Click="Structure_Click"/>
+      <MenuItem Header="删除选区所在列" Tag="deleteColumn" Click="Structure_Click"/>
+      <MenuItem Header="移动选区所在列…" Tag="moveColumn" Click="Structure_Click"/>
+      <Separator/>
+      <MenuItem Header="设置行高…" Tag="sizeRow" Click="Structure_Click"/>
+      <MenuItem Header="设置列宽…" Tag="sizeColumn" Click="Structure_Click"/>
+      <MenuItem Header="隐藏选区所在行" Tag="hideRow" Click="Structure_Click"/>
+      <MenuItem Header="显示选区所在行" Tag="showRow" Click="Structure_Click"/>
+      <MenuItem Header="隐藏选区所在列" Tag="hideColumn" Click="Structure_Click"/>
+      <MenuItem Header="显示选区所在列" Tag="showColumn" Click="Structure_Click"/>
+      <Separator/>
+      <MenuItem Header="重命名工作表…" Tag="rename" Click="Structure_Click"/>
+      <MenuItem Header="删除工作表…" Tag="deleteSheet" Click="Structure_Click"/>
+     </MenuItem>
+     <MenuItem Header="数据与视图">
+      <MenuItem Header="选区升序（不含表头）" Tag="asc" Click="Sort_Click" ToolTip="按当前列；移动公式调整相对引用，外部引用保留原地址"/>
+      <MenuItem Header="选区降序（不含表头）" Tag="desc" Click="Sort_Click"/>
+      <MenuItem Header="筛选选区（含表头）…" Click="Filter_Click"/>
+      <MenuItem Header="清除筛选" Click="ClearFilter_Click"/>
+      <Separator/>
+      <MenuItem Header="冻结当前格上方行和左侧列" Click="Freeze_Click" ToolTip="上方最多 10 行；点击冻结行定位原格编辑；仅本次工作区"/>
+      <MenuItem Header="取消冻结" Tag="clear" Click="Freeze_Click"/>
+     </MenuItem>
+     <MenuItem Header="格式">
+      <MenuItem Header="粗体开关" Tag="bold" Click="Style_Click"/>
+      <MenuItem Header="斜体开关" Tag="italic" Click="Style_Click"/>
+      <MenuItem Header="浅黄填充" Tag="fill" Click="Style_Click"/>
+      <MenuItem Header="深绿字体" Tag="font" Click="Style_Click"/>
+      <MenuItem Header="左对齐" Tag="left" Click="Style_Click"/>
+      <MenuItem Header="居中" Tag="center" Click="Style_Click"/>
+      <MenuItem Header="右对齐" Tag="right" Click="Style_Click"/>
+      <MenuItem Header="细边框" Tag="border" Click="Style_Click"/>
+      <MenuItem Header="无边框" Tag="noBorder" Click="Style_Click"/>
+      <Separator/>
+      <MenuItem Header="常规" Tag="general" Click="Style_Click"/>
+      <MenuItem Header="两位小数" Tag="number" Click="Style_Click"/>
+      <MenuItem Header="百分比" Tag="percent" Click="Style_Click"/>
+      <MenuItem Header="日期 yyyy-mm-dd" Tag="date" Click="Style_Click"/>
+      <MenuItem Header="清除样式" Tag="reset" Click="Style_Click"/>
+     </MenuItem>
+    </Menu>
     <Button Content="新建" Click="New_Click" ToolTip="新建空白工作簿 · Ctrl+N"/>
     <Button Content="打开…" Click="Open_Click" ToolTip="打开 .xlsx / .xlsq · Ctrl+O"/>
     <Button Content="保存 .xlsq" Click="Save_Click" Style="{StaticResource Primary}" ToolTip="保存工作簿和脚本 · Ctrl+S"/>
@@ -53,7 +104,7 @@
    <Grid.ColumnDefinitions><ColumnDefinition Width="*" MinWidth="490"/><ColumnDefinition Width="14"/><ColumnDefinition Width="390" MinWidth="300" MaxWidth="650"/></Grid.ColumnDefinitions>
    <Border Background="White" CornerRadius="8" BorderBrush="#DCE5DF" BorderThickness="1" ClipToBounds="True">
     <Grid>
-     <Grid.RowDefinitions><RowDefinition Height="50"/><RowDefinition Height="*"/><RowDefinition Height="46"/></Grid.RowDefinitions>
+     <Grid.RowDefinitions><RowDefinition Height="50"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="46"/></Grid.RowDefinitions>
      <Grid Margin="12,8">
       <Grid.ColumnDefinitions><ColumnDefinition Width="66"/><ColumnDefinition Width="28"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
       <Border Background="#F1F5F1" CornerRadius="4"><TextBlock x:Name="CellAddress" Text="A1" FontFamily="Consolas" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
@@ -61,11 +112,16 @@
       <TextBox Grid.Column="2" x:Name="FormulaBar" BorderThickness="0" VerticalContentAlignment="Center" FontFamily="Consolas, Microsoft YaHei UI" KeyDown="FormulaBar_KeyDown" TextChanged="FormulaBar_TextChanged" ToolTip="输入值或以 = 开头的公式，按 Enter 应用"/>
       <Button Grid.Column="3" Content="↵" Padding="10,3" Margin="3,0,0,0" Click="ApplyCell_Click" ToolTip="应用公式栏内容"/>
      </Grid>
-     <DataGrid Grid.Row="1" x:Name="SheetGrid" AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False" CanUserReorderColumns="False" CanUserSortColumns="False"
+     <TextBlock Grid.Row="1" x:Name="ViewStatus" Margin="12,2,12,4" Foreground="#47614F" FontSize="11" TextTrimming="CharacterEllipsis" Visibility="Collapsed"/>
+     <DataGrid Grid.Row="2" x:Name="FrozenGrid" Visibility="Collapsed" MaxHeight="220" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" CanUserDeleteRows="False" CanUserReorderColumns="False" CanUserSortColumns="False" CanUserResizeColumns="False"
+       HeadersVisibility="Row" RowHeaderWidth="45" RowHeight="31" SelectionUnit="Cell" SelectionMode="Single" Background="#F1F5F1" BorderThickness="0,0,0,2" BorderBrush="#187553" HorizontalGridLinesBrush="#E7ECE8" VerticalGridLinesBrush="#E7ECE8"
+       ScrollViewer.HorizontalScrollBarVisibility="Hidden" CurrentCellChanged="FrozenGrid_CurrentCellChanged" AutomationProperties.Name="冻结行，选择后定位编辑"/>
+     <DataGrid Grid.Row="3" x:Name="SheetGrid" AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False" CanUserReorderColumns="False" CanUserSortColumns="False" CanUserResizeColumns="False"
        SelectionUnit="Cell" SelectionMode="Extended" HeadersVisibility="All" RowHeaderWidth="45" RowHeight="31" ColumnHeaderHeight="32"
        GridLinesVisibility="All" HorizontalGridLinesBrush="#E7ECE8" VerticalGridLinesBrush="#E7ECE8" Background="White" BorderThickness="0,1,0,1" BorderBrush="#DCE5DF"
        EnableRowVirtualization="True" EnableColumnVirtualization="True" VirtualizingPanel.VirtualizationMode="Recycling" ScrollViewer.CanContentScroll="True"
-       LoadingRow="Grid_LoadingRow" CurrentCellChanged="Grid_CurrentCellChanged" BeginningEdit="Grid_BeginningEdit" PreparingCellForEdit="Grid_PreparingCellForEdit" CellEditEnding="Grid_CellEditEnding" PreviewKeyDown="Grid_KeyDown">
+       ClipboardCopyMode="None" CurrentCellChanged="Grid_CurrentCellChanged" BeginningEdit="Grid_BeginningEdit" CellEditEnding="Grid_CellEditEnding" PreviewKeyDown="Grid_KeyDown"
+       AutomationProperties.Name="工作表网格" ToolTip="单击选中，再次单击编辑；F2 编辑；Enter 向下；Tab 向右；Shift 扩展选区；Ctrl+C 复制结果；Ctrl+V 粘贴值；Ctrl+Shift+V 按输入解析公式">
       <DataGrid.Resources>
        <Style TargetType="DataGridColumnHeader"><Setter Property="Background" Value="#F3F6F3"/><Setter Property="Foreground" Value="#75847A"/><Setter Property="HorizontalContentAlignment" Value="Center"/><Setter Property="BorderThickness" Value="0,0,1,0"/><Setter Property="BorderBrush" Value="#DCE5DF"/><Setter Property="FontSize" Value="11"/></Style>
        <Style TargetType="DataGridRowHeader"><Setter Property="Background" Value="#F3F6F3"/><Setter Property="Foreground" Value="#75847A"/><Setter Property="HorizontalContentAlignment" Value="Center"/><Setter Property="FontSize" Value="11"/></Style>
@@ -75,7 +131,7 @@
        </Style>
       </DataGrid.Resources>
      </DataGrid>
-     <DockPanel Grid.Row="2" Margin="10,6">
+     <DockPanel Grid.Row="4" Margin="10,6">
       <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
        <Button Content="＋ 行" Click="MoreRows_Click" Padding="7,3" ToolTip="再显示 100 行"/>
        <Button Content="＋ 列" Click="MoreColumns_Click" Padding="7,3" ToolTip="再显示 8 列"/>
@@ -85,8 +141,8 @@
      </DockPanel>
     </Grid>
    </Border>
-   <GridSplitter Grid.Column="1" Width="6" HorizontalAlignment="Center" Background="Transparent" ResizeBehavior="PreviousAndNext"/>
-   <Border Grid.Column="2" Background="#FCFDFB" CornerRadius="8" BorderBrush="#DCE5DF" BorderThickness="1">
+   <GridSplitter x:Name="ScriptSplitter" Grid.Column="1" Width="6" HorizontalAlignment="Center" Background="Transparent" ResizeBehavior="PreviousAndNext"/>
+   <Border x:Name="ScriptPanel" Grid.Column="2" Background="#FCFDFB" CornerRadius="8" BorderBrush="#DCE5DF" BorderThickness="1">
     <Grid>
      <Grid.RowDefinitions><RowDefinition Height="62"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/><RowDefinition Height="160"/></Grid.RowDefinitions>
      <Grid Margin="17,14">

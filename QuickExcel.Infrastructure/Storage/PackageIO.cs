@@ -216,7 +216,7 @@ internal static class PackageIO
         return PathName(string.Join('/', pieces));
     }
 
-    public static void AtomicWrite(string path, byte[] bytes, Action<string> validate, CancellationToken cancellationToken)
+    public static void AtomicWrite(string path, byte[] bytes, Action<string> validate, CancellationToken cancellationToken, QuickExcel.Core.FileVersion? expected = null)
     {
         var fullPath = Path.GetFullPath(path);
         var temp = Path.Combine(Path.GetDirectoryName(fullPath)!, $".{Path.GetFileName(path)}.{Guid.NewGuid():N}.tmp");
@@ -227,6 +227,7 @@ internal static class PackageIO
             { stream.Write(bytes); stream.Flush(true); }
             validate(temp);
             cancellationToken.ThrowIfCancellationRequested();
+            if (expected is not null) FileVersions.Require(fullPath, expected);
             if (File.Exists(fullPath)) File.Replace(temp, fullPath, null);
             else File.Move(temp, fullPath);
         }

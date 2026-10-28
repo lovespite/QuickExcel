@@ -15,7 +15,7 @@ public sealed class WorkbookCompatibilityException(IEnumerable<string> issues) :
 }
 
 /// <summary>M2 typed XLSX and XLSQ v2 boundary. Legacy storage remains available for explicit v1 regression.</summary>
-public sealed partial class TypedWorkbookStorage : IWorkbookStorageOptions
+public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage
 {
     private static readonly string[] Features = ["typed-workbook", "stable-sheet-ids", "script-modules"];
     public WorkbookSnapshot Open(string path) => Open(path, CancellationToken.None);
@@ -155,11 +155,16 @@ public sealed partial class TypedWorkbookStorage : IWorkbookStorageOptions
 
     public void Save(string path, WorkbookSnapshot snapshot) => Save(path, snapshot, false);
     public void Save(string path, WorkbookSnapshot snapshot, bool discardUnsupported) => Save(path, snapshot, discardUnsupported, CancellationToken.None);
-    public void Save(string path, WorkbookSnapshot snapshot, bool discardUnsupported, CancellationToken cancellationToken)
+    public void Save(string path, WorkbookSnapshot snapshot, bool discardUnsupported, CancellationToken cancellationToken) =>
+        SaveCore(path, snapshot, discardUnsupported, cancellationToken, null);
+    public FileVersion SaveChecked(string path, WorkbookSnapshot snapshot, bool discardUnsupported, FileVersion expected) =>
+        SaveCore(path, snapshot, discardUnsupported, CancellationToken.None, expected);
+    private FileVersion SaveCore(string path, WorkbookSnapshot snapshot, bool discardUnsupported, CancellationToken cancellationToken, FileVersion? expected)
     {
         RequireExtension(path, ".xlsq");
         ArgumentNullException.ThrowIfNull(snapshot);
         cancellationToken.ThrowIfCancellationRequested();
+        if (expected is not null) FileVersions.Require(path, expected);
         GuardOriginal(path, snapshot, discardUnsupported);
         if (snapshot.ScriptModules.Modules.Sum(m => (long)Utf8.GetByteCount(m.Value.Source)) > 1024 * 1024) throw new InvalidOperationException("Combined script source exceeds 1 MiB.");
         var unchanged = snapshot.FileState is { } state && ContentEquals(snapshot, state.OriginalModel);
@@ -207,7 +212,8 @@ public sealed partial class TypedWorkbookStorage : IWorkbookStorageOptions
             if (!ContentEquals(snapshot, checkedSnapshot) || snapshot.DocumentId != checkedSnapshot.DocumentId || snapshot.Revision != checkedSnapshot.Revision ||
                 !snapshot.Sheets.Select(s => s.Id).SequenceEqual(checkedSnapshot.Sheets.Select(s => s.Id)) || snapshot.ScriptModules.ScriptApiVersion != checkedSnapshot.ScriptModules.ScriptApiVersion || ScriptHash(snapshot.ScriptModules) != ScriptHash(checkedSnapshot.ScriptModules))
                 throw new InvalidDataException("保存后重开校验未能还原完整快照。");
-        }, cancellationToken);
+        }, cancellationToken, expected);
+        return new(Convert.ToHexString(SHA256.HashData(bytes)));
     }
 
     public void Export(string path, WorkbookSnapshot snapshot) => Export(path, snapshot, false, false);

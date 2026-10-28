@@ -53,7 +53,7 @@ public partial class MainWindow
         }, ["main"], scriptApiVersion: 2);
         var modulePath = Path.Combine(folder, "worker-modules.xlsq");
         _services.Storage.Save(modulePath, _document.Snapshot.WithScriptModules(modules));
-        InstallDocument(WorkbookDocument.Open(modulePath, _services), modulePath, "worker-modules.xlsq");
+        InstallDocument(WorkbookDocument.Open(modulePath, _services), modulePath, "worker-modules.xlsq", fileVersion: QuickExcel.Storage.FileVersions.Read(modulePath));
         if (_document.ScriptsEnabled || _document.GetCellValue(0, 0, 0) != "84")
             throw new Exception("Opening modules executed source or changed cached values.");
         await RunScriptsAsync();

@@ -27,7 +27,7 @@ public partial class MainWindow
         var v1 = Path.Combine(folder, "migration-source.xlsq");
         new LegacyWorkbookStorage().Save(v1, _document.Snapshot);
         var before = File.ReadAllBytes(v1);
-        InstallDocument(WorkbookDocument.Open(v1, _services), v1, "migration-source.xlsq");
+        InstallDocument(WorkbookDocument.Open(v1, _services), v1, "migration-source.xlsq", fileVersion: FileVersions.Read(v1));
         if (!_document.IsDirty || !LogText.Text.Contains("另存") || _document.ScriptsEnabled)
             throw new Exception("Migration UI does not identify the unsaved v1 upgrade.");
         _filePath = Path.Combine(folder, "migration-upgraded.xlsq");

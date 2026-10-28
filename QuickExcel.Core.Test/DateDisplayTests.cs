@@ -104,8 +104,9 @@ public sealed class DateDisplayTests : IDisposable
     [InlineData("yyyy-mm-dd\"")]
     [InlineData("[oops]yyyy-mm-dd")]
     [InlineData("[>=10]yyyy-mm-dd;0")]
-    public void NonDateAndUnsupportedSelectedFormatsDoNotReinterpretNumbers(string code) =>
-        Assert.Equal("1.5", Display(1.5, code));
+    public void BasicNumericFormatsDisplayNumbersAndUnsupportedFormatsKeepGeneralFallback(string code) =>
+        // M5 adds the explicitly supported basic numeric formats; the date parser still must not reinterpret them as dates.
+        Assert.Equal(code switch { "0.00" => "1.50", "0%" => "150%", _ => "1.5" }, Display(1.5, code));
 
     [Fact]
     public void SectionSelectionAndExplicitFormatOverridesAreRespected()

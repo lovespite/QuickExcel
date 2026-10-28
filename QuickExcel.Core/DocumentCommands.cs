@@ -42,7 +42,9 @@ public sealed class SetCellsCommand : DocumentCommand
             if (text.Length > WorkbookLimits.MaxCellTextLength) throw new ArgumentException("单元格最多支持 32767 个字符，整批编辑尚未应用。");
             var before = sheet.GetCell(edit.Address.Row, edit.Address.Column);
             if (before?.Content == edit.Content) continue;
-            var after = edit.Content.Kind == CellContentKind.Literal && edit.Content.LiteralValue.Kind == CellValueKind.Blank && edit.Content.StyleId == 0
+            var inheritedStyle = sheet.Rows.GetValueOrDefault(edit.Address.Row)?.StyleId is > 0
+                ? sheet.Rows[edit.Address.Row].StyleId : sheet.Columns.GetValueOrDefault(edit.Address.Column)?.StyleId ?? 0;
+            var after = edit.Content.Kind == CellContentKind.Literal && edit.Content.LiteralValue.Kind == CellValueKind.Blank && edit.Content.StyleId == 0 && inheritedStyle == 0
                 ? null : new CellSnapshot(edit.Content);
             if (before is null && after is null) continue;
             if (!builders.TryGetValue(sheet.Id, out var builder)) builders[sheet.Id] = builder = sheet.Cells.ToBuilder();

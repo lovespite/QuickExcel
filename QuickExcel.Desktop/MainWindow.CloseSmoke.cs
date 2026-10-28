@@ -17,7 +17,8 @@ public partial class MainWindow
             var window = new MainWindow
             {
                 Owner = this, ShowInTaskbar = false, ShowActivated = false, Opacity = 0,
-                _smokeMode = true
+                _smokeMode = true,
+                _recentFiles = new(Path.Combine(folder, "close-recent-files.json"))
             };
             windows.Add(window);
             window.InstallDocument(WorkbookDocument.CreateBlank(services ?? _services), path, "关闭回归.xlsq");
@@ -95,12 +96,13 @@ public partial class MainWindow
                 if (reopened.GetCellValue(0, 0, 0) != "40" || reopened.GetCellValue(0, 0, 1) != "80")
                     throw new Exception("Save-on-close lost committed inputs or formula caches.");
 
-            var failed = CreateWindow(new(new SmokeFailingStorage(_services.Storage), _services.Calculator), savePath);
+            var failingStorage = new SmokeFailingStorage(_services.Storage);
+            var failed = CreateWindow(new(failingStorage, _services.Calculator), savePath);
             failed.ApplyValues([(0, 0, "99")]);
             failed._smokeDiscardDecision = MessageBoxResult.Yes;
             failed.Close();
             await WaitForDecisionAsync(failed);
-            if (!failed.IsVisible || failed._document.Session.IsClosed || !failed._document.IsDirty)
+            if (!failed.IsVisible || failed._document.Session.IsClosed || !failed._document.IsDirty || failingStorage.CheckedSaveAttempts != 1)
                 throw new Exception("Failed save-on-close disposed or marked the document saved.");
             using (var previous = WorkbookDocument.Open(savePath, _services))
                 if (previous.GetCellValue(0, 0, 0) != "40") throw new Exception("Failed close-save changed the previous file.");
@@ -146,10 +148,16 @@ public partial class MainWindow
         }
     }
 
-    private sealed class SmokeFailingStorage(IWorkbookStorage inner) : IWorkbookStorage
+    private sealed class SmokeFailingStorage(IWorkbookStorage inner) : IVersionedWorkbookStorage
     {
+        public int CheckedSaveAttempts { get; private set; }
         public WorkbookSnapshot Open(string path) => inner.Open(path);
         public void Save(string path, WorkbookSnapshot snapshot) => throw new IOException("Smoke: simulated save failure.");
+        public void Save(string path, WorkbookSnapshot snapshot, bool discardUnsupported) => Save(path, snapshot);
+        public FileVersion SaveChecked(string path, WorkbookSnapshot snapshot, bool discardUnsupported, FileVersion expected)
+        { CheckedSaveAttempts++; throw new IOException("Smoke: simulated versioned save failure."); }
         public void Export(string path, WorkbookSnapshot snapshot) => inner.Export(path, snapshot);
+        public void Export(string path, WorkbookSnapshot snapshot, bool allowStaleCaches, bool discardUnsupported) =>
+            ((IWorkbookStorageOptions)inner).Export(path, snapshot, allowStaleCaches, discardUnsupported);
     }
 }

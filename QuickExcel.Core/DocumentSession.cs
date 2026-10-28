@@ -332,8 +332,8 @@ public sealed class DocumentSession : IDisposable
 
     private static ImmutableArray<CellChange> ActualChanges(WorkbookSnapshot before, WorkbookSnapshot after, ImmutableArray<CellChange> changes) =>
         changes.Select(change => new CellChange(change.Address,
-            before.GetSheet(change.Address.SheetId).GetCell(change.Address.Row, change.Address.Column),
-            after.GetSheet(change.Address.SheetId).GetCell(change.Address.Row, change.Address.Column))).ToImmutableArray();
+            before.Sheets.FirstOrDefault(s => s.Id == change.Address.SheetId)?.GetCell(change.Address.Row, change.Address.Column),
+            after.Sheets.FirstOrDefault(s => s.Id == change.Address.SheetId)?.GetCell(change.Address.Row, change.Address.Column))).ToImmutableArray();
 
     private void CheckRevision(long? expected)
     {
@@ -405,7 +405,12 @@ public sealed class DocumentSession : IDisposable
             + FormulaCaches(Before) + FormulaCaches(After)
             + Before.DefinedNames.Sum(n => 128L + 2L * (n.Name.Length + n.Formula.Length))
             + After.DefinedNames.Sum(n => 128L + 2L * (n.Name.Length + n.Formula.Length))
+            + RemovedSheetMetadata(Before, After) + RemovedSheetMetadata(After, Before)
             + (StructureChanged ? 512L * Math.Abs(After.Sheets.Length - Before.Sheets.Length) : 0);
+        private static long RemovedSheetMetadata(WorkbookSnapshot from, WorkbookSnapshot to) => from.Sheets
+            .Where(s => !to.Sheets.Any(other => other.Id == s.Id))
+            .Sum(s => 96L * (s.Rows.Count + s.Columns.Count) + s.Images.Sum(image => 128L + image.Data.Length)
+                + s.MergedCells.Sum(merge => 32L + merge.Length * 2L));
         private static long FormulaCaches(WorkbookSnapshot snapshot) => snapshot.Sheets.Sum(sheet => sheet.Cells.Values
             .Where(cell => cell.Content.Kind == CellContentKind.Formula).Sum(cell => 256L
                 + (cell.Calculation?.Value is { Kind: CellValueKind.Text } value ? value.TextValue.Length * 2L : 0)

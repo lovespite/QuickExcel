@@ -110,6 +110,20 @@ public sealed class WorkbookDocument : IDisposable
         }
     }
 
+    public FileVersion SaveChecked(string path, FileVersion expected, bool discardUnsupported = false)
+    {
+        WorkbookSnapshot captured;
+        FileVersion version;
+        lock (_saveGate)
+        {
+            captured = Snapshot;
+            if (_services.Storage is not IVersionedWorkbookStorage storage) throw new NotSupportedException("存储不支持外部文件冲突检查。");
+            version = storage.SaveChecked(path, captured, discardUnsupported, expected);
+        }
+        Session.MarkSaved(Session.SessionId, captured.Revision);
+        return version;
+    }
+
     public PortableExportReport InspectPortableExport() => _services.Storage is IPortableWorkbookStorage portable
         ? portable.InspectPortableExport(Snapshot) : throw new NotSupportedException("Storage does not support portable formulas.");
 

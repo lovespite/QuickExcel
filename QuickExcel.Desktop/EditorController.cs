@@ -22,6 +22,7 @@ internal sealed class EditorController(WorkbookDocument document)
         SetCells(sheetIndex, positions.Select(position => (position.Row, position.Column, "")));
 
     public WorksheetSnapshot AddSheet(string name) => document.AddSheet(name);
+    public CommandResult Execute(DocumentCommand command) => document.Session.Execute(command);
     public void UpdateScriptSource(string source) => document.ScriptSource = source;
     public bool Undo() => document.Undo();
     public bool Redo() => document.Redo();

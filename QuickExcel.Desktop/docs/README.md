@@ -1,13 +1,16 @@
 # QuickExcel 架构与实施文档
 
-设计基线：2026-10-22；最新阶段：2026-10-28 的 **M4 actions 事务切片**。产品为 QuickExcel，文档为 .xlsq。先读 [actions 实现与证据](13-m4-actions.md)、[模块实现](12-m4-modules.md)及 [worker 实现](11-m4-worker.md)；M4 合批与 OS 访问隔离、M5/M6 和完整 Beta 继续按计划推进。
+设计基线：2026-10-22；最新阶段：2026-10-28 的 **M5 结构与工作区切片**。先读 [UI-004 / UI-005 实现与验收](18-m5-structure-and-workspace.md)、[UI-002 / UI-003](17-m5-grid-and-input.md)、[M4 回收与部署](16-m4-recovery-and-deployment.md)及[隔离 ADR](15-m4-os-isolation-adr.md)。M4 未关闭项、M5 后续交互和 M6 Beta 门禁继续按计划推进。
 
-0.2 已将桌面编辑接入独立稀疏领域快照、DocumentSession、事务命令和撤销历史，计算与保存通过端口使用同一版本状态。Core 为纯 .NET 程序集，ExcelIO 与 QuickJS 适配位于 Infrastructure。仍使用 XLSQ v1、同表兼容计算和进程内可信脚本执行。
+当前使用 XLSQ v2、类型化跨表计算及独立 AppContainer worker。Core 保持纯 .NET；ExcelIO 与脚本适配位于 Infrastructure。下文明确标记 0.2 的内容保留为历史。
 
 ## 阅读顺序
 
 | 文档 | 解决的问题 |
 | --- | --- |
+| [M5 结构与工作区](18-m5-structure-and-workspace.md) | 结构、排序引用、筛选/冻结、基础样式、最近文件与外部冲突 |
+| [M5 网格与输入](17-m5-grid-and-input.md) | 网格适配、虚拟化测量、键盘/选区/剪贴板、IME 验收边界 |
+| [M4 回收与部署](16-m4-recovery-and-deployment.md) | 宿主崩溃回收、部署证据与未关闭项 |
 | [M4 包内模块](12-m4-modules.md) | API v2、逻辑 ID 导入、同步初始化、版本兼容与模块验证 |
 | [M4 actions 操作脚本](13-m4-actions.md) | 只读快照、二次校验、原子提交、一次撤销、桌面运行与验证 |
 | [M4 独立脚本进程](11-m4-worker.md) | worker 首切片的取消、故障和资源边界；保留历史发布证据 |
