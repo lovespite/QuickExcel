@@ -49,7 +49,9 @@ public sealed class SetCellsCommand : DocumentCommand
             var inheritedStyle = sheet.Rows.GetValueOrDefault(edit.Address.Row)?.StyleId is > 0
                 ? sheet.Rows[edit.Address.Row].StyleId : sheet.Columns.GetValueOrDefault(edit.Address.Column)?.StyleId ?? 0;
             var after = edit.Content.Kind == CellContentKind.Literal && edit.Content.LiteralValue.Kind == CellValueKind.Blank && edit.Content.StyleId == 0 && inheritedStyle == 0
-                ? null : new CellSnapshot(edit.Content);
+                ? null : new CellSnapshot(edit.Content,
+                    before?.Content.Kind == CellContentKind.Formula && edit.Content.Kind == CellContentKind.Formula &&
+                    before.Content.FormulaText == edit.Content.FormulaText ? before.Calculation : null);
             if (before is null && after is null) continue;
             if (!builders.TryGetValue(sheet.Id, out var builder)) builders[sheet.Id] = builder = sheet.Cells.ToBuilder();
             var position = new CellPosition(edit.Address.Row, edit.Address.Column);
@@ -133,6 +135,7 @@ public sealed record DocumentChange(long Revision, ImmutableArray<CellChange> Ce
     /// <summary>The exact committed state for this event, even if another writer has already advanced the session.</summary>
     public WorkbookSnapshot? Snapshot { get; init; }
     public Guid SessionId { get; init; }
+    public bool CalculationUnchanged { get; init; }
 }
 
 public sealed record CommandResult(bool Changed, long Revision)

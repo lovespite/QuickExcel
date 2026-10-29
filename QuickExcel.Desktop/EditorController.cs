@@ -24,6 +24,6 @@ internal sealed class EditorController(WorkbookDocument document)
     public WorksheetSnapshot AddSheet(string name) => document.AddSheet(name);
     public CommandResult Execute(DocumentCommand command) => document.Session.Execute(command);
     public void UpdateScriptSource(string source) => document.ScriptSource = source;
-    public bool Undo() => document.Undo();
-    public bool Redo() => document.Redo();
+    public CommandResult Undo() => document.Session.UndoWithResult();
+    public CommandResult Redo() => document.Session.RedoWithResult();
 }

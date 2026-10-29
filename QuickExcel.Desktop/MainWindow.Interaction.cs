@@ -18,6 +18,12 @@ public partial class MainWindow
         AddHandler(TextCompositionManager.PreviewTextInputEvent, new TextCompositionEventHandler(CompositionCompleted), true);
         PreviewMouseDown += (_, e) =>
         {
+            if (_busy)
+            {
+                e.Handled = e.OriginalSource is not DependencyObject busyTarget ||
+                    !(ReferenceEquals(busyTarget, StopCalculationButton) || StopCalculationButton.IsAncestorOf(busyTarget));
+                return;
+            }
             // Focus loss makes Windows Pinyin commit its unfinished Latin buffer. Keep focus
             // in the composing cell editor until the user confirms/cancels the candidate.
             if (_editState.IsComposing && Keyboard.FocusedElement is TextBox editor && IsCellInputSource(editor) &&
@@ -27,6 +33,8 @@ public partial class MainWindow
                 CanCommitComposition();
             }
         };
+        PreviewMouseWheel += (_, e) => { if (_busy) e.Handled = true; };
+        CommandManager.AddPreviewExecutedHandler(this, (_, e) => { if (_busy) e.Handled = true; });
         SheetGrid.GotKeyboardFocus += (_, e) =>
         {
             if (e.NewFocus is not DataGridCell cell) return;
@@ -90,6 +98,7 @@ public partial class MainWindow
 
     private void CompositionStarted(object sender, TextCompositionEventArgs e)
     {
+        if (_busy) { e.Handled = true; return; }
         if (IsCellInputSource(e.OriginalSource))
         {
             ActivateGridDraft(e.OriginalSource);
@@ -99,6 +108,7 @@ public partial class MainWindow
 
     private void CompositionCompleted(object sender, TextCompositionEventArgs e)
     {
+        if (_busy) { e.Handled = true; return; }
         if (!IsCellInputSource(e.OriginalSource)) return;
         ActivateGridDraft(e.OriginalSource);
         // Preview runs before TextBox inserts the final composed text. Keep the gate until bubbling completes.

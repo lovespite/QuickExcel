@@ -35,6 +35,7 @@ internal sealed class WpfGridSurface : IGridSurface
     public WorksheetSnapshot Sheet => Snapshot.Sheets[_sheetIndex];
     public VirtualRowList<SheetRow> Rows { get; private set; } = new(0, _ => throw new InvalidOperationException(), row => row.Index);
     public int RealizedRows => _realized.Count;
+    public int ColumnCount => _grid.Columns.Count;
     public int LastRefreshRows { get; private set; }
     public SheetViewState View { get; set; } = new();
     public bool IsFiltered(int row) => View.IsFilteredOut(Snapshot, _sheetIndex, row);
@@ -42,7 +43,13 @@ internal sealed class WpfGridSurface : IGridSurface
     {
         _grid = grid;
         grid.LoadingRow += (_, e) => { _realized.Add(e.Row); RefreshRow(e.Row); };
-        grid.UnloadingRow += (_, e) => _realized.Remove(e.Row);
+        grid.UnloadingRow += (_, e) =>
+        {
+            _realized.Remove(e.Row);
+            // VirtualRowList retains row identities. Do not retain a column-sized display
+            // cache for every row visited while scrolling; only frozen rows also have a view.
+            if (e.Row.Item is SheetRow row && row.Index >= View.FrozenRows) row.ReleasePresentation();
+        };
     }
 
     public void Bind(WorkbookSnapshot snapshot, int sheetIndex, int rows, int columns)
@@ -67,20 +74,20 @@ internal sealed class WpfGridSurface : IGridSurface
                 var style = new Style(typeof(TextBlock));
                 style.Setters.Add(new Setter(TextBlock.PaddingProperty, new Thickness(8, 4, 5, 3)));
                 style.Setters.Add(new Setter(TextBlock.TextTrimmingProperty, TextTrimming.CharacterEllipsis));
-                style.Setters.Add(new Setter(TextBlock.ForegroundProperty, new Binding { Converter = new AppearanceConverter(column, "foreground") }));
-                style.Setters.Add(new Setter(TextBlock.BackgroundProperty, new Binding { Converter = new AppearanceConverter(column, "background") }));
-                style.Setters.Add(new Setter(TextBlock.FontWeightProperty, new Binding { Converter = new AppearanceConverter(column, "weight") }));
-                style.Setters.Add(new Setter(TextBlock.FontStyleProperty, new Binding { Converter = new AppearanceConverter(column, "italic") }));
-                style.Setters.Add(new Setter(TextBlock.FontFamilyProperty, new Binding { Converter = new AppearanceConverter(column, "family") }));
-                style.Setters.Add(new Setter(TextBlock.FontSizeProperty, new Binding { Converter = new AppearanceConverter(column, "size") }));
-                style.Setters.Add(new Setter(TextBlock.TextWrappingProperty, new Binding { Converter = new AppearanceConverter(column, "wrap") }));
-                style.Setters.Add(new Setter(FrameworkElement.VerticalAlignmentProperty, new Binding { Converter = new AppearanceConverter(column, "vertical") }));
-                style.Setters.Add(new Setter(TextBlock.TextAlignmentProperty, new Binding { Converter = new AppearanceConverter(column, "alignment") }));
+                style.Setters.Add(new Setter(TextBlock.ForegroundProperty, new Binding(nameof(SheetRow.Appearance)) { Converter = new AppearanceConverter(column, "foreground") }));
+                style.Setters.Add(new Setter(TextBlock.BackgroundProperty, new Binding(nameof(SheetRow.Appearance)) { Converter = new AppearanceConverter(column, "background") }));
+                style.Setters.Add(new Setter(TextBlock.FontWeightProperty, new Binding(nameof(SheetRow.Appearance)) { Converter = new AppearanceConverter(column, "weight") }));
+                style.Setters.Add(new Setter(TextBlock.FontStyleProperty, new Binding(nameof(SheetRow.Appearance)) { Converter = new AppearanceConverter(column, "italic") }));
+                style.Setters.Add(new Setter(TextBlock.FontFamilyProperty, new Binding(nameof(SheetRow.Appearance)) { Converter = new AppearanceConverter(column, "family") }));
+                style.Setters.Add(new Setter(TextBlock.FontSizeProperty, new Binding(nameof(SheetRow.Appearance)) { Converter = new AppearanceConverter(column, "size") }));
+                style.Setters.Add(new Setter(TextBlock.TextWrappingProperty, new Binding(nameof(SheetRow.Appearance)) { Converter = new AppearanceConverter(column, "wrap") }));
+                style.Setters.Add(new Setter(FrameworkElement.VerticalAlignmentProperty, new Binding(nameof(SheetRow.Appearance)) { Converter = new AppearanceConverter(column, "vertical") }));
+                style.Setters.Add(new Setter(TextBlock.TextAlignmentProperty, new Binding(nameof(SheetRow.Appearance)) { Converter = new AppearanceConverter(column, "alignment") }));
                 var cellStyle = new Style(typeof(DataGridCell), (Style)_grid.FindResource(typeof(DataGridCell)));
-                cellStyle.Setters.Add(new Setter(AutomationProperties.NameProperty, new Binding { Converter = new AppearanceConverter(column, "automation") }));
-                cellStyle.Setters.Add(new Setter(Control.BorderThicknessProperty, new Binding { Converter = new AppearanceConverter(column, "border") }));
-                cellStyle.Setters.Add(new Setter(Control.BorderBrushProperty, new Binding { Converter = new AppearanceConverter(column, "borderColor") }));
-                cellStyle.Setters.Add(new Setter(Control.BackgroundProperty, new Binding { Converter = new AppearanceConverter(column, "background") }));
+                cellStyle.Setters.Add(new Setter(AutomationProperties.NameProperty, new Binding(nameof(SheetRow.Appearance)) { Converter = new AppearanceConverter(column, "automation") }));
+                cellStyle.Setters.Add(new Setter(Control.BorderThicknessProperty, new Binding(nameof(SheetRow.Appearance)) { Converter = new AppearanceConverter(column, "border") }));
+                cellStyle.Setters.Add(new Setter(Control.BorderBrushProperty, new Binding(nameof(SheetRow.Appearance)) { Converter = new AppearanceConverter(column, "borderColor") }));
+                cellStyle.Setters.Add(new Setter(Control.BackgroundProperty, new Binding(nameof(SheetRow.Appearance)) { Converter = new AppearanceConverter(column, "background") }));
                 cellStyle.Triggers.Add(new Trigger { Property = DataGridCell.IsSelectedProperty, Value = true,
                     Setters = { new Setter(Control.BorderThicknessProperty, new Thickness(1)),
                         new Setter(Control.BorderBrushProperty, new SolidColorBrush(Color.FromRgb(24, 117, 83))) } });
@@ -98,15 +105,15 @@ internal sealed class WpfGridSurface : IGridSurface
                     CellStyle = cellStyle,
                     EditingElementStyle = new Style(typeof(TextBox))
                     { Setters = { new Setter(TextBox.PaddingProperty, new Thickness(5, 3, 4, 2)),
-                        new Setter(TextBox.ForegroundProperty, new Binding { Converter = new AppearanceConverter(column, "foreground") }),
-                        new Setter(TextBox.BackgroundProperty, new Binding { Converter = new AppearanceConverter(column, "background") }),
-                        new Setter(TextBox.FontWeightProperty, new Binding { Converter = new AppearanceConverter(column, "weight") }),
-                        new Setter(TextBox.FontStyleProperty, new Binding { Converter = new AppearanceConverter(column, "italic") }),
-                        new Setter(TextBox.FontFamilyProperty, new Binding { Converter = new AppearanceConverter(column, "family") }),
-                        new Setter(TextBox.FontSizeProperty, new Binding { Converter = new AppearanceConverter(column, "size") }),
-                        new Setter(TextBox.TextWrappingProperty, new Binding { Converter = new AppearanceConverter(column, "wrap") }),
-                        new Setter(Control.VerticalContentAlignmentProperty, new Binding { Converter = new AppearanceConverter(column, "vertical") }),
-                        new Setter(TextBox.TextAlignmentProperty, new Binding { Converter = new AppearanceConverter(column, "alignment") }) },
+                        new Setter(TextBox.ForegroundProperty, new Binding(nameof(SheetRow.Appearance)) { Converter = new AppearanceConverter(column, "foreground") }),
+                        new Setter(TextBox.BackgroundProperty, new Binding(nameof(SheetRow.Appearance)) { Converter = new AppearanceConverter(column, "background") }),
+                        new Setter(TextBox.FontWeightProperty, new Binding(nameof(SheetRow.Appearance)) { Converter = new AppearanceConverter(column, "weight") }),
+                        new Setter(TextBox.FontStyleProperty, new Binding(nameof(SheetRow.Appearance)) { Converter = new AppearanceConverter(column, "italic") }),
+                        new Setter(TextBox.FontFamilyProperty, new Binding(nameof(SheetRow.Appearance)) { Converter = new AppearanceConverter(column, "family") }),
+                        new Setter(TextBox.FontSizeProperty, new Binding(nameof(SheetRow.Appearance)) { Converter = new AppearanceConverter(column, "size") }),
+                        new Setter(TextBox.TextWrappingProperty, new Binding(nameof(SheetRow.Appearance)) { Converter = new AppearanceConverter(column, "wrap") }),
+                        new Setter(Control.VerticalContentAlignmentProperty, new Binding(nameof(SheetRow.Appearance)) { Converter = new AppearanceConverter(column, "vertical") }),
+                        new Setter(TextBox.TextAlignmentProperty, new Binding(nameof(SheetRow.Appearance)) { Converter = new AppearanceConverter(column, "alignment") }) },
                       Triggers = { new Trigger { Property = GridInputColumn.IsPreparedProperty, Value = true,
                           Setters = { new Setter(UIElement.IsHitTestVisibleProperty, false),
                               new Setter(TextBox.CaretBrushProperty, Brushes.Transparent),
@@ -197,7 +204,10 @@ internal sealed class WpfGridSurface : IGridSurface
 
 internal sealed class SheetRow(WpfGridSurface owner, int index) : INotifyPropertyChanged
 {
+    private (CellValue Value, StyleDefinition Style)[] _presentation = [];
+    private ExcelDateSystem? _dateSystem;
     public int Index { get; } = index;
+    public SheetRow Appearance => this;
     public string GetInput(int column) => owner.Sheet.GetCell(Index, column) is { } cell ? CellInput.EditText(cell.Content) : "";
     public string this[int column]
     {
@@ -207,7 +217,21 @@ internal sealed class SheetRow(WpfGridSurface owner, int index) : INotifyPropert
     }
     public StyleDefinition GetStyle(int column) => owner.Snapshot.Styles[owner.Sheet.GetStyleId(Index, column)];
     public event PropertyChangedEventHandler? PropertyChanged;
-    public void Refresh() => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(string.Empty));
+    public void ReleasePresentation() { _presentation = []; _dateSystem = null; }
+    public void Refresh()
+    {
+        var changed = _presentation.Length != owner.ColumnCount || _dateSystem != owner.Snapshot.DateSystem;
+        if (_presentation.Length != owner.ColumnCount) _presentation = new (CellValue, StyleDefinition)[owner.ColumnCount];
+        _dateSystem = owner.Snapshot.DateSystem;
+        for (var column = 0; column < _presentation.Length; column++)
+        {
+            var next = (owner.Sheet.GetCell(Index, column)?.Value ?? CellValue.Blank, GetStyle(column));
+            changed |= _presentation[column] != next;
+            _presentation[column] = next;
+        }
+        // Calculation generations and cache freshness do not change the displayed cells.
+        if (changed) PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(string.Empty));
+    }
 }
 
 internal sealed class GridInputColumn(int column) : DataGridTextColumn

@@ -181,10 +181,14 @@ public partial class MainWindow : Window
         RefreshWorkspaceView();
         if (_gridEditorArmed && SheetGrid.CurrentColumn?.GetCellContent(SheetGrid.CurrentItem) is TextBox readyEditor)
         {
-            _gridEditorArmed = false;
-            GridInputColumn.InitializeText(readyEditor, _document.GetCellValue(_sheetIndex, _selectedRow, _selectedColumn));
-            readyEditor.SelectAll();
-            _gridEditorArmed = true;
+            var text = _document.GetCellValue(_sheetIndex, _selectedRow, _selectedColumn);
+            if (readyEditor.Text != text)
+            {
+                _gridEditorArmed = false;
+                GridInputColumn.InitializeText(readyEditor, text);
+                readyEditor.SelectAll();
+                _gridEditorArmed = true;
+            }
         }
         if (!_editState.GridEditing && !_formulaPending && CurrentView.FilterRange is { } filter &&
             CurrentView.IsFilteredOut(_document.Snapshot, _sheetIndex, _selectedRow))
@@ -232,7 +236,7 @@ public partial class MainWindow : Window
         try
         {
             var result = _editor.SetCell(_formulaSheet, _formulaRow, _formulaColumn, FormulaBar.Text);
-            _calculationPending |= result.Changed;
+            _calculationPending |= result.Changed && !result.CalculationUnchanged;
             _editState.EndFormula();
             UpdateChrome();
             return true;
@@ -250,7 +254,8 @@ public partial class MainWindow : Window
         using var cancellation = cancellable ? new CancellationTokenSource() : null;
         _calculationCancellation = cancellation;
         StopCalculationButton.Visibility = cancellable ? Visibility.Visible : Visibility.Collapsed;
-        Toolbar.IsEnabled = Workspace.IsEnabled = false;
+        // Keep enabled visuals and the attached native input context stable. Preview input
+        // handlers enforce the busy gate without disabling/re-enabling the entire visual tree.
         StatusText.Text = message;
         var timer = Stopwatch.StartNew();
         try
@@ -272,10 +277,8 @@ public partial class MainWindow : Window
             _busy = false;
             _calculationCancellation = null;
             StopCalculationButton.Visibility = Visibility.Collapsed;
-            Toolbar.IsEnabled = Workspace.IsEnabled = true;
             UpdateChrome();
-            // Disabling the workspace drops native TSF focus. Restore a still-attached
-            // editor so the next IME key cannot target an obsolete DataGrid editor.
+            // Restore focus if the user selected Stop while the operation was running.
             if (IsActive && inputFocus is { IsVisible: true, IsEnabled: true } &&
                 PresentationSource.FromVisual(inputFocus) is not null)
                 Keyboard.Focus(inputFocus);
@@ -307,7 +310,9 @@ public partial class MainWindow : Window
     {
         if (_busy) return false;
         _calculationPending = false;
-        var ok = await WorkAsync("重新计算…", token => _document.Calculate(token), cancellable: true);
+        var committed = false;
+        var ok = await WorkAsync("重新计算…", token => committed = _document.Calculate(token), cancellable: true);
+        ok &= committed;
         if (!ok) _calculationPending = true;
         ShowDiagnostics();
         return ok;
@@ -316,7 +321,7 @@ public partial class MainWindow : Window
     private bool ApplyValues(IEnumerable<(int Row, int Column, string Value)> values)
     {
         var result = _editor.SetCells(_sheetIndex, values);
-        _calculationPending |= result.Changed;
+        _calculationPending |= result.Changed && !result.CalculationUnchanged;
         UpdateChrome();
         return result.Changed;
     }
@@ -410,7 +415,15 @@ public partial class MainWindow : Window
     {
         if (_busy || !CommitEditors()) return;
         var sheetId = _document.Snapshot.Sheets[_sheetIndex].Id;
-        if (!(redo ? _editor.Redo() : _editor.Undo())) return;
+        var result = redo ? _editor.Redo() : _editor.Undo();
+        if (!result.Changed) return;
+        if (result.CalculationUnchanged)
+        {
+            RefreshSheet();
+            UpdateChrome();
+            if (_calculationPending) await RecalculateAsync();
+            return;
+        }
         var sheets = _document.Snapshot.Sheets;
         var index = Array.FindIndex(sheets.ToArray(), sheet => sheet.Id == sheetId);
         _sheetIndex = index >= 0 ? index : Math.Min(_sheetIndex, sheets.Length - 1);
@@ -689,6 +702,13 @@ public partial class MainWindow : Window
 
     private async void Window_KeyDown(object sender, KeyEventArgs e)
     {
+        if (_busy)
+        {
+            if (e.Key == Key.Escape) _calculationCancellation?.Cancel();
+            if (e.Key == Key.Tab && StopCalculationButton.IsVisible) StopCalculationButton.Focus();
+            e.Handled = !StopCalculationButton.IsKeyboardFocused || e.Key is not (Key.Enter or Key.Space);
+            return;
+        }
         if (!_busy && !_editState.IsComposing && e.Key == Key.F6)
         {
             e.Handled = true;

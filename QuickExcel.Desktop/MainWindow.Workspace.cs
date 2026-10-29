@@ -67,7 +67,6 @@ public partial class MainWindow
     }
     private void RefreshWorkspaceView()
     {
-        _artwork?.Refresh(); _frozenArtwork?.Refresh();
         var view = CurrentView;
         ViewStatus.Text = (view.FilterRange is null ? "" : $"筛选 {ColumnName(view.FilterColumn)} · {view.FilterText}  ") +
             (view.FrozenRows + view.FrozenColumns == 0 ? "" : $"冻结 {view.FrozenRows} 行 / {view.FrozenColumns} 列");
@@ -77,22 +76,38 @@ public partial class MainWindow
         _refreshingFrozen = true;
         try
         {
-            FrozenGrid.Columns.Clear();
-            if (view.FrozenRows == 0) { FrozenGrid.ItemsSource = null; return; }
-            foreach (var column in SheetGrid.Columns.Cast<DataGridTextColumn>())
-                FrozenGrid.Columns.Add(new DataGridTextColumn { Binding = new Binding($"[{column.DisplayIndex}]") { Mode = BindingMode.OneWay },
-                    Width = column.Width, Visibility = column.Visibility, ElementStyle = column.ElementStyle, CellStyle = column.CellStyle });
-            FrozenGrid.FrozenColumnCount = view.FrozenColumns;
-            var sheet = _document.Snapshot.Sheets[_sheetIndex];
-            FrozenGrid.ItemsSource = Enumerable.Range(0, view.FrozenRows).Where(r => sheet.Rows.GetValueOrDefault(r)?.Hidden != true &&
-                !view.IsFilteredOut(_document.Snapshot, _sheetIndex, r)).Select(r => _rows[r]).ToArray();
+            if (view.FrozenRows == 0) FrozenGrid.ItemsSource = null;
+            else
+            {
+                // Rebuild only when the source columns change (sheet switch or expansion).
+                if (FrozenGrid.Columns.Count != SheetGrid.Columns.Count || FrozenGrid.Columns.Cast<DataGridTextColumn>()
+                    .Where((column, index) => column.ElementStyle != ((DataGridTextColumn)SheetGrid.Columns[index]).ElementStyle).Any())
+                {
+                    FrozenGrid.Columns.Clear();
+                    foreach (var column in SheetGrid.Columns.Cast<DataGridTextColumn>())
+                        FrozenGrid.Columns.Add(new DataGridTextColumn { Binding = new Binding($"[{column.DisplayIndex}]") { Mode = BindingMode.OneWay },
+                            Width = column.Width, Visibility = column.Visibility, ElementStyle = column.ElementStyle, CellStyle = column.CellStyle });
+                }
+                FrozenGrid.FrozenColumnCount = Math.Min(view.FrozenColumns, FrozenGrid.Columns.Count);
+                var sheet = _document.Snapshot.Sheets[_sheetIndex];
+                var rows = Enumerable.Range(0, view.FrozenRows).Where(r => sheet.Rows.GetValueOrDefault(r)?.Hidden != true &&
+                    !view.IsFilteredOut(_document.Snapshot, _sheetIndex, r)).Select(r => _rows[r]).ToArray();
+                if (!FrozenGrid.Items.OfType<SheetRow>().SequenceEqual(rows)) FrozenGrid.ItemsSource = rows;
+                // Frozen rows may no longer be realized in the scrolled main grid.
+                foreach (var row in rows) row.Refresh();
+            }
         }
         finally { _refreshingFrozen = false; }
+        RefreshWorkspaceDimensions();
     }
     private void RefreshWorkspaceDimensions()
     {
         // Keep columns/items/editors attached: a size change does not require rebinding data.
-        for (var i = 0; i < FrozenGrid.Columns.Count; i++) FrozenGrid.Columns[i].Width = SheetGrid.Columns[i].Width;
+        for (var i = 0; i < Math.Min(FrozenGrid.Columns.Count, SheetGrid.Columns.Count); i++)
+        {
+            FrozenGrid.Columns[i].Width = SheetGrid.Columns[i].Width;
+            FrozenGrid.Columns[i].Visibility = SheetGrid.Columns[i].Visibility;
+        }
         var sheet = _document.Snapshot.Sheets[_sheetIndex];
         foreach (var item in FrozenGrid.Items.OfType<SheetRow>())
             if (FrozenGrid.ItemContainerGenerator.ContainerFromItem(item) is DataGridRow row)
@@ -145,8 +160,12 @@ public partial class MainWindow
             if (!result.Changed) return true;
             if (result.CalculationUnchanged)
             {
-                _grid.RefreshDimensions(_document.Snapshot);
-                RefreshWorkspaceDimensions();
+                if (command is SetAxisMetadataCommand)
+                {
+                    _grid.RefreshDimensions(_document.Snapshot);
+                    RefreshWorkspaceDimensions();
+                }
+                else RefreshSheet();
                 UpdateChrome();
                 QueueRecalculation();
                 return true;

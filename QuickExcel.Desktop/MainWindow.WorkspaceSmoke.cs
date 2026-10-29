@@ -25,6 +25,7 @@ public partial class MainWindow
         _suppressAutoCalculation = true;
         try
         {
+            await RunCalculationRefreshSmokeAsync(Check);
             await RunGridResizeSmokeAsync(folder, Check);
             InstallDocument(WorkbookDocument.CreateBlank(_services), path, "工作区验收.xlsq");
             ApplyValues([(0, 0, "Key"), (0, 1, "Label"), (0, 2, "Value"), (1, 0, "2"), (1, 1, "second"), (1, 2, "=A2*10"),

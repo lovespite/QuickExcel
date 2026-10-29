@@ -78,7 +78,7 @@ public sealed class DocumentSession : IDisposable
             var sourceChanged = command is UpdateScriptSourceCommand or UpdateScriptModulesCommand or UpdateScriptSignatureCommand;
             var revised = draft.Snapshot.WithRevision(checked(before.Revision + 1));
             var after = draft.CalculationUnchanged ? CarryCalculationRevision(revised, before.Revision) : Invalidate(revised);
-            var entry = sourceChanged ? null : new HistoryEntry(before, after, draft.Changes, draft.StructureChanged);
+            var entry = sourceChanged ? null : new HistoryEntry(before, after, draft.Changes, draft.StructureChanged, draft.CalculationUnchanged);
             if (entry is not null && entry.Bytes > HistoryBudgetBytes)
                 throw new InvalidOperationException("此操作超过撤销历史容量，尚未修改工作簿。请缩小操作范围。");
             cancellationToken.ThrowIfCancellationRequested();
@@ -101,7 +101,8 @@ public sealed class DocumentSession : IDisposable
             AdvanceCalculationGeneration();
             _snapshot = after;
             if (!draft.CalculationUnchanged) _diagnostics = diagnostics.IsDefault ? [] : diagnostics;
-            change = new(after.Revision, ActualChanges(before, after, draft.Changes), draft.StructureChanged);
+            change = new(after.Revision, ActualChanges(before, after, draft.Changes), draft.StructureChanged)
+            { CalculationUnchanged = draft.CalculationUnchanged };
             QueueNotification(change);
             result = new(true, after.Revision) { CalculationUnchanged = draft.CalculationUnchanged };
         }
@@ -159,32 +160,41 @@ public sealed class DocumentSession : IDisposable
         }
     }
 
-    public bool Undo(long? expectedRevision = null) => MoveHistory(redo: false, expectedRevision);
-    public bool Redo(long? expectedRevision = null) => MoveHistory(redo: true, expectedRevision);
+    public bool Undo(long? expectedRevision = null) => UndoWithResult(expectedRevision).Changed;
+    public bool Redo(long? expectedRevision = null) => RedoWithResult(expectedRevision).Changed;
+    public CommandResult UndoWithResult(long? expectedRevision = null) => MoveHistory(redo: false, expectedRevision);
+    public CommandResult RedoWithResult(long? expectedRevision = null) => MoveHistory(redo: true, expectedRevision);
 
-    private bool MoveHistory(bool redo, long? expectedRevision)
+    private CommandResult MoveHistory(bool redo, long? expectedRevision)
     {
         DocumentChange change;
+        CommandResult result;
         lock (_gate)
         {
             ThrowIfClosed();
             CheckRevision(expectedRevision);
-            if (redo ? _redo.Count == 0 : _undo.Count == 0) return false;
+            if (redo ? _redo.Count == 0 : _undo.Count == 0) return new(false, _snapshot.Revision);
             var before = _snapshot;
             var entry = redo ? _redo.Pop() : _undo.Last!.Value;
             if (!redo) _undo.RemoveLast();
             // Script text has its own editor history. Cell undo never reverts source or grants execution.
             var restored = (redo ? entry.After : entry.Before).WithScriptModules(before.ScriptModules)
                 .WithRevision(checked(before.Revision + 1));
-            _snapshot = Invalidate(restored);
+            // Presentation history must use the current caches, not historical results that
+            // may predate a script change, a failed calculation or a newer manual calculation.
+            _snapshot = entry.CalculationUnchanged
+                ? CarryCalculationRevision(RestoreCurrentCalculations(restored, before), before.Revision)
+                : Invalidate(restored);
             AdvanceCalculationGeneration();
             if (redo) _undo.AddLast(entry); else _redo.Push(entry);
-            _diagnostics = [];
-            change = new(_snapshot.Revision, ActualChanges(before, _snapshot, entry.Changes), entry.StructureChanged, IsUndoOrRedo: true);
+            if (!entry.CalculationUnchanged) _diagnostics = [];
+            change = new(_snapshot.Revision, ActualChanges(before, _snapshot, entry.Changes), entry.StructureChanged, IsUndoOrRedo: true)
+            { CalculationUnchanged = entry.CalculationUnchanged };
             QueueNotification(change);
+            result = new(true, _snapshot.Revision) { CalculationUnchanged = entry.CalculationUnchanged };
         }
         PublishNotifications();
-        return true;
+        return result;
     }
 
     public void SetScriptsEnabled(bool enabled)
@@ -321,9 +331,20 @@ public sealed class DocumentSession : IDisposable
         return snapshot.WithSheets(sheets);
     }
 
-    // Size-only edits cannot change formula inputs. Carry only results valid for the previous
+    private static WorkbookSnapshot RestoreCurrentCalculations(WorkbookSnapshot restored, WorkbookSnapshot current) =>
+        restored.WithSheets(restored.Sheets.Select(sheet =>
+        {
+            var currentSheet = current.GetSheet(sheet.Id);
+            var cells = sheet.Cells.ToBuilder();
+            foreach (var (position, cell) in sheet.Cells)
+                if (cell.Content.Kind == CellContentKind.Formula)
+                    cells[position] = new(cell.Content, currentSheet.GetCell(position.Row, position.Column)?.Calculation);
+            return sheet.WithCells(cells.ToImmutable());
+        }));
+
+    // Presentation edits cannot change formula inputs. Carry only results valid for the previous
     // revision; stale/blocked/missing caches stay that way. Generation advancement still rejects
-    // late calculations/actions, and normal undo/redo retains its existing invalidation policy.
+    // late calculations/actions. Content/structure undo still invalidates calculations.
     private static WorkbookSnapshot CarryCalculationRevision(WorkbookSnapshot snapshot, long previousRevision)
     {
         return snapshot.WithSheets(snapshot.Sheets.Select(sheet =>
@@ -419,7 +440,7 @@ public sealed class DocumentSession : IDisposable
         }
     }
 
-    private sealed record HistoryEntry(WorkbookSnapshot Before, WorkbookSnapshot After, ImmutableArray<CellChange> Changes, bool StructureChanged)
+    private sealed record HistoryEntry(WorkbookSnapshot Before, WorkbookSnapshot After, ImmutableArray<CellChange> Changes, bool StructureChanged, bool CalculationUnchanged)
     {
         // Unchanged immutable input and metadata are shared. Count changed payloads and copied formula caches.
         public long Bytes => 1024L + Changes.Sum(change => Estimate(change.Before) + Estimate(change.After) + 256L)

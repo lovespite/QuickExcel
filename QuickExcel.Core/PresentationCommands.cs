@@ -140,7 +140,7 @@ public sealed class SetCellStyleCommand : DocumentCommand
         var styled = new WorkbookSnapshot(snapshot.DocumentId, snapshot.Revision, snapshot.DateSystem, snapshot.Sheets,
             snapshot.ScriptSource, styles, snapshot.ScriptModules, snapshot.FileState, snapshot.DefinedNames);
         var draft = new SetCellsCommand(edits).Prepare(styled);
-        return draft.Changes.IsEmpty ? new(snapshot, [], false) : draft;
+        return draft.Changes.IsEmpty ? new(snapshot, [], false) : draft with { CalculationUnchanged = true };
     }
 }
 
