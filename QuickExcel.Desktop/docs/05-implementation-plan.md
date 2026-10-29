@@ -1,5 +1,7 @@
 # QuickExcel 实施计划
 
+2026-10-28 正式界面更新：`0.6.0-preview.3` 接入启动页、可停靠工作表导航和脚本专页，并推进 JS-011/FMT-009/UI-006–008。查找替换、基础图片/合并及安全结构变换已有领域与 WPF 证据；恢复仅为手动副本打开原型，自动恢复与完整无障碍/跨环境验收仍未关闭。详见 [正式界面记录](19-m5-product-workspace.md)。
+
 2026-10-28 M5 更新：UI-002 网格适配、虚拟化探索与 ADR-022，以及 UI-003 键盘/选区/剪贴板/编辑状态机本切片完成；32 项 WPF 交互断言和本机系统中文拼音实机验收通过，证据见 [M5 记录](17-m5-grid-and-input.md)。M4 保持下述未关闭项，不能据此宣布 M5 整体通过。
 
 本计划从 M0 原型走向 Windows x64 Beta。M1–M3 支持子集已交付；M4 已接入独立 worker、可终止执行、包内 ES 模块、actions 快照事务、有界 UDF 合批及实际 worker 的无能力 AppContainer。2026-10-28 已取得 IPv4/IPv6 回环与 DNS 的本机 WFP 拒绝证据，并补齐宿主崩溃后的 profile/payload 回收及故障测试。M4 保持进行中，严格执行策略及完整部署矩阵未完成；M6 仍需干净机器与最终 OS 门禁。当前实现与验收见 [回收与部署验证](16-m4-recovery-and-deployment.md)、[合批记录](14-m4-batching.md)、[隔离 ADR](15-m4-os-isolation-adr.md)及 [actions 记录](13-m4-actions.md)。以下 M3 记录保留为历史基线。

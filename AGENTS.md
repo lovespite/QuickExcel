@@ -17,6 +17,8 @@ dotnet run --project .\QuickExcel.Scripting\smoke\QuickExcel.Scripting.Smoke.csp
 
 Always supply `--artifacts-path` for managed builds, tests, runs, and publishes so referenced ExcelIO projects also write their outputs inside QuickExcel. Native runtime build requirements and source provenance are in `QuickExcel.Scripting/native/SOURCES.md`.
 
+Important! DO NOT run the full regression test suite for every feature change or bug fix! Only run the tests related to the modified areas!
+
 ## Structure
 
 - `QuickExcel.Core`: pure .NET domain model, document session, commands, history, facade and ports; no ExcelIO, WPF or native runtime references.

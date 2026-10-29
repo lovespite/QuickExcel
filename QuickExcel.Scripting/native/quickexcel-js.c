@@ -17,6 +17,7 @@ typedef struct {
     JSRuntime *runtime;
     JSContext *context;
     JSValue bridge;
+    JSValue error_stack_getter;
     ULONGLONG deadline;
     int interrupted;
     qx_module modules[64];
@@ -50,6 +51,13 @@ static void start_operation(qx_session *session) {
     session->deadline = GetTickCount64() + 1000;
 }
 
+static size_t diagnostic_length(const char *text, size_t length, size_t budget) {
+    if (length <= budget) return length;
+    length = budget;
+    while (length && (((unsigned char)text[length] & 0xc0) == 0x80)) length--;
+    return length;
+}
+
 static void exception_error(qx_session *session, char **error) {
     JSValue exception = JS_GetException(session->context);
     if (session->interrupted) {
@@ -58,8 +66,32 @@ static void exception_error(qx_session *session, char **error) {
         size_t length = 0;
         const char *text = JS_ToCStringLen(session->context, &length, exception);
         if (text) {
-            if (length > 16384) length = 16384;
-            if (error) *error = copy_text(text, length);
+            length = diagnostic_length(text, length, 16384);
+            if (error) {
+                *error = malloc(16385);
+                if (*error) {
+                    memcpy(*error, text, length);
+                    /* Call the pinned engine getter directly. User-defined stack
+                       getters and replaced Error prototypes are never consulted. */
+                    if (length < 16383 && JS_IsError(exception) && !session->interrupted) {
+                        JSValue trace = JS_Call(session->context, session->error_stack_getter, exception, 0, NULL);
+                        if (JS_IsString(trace)) {
+                            size_t stack_length = 0;
+                            const char *stack = JS_ToCStringLen(session->context, &stack_length, trace);
+                            if (stack) {
+                                stack_length = diagnostic_length(stack, stack_length, 16384 - length - 1);
+                                if (stack_length) { (*error)[length++] = '\n'; memcpy(*error + length, stack, stack_length); length += stack_length; }
+                                JS_FreeCString(session->context, stack);
+                            }
+                        } else if (JS_IsException(trace)) {
+                            JSValue secondary = JS_GetException(session->context);
+                            JS_FreeValue(session->context, secondary);
+                        }
+                        JS_FreeValue(session->context, trace);
+                    }
+                    (*error)[length] = 0;
+                }
+            }
             JS_FreeCString(session->context, text);
         } else {
             set_error(error, "JavaScript failed (execution or memory limit reached).");
@@ -78,6 +110,7 @@ QX_EXPORT void qx_destroy(qx_session *session) {
             if (session->modules[i].source) JS_FreeCString(session->context, session->modules[i].source);
         }
         JS_FreeValue(session->context, session->bridge);
+        JS_FreeValue(session->context, session->error_stack_getter);
         JS_FreeContext(session->context);
     }
     if (session->runtime) JS_FreeRuntime(session->runtime);
@@ -89,6 +122,7 @@ QX_EXPORT qx_session *qx_create(const char *bootstrap, char **error) {
     qx_session *session = calloc(1, sizeof(qx_session));
     if (!session) { set_error(error, "Unable to allocate JavaScript session."); return NULL; }
     session->bridge = JS_UNDEFINED;
+    session->error_stack_getter = JS_UNDEFINED;
     session->runtime = JS_NewRuntime();
     if (!session->runtime) { set_error(error, "Unable to create QuickJS runtime."); qx_destroy(session); return NULL; }
     JS_SetMemoryLimit(session->runtime, 64 * 1024 * 1024);
@@ -97,6 +131,22 @@ QX_EXPORT qx_session *qx_create(const char *bootstrap, char **error) {
     session->context = JS_NewContext(session->runtime);
     if (!session->context) { set_error(error, "Unable to create QuickJS context."); qx_destroy(session); return NULL; }
     start_operation(session);
+    JSValue sample_error = JS_NewError(session->context);
+    JSValue error_prototype = JS_GetPrototype(session->context, sample_error);
+    JSAtom stack_atom = JS_NewAtom(session->context, "stack");
+    JSPropertyDescriptor stack_descriptor;
+    int stack_found = JS_GetOwnProperty(session->context, &stack_descriptor, error_prototype, stack_atom);
+    JS_FreeAtom(session->context, stack_atom);
+    JS_FreeValue(session->context, error_prototype);
+    JS_FreeValue(session->context, sample_error);
+    if (stack_found > 0) {
+        session->error_stack_getter = stack_descriptor.getter;
+        JS_FreeValue(session->context, stack_descriptor.value);
+        JS_FreeValue(session->context, stack_descriptor.setter);
+    }
+    if (!JS_IsFunction(session->context, session->error_stack_getter)) {
+        set_error(error, "Unable to capture engine error diagnostics."); qx_destroy(session); return NULL;
+    }
     session->bridge = JS_Eval(session->context, bootstrap, strlen(bootstrap), "quickexcel-host.js", JS_EVAL_TYPE_GLOBAL);
     if (JS_IsException(session->bridge)) {
         exception_error(session, error);

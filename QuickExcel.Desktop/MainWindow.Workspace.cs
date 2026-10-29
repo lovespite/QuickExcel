@@ -5,6 +5,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Data;
 using System.Windows.Media;
+using System.Windows.Documents;
 using QuickExcel.Core;
 using QuickExcel.Domain;
 using QuickExcel.Storage;
@@ -20,6 +21,8 @@ public partial class MainWindow
     private bool _refreshingFrozen;
     private string? _smokeTextDecision;
     private Task _workspaceInput = Task.CompletedTask;
+    private SheetArtworkAdorner? _artwork;
+    private SheetArtworkAdorner? _frozenArtwork;
     private static T? VisualChild<T>(DependencyObject parent) where T : DependencyObject
     {
         for (var i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
@@ -32,8 +35,26 @@ public partial class MainWindow
     }
     private void InstallWorkspaceHandlers()
     {
+        InstallGridResizeHandlers(SheetGrid);
+        InstallGridResizeHandlers(FrozenGrid);
+        Loaded += (_, _) =>
+        {
+            _artwork = new(SheetGrid, _grid, false); _frozenArtwork = new(FrozenGrid, _grid, true);
+            AdornerLayer.GetAdornerLayer(SheetGrid)?.Add(_artwork);
+            AdornerLayer.GetAdornerLayer(FrozenGrid)?.Add(_frozenArtwork);
+            _artwork.Refresh(); _frozenArtwork.Refresh();
+        };
+        SheetGrid.SizeChanged += (_, _) => _artwork?.InvalidateVisual();
+        SheetGrid.LayoutUpdated += (_, _) => _artwork?.RefreshLayout();
+        FrozenGrid.LayoutUpdated += (_, _) => _frozenArtwork?.RefreshLayout();
+        SheetGrid.CurrentCellChanged += (_, _) => _artwork?.InvalidateVisual();
+        SheetGrid.PreparingCellForEdit += (_, _) => _artwork?.InvalidateVisual();
+        SheetGrid.CellEditEnding += (_, _) => _artwork?.InvalidateVisual();
+        FrozenGrid.SizeChanged += (_, _) => _frozenArtwork?.InvalidateVisual();
+        FrozenGrid.AddHandler(ScrollViewer.ScrollChangedEvent, new ScrollChangedEventHandler((_, _) => _frozenArtwork?.InvalidateVisual()));
         SheetGrid.AddHandler(ScrollViewer.ScrollChangedEvent, new ScrollChangedEventHandler((_, e) =>
         {
+            _artwork?.InvalidateVisual();
             if (e.HorizontalChange != 0) VisualChild<ScrollViewer>(FrozenGrid)?.ScrollToHorizontalOffset(e.HorizontalOffset);
         }));
         FrozenGrid.LoadingRow += (_, e) =>
@@ -46,9 +67,11 @@ public partial class MainWindow
     }
     private void RefreshWorkspaceView()
     {
+        _artwork?.Refresh(); _frozenArtwork?.Refresh();
         var view = CurrentView;
-        ViewStatus.Text = (view.FilterRange is null ? "" : $"筛选 {ColumnName(view.FilterColumn)} 列包含“{view.FilterText}”；首行为表头。 ") +
-            (view.FrozenRows + view.FrozenColumns == 0 ? "" : $"冻结 {view.FrozenRows} 行 / {view.FrozenColumns} 列。 ") + "视图设置仅本次工作区有效。";
+        ViewStatus.Text = (view.FilterRange is null ? "" : $"筛选 {ColumnName(view.FilterColumn)} · {view.FilterText}  ") +
+            (view.FrozenRows + view.FrozenColumns == 0 ? "" : $"冻结 {view.FrozenRows} 行 / {view.FrozenColumns} 列");
+        ViewStatus.ToolTip = "筛选首行为表头；视图设置仅本次工作区有效。";
         ViewStatus.Visibility = view.FilterRange is not null || view.FrozenRows + view.FrozenColumns > 0 ? Visibility.Visible : Visibility.Collapsed;
         FrozenGrid.Visibility = view.FrozenRows > 0 ? Visibility.Visible : Visibility.Collapsed;
         _refreshingFrozen = true;
@@ -66,6 +89,18 @@ public partial class MainWindow
         }
         finally { _refreshingFrozen = false; }
     }
+    private void RefreshWorkspaceDimensions()
+    {
+        // Keep columns/items/editors attached: a size change does not require rebinding data.
+        for (var i = 0; i < FrozenGrid.Columns.Count; i++) FrozenGrid.Columns[i].Width = SheetGrid.Columns[i].Width;
+        var sheet = _document.Snapshot.Sheets[_sheetIndex];
+        foreach (var item in FrozenGrid.Items.OfType<SheetRow>())
+            if (FrozenGrid.ItemContainerGenerator.ContainerFromItem(item) is DataGridRow row)
+                row.Height = Math.Clamp(sheet.Rows.GetValueOrDefault(item.Index)?.Height ?? sheet.DefaultRowHeight ?? 31, 0, 400);
+        _artwork?.Refresh();
+        _frozenArtwork?.Refresh();
+    }
+
     private void FrozenGrid_CurrentCellChanged(object? sender, EventArgs e)
     {
         if (_refreshingFrozen || _busy || FrozenGrid.CurrentItem is not SheetRow row || FrozenGrid.CurrentColumn is not { } column || !CommitEditors()) return;
@@ -106,7 +141,16 @@ public partial class MainWindow
         if (_busy || !CommitEditors()) return false;
         try
         {
-            if (!_editor.Execute(command).Changed) return true;
+            var result = _editor.Execute(command);
+            if (!result.Changed) return true;
+            if (result.CalculationUnchanged)
+            {
+                _grid.RefreshDimensions(_document.Snapshot);
+                RefreshWorkspaceDimensions();
+                UpdateChrome();
+                QueueRecalculation();
+                return true;
+            }
             _sheetIndex = Math.Min(_sheetIndex, _document.Snapshot.Sheets.Length - 1);
             if (clearView) { CurrentView.FilterRange = null; CurrentView.FrozenRows = CurrentView.FrozenColumns = 0; }
             _gridEditorArmed = false;
@@ -245,6 +289,18 @@ public partial class MainWindow
         catch (Exception ex) { ReportEditFailure(ex); }
     }
 
+    private void Merge_Click(object sender, RoutedEventArgs e)
+    {
+        if (_busy || !CommitEditors()) return;
+        try
+        {
+            var range = SelectedRange();
+            ExecuteWorkbookCommand(new MergeCellsCommand(_document.Snapshot.Sheets[_sheetIndex].Id,
+                new(range.Top, range.Left, range.Bottom, range.Right), (sender as MenuItem)?.Tag as string == "unmerge"));
+        }
+        catch (Exception ex) { ReportEditFailure(ex); }
+    }
+
     private void RecentFiles_Opened(object sender, RoutedEventArgs e)
     {
         RecentFilesMenu.Items.Clear();
@@ -268,16 +324,16 @@ public partial class MainWindow
         _recentFiles.Remember(path);
         if (_recentFiles.Error is { } error) AppendLog("最近文件记录未保存：" + error);
     }
-    private void CloseDocument_Click(object sender, RoutedEventArgs e) => New_Click(sender, e);
+    private async void CloseDocument_Click(object sender, RoutedEventArgs e)
+    {
+        if (_busy || !await ConfirmDiscardAsync()) return;
+        InstallDocument(WorkbookDocument.CreateBlank(_services), null, "未命名.xlsq");
+        _hasWorkbook = false; ShowStartPage();
+    }
     private void ToggleScriptPanel_Click(object sender, RoutedEventArgs e)
     {
         if (!CommitEditors()) return;
-        var hide = ScriptPanel.Visibility == Visibility.Visible;
-        ScriptPanel.Visibility = ScriptSplitter.Visibility = hide ? Visibility.Collapsed : Visibility.Visible;
-        Workspace.ColumnDefinitions[2].MinWidth = hide ? 0 : 300;
-        Workspace.ColumnDefinitions[2].Width = new(hide ? 0 : 390);
-        Workspace.ColumnDefinitions[1].Width = new(hide ? 0 : 14);
-        GridSurface.Select(new(_selectedRow, _selectedColumn));
+        ShowWorkbookPage(ScriptPanel.Visibility != Visibility.Visible);
     }
 
     private async Task<bool> SaveToPathAsync(string path, bool discardUnsupported, FileVersion expected)

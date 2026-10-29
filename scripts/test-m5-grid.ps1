@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
     [string]$PackageDirectory = 'artifacts\QuickExcel',
-    [ValidateSet('Interaction', 'Workspace', 'Benchmark', 'All')][string]$Mode = 'All'
+    [ValidateSet('Interaction', 'Workspace', 'Product', 'Benchmark', 'ResizeBenchmark', 'All')][string]$Mode = 'All'
 )
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
@@ -16,12 +16,12 @@ if (-not (Test-Path -LiteralPath $exe -PathType Leaf)) { throw "Missing executab
 $run = [DateTime]::UtcNow.ToString('yyyyMMdd-HHmmss') + '-' + [Guid]::NewGuid().ToString('N').Substring(0, 8)
 $evidence = Join-Path $artifacts "validation\m5-grid\$run"
 New-Item -ItemType Directory -Path $evidence | Out-Null
-$modes = if ($Mode -eq 'All') { @('Interaction', 'Workspace', 'Benchmark') } else { @($Mode) }
+$modes = if ($Mode -eq 'All') { @('Interaction', 'Workspace', 'Product', 'Benchmark') } else { @($Mode) }
 foreach ($scenario in $modes) {
     $directory = Join-Path $evidence $scenario
     New-Item -ItemType Directory -Path $directory | Out-Null
-    $argument = switch ($scenario) { 'Benchmark' { '--grid-benchmark' } 'Workspace' { '--workspace-smoke' } default { '--interaction-smoke' } }
-    $result = switch ($scenario) { 'Benchmark' { 'grid-benchmark-result.txt' } 'Workspace' { 'workspace-smoke-result.txt' } default { 'interaction-smoke-result.txt' } }
+    $argument = switch ($scenario) { 'ResizeBenchmark' { '--resize-benchmark' } 'Benchmark' { '--grid-benchmark' } 'Workspace' { '--workspace-smoke' } 'Product' { '--product-smoke' } default { '--interaction-smoke' } }
+    $result = switch ($scenario) { 'ResizeBenchmark' { 'resize-benchmark-result.txt' } 'Benchmark' { 'grid-benchmark-result.txt' } 'Workspace' { 'workspace-smoke-result.txt' } 'Product' { 'product-smoke-result.txt' } default { 'interaction-smoke-result.txt' } }
     $process = $null
     try {
         $process = Start-Process -FilePath $exe -ArgumentList @($argument, ('"{0}"' -f $directory)) -WorkingDirectory $package -WindowStyle Hidden -PassThru

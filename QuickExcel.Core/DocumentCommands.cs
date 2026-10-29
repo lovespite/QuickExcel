@@ -42,6 +42,10 @@ public sealed class SetCellsCommand : DocumentCommand
             if (text.Length > WorkbookLimits.MaxCellTextLength) throw new ArgumentException("单元格最多支持 32767 个字符，整批编辑尚未应用。");
             var before = sheet.GetCell(edit.Address.Row, edit.Address.Column);
             if (before?.Content == edit.Content) continue;
+            if (edit.Content.Kind != CellContentKind.Literal || edit.Content.LiteralValue.Kind != CellValueKind.Blank)
+                foreach (var merge in sheet.MergedCells.Select(CellRectangle.Parse))
+                    if (merge.Contains(edit.Address.Row, edit.Address.Column) && (edit.Address.Row != merge.Top || edit.Address.Column != merge.Left))
+                        throw new InvalidOperationException("不能写入合并区域的非主单元格，请先取消合并；整批操作未应用。");
             var inheritedStyle = sheet.Rows.GetValueOrDefault(edit.Address.Row)?.StyleId is > 0
                 ? sheet.Rows[edit.Address.Row].StyleId : sheet.Columns.GetValueOrDefault(edit.Address.Column)?.StyleId ?? 0;
             var after = edit.Content.Kind == CellContentKind.Literal && edit.Content.LiteralValue.Kind == CellValueKind.Blank && edit.Content.StyleId == 0 && inheritedStyle == 0
@@ -110,7 +114,8 @@ public sealed class UpdateScriptModulesCommand(ScriptModuleSet modules) : Docume
     }
 }
 
-internal sealed record CommandDraft(WorkbookSnapshot Snapshot, ImmutableArray<CellChange> Changes, bool StructureChanged);
+internal sealed record CommandDraft(WorkbookSnapshot Snapshot, ImmutableArray<CellChange> Changes, bool StructureChanged,
+    bool CalculationUnchanged = false);
 
 public sealed record DocumentChange(long Revision, ImmutableArray<CellChange> Cells, bool StructureChanged,
     bool IsUndoOrRedo = false, bool CalculationOnly = false)
@@ -120,4 +125,7 @@ public sealed record DocumentChange(long Revision, ImmutableArray<CellChange> Ce
     public Guid SessionId { get; init; }
 }
 
-public sealed record CommandResult(bool Changed, long Revision);
+public sealed record CommandResult(bool Changed, long Revision)
+{
+    public bool CalculationUnchanged { get; init; }
+}

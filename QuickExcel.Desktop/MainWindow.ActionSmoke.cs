@@ -30,6 +30,7 @@ public partial class MainWindow
         if (_document.ScriptsEnabled || RunActionButton.IsEnabled || ActionPicker.Items.Count != 0)
             throw new Exception("Opening an action package restored authorization or a live registry.");
         await RunScriptsAsync();
+        ScriptPage_Click(this, new());
         if (ActionPicker.Items.Count != 1 || !RunActionButton.IsEnabled || !ActionsPanel.IsVisible)
             throw new Exception("The action selector is not ready after explicit application.");
         var before = _document.Snapshot.Revision;

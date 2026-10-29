@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Automation;
 using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -36,6 +37,7 @@ internal sealed class WpfGridSurface : IGridSurface
     public int RealizedRows => _realized.Count;
     public int LastRefreshRows { get; private set; }
     public SheetViewState View { get; set; } = new();
+    public bool IsFiltered(int row) => View.IsFilteredOut(Snapshot, _sheetIndex, row);
     public WpfGridSurface(DataGrid grid)
     {
         _grid = grid;
@@ -71,6 +73,7 @@ internal sealed class WpfGridSurface : IGridSurface
                 style.Setters.Add(new Setter(TextBlock.FontStyleProperty, new Binding { Converter = new AppearanceConverter(column, "italic") }));
                 style.Setters.Add(new Setter(TextBlock.TextAlignmentProperty, new Binding { Converter = new AppearanceConverter(column, "alignment") }));
                 var cellStyle = new Style(typeof(DataGridCell), (Style)_grid.FindResource(typeof(DataGridCell)));
+                cellStyle.Setters.Add(new Setter(AutomationProperties.NameProperty, new Binding { Converter = new AppearanceConverter(column, "automation") }));
                 cellStyle.Setters.Add(new Setter(Control.BorderThicknessProperty, new Binding { Converter = new AppearanceConverter(column, "border") }));
                 cellStyle.Setters.Add(new Setter(Control.BorderBrushProperty, new Binding { Converter = new AppearanceConverter(column, "borderColor") }));
                 cellStyle.Triggers.Add(new Trigger { Property = DataGridCell.IsSelectedProperty, Value = true,
@@ -83,7 +86,7 @@ internal sealed class WpfGridSurface : IGridSurface
                 _grid.Columns.Add(new GridInputColumn(column)
                 {
                     Header = MainWindow.ColumnName(column),
-                    Width = metadata?.Width is { } width ? Math.Clamp(width * 7 + 5, 55, 400) : column == 0 ? 160 : 112,
+                    Width = metadata?.Width is { } width ? Math.Clamp(width * 7 + 5, 12, 400) : column == 0 ? 160 : 112,
                     Visibility = metadata?.Hidden == true ? Visibility.Collapsed : Visibility.Visible,
                     Binding = new Binding($"[{column}]") { Mode = BindingMode.TwoWay, UpdateSourceTrigger = UpdateSourceTrigger.Explicit },
                     ElementStyle = style,
@@ -109,7 +112,10 @@ internal sealed class WpfGridSurface : IGridSurface
         Refresh(snapshot);
     }
 
-    public void Refresh(WorkbookSnapshot snapshot)
+    public void Refresh(WorkbookSnapshot snapshot) => RefreshCore(snapshot, refreshContents: true);
+    public void RefreshDimensions(WorkbookSnapshot snapshot) => RefreshCore(snapshot, refreshContents: false);
+
+    private void RefreshCore(WorkbookSnapshot snapshot, bool refreshContents)
     {
         Snapshot = snapshot;
         _grid.FrozenColumnCount = Math.Min(View.FrozenColumns, _grid.Columns.Count);
@@ -117,23 +123,24 @@ internal sealed class WpfGridSurface : IGridSurface
         {
             Sheet.Columns.TryGetValue(column, out var metadata);
             _grid.Columns[column].Visibility = metadata?.Hidden == true ? Visibility.Collapsed : Visibility.Visible;
-            _grid.Columns[column].Width = metadata?.Width is { } width ? Math.Clamp(width * 7 + 5, 55, 400) : column == 0 ? 160 : 112;
+            _grid.Columns[column].Width = metadata?.Width is { } width ? Math.Clamp(width * 7 + 5, 12, 400) : column == 0 ? 160 : 112;
         }
         LastRefreshRows = 0;
         foreach (var container in _realized.ToArray())
         {
-            RefreshRow(container);
+            RefreshRow(container, refreshContents);
             LastRefreshRows++;
         }
     }
 
-    private void RefreshRow(DataGridRow container)
+    private void RefreshRow(DataGridRow container, bool refreshContents = true)
     {
         if (container.Item is not SheetRow row) return;
         container.Header = (row.Index + 1).ToString(CultureInfo.InvariantCulture);
+        AutomationProperties.SetName(container, $"第 {row.Index + 1} 行");
         Sheet.Rows.TryGetValue(row.Index, out var metadata);
         container.Height = metadata?.Hidden == true || View.IsFilteredOut(Snapshot, _sheetIndex, row.Index) ? 0 : Math.Clamp(metadata?.Height ?? Sheet.DefaultRowHeight ?? 31, 0, 400);
-        row.Refresh();
+        if (refreshContents) row.Refresh();
     }
 
     public IReadOnlyList<CellPosition> Selection => _grid.SelectedCells.Where(c => c.Item is SheetRow)
@@ -234,6 +241,7 @@ internal sealed class AppearanceConverter(int column, string property) : IValueC
         var style = (value as SheetRow)?.GetStyle(column);
         return property switch
         {
+            "automation" => value is SheetRow row ? $"{MainWindow.ColumnName(column)}{row.Index + 1}，{row[column]}" : "",
             "weight" => style?.Bold == true ? FontWeights.SemiBold : FontWeights.Normal,
             "italic" => style?.Italic == true ? FontStyles.Italic : FontStyles.Normal,
             "alignment" => style?.Horizontal switch { 2 => TextAlignment.Center, 3 => TextAlignment.Right, _ => TextAlignment.Left },

@@ -25,6 +25,7 @@ public partial class MainWindow
         _suppressAutoCalculation = true;
         try
         {
+            await RunGridResizeSmokeAsync(folder, Check);
             InstallDocument(WorkbookDocument.CreateBlank(_services), path, "工作区验收.xlsq");
             ApplyValues([(0, 0, "Key"), (0, 1, "Label"), (0, 2, "Value"), (1, 0, "2"), (1, 1, "second"), (1, 2, "=A2*10"),
                 (2, 0, "1"), (2, 1, "first"), (2, 2, "=A3*10"), (3, 0, "2"), (3, 1, "third"), (3, 2, "=A4*10")]);
@@ -124,8 +125,8 @@ public partial class MainWindow
             Check(_recentFiles.Paths[0] == copy && RecentFilesMenu.Items.Count >= 3, "Successful opens and saves populate recent menu; failures do not");
             var reload = new RecentFileStore(Path.Combine(folder, "recent-files.json")); reload.Load();
             Check(reload.Paths.Contains(copy), "Recent files persist to isolated acceptance settings");
-            ToggleScriptPanel_Click(this, new()); Check(ScriptPanel.Visibility == Visibility.Collapsed, "Workspace can hide script panel");
-            ToggleScriptPanel_Click(this, new()); Check(ScriptPanel.Visibility == Visibility.Visible, "Workspace restores script panel and grid focus");
+            ScriptPage_Click(this, new()); Check(ScriptPanel.Visibility == Visibility.Visible && !WorkbookPage.IsVisible, "Workspace opens dedicated script page");
+            WorkbookPage_Click(this, new()); Check(ScriptPanel.Visibility == Visibility.Collapsed && WorkbookPage.IsVisible, "Workspace restores full-width grid");
             ApplyValues([(5, 0, "pending")]); _smokeDiscardDecision = MessageBoxResult.Cancel;
             New_Click(this, new()); await Idle();
             Check(_document.Session.SessionId == identity && _document.IsDirty, "Cancel New preserves dirty workbook");

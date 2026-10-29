@@ -40,7 +40,6 @@ public sealed class ShiftAxisCommand(SheetId sheetId, SheetAxis axis, int index,
         var limit = axis == SheetAxis.Row ? WorkbookLimits.MaxRows : WorkbookLimits.MaxColumns;
         if (!Enum.IsDefined(axis) || index < 0 || count < 1 || index > limit - count) throw new ArgumentOutOfRangeException(nameof(index));
         var target = snapshot.GetSheet(sheetId);
-        StructureEdits.RequireSimpleStructure(target);
         int? Position(int value)
         {
             if (!delete) return value < index ? value : checked(value + count);
@@ -67,7 +66,7 @@ public sealed class MoveAxisCommand(SheetId sheetId, SheetAxis axis, int start, 
         if (!Enum.IsDefined(axis) || start < 0 || destination < 0 || count < 1 || start > limit - count || destination > limit - count)
             throw new ArgumentOutOfRangeException(nameof(start));
         if (start == destination) return new(snapshot, [], false);
-        var target = snapshot.GetSheet(sheetId); StructureEdits.RequireSimpleStructure(target);
+        var target = snapshot.GetSheet(sheetId);
         int? Position(int value)
         {
             if (value >= start && value < start + count) return destination + value - start;
@@ -188,8 +187,36 @@ internal static class StructureEdits
                     yield return new(next.Value, value);
                 }
             }
+            CellRectangle? MapRectangle(CellRectangle rectangle)
+            {
+                var mapped = interval(axis == SheetAxis.Row ? rectangle.Top : rectangle.Left, axis == SheetAxis.Row ? rectangle.Bottom : rectangle.Right);
+                if (mapped is null) return null;
+                if (mapped.Value.Start < 0 || mapped.Value.End >= limit) throw new ArgumentException("结构编辑会使图片或合并区域越界，操作未应用。");
+                return axis == SheetAxis.Row ? rectangle with { Top = mapped.Value.Start, Bottom = mapped.Value.End }
+                    : rectangle with { Left = mapped.Value.Start, Right = mapped.Value.End };
+            }
+            var merges = new List<CellRectangle>();
+            foreach (var text in sheet.MergedCells)
+            {
+                var original = CellRectangle.Parse(text);
+                if (MapRectangle(original) is not { } mapped) continue;
+                // A partial move must retain the top-left owner, otherwise its value would be hidden.
+                var owner = position(axis == SheetAxis.Row ? original.Top : original.Left);
+                if (owner is null || owner != (axis == SheetAxis.Row ? mapped.Top : mapped.Left))
+                    throw new NotSupportedException("操作会移除或移动合并区域的主单元格，请先取消合并。");
+                if (merges.Any(m => m.Top <= mapped.Bottom && m.Bottom >= mapped.Top && m.Left <= mapped.Right && m.Right >= mapped.Left))
+                    throw new NotSupportedException("操作会使合并区域重叠。");
+                merges.Add(mapped);
+            }
+            var images = new List<SheetImage>();
+            foreach (var image in sheet.Images)
+            {
+                var original = new CellRectangle(image.RowIndex, image.ColumnIndex, image.RowIndex + image.RowSpan - 1, image.ColumnIndex + image.ColumnSpan - 1);
+                if (MapRectangle(original) is not { } mapped) continue;
+                images.Add(new(image.Data, image.Extension, mapped.Top, mapped.Left, mapped.Bottom - mapped.Top + 1, mapped.Right - mapped.Left + 1, image.PlaceInCell));
+            }
             return new(sheet.Id, sheet.Name, relocated, axis == SheetAxis.Row ? Metadata(sheet.Rows) : sheet.Rows,
-                axis == SheetAxis.Column ? Metadata(sheet.Columns) : sheet.Columns, sheet.MergedCells, sheet.Images,
+                axis == SheetAxis.Column ? Metadata(sheet.Columns) : sheet.Columns, merges.Select(m => m.ToString()), images,
                 sheet.ShowGridLines, sheet.DefaultRowHeight, sheet.TabColor);
         });
     }

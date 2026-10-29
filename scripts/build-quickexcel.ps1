@@ -108,7 +108,7 @@ try {
             if (-not (Test-Path -LiteralPath $resultPath -PathType Leaf)) { throw "QuickExcel WPF smoke exited without its result file: $smokePath" }
             $smokeResult = (Get-Content -LiteralPath $resultPath -Raw).Trim()
             if (-not $smokeResult.StartsWith('PASS:', [StringComparison]::Ordinal)) { throw "QuickExcel WPF smoke did not report PASS: $smokePath" }
-            foreach ($resultName in @('storage-smoke-result.txt', 'close-smoke-result.txt', 'calculation-smoke-result.txt', 'date-display-smoke-result.txt', 'worker-smoke-result.txt', 'actions-smoke-result.txt', 'interaction-smoke-result.txt', 'workspace-smoke-result.txt')) {
+            foreach ($resultName in @('storage-smoke-result.txt', 'close-smoke-result.txt', 'calculation-smoke-result.txt', 'date-display-smoke-result.txt', 'worker-smoke-result.txt', 'actions-smoke-result.txt', 'interaction-smoke-result.txt', 'workspace-smoke-result.txt', 'product-smoke-result.txt')) {
                 $resultFile = Join-Path $smokePath $resultName
                 if (-not (Test-Path -LiteralPath $resultFile -PathType Leaf) -or
                     -not (Get-Content -LiteralPath $resultFile -Raw).StartsWith('PASS:', [StringComparison]::Ordinal)) {
@@ -175,6 +175,7 @@ try {
     Copy-Item -LiteralPath (Join-Path $projectRoot 'QuickExcel.Desktop\docs\16-m4-recovery-and-deployment.md') -Destination (Join-Path $supportDocsPath '16-m4-recovery-and-deployment.md')
     Copy-Item -LiteralPath (Join-Path $projectRoot 'QuickExcel.Desktop\docs\17-m5-grid-and-input.md') -Destination (Join-Path $supportDocsPath '17-m5-grid-and-input.md')
     Copy-Item -LiteralPath (Join-Path $projectRoot 'QuickExcel.Desktop\docs\18-m5-structure-and-workspace.md') -Destination (Join-Path $supportDocsPath '18-m5-structure-and-workspace.md')
+    Copy-Item -LiteralPath (Join-Path $projectRoot 'QuickExcel.Desktop\docs\19-m5-product-workspace.md') -Destination (Join-Path $supportDocsPath '19-m5-product-workspace.md')
     Copy-Item -LiteralPath (Join-Path $projectRoot 'QuickExcel.Scripting\native\SOURCES.md') -Destination (Join-Path $publishPath 'QUICKJS-SOURCES.md')
     $notices = @"
 QuickExcel third-party component provenance

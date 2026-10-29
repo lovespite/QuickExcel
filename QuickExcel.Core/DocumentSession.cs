@@ -76,7 +76,8 @@ public sealed class DocumentSession : IDisposable
                 return new(false, before.Revision);
             }
             var sourceChanged = command is UpdateScriptSourceCommand or UpdateScriptModulesCommand;
-            var after = Invalidate(draft.Snapshot.WithRevision(checked(before.Revision + 1)));
+            var revised = draft.Snapshot.WithRevision(checked(before.Revision + 1));
+            var after = draft.CalculationUnchanged ? CarryCalculationRevision(revised, before.Revision) : Invalidate(revised);
             var entry = sourceChanged ? null : new HistoryEntry(before, after, draft.Changes, draft.StructureChanged);
             if (entry is not null && entry.Bytes > HistoryBudgetBytes)
                 throw new InvalidOperationException("此操作超过撤销历史容量，尚未修改工作簿。请缩小操作范围。");
@@ -99,10 +100,10 @@ public sealed class DocumentSession : IDisposable
             }
             AdvanceCalculationGeneration();
             _snapshot = after;
-            _diagnostics = diagnostics.IsDefault ? [] : diagnostics;
+            if (!draft.CalculationUnchanged) _diagnostics = diagnostics.IsDefault ? [] : diagnostics;
             change = new(after.Revision, ActualChanges(before, after, draft.Changes), draft.StructureChanged);
             QueueNotification(change);
-            result = new(true, after.Revision);
+            result = new(true, after.Revision) { CalculationUnchanged = draft.CalculationUnchanged };
         }
         PublishNotifications();
         return result;
@@ -318,6 +319,26 @@ public sealed class DocumentSession : IDisposable
             return changed ? sheet.WithCells(cells.ToImmutable()) : sheet;
         });
         return snapshot.WithSheets(sheets);
+    }
+
+    // Size-only edits cannot change formula inputs. Carry only results valid for the previous
+    // revision; stale/blocked/missing caches stay that way. Generation advancement still rejects
+    // late calculations/actions, and normal undo/redo retains its existing invalidation policy.
+    private static WorkbookSnapshot CarryCalculationRevision(WorkbookSnapshot snapshot, long previousRevision)
+    {
+        return snapshot.WithSheets(snapshot.Sheets.Select(sheet =>
+        {
+            ImmutableDictionary<CellPosition, CellSnapshot>.Builder? cells = null;
+            foreach (var (position, cell) in sheet.Cells)
+                if (cell.Content.Kind == CellContentKind.Formula && cell.Calculation is { } cache &&
+                    cache.InputRevision == previousRevision && cache.State is CalculationState.Fresh or CalculationState.Error)
+                {
+                    cells ??= sheet.Cells.ToBuilder();
+                    cells[position] = new(cell.Content, new(cache.Value, cache.State, snapshot.Revision,
+                        cache.CalculationGeneration, cache.ScriptGeneration, cache.Diagnostics));
+                }
+            return cells is null ? sheet : sheet.WithCells(cells.ToImmutable());
+        }));
     }
 
     private void TrimHistory()

@@ -1,6 +1,6 @@
 # QuickExcel 0.6 交互预览版
 
-最新 `0.6.0-preview.2`：UI-004/UI-005 当前范围完成，加入结构菜单、排序/筛选、冻结、基础样式、最近文件及保存外部冲突检测；操作语义、验收和边界见 [M5 结构与工作区](QuickExcel.Desktop/docs/18-m5-structure-and-workspace.md)。候选程序位于 `artifacts/m5-workspace-candidate/QuickExcel.exe`。
+最新 `0.6.0-preview.3`：正式界面基础已接入，启动页、底部/左/右工作表标签、脚本专页、模块编辑、查找替换、基础图片/合并呈现和兼容/导出入口；范围与证据见 [M5 正式界面](QuickExcel.Desktop/docs/19-m5-product-workspace.md)。候选程序位于 `artifacts/QuickExcel/QuickExcel.exe`，也可双击 `Start-QuickExcel.cmd`。
 
 2026-10-28 M5 首切片：UI-002 / UI-003 本切片完成，网格适配、按需行/可见行刷新、键盘导航/矩形选择及 TSV 粘贴已接入；32 项 WPF 交互断言与本机中文拼音实机验收通过。测试、性能探索及验收范围见 [M5 网格与输入](QuickExcel.Desktop/docs/17-m5-grid-and-input.md)。M5 整体与 Beta 尚未完成。
 

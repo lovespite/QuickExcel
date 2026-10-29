@@ -151,7 +151,8 @@ public sealed class SetAxisMetadataCommand(SheetId sheetId, SheetAxis axis, int 
         if (rows.SequenceEqual(sheet.Rows) && columns.SequenceEqual(sheet.Columns)) return new(snapshot, [], false);
         var updated = new WorksheetSnapshot(sheet.Id, sheet.Name, sheet.Cells, rows, columns, sheet.MergedCells, sheet.Images,
             sheet.ShowGridLines, sheet.DefaultRowHeight, sheet.TabColor);
-        return new(snapshot.WithSheets(snapshot.Sheets.Select(s => s.Id == sheetId ? updated : s)), [], true);
+        return new(snapshot.WithSheets(snapshot.Sheets.Select(s => s.Id == sheetId ? updated : s)), [], true,
+            CalculationUnchanged: size.HasValue && hidden is null);
     }
 }
 

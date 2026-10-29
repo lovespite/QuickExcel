@@ -56,6 +56,13 @@ must complete synchronously; no Promise job loop is run. The module map is held
 privately by the native session and released with it. The upstream version,
 archive SHA-256 and license remain unchanged; no vendored engine source is edited.
 
+The M5 product slice preserves bounded native Error stack diagnostics (logical module
+IDs and source lines) through the existing worker failure message. The bridge captures
+the engine's original stack getter before loading workbook code; it does not invoke
+user-defined `stack` getters. Error text remains bounded to 16 KiB UTF-8 and worker
+diagnostics retain the protocol log budget. Engine pin, source hash, license, memory,
+time limits, module resolution and AppContainer launch policy remain unchanged.
+
 Run the runtime smoke checks with:
 
 ```powershell

@@ -40,7 +40,17 @@ UI-004 当前支持范围完成：行列插入/删除/移动、表改名/删除�
 
 显示格式新增内置 ID 1/2/3/4/9/10 及对应精确格式串 `0`、`0.00`、`#,##0`、`#,##0.00`、`0%`、`0.00%`；小数点/分组符跟随显示文化。日期沿用既有格式器。未支持复杂数值格式仍退回通用数字，不宣称完整 Excel 格式引擎。`0.125` 显示 `12.50%` 后编辑仍为 `0.125`，公式栏仍为公式源码。
 
-行高 1–400，列宽 1–56 字符单位，WPF 实际列宽沿用 55–400 DIP 限制。尺寸由命令修改，关闭原生拖动列宽避免不进入历史的写路径。边框呈现为基础细线；复杂边框/字体选择器、合并和图片呈现不属于本轮。
+菜单行高 1–400，列宽 1–56 字符单位；网格显示及拖动列宽范围为 12–400 DIP（字符宽 × 7 + 5）。行列标题边界支持拖动：过程中仅预览，松开后通过 `EditorController` / `SetAxisMetadataCommand` 提交一次可撤销事务。取消或未移动不新增历史，刷新、滚动复用及保存重开保留尺寸；冻结行参照区同步尺寸，拖动保留当前选区、筛选和冻结状态。边框呈现为基础细线；复杂边框/字体选择器、合并和图片呈现不属于本轮。
+
+2026-10-29 尺寸拖动修正：开启列标题拖动，去除固定 `DataGrid.RowHeight` 与原生 `DataGridCellsPresenter.Height` 的冲突，拖动预览统一更新行容器并清除原生临时高度，避免虚拟化复用残留。`MainWindow.GridResizeSmoke.cs` 新增 34 项实际 WPF 控件断言，工作区总数为 81；覆盖连续拖动、一次历史、取消/无移动、相邻标题边界、隐藏列、筛选、冻结、窄列、输入法门禁、原格草稿及保存重开。事件为合成 Thumb 路由，本轮未做物理鼠标验收。
+
+验证：Release solution 构建 0 警告/0 错误；正常用户完整测试 688/688 通过（`artifacts/test-results/20261029-010246-be618fc9/core-tests.trx`）。受限环境的 96 项脚本隔离失败单独保留于 `artifacts/validation/grid-resize-core`。最终仅桌面后续修正使用 `-SkipTests -RunSmoke` 发布，Core/Infrastructure 二进制与完整测试轮一致；native 及全部 WPF 子结果通过（工作区 81、交互 40、产品 41），证据为 `artifacts/smoke/20261029-010640-e8d5f3df`。默认启动包已更新至 `artifacts/QuickExcel`，日志为 `artifacts/validation/grid-resize-final.log`。
+
+同日后续流畅性修正：`GridResizeInput` 在已启用的网格标题 Thumb 上先处理事件，避免 WPF 原生和自定义逻辑重复写尺寸；其他 Thumb（如滚动条）不受影响。鼠标移动合并到 Render 优先级预览，冻结区域及图片/合并几何同步预览。松手只刷新尺寸，保留冻结列/ItemsSource 和单元格内容绑定，不重建视图。`SetAxisMetadataCommand` 的纯尺寸变更保留当前有效公式结果并推进结果修订号，不启动公式计算或短暂禁用工作区；旧/阻止/缺失缓存不升级。仍推进会话代次以拒绝迟到结果，已有草稿照常提交和重算，隐藏操作、输入编辑及撤销/重做保留原有失效规则。
+
+本轮 Release 构建 0 警告/0 错误；新增 5 项 Core 测试后全量 **693/693**，新增 11 项 WPF 回归后工作区 **92**，交互 **40**、产品 **41** 及完整 native/WPF smoke 通过。结果在 `artifacts/test-results/20261029-012152-a497d5c1` 和 `artifacts/smoke/20261029-012152-a497d5c1`；默认启动包与原始发布树 `artifacts/publish/20261029-012152-a497d5c1` 一致。
+
+独立测量命令为 `scripts/test-m5-grid.ps1 -PackageDirectory artifacts/build/bin/QuickExcel.Desktop/release -Mode ResizeBenchmark`。`artifacts/validation/m5-grid/20261029-012146-8d97d547/ResizeBenchmark/resize-benchmark.json` 保留原始样本：10,000 格含 1,000 个公式、冻结 2 行/2 列，每轴 5 次预热和 10 次测量，每次 32 个合成 Thumb 位移分 4 批。列/行松手到 ApplicationIdle 的 P50 为 21.00/19.01 ms，P95 为 32.90/27.93 ms；预览批次 P95 为 13.24/15.73 ms。所有测量的重算、工作区禁用及冻结列重建次数均为 0。这不是物理鼠标到显示器的帧延迟，也未关闭 M6 性能门禁。早先尝试的通用 `Benchmark` 进程以 `0xC0000005` 退出（目录 `20261029-011602-fc017e48`），未产出可用基线，不用于前后速度比或通过声明。
 
 ## 文件工作区与冲突
 

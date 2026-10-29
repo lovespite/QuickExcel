@@ -11,6 +11,26 @@ namespace QuickExcel.Core.Test;
 
 public sealed class M4ModuleTests
 {
+    [Theory]
+    [InlineData(false)] [InlineData(true)]
+    public void SyntaxErrorsRetainLogicalModuleAndLine(bool worker)
+    {
+        var package = Package("import 'broken';", ("broken", "// first line\nexport const value = ;"));
+        var error = Assert.ThrowsAny<Exception>(() => Create(package, worker));
+        Assert.Contains("SyntaxError", error.Message);
+        Assert.Contains("broken:2", error.Message);
+    }
+
+    [Theory]
+    [InlineData(false)] [InlineData(true)]
+    public void ErrorStackGetterIsNotExecutedByDiagnosticFormatting(bool worker)
+    {
+        var package = Package("const error = new Error('expected'); Object.defineProperty(error, 'stack', {get(){while(true){}}}); throw error;");
+        var error = Assert.ThrowsAny<Exception>(() => Create(package, worker));
+        Assert.Contains("expected", error.Message);
+        Assert.DoesNotContain("time limit", error.Message);
+    }
+
     private static ScriptModuleSet Package(string main, params (string Id, string Source)[] helpers) => new(
         new[] { new KeyValuePair<string, ScriptModule>("main", new("scripts/main.js", main)) }
             .Concat(helpers.Select(h => new KeyValuePair<string, ScriptModule>(h.Id, new($"scripts/lib/{h.Id}.js", h.Source)))),

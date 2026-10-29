@@ -56,10 +56,11 @@ try
                 create = () => new QuickJsSession(load.Source);
             }
             try { runtime = create(); }
-            catch (Exception)
+            catch (Exception error)
             {
                 await WorkerProtocol.WriteAsync(output, WorkerProtocol.Message(request.Identity, "failure",
-                    new WorkerFailure("Load", "脚本加载失败；请检查语法、包内模块 ID、同步初始化、注册及资源限额。")));
+                    new WorkerFailure("Load", error is InvalidOperationException ? Bounded("脚本加载失败：" + error.Message)
+                        : "脚本加载失败；请检查语法、包内模块 ID、同步初始化、注册及资源限额。")));
                 return 3;
             }
             if (runtime.FunctionDescriptors.Count > WorkerProtocol.MaxFunctions) throw new ProtocolException("Too many functions.");
@@ -125,10 +126,10 @@ try
                 ActionProtocol.ValidatePatch(patch, action);
                 await WorkerProtocol.WriteAsync(output, WorkerProtocol.Message(request.Identity, "runAction", patch));
             }
-            catch (InvalidOperationException)
+            catch (InvalidOperationException error)
             {
                 await WorkerProtocol.WriteAsync(output, WorkerProtocol.Message(request.Identity, "failure",
-                    new WorkerFailure(runtime.LastOperationInterrupted ? "Timeout" : "Action", "操作脚本失败或超出资源/变更限制，本次变更未提交。")));
+                    new WorkerFailure(runtime.LastOperationInterrupted ? "Timeout" : "Action", Bounded("操作脚本失败，本次变更未提交：" + error.Message))));
                 return 7;
             }
         }

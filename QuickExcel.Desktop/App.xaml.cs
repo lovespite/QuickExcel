@@ -11,13 +11,13 @@ public partial class App : Application
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
-        if (e.Args.Length > 0 && e.Args[0] is "--smoke-test" or "--interaction-smoke" or "--workspace-smoke" or "--grid-benchmark")
+        if (e.Args.Length > 0 && e.Args[0] is "--smoke-test" or "--interaction-smoke" or "--workspace-smoke" or "--product-smoke" or "--grid-benchmark" or "--resize-benchmark")
             _smokeEvidenceDirectory = e.Args.Length > 1 ? e.Args[1] : Path.Combine(AppContext.BaseDirectory, "smoke");
         DispatcherUnhandledException += OnUnhandled;
         var window = new MainWindow();
         MainWindow = window;
-        window.Show();
         window.Loaded += async (_, _) => await window.StartAsync(e.Args);
+        window.Show();
     }
 
     private static void OnUnhandled(object sender, DispatcherUnhandledExceptionEventArgs e)
