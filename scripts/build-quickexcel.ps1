@@ -177,9 +177,15 @@ try {
     Copy-Item -LiteralPath (Join-Path $projectRoot 'QuickExcel.Desktop\docs\18-m5-structure-and-workspace.md') -Destination (Join-Path $supportDocsPath '18-m5-structure-and-workspace.md')
     Copy-Item -LiteralPath (Join-Path $projectRoot 'QuickExcel.Desktop\docs\19-m5-product-workspace.md') -Destination (Join-Path $supportDocsPath '19-m5-product-workspace.md')
     Copy-Item -LiteralPath (Join-Path $projectRoot 'QuickExcel.Desktop\docs\20-script-signatures.md') -Destination (Join-Path $supportDocsPath '20-script-signatures.md')
+    Copy-Item -LiteralPath (Join-Path $projectRoot 'QuickExcel.Desktop\docs\21-excel-ribbon.md') -Destination (Join-Path $supportDocsPath '21-excel-ribbon.md')
     Copy-Item -LiteralPath (Join-Path $projectRoot 'QuickExcel.Scripting\native\SOURCES.md') -Destination (Join-Path $publishPath 'QUICKJS-SOURCES.md')
     $notices = @"
 QuickExcel third-party component provenance
+
+FluentIcons.Wpf / FluentIcons.Common 2.1.344
+Source: https://github.com/davidxuang/FluentIcons
+Upstream artwork: https://github.com/microsoft/fluentui-system-icons
+Declared license: MIT. Complete copyright and license text: FLUENT-ICONS-LICENSE.txt.
 
 QuickJS-NG $($nativeVersionMatch.Groups[1].Value)
 Source: https://github.com/quickjs-ng/quickjs

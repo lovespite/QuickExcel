@@ -267,7 +267,7 @@ public partial class MainWindow
 
     private void Style_Click(object sender, RoutedEventArgs e)
     {
-        if (_busy || !CommitEditors()) return;
+        if (_busy || !CommitEditors()) { UpdateRibbonState(); return; }
         try
         {
             var snapshot = _document.Snapshot; var sheet = snapshot.Sheets[_sheetIndex];

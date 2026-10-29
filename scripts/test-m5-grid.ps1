@@ -16,7 +16,7 @@ if (-not (Test-Path -LiteralPath $exe -PathType Leaf)) { throw "Missing executab
 $run = [DateTime]::UtcNow.ToString('yyyyMMdd-HHmmss') + '-' + [Guid]::NewGuid().ToString('N').Substring(0, 8)
 $evidence = Join-Path $artifacts "validation\m5-grid\$run"
 New-Item -ItemType Directory -Path $evidence | Out-Null
-$modes = if ($Mode -eq 'All') { @('Interaction', 'Workspace', 'Product', 'Benchmark') } else { @($Mode) }
+$modes = if ($Mode -eq 'All') { @('Interaction', 'Workspace', 'Product', 'Ribbon', 'Benchmark') } else { @($Mode) }
 foreach ($scenario in $modes) {
     $directory = Join-Path $evidence $scenario
     New-Item -ItemType Directory -Path $directory | Out-Null

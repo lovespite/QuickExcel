@@ -13,6 +13,7 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="FluentIcons.Wpf" Version="2.1.344" />
+    <None Update="FLUENT-ICONS-LICENSE.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <ProjectReference Include="../QuickExcel.Core/QuickExcel.Core.csproj" />
     <ProjectReference Include="../QuickExcel.Infrastructure/QuickExcel.Infrastructure.csproj" />
   </ItemGroup>

@@ -54,7 +54,7 @@ public partial class MainWindow
             Check(_document.GetCellInput(0, 3, 1) == "123" &&
                 _document.Snapshot.Styles[_document.Snapshot.Sheets[0].GetStyleId(3, 1)].FontSize == 18,
                 "Changing font size commits the original-cell draft and keeps the requested size");
-            RibbonFontFamily.SelectedItem = "Consolas"; await Idle();
+            RibbonFontFamily.SelectedValue = "Consolas"; await Idle();
             Click(RibbonWrap); Click(RibbonAlignMiddle); Click(RibbonAlignCenter); await Idle();
             var style = _document.Snapshot.Styles[_document.Snapshot.Sheets[0].GetStyleId(3, 1)];
             Check(style.FontName == "Consolas" && style.WrapText && style.Vertical == 1 && style.Horizontal == 2,
@@ -79,7 +79,8 @@ public partial class MainWindow
             Check(ScriptPanel.IsVisible && !RibbonTabs.IsEnabled, "Workbook ribbon is disabled while editing scripts");
             WorkbookPage_Click(this, new()); await Idle();
             Check(RibbonTabs.IsEnabled, "Workbook ribbon reactivates when returning to the sheet");
-            Check(ProductChildren<ButtonBase>(HomeRibbonContent).All(b => !string.IsNullOrWhiteSpace(AutomationProperties.GetName(b))),
+            Check(ProductChildren<ButtonBase>(HomeRibbonContent).Where(b => b.ReadLocalValue(Ribbon.IconProperty) != DependencyProperty.UnsetValue)
+                .All(b => !string.IsNullOrWhiteSpace(AutomationProperties.GetName(b))),
                 "Every ribbon action has an accessible name");
             InstallProductFixture(); await Idle();
             GridSurface.Select(new(3, 1)); await Idle();

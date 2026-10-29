@@ -4,6 +4,7 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Markup;
 using QuickExcel.Core;
 using QuickExcel.Domain;
 
@@ -12,8 +13,11 @@ namespace QuickExcel.Desktop;
 public partial class MainWindow
 {
     private bool _updatingRibbon;
-    private readonly List<string> _ribbonFonts = Fonts.SystemFontFamilies.Select(f => f.Source)
-        .OrderBy(name => name, StringComparer.CurrentCultureIgnoreCase).ToList();
+    private sealed record RibbonFont(string Source, string Name);
+    private readonly List<RibbonFont> _ribbonFonts = Fonts.SystemFontFamilies.Select(f => new RibbonFont(f.Source,
+        f.Source switch { "Microsoft YaHei UI" => "微软雅黑 UI", "Microsoft YaHei" => "微软雅黑",
+            _ => f.FamilyNames.TryGetValue(XmlLanguage.GetLanguage("zh-CN"), out var name) ? name : f.Source }))
+        .OrderBy(font => font.Name, StringComparer.CurrentCultureIgnoreCase).ToList();
     private readonly List<double> _ribbonSizes = [8, 9, 10, 11, 12, 14, 16, 18, 20, 24, 28, 36, 48, 72];
 
     private void UpdateRibbonState()
@@ -27,11 +31,11 @@ public partial class MainWindow
             var style = snapshot.Styles[sheet.GetStyleId(_selectedRow, _selectedColumn)];
             var font = style.FontName ?? "Microsoft YaHei UI";
             var size = style.FontSize ?? 11;
-            if (!_ribbonFonts.Contains(font)) { _ribbonFonts.Add(font); RibbonFontFamily.ItemsSource = null; }
+            if (!_ribbonFonts.Any(f => f.Source == font)) { _ribbonFonts.Add(new(font, font)); RibbonFontFamily.ItemsSource = null; }
             if (!_ribbonSizes.Contains(size)) { _ribbonSizes.Add(size); _ribbonSizes.Sort(); RibbonFontSize.ItemsSource = null; }
             RibbonFontFamily.ItemsSource = _ribbonFonts;
             RibbonFontSize.ItemsSource = _ribbonSizes;
-            RibbonFontFamily.SelectedItem = font;
+            RibbonFontFamily.SelectedValue = font;
             RibbonFontSize.SelectedItem = size;
             RibbonBold.IsChecked = style.Bold;
             RibbonItalic.IsChecked = style.Italic;
@@ -67,8 +71,8 @@ public partial class MainWindow
         try
         {
             if (_busy || !CommitEditors()) return;
-            if (ReferenceEquals(sender, RibbonFontFamily) && selected is string family)
-                ApplyRibbonStyle(new(FontName: family));
+            if (ReferenceEquals(sender, RibbonFontFamily) && selected is RibbonFont family)
+                ApplyRibbonStyle(new(FontName: family.Source));
             else if (ReferenceEquals(sender, RibbonFontSize) && selected is double size)
                 ApplyRibbonStyle(new(FontSize: size));
         }

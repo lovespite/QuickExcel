@@ -27,6 +27,10 @@
   </ControlTemplate></Setter.Value></Setter>
  </Style>
  <Style x:Key="RibbonButton" TargetType="Button" BasedOn="{StaticResource RibbonButtonBase}"/>
+ <Style x:Key="RibbonQuickButton" TargetType="Button" BasedOn="{StaticResource RibbonButton}">
+  <Setter Property="Foreground" Value="White"/>
+  <Style.Triggers><Trigger Property="IsMouseOver" Value="True"><Setter Property="Foreground" Value="#22352E"/></Trigger></Style.Triggers>
+ </Style>
  <Style x:Key="RibbonToggle" TargetType="ToggleButton" BasedOn="{StaticResource RibbonButtonBase}">
   <Style.Triggers><Trigger Property="IsChecked" Value="True"><Setter Property="Background" Value="#DCEAE2"/><Setter Property="BorderBrush" Value="#8DAE9C"/></Trigger></Style.Triggers>
  </Style>
@@ -62,13 +66,13 @@
   <Setter Property="Padding" Value="15,7"/><Setter Property="FontSize" Value="15"/>
   <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="TabItem">
    <Border x:Name="Tab" Background="Transparent" Padding="{TemplateBinding Padding}">
-    <Grid><ContentPresenter ContentSource="Header" VerticalAlignment="Center" RecognizesAccessKey="True"/>
+    <Grid><ContentPresenter x:Name="Header" ContentSource="Header" VerticalAlignment="Center" RecognizesAccessKey="True"/>
      <Border x:Name="Underline" Height="3" Background="Transparent" VerticalAlignment="Bottom" Margin="0,0,0,-6" CornerRadius="1"/>
     </Grid>
    </Border>
    <ControlTemplate.Triggers>
     <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Tab" Property="Background" Value="#E4E4E4"/></Trigger>
-    <Trigger Property="IsSelected" Value="True"><Setter Property="FontWeight" Value="SemiBold"/><Setter TargetName="Underline" Property="Background" Value="#187553"/></Trigger>
+    <Trigger Property="IsSelected" Value="True"><Setter TargetName="Header" Property="TextElement.FontWeight" Value="SemiBold"/><Setter TargetName="Underline" Property="Background" Value="#187553"/></Trigger>
     <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Tab" Property="Background" Value="#DCEAE2"/></Trigger>
    </ControlTemplate.Triggers>
   </ControlTemplate></Setter.Value></Setter>
