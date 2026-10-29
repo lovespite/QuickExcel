@@ -1,6 +1,5 @@
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Controls.Primitives;
+using System.Windows.Input;
 using System.Windows.Threading;
 using QuickExcel.Core;
 using QuickExcel.Domain;
@@ -9,131 +8,103 @@ namespace QuickExcel.Desktop;
 
 public partial class MainWindow
 {
-    private sealed class GridResize(DataGrid grid, Thumb grip, SheetId sheetId, SheetAxis axis, int index,
-        DataGridRow? row, DataGridColumn? column, double pixels)
+    private sealed record GridResize(SheetId SheetId, SheetAxis Axis, int Index, double OriginalPixels, Point Origin)
     {
-        public Thumb Grip { get; } = grip;
-        public DataGrid Grid { get; } = grid;
-        public Point Origin { get; } = grip.TranslatePoint(new Point(), grid);
-        public SheetId SheetId { get; } = sheetId;
-        public SheetAxis Axis { get; } = axis;
-        public int Index { get; } = index;
-        public DataGridRow? Row { get; } = row;
-        public DataGridColumn? Column { get; } = column;
-        public double OriginalPixels { get; } = pixels;
-        public double Pixels { get; set; } = pixels;
+        public double Pixels { get; set; } = OriginalPixels;
     }
-
     private GridResize? _gridResize;
     private DispatcherOperation? _resizePreview;
 
-    private void InstallGridResizeHandlers(DataGrid grid)
+    private void InstallGridResizeHandlers()
     {
-        GridResizeInput.Enable(grid);
-        grid.AddHandler(Thumb.DragStartedEvent, new DragStartedEventHandler(GridResize_Started), true);
-        grid.AddHandler(Thumb.DragDeltaEvent, new DragDeltaEventHandler(GridResize_Delta), true);
-        grid.AddHandler(Thumb.DragCompletedEvent, new DragCompletedEventHandler(GridResize_Completed), true);
+        SheetGrid.PreviewMouseLeftButtonDown += (_, e) =>
+        {
+            if (e.Handled || FindGridResize(e.GetPosition(_grid.Control)) is not { } hit) return;
+            e.Handled = true;
+            if (BeginGridResize(hit.Axis, hit.Index, e.GetPosition(_grid.Control)))
+                Mouse.Capture(SheetGrid, CaptureMode.Element);
+        };
+        SheetGrid.PreviewMouseMove += (_, e) =>
+        {
+            if (_gridResize is { } resize)
+            {
+                var point = e.GetPosition(_grid.Control);
+                PreviewGridResize(resize.Axis == SheetAxis.Row ? point.Y - resize.Origin.Y : point.X - resize.Origin.X);
+                e.Handled = true;
+            }
+            else SheetGrid.Cursor = FindGridResize(e.GetPosition(_grid.Control)) is { } hit
+                ? hit.Axis == SheetAxis.Row ? Cursors.SizeNS : Cursors.SizeWE : null;
+        };
+        SheetGrid.PreviewMouseLeftButtonUp += (_, e) =>
+        {
+            if (_gridResize is null) return;
+            CompleteGridResize(false); Mouse.Capture(null); e.Handled = true;
+        };
+        SheetGrid.LostMouseCapture += (_, _) => { if (_gridResize is not null) CompleteGridResize(true); };
+        PreviewKeyDown += (_, e) =>
+        {
+            if (_gridResize is not null && e.Key == Key.Escape)
+            { CompleteGridResize(true); Mouse.Capture(null); e.Handled = true; }
+        };
     }
 
-    private GridResize? FindGridResize(DataGrid grid, Thumb grip)
+    private (SheetAxis Axis, int Index)? FindGridResize(Point point)
     {
-        var sheet = _document.Snapshot.Sheets[_sheetIndex];
-        if (grip.TemplatedParent is DataGridColumnHeader header && grid.CanUserResizeColumns)
+        if (_document is null) return null;
+        var grid = _grid.Control;
+        if (point.Y >= 0 && point.Y < grid.ColumnHeaderHeight)
         {
-            var column = grip.Name switch
-            {
-                "PART_RightHeaderGripper" => header.Column,
-                "PART_LeftHeaderGripper" => grid.Columns.Where(c => c.DisplayIndex < header.DisplayIndex && c.Visibility == Visibility.Visible)
-                    .OrderByDescending(c => c.DisplayIndex).FirstOrDefault(),
-                _ => null
-            };
-            if (column is { CanUserResize: true })
-                return new(grid, grip, sheet.Id, SheetAxis.Column, column.DisplayIndex, null, column, column.ActualWidth);
+            var row = grid.GetVisibleModelRows().FirstOrDefault();
+            foreach (var column in grid.GetVisibleModelColumns())
+                if (grid.GetModelCellBounds(row, column) is { } bounds && Math.Abs(point.X - bounds.Right) <= 4)
+                    return (SheetAxis.Column, column);
         }
-        if (grip.TemplatedParent is DataGridRowHeader rowHeader && grid.CanUserResizeRows &&
-            ItemsControl.ContainerFromElement(grid, rowHeader) is DataGridRow headerRow)
+        if (point.X >= 0 && point.X < grid.RowHeaderWidth)
         {
-            DataGridRow? row = headerRow;
-            if (grip.Name == "PART_TopHeaderGripper")
-            {
-                var index = grid.ItemContainerGenerator.IndexFromContainer(row);
-                row = index > 0 ? grid.ItemContainerGenerator.ContainerFromIndex(index - 1) as DataGridRow : null;
-            }
-            else if (grip.Name != "PART_BottomHeaderGripper") return null;
-            if (row?.Item is SheetRow item && row.ActualHeight > 0 &&
-                sheet.Rows.GetValueOrDefault(item.Index)?.Hidden != true && !_grid.IsFiltered(item.Index))
-                return new(grid, grip, sheet.Id, SheetAxis.Row, item.Index, row, null, row.ActualHeight);
+            var column = grid.GetVisibleModelColumns().FirstOrDefault();
+            foreach (var row in grid.GetVisibleModelRows())
+                if (grid.GetModelCellBounds(row, column) is { } bounds && Math.Abs(point.Y - bounds.Bottom) <= 4)
+                    return (SheetAxis.Row, row);
         }
         return null;
     }
 
-    private void GridResize_Started(object sender, DragStartedEventArgs e)
+    private bool BeginGridResize(SheetAxis axis, int index, Point origin = default)
     {
-        if (e.OriginalSource is not Thumb grip || grip.TemplatedParent is not (DataGridColumnHeader or DataGridRowHeader)) return;
-        if (FindGridResize((DataGrid)sender, grip) is not { } resize || _busy || !CommitEditors())
-        { grip.CancelDrag(); return; }
-        _gridResize = resize;
+        if (_busy || !CommitEditors()) return false;
+        var sheet = _document.Snapshot.Sheets[_sheetIndex];
+        var pixels = axis == SheetAxis.Row ? Math.Clamp(sheet.Rows.GetValueOrDefault(index)?.Height ?? sheet.DefaultRowHeight ?? 31, 1, 10000) :
+            sheet.Columns.GetValueOrDefault(index)?.Width is { } width ? Math.Clamp(width * 7 + 5, 1, 10000) : index == 0 ? 160 : 112;
+        _gridResize = new(sheet.Id, axis, index, pixels, origin);
+        return true;
     }
 
-    private void GridResize_Delta(object sender, DragDeltaEventArgs e)
+    private void PreviewGridResize(double displacement)
     {
-        if (_gridResize is not { } resize || !ReferenceEquals(e.OriginalSource, resize.Grip)) return;
-        var change = resize.Axis == SheetAxis.Row ? e.VerticalChange : e.HorizontalChange;
-        if (!double.IsFinite(change)) return;
-        // Thumb reports pointer displacement from its initial local grab point, NOT from
-        // the preceding event. Before queued layout moves the grip, those deltas overlap.
-        // Recover displacement in grid coordinates instead of summing pending deltas.
-        var gripPosition = resize.Grip.TranslatePoint(new Point(), resize.Grid);
-        var moved = resize.Axis == SheetAxis.Row ? gripPosition.Y - resize.Origin.Y : gripPosition.X - resize.Origin.X;
-        resize.Pixels = Math.Clamp(resize.OriginalPixels + moved + change, resize.Axis == SheetAxis.Row ? 1 : 12, 400);
-        // Merge queued pointer moves before layout; only the latest size reaches the view.
-        _resizePreview ??= Dispatcher.BeginInvoke(DispatcherPriority.Render, new Action(ApplyResizePreview));
+        if (_gridResize is not { } resize || !double.IsFinite(displacement)) return;
+        resize.Pixels = Math.Clamp(resize.OriginalPixels + displacement, resize.Axis == SheetAxis.Row ? 1 : 12, 10000);
+        _resizePreview ??= Dispatcher.BeginInvoke(DispatcherPriority.Render, new Action(() =>
+        {
+            _resizePreview = null;
+            if (_gridResize is { } current) _grid.ApplyDimensions(current.Axis, current.Index, current.Pixels);
+        }));
     }
 
-    private void ApplyResizePreview()
+    private void CompleteGridResize(bool cancel)
     {
-        _resizePreview = null;
         if (_gridResize is not { } resize) return;
-        if (resize.Row is { } row)
-        {
-            row.Height = resize.Pixels;
-            foreach (var grid in new[] { SheetGrid, FrozenGrid })
-                if (grid.ItemContainerGenerator.ContainerFromItem(_rows[resize.Index]) is DataGridRow counterpart && !ReferenceEquals(row, counterpart))
-                    counterpart.Height = resize.Pixels;
-            _artwork?.PreviewRowHeight(resize.Index, resize.Pixels - resize.OriginalPixels);
-            _frozenArtwork?.PreviewRowHeight(resize.Index, resize.Pixels - resize.OriginalPixels);
-        }
-        else
-        {
-            resize.Column!.Width = resize.Pixels;
-            if (resize.Index < FrozenGrid.Columns.Count) FrozenGrid.Columns[resize.Index].Width = resize.Pixels;
-        }
-    }
-
-    private void GridResize_Completed(object sender, DragCompletedEventArgs e)
-    {
-        if (_gridResize is not { } resize || !ReferenceEquals(e.OriginalSource, resize.Grip)) return;
-        _resizePreview?.Abort();
-        _resizePreview = null;
-        _gridResize = null;
+        _resizePreview?.Abort(); _resizePreview = null; _gridResize = null;
         if (_document.Snapshot.Sheets[_sheetIndex].Id != resize.SheetId) return;
         try
         {
-            if (!e.Canceled && Math.Abs(resize.Pixels - resize.OriginalPixels) > 0.01 && !_busy && CommitEditors())
-            {
-                var size = resize.Axis == SheetAxis.Row ? resize.Pixels : (resize.Pixels - 5) / 7;
-                _editor.Execute(new SetAxisMetadataCommand(resize.SheetId, resize.Axis, resize.Index, 1, size));
-            }
+            if (!cancel && Math.Abs(resize.Pixels - resize.OriginalPixels) > .01 && !_busy && CommitEditors())
+                _editor.Execute(new SetAxisMetadataCommand(resize.SheetId, resize.Axis, resize.Index, 1,
+                    resize.Axis == SheetAxis.Row ? resize.Pixels : (resize.Pixels - 5) / 7));
         }
         catch (Exception ex) { ReportEditFailure(ex); }
         finally
         {
-            // Also restores canceled/rejected previews, without adding undo entries.
-            _grid.RefreshDimensions(_document.Snapshot);
-            RefreshWorkspaceDimensions();
-            UpdateChrome();
-            // Only an actual pending cell/script draft needs calculation, not the size change.
-            QueueRecalculation();
+            _grid.RefreshDimensions(_document.Snapshot); _grid.ApplyDimensions(); UpdateChrome(); QueueRecalculation();
         }
     }
 }

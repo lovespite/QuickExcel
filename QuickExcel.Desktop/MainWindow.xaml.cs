@@ -23,9 +23,8 @@ public partial class MainWindow : Window
     private WorkbookDocument _document = null!;
     private DocumentViewModel _viewModel = null!;
     private EditorController _editor = null!;
-    private readonly WpfGridSurface _grid;
+    private readonly FastGridSurface _grid;
     private IGridSurface GridSurface => _grid;
-    private VirtualRowList<SheetRow> _rows => _grid.Rows;
     private readonly CellEditState _editState = new();
     private int _sheetIndex;
     private int _rowCount = 100;
@@ -54,7 +53,13 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
-        _grid = new WpfGridSurface(SheetGrid);
+        _grid = new FastGridSurface(CommitGridValue) { HandlesKeyboard = false };
+        SheetGrid.Children.Add(_grid.Element);
+        _grid.BeforeNavigate = () => !_busy && CanCommitComposition() && CommitFormulaBar();
+        _grid.BeforeBeginEdit = () => !_busy && CanCommitComposition() && CommitFormulaBar();
+        _grid.LatestSnapshot = () => _document.Snapshot;
+        _grid.SelectionChanged += Grid_CurrentCellChanged;
+        _grid.EditingChanged += () => { if (_grid.IsEditing) _editState.BeginGrid(); else _editState.EndGrid(); };
         InstallInputHandlers();
         InstallWorkspaceHandlers();
         InstallDocument(WorkbookDocument.CreateBlank(_services), null, "未命名.xlsq", disposePrevious: false);
@@ -72,7 +77,7 @@ public partial class MainWindow : Window
             _scriptTrust = new(Path.Combine(folder, "trusted-script-certificates.json"));
             args = [];
         }
-        if (args.Length > 0 && args[0] is "--smoke-test" or "--interaction-smoke" or "--workspace-smoke" or "--product-smoke" or "--ribbon-smoke" or "--signature-smoke" or "--grid-benchmark" or "--resize-benchmark" or "--data-operations-smoke" or "--fast-grid-benchmark" or "--fast-grid-drag-benchmark")
+        if (args.Length > 0 && args[0] is "--smoke-test" or "--interaction-smoke" or "--workspace-smoke" or "--product-smoke" or "--ribbon-smoke" or "--signature-smoke" or "--grid-benchmark" or "--resize-benchmark" or "--data-operations-smoke" or "--fast-grid-benchmark" or "--fast-grid-drag-benchmark" or "--grid-integration-smoke" or "--xlsx-rendering-smoke")
         {
             _smokeMode = true;
             _recentFiles = new(Path.Combine(args.Length > 1 ? args[1] : AppContext.BaseDirectory, "recent-files.json"));
@@ -82,7 +87,9 @@ public partial class MainWindow : Window
             try
             {
                 var folder = args.Length > 1 ? args[1] : Path.Combine(AppContext.BaseDirectory, "smoke");
-                if (args[0] == "--fast-grid-drag-benchmark") await RunFastGridDragBenchmarkAsync(folder);
+                if (args[0] == "--xlsx-rendering-smoke") await RunXlsxRenderingSmokeAsync(folder, args.ElementAtOrDefault(2));
+                else if (args[0] == "--fast-grid-drag-benchmark") await RunFastGridDragBenchmarkAsync(folder);
+                else if (args[0] == "--grid-integration-smoke") await RunGridIntegrationSmokeAsync(folder);
                 else if (args[0] == "--fast-grid-benchmark") await RunFastGridBenchmarkAsync(folder);
                 else if (args[0] == "--data-operations-smoke") await RunDataOperationsSmokeAsync(folder);
                 else if (args[0] == "--signature-smoke") await RunSignatureSmokeAsync(folder);
@@ -137,7 +144,6 @@ public partial class MainWindow : Window
         _rowCount = 100;
         _columnCount = 12;
         _editState.Reset();
-        _gridEditorArmed = false;
         _calculationPending = false;
         _refreshing = true;
         LoadScriptModules();
@@ -156,7 +162,8 @@ public partial class MainWindow : Window
         if (document.Snapshot.FileState?.RequiresMigration == true)
             LogText.Text += "\n已导入 v1：历史文本不会被猜测转换类型。首次保存必须另存为 v2，原文件保留。";
         if (document.Snapshot.FileState is { CompatibilityIssues.Length: > 0 } fileState)
-            LogText.Text += "\n兼容性报告：\n" + string.Join("\n", fileState.CompatibilityIssues.Take(20));
+            LogText.Text += $"\n文件已打开。有 {fileState.CompatibilityIssues.Length} 项格式或附加信息尚未完整支持，部分显示可能与 Excel 不同。" +
+                "\n原始内容已保留；修改后保存或导出前会提示可能丢失的内容。详情见文件菜单中的兼容性报告。";
         if (!document.Snapshot.ScriptModules.CanExecute)
             LogText.Text += "\n多模块源码已保留；执行需要显式声明脚本 API v2。";
         else if (document.Snapshot.ScriptModules.ScriptApiVersion == 2)
@@ -182,17 +189,6 @@ public partial class MainWindow : Window
         }
         else GridSurface.Refresh(_document.Snapshot);
         RefreshWorkspaceView();
-        if (_gridEditorArmed && SheetGrid.CurrentColumn?.GetCellContent(SheetGrid.CurrentItem) is TextBox readyEditor)
-        {
-            var text = _document.GetCellValue(_sheetIndex, _selectedRow, _selectedColumn);
-            if (readyEditor.Text != text)
-            {
-                _gridEditorArmed = false;
-                GridInputColumn.InitializeText(readyEditor, text);
-                readyEditor.SelectAll();
-                _gridEditorArmed = true;
-            }
-        }
         if (!_editState.GridEditing && !_formulaPending && CurrentView.FilterRange is { } filter &&
             CurrentView.IsFilteredOut(_document.Snapshot, _sheetIndex, _selectedRow))
             GridSurface.Select(new(filter.Top, _selectedColumn));
@@ -222,7 +218,7 @@ public partial class MainWindow : Window
         if (_formulaPending) return; // A selection/refresh must not overwrite an unsubmitted edit.
         CellAddress.Text = ColumnName(_selectedColumn) + (_selectedRow + 1);
         _updatingFormula = true;
-        GridInputColumn.InitializeText(FormulaBar, _document.GetCellInput(_sheetIndex, _selectedRow, _selectedColumn));
+        CellEditorText.InitializeText(FormulaBar, _document.GetCellInput(_sheetIndex, _selectedRow, _selectedColumn));
         _updatingFormula = false;
     }
 
@@ -344,72 +340,31 @@ public partial class MainWindow : Window
     }
 
     private async void ApplyCell_Click(object sender, RoutedEventArgs e) => await ApplyFormulaBarAsync();
-    private void Grid_CurrentCellChanged(object? sender, EventArgs e)
+    private bool CommitGridValue(CellPosition position, string text)
     {
-        if (_refreshing || _busy || SheetGrid.CurrentCell.Item is not SheetRow row || SheetGrid.CurrentCell.Column is null || SheetGrid.CurrentCell.Column.DisplayIndex < 0) return;
-        if (!CommitFormulaBar())
+        if (_busy || !CanCommitComposition()) return false;
+        try
         {
-            // Keep the actual grid selection aligned with the pending edit's address.
-            _refreshing = true;
-            try
-            {
-                var previous = new DataGridCellInfo(_rows[_selectedRow], SheetGrid.Columns[_selectedColumn]);
-                SheetGrid.CurrentCell = previous;
-                SheetGrid.SelectedCells.Clear();
-                SheetGrid.SelectedCells.Add(previous);
-            }
-            finally { _refreshing = false; }
-            FormulaBar.Focus();
-            return;
+            if (ApplyValues([(position.Row, position.Column, text)])) QueueRecalculation();
+            return true;
         }
-        _selectedRow = row.Index;
-        _selectedColumn = SheetGrid.CurrentCell.Column.DisplayIndex;
+        catch (Exception ex) { _cellCommitFailed = true; ReportEditFailure(ex); return false; }
+    }
+
+    private void Grid_CurrentCellChanged()
+    {
+        if (_refreshing || _busy) return;
+        _selectedRow = _grid.Current.Row;
+        _selectedColumn = _grid.Current.Column;
         var merge = _document.Snapshot.Sheets[_sheetIndex].MergedCells.Select(CellRectangle.Parse)
             .Where(range => range.Contains(_selectedRow, _selectedColumn)).Cast<CellRectangle?>().FirstOrDefault();
-        if (merge is { } merged && (merged.Top != _selectedRow || merged.Left != _selectedColumn) && SheetGrid.SelectedCells.Count <= 1)
+        if (merge is { } merged && (merged.Top != _selectedRow || merged.Left != _selectedColumn) && _grid.Control.SelectedCellCount <= 1)
         {
             GridSurface.Select(new(merged.Top, merged.Left));
             return;
         }
         UpdateFormulaBar();
         QueueRecalculation();
-    }
-
-    private void Grid_BeginningEdit(object sender, DataGridBeginningEditEventArgs e)
-    {
-        if (e.Row.Item is SheetRow candidate && _document.Snapshot.Sheets[_sheetIndex].MergedCells.Select(CellRectangle.Parse)
-            .Any(range => range.Contains(candidate.Index, e.Column.DisplayIndex) && (candidate.Index != range.Top || e.Column.DisplayIndex != range.Left)))
-        { e.Cancel = true; return; }
-        // Switching editors in the same cell does not raise CurrentCellChanged.
-        // Commit the older formula-bar input before loading the newer grid editor.
-        // IME may start a grid editor from a focused cell before its first committed text.
-        if (_busy || (_editState.IsComposing ? _formulaPending : !CommitFormulaBar())) { e.Cancel = true; return; }
-        _editState.BeginGrid();
-        if (e.Row.Item is SheetRow row)
-        {
-            _selectedRow = row.Index;
-            _selectedColumn = e.Column.DisplayIndex;
-        }
-    }
-
-    private void Grid_CellEditEnding(object sender, DataGridCellEditEndingEventArgs e)
-    {
-        if (_editState.IsComposing) { e.Cancel = true; return; }
-        if (_gridEditorArmed)
-        {
-            _gridEditorArmed = false;
-            _editState.EndGrid();
-            return; // Merely focusing a formatted value must never replace its formula/raw input.
-        }
-        _gridEditorArmed = false;
-        if (e.EditAction == DataGridEditAction.Cancel) { _editState.EndGrid(); return; }
-        if (_busy || e.Row.Item is not SheetRow row || e.EditingElement is not TextBox editor) return;
-        try
-        {
-            if (ApplyValues([(row.Index, e.Column.DisplayIndex, editor.Text)])) QueueRecalculation();
-            _editState.EndGrid();
-        }
-        catch (Exception ex) { _cellCommitFailed = true; e.Cancel = true; ReportEditFailure(ex); }
     }
 
     private async void Undo_Click(object sender, RoutedEventArgs e) => await UndoAsync(false);
@@ -832,11 +787,10 @@ public partial class MainWindow : Window
         RefreshSheet();
         var path = Path.Combine(folder, "smoke.xlsq");
         _filePath = path;
-        SheetGrid.CurrentCell = new DataGridCellInfo(_rows[0], SheetGrid.Columns[0]);
-        SheetGrid.ScrollIntoView(_rows[0], SheetGrid.Columns[0]);
+        GridSurface.Select(new(0, 0));
         SheetGrid.Focus();
-        if (!SheetGrid.BeginEdit()) throw new Exception("DataGrid could not enter edit mode.");
-        if (SheetGrid.Columns[0].GetCellContent(_rows[0]) is not TextBox editBox) throw new Exception("DataGrid editor missing.");
+        if (!GridSurface.BeginEdit()) throw new Exception("Grid could not enter edit mode.");
+        var editBox = _grid.Editor;
         editBox.Text = "30";
         if (!await SaveAsync(false)) throw new Exception("Saving an active cell edit failed.");
         using (var reopened = WorkbookDocument.Open(path, _services))
@@ -859,14 +813,11 @@ public partial class MainWindow : Window
             if (formulaSaved.GetCellValue(0, 0, 1) != "70") throw new Exception("Formula bar pending edit was omitted from saved cache.");
         if (_document.IsDirty) throw new Exception("Successful save did not mark the session revision saved.");
         // Entering the grid in the same cell must not let an older formula-bar draft overwrite it.
-        SheetGrid.CurrentCell = new DataGridCellInfo(_rows[0], SheetGrid.Columns[0]);
-        SheetGrid.SelectedCells.Clear();
-        SheetGrid.SelectedCells.Add(SheetGrid.CurrentCell);
-        SheetGrid.ScrollIntoView(_rows[0], SheetGrid.Columns[0]);
+        GridSurface.Select(new(0, 0));
         FormulaBar.Text = "36";
         SheetGrid.Focus();
-        if (!SheetGrid.BeginEdit()) throw new Exception($"Same-cell editor switch failed (busy={_busy}, enabled={SheetGrid.IsEnabled}, valid={SheetGrid.CurrentCell.IsValid}).");
-        if (SheetGrid.Columns[0].GetCellContent(_rows[0]) is not TextBox switchedEditor) throw new Exception("Switched grid editor missing.");
+        if (!GridSurface.BeginEdit()) throw new Exception($"Same-cell editor switch failed (busy={_busy}, enabled={SheetGrid.IsEnabled}, current={_grid.Current}).");
+        var switchedEditor = _grid.Editor;
         switchedEditor.Text = "37";
         if (!await SaveAsync(false)) throw new Exception("Saving the latest editor failed.");
         using (var latestEditor = WorkbookDocument.Open(path, _services))
@@ -874,12 +825,11 @@ public partial class MainWindow : Window
                 throw new Exception("An older formula draft overwrote the latest grid edit.");
         FormulaBar.Text = new string('x', WorkbookLimits.MaxCellTextLength + 1);
         var invalidRevision = _document.Snapshot.Revision;
-        SheetGrid.CurrentCell = new DataGridCellInfo(_rows[0], SheetGrid.Columns[1]);
-        // Moving focus back to the formula editor can clear WPF's CurrentCell.
-        // It must never leave another valid grid address beside the pending A1 edit.
-        if ((SheetGrid.CurrentCell.IsValid && SheetGrid.CurrentCell.Column != SheetGrid.Columns[0]) ||
+        GridSurface.Select(new(0, 1));
+        // Rejected input must leave the visual selection at the original A1 address.
+        if (_grid.Current != new CellPosition(0, 0) ||
             _selectedColumn != 0 || !_formulaPending || _formulaColumn != 0 || _formulaRow != 0)
-            throw new Exception($"Rejected formula input left selection and edit address out of sync (grid={SheetGrid.CurrentCell.Column?.DisplayIndex}, selected={_selectedColumn}, formula={_formulaColumn}, pending={_formulaPending}, busy={_busy}).");
+            throw new Exception($"Rejected formula input left selection and edit address out of sync (grid={_grid.Current.Column}, selected={_selectedColumn}, formula={_formulaColumn}, pending={_formulaPending}, busy={_busy}).");
         if (await SaveAsync(false) || _document.Snapshot.Revision != invalidRevision)
             throw new Exception("Invalid pending input changed or saved the document.");
         using (var previousSave = WorkbookDocument.Open(path, _services))
@@ -908,13 +858,11 @@ public partial class MainWindow : Window
         if (_document.Snapshot.Sheets.Length != beforeSheetCount + 1) throw new Exception("Add sheet redo failed.");
         var reversePath = Path.Combine(folder, "reverse-editor.xlsq");
         InstallDocument(WorkbookDocument.CreateBlank(_services), reversePath, "reverse-editor.xlsq");
-        SheetGrid.CurrentCell = new DataGridCellInfo(_rows[0], SheetGrid.Columns[0]);
-        SheetGrid.SelectedCells.Clear();
-        SheetGrid.SelectedCells.Add(SheetGrid.CurrentCell);
-        SheetGrid.ScrollIntoView(_rows[0], SheetGrid.Columns[0]);
+        GridSurface.Select(new(0, 0));
         SheetGrid.Focus();
-        if (!SheetGrid.BeginEdit() || SheetGrid.Columns[0].GetCellContent(_rows[0]) is not TextBox olderGridEditor)
+        if (!GridSurface.BeginEdit())
             throw new Exception("Reverse editor switch could not start grid editing.");
+        var olderGridEditor = _grid.Editor;
         olderGridEditor.Text = "11";
         FormulaBar.Focus();
         FormulaBar.Text = "=1+2";
@@ -960,7 +908,7 @@ public partial class MainWindow : Window
         var encoder = new PngBitmapEncoder();
         encoder.Frames.Add(BitmapFrame.Create(bitmap));
         using (var file = File.Create(Path.Combine(folder, "QuickExcel-preview.png"))) encoder.Save(file);
-        File.WriteAllText(Path.Combine(folder, "smoke-result.txt"), "PASS: actual WPF close lifecycle (8 scenarios, including cancel/save/failure/duplicate requests), native QuickJS, formula-bar edit/recalculate, undo/redo with cached formulas, atomic rejected paste, save active DataGrid and formula-bar edits with fresh caches, bidirectional same-cell editor switch, rejected pending input preserves selection and saved file, session revisions and clean script authorization, rejected script edit revokes authorization, failed calculation allows undo/save/close, add-sheet undo/redo, XLSQ roundtrip, values-only XLSX export, WPF render.");
+        File.WriteAllText(Path.Combine(folder, "smoke-result.txt"), "PASS: actual WPF close lifecycle (8 scenarios, including cancel/save/failure/duplicate requests), native QuickJS, formula-bar edit/recalculate, undo/redo with cached formulas, atomic rejected paste, save active grid and formula-bar edits with fresh caches, bidirectional same-cell editor switch, rejected pending input preserves selection and saved file, session revisions and clean script authorization, rejected script edit revokes authorization, failed calculation allows undo/save/close, add-sheet undo/redo, XLSQ roundtrip, values-only XLSX export, WPF render.");
     }
 
     private sealed class SmokeFailingCalculator : IWorkbookCalculator

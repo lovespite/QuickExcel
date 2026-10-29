@@ -322,6 +322,9 @@ namespace FastWpfGrid
 
         public int ScrollInView(int firstVisibleIndex, int scrollIndex, int viewportSize)
         {
+            // A cell wider/taller than the viewport cannot fit. Align its leading edge,
+            // rather than advancing to the next cell and hiding the requested one entirely.
+            if (GetSizeByScrollIndex(scrollIndex) >= viewportSize) return scrollIndex;
             if (IsWholeInView(firstVisibleIndex, scrollIndex, viewportSize))
             {
                 return firstVisibleIndex;

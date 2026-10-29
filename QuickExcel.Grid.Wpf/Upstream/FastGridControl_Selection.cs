@@ -33,8 +33,10 @@ namespace FastWpfGrid
             }
         }
         private void ClearSelectedCells() => _selectedCells.Clear();
-        private void AddSelectedCell(FastGridCellAddress cell) => _selectedCells.Add(cell);
-        private void RemoveSelectedCell(FastGridCellAddress cell) => _selectedCells.Remove(cell);
+        private void AddSelectedCell(FastGridCellAddress cell)
+        { if (cell.IsCell) _selectedCells.Add(GetMergedRealCellRange(cell)); }
+        private void RemoveSelectedCell(FastGridCellAddress cell)
+        { if (cell.IsCell) _selectedCells.Remove(GetMergedRealCellRange(cell)); }
         public bool IsLimitedSelection => SelectedRealRowCountLimit.HasValue && _selectedCells.RowCount >= SelectedRealRowCountLimit.Value ||
             SelectedRealColumnCountLimit.HasValue && _selectedCells.ColumnCount >= SelectedRealColumnCountLimit.Value;
         private void SetSelectedRectangle(FastGridCellAddress origin, FastGridCellAddress cell)
@@ -75,7 +77,7 @@ namespace FastWpfGrid
             if (rows.Count == 0 || columns.Count == 0) return false;
             _selectedCells.Clear();
             foreach (var row in rows) foreach (var column in columns)
-                _selectedCells.Add(new GridCellRange(row.First, column.First, row.Last, column.Last));
+                _selectedCells.Add(ExpandMergedRange(new GridCellRange(row.First, column.First, row.Last, column.Last)));
             var mapped = ModelToReal(current);
             if (!mapped.IsCell || !_selectedCells.Contains(mapped)) mapped = new(rows[0].First, columns[0].First);
             SetCurrentCell(mapped); InvalidateSelection(); OnChangeSelectedCells(true); ScrollCurrentCellIntoView();

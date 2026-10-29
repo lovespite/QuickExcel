@@ -12,6 +12,24 @@ public readonly record struct GridCellRange(int Top, int Left, int Bottom, int R
     public bool Intersects(GridCellRange other) => Top <= other.Bottom && Bottom >= other.Top && Left <= other.Right && Right >= other.Left;
 }
 
+/// <summary>Close a rectangular selection over all intersecting merged cells, without enumerating cells.</summary>
+public static class GridMergedSelection
+{
+    public static GridCellRange Expand(GridCellRange range, IReadOnlyList<GridCellRange> merges)
+    {
+        GridCellRange previous;
+        do
+        {
+            previous = range;
+            foreach (var merge in merges)
+                if (range.Intersects(merge))
+                    range = new(Math.Min(range.Top, merge.Top), Math.Min(range.Left, merge.Left),
+                        Math.Max(range.Bottom, merge.Bottom), Math.Max(range.Right, merge.Right));
+        } while (range != previous);
+        return range;
+    }
+}
+
 /// <summary>Disjoint rectangles. Selection costs depend on rectangle count, not selected cell count.</summary>
 public sealed class GridRangeSelection : IEnumerable<FastGridCellAddress>
 {

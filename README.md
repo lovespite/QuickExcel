@@ -1,6 +1,6 @@
 # QuickExcel 0.6 交互预览版
 
-2026-10-29 源码更新：数据标题行筛选、多列条件和多级排序已接入；视图页新增 FastWpfGrid 试验工作区。默认仍是 DataGrid，候选功能对等与真实 IME/DPI 门禁未关闭。操作、专项测试和性能对照见 [实施记录](QuickExcel.Desktop/docs/23-fast-grid-implementation.md)。本轮独立试用目录为 `artifacts/QuickExcel-fastgrid-20261029`。
+2026-10-29 源码更新：主工作区已直接接入 `QuickExcel.Grid.Wpf`，移除旧 DataGrid 和试验窗口，保留编辑、筛选排序、冻结、尺寸撤销、图片与合并显示。构建后运行 `artifacts/build/bin/QuickExcel.Desktop/release/QuickExcel.exe`；已有发布目录不会自动更新。迁移和专项验证见 [主网格迁移记录](QuickExcel.Desktop/docs/24-main-grid-migration.md)。真实 IME、跨屏 DPI 和完整辅助功能门禁仍待验收。
 
 最新 `0.6.0-preview.3`：正式界面基础已接入，启动页、底部/左/右工作表标签、脚本专页、模块编辑、查找替换、基础图片/合并呈现和兼容/导出入口；范围与证据见 [M5 正式界面](QuickExcel.Desktop/docs/19-m5-product-workspace.md)。候选程序位于 `artifacts/QuickExcel/QuickExcel.exe`，也可双击 `Start-QuickExcel.cmd`。
 

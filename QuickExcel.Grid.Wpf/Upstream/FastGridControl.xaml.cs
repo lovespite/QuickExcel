@@ -187,6 +187,7 @@ namespace FastWpfGrid
 
         private void OnModelPropertyChanged()
         {
+            _hasModelDimensions = false;
             if (_model != null) _model.DetachView(this);
             _model = Model;
             if (_model != null) _model.AttachView(this);
@@ -303,7 +304,7 @@ namespace FastWpfGrid
             }
 
             ClearSelectedCells();
-            _currentCell = new FastGridCellAddress(row, col);
+            SetCurrentCell(new FastGridCellAddress(row, col));
             if (_currentCell.IsCell) AddSelectedCell(_currentCell);
             OnChangeSelectedCells(false);
         }
@@ -482,6 +483,11 @@ namespace FastWpfGrid
         {
             if (cell.IsRowHeader && _currentCell.IsCell) cell = new FastGridCellAddress(cell.Row, _currentCell.Column);
             if (cell.IsColumnHeader && _currentCell.IsCell) cell = new FastGridCellAddress(_currentCell.Row, cell.Column);
+            if (cell.IsCell)
+            {
+                var merge = GetMergedRealCellRange(cell);
+                cell = new FastGridCellAddress(merge.Top, merge.Left);
+            }
             if (cell == _currentCell) return;
 
             using (var ctx = CreateInvalidationContext())
@@ -538,7 +544,7 @@ namespace FastWpfGrid
                 maxcol = mincol + SelectedRealColumnCountLimit.Value + LIMIT_RESERVE;
             }
 
-            if (minrow <= maxrow && mincol <= maxcol) res.Set(new GridCellRange(minrow, mincol, maxrow, maxcol));
+            if (minrow <= maxrow && mincol <= maxcol) res.Set(ExpandMergedRange(new GridCellRange(minrow, mincol, maxrow, maxcol)));
             return res;
         }
 
@@ -641,13 +647,16 @@ namespace FastWpfGrid
             //if (fracY == 0) dtop = 0;
             //image.Margin = new Thickness(dleft, dtop, imageGrid.ActualWidth - width - dleft - 1, imageGrid.ActualHeight - height - dtop - 25);
 
-            if (wasEmpty && _drawBuffer != null)
+            // A host can bind workbook dimensions before the first layout (or while hidden).
+            // Creating the raster viewport must not replace those dimensions with text auto-fit.
+            if (wasEmpty && _drawBuffer != null && !_hasModelDimensions)
             {
                 RecountColumnWidths();
                 RecountRowHeights();
             }
             AdjustScrollbars();
             InvalidateAll();
+            NotifyViewportChanged();
         }
 
         private bool MoveCurrentCell(int? row, int? col, KeyEventArgs e = null)
@@ -666,7 +675,7 @@ namespace FastWpfGrid
             if (col < 0) col = 0;
             if (col >= _realColumnCount) col = _realColumnCount - 1;
 
-            _currentCell = new FastGridCellAddress(row, col);
+            SetCurrentCell(new FastGridCellAddress(row, col));
             if (_currentCell.IsCell) AddSelectedCell(_currentCell);
             InvalidateCurrentCell();
             ScrollCurrentCellIntoView();

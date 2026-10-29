@@ -18,11 +18,8 @@ public partial class MainWindow
     private RecentFileStore _recentFiles = new(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "QuickExcel", "recent-files.json"));
     private FileVersion? _fileVersion;
     private string? _versionPath;
-    private bool _refreshingFrozen;
     private string? _smokeTextDecision;
     private Task _workspaceInput = Task.CompletedTask;
-    private SheetArtworkAdorner? _artwork;
-    private SheetArtworkAdorner? _frozenArtwork;
     private static T? VisualChild<T>(DependencyObject parent) where T : DependencyObject
     {
         for (var i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
@@ -35,101 +32,20 @@ public partial class MainWindow
     }
     private void InstallWorkspaceHandlers()
     {
-        InstallGridResizeHandlers(SheetGrid);
-        InstallGridResizeHandlers(FrozenGrid);
-        Loaded += (_, _) =>
-        {
-            _artwork = new(SheetGrid, _grid, false); _frozenArtwork = new(FrozenGrid, _grid, true);
-            AdornerLayer.GetAdornerLayer(SheetGrid)?.Add(_artwork);
-            AdornerLayer.GetAdornerLayer(FrozenGrid)?.Add(_frozenArtwork);
-            _filterHeaders = new(SheetGrid, _grid, OpenHeaderFilter);
-            _frozenFilterHeaders = new(FrozenGrid, _grid, OpenHeaderFilter);
-            RefreshFilterHeaderLayers();
-            _artwork.Refresh(); _frozenArtwork.Refresh();
-        };
-        SheetGrid.SizeChanged += (_, _) => _artwork?.InvalidateVisual();
-        SheetGrid.LayoutUpdated += (_, _) => _artwork?.RefreshLayout();
-        SheetGrid.LayoutUpdated += (_, _) => _filterHeaders?.Refresh();
-        FrozenGrid.LayoutUpdated += (_, _) => _frozenFilterHeaders?.Refresh();
+        InstallGridResizeHandlers();
+        _grid.HeaderRequested += OpenHeaderFilter;
+        _grid.Control.ViewportChanged += (_, _) => _filterPopup?.Close();
         Deactivated += (_, _) => _filterPopup?.Close();
-        FrozenGrid.LayoutUpdated += (_, _) => _frozenArtwork?.RefreshLayout();
-        SheetGrid.CurrentCellChanged += (_, _) => _artwork?.InvalidateVisual();
-        SheetGrid.PreparingCellForEdit += (_, _) => _artwork?.InvalidateVisual();
-        SheetGrid.CellEditEnding += (_, _) => _artwork?.InvalidateVisual();
-        FrozenGrid.SizeChanged += (_, _) => _frozenArtwork?.InvalidateVisual();
-        FrozenGrid.AddHandler(ScrollViewer.ScrollChangedEvent, new ScrollChangedEventHandler((_, _) => _frozenArtwork?.InvalidateVisual()));
-        SheetGrid.AddHandler(ScrollViewer.ScrollChangedEvent, new ScrollChangedEventHandler((_, e) =>
-        {
-            _artwork?.InvalidateVisual();
-            if (e.HorizontalChange != 0 || e.VerticalChange != 0) _filterPopup?.Close();
-            if (e.HorizontalChange != 0) VisualChild<ScrollViewer>(FrozenGrid)?.ScrollToHorizontalOffset(e.HorizontalOffset);
-        }));
-        FrozenGrid.LoadingRow += (_, e) =>
-        {
-            if (e.Row.Item is not SheetRow row) return;
-            e.Row.Header = (row.Index + 1).ToString(CultureInfo.InvariantCulture);
-            var sheet = _document.Snapshot.Sheets[_sheetIndex];
-            e.Row.Height = Math.Clamp(sheet.Rows.GetValueOrDefault(row.Index)?.Height ?? sheet.DefaultRowHeight ?? 31, 0, 400);
-        };
     }
     private void RefreshWorkspaceView()
     {
         var view = CurrentView;
-        RefreshFilterHeaderLayers();
         view.RefreshFilter(_document.Snapshot);
         ViewStatus.Text = (view.FilterRange is null ? "" : view.Region is null ? $"筛选 {ColumnName(view.FilterColumn)} · {view.FilterText}  " :
             view.FilterError is not null ? $"筛选待更新：{view.FilterError}（暂显示全部行）  " : $"筛选区域 · {view.Filters.Count} 列条件  ") +
             (view.FrozenRows + view.FrozenColumns == 0 ? "" : $"冻结 {view.FrozenRows} 行 / {view.FrozenColumns} 列");
         ViewStatus.ToolTip = "筛选首行为表头；视图设置仅本次工作区有效。";
         ViewStatus.Visibility = view.FilterRange is not null || view.FrozenRows + view.FrozenColumns > 0 ? Visibility.Visible : Visibility.Collapsed;
-        FrozenGrid.Visibility = view.FrozenRows > 0 ? Visibility.Visible : Visibility.Collapsed;
-        _refreshingFrozen = true;
-        try
-        {
-            if (view.FrozenRows == 0) FrozenGrid.ItemsSource = null;
-            else
-            {
-                // Rebuild only when the source columns change (sheet switch or expansion).
-                if (FrozenGrid.Columns.Count != SheetGrid.Columns.Count || FrozenGrid.Columns.Cast<DataGridTextColumn>()
-                    .Where((column, index) => column.ElementStyle != ((DataGridTextColumn)SheetGrid.Columns[index]).ElementStyle).Any())
-                {
-                    FrozenGrid.Columns.Clear();
-                    foreach (var column in SheetGrid.Columns.Cast<DataGridTextColumn>())
-                        FrozenGrid.Columns.Add(new DataGridTextColumn { Binding = new Binding($"[{column.DisplayIndex}]") { Mode = BindingMode.OneWay },
-                            Width = column.Width, Visibility = column.Visibility, ElementStyle = column.ElementStyle, CellStyle = column.CellStyle });
-                }
-                FrozenGrid.FrozenColumnCount = Math.Min(view.FrozenColumns, FrozenGrid.Columns.Count);
-                var sheet = _document.Snapshot.Sheets[_sheetIndex];
-                var rows = Enumerable.Range(0, view.FrozenRows).Where(r => sheet.Rows.GetValueOrDefault(r)?.Hidden != true &&
-                    !view.IsFilteredOut(_document.Snapshot, _sheetIndex, r)).Select(r => _rows[r]).ToArray();
-                if (!FrozenGrid.Items.OfType<SheetRow>().SequenceEqual(rows)) FrozenGrid.ItemsSource = rows;
-                // Frozen rows may no longer be realized in the scrolled main grid.
-                foreach (var row in rows) row.Refresh();
-            }
-        }
-        finally { _refreshingFrozen = false; }
-        RefreshWorkspaceDimensions();
-    }
-    private void RefreshWorkspaceDimensions()
-    {
-        // Keep columns/items/editors attached: a size change does not require rebinding data.
-        for (var i = 0; i < Math.Min(FrozenGrid.Columns.Count, SheetGrid.Columns.Count); i++)
-        {
-            FrozenGrid.Columns[i].Width = SheetGrid.Columns[i].Width;
-            FrozenGrid.Columns[i].Visibility = SheetGrid.Columns[i].Visibility;
-        }
-        var sheet = _document.Snapshot.Sheets[_sheetIndex];
-        foreach (var item in FrozenGrid.Items.OfType<SheetRow>())
-            if (FrozenGrid.ItemContainerGenerator.ContainerFromItem(item) is DataGridRow row)
-                row.Height = Math.Clamp(sheet.Rows.GetValueOrDefault(item.Index)?.Height ?? sheet.DefaultRowHeight ?? 31, 0, 400);
-        _artwork?.Refresh();
-        _frozenArtwork?.Refresh();
-    }
-
-    private void FrozenGrid_CurrentCellChanged(object? sender, EventArgs e)
-    {
-        if (_refreshingFrozen || _busy || FrozenGrid.CurrentItem is not SheetRow row || FrozenGrid.CurrentColumn is not { } column || !CommitEditors()) return;
-        GridSurface.Select(new(row.Index, column.DisplayIndex));
     }
     private SheetViewState CurrentView
     {
@@ -145,6 +61,11 @@ public partial class MainWindow
         var ranges = GridSurface.SelectionRanges;
         if (ranges.Count == 0) return new(_selectedRow, _selectedColumn, _selectedRow, _selectedColumn);
         if (ranges.Count == 1) return ranges[0];
+        var rectangle = new GridRange(ranges.Min(r => r.Top), ranges.Min(r => r.Left), ranges.Max(r => r.Bottom), ranges.Max(r => r.Right));
+        var sheet = _document.Snapshot.Sheets[_sheetIndex];
+        var visibleRows = Enumerable.Range(rectangle.Top, rectangle.Rows).Count(r => sheet.Rows.GetValueOrDefault(r)?.Hidden != true);
+        var visibleColumns = Enumerable.Range(rectangle.Left, rectangle.Columns).Count(c => sheet.Columns.GetValueOrDefault(c)?.Hidden != true);
+        if (ranges.Sum(r => r.Count) == (long)visibleRows * visibleColumns) return rectangle;
         throw new ArgumentException("请使用连续矩形选区。");
     }
 
@@ -178,7 +99,6 @@ public partial class MainWindow
                 if (command is SetAxisMetadataCommand)
                 {
                     _grid.RefreshDimensions(_document.Snapshot);
-                    RefreshWorkspaceDimensions();
                 }
                 else RefreshSheet();
                 UpdateChrome();
@@ -187,7 +107,6 @@ public partial class MainWindow
             }
             _sheetIndex = Math.Min(_sheetIndex, _document.Snapshot.Sheets.Length - 1);
             if (clearView) { CurrentView.FilterRange = null; CurrentView.FrozenRows = CurrentView.FrozenColumns = 0; }
-            _gridEditorArmed = false;
             SynchronizeSheets();
             var position = target ?? new CellPosition(_selectedRow, _selectedColumn);
             GridSurface.Select(new(Math.Clamp(position.Row, 0, _rowCount - 1), Math.Clamp(position.Column, 0, _columnCount - 1)));
@@ -223,6 +142,17 @@ public partial class MainWindow
             var axis = operation.EndsWith("Row", StringComparison.Ordinal) ? SheetAxis.Row : SheetAxis.Column;
             var start = axis == SheetAxis.Row ? range.Top : range.Left;
             var count = axis == SheetAxis.Row ? range.Rows : range.Columns;
+            if (operation.StartsWith("show", StringComparison.Ordinal))
+            {
+                // Hidden dimensions cannot own a native selection. Include contiguous hidden
+                // neighbors so a visible header can restore them, including at sheet edges.
+                bool Hidden(int index) => axis == SheetAxis.Row ? sheet.Rows.GetValueOrDefault(index)?.Hidden == true : sheet.Columns.GetValueOrDefault(index)?.Hidden == true;
+                var end = start + count;
+                while (start > 0 && Hidden(start - 1)) start--;
+                var limit = axis == SheetAxis.Row ? _rowCount : _columnCount;
+                while (end < limit && Hidden(end)) end++;
+                count = end - start;
+            }
             DocumentCommand command;
             var target = new CellPosition(range.Top, range.Left);
             if (operation.StartsWith("move", StringComparison.Ordinal))

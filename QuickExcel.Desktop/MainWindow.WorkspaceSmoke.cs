@@ -56,10 +56,13 @@ public partial class MainWindow
             Structure("rename", "数据 工作表"); await RecalculateAsync();
             Check(SheetPicker.SelectedItem?.ToString() == "数据 工作表", "Rename updates sheet picker");
             GridSurface.Select(new(0, 0)); Structure("sizeRow", "42"); Structure("sizeColumn", "24"); await Idle();
-            Check(((DataGridRow)SheetGrid.ItemContainerGenerator.ContainerFromItem(_rows[0])).Height == 42 && SheetGrid.Columns[0].ActualWidth == 173, "Row height and column width commands reach actual WPF containers");
+            var resized = _grid.Control.GetModelCellBounds(0, 0);
+            Check(resized is { } size && Math.Abs(size.Height - 42) < 1 && Math.Abs(size.Width - 173) < 1,
+                $"Row height and column width commands reach pixel-rounded geometry: {resized}");
             GridSurface.Select(new(0, 3)); Structure("hideColumn");
-            Check(SheetGrid.Columns[3].Visibility == Visibility.Collapsed, "Hide column applies immediately");
-            Structure("showColumn"); Check(SheetGrid.Columns[3].Visibility == Visibility.Visible, "Show column applies immediately");
+            Check(_grid.Control.GetModelCellBounds(0, 3) is null, "Hide column applies immediately");
+            Structure("showColumn"); Check(_grid.Control.GetModelCellBounds(0, 3) is not null,
+                $"Show column applies immediately: hidden={_grid.Sheet.Columns.GetValueOrDefault(3)?.Hidden}, current={_grid.Current}, selection={string.Join(';', _grid.SelectionRanges)}, status={StatusText.Text}");
             GridSurface.Select(new(0, 0)); Style("bold"); Style("fill"); Style("border"); Style("center");
             var style = _document.Snapshot.Styles[_document.Snapshot.Sheets[0].GetStyleId(0, 0)];
             Check(style.Bold && style.FillColor == "FFFFE599" && style.Horizontal == 2 && style.BottomBorder == 1, "Format menu composes font fill border alignment without losing previous style");
@@ -70,7 +73,7 @@ public partial class MainWindow
             var revision = _document.Snapshot.Revision;
             ApplyFilter(new(0, 0, 3, 2), 1, "first"); await Idle();
             Check(CurrentView.IsFilteredOut(_document.Snapshot, 0, 2) && _document.Snapshot.Revision == revision, "Filter hides rows without a document revision");
-            Check(((DataGridRow)SheetGrid.ItemContainerGenerator.ContainerFromItem(_rows[2])).Height == 0, "Filter reaches WPF row visibility");
+            Check(_grid.Control.GetModelCellBounds(2, 0) is null, "Filter reaches WPF row visibility");
             GridSurface.SelectRange(new(0, 0, 3, 2), new(0, 0)); CopySelection();
             Check(Clipboard.GetText().Contains("first") && !Clipboard.GetText().Contains("second"), "Filtered copy contains only visible rows");
             GridSurface.Select(new(1, 0));
@@ -87,16 +90,16 @@ public partial class MainWindow
             Check(_document.GetCellInput(0, 1, 1) == "" && _document.GetCellInput(0, 2, 1) == "second", "Filtered Delete clears visible cells only");
             await UndoAsync(false); Check(CurrentView.FilterRange is null && _document.GetCellValue(0, 1, 1) == "first", "Undo restores cells and clears stale view range");
             GridSurface.Select(new(1, 1)); Freeze_Click(new MenuItem(), new()); await Idle();
-            Check(FrozenGrid.Visibility == Visibility.Visible && FrozenGrid.Items.Count == 1 && SheetGrid.FrozenColumnCount == 1, "Freeze creates top row reference pane and frozen columns");
-            SheetGrid.ScrollIntoView(_rows[80], SheetGrid.Columns[10]); await Idle();
-            Check(((SheetRow)FrozenGrid.Items[0]).Index == 0 && SheetGrid.Columns[0].IsFrozen, "Frozen row and first column survive distant scrolling");
-            FrozenGrid.CurrentCell = new(_rows[0], FrozenGrid.Columns[0]); await Idle();
-            Check(_selectedRow == 0 && _selectedColumn == 0, "Selecting frozen reference row locates original editable cell");
+            Check(_grid.Control.FrozenRowCount == 1 && _grid.Control.FrozenColumnCount == 1, "Freeze creates native frozen rows and columns");
+            GridSurface.Select(new(80, 10)); await Idle();
+            Check(_grid.Control.GetModelCellBounds(0, 0) is not null && _grid.Control.FrozenColumnCount == 1, "Frozen row and first column survive distant scrolling");
+            GridSurface.Select(new(0, 0)); await Idle();
+            Check(_selectedRow == 0 && _selectedColumn == 0, "Selecting frozen row locates original editable cell");
             GridSurface.Select(new(1, 1));
             CaptureGridEvidence(Path.Combine(folder, "QuickExcel-workspace.png"));
             var firstSheet = _document.Snapshot.Sheets[0].Id;
             AddSheet_Click(this, new()); await Idle();
-            Check(SheetGrid.FrozenColumnCount == 0, "New sheet starts with independent view state");
+            Check(_grid.Control.FrozenColumnCount == 0, "New sheet starts with independent view state");
             _smokeDiscardDecision = MessageBoxResult.Cancel; Structure("deleteSheet");
             Check(_document.Snapshot.Sheets.Length == 2, "Cancel delete sheet leaves workbook unchanged");
             _smokeDiscardDecision = MessageBoxResult.OK; Structure("deleteSheet");
@@ -106,7 +109,7 @@ public partial class MainWindow
             SheetPicker.SelectedIndex = 0; await Idle();
             GridSurface.Select(new(1, 1)); Freeze_Click(new MenuItem(), new());
             SheetPicker.SelectedIndex = 1; SheetPicker.SelectedIndex = 0; await Idle();
-            Check(SheetGrid.FrozenColumnCount == 1 && _document.Snapshot.Sheets[0].Id == firstSheet, "Switching sheet restores its view and stable identity");
+            Check(_grid.Control.FrozenColumnCount == 1 && _document.Snapshot.Sheets[0].Id == firstSheet, "Switching sheet restores its view and stable identity");
             Check(await SaveAsync(false) && !_document.IsDirty && !Title.StartsWith("*"), "Save updates dirty title and stores captured revision");
             var saved = File.ReadAllBytes(path);
             ApplyValues([(5, 0, "local draft")]);

@@ -39,16 +39,13 @@ public partial class MainWindow
         string[] expected = ["2026-10-27", "13:05:09", "2026-10-27 13:05:09", "36:00:00", "2026-10-28", "12345"];
         for (var row = 0; row < expected.Length; row++)
         {
-            SheetGrid.ScrollIntoView(_rows[row], SheetGrid.Columns[1]);
             SheetGrid.UpdateLayout();
-            if (SheetGrid.Columns[1].GetCellContent(_rows[row]) is not TextBlock text || text.Text != expected[row])
-                throw new Exception($"Date display mismatch in actual DataGrid row {row}.");
+            if (_grid.DisplayText(row, 1) != expected[row])
+                throw new Exception($"Date display mismatch in actual QuickExcel.Grid.Wpf row {row}.");
         }
-        SheetGrid.CurrentCell = new DataGridCellInfo(_rows[0], SheetGrid.Columns[1]);
-        SheetGrid.SelectedCells.Clear();
-        SheetGrid.SelectedCells.Add(SheetGrid.CurrentCell);
+        GridSurface.Select(new(0, 1));
         SheetGrid.Focus();
-        if (!SheetGrid.BeginEdit() || SheetGrid.Columns[1].GetCellContent(_rows[0]) is not TextBox editor ||
+        if (!GridSurface.BeginEdit() || ((System.Windows.FrameworkElement)_grid.Editor) is not TextBox editor ||
             editor.Text != serial.ToString("R", CultureInfo.InvariantCulture))
             throw new Exception("Date editor must preserve the full numeric input.");
         if (!CommitEdit()) throw new Exception("Unchanged date edit did not commit.");
@@ -71,6 +68,6 @@ public partial class MainWindow
         encoder.Frames.Add(BitmapFrame.Create(bitmap));
         using (var file = File.Create(Path.Combine(folder, "QuickExcel-dates.png"))) encoder.Save(file);
         File.WriteAllText(Path.Combine(folder, "date-display-smoke-result.txt"),
-            "PASS: XLSX opened through desktop OpenPath; actual DataGrid shows date/time/datetime/elapsed/formula/general values; edit commit preserves numeric precision; XLSQ save/reopen preserves display and numbers.");
+            "PASS: XLSX opened through desktop OpenPath; actual QuickExcel.Grid.Wpf shows date/time/datetime/elapsed/formula/general values; edit commit preserves numeric precision; XLSQ save/reopen preserves display and numbers.");
     }
 }

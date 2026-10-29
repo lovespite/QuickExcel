@@ -159,6 +159,8 @@ public partial class MainWindow
         if (_busy || !CommitEditors()) return;
         var snapshot = _document.Snapshot;
         var lines = new List<string>();
+        if (snapshot.FileState?.CompatibilityIssues.Length > 0)
+            lines.Add("文件已打开，以下为显示与保存保真限制，并非文件损坏。原始内容已保留；修改后保存或导出受支持副本可能移除这些内容，届时会再次确认。");
         if (snapshot.FileState?.RequiresMigration == true) lines.Add("XLSQ v1 → v2：首次保存为新副本，原文件保留。");
         lines.AddRange(snapshot.FileState?.CompatibilityIssues ?? []);
         foreach (var sheet in snapshot.Sheets)

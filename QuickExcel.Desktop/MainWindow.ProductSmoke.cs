@@ -111,7 +111,7 @@ public partial class MainWindow
             WorkbookPage_Click(this, new());
             InstallProductFixture(); await Idle();
             GridSurface.Select(new(0, 0));
-            Check(_artwork is not null && _document.Snapshot.Sheets[0].Images.Length == 1, "Artwork renderer is attached to actual WPF grid");
+            Check(_grid.Artwork.IsLoaded && _document.Snapshot.Sheets[0].Images.Length == 1, "Artwork renderer is attached to actual WPF grid");
             await Idle();
             Check(ProductCellPixel(SheetGrid, 0, 1) == Color.FromRgb(230, 241, 235), "Merged background paints across the second cell");
             Check(ProductCellPixel(SheetGrid, 2, 6) == Color.FromRgb(22, 99, 75), "Embedded image pixels are visible above the grid");
@@ -133,8 +133,8 @@ public partial class MainWindow
             Check(_document.Snapshot.Sheets[0].MergedCells[0] == "A1:D1" && _document.Snapshot.Sheets[0].Images[0].RowIndex == 2, "Undo restores merge and image anchors");
             GridSurface.Select(new(4, 2)); Freeze_Click(new MenuItem(), new()); await Idle();
             CaptureGridEvidence(Path.Combine(folder, "QuickExcel-artwork-frozen.png"));
-            Check(FrozenGrid.IsVisible && _frozenArtwork is not null, "Frozen rows have their own artwork projection");
-            Check(ProductCellPixel(FrozenGrid, 0, 1) == Color.FromRgb(230, 241, 235), "Frozen merge is painted in the frozen viewport");
+            Check(_grid.Control.FrozenRowCount > 0 && _grid.Artwork.IsLoaded, "Frozen rows have their own artwork projection");
+            Check(ProductCellPixel(SheetGrid, 0, 1) == Color.FromRgb(230, 241, 235), "Frozen merge is painted in the frozen viewport");
             Freeze_Click(new MenuItem { Tag = "clear" }, new());
             var path = Path.Combine(folder, "product-workbook.xlsq");
             if (!await SaveToPathAsync(path, false, new(null))) throw new Exception("Product save failed: " + LogText.Text);
@@ -182,12 +182,12 @@ public partial class MainWindow
         InstallDocument(document, null, "销售台账.xlsq");
     }
 
-    private Color ProductCellPixel(DataGrid grid, int row, int column)
+    private Color ProductCellPixel(FrameworkElement grid, int row, int column)
     {
         UpdateLayout();
-        var cell = ProductChildren<DataGridCell>(grid).Single(c => c.DataContext is SheetRow r && r.Index == row && c.Column.DisplayIndex == column);
+        var cell = _grid.Control.GetModelCellBounds(row, column) ?? throw new Exception("Cell is not visible.");
         var root = (FrameworkElement)Content;
-        var point = cell.TranslatePoint(new Point(cell.ActualWidth / 2, cell.ActualHeight / 2), root);
+        var point = _grid.Control.TranslatePoint(new Point(cell.Left + cell.Width / 2, cell.Top + cell.Height / 2), root);
         var dpi = VisualTreeHelper.GetDpi(root);
         var bitmap = new RenderTargetBitmap((int)(root.ActualWidth * dpi.DpiScaleX), (int)(root.ActualHeight * dpi.DpiScaleY),
             96 * dpi.DpiScaleX, 96 * dpi.DpiScaleY, PixelFormats.Pbgra32);

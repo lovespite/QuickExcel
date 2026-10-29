@@ -59,12 +59,12 @@ public partial class MainWindow
             var style = _document.Snapshot.Styles[_document.Snapshot.Sheets[0].GetStyleId(3, 1)];
             Check(style.FontName == "Consolas" && style.WrapText && style.Vertical == 1 && style.Horizontal == 2,
                 "Font, wrap and alignment ribbon controls execute document commands");
-            var column = SheetGrid.Columns[1];
-            var text = column.GetCellContent(_rows[3]);
-            Check(text is TextBlock { FontSize: 24, TextWrapping: TextWrapping.Wrap, VerticalAlignment: VerticalAlignment.Center } block &&
-                block.FontFamily.Source == "Consolas" || text is TextBox { FontSize: 24, TextWrapping: TextWrapping.Wrap } editor &&
-                editor.FontFamily.Source == "Consolas" && editor.VerticalContentAlignment == VerticalAlignment.Center,
-                "Grid renders the requested family, point size, wrapping and vertical alignment");
+            GridSurface.BeginEdit();
+            var text = _grid.Editor;
+            Check(text.FontSize == 24 && text.TextWrapping == TextWrapping.Wrap &&
+                text.FontFamily.Source == "Consolas" && text.VerticalContentAlignment == VerticalAlignment.Center,
+                "Grid editor uses the requested family, point size, wrapping and vertical alignment");
+            GridSurface.Cancel();
             RibbonNumberFormat.SelectedIndex = 2; await Idle();
             Check(_document.Snapshot.Styles[_document.Snapshot.Sheets[0].GetStyleId(3, 1)].NumberFormatId == 10,
                 "Number format selector applies the chosen format");

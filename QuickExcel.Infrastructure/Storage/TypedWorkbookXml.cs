@@ -82,7 +82,7 @@ internal static class TypedWorkbookXml
                 var rowIndex = Int(Attr(row, "r"), WorkbookLimits.MaxRows) - 1;
                 if (rowIndex < 0 || !seenRows.Add(rowIndex)) throw new InvalidDataException("工作表行重复或无效。");
                 package.Shape(row, "c", "r ht hidden s customHeight customFormat spans", path);
-                var rowMetadata = new RowMetadata(OptionalDouble(row.Attribute("ht")), Bool((string?)row.Attribute("hidden")), Style(row, "s", styles.Count));
+                var rowMetadata = new RowMetadata(OptionalDouble(row.Attribute("ht")) / 0.75, Bool((string?)row.Attribute("hidden")), Style(row, "s", styles.Count));
                 if (rowMetadata != new RowMetadata() || row.Attribute("s") is not null || row.Attribute("customFormat") is not null) rows.Add(rowIndex, rowMetadata);
                 var nextColumn = 0;
                 foreach (var element in row.Elements(Main + "c"))
@@ -123,7 +123,7 @@ internal static class TypedWorkbookXml
             foreach (var merge in merges) ValidateRange(merge);
             var images = TypedImages.Read(package, path, sheet);
             sheets.Add(new WorksheetSnapshot(SheetId.New(), Decode(Attr(definition, "name")), cells, rows, columns, merges, images,
-                view?.Attribute("showGridLines") is null || Bool((string?)view.Attribute("showGridLines")), OptionalDouble(format?.Attribute("defaultRowHeight")), (string?)tabColor?.Attribute("rgb")));
+                view?.Attribute("showGridLines") is null || Bool((string?)view.Attribute("showGridLines")), OptionalDouble(format?.Attribute("defaultRowHeight")) / 0.75, (string?)tabColor?.Attribute("rgb")));
             bindings.Add(new(sheetId, path));
         }
         if (sheets.Count == 0) throw new InvalidDataException("工作簿没有工作表。");
@@ -240,7 +240,7 @@ internal static class TypedWorkbookXml
             var root = new XElement(Main + "worksheet", new XAttribute(XNamespace.Xmlns + "r", Rel));
             if (sheet.TabColor is not null) root.Add(new XElement(Main + "sheetPr", new XElement(Main + "tabColor", new XAttribute("rgb", sheet.TabColor))));
             root.Add(new XElement(Main + "sheetViews", new XElement(Main + "sheetView", new XAttribute("workbookViewId", 0), new XAttribute("showGridLines", sheet.ShowGridLines ? 1 : 0))));
-            if (sheet.DefaultRowHeight is { } height) root.Add(new XElement(Main + "sheetFormatPr", new XAttribute("defaultRowHeight", height)));
+            if (sheet.DefaultRowHeight is { } height) root.Add(new XElement(Main + "sheetFormatPr", new XAttribute("defaultRowHeight", height * 0.75)));
             if (sheet.Columns.Count > 0)
                 root.Add(new XElement(Main + "cols", sheet.Columns.OrderBy(p => p.Key).Select(p => new XElement(Main + "col",
                     new XAttribute("min", p.Key + 1), new XAttribute("max", p.Key + 1), p.Value.Width is { } width ? new XAttribute("width", width) : null,
@@ -253,7 +253,7 @@ internal static class TypedWorkbookXml
                 var row = new XElement(Main + "row", new XAttribute("r", rowIndex + 1));
                 if (sheet.Rows.TryGetValue(rowIndex, out var metadata))
                 {
-                    if (metadata.Height.HasValue) row.Add(new XAttribute("ht", metadata.Height.Value), new XAttribute("customHeight", 1));
+                    if (metadata.Height.HasValue) row.Add(new XAttribute("ht", metadata.Height.Value * 0.75), new XAttribute("customHeight", 1));
                     row.Add(new XAttribute("hidden", metadata.Hidden ? 1 : 0), new XAttribute("s", metadata.StyleId), new XAttribute("customFormat", 1));
                 }
                 if (grouped.TryGetValue(rowIndex, out var rowCells))

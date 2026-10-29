@@ -32,8 +32,8 @@ public partial class MainWindow
         GridSurface.SelectRange(new(2, 1, 6, 5), new(2, 1));
         Filter_Click(SheetGrid, new()); await Idle();
         Check(CurrentView.Region?.Range == new GridRange(2, 1, 6, 5), "Filter command explicitly establishes B3:F7 region");
-        Check(_filterHeaders?.ButtonCount == 5, "Five real header-cell filter buttons are realized");
-        var headerButton = VisualChild<Button>(_filterHeaders!) ?? throw new Exception("Header filter button missing from visual tree.");
+        Check(_grid.HeaderButtons.Count == 5, "Five real header-cell filter buttons are realized");
+        var headerButton = _grid.HeaderButtons.FirstOrDefault() ?? throw new Exception("Header filter button missing from visual tree.");
         var headerPoint = headerButton.TranslatePoint(new Point(headerButton.ActualWidth / 2, headerButton.ActualHeight / 2), this);
         var headerHit = InputHitTest(headerPoint) as DependencyObject;
         Check(headerButton.IsVisible && headerButton.ActualWidth > 0 && headerButton.ActualHeight > 0 && headerHit is not null &&
@@ -71,7 +71,7 @@ public partial class MainWindow
         var path = Path.Combine(folder, "sorted.xlsq"); _document.Save(path);
         using (var reopened = WorkbookDocument.Open(path, _services)) Check(reopened.GetCellInput(0, 4, 4) == "third", "Sorted records survive file save and reopen");
         CurrentView.FrozenRows = 3; CurrentView.FrozenColumns = 2; RefreshSheet(); await Idle();
-        Check(_frozenFilterHeaders?.ButtonCount > 0, "Header buttons exist in frozen reference rows");
+        Check(_grid.HeaderButtons.Count > 0, "Header buttons exist in frozen reference rows");
         CaptureGridEvidence(Path.Combine(folder, "data-operations.png"));
         CurrentView.FrozenRows = CurrentView.FrozenColumns = 0;
 
@@ -83,7 +83,7 @@ public partial class MainWindow
             surface.Bind(_document.Snapshot, 0, 100_000, 256); await Idle();
             Check(surface.ReadCount < 30_000, "Candidate bind reads visible cells without materializing 25.6M cells");
             Check(!surface.Control.AllowColumnResize && surface.Control.GetResizingColumn(new Point(160, 1)) is null,
-                "Candidate disables unsaved view-only column resizing until dimension transactions are integrated");
+                "Native unsaved resizing remains disabled; desktop owns dimension transactions");
             surface.SelectRange(new(0, 0, 99_999, 255), new(0, 0)); await Idle();
             Check(surface.Control.SelectedCellCount == 99_999L * 256 && surface.Control.SelectedRanges.Count == 1, "Huge candidate selection is one range and excludes manual hidden row");
             surface.SelectRange(new(5, 1, 6, 2), new(5, 1));
@@ -106,17 +106,12 @@ public partial class MainWindow
             SaveVisual(window, Path.Combine(folder, "fast-grid.png"));
         }
         finally { window.Close(); }
-        var workspace = new FastGridWindow(this, _document, 0, CurrentView, 100_000, 256) { ShowInTaskbar = false };
-        workspace.Show(); await Idle();
-        try
-        {
-            workspace.Surface.Select(new(11, 1)); workspace.Surface.BeginEdit(); workspace.Surface.Editor.Text = new string('x', 32768);
-            workspace.Close(); await Idle();
-            Check(workspace.IsVisible && workspace.Surface.Editor.Text.Length == 32768, "Actual candidate workspace blocks closing an invalid draft");
-            workspace.Surface.Editor.Text = "关闭时提交"; workspace.Close(); await Idle();
-            Check(!workspace.IsVisible && _document.GetCellInput(0, 11, 1) == "关闭时提交", "Actual candidate workspace commits the original cell on close without a late refresh");
-        }
-        finally { if (workspace.IsVisible) { workspace.Surface.Cancel(); workspace.Close(); } }
+        GridSurface.Select(new(11, 1)); GridSurface.BeginEdit(); _grid.Editor.Text = new string('x', 32768);
+        var rejected = _document.Snapshot.Revision;
+        Check(!CommitEditors() && _grid.IsEditing && _grid.Editor.Text.Length == 32768 && rejected == _document.Snapshot.Revision,
+            "Main workspace retains invalid drafts without history");
+        _grid.Editor.Text = "主网格提交"; Check(CommitEditors() && _document.GetCellInput(0, 11, 1) == "主网格提交",
+            "Main workspace commits to the original cell");
         File.WriteAllText(Path.Combine(folder, "data-operations-smoke.json"), JsonSerializer.Serialize(checks, new JsonSerializerOptions { WriteIndented = true }));
         File.WriteAllText(Path.Combine(folder, "data-operations-smoke-result.txt"), $"PASS: {checks.Count} data operations and candidate grid assertions. Native OS IME and cross-monitor DPI remain unverified.");
     }

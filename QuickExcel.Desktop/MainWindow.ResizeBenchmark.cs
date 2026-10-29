@@ -24,13 +24,11 @@ public partial class MainWindow
         GridSurface.Select(new(2, 2)); Freeze_Click(new MenuItem(), new());
         await Dispatcher.InvokeAsync(() => UpdateLayout(), DispatcherPriority.ApplicationIdle);
         var samples = new List<object>();
-        var recalculations = 0; var disabled = 0; var frozenResets = 0;
+        var recalculations = 0; var disabled = 0;
         void Changed(object? sender, DocumentChange e) { if (e.CalculationOnly) recalculations++; }
         void EnabledChanged(object sender, DependencyPropertyChangedEventArgs e) { if (Equals(e.NewValue, false)) disabled++; }
-        void ColumnsChanged(object? sender, NotifyCollectionChangedEventArgs e) { if (e.Action == NotifyCollectionChangedAction.Reset) frozenResets++; }
         _document.Session.Changed += Changed;
         Workspace.IsEnabledChanged += EnabledChanged;
-        ((INotifyCollectionChanged)FrozenGrid.Columns).CollectionChanged += ColumnsChanged;
         var suppress = _suppressAutoCalculation;
         _suppressAutoCalculation = false;
         try
@@ -38,40 +36,27 @@ public partial class MainWindow
             foreach (var axis in new[] { "column", "row" })
             for (var sample = 0; sample < 15; sample++)
             {
-                Thumb grip;
-                if (axis == "column")
-                {
-                    var presenter = VisualChild<DataGridColumnHeadersPresenter>(SheetGrid)!;
-                    var header = (DataGridColumnHeader)presenter.ItemContainerGenerator.ContainerFromIndex(0);
-                    grip = (Thumb)header.Template.FindName("PART_RightHeaderGripper", header);
-                }
-                else
-                {
-                    var row = (DataGridRow)SheetGrid.ItemContainerGenerator.ContainerFromItem(_rows[0]);
-                    var header = VisualChild<DataGridRowHeader>(row)!;
-                    grip = (Thumb)header.Template.FindName("PART_BottomHeaderGripper", header);
-                }
-                recalculations = disabled = frozenResets = 0;
+                var resizeAxis = axis == "column" ? SheetAxis.Column : SheetAxis.Row;
+                recalculations = disabled = 0;
                 var preview = new List<double>();
-                grip.RaiseEvent(new DragStartedEventArgs(0, 0) { RoutedEvent = Thumb.DragStartedEvent });
+                BeginGridResize(resizeAxis, 0);
                 for (var frame = 0; frame < 4; frame++)
                 {
                     var timer = Stopwatch.StartNew();
                     for (var move = 0; move < 8; move++)
                     {
                         var delta = sample % 2 == 0 ? 0.5 : -0.5;
-                        // Thumb offsets overlap until layout moves the grip to the pointer.
-                        grip.RaiseEvent(new DragDeltaEventArgs(axis == "column" ? delta * (move + 1) : 0, axis == "row" ? delta * (move + 1) : 0) { RoutedEvent = Thumb.DragDeltaEvent });
+                        PreviewGridResize(delta * (frame * 8 + move + 1));
                     }
                     await Dispatcher.InvokeAsync(() => SheetGrid.UpdateLayout(), DispatcherPriority.ApplicationIdle);
                     preview.Add(timer.Elapsed.TotalMilliseconds);
                 }
                 var complete = Stopwatch.StartNew();
-                grip.RaiseEvent(new DragCompletedEventArgs(0, 0, false) { RoutedEvent = Thumb.DragCompletedEvent });
+                CompleteGridResize(false);
                 await Dispatcher.InvokeAsync(() => UpdateLayout(), DispatcherPriority.ApplicationIdle);
                 while (_busy) await Task.Delay(5);
                 await Dispatcher.InvokeAsync(() => UpdateLayout(), DispatcherPriority.ApplicationIdle);
-                if (sample >= 5) samples.Add(new { axis, previewMs = preview, completeMs = complete.Elapsed.TotalMilliseconds, recalculations, workspaceDisableCount = disabled, frozenColumnResets = frozenResets });
+                if (sample >= 5) samples.Add(new { axis, previewMs = preview, completeMs = complete.Elapsed.TotalMilliseconds, recalculations, workspaceDisableCount = disabled });
             }
         }
         finally
@@ -79,11 +64,10 @@ public partial class MainWindow
             _suppressAutoCalculation = suppress;
             _document.Session.Changed -= Changed;
             Workspace.IsEnabledChanged -= EnabledChanged;
-            ((INotifyCollectionChanged)FrozenGrid.Columns).CollectionChanged -= ColumnsChanged;
         }
         File.WriteAllText(Path.Combine(folder, "resize-benchmark.json"), JsonSerializer.Serialize(new
         {
-            method = "10k cells including 1k formulas, 2 frozen rows/columns; each axis 5 warmups + 10 samples, 32 synthetic Thumb deltas in 4 bursts; times end at ApplicationIdle after layout, not physical pointer-to-display latency.",
+            method = "10k cells including 1k formulas, 2 frozen rows/columns; each axis 5 warmups + 10 samples, 32 synthetic pointer displacements in 4 bursts; times end at ApplicationIdle after layout, not physical pointer-to-display latency.",
             samples
         }, new JsonSerializerOptions { WriteIndented = true }));
         File.WriteAllText(Path.Combine(folder, "resize-benchmark-result.txt"), "PASS: resize measurements completed; see raw samples and counters in resize-benchmark.json.");

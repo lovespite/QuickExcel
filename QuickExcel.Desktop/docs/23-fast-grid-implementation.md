@@ -2,7 +2,7 @@
 
 日期：2026-10-29。
 
-本记录跟踪 [22 号方案](22-fastwpfgrid-and-data-operations.md) 的实现。默认网格仍是 DataGrid；FastWpfGrid 从“视图 → 试验网格”进入，同一文档会话持有写入和撤销。不能把候选入口等同于 FG-04 默认切换。
+本记录保留 [22 号方案](22-fastwpfgrid-and-data-operations.md) 的试验阶段实现和原始对照证据，下文的 DataGrid 默认值与试验入口属于历史。2026-10-29 后续已按用户要求完成主界面切换并移除旧控件，当前状态见 [主网格迁移记录](24-main-grid-migration.md)，质量门禁仍单独跟踪。
 
 ## 预先确定的性能口径
 

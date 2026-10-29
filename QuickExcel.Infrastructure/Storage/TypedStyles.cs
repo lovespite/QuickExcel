@@ -19,7 +19,8 @@ internal static class TypedStyles
         package.RequireType(path, "application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml");
         var root = package.XmlPart(path).Root!;
         if (root.Name != Main + "styleSheet") throw new InvalidDataException("无效样式表。");
-        package.Shape(root, "numFmts fonts fills borders cellXfs cellStyleXfs cellStyles", "", path);
+        package.Shape(root, "numFmts fonts fills borders cellXfs cellStyleXfs cellStyles colors", "", path);
+        var colors = new XlsxColors(package, workbookPart, root, path);
         // Named/inherited styles need a separate editing model. Keep them in the compatibility report.
         if (root.Element(Main + "cellStyleXfs") is { } inherited && (inherited.Elements().Count() > 1 ||
             inherited.Elements().Any(x => x.Attributes().Any(a => a.Name.LocalName is not ("numFmtId" or "fontId" or "fillId" or "borderId") || a.Value != "0"))))
@@ -66,16 +67,16 @@ internal static class TypedStyles
             var numberId = Int((string?)xf.Attribute("numFmtId") ?? "0", 65535);
             if (numberId >= 164 && !formats.ContainsKey(numberId)) throw new InvalidDataException("数字格式定义缺失。");
             int Side(string name) => Named((string?)border.Element(Main + name)?.Attribute("style"), Borders, 0, package, path);
-            string? SideColor(string name) => Color(border.Element(Main + name)?.Element(Main + "color"), package, path);
+            string? SideColor(string name) => colors.Read(border.Element(Main + name)?.Element(Main + "color"), package, path);
             result.Add(new StyleDefinition
             {
                 NumberFormatId = formats.ContainsKey(numberId) ? 0 : numberId,
                 NumberFormatCode = formats.GetValueOrDefault(numberId),
                 FontName = (string?)font.Element(Main + "name")?.Attribute("val"),
                 FontSize = OptionalDouble(font.Element(Main + "sz")?.Attribute("val")),
-                FontColor = Color(font.Element(Main + "color"), package, path),
+                FontColor = colors.Read(font.Element(Main + "color"), package, path),
                 Bold = Flag(font.Element(Main + "b")), Italic = Flag(font.Element(Main + "i")),
-                FillColor = (string?)pattern?.Attribute("patternType") == "solid" ? Color(pattern.Element(Main + "fgColor"), package, path) : null,
+                FillColor = (string?)pattern?.Attribute("patternType") == "solid" ? colors.Read(pattern.Element(Main + "fgColor"), package, path) : null,
                 Horizontal = Named((string?)alignment?.Attribute("horizontal"), Horizontal, 0, package, path),
                 Vertical = Named((string?)alignment?.Attribute("vertical"), Vertical, 2, package, path),
                 WrapText = Bool((string?)alignment?.Attribute("wrapText")),
@@ -143,14 +144,6 @@ internal static class TypedStyles
         if (index >= 0) return index;
         package.Issues.Add($"{path}: 未建模样式 {value}");
         return fallback;
-    }
-    private static string? Color(XElement? element, XlsxPackage package, string path)
-    {
-        if (element is null) return null;
-        package.Shape(element, "", "rgb", path);
-        var rgb = (string?)element.Attribute("rgb");
-        if (rgb is not null && (rgb.Length != 8 || rgb.Any(c => !char.IsAsciiHexDigit(c)))) throw new InvalidDataException("ARGB 颜色无效。");
-        return rgb;
     }
     public static string Decode(string value) => System.Text.RegularExpressions.Regex.Replace(value, "_x([0-9A-Fa-f]{4})_",
         match => ((char)int.Parse(match.Groups[1].Value, NumberStyles.HexNumber, CultureInfo.InvariantCulture)).ToString());

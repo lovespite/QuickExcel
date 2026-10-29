@@ -10,7 +10,7 @@ namespace QuickExcel.Desktop;
 public partial class MainWindow
 {
     private Task _gridInput = Task.CompletedTask;
-    private bool _gridEditorArmed;
+    private bool _gridEditorArmed => !_grid.IsEditing;
     private void InstallInputHandlers()
     {
         AddHandler(TextCompositionManager.PreviewTextInputStartEvent, new TextCompositionEventHandler(CompositionStarted), true);
@@ -35,26 +35,7 @@ public partial class MainWindow
         };
         PreviewMouseWheel += (_, e) => { if (_busy) e.Handled = true; };
         CommandManager.AddPreviewExecutedHandler(this, (_, e) => { if (_busy) e.Handled = true; });
-        SheetGrid.GotKeyboardFocus += (_, e) =>
-        {
-            if (e.NewFocus is not DataGridCell cell) return;
-            // A focused editor must already be registered with TSF before the first native IME
-            // key arrives. Preparing it from that key is too late for modern Windows Pinyin.
-            Dispatcher.BeginInvoke(DispatcherPriority.Input, new Action(() =>
-            {
-                if (_busy || _editState.GridEditing || _editState.IsComposing || !cell.IsKeyboardFocused) return;
-                if (!GridSurface.BeginEdit()) return;
-                if (cell.Content is not TextBox editor) return;
-                GridInputColumn.InitializeText(editor, _document.GetCellValue(_sheetIndex, _selectedRow, _selectedColumn));
-                editor.SelectAll();
-                GridInputColumn.SetPrepared(editor, true);
-                editor.TextChanged += (_, _) => ActivateGridDraft(editor);
-                _gridEditorArmed = true;
-                _editState.EndGrid(); // Ready for input; no draft yet. Navigation still belongs to the grid.
-            }));
-        };
-        SheetGrid.PreviewMouseLeftButtonDown += Grid_MouseLeftButtonDown;
-        SheetGrid.PreviewMouseDoubleClick += Grid_MouseDoubleClick;
+        SheetGrid.PreviewKeyDown += Grid_KeyDown;
         // While a text editor owns focus, its Ctrl+Z/C/Y/V remain normal text commands.
         SheetGrid.CommandBindings.Add(new CommandBinding(ApplicationCommands.Copy,
             (_, e) =>
@@ -65,41 +46,6 @@ public partial class MainWindow
                 catch (Exception ex) { ReportEditFailure(ex); }
             },
             (_, e) => { if (!_editState.GridEditing) { e.CanExecute = !_busy; e.Handled = true; } }));
-    }
-
-    private void Grid_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
-    {
-        if (_busy || _editState.IsComposing) return;
-        var modifiers = Keyboard.Modifiers;
-        if (modifiers.HasFlag(ModifierKeys.Shift)) _grid.CaptureAnchor();
-        else _grid.ResetAnchor();
-
-        var source = e.OriginalSource as DependencyObject;
-        while (source is not null and not DataGridCell)
-            source = source is Visual ? VisualTreeHelper.GetParent(source) : LogicalTreeHelper.GetParent(source);
-        if (!_gridEditorArmed || modifiers != ModifierKeys.None || source is not DataGridCell { IsSelected: true, Content: TextBox editor } ||
-            !ReferenceEquals(editor, SheetGrid.CurrentColumn?.GetCellContent(SheetGrid.CurrentItem))) return;
-
-        // WPF treats a focused, selected cell as an edit click and does not start dragging.
-        // Retire only the prepared input context and let its native selection path capture
-        // the mouse, extend the range and auto-scroll. No document draft exists here.
-        GridSurface.Cancel();
-        Keyboard.ClearFocus();
-    }
-
-    private void Grid_MouseDoubleClick(object sender, MouseButtonEventArgs e)
-    {
-        if (_busy || _editState.IsComposing || e.ChangedButton != MouseButton.Left || Keyboard.Modifiers != ModifierKeys.None) return;
-        var source = e.OriginalSource as DependencyObject;
-        while (source is not null and not DataGridCell)
-            source = source is Visual ? VisualTreeHelper.GetParent(source) : LogicalTreeHelper.GetParent(source);
-        if (!_gridEditorArmed || source is not DataGridCell { IsSelected: true, Content: TextBox editor } ||
-            !ReferenceEquals(editor, SheetGrid.CurrentColumn?.GetCellContent(SheetGrid.CurrentItem))) return;
-
-        BeginExplicitGridEdit(editor);
-        editor.Focus();
-        editor.CaretIndex = Math.Max(0, editor.GetCharacterIndexFromPoint(e.GetPosition(editor), true));
-        e.Handled = true;
     }
 
     private bool IsCellInputSource(object source) => source is DependencyObject obj &&
@@ -126,27 +72,12 @@ public partial class MainWindow
 
     private void ActivateGridDraft(object source)
     {
-        if (_gridEditorArmed && source is DependencyObject obj && SheetGrid.IsAncestorOf(obj))
-        {
-            _gridEditorArmed = false;
-            if (SheetGrid.CurrentColumn?.GetCellContent(SheetGrid.CurrentItem) is TextBox editor)
-                GridInputColumn.SetPrepared(editor, false);
-            _editState.BeginGrid();
-        }
+        if (ReferenceEquals(source, _grid.Editor)) _grid.ActivateDraft();
     }
-
-    private void BeginExplicitGridEdit(TextBox editor)
-    {
-        _gridEditorArmed = false;
-        GridInputColumn.SetPrepared(editor, false);
-        _editState.BeginGrid();
-        GridInputColumn.InitializeText(editor, _document.GetCellInput(_sheetIndex, _selectedRow, _selectedColumn));
-    }
-
 
     private bool CanCommitComposition()
     {
-        if (!_editState.IsComposing) return true;
+        if (!_editState.IsComposing && !_grid.IsComposing) return true;
         StatusText.Text = "请先完成或取消输入法组合输入，再提交、切换或保存。";
         return false;
     }
@@ -180,7 +111,7 @@ public partial class MainWindow
             if ((e.Key == Key.Down || e.SystemKey == Key.Down) && CurrentView.Region is not null)
             {
                 e.Handled = true;
-                var target = SheetGrid.CurrentColumn?.GetCellContent(SheetGrid.CurrentItem) as FrameworkElement ?? SheetGrid;
+                var target = _grid.Editor;
                 await (_workspaceInput = OpenHeaderFilterAsync(_selectedColumn, target));
             }
             return;
@@ -226,11 +157,7 @@ public partial class MainWindow
         {
             if (!CommitFormulaBar()) return;
             GridSurface.BeginEdit();
-            if (SheetGrid.CurrentColumn?.GetCellContent(SheetGrid.CurrentItem) is TextBox editor)
-            {
-                if (_gridEditorArmed) BeginExplicitGridEdit(editor);
-                editor.Select(editor.Text.Length, 0);
-            }
+            _grid.Editor.Select(_grid.Editor.Text.Length, 0);
             return;
         }
         if (key == Key.Delete)
@@ -256,19 +183,20 @@ public partial class MainWindow
         var sheet = _document.Snapshot.Sheets[_sheetIndex];
         var row = _selectedRow;
         var column = _selectedColumn;
+        var currentRange = _grid.CurrentRange;
         var delta = shift && key is Key.Tab or Key.Enter ? -1 : 1;
         switch (key)
         {
-            case Key.Enter: row += delta; break;
+            case Key.Enter: row = delta > 0 ? currentRange.Bottom + 1 : currentRange.Top - 1; break;
             case Key.Tab:
-                column += delta;
+                column = delta > 0 ? currentRange.Right + 1 : currentRange.Left - 1;
                 if (column >= _columnCount) { column = 0; row++; }
                 if (column < 0) { column = _columnCount - 1; row--; }
                 break;
-            case Key.Left: column = ctrl ? 0 : column - 1; break;
-            case Key.Right: column = ctrl ? Math.Max(0, sheet.UsedColumnCount - 1) : column + 1; break;
-            case Key.Up: row = ctrl ? 0 : row - 1; break;
-            case Key.Down: row = ctrl ? Math.Max(0, sheet.UsedRowCount - 1) : row + 1; break;
+            case Key.Left: column = ctrl ? 0 : currentRange.Left - 1; break;
+            case Key.Right: column = ctrl ? Math.Max(0, sheet.UsedColumnCount - 1) : currentRange.Right + 1; break;
+            case Key.Up: row = ctrl ? 0 : currentRange.Top - 1; break;
+            case Key.Down: row = ctrl ? Math.Max(0, sheet.UsedRowCount - 1) : currentRange.Bottom + 1; break;
             case Key.Home: column = 0; if (ctrl) row = 0; break;
             case Key.End: column = Math.Max(0, sheet.UsedColumnCount - 1); if (ctrl) row = Math.Max(0, sheet.UsedRowCount - 1); break;
         }
@@ -288,7 +216,8 @@ public partial class MainWindow
     {
         if (!CommitEditors()) return;
         CurrentView.RequireCurrentFilter(_document.Snapshot);
-        bool Excluded(int row) => CurrentView.IsFilteredOut(_document.Snapshot, _sheetIndex, row);
+        bool Excluded(int row) => CurrentView.IsFilteredOut(_document.Snapshot, _sheetIndex, row) ||
+            _document.Snapshot.Sheets[_sheetIndex].Rows.GetValueOrDefault(row)?.Hidden == true;
         var range = GridRange.Rectangle(GridSurface.Selection, Excluded);
         var text = GridClipboard.Write(range, (r, c) => _document.GetCellValue(_sheetIndex, r, c), Excluded);
         Clipboard.SetText(text);
@@ -299,6 +228,11 @@ public partial class MainWindow
     {
         var selection = GridSurface.Selection;
         var range = selection.Count == 0 ? new GridRange(_selectedRow, _selectedColumn, _selectedRow, _selectedColumn) : GridRange.Rectangle(selection);
+        // A single merged cell is one paste destination even though its selection spans all covered cells.
+        var merge = _grid.CurrentRange;
+        if (merge.Count > 1 && range == new GridRange(merge.Top, merge.Left, merge.Bottom, merge.Right) &&
+            GridClipboard.Read(text) is [{ Length: 1 }])
+            range = new(merge.Top, merge.Left, merge.Top, merge.Left);
         var edits = GridClipboard.Prepare(text, range, allowFormulas);
         if (!CommitEditors()) return;
         CurrentView.RequireVisibleTargets(_document.Snapshot, _sheetIndex, edits.Select(edit => edit.Row));

@@ -79,8 +79,10 @@ partial class FastGridControl
         foreach (var range in _selectedCells.Ranges)
             foreach (var rect in GetOverlayRectangles(range)) drawing.DrawRectangle(fill, pen, rect);
 
-        if (_currentCell.IsCell)
-            foreach (var rect in GetOverlayRectangles(new(_currentCell.Row.Value, _currentCell.Column.Value, _currentCell.Row.Value, _currentCell.Column.Value)))
+        // Selected cells already share the range outline. Drawing the current cell again
+        // adds a nested box during range selection (and doubles a single-cell border).
+        if (_currentCell.IsCell && !_selectedCells.Contains(_currentCell))
+            foreach (var rect in GetOverlayRectangles(GetMergedRealCellRange(_currentCell)))
                 drawing.DrawRectangle(null, pen, rect);
 
         void RowHeader(int? row, Brush brush)

@@ -10,7 +10,7 @@ using QuickExcel.Storage;
 
 namespace QuickExcel.Core.Test;
 
-public sealed class TypedStorageTests : IDisposable
+public sealed partial class TypedStorageTests : IDisposable
 {
     private readonly string _folder = Path.Combine(Path.GetTempPath(), "QuickExcel-v2-" + Guid.NewGuid().ToString("N"));
     private readonly TypedWorkbookStorage _storage = new();

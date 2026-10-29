@@ -19,21 +19,13 @@ public partial class MainWindow
         await RecalculateAsync();
         GridSurface.Select(new(1, 1)); Freeze_Click(new MenuItem(), new()); await Idle();
         GridSurface.Select(new(80, 1)); await Idle();
-        var rows = SheetGrid.ItemsSource;
-        var columns = SheetGrid.Columns.ToArray();
-        var frozenRows = FrozenGrid.ItemsSource;
-        var frozenColumns = FrozenGrid.Columns.ToArray();
-        var scroll = VisualChild<ScrollViewer>(SheetGrid)!;
-        var offset = scroll.VerticalOffset;
-        var current = SheetGrid.CurrentCell;
-        var editor = SheetGrid.CurrentColumn.GetCellContent(SheetGrid.CurrentItem);
+        var model = _grid.Control.Model;
+        var offset = _grid.Control.FirstVisibleRowScrollIndex;
+        var current = _grid.Current;
+        var editor = _grid.Editor;
         var focus = Keyboard.FocusedElement;
-        var refreshes = 0;
         var disabled = 0;
-        void RowChanged(object? sender, PropertyChangedEventArgs e) => refreshes++;
         void EnabledChanged(object sender, DependencyPropertyChangedEventArgs e) { if (Equals(e.NewValue, false)) disabled++; }
-        var frozenRow = _rows[0];
-        frozenRow.PropertyChanged += RowChanged;
         Toolbar.IsEnabledChanged += EnabledChanged;
         Workspace.IsEnabledChanged += EnabledChanged;
         var suppression = _suppressAutoCalculation;
@@ -46,7 +38,7 @@ public partial class MainWindow
                 await gate.Entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
                 check(_busy && Toolbar.IsEnabled && Workspace.IsEnabled && SheetGrid.IsEnabled,
                     "Recalculation keeps toolbar and grid enabled without disabled visual transitions");
-                check(ReferenceEquals(focus, Keyboard.FocusedElement) && ReferenceEquals(editor, SheetGrid.CurrentColumn.GetCellContent(SheetGrid.CurrentItem)),
+                check(ReferenceEquals(focus, Keyboard.FocusedElement) && ReferenceEquals(editor, _grid.Editor),
                     "Recalculation keeps the focused editor attached");
                 var key = new KeyEventArgs(Keyboard.PrimaryDevice, PresentationSource.FromVisual(this), 0, Key.A)
                     { RoutedEvent = Keyboard.PreviewKeyDownEvent };
@@ -62,31 +54,27 @@ public partial class MainWindow
             finally { gate.Release.TrySetResult(); }
             check(await running, "Held recalculation commits successfully");
             await Idle();
-            check(disabled == 0 && refreshes == 0, "Unchanged calculation results emit no row refresh or disabled transitions");
-            check(ReferenceEquals(rows, SheetGrid.ItemsSource) && columns.SequenceEqual(SheetGrid.Columns) &&
-                ReferenceEquals(frozenRows, FrozenGrid.ItemsSource) && frozenColumns.SequenceEqual(FrozenGrid.Columns),
-                "Calculation preserves main and frozen items and columns");
-            check(current == SheetGrid.CurrentCell && scroll.VerticalOffset == offset && ReferenceEquals(editor, SheetGrid.CurrentColumn.GetCellContent(SheetGrid.CurrentItem)),
+            check(disabled == 0, "Calculation emits no disabled transitions");
+            check(ReferenceEquals(model, _grid.Control.Model) && _grid.Control.FrozenRowCount == 1 && _grid.Control.FrozenColumnCount == 1,
+                "Calculation preserves the model and both frozen axes");
+            check(current == _grid.Current && _grid.Control.FirstVisibleRowScrollIndex == offset && ReferenceEquals(editor, _grid.Editor),
                 "Calculation preserves current cell, scroll offset and prepared editor");
 
             ApplyValues([(0, 0, "3")]); await RecalculateAsync(); await Idle();
-            check(((TextBlock)FrozenGrid.Columns[1].GetCellContent(frozenRow)).Text == "6" && refreshes == 1,
+            check(_grid.DisplayText(0, 1) == "6" && _grid.Control.GetModelCellBounds(0, 1) is not null,
                 "Changed formula results update frozen rows even when the main row is offscreen");
             GridSurface.SelectRange(new(0, 0, 0, 1), new(0, 0)); await Idle();
             var selection = GridSurface.Selection.ToArray();
             var calls = calculator.Calls;
             _suppressAutoCalculation = false;
             ApplyRibbonStyle(new(Bold: true, FillColor: "FFFFFF00", NumberFormatId: 2)); await Idle();
-            var content = (TextBlock)SheetGrid.Columns[1].GetCellContent(frozenRow);
-            check(content.Text == "6.00" && content.FontWeight == FontWeights.SemiBold &&
-                ((DataGridCell)content.Parent).Background.ToString() == "#FFFFFF00" &&
-                ((DataGridCell)FrozenGrid.Columns[1].GetCellContent(frozenRow).Parent).Background.ToString() == "#FFFFFF00" &&
-                ((TextBlock)FrozenGrid.Columns[1].GetCellContent(frozenRow)).Text == "6.00",
-                "Style bindings update font, fill and number display immediately in both panes");
+            var style = _document.Snapshot.Styles[_document.Snapshot.Sheets[0].GetStyleId(0, 1)];
+            check(_grid.DisplayText(0, 1) == "6.00" && style.Bold && style.FillColor == "FFFFFF00" && _grid.Artwork.IsLoaded,
+                "Formatting projection updates the frozen cell without replacing the model");
             check(calculator.Calls == calls && !_calculationPending && selection.SequenceEqual(GridSurface.Selection),
                 "Formatting preserves the range selection and never schedules calculation");
             await UndoAsync(false); await Idle();
-            check(((TextBlock)SheetGrid.Columns[1].GetCellContent(frozenRow)).Text == "6" && CurrentView.FrozenRows == 1,
+            check(_grid.DisplayText(0, 1) == "6" && CurrentView.FrozenRows == 1,
                 "Formatting undo restores display and preserves frozen view");
             await UndoAsync(true); await Idle();
             check(calculator.Calls == calls && !_calculationPending && _document.Snapshot.Sheets[0].GetCell(0, 1)!.Calculation!.State == CalculationState.Fresh,
@@ -118,7 +106,6 @@ public partial class MainWindow
         finally
         {
             _suppressAutoCalculation = suppression;
-            frozenRow.PropertyChanged -= RowChanged;
             Toolbar.IsEnabledChanged -= EnabledChanged;
             Workspace.IsEnabledChanged -= EnabledChanged;
         }

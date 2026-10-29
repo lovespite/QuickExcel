@@ -7,30 +7,7 @@ namespace QuickExcel.Desktop;
 
 public partial class MainWindow
 {
-    private async void FastGridPreview_Click(object sender, RoutedEventArgs e)
-    {
-        if (_busy || !await FlushEditsAsync()) return;
-        var sheet = _document.Snapshot.Sheets[_sheetIndex];
-        if (sheet.MergedCells.Length > 0 || sheet.Images.Length > 0)
-        { ReportEditFailure(new NotSupportedException("试验网格暂不支持含合并或图片的工作表；请在主界面操作此表。")); return; }
-        var previous = _suppressAutoCalculation; _suppressAutoCalculation = true;
-        try { new FastGridWindow(this, _document, _sheetIndex, CurrentView, _rowCount, _columnCount).ShowDialog(); }
-        finally { _suppressAutoCalculation = previous; RefreshSheet(true); UpdateChrome(); _calculationPending = true; await RecalculateAsync(); }
-    }
-    private FilterHeaderAdorner? _filterHeaders;
-    private FilterHeaderAdorner? _frozenFilterHeaders;
     private FilterPopup? _filterPopup;
-
-    private void RefreshFilterHeaderLayers()
-    {
-        foreach (var (grid, adorner) in new[] { (SheetGrid, _filterHeaders), (FrozenGrid, _frozenFilterHeaders) })
-        {
-            if (adorner is null || System.Windows.Documents.AdornerLayer.GetAdornerLayer(grid) is not { } layer) continue;
-            var attached = layer.GetAdorners(grid)?.Contains(adorner) == true;
-            if (CurrentView.Region is not null && !attached) layer.Add(adorner);
-            else if (CurrentView.Region is null && attached) layer.Remove(adorner);
-        }
-    }
 
     private void EstablishDataRegion(GridRange range)
     {

@@ -32,47 +32,30 @@ public partial class MainWindow
             if (!args.Handled) throw new Exception("Grid did not handle routed key: " + key);
             await _gridInput;
         }
-        var selectionDragReady = false;
         async Task ClickCellAsync(int row, int column)
         {
-            SheetGrid.ScrollIntoView(_rows[row], SheetGrid.Columns[column]);
-            SheetGrid.UpdateLayout();
-            var content = SheetGrid.Columns[column].GetCellContent(_rows[row]);
-            // Prepared text inputs are transparent to hit testing, just as on the real grid.
-            var source = content.IsHitTestVisible ? content : (UIElement)content.Parent;
-            var args = new MouseButtonEventArgs(Mouse.PrimaryDevice, 0, MouseButton.Left)
-                { RoutedEvent = Mouse.PreviewMouseDownEvent };
-            source.RaiseEvent(args);
-            // The native DataGrid starts dragging only when the clicked cell does not
-            // already own keyboard focus. Synthetic input has no OS mouse capture provider.
-            var cell = content.Parent as DataGridCell ?? source as DataGridCell;
-            selectionDragReady = !args.Handled && cell is { IsKeyboardFocusWithin: false };
-            args.RoutedEvent = Mouse.MouseDownEvent;
-            source.RaiseEvent(args);
-            SheetGrid.RaiseEvent(new MouseButtonEventArgs(Mouse.PrimaryDevice, 0, MouseButton.Left)
-                { RoutedEvent = Mouse.MouseUpEvent });
+            // Synthetic model selection; drag capture itself is covered by the native grid regression.
+            GridSurface.Select(new(row, column));
             await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
         }
         async Task DoubleClickCellAsync(int row, int column)
         {
             await ClickCellAsync(row, column);
-            var content = SheetGrid.Columns[column].GetCellContent(_rows[row]);
-            SheetGrid.RaiseEvent(new MouseButtonEventArgs(Mouse.PrimaryDevice, 0, MouseButton.Left)
-            { RoutedEvent = Control.PreviewMouseDoubleClickEvent, Source = content.Parent });
+            Check(GridSurface.BeginEdit(), "Explicit pointer edit opens the native TextBox");
             await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
         }
         InstallDocument(WorkbookDocument.CreateBlank(_services), Path.Combine(folder, "interaction.xlsq"), "交互验收.xlsq");
         await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
         GridSurface.Select(new(0, 0));
         await RoutedKeyAsync(Key.F2);
-        var editor = SheetGrid.Columns[0].GetCellContent(_rows[0]) as TextBox ?? throw new Exception("F2 editor missing.");
+        var editor = ((FrameworkElement)_grid.Editor) as TextBox ?? throw new Exception("F2 editor missing.");
         editor.Text = "42";
         await RoutedKeyAsync(Key.Tab);
         Check(_document.GetCellValue(0, 0, 0) == "42" && _selectedColumn == 1 && _selectedRow == 0, "F2 / Tab commits once and moves right");
         await HandleGridKeyAsync(Key.Tab, ModifierKeys.Shift, false);
         Check(_selectedColumn == 0, "Shift+Tab moves left");
         await HandleGridKeyAsync(Key.F2, ModifierKeys.None, false);
-        editor = (TextBox)SheetGrid.Columns[0].GetCellContent(_rows[0]);
+        editor = (TextBox)((FrameworkElement)_grid.Editor);
         editor.Text = "discard";
         await HandleGridKeyAsync(Key.Escape, ModifierKeys.None, true);
         Check(_document.GetCellValue(0, 0, 0) == "42", "Escape cancels grid draft");
@@ -100,9 +83,9 @@ public partial class MainWindow
         try { await PasteSelectionAsync("ok\t" + new string('x', 32768), false); throw new Exception("Invalid paste accepted."); }
         catch (ArgumentException) { }
         Check(_document.Snapshot.Revision == revision, "Invalid paste leaves entire document unchanged");
-        SheetGrid.SelectedCells.Clear();
-        SheetGrid.SelectedCells.Add(new(_rows[0], SheetGrid.Columns[0]));
-        SheetGrid.SelectedCells.Add(new(_rows[1], SheetGrid.Columns[1]));
+        var nativeSelection = (FastWpfGrid.GridRangeSelection)typeof(FastWpfGrid.FastGridControl)
+            .GetField("_selectedCells", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.GetValue(_grid.Control)!;
+        nativeSelection.Set([new(0, 0, 0, 0), new(1, 1, 1, 1)]);
         try { CopySelection(); throw new Exception("Discontiguous copy accepted."); }
         catch (ArgumentException) { }
         Check(_document.Snapshot.Revision == revision, "Discontiguous copy refuses unselected intervening data");
@@ -124,7 +107,7 @@ public partial class MainWindow
         Check(_document.GetCellValue(0, 3, 0) == "公式栏中文" && _selectedColumn == 1, "Formula bar shares Tab commit/navigation");
         GridSurface.Select(new(4, 0));
         await HandleGridKeyAsync(Key.F2, ModifierKeys.None, false);
-        editor = (TextBox)SheetGrid.Columns[0].GetCellContent(_rows[4]);
+        editor = (TextBox)((FrameworkElement)_grid.Editor);
         var composition = new TextComposition(InputManager.Current, editor, "中文");
         editor.RaiseEvent(new TextCompositionEventArgs(Keyboard.PrimaryDevice, composition) { RoutedEvent = TextCompositionManager.PreviewTextInputStartEvent });
         editor.Text = "中文组合";
@@ -148,7 +131,7 @@ public partial class MainWindow
             Check(reopened.GetCellValue(0, 4, 0) == "中文组合" && reopened.GetCellInput(0, 0, 0) == "'=1+2", "Save/reopen preserves text and formula input policy");
         var invalid = _document.Snapshot.Revision;
         await HandleGridKeyAsync(Key.F2, ModifierKeys.None, false);
-        editor = (TextBox)SheetGrid.Columns[0].GetCellContent(_rows[5]);
+        editor = (TextBox)((FrameworkElement)_grid.Editor);
         editor.Text = new string('x', 32768);
         await HandleGridKeyAsync(Key.Tab, ModifierKeys.None, true);
         Check(_selectedRow == 5 && _selectedColumn == 0 && editor.Text.Length == 32768 && _document.Snapshot.Revision == invalid,
@@ -158,7 +141,7 @@ public partial class MainWindow
         await RecalculateAsync();
         GridSurface.Select(new(6, 0));
         await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
-        editor = (TextBox)SheetGrid.Columns[0].GetCellContent(_rows[6]);
+        editor = (TextBox)((FrameworkElement)_grid.Editor);
         Check(_gridEditorArmed && !_editState.GridEditing && editor.Text == "3",
             "Focused cell prepares native IME editor while showing calculated value without a draft");
         revision = _document.Snapshot.Revision;
@@ -168,7 +151,7 @@ public partial class MainWindow
         GridSurface.Select(new(6, 0));
         await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
         await RoutedKeyAsync(Key.F2);
-        editor = (TextBox)SheetGrid.Columns[0].GetCellContent(_rows[6]);
+        editor = (TextBox)((FrameworkElement)_grid.Editor);
         Check(editor.Text == "=1+2" && editor.CaretIndex == editor.Text.Length && editor.IsHitTestVisible && editor.SelectionOpacity > 0,
             "F2 initializes raw formula before focus and places caret at end");
         await HandleGridKeyAsync(Key.Escape, ModifierKeys.None, true);
@@ -177,7 +160,7 @@ public partial class MainWindow
         inputTarget.RaiseEvent(new TextCompositionEventArgs(Keyboard.PrimaryDevice,
             new TextComposition(InputManager.Current, inputTarget, "n"))
             { RoutedEvent = TextCompositionManager.TextInputEvent });
-        editor = SheetGrid.Columns[0].GetCellContent(_rows[6]) as TextBox ?? throw new Exception("Direct input editor missing.");
+        editor = ((FrameworkElement)_grid.Editor) as TextBox ?? throw new Exception("Direct input editor missing.");
         Check(editor.Text == "n" && !_gridEditorArmed && editor.IsHitTestVisible && editor.SelectionOpacity > 0,
             "Direct text input exposes the editor, retains initiating character and replaces original formula");
         await RoutedKeyAsync(Key.Enter);
@@ -198,31 +181,30 @@ public partial class MainWindow
         await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
         Check(_selectedRow == 0 && _selectedColumn == 0 &&
             GridSurface.Selection.SequenceEqual(new[] { new CellPosition(0, 0) }) &&
-            SheetGrid.CurrentItem == _rows[0] && SheetGrid.CurrentColumn == SheetGrid.Columns[0] && CellAddress.Text == "A1",
+            _grid.Current == new CellPosition(0, 0) && CellAddress.Text == "A1",
             "Reopening the same sheet identity resets visual selection, current editor and formula address together");
 
         ApplyValues([(6, 0, "=1+2")]);
         await RecalculateAsync();
         revision = _document.Snapshot.Revision;
         await ClickCellAsync(6, 0);
-        editor = SheetGrid.Columns[0].GetCellContent(_rows[6]) as TextBox ?? throw new Exception("Selected cell input context missing.");
+        editor = ((FrameworkElement)_grid.Editor) as TextBox ?? throw new Exception("Selected cell input context missing.");
         Check(_selectedRow == 6 && _selectedColumn == 0 && _gridEditorArmed && !_editState.GridEditing &&
             editor.Text == "3" && _document.Snapshot.Revision == revision,
             "First mouse click selects a different cell and displays its calculated value without starting a draft");
         Check(!editor.IsHitTestVisible && editor.CaretBrush == Brushes.Transparent && editor.SelectionOpacity == 0 &&
-            editor.BorderThickness == new Thickness(0) && editor.IsKeyboardFocused,
+            editor.BorderBrush == Brushes.Transparent && editor.IsKeyboardFocused,
             "Selection hides the text caret, text selection and editor border while preserving native keyboard input context");
-        Check(editor.Parent is DataGridCell { BorderThickness.Left: 1, BorderBrush: SolidColorBrush border } &&
-            border.Color == Color.FromRgb(24, 117, 83),
-            "Selected cell retains a visible green cell border independent of its workbook border style");
+        Check(_grid.Control.UseSelectionOverlay && _grid.Control.SelectedCellCount == 1,
+            "Selection is rendered independently of workbook content and the prepared editor");
         CaptureGridEvidence(Path.Combine(folder, "QuickExcel-click-selected.png"));
         await ClickCellAsync(6, 0);
-        editor = (TextBox)SheetGrid.Columns[0].GetCellContent(_rows[6]);
+        editor = (TextBox)((FrameworkElement)_grid.Editor);
         Check(_gridEditorArmed && !_editState.GridEditing && !editor.IsHitTestVisible && editor.Text == "3" &&
-            selectionDragReady && _document.Snapshot.Revision == revision,
-            "Repeated single click preserves formula and reaches native drag selection without editing");
+            !_grid.Control.IsSelectionDragging && _document.Snapshot.Revision == revision,
+            "Repeated single click preserves formula and retains prepared input without editing");
         await DoubleClickCellAsync(6, 0);
-        editor = (TextBox)SheetGrid.Columns[0].GetCellContent(_rows[6]);
+        editor = (TextBox)((FrameworkElement)_grid.Editor);
         Check(!_gridEditorArmed && _editState.GridEditing && editor.Text == "=1+2" && editor.IsHitTestVisible &&
             editor.SelectionOpacity > 0 && editor.CaretBrush != Brushes.Transparent && _document.Snapshot.Revision == revision,
             "Double click starts editing the original formula without committing it");
@@ -232,7 +214,7 @@ public partial class MainWindow
             "Escape after mouse editing preserves the original formula and history");
         await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
         await DoubleClickCellAsync(6, 0);
-        editor = (TextBox)SheetGrid.Columns[0].GetCellContent(_rows[6]);
+        editor = (TextBox)((FrameworkElement)_grid.Editor);
         editor.Text = "=2+3";
         await ClickCellAsync(6, 1);
         Check(_document.GetCellInput(0, 6, 0) == "=2+3" && _document.Snapshot.Revision == revision + 1 &&
@@ -244,8 +226,8 @@ public partial class MainWindow
         Check(GridSurface.Selection.SequenceEqual(new[] { new CellPosition(6, 0) }) && _gridEditorArmed && !_editState.GridEditing,
             "First click on an active cell in a multi-cell selection collapses the range without editing");
         await ClickCellAsync(6, 0);
-        Check(!_editState.GridEditing && _gridEditorArmed && selectionDragReady,
-            "Another single click after collapsing a range still reaches native drag selection");
+        Check(!_editState.GridEditing && _gridEditorArmed && !_grid.Control.IsSelectionDragging,
+            "Another single click after collapsing a range preserves prepared input");
         await DoubleClickCellAsync(6, 0);
         Check(_editState.GridEditing && !_gridEditorArmed, "Double click after collapsing a range enters cell editing");
         await RoutedKeyAsync(Key.Escape);
@@ -257,7 +239,7 @@ public partial class MainWindow
         {
             cases, imeEvidence = "Synthetic WPF routed composition; physical IME candidate window not automated."
         }, new JsonSerializerOptions { WriteIndented = true }));
-        File.WriteAllText(Path.Combine(folder, "interaction-smoke-result.txt"), $"PASS: {cases.Count} WPF assertions; mouse/keyboard/edit/selection/paste/undo/composition/save/reopen. Mouse and IME composition routing is synthetic.");
+        File.WriteAllText(Path.Combine(folder, "interaction-smoke-result.txt"), $"PASS: {cases.Count} WPF assertions; mouse/keyboard/edit/selection/paste/undo/composition/save/reopen. Selection is synthetic model selection; keyboard and IME use routed events.");
     }
 
     private void CaptureGridEvidence(string path)
@@ -302,9 +284,7 @@ public partial class MainWindow
             await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
             var bindMs = timer.Elapsed.TotalMilliseconds;
             var after = GC.GetTotalMemory(true);
-            var firstRows = _rows.CreatedCount;
-            if (firstRows > 1000 || _grid.RealizedRows > 1000)
-                throw new Exception("Grid bind eagerly realized too many rows.");
+            var firstReads = _grid.ReadCount;
             var scroll = new List<double>();
             var horizontal = new List<double>();
             var input = new List<double>();
@@ -314,11 +294,11 @@ public partial class MainWindow
             for (var i = 0; i < 35; i++)
             {
                 timer.Restart();
-                SheetGrid.ScrollIntoView(_rows[(i * 271) % _rowCount], SheetGrid.Columns[0]);
+                GridSurface.Select(new((i * 271) % _rowCount, 0));
                 await Dispatcher.InvokeAsync(() => { SheetGrid.UpdateLayout(); }, DispatcherPriority.ApplicationIdle);
                 if (i >= 5) scroll.Add(timer.Elapsed.TotalMilliseconds);
                 timer.Restart();
-                SheetGrid.ScrollIntoView(_rows[(i * 271) % _rowCount], SheetGrid.Columns[(i * 17) % _columnCount]);
+                GridSurface.Select(new((i * 271) % _rowCount, (i * 17) % _columnCount));
                 await Dispatcher.InvokeAsync(() => { SheetGrid.UpdateLayout(); }, DispatcherPriority.ApplicationIdle);
                 if (i >= 5) horizontal.Add(timer.Elapsed.TotalMilliseconds);
                 timer.Restart();
@@ -342,9 +322,9 @@ public partial class MainWindow
             workloads.Add(new
             {
                 name = sparse ? "20k sparse / 100k rows x 256 columns" : "P02 100k cells / 10k rows x 10 columns",
-                cellCount = cells.Count, logicalRows = _rows.Count, logicalColumns = _columnCount, bindMs,
-                viewManagedBytesDelta = after - before, createdRowsAfterBind = firstRows, createdRowsAfterRun = _rows.CreatedCount,
-                realizedRows = _grid.RealizedRows, refreshedRows = _grid.LastRefreshRows,
+                cellCount = cells.Count, logicalRows = _grid.RowCount, logicalColumns = _columnCount, bindMs,
+                viewManagedBytesDelta = after - before, modelReadsAfterBind = firstReads, modelReadsAfterRun = _grid.ReadCount,
+                visibleRows = _grid.Control.VisibleRowCount,
                 scroll = Samples(scroll), horizontal = Samples(horizontal), input = Samples(input), command = Samples(command),
                 refresh = Samples(refresh), selection100 = Samples(selection)
             });

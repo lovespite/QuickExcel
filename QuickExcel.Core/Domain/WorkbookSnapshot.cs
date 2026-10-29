@@ -54,6 +54,7 @@ public sealed record StyleDefinition
     public string? BottomBorderColor { get; init; }
 }
 
+/// <summary>Height is in device-independent pixels (1/96 inch); XLSX stores points (1/72 inch).</summary>
 public sealed record RowMetadata(double? Height = null, bool Hidden = false, int StyleId = 0);
 public sealed record ColumnMetadata(double? Width = null, bool Hidden = false, int StyleId = 0);
 

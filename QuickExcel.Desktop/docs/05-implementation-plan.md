@@ -1,6 +1,6 @@
 # QuickExcel 实施计划
 
-2026-10-29：[FastWpfGrid 方案](22-fastwpfgrid-and-data-operations.md) 已落地固定来源移植、试验工作区、范围选区、列头筛选、多列组合与多级排序，并完成相关规则/WPF测试和同环境性能对照。实际命令、证据和缺口见 [实施记录](23-fast-grid-implementation.md)。FG-01 的主界面依赖抽离、FG-02 真实 IME/复杂样式、FG-03/04 功能对等与默认切换尚未完成，默认保持 DataGrid，不改变下述历史记录和未关闭门禁。
+2026-10-29：[FastWpfGrid 方案](22-fastwpfgrid-and-data-operations.md) 已按用户要求切换主工作区并移除旧 DataGrid/试验窗口，尺寸事务、字体格式、图片/合并、编辑与保存有专项验收。当前实现和证据见 [主网格迁移](24-main-grid-migration.md)，试验阶段对照见 [历史记录](23-fast-grid-implementation.md)。默认切换不代表真实 IME、跨屏 DPI、完整辅助功能以及 M5/M6 门禁已关闭，下述旧阶段计划保留为历史。
 
 2026-10-28 正式界面更新：`0.6.0-preview.3` 接入启动页、可停靠工作表导航和脚本专页，并推进 JS-011/FMT-009/UI-006–008。查找替换、基础图片/合并及安全结构变换已有领域与 WPF 证据；恢复仅为手动副本打开原型，自动恢复与完整无障碍/跨环境验收仍未关闭。详见 [正式界面记录](19-m5-product-workspace.md)。
 

@@ -1,6 +1,8 @@
 # QuickExcel 架构与实施文档
 
-新增 [FastWpfGrid 实施记录](23-fast-grid-implementation.md)：固定来源移植、试验工作区、范围选区、类型化列头筛选与多级排序已接入，相关测试和首批性能对照已有证据。[原方案](22-fastwpfgrid-and-data-operations.md) 的功能对等、真实 IME/DPI 和默认切换仍待完成，默认保持 DataGrid。
+新增 [XLSX 渲染修复](25-xlsx-rendering.md)：行高单位、字体行框裁剪、主题色、宽列与滚动定位，以及兼容性报告和附件复现证据。
+
+新增 [主网格迁移记录](24-main-grid-migration.md)：主界面已切换到 `QuickExcel.Grid.Wpf`，旧 DataGrid 与试验窗口已移除。编辑、尺寸、冻结、筛选、样式和图片迁移有专项证据；真实 IME、跨屏 DPI、辅助功能及完整性能门禁仍待验收。[23 号记录](23-fast-grid-implementation.md) 保留试验阶段和历史性能对照。
 
 新增 [类 Excel 功能区](21-excel-ribbon.md)：选项卡、分组、FluentIcons 图标、字体与对齐控制、窄窗口行为及专项验证。
 
@@ -16,6 +18,7 @@
 
 | 文档 | 解决的问题 |
 | --- | --- |
+| [主网格迁移](24-main-grid-migration.md) | 当前主界面接线、旧控件移除、功能回归、性能样本及剩余验收边界 |
 | [FastWpfGrid 实施记录](23-fast-grid-implementation.md) | 使用入口、筛选/排序支持矩阵、专项测试、性能证据和候选迁移缺口 |
 | [FastWpfGrid 增强与筛选排序方案](22-fastwpfgrid-and-data-operations.md) | 目标网格架构、Excel 式列头筛选/高级排序、迁移阶段与验收条件；实施中 |
 | [M5 结构与工作区](18-m5-structure-and-workspace.md) | 结构、排序引用、筛选/冻结、基础样式、最近文件与外部冲突 |
