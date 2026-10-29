@@ -1,4 +1,7 @@
 using System.IO;
+using System.Security.Cryptography;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -70,6 +73,17 @@ public partial class MainWindow
         }
         await OpenPathAsync(Path.Combine(folder, "unsigned.xlsq"));
         Check(!_document.ScriptsEnabled && _certificatePromptCount == 0, "Unsigned open stays disabled without prompt");
+        var trustPath = Path.Combine(folder, "trusted-script-certificates.json");
+        var forgedTrust = JsonSerializer.Serialize(new[] { new TrustedScriptCertificate(
+            Convert.ToHexString(SHA256.HashData(certificate.RawData)), certificate.Subject, certificate.NotAfter) });
+        File.WriteAllText(trustPath, forgedTrust);
+        await OpenPathAsync(signedPath);
+        Check(!_document.ScriptsEnabled && ActionPicker.Items.Count == 0 && _certificatePromptCount == 0,
+            "Injected plaintext certificate cannot auto-enable formulas or discover actions");
+        await RunScriptsAsync();
+        Check(!_document.ScriptsEnabled && File.ReadAllText(trustPath) == forgedTrust,
+            "Manual Run cannot launder an injected plaintext trust list");
+        File.Delete(trustPath);
         _smokeCertificateDecision = CertificateDecision.Cancel;
         await OpenPathAsync(signedPath);
         Check(!_document.ScriptsEnabled && _certificatePromptCount == 1, "Declining self-signed certificate keeps scripts disabled");
@@ -90,8 +104,20 @@ public partial class MainWindow
         await OpenPathAsync(signedPath);
         Check(_document.ScriptsEnabled && _certificatePromptCount == prompts, "Remembered certificate auto-enables without dialog");
         Check(!_document.IsDirty, "Verification and automatic calculation do not dirty the workbook");
-        var trustPath = Path.Combine(folder, "trusted-script-certificates.json");
         var trustData = File.ReadAllText(trustPath);
+        var envelope = JsonNode.Parse(trustData)!.AsObject();
+        var data = Convert.FromBase64String(envelope["Data"]!.GetValue<string>());
+        data[^1] ^= 1; envelope["Data"] = Convert.ToBase64String(data);
+        File.WriteAllText(trustPath, envelope.ToJsonString());
+        await RunScriptsAsync();
+        Check(!_document.ScriptsEnabled && ActionPicker.Items.Count == 0,
+            "Tampering with protected trust revokes a previously enabled session");
+        await OpenPathAsync(signedPath);
+        Check(!_document.ScriptsEnabled && _certificatePromptCount == prompts,
+            "Tampered protected trust cannot auto-enable on reopen");
+        File.WriteAllText(trustPath, trustData);
+        await RunScriptsAsync();
+        Check(_document.ScriptsEnabled, "Unmodified protected trust remains usable after a rejected tamper");
         File.WriteAllText(trustPath, "broken");
         await RunScriptsAsync();
         Check(!_document.ScriptsEnabled, "A failed trust read revokes a previously enabled session");

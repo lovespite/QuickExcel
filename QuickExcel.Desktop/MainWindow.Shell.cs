@@ -37,6 +37,7 @@ public partial class MainWindow
         CommandBar.Visibility = Workspace.Visibility = Visibility.Visible;
         WorkbookPage.Visibility = script ? Visibility.Collapsed : Visibility.Visible;
         ScriptPanel.Visibility = script ? Visibility.Visible : Visibility.Collapsed;
+        RibbonTabs.IsEnabled = !script;
         WorkbookPageButton.FontWeight = script ? FontWeights.Normal : FontWeights.SemiBold;
         ScriptPageButton.FontWeight = script ? FontWeights.SemiBold : FontWeights.Normal;
         if (IsLoaded) UpdateLayout();

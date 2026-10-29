@@ -74,11 +74,17 @@ public sealed class SortRangeCommand(SheetId sheetId, CellPosition first, CellPo
 
 public sealed record CellStylePatch(bool? Bold = null, bool? Italic = null, string? FontColor = null,
     string? FillColor = null, int? Horizontal = null, int? NumberFormatId = null, string? NumberFormatCode = null,
-    bool? Border = null, double? FontSize = null, bool Reset = false)
+    bool? Border = null, double? FontSize = null, bool Reset = false,
+    string? FontName = null, int? Vertical = null, bool? WrapText = null)
 {
     internal StyleDefinition Apply(StyleDefinition style)
     {
         if (Reset) return new();
+        if (FontName is not null && (string.IsNullOrWhiteSpace(FontName) || FontName.Length > 256))
+            throw new ArgumentException("字体名称不能为空且不能超过 256 个字符。");
+        if (FontSize is <= 0 or > 409 || FontSize.HasValue && !double.IsFinite(FontSize.Value))
+            throw new ArgumentException("字号必须大于 0 且不超过 409。");
+        if (Vertical is < 0 or > 3) throw new ArgumentException("不支持的垂直对齐方式。");
         if (NumberFormatId is < 0 or >= 164) throw new ArgumentException("自定义数字格式使用代码和规范化 ID 0，内置格式 ID 必须小于 164。");
         static string? Color(string? color)
         {
@@ -91,6 +97,8 @@ public sealed record CellStylePatch(bool? Bold = null, bool? Italic = null, stri
             Bold = Bold ?? style.Bold, Italic = Italic ?? style.Italic,
             FontColor = Color(FontColor) ?? style.FontColor, FillColor = Color(FillColor) ?? style.FillColor,
             FontSize = FontSize ?? style.FontSize, Horizontal = Horizontal ?? style.Horizontal,
+            FontName = FontName ?? style.FontName, Vertical = Vertical ?? style.Vertical,
+            WrapText = WrapText ?? style.WrapText,
             NumberFormatId = NumberFormatId ?? style.NumberFormatId,
             NumberFormatCode = NumberFormatId.HasValue ? NumberFormatCode : style.NumberFormatCode,
             LeftBorder = Border.HasValue ? (Border.Value ? 1 : 0) : style.LeftBorder,

@@ -71,11 +71,16 @@ internal sealed class WpfGridSurface : IGridSurface
                 style.Setters.Add(new Setter(TextBlock.BackgroundProperty, new Binding { Converter = new AppearanceConverter(column, "background") }));
                 style.Setters.Add(new Setter(TextBlock.FontWeightProperty, new Binding { Converter = new AppearanceConverter(column, "weight") }));
                 style.Setters.Add(new Setter(TextBlock.FontStyleProperty, new Binding { Converter = new AppearanceConverter(column, "italic") }));
+                style.Setters.Add(new Setter(TextBlock.FontFamilyProperty, new Binding { Converter = new AppearanceConverter(column, "family") }));
+                style.Setters.Add(new Setter(TextBlock.FontSizeProperty, new Binding { Converter = new AppearanceConverter(column, "size") }));
+                style.Setters.Add(new Setter(TextBlock.TextWrappingProperty, new Binding { Converter = new AppearanceConverter(column, "wrap") }));
+                style.Setters.Add(new Setter(FrameworkElement.VerticalAlignmentProperty, new Binding { Converter = new AppearanceConverter(column, "vertical") }));
                 style.Setters.Add(new Setter(TextBlock.TextAlignmentProperty, new Binding { Converter = new AppearanceConverter(column, "alignment") }));
                 var cellStyle = new Style(typeof(DataGridCell), (Style)_grid.FindResource(typeof(DataGridCell)));
                 cellStyle.Setters.Add(new Setter(AutomationProperties.NameProperty, new Binding { Converter = new AppearanceConverter(column, "automation") }));
                 cellStyle.Setters.Add(new Setter(Control.BorderThicknessProperty, new Binding { Converter = new AppearanceConverter(column, "border") }));
                 cellStyle.Setters.Add(new Setter(Control.BorderBrushProperty, new Binding { Converter = new AppearanceConverter(column, "borderColor") }));
+                cellStyle.Setters.Add(new Setter(Control.BackgroundProperty, new Binding { Converter = new AppearanceConverter(column, "background") }));
                 cellStyle.Triggers.Add(new Trigger { Property = DataGridCell.IsSelectedProperty, Value = true,
                     Setters = { new Setter(Control.BorderThicknessProperty, new Thickness(1)),
                         new Setter(Control.BorderBrushProperty, new SolidColorBrush(Color.FromRgb(24, 117, 83))) } });
@@ -97,6 +102,10 @@ internal sealed class WpfGridSurface : IGridSurface
                         new Setter(TextBox.BackgroundProperty, new Binding { Converter = new AppearanceConverter(column, "background") }),
                         new Setter(TextBox.FontWeightProperty, new Binding { Converter = new AppearanceConverter(column, "weight") }),
                         new Setter(TextBox.FontStyleProperty, new Binding { Converter = new AppearanceConverter(column, "italic") }),
+                        new Setter(TextBox.FontFamilyProperty, new Binding { Converter = new AppearanceConverter(column, "family") }),
+                        new Setter(TextBox.FontSizeProperty, new Binding { Converter = new AppearanceConverter(column, "size") }),
+                        new Setter(TextBox.TextWrappingProperty, new Binding { Converter = new AppearanceConverter(column, "wrap") }),
+                        new Setter(Control.VerticalContentAlignmentProperty, new Binding { Converter = new AppearanceConverter(column, "vertical") }),
                         new Setter(TextBox.TextAlignmentProperty, new Binding { Converter = new AppearanceConverter(column, "alignment") }) },
                       Triggers = { new Trigger { Property = GridInputColumn.IsPreparedProperty, Value = true,
                           Setters = { new Setter(UIElement.IsHitTestVisibleProperty, false),
@@ -244,12 +253,21 @@ internal sealed class AppearanceConverter(int column, string property) : IValueC
             "automation" => value is SheetRow row ? $"{MainWindow.ColumnName(column)}{row.Index + 1}，{row[column]}" : "",
             "weight" => style?.Bold == true ? FontWeights.SemiBold : FontWeights.Normal,
             "italic" => style?.Italic == true ? FontStyles.Italic : FontStyles.Normal,
+            "family" => Font(style?.FontName),
+            "size" => (style?.FontSize ?? 11) * 96d / 72d,
+            "wrap" => style?.WrapText == true ? TextWrapping.Wrap : TextWrapping.NoWrap,
+            "vertical" => style?.Vertical switch { 0 => VerticalAlignment.Top, 1 => VerticalAlignment.Center, _ => VerticalAlignment.Bottom },
             "alignment" => style?.Horizontal switch { 2 => TextAlignment.Center, 3 => TextAlignment.Right, _ => TextAlignment.Left },
             "border" => new Thickness(style?.LeftBorder > 0 ? 1 : 0, style?.TopBorder > 0 ? 1 : 0, style?.RightBorder > 0 ? 1 : 0, style?.BottomBorder > 0 ? 1 : 0),
             "borderColor" => ColorBrush(style?.BottomBorderColor, Brushes.Gray),
             "background" => ColorBrush(style?.FillColor, Brushes.Transparent),
             _ => ColorBrush(style?.FontColor, Ink)
         };
+    }
+    private static FontFamily Font(string? name)
+    {
+        try { return new FontFamily(string.IsNullOrWhiteSpace(name) ? "Microsoft YaHei UI, Segoe UI" : name); }
+        catch (ArgumentException) { return new FontFamily("Microsoft YaHei UI, Segoe UI"); }
     }
     private Brush ColorBrush(string? color, Brush fallback)
     {

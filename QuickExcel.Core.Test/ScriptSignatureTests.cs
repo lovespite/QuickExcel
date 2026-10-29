@@ -1,5 +1,8 @@
+using System.Net;
+using System.Net.Sockets;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
+using System.Text;
 using System.Text.Json.Nodes;
 using QuickExcel.Domain;
 using QuickExcel.Security;
@@ -38,6 +41,180 @@ public sealed class ScriptSignatureTests : IDisposable
         Assert.False(reopened.Verify(other.WithSignature(ScriptSignatures.Sign(other, otherCert))).CanAutoEnable);
         reopened.Remove(reopened.Read().Single().Fingerprint);
         Assert.False(store.Verify(modules).CanAutoEnable);
+    }
+
+    [Fact]
+    public void ForgedPlaintextTrustListCannotAuthorizeScripts()
+    {
+        var modules = Signed();
+        var path = PathFor("trust.json");
+        var forged = System.Text.Json.JsonSerializer.Serialize(new[]
+        {
+            new TrustedScriptCertificate(Convert.ToHexString(SHA256.HashData(_certificate.RawData)),
+                _certificate.Subject, _certificate.NotAfter)
+        });
+        File.WriteAllText(path, forged);
+        var store = new ScriptCertificateTrustStore(path);
+        Assert.Throws<InvalidDataException>(() => store.Verify(modules));
+        Assert.Throws<InvalidDataException>(() => store.Trust(modules));
+        Assert.Equal(forged, File.ReadAllText(path));
+    }
+
+    [Theory]
+    [InlineData("replace-with-plaintext")]
+    [InlineData("modify-protected-data")]
+    [InlineData("append-unprotected-pin")]
+    [InlineData("copy-from-other-store")]
+    public void TamperingWithPersistedTrustCannotAuthorizeAnotherSigner(string mutation)
+    {
+        var path = PathFor("trust.json");
+        var store = new ScriptCertificateTrustStore(path);
+        store.Trust(Signed());
+        using var attacker = ScriptSignatures.CreateSelfSigned("Injected signer");
+        var modules = Modules();
+        modules = modules.WithSignature(ScriptSignatures.Sign(modules, attacker));
+        var pin = new TrustedScriptCertificate(Convert.ToHexString(SHA256.HashData(attacker.RawData)), attacker.Subject, attacker.NotAfter);
+        var original = File.ReadAllText(path);
+        var envelope = JsonNode.Parse(original)!.AsObject();
+        switch (mutation)
+        {
+            case "replace-with-plaintext":
+                File.WriteAllText(path, System.Text.Json.JsonSerializer.Serialize(new[] { pin }));
+                break;
+            case "modify-protected-data":
+                var data = Convert.FromBase64String(envelope["Data"]!.GetValue<string>());
+                data[^1] ^= 1;
+                envelope["Data"] = Convert.ToBase64String(data);
+                File.WriteAllText(path, envelope.ToJsonString());
+                break;
+            case "append-unprotected-pin":
+                envelope["Entries"] = System.Text.Json.JsonSerializer.SerializeToNode(new[] { pin });
+                File.WriteAllText(path, envelope.ToJsonString());
+                break;
+            case "copy-from-other-store":
+                var otherPath = PathFor("attacker.json");
+                new ScriptCertificateTrustStore(otherPath).Trust(modules);
+                File.Copy(otherPath, path, true);
+                break;
+        }
+        var tampered = File.ReadAllText(path);
+        var reopened = new ScriptCertificateTrustStore(path);
+        // Verify and an explicit trust write must both fail, without laundering existing forged entries.
+        if (mutation == "append-unprotected-pin")
+        {
+            Assert.ThrowsAny<System.Text.Json.JsonException>(() => reopened.Verify(modules));
+            Assert.ThrowsAny<System.Text.Json.JsonException>(() => reopened.Trust(Signed()));
+        }
+        else
+        {
+            Assert.Throws<InvalidDataException>(() => reopened.Verify(modules));
+            Assert.Throws<InvalidDataException>(() => reopened.Trust(Signed()));
+        }
+        Assert.Equal(tampered, File.ReadAllText(path));
+        File.WriteAllText(path, original);
+        Assert.True(reopened.Verify(Signed()).CanAutoEnable);
+        Assert.Equal(ScriptSignatureStatus.UntrustedSelfSigned, reopened.Verify(modules).Status);
+    }
+
+    [Fact]
+    public void DeletedTrustFileRequiresConfirmationAgain()
+    {
+        var modules = Signed(); var path = PathFor("trust.json");
+        var store = new ScriptCertificateTrustStore(path); store.Trust(modules);
+        File.Delete(path);
+        Assert.Equal(ScriptSignatureStatus.UntrustedSelfSigned, new ScriptCertificateTrustStore(path).Verify(modules).Status);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void RevokedCertificateCannotAutoEnableEvenWithMatchingPin(bool pinned)
+    {
+        // A fresh CA and loopback CRL exercise Windows' real Online revocation check without
+        // installing a root, contacting a public CA, or simulating the chain result.
+        using var server = new CrlServer();
+        var now = DateTimeOffset.UtcNow;
+        using var issuerKey = RSA.Create(2048);
+        var issuerRequest = new CertificateRequest("CN=Revocation test " + Guid.NewGuid().ToString("N"), issuerKey,
+            HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+        issuerRequest.CertificateExtensions.Add(new X509BasicConstraintsExtension(true, false, 0, true));
+        issuerRequest.CertificateExtensions.Add(new X509KeyUsageExtension(X509KeyUsageFlags.KeyCertSign | X509KeyUsageFlags.CrlSign, true));
+        issuerRequest.CertificateExtensions.Add(new X509SubjectKeyIdentifierExtension(issuerRequest.PublicKey, false));
+        using var issuer = issuerRequest.CreateSelfSigned(now.AddDays(-1), now.AddDays(5));
+        using var key = RSA.Create(2048);
+        var request = new CertificateRequest("CN=Revoked code signer", key, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+        request.CertificateExtensions.Add(new X509BasicConstraintsExtension(false, false, 0, true));
+        request.CertificateExtensions.Add(new X509KeyUsageExtension(X509KeyUsageFlags.DigitalSignature, true));
+        request.CertificateExtensions.Add(new X509EnhancedKeyUsageExtension(new OidCollection { new(ScriptSignatures.CodeSigningOid) }, true));
+        request.CertificateExtensions.Add(X509AuthorityKeyIdentifierExtension.CreateFromCertificate(issuer, true, false));
+        request.CertificateExtensions.Add(CertificateRevocationListBuilder.BuildCrlDistributionPointExtension([server.Url]));
+        using var publicCertificate = request.Create(issuer, now.AddHours(-1), now.AddDays(1), RandomNumberGenerator.GetBytes(16));
+        using var certificate = publicCertificate.CopyWithPrivateKey(key);
+        using var goodPublic = request.Create(issuer, now.AddHours(-1), now.AddDays(1), RandomNumberGenerator.GetBytes(16));
+        using var goodCertificate = goodPublic.CopyWithPrivateKey(key);
+        var crl = new CertificateRevocationListBuilder();
+        crl.AddEntry(certificate, now.AddMinutes(-10), X509RevocationReason.KeyCompromise);
+        server.Data = crl.Build(issuer, 1, now.AddDays(1), HashAlgorithmName.SHA256,
+            RSASignaturePadding.Pkcs1, now.AddMinutes(-5));
+        void Configure(X509ChainPolicy policy)
+        {
+            policy.TrustMode = X509ChainTrustMode.CustomRootTrust;
+            policy.CustomTrustStore.Add(issuer);
+        }
+        var unsigned = Modules();
+        var good = unsigned.WithSignature(ScriptSignatures.Sign(unsigned, goodCertificate));
+        var goodResult = ScriptSignatures.Verify(good, null, Configure);
+        Assert.True(goodResult.CanAutoEnable, goodResult.Message);
+        var signed = unsigned.WithSignature(ScriptSignatures.Sign(unsigned, certificate));
+        string[]? pins = pinned ? [Convert.ToHexString(SHA256.HashData(certificate.RawData))] : null;
+        var result = ScriptSignatures.Verify(signed, pins, Configure);
+        Assert.Equal(ScriptSignatureStatus.Untrusted, result.Status);
+        Assert.False(result.CanAutoEnable);
+        Assert.Contains("Revoked", result.Message);
+        Assert.Throws<InvalidOperationException>(() => new ScriptCertificateTrustStore(PathFor("trust.json")).Trust(signed));
+    }
+
+    private sealed class CrlServer : IDisposable
+    {
+        private readonly TcpListener _listener = new(IPAddress.Loopback, 0);
+        private readonly CancellationTokenSource _stop = new();
+        private readonly Task _serve;
+        public string Url { get; }
+        public byte[] Data { get; set; } = [];
+
+        public CrlServer()
+        {
+            _listener.Start();
+            Url = $"http://127.0.0.1:{((IPEndPoint)_listener.LocalEndpoint).Port}/{Guid.NewGuid():N}.crl";
+            _serve = ServeAsync();
+        }
+
+        private async Task ServeAsync()
+        {
+            try
+            {
+                while (!_stop.IsCancellationRequested)
+                {
+                    using var client = await _listener.AcceptTcpClientAsync(_stop.Token);
+                    await using var stream = client.GetStream();
+                    using var reader = new StreamReader(stream, Encoding.ASCII, leaveOpen: true);
+                    while (await reader.ReadLineAsync(_stop.Token) is { Length: > 0 }) { }
+                    var data = Data;
+                    var header = Encoding.ASCII.GetBytes($"HTTP/1.1 200 OK\r\nContent-Type: application/pkix-crl\r\nContent-Length: {data.Length}\r\nConnection: close\r\n\r\n");
+                    await stream.WriteAsync(header, _stop.Token);
+                    await stream.WriteAsync(data, _stop.Token);
+                }
+            }
+            catch (OperationCanceledException) when (_stop.IsCancellationRequested) { }
+            catch (SocketException) when (_stop.IsCancellationRequested) { }
+        }
+
+        public void Dispose()
+        {
+            _stop.Cancel(); _listener.Stop();
+            try { _serve.GetAwaiter().GetResult(); }
+            finally { _stop.Dispose(); }
+        }
     }
 
     [Theory]
@@ -231,8 +408,8 @@ public sealed class ScriptSignatureTests : IDisposable
     {
         var path = PathFor("trust.json"); File.WriteAllText(path, "broken");
         var store = new ScriptCertificateTrustStore(path);
-        Assert.Throws<System.Text.Json.JsonException>(() => store.Verify(Signed()));
-        Assert.Throws<System.Text.Json.JsonException>(() => store.Trust(Signed()));
+        Assert.ThrowsAny<System.Text.Json.JsonException>(() => store.Verify(Signed()));
+        Assert.ThrowsAny<System.Text.Json.JsonException>(() => store.Trust(Signed()));
         Assert.Equal("broken", File.ReadAllText(path));
     }
 

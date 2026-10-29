@@ -170,7 +170,7 @@ public partial class MainWindow
         try
         {
             if (CurrentView.FilterRange is not null) throw new InvalidOperationException("请先清除筛选，再进行结构操作。");
-            var operation = ((MenuItem)sender).Tag.ToString()!;
+            var operation = ((FrameworkElement)sender).Tag.ToString()!;
             var sheet = _document.Snapshot.Sheets[_sheetIndex];
             if (operation == "rename")
             {
@@ -217,7 +217,7 @@ public partial class MainWindow
     }
 
     private async void Sort_Click(object sender, RoutedEventArgs e)
-        => await (_workspaceInput = SortSelectionAsync(((MenuItem)sender).Tag?.ToString() == "desc"));
+        => await (_workspaceInput = SortSelectionAsync(((FrameworkElement)sender).Tag?.ToString() == "desc"));
     private async Task SortSelectionAsync(bool descending)
     {
         if (_busy || !await FlushEditsAsync()) return;
@@ -257,7 +257,7 @@ public partial class MainWindow
     private void Freeze_Click(object sender, RoutedEventArgs e)
     {
         if (!CommitEditors()) return;
-        var clear = ((MenuItem)sender).Tag?.ToString() == "clear";
+        var clear = ((FrameworkElement)sender).Tag?.ToString() == "clear";
         if (!clear && _selectedRow > 10) { ReportEditFailure(new ArgumentException("冻结上方行最多 10 行，请选择第 11 行以内的单元格。")); return; }
         CurrentView.FrozenRows = clear ? 0 : _selectedRow;
         CurrentView.FrozenColumns = clear ? 0 : _selectedColumn;
@@ -272,21 +272,23 @@ public partial class MainWindow
         {
             var snapshot = _document.Snapshot; var sheet = snapshot.Sheets[_sheetIndex];
             var style = snapshot.Styles[sheet.GetStyleId(_selectedRow, _selectedColumn)];
-            var action = ((MenuItem)sender).Tag.ToString();
+            var action = ((FrameworkElement)sender).Tag.ToString();
             CellStylePatch patch = action switch
             {
                 "bold" => new(Bold: !style.Bold), "italic" => new(Italic: !style.Italic),
                 "fill" => new(FillColor: "FFFFE599"), "font" => new(FontColor: "FF187553"),
                 "left" => new(Horizontal: 1), "center" => new(Horizontal: 2), "right" => new(Horizontal: 3),
+                "top" => new(Vertical: 0), "middle" => new(Vertical: 1), "bottom" => new(Vertical: 2),
+                "wrap" => new(WrapText: !style.WrapText),
                 "border" => new(Border: true), "noBorder" => new(Border: false),
                 "number" => new(NumberFormatId: 2), "percent" => new(NumberFormatId: 10),
                 "date" => new(NumberFormatId: 0, NumberFormatCode: "yyyy-mm-dd"),
                 "general" => new(NumberFormatId: 0), "reset" => new(Reset: true), _ => throw new ArgumentException("未知样式。")
             };
-            var addresses = GridSurface.Selection.Where(p => !CurrentView.IsFilteredOut(snapshot, _sheetIndex, p.Row)).Select(p => new CellAddress(sheet.Id, p.Row, p.Column));
-            ExecuteWorkbookCommand(new SetCellStyleCommand(addresses, patch));
+            ApplyRibbonStyle(patch);
         }
         catch (Exception ex) { ReportEditFailure(ex); }
+        finally { UpdateRibbonState(); }
     }
 
     private void Merge_Click(object sender, RoutedEventArgs e)
@@ -296,7 +298,7 @@ public partial class MainWindow
         {
             var range = SelectedRange();
             ExecuteWorkbookCommand(new MergeCellsCommand(_document.Snapshot.Sheets[_sheetIndex].Id,
-                new(range.Top, range.Left, range.Bottom, range.Right), (sender as MenuItem)?.Tag as string == "unmerge"));
+                new(range.Top, range.Left, range.Bottom, range.Right), (sender as FrameworkElement)?.Tag as string == "unmerge"));
         }
         catch (Exception ex) { ReportEditFailure(ex); }
     }

@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
     [string]$PackageDirectory = 'artifacts\QuickExcel',
-    [ValidateSet('Interaction', 'Workspace', 'Product', 'Benchmark', 'ResizeBenchmark', 'All')][string]$Mode = 'All'
+    [ValidateSet('Interaction', 'Workspace', 'Product', 'Ribbon', 'Benchmark', 'ResizeBenchmark', 'All')][string]$Mode = 'All'
 )
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
@@ -20,8 +20,8 @@ $modes = if ($Mode -eq 'All') { @('Interaction', 'Workspace', 'Product', 'Benchm
 foreach ($scenario in $modes) {
     $directory = Join-Path $evidence $scenario
     New-Item -ItemType Directory -Path $directory | Out-Null
-    $argument = switch ($scenario) { 'ResizeBenchmark' { '--resize-benchmark' } 'Benchmark' { '--grid-benchmark' } 'Workspace' { '--workspace-smoke' } 'Product' { '--product-smoke' } default { '--interaction-smoke' } }
-    $result = switch ($scenario) { 'ResizeBenchmark' { 'resize-benchmark-result.txt' } 'Benchmark' { 'grid-benchmark-result.txt' } 'Workspace' { 'workspace-smoke-result.txt' } 'Product' { 'product-smoke-result.txt' } default { 'interaction-smoke-result.txt' } }
+    $argument = switch ($scenario) { 'Ribbon' { '--ribbon-smoke' } 'ResizeBenchmark' { '--resize-benchmark' } 'Benchmark' { '--grid-benchmark' } 'Workspace' { '--workspace-smoke' } 'Product' { '--product-smoke' } default { '--interaction-smoke' } }
+    $result = switch ($scenario) { 'Ribbon' { 'ribbon-smoke-result.txt' } 'ResizeBenchmark' { 'resize-benchmark-result.txt' } 'Benchmark' { 'grid-benchmark-result.txt' } 'Workspace' { 'workspace-smoke-result.txt' } 'Product' { 'product-smoke-result.txt' } default { 'interaction-smoke-result.txt' } }
     $process = $null
     try {
         $process = Start-Process -FilePath $exe -ArgumentList @($argument, ('"{0}"' -f $directory)) -WorkingDirectory $package -WindowStyle Hidden -PassThru

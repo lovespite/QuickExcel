@@ -41,7 +41,11 @@ JSON 为 `version: 1`、`algorithm`、Base64 DER `certificate` 和 Base64 `value
 
 只有链仅含该证书、subject/issuer 一致且唯一错误为 UntrustedRoot 的自签证书可以被记住。指纹不覆盖过期、撤销、显式不信任、用途或其他链错误。同名、换密钥或重新签发均不是原证书。无时间戳服务，过期后需重新签名；自签证书无在线撤销服务，应移除不再信任的证书。
 
-信任列表 `%LOCALAPPDATA%/QuickExcel/trusted-script-certificates.json` 只保存指纹、显示名称和到期时间；跨进程独占文件锁和原子替换保护写入。读取损坏或写入失败不授予授权。列表属于当前 Windows 用户，不防御同账户恶意进程修改。测试及 `--ui-validation` 使用指定目录中的独立列表。
+信任列表 `%LOCALAPPDATA%/QuickExcel/trusted-script-certificates.json` 使用版本化 JSON 外壳，内部指纹、显示名称和到期时间由 Windows DPAPI `CurrentUser` 保护并验证完整性；用途和列表绝对路径参与绑定，其他路径的受保护列表不能直接替换。跨进程独占文件锁和原子替换保护写入。修改保护数据、追加未保护字段、格式错误、解密失败或写入失败均不授予授权；每次验证重新读取，不能沿用上一次授权结果。参见 [微软 DPAPI 说明](https://learn.microsoft.com/dotnet/api/system.security.cryptography.protecteddata)。
+
+旧版明文列表无法证明用户曾同意，升级后拒绝使用，也不会在新的信任写入中自动迁移。遇到旧版或损坏列表时脚本保持停用；关闭程序，将上述文件移走或删除，重开工作簿后重新核对证书并确认。删除列表只会撤销记忆的信任，不会使自签证书自动受信任。测试及 `--ui-validation` 使用指定目录中的独立列表。
+
+此保护针对直接修改配置内容，不隔离已经以同一 Windows 用户身份执行的恶意代码：该身份也能调用 DPAPI。它也不提供同一路径历史完整密文的防回滚保证。CA 吊销状态仍由每次证书链验证决定，保存的指纹不能覆盖吊销结果；自签证书的移除信任不等同于 CA 的在线吊销。
 
 文件不保存“已信任”标志。恢复入口不自动执行，用户审阅后可手动运行。`.xlsx` 导出不含脚本及签名。此功能不等同于程序/安装器 Authenticode 签名或完成 M6 OS 门禁。
 
@@ -58,3 +62,9 @@ dotnet test .\QuickExcel.Core.Test\QuickExcel.Core.Test.csproj -c Release --no-b
 Release 构建 0 警告/0 错误。正常用户环境相关测试 125/125（签名 26 项），结果 `artifacts/validation/script-signatures/related-tests-final.trx`。受限环境首轮 105/106，PFX 导入因环境权限失败；正常用户测试通过，未更改生产权限要求。
 
 WPF 专项覆盖真实信任按钮、默认取消、一次/持久信任、重开自动授权、动作仅发现、数据编辑保留签名、源码编辑撤权、篡改拒绝、损坏信任列表撤权、恢复入口和撤销信任。公式和动作发现使用实际 AppContainer worker。截图、逐项结果和二进制哈希位于测试脚本输出的唯一 artifacts 目录；程序化断言不代表真实鼠标/键盘或完整 OS 验收。
+
+### 信任列表防篡改修复（2026-10-29）
+
+已用伪造明文列表回归测试复现旧实现接受注入指纹的问题，修复前证据为 `artifacts/validation/script-trust-hardening/trust-tamper-before.trx`。修复后签名专项新增伪造列表、替换合法列表、修改保护数据、追加明文指纹、跨路径替换、删除后重新确认，以及真实 CRL 吊销测试。吊销夹具使用独立 CA 和唯一回环 HTTP CRL，不安装系统根证书；先断言未吊销证书可通过，再断言吊销证书返回 `Revoked`，有无匹配指纹都不能自动启用。
+
+本轮 Release 构建 0 警告/0 错误，仅运行 `FullyQualifiedName~ScriptSignatureTests` 和 `scripts/test-script-signatures.ps1`，不运行全量回归。签名专项 34/34 通过，证据为 `artifacts/validation/script-trust-hardening/signature-security-final.trx`。DPAPI/PFX 和回环 CRL 使用正常 Windows 用户环境验证；受限令牌下的用户配置保护失败不通过降低安全策略处理。WPF 新增伪造列表阻止打开/运行、保护数据篡改撤权和重开拒绝，共 23 项断言通过，证据位于 `artifacts/validation/script-signatures/20261029-022455-eed7142b`。

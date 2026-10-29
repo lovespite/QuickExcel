@@ -72,7 +72,7 @@ public partial class MainWindow : Window
             _scriptTrust = new(Path.Combine(folder, "trusted-script-certificates.json"));
             args = [];
         }
-        if (args.Length > 0 && args[0] is "--smoke-test" or "--interaction-smoke" or "--workspace-smoke" or "--product-smoke" or "--signature-smoke" or "--grid-benchmark" or "--resize-benchmark")
+        if (args.Length > 0 && args[0] is "--smoke-test" or "--interaction-smoke" or "--workspace-smoke" or "--product-smoke" or "--ribbon-smoke" or "--signature-smoke" or "--grid-benchmark" or "--resize-benchmark")
         {
             _smokeMode = true;
             _recentFiles = new(Path.Combine(args.Length > 1 ? args[1] : AppContext.BaseDirectory, "recent-files.json"));
@@ -83,6 +83,7 @@ public partial class MainWindow : Window
             {
                 var folder = args.Length > 1 ? args[1] : Path.Combine(AppContext.BaseDirectory, "smoke");
                 if (args[0] == "--signature-smoke") await RunSignatureSmokeAsync(folder);
+                else if (args[0] == "--ribbon-smoke") await RunRibbonSmokeAsync(folder);
                 else if (args[0] == "--resize-benchmark") await MeasureResizeAsync(folder);
                 else if (args[0] == "--grid-benchmark") await RunGridBenchmarkAsync(folder);
                 else if (args[0] == "--interaction-smoke") await RunInteractionSmokeAsync(folder);
@@ -203,12 +204,14 @@ public partial class MainWindow : Window
         FileTitle.ToolTip = (_filePath ?? _displayName) + (_viewModel.DiscardedHistoryCount > 0 ? $" · 已释放 {_viewModel.DiscardedHistoryCount} 条较早撤销记录" : "");
         UndoButton.IsEnabled = _viewModel.CanUndo && !_busy;
         RedoButton.IsEnabled = _viewModel.CanRedo && !_busy;
+        UpdateRibbonState();
         ActionsPanel.Visibility = _document.Snapshot.ScriptModules.HasActions ? Visibility.Visible : Visibility.Collapsed;
         RunActionButton.IsEnabled = !_busy && _document.ScriptsEnabled && ActionPicker.Items.Count > 0;
     }
 
     private void UpdateFormulaBar()
     {
+        UpdateRibbonState();
         if (_formulaPending) return; // A selection/refresh must not overwrite an unsubmitted edit.
         CellAddress.Text = ColumnName(_selectedColumn) + (_selectedRow + 1);
         _updatingFormula = true;

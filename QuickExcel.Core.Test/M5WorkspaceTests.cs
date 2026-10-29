@@ -120,6 +120,30 @@ public sealed class M5WorkspaceTests : IDisposable
     }
 
     [Fact]
+    public void RibbonFontAndAlignmentPatchPreservesContentAndRoundTripsWithUndo()
+    {
+        using var doc = new WorkbookDocument(Book(Sheet("D", (0, 0, F("=1+2")), (1, 0, T("long text")))), Services);
+        var id = doc.Snapshot.Sheets[0].Id;
+        var addresses = new[] { new CellAddress(id, 0, 0), new CellAddress(id, 1, 0) };
+        doc.Session.Execute(new SetCellStyleCommand(addresses, new(FontName: "Consolas", FontSize: 18, WrapText: true, Vertical: 1)));
+        Assert.Equal("=1+2", doc.GetCellInput(0, 0, 0));
+        Assert.Equal("long text", doc.GetCellInput(0, 1, 0));
+        Assert.Equal(new StyleDefinition { FontName = "Consolas", FontSize = 18, WrapText = true, Vertical = 1 }, doc.Snapshot.Styles[1]);
+        Assert.Equal(doc.Snapshot.Sheets[0].GetStyleId(0, 0), doc.Snapshot.Sheets[0].GetStyleId(1, 0));
+        doc.Save(FilePath());
+        using var reopened = WorkbookDocument.Open(FilePath(), Services);
+        Assert.Equal(doc.Snapshot.Styles.ToArray(), reopened.Snapshot.Styles.ToArray());
+        Assert.True(doc.Undo()); Assert.Single(doc.Snapshot.Styles);
+        Assert.True(doc.Redo()); Assert.Equal(reopened.Snapshot.Styles[1], doc.Snapshot.Styles[1]);
+        var before = doc.Snapshot;
+        foreach (var invalid in new[] { new CellStylePatch(FontName: " "), new(FontSize: double.NaN), new(FontSize: 0), new(Vertical: 4) })
+        {
+            Assert.Throws<ArgumentException>(() => doc.Session.Execute(new SetCellStyleCommand(addresses, invalid)));
+            Assert.Same(before, doc.Snapshot);
+        }
+    }
+
+    [Fact]
     public void ResetBlankStyleOverridesInheritedRowStyleAndSurvivesSave()
     {
         var sheet = new WorksheetSnapshot(SheetId.New(), "D", rows: [new(0, new(StyleId: 1))]);
