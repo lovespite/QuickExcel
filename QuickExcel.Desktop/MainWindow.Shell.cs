@@ -144,7 +144,7 @@ public partial class MainWindow
         var dialog = new OpenFileDialog { Filter = "QuickExcel 副本 (*.xlsq)|*.xlsq", Title = "打开恢复副本" };
         if (dialog.ShowDialog(this) != true || !await ConfirmDiscardAsync()) return;
         var prior = _document.Session.SessionId;
-        await OpenPathAsync(dialog.FileName);
+        await OpenPathAsync(dialog.FileName, allowAutomaticScripts: false);
         if (_document.Session.SessionId == prior) return;
         // Recovery always opens an unbound copy. It cannot overwrite its source or carry authorization.
         _filePath = _versionPath = null; _fileVersion = null;

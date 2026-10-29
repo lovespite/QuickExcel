@@ -69,18 +69,21 @@ public partial class MainWindow : Window
             var folder = Path.GetFullPath(args[1]);
             _recentFiles = new(Path.Combine(folder, "recent-files.json"));
             _settings = new(Path.Combine(folder, "settings.json"));
+            _scriptTrust = new(Path.Combine(folder, "trusted-script-certificates.json"));
             args = [];
         }
-        if (args.Length > 0 && args[0] is "--smoke-test" or "--interaction-smoke" or "--workspace-smoke" or "--product-smoke" or "--grid-benchmark" or "--resize-benchmark")
+        if (args.Length > 0 && args[0] is "--smoke-test" or "--interaction-smoke" or "--workspace-smoke" or "--product-smoke" or "--signature-smoke" or "--grid-benchmark" or "--resize-benchmark")
         {
             _smokeMode = true;
             _recentFiles = new(Path.Combine(args.Length > 1 ? args[1] : AppContext.BaseDirectory, "recent-files.json"));
             _settings = new(Path.Combine(args.Length > 1 ? args[1] : AppContext.BaseDirectory, "settings.json"));
+            _scriptTrust = new(Path.Combine(args.Length > 1 ? args[1] : AppContext.BaseDirectory, "trusted-script-certificates.json"));
             ShowWorkbookPage();
             try
             {
                 var folder = args.Length > 1 ? args[1] : Path.Combine(AppContext.BaseDirectory, "smoke");
-                if (args[0] == "--resize-benchmark") await MeasureResizeAsync(folder);
+                if (args[0] == "--signature-smoke") await RunSignatureSmokeAsync(folder);
+                else if (args[0] == "--resize-benchmark") await MeasureResizeAsync(folder);
                 else if (args[0] == "--grid-benchmark") await RunGridBenchmarkAsync(folder);
                 else if (args[0] == "--interaction-smoke") await RunInteractionSmokeAsync(folder);
                 else if (args[0] == "--workspace-smoke") await RunWorkspaceSmokeAsync(folder);
@@ -116,6 +119,8 @@ public partial class MainWindow : Window
     {
         if (disposePrevious) _document.Dispose();
         _document = document;
+        _verifiedScriptModules = null;
+        _signatureVerification = null;
         _viewModel = new DocumentViewModel(document);
         _editor = new EditorController(document);
         DataContext = _viewModel;
@@ -191,6 +196,7 @@ public partial class MainWindow : Window
 
     private void UpdateChrome()
     {
+        RefreshSignatureState();
         _viewModel.Refresh();
         FileTitle.Text = _displayName + (_viewModel.IsDirty ? "  •" : "");
         Title = $"{(_viewModel.IsDirty ? "* " : "")}{_displayName} — QuickExcel";
@@ -463,6 +469,8 @@ public partial class MainWindow : Window
         if (_refreshing || ScriptState is null || _editor is null) return;
         // Even rejected source edits must revoke the old source's authorization.
         _document.DisableScripts();
+        var signedModules = _document.Snapshot.ScriptModules;
+        if (signedModules.Signature is not null) _editor.Execute(new UpdateScriptSignatureCommand(signedModules, null));
         ActionPicker.ItemsSource = null;
         ScriptState.Text = "● 已修改，等待应用";
         try
@@ -474,13 +482,14 @@ public partial class MainWindow : Window
     }
 
     private async void Run_Click(object sender, RoutedEventArgs e) => await RunScriptsAsync();
-    private async Task RunScriptsAsync()
+    private async Task RunScriptsAsync(bool automatic = false)
     {
         if (_busy) return;
         _suppressAutoCalculation = true;
         try { if (!CommitEdit()) return; }
         finally { _suppressAutoCalculation = false; }
         _calculationPending = false;
+        if (!await CheckScriptTrustAsync(automatic)) return;
         IReadOnlyList<ScriptActionDescriptor> actions = [];
         ActionPicker.ItemsSource = null;
         var ok = await WorkAsync("应用 JavaScript 并计算…", token =>
@@ -579,7 +588,7 @@ public partial class MainWindow : Window
         if (dialog.ShowDialog(this) == true && await ConfirmDiscardAsync()) await OpenPathAsync(dialog.FileName);
     }
 
-    private async Task OpenPathAsync(string path)
+    private async Task OpenPathAsync(string path, bool allowAutomaticScripts = true)
     {
         WorkbookDocument? next = null;
         FileVersion? version = null;
@@ -593,6 +602,7 @@ public partial class MainWindow : Window
         {
             InstallDocument(next!, Path.GetFullPath(path), Path.GetFileName(path), fileVersion: version);
             RememberFile(Path.GetFullPath(path));
+            if (allowAutomaticScripts && _document.Snapshot.ScriptModules.Signature is not null) await RunScriptsAsync(automatic: true);
         }
     }
 

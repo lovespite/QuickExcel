@@ -75,7 +75,7 @@ public sealed class DocumentSession : IDisposable
                 if (action is not null) { AdvanceCalculationGeneration(); _diagnostics = diagnostics; }
                 return new(false, before.Revision);
             }
-            var sourceChanged = command is UpdateScriptSourceCommand or UpdateScriptModulesCommand;
+            var sourceChanged = command is UpdateScriptSourceCommand or UpdateScriptModulesCommand or UpdateScriptSignatureCommand;
             var revised = draft.Snapshot.WithRevision(checked(before.Revision + 1));
             var after = draft.CalculationUnchanged ? CarryCalculationRevision(revised, before.Revision) : Invalidate(revised);
             var entry = sourceChanged ? null : new HistoryEntry(before, after, draft.Changes, draft.StructureChanged);

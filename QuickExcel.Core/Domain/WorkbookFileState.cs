@@ -5,12 +5,15 @@ namespace QuickExcel.Domain;
 
 public sealed record ScriptModule(string Path, string Source);
 public sealed record ScriptBinding(string Module, string Kind);
+// Public certificate and signature only; private keys and trust decisions never enter a workbook.
+public sealed record ScriptSignature(int Version, string Algorithm, string Certificate, string Value);
 
 /// <summary>Source metadata only. It never carries execution authorization.</summary>
 public sealed class ScriptModuleSet
 {
     public ScriptModuleSet(IEnumerable<KeyValuePair<string, ScriptModule>> modules, IEnumerable<string> entryModules,
-        long revision = 0, long bindingRevision = 0, int scriptApiVersion = 1, IEnumerable<ScriptBinding>? bindings = null)
+        long revision = 0, long bindingRevision = 0, int scriptApiVersion = 1, IEnumerable<ScriptBinding>? bindings = null,
+        ScriptSignature? signature = null)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(revision);
         ArgumentOutOfRangeException.ThrowIfNegative(bindingRevision);
@@ -38,6 +41,7 @@ public sealed class ScriptModuleSet
         Revision = revision;
         BindingRevision = bindingRevision;
         ScriptApiVersion = scriptApiVersion;
+        Signature = signature;
     }
     public ImmutableDictionary<string, ScriptModule> Modules { get; }
     public ImmutableArray<string> EntryModules { get; }
@@ -45,6 +49,9 @@ public sealed class ScriptModuleSet
     public long BindingRevision { get; }
     public int ScriptApiVersion { get; }
     public ImmutableArray<ScriptBinding> Bindings { get; }
+    public ScriptSignature? Signature { get; }
+    public ScriptModuleSet WithSignature(ScriptSignature? signature) => Signature == signature ? this : new(
+        Modules, EntryModules, Revision, BindingRevision, ScriptApiVersion, Bindings, signature);
     public bool HasActions => Bindings.Any(b => b.Kind == "actions");
     public ImmutableArray<string> EntriesFor(string kind) => EntryModules.Where(id => Bindings.Any(b => b.Module == id && b.Kind == kind)).ToImmutableArray();
     public string PrimarySource => Modules[EntryModules[0]].Source;

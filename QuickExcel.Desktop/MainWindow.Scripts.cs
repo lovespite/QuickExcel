@@ -23,6 +23,7 @@ public partial class MainWindow
         RefreshModuleRole();
         ScriptPosition.Text = "1:1";
         DiagnosticsList.ItemsSource = null;
+        RefreshSignatureState();
     }
 
     private void CommitScriptModule()

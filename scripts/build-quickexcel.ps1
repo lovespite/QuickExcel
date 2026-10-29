@@ -176,6 +176,7 @@ try {
     Copy-Item -LiteralPath (Join-Path $projectRoot 'QuickExcel.Desktop\docs\17-m5-grid-and-input.md') -Destination (Join-Path $supportDocsPath '17-m5-grid-and-input.md')
     Copy-Item -LiteralPath (Join-Path $projectRoot 'QuickExcel.Desktop\docs\18-m5-structure-and-workspace.md') -Destination (Join-Path $supportDocsPath '18-m5-structure-and-workspace.md')
     Copy-Item -LiteralPath (Join-Path $projectRoot 'QuickExcel.Desktop\docs\19-m5-product-workspace.md') -Destination (Join-Path $supportDocsPath '19-m5-product-workspace.md')
+    Copy-Item -LiteralPath (Join-Path $projectRoot 'QuickExcel.Desktop\docs\20-script-signatures.md') -Destination (Join-Path $supportDocsPath '20-script-signatures.md')
     Copy-Item -LiteralPath (Join-Path $projectRoot 'QuickExcel.Scripting\native\SOURCES.md') -Destination (Join-Path $publishPath 'QUICKJS-SOURCES.md')
     $notices = @"
 QuickExcel third-party component provenance

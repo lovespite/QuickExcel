@@ -56,7 +56,7 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage
                     if (String(root, "format") != "QuickExcel" || Integer(root, "minReaderVersion", 2) != 2 || scriptApiVersion is not (1 or 2))
                         throw new InvalidDataException("XLSQ 格式、读取器版本或脚本 API 不受支持。");
                     var features = Array(root, "requiredFeatures").Select(e => e.GetString() ?? throw new InvalidDataException("能力名称必须为字符串。")).ToArray();
-                    if (features.Distinct().Count() != features.Length || Features.Except(features).Any() || features.Except(Features.Append("script-actions")).Any() ||
+                    if (features.Distinct().Count() != features.Length || Features.Except(features).Any() || features.Except(Features.Concat(["script-actions", "script-signatures"])).Any() ||
                         features.Contains("script-actions") && scriptApiVersion != 2)
                         throw new InvalidDataException("XLSQ 缺少必要能力或包含未知必需能力。");
                     var referenced = new HashSet<string>(StringComparer.Ordinal) { "manifest.json" };
@@ -90,6 +90,15 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage
                         Integer(state.RootElement, "scriptRevision"), Integer(state.RootElement, "bindingRevision"), scriptApiVersion,
                         bindings.Select(b => new ScriptBinding(String(b, "module"), String(b, "kind"))));
                     if (modules.HasActions != features.Contains("script-actions")) throw new InvalidDataException("动作绑定与必需能力不一致。");
+                    if (root.TryGetProperty("scriptSignature", out var signatureReference))
+                    {
+                        if (!features.Contains("script-signatures")) throw new InvalidDataException("脚本签名缺少必需能力声明。");
+                        using var signatureJson = Json(Reference(signatureReference, "security/script-signature.json"), budget, 64 * 1024);
+                        var signature = signatureJson.RootElement;
+                        modules = modules.WithSignature(new(checked((int)Integer(signature, "version")), String(signature, "algorithm"),
+                            String(signature, "certificate"), String(signature, "value")));
+                    }
+                    else if (features.Contains("script-signatures")) throw new InvalidDataException("缺少脚本签名。");
                     if (referenced.Count != parts.Count) throw new InvalidDataException("XLSQ 包含未声明条目。");
                     var calculation = Property(state.RootElement, "calculation");
                     _ = String(calculation, "engineVersion");
@@ -196,8 +205,17 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage
         parts["state/document.json"] = JsonSerializer.SerializeToUtf8Bytes(document);
         var manifest = Object(snapshot.FileState?.ManifestJson);
         manifest["format"] = "QuickExcel"; manifest["formatVersion"] = 2; manifest["minReaderVersion"] = 2; manifest["scriptApiVersion"] = snapshot.ScriptModules.ScriptApiVersion;
-        manifest["requiredFeatures"] = JsonSerializer.SerializeToNode(snapshot.ScriptModules.HasActions ? [.. Features, "script-actions"] : Features);
+        manifest["requiredFeatures"] = JsonSerializer.SerializeToNode(Features
+            .Concat(snapshot.ScriptModules.HasActions ? ["script-actions"] : [])
+            .Concat(snapshot.ScriptModules.Signature is not null ? ["script-signatures"] : []));
         JsonNode Reference(string name) => JsonSerializer.SerializeToNode(new { path = name, sha256 = Hash(parts[name]) })!;
+        if (snapshot.ScriptModules.Signature is { } signature)
+        {
+            parts["security/script-signature.json"] = JsonSerializer.SerializeToUtf8Bytes(new {
+                version = signature.Version, algorithm = signature.Algorithm, certificate = signature.Certificate, value = signature.Value });
+            manifest["scriptSignature"] = Reference("security/script-signature.json");
+        }
+        else manifest.Remove("scriptSignature");
         manifest["workbook"] = Merge(manifest["workbook"], Reference("workbook.xlsx")); manifest["state"] = Merge(manifest["state"], Reference("state/document.json"));
         var modules = new JsonObject();
         foreach (var (id, module) in snapshot.ScriptModules.Modules.OrderBy(m => m.Key, StringComparer.Ordinal))
@@ -210,7 +228,7 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage
         {
             var checkedSnapshot = OpenBytes(ReadFile(temp, new(cancellationToken)), path, true, new(cancellationToken));
             if (!ContentEquals(snapshot, checkedSnapshot) || snapshot.DocumentId != checkedSnapshot.DocumentId || snapshot.Revision != checkedSnapshot.Revision ||
-                !snapshot.Sheets.Select(s => s.Id).SequenceEqual(checkedSnapshot.Sheets.Select(s => s.Id)) || snapshot.ScriptModules.ScriptApiVersion != checkedSnapshot.ScriptModules.ScriptApiVersion || ScriptHash(snapshot.ScriptModules) != ScriptHash(checkedSnapshot.ScriptModules))
+                !snapshot.Sheets.Select(s => s.Id).SequenceEqual(checkedSnapshot.Sheets.Select(s => s.Id)) || snapshot.ScriptModules.Signature != checkedSnapshot.ScriptModules.Signature || snapshot.ScriptModules.ScriptApiVersion != checkedSnapshot.ScriptModules.ScriptApiVersion || ScriptHash(snapshot.ScriptModules) != ScriptHash(checkedSnapshot.ScriptModules))
                 throw new InvalidDataException("保存后重开校验未能还原完整快照。");
         }, cancellationToken, expected);
         return new(Convert.ToHexString(SHA256.HashData(bytes)));

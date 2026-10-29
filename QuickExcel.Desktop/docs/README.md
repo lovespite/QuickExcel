@@ -1,5 +1,7 @@
 # QuickExcel 架构与实施文档
 
+新增 [工作簿脚本数字签名与证书信任](20-script-signatures.md)：签名、自签证书、自动授权和兼容性；此策略更新历史文档中“打开一律不执行脚本”的描述。
+
 最新 `0.6.0-preview.3` 请先读 [M5 正式界面与桌面流程](19-m5-product-workspace.md)：启动、导航、脚本专页、查找替换、基础图片/合并，以及验证和未关闭门禁。下述原型切片记录保留为历史证据。
 
 设计基线：2026-10-22；最新阶段：2026-10-28 的 **M5 结构与工作区切片**。先读 [UI-004 / UI-005 实现与验收](18-m5-structure-and-workspace.md)、[UI-002 / UI-003](17-m5-grid-and-input.md)、[M4 回收与部署](16-m4-recovery-and-deployment.md)及[隔离 ADR](15-m4-os-isolation-adr.md)。M4 未关闭项、M5 后续交互和 M6 Beta 门禁继续按计划推进。

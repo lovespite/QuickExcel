@@ -150,6 +150,11 @@
        <StackPanel DockPanel.Dock="Top">
         <TextBlock Text="模块" FontWeight="SemiBold" Margin="4,4,0,12"/>
         <Button Content="新建模块" Click="AddModule_Click" Margin="0,0,0,8"/>
+        <TextBlock Text="数字签名" FontWeight="SemiBold" Margin="4,12,0,8"/>
+        <TextBlock x:Name="SignatureState" Text="未签名" TextWrapping="Wrap" Margin="4,0,4,8"/>
+        <Button Content="签名…" Click="SignScript_Click" Margin="0,0,0,6"/>
+        <Button Content="签名详情…" Click="SignatureDetails_Click" Margin="0,0,0,6"/>
+        <Button Content="受信任证书…" Click="TrustedCertificates_Click" Margin="0,0,0,12"/>
        </StackPanel>
        <ListBox x:Name="ModulePicker" SelectionChanged="ModulePicker_SelectionChanged" Background="Transparent" BorderThickness="0" AutomationProperties.Name="脚本模块"/>
       </DockPanel>

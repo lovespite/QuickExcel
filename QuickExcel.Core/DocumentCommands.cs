@@ -114,6 +114,16 @@ public sealed class UpdateScriptModulesCommand(ScriptModuleSet modules) : Docume
     }
 }
 
+/// <summary>Attaches a signature to the exact source capture that was signed; never grants execution.</summary>
+public sealed class UpdateScriptSignatureCommand(ScriptModuleSet expectedModules, ScriptSignature? signature) : DocumentCommand
+{
+    internal override CommandDraft Prepare(WorkbookSnapshot snapshot)
+    {
+        if (!ReferenceEquals(snapshot.ScriptModules, expectedModules)) throw new InvalidOperationException("脚本已改变，请重新签名。");
+        return new(snapshot.ScriptModules.Signature == signature ? snapshot : snapshot.WithScriptModules(expectedModules.WithSignature(signature)), [], false);
+    }
+}
+
 internal sealed record CommandDraft(WorkbookSnapshot Snapshot, ImmutableArray<CellChange> Changes, bool StructureChanged,
     bool CalculationUnchanged = false);
 
