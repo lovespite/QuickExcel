@@ -72,7 +72,7 @@ public partial class MainWindow : Window
             _scriptTrust = new(Path.Combine(folder, "trusted-script-certificates.json"));
             args = [];
         }
-        if (args.Length > 0 && args[0] is "--smoke-test" or "--interaction-smoke" or "--workspace-smoke" or "--product-smoke" or "--ribbon-smoke" or "--signature-smoke" or "--grid-benchmark" or "--resize-benchmark")
+        if (args.Length > 0 && args[0] is "--smoke-test" or "--interaction-smoke" or "--workspace-smoke" or "--product-smoke" or "--ribbon-smoke" or "--signature-smoke" or "--grid-benchmark" or "--resize-benchmark" or "--data-operations-smoke" or "--fast-grid-benchmark" or "--fast-grid-drag-benchmark")
         {
             _smokeMode = true;
             _recentFiles = new(Path.Combine(args.Length > 1 ? args[1] : AppContext.BaseDirectory, "recent-files.json"));
@@ -82,7 +82,10 @@ public partial class MainWindow : Window
             try
             {
                 var folder = args.Length > 1 ? args[1] : Path.Combine(AppContext.BaseDirectory, "smoke");
-                if (args[0] == "--signature-smoke") await RunSignatureSmokeAsync(folder);
+                if (args[0] == "--fast-grid-drag-benchmark") await RunFastGridDragBenchmarkAsync(folder);
+                else if (args[0] == "--fast-grid-benchmark") await RunFastGridBenchmarkAsync(folder);
+                else if (args[0] == "--data-operations-smoke") await RunDataOperationsSmokeAsync(folder);
+                else if (args[0] == "--signature-smoke") await RunSignatureSmokeAsync(folder);
                 else if (args[0] == "--ribbon-smoke") await RunRibbonSmokeAsync(folder);
                 else if (args[0] == "--resize-benchmark") await MeasureResizeAsync(folder);
                 else if (args[0] == "--grid-benchmark") await RunGridBenchmarkAsync(folder);
@@ -427,8 +430,11 @@ public partial class MainWindow : Window
         var sheets = _document.Snapshot.Sheets;
         var index = Array.FindIndex(sheets.ToArray(), sheet => sheet.Id == sheetId);
         _sheetIndex = index >= 0 ? index : Math.Min(_sheetIndex, sheets.Length - 1);
-        CurrentView.FilterRange = null;
-        CurrentView.FrozenRows = CurrentView.FrozenColumns = 0;
+        if (CurrentView.Region is null)
+        {
+            CurrentView.FilterRange = null;
+            CurrentView.FrozenRows = CurrentView.FrozenColumns = 0;
+        }
         SynchronizeSheets();
         _calculationPending = true;
         await RecalculateAsync();

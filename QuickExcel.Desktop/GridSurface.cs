@@ -17,6 +17,7 @@ internal interface IGridSurface
     void Bind(WorkbookSnapshot snapshot, int sheetIndex, int rows, int columns);
     void Refresh(WorkbookSnapshot snapshot);
     IReadOnlyList<CellPosition> Selection { get; }
+    IReadOnlyList<GridRange> SelectionRanges { get; }
     void Select(CellPosition position, bool extend = false);
     void SelectRange(GridRange range, CellPosition current);
     bool Commit();
@@ -167,6 +168,17 @@ internal sealed class WpfGridSurface : IGridSurface
     public IReadOnlyList<CellPosition> Selection => _grid.SelectedCells.Where(c => c.Item is SheetRow)
         // Keep one overflow sentinel; every consuming operation rejects it before writing.
         .Take(100_001).Select(c => new CellPosition(((SheetRow)c.Item).Index, c.Column.DisplayIndex)).ToArray();
+
+    public IReadOnlyList<GridRange> SelectionRanges
+    {
+        get
+        {
+            var selection = Selection;
+            if (selection.Count == 0) return [];
+            try { return [GridRange.Rectangle(selection)]; }
+            catch (ArgumentException) { return selection.Select(p => new GridRange(p.Row, p.Column, p.Row, p.Column)).ToArray(); }
+        }
+    }
 
     public void ResetAnchor() => _anchor = null;
     public void CaptureAnchor()

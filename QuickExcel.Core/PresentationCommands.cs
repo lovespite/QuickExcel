@@ -5,33 +5,54 @@ using QuickExcel.Formulas;
 namespace QuickExcel.Core;
 
 /// <summary>Stable rectangular row sort. Moved formulas use copy semantics; outside references keep their addresses.</summary>
-public sealed class SortRangeCommand(SheetId sheetId, CellPosition first, CellPosition last, int keyColumn, bool descending = false) : DocumentCommand
+public sealed class SortRangeCommand : DocumentCommand
 {
+    private readonly SortDescriptor _descriptor;
+    public SortRangeCommand(SheetId sheetId, CellPosition first, CellPosition last, int keyColumn, bool descending = false)
+        : this(new SortDescriptor(sheetId, first, last, [new SortKey(keyColumn, descending)])) { }
+
+    public SortRangeCommand(SortDescriptor descriptor) => _descriptor = descriptor ?? throw new ArgumentNullException(nameof(descriptor));
+
     internal override CommandDraft Prepare(WorkbookSnapshot snapshot)
     {
+        var (sheetId, first, last) = (_descriptor.SheetId, _descriptor.First, _descriptor.Last);
         WorkbookLimits.ValidatePosition(first.Row, first.Column);
         WorkbookLimits.ValidatePosition(last.Row, last.Column);
-        if (first.Row > last.Row || first.Column > last.Column || keyColumn < first.Column || keyColumn > last.Column ||
+        if (first.Row > last.Row || first.Column > last.Column || _descriptor.Keys.IsEmpty || _descriptor.Keys.Length > 32 ||
+            _descriptor.Keys.Any(key => key.Column < first.Column || key.Column > last.Column) ||
+            _descriptor.Keys.Select(key => (key.Column, key.Basis)).Distinct().Count() != _descriptor.Keys.Length ||
             (long)(last.Row - first.Row + 1) * (last.Column - first.Column + 1) > 20_000)
-            throw new ArgumentException("排序需要不超过 20,000 格的矩形及区域内的关键列。");
+            throw new ArgumentException("排序需要不超过 20,000 格的矩形，以及 1–32 个不重复的区域内排序键。");
+        foreach (var key in _descriptor.Keys) key.Validate();
         var sheet = snapshot.GetSheet(sheetId);
         StructureEdits.RequireSimpleStructure(sheet);
-        CellValue Key(int row)
+        var dataFirst = first.Row + (_descriptor.HasHeader ? 1 : 0);
+        (CellValue Value, StyleDefinition Style) Key(int row, SortKey key)
         {
-            var cell = sheet.GetCell(row, keyColumn);
+            var cell = sheet.GetCell(row, key.Column);
             if (cell?.Content.Kind == CellContentKind.Formula && (cell.Calculation?.Value is null ||
                 cell.Calculation.State is not (CalculationState.Fresh or CalculationState.Error) || cell.Calculation.InputRevision != snapshot.Revision))
                 throw new InvalidOperationException("排序关键列包含旧缓存或缺少结果，请先完成重算。");
-            return cell?.Value ?? CellValue.Blank;
+            return (cell?.Value ?? CellValue.Blank, snapshot.Styles[sheet.GetStyleId(row, key.Column)]);
         }
-        var order = Enumerable.Range(first.Row, last.Row - first.Row + 1).Select(row => (Row: row, Value: Key(row)))
-            .OrderBy(p => p.Value, Comparer<CellValue>.Create((a, b) => Compare(a, b, descending))).Select(p => p.Row).ToArray();
-        if (order.Select((row, index) => row == first.Row + index).All(v => v)) return new(snapshot, [], false);
+        // Materialize every key before sorting: even a later key that never breaks a tie must be fresh.
+        var records = Enumerable.Range(dataFirst, Math.Max(0, last.Row - dataFirst + 1))
+            .Select(row => (Row: row, Keys: _descriptor.Keys.Select(key => Key(row, key)).ToArray())).ToArray();
+        var order = records.OrderBy(record => record, Comparer<(int Row, (CellValue Value, StyleDefinition Style)[] Keys)>.Create((a, b) =>
+        {
+            for (var i = 0; i < _descriptor.Keys.Length; i++)
+            {
+                var comparison = _descriptor.Keys[i].Compare(a.Keys[i], b.Keys[i]);
+                if (comparison != 0) return comparison;
+            }
+            return a.Row.CompareTo(b.Row);
+        })).Select(record => record.Row).ToArray();
+        if (order.Select((row, index) => row == dataFirst + index).All(v => v)) return new(snapshot, [], false);
         var cells = sheet.Cells.ToBuilder();
         for (var index = 0; index < order.Length; index++)
         for (var column = first.Column; column <= last.Column; column++)
         {
-            var row = first.Row + index;
+            var row = dataFirst + index;
             var source = sheet.GetCell(order[index], column);
             var position = new CellPosition(row, column);
             if (source is null) { cells.Remove(position); continue; }
@@ -56,7 +77,7 @@ public sealed class SortRangeCommand(SheetId sheetId, CellPosition first, CellPo
     }
 
     // Numbers, ordinal-ignore-case text, booleans, errors, blanks. Blanks stay last in both directions.
-    private static int Compare(CellValue a, CellValue b, bool descending)
+    internal static int Compare(CellValue a, CellValue b, bool descending, bool caseSensitive = false)
     {
         static int Rank(CellValue v) => v.Kind switch { CellValueKind.Number => 0, CellValueKind.Text => 1, CellValueKind.Boolean => 2, CellValueKind.Error => 3, _ => 4 };
         if (a.Kind == CellValueKind.Blank || b.Kind == CellValueKind.Blank) return Rank(a).CompareTo(Rank(b));
@@ -64,7 +85,7 @@ public sealed class SortRangeCommand(SheetId sheetId, CellPosition first, CellPo
         if (comparison == 0) comparison = a.Kind switch
         {
             CellValueKind.Number => a.NumberValue.CompareTo(b.NumberValue),
-            CellValueKind.Text => StringComparer.OrdinalIgnoreCase.Compare(a.TextValue, b.TextValue),
+            CellValueKind.Text => (caseSensitive ? StringComparer.Ordinal : StringComparer.OrdinalIgnoreCase).Compare(a.TextValue, b.TextValue),
             CellValueKind.Boolean => a.BooleanValue.CompareTo(b.BooleanValue),
             CellValueKind.Error => a.ErrorCode.CompareTo(b.ErrorCode), _ => 0
         };

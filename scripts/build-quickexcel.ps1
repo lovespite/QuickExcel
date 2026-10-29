@@ -76,7 +76,8 @@ try {
     dotnet publish .\QuickExcel.Desktop\QuickExcel.Desktop.csproj -c $Configuration --artifacts-path $artifactsPath -r win-x64 --self-contained false -o $publishPath -v minimal
     if ($LASTEXITCODE -ne 0) { throw 'QuickExcel publish failed.' }
 
-    foreach ($required in @('QuickExcel.exe', 'QuickExcel.dll', 'QuickExcel.runtimeconfig.json', 'quickexcel-js.dll', 'QUICKJS-LICENSE.txt')) {
+    foreach ($required in @('QuickExcel.exe', 'QuickExcel.dll', 'QuickExcel.runtimeconfig.json', 'quickexcel-js.dll', 'QUICKJS-LICENSE.txt',
+        'QuickExcel.Grid.Wpf.dll', 'FASTWPFGRID-LICENSE.txt', 'WRITEABLEBITMAPEX-LICENSE.txt')) {
         if (-not (Test-Path -LiteralPath (Join-Path $publishPath $required) -PathType Leaf)) { throw "Published application is missing $required" }
     }
 
@@ -150,6 +151,11 @@ try {
         cleanMachineValidated = $false
         source = Read-GitState $projectRoot
         excelIoSource = Read-GitState $dependencyRoot
+        gridSource = [ordered]@{
+            upstreamCommit = (Get-Content -LiteralPath (Join-Path $projectRoot 'QuickExcel.Grid.Wpf\UPSTREAM-SOURCES.json') -Raw | ConvertFrom-Json).commit
+            publishedDllSha256 = (Get-FileHash -LiteralPath (Join-Path $publishPath 'QuickExcel.Grid.Wpf.dll') -Algorithm SHA256).Hash
+            defaultSurface = 'DataGrid'
+        }
         sdkVersion = $sdkVersion
         installedRuntimesOnBuildMachine = $runtimes
         nativeRuntime = [ordered]@{
@@ -178,9 +184,18 @@ try {
     Copy-Item -LiteralPath (Join-Path $projectRoot 'QuickExcel.Desktop\docs\19-m5-product-workspace.md') -Destination (Join-Path $supportDocsPath '19-m5-product-workspace.md')
     Copy-Item -LiteralPath (Join-Path $projectRoot 'QuickExcel.Desktop\docs\20-script-signatures.md') -Destination (Join-Path $supportDocsPath '20-script-signatures.md')
     Copy-Item -LiteralPath (Join-Path $projectRoot 'QuickExcel.Desktop\docs\21-excel-ribbon.md') -Destination (Join-Path $supportDocsPath '21-excel-ribbon.md')
+    Copy-Item -LiteralPath (Join-Path $projectRoot 'QuickExcel.Desktop\docs\22-fastwpfgrid-and-data-operations.md') -Destination (Join-Path $supportDocsPath '22-fastwpfgrid-and-data-operations.md')
+    Copy-Item -LiteralPath (Join-Path $projectRoot 'QuickExcel.Desktop\docs\23-fast-grid-implementation.md') -Destination (Join-Path $supportDocsPath '23-fast-grid-implementation.md')
+    Copy-Item -LiteralPath (Join-Path $projectRoot 'QuickExcel.Grid.Wpf\SOURCES.md') -Destination (Join-Path $publishPath 'FASTWPFGRID-SOURCES.md')
+    Copy-Item -LiteralPath (Join-Path $projectRoot 'QuickExcel.Grid.Wpf\UPSTREAM-SOURCES.json') -Destination (Join-Path $publishPath 'FASTWPFGRID-UPSTREAM-SOURCES.json')
     Copy-Item -LiteralPath (Join-Path $projectRoot 'QuickExcel.Scripting\native\SOURCES.md') -Destination (Join-Path $publishPath 'QUICKJS-SOURCES.md')
     $notices = @"
 QuickExcel third-party component provenance
+
+FastWpfGrid and its embedded WriteableBitmapEx fork
+Source: https://github.com/janproch/fastwpfgrid
+Pinned commit and local changes: FASTWPFGRID-SOURCES.md and FASTWPFGRID-UPSTREAM-SOURCES.json.
+Declared licenses: MIT. Complete texts: FASTWPFGRID-LICENSE.txt and WRITEABLEBITMAPEX-LICENSE.txt.
 
 FluentIcons.Wpf / FluentIcons.Common 2.1.344
 Source: https://github.com/davidxuang/FluentIcons

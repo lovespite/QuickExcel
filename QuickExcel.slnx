@@ -10,4 +10,5 @@
   <Project Path="QuickExcel.Core.Test/WorkerFixture/WorkerFixture.csproj" />
   <Project Path="QuickExcel.Core.Test/SandboxHostFixture/SandboxHostFixture.csproj" />
   <Project Path="QuickExcel.Desktop/QuickExcel.Desktop.csproj" />
+  <Project Path="QuickExcel.Grid.Wpf/QuickExcel.Grid.Wpf.csproj" />
 </Solution>

@@ -170,7 +170,8 @@
           <Button Content="升序" local:Ribbon.Icon="TextSortAscending" Style="{StaticResource RibbonButton}" Click="Sort_Click" Tag="asc" ToolTip="按当前列升序；选区不含表头，移动公式调整相对引用"/>
           <Button Content="降序" local:Ribbon.Icon="TextSortDescending" Style="{StaticResource RibbonButton}" Click="Sort_Click" Tag="desc" ToolTip="按当前列降序；选区不含表头"/>
          </StackPanel>
-         <Button Content="筛选" local:Ribbon.Icon="Filter" Style="{StaticResource RibbonLargeButton}" Click="Filter_Click" ToolTip="筛选选区（含表头），按当前列包含文本筛选"/>
+         <Button Content="多级排序" local:Ribbon.Icon="TextSortAscending" Style="{StaticResource RibbonLargeButton}" Click="AdvancedSort_Click" ToolTip="按多个列、方向和规则排序完整记录"/>
+         <Button Content="筛选" local:Ribbon.Icon="Filter" Style="{StaticResource RibbonLargeButton}" Click="Filter_Click" ToolTip="选中含表头的矩形建立筛选区域，再从标题单元格下拉筛选；选单格时打开当前列面板"/>
          <Button Content="清除筛选" local:Ribbon.Icon="FilterDismiss" Style="{StaticResource RibbonLargeButton}" Click="ClearFilter_Click" ToolTip="清除当前工作表筛选"/>
         </StackPanel>
        </GroupBox>
@@ -197,7 +198,10 @@
         </StackPanel>
        </GroupBox>
        <GroupBox Header="工作区" Style="{StaticResource RibbonGroup}">
-        <Button Content="设置" local:Ribbon.Icon="WindowSettings" Style="{StaticResource RibbonLargeButton}" Click="Settings_Click" ToolTip="工作表标签位置和网格缩放"/>
+        <StackPanel Orientation="Horizontal">
+         <Button Content="设置" local:Ribbon.Icon="WindowSettings" Style="{StaticResource RibbonLargeButton}" Click="Settings_Click" ToolTip="工作表标签位置和网格缩放"/>
+         <Button Content="试验网格" local:Ribbon.Icon="Table" Style="{StaticResource RibbonLargeButton}" Click="FastGridPreview_Click" ToolTip="打开当前工作表的 FastWpfGrid 试验工作区"/>
+        </StackPanel>
        </GroupBox>
       </StackPanel>
      </TabItem>
@@ -257,7 +261,7 @@
        GridLinesVisibility="None" Background="White" BorderThickness="0,1,0,1" BorderBrush="#DCE5DF" SnapsToDevicePixels="True"
        EnableRowVirtualization="True" EnableColumnVirtualization="True" VirtualizingPanel.VirtualizationMode="Recycling" ScrollViewer.CanContentScroll="True"
        ClipboardCopyMode="None" CurrentCellChanged="Grid_CurrentCellChanged" BeginningEdit="Grid_BeginningEdit" CellEditEnding="Grid_CellEditEnding" PreviewKeyDown="Grid_KeyDown"
-       AutomationProperties.Name="工作表网格" ToolTip="单击选中，再次单击编辑；F2 编辑；Enter 向下；Tab 向右；Shift 扩展选区；Ctrl+C 复制结果；Ctrl+V 粘贴值；Ctrl+Shift+V 按输入解析公式">
+       AutomationProperties.Name="工作表网格" ToolTip="单击选中，按住拖动扩展选区；双击或 F2 编辑；Enter 向下；Tab 向右；Shift 扩展选区；Ctrl+C 复制结果；Ctrl+V 粘贴值；Ctrl+Shift+V 按输入解析公式">
       <DataGrid.Resources>
        <Style TargetType="DataGridColumnHeader"><Setter Property="Background" Value="#F3F6F3"/><Setter Property="Foreground" Value="#75847A"/><Setter Property="HorizontalContentAlignment" Value="Center"/><Setter Property="BorderThickness" Value="0,0,1,0"/><Setter Property="BorderBrush" Value="#DCE5DF"/><Setter Property="FontSize" Value="11"/></Style>
        <Style TargetType="DataGridRowHeader"><Setter Property="Background" Value="#F3F6F3"/><Setter Property="Foreground" Value="#75847A"/><Setter Property="HorizontalContentAlignment" Value="Center"/><Setter Property="FontSize" Value="11"/></Style>

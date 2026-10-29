@@ -7,6 +7,9 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="../QuickExcel.Desktop/Interaction/*.cs" Link="DesktopInteraction/%(Filename)%(Extension)" />
+    <Compile Include="../QuickExcel.Grid.Wpf/Upstream/SeriesSizes.cs" Link="Grid/SeriesSizes.cs" />
+    <Compile Include="../QuickExcel.Grid.Wpf/GridCellRange.cs" Link="Grid/GridCellRange.cs" />
+    <Compile Include="../QuickExcel.Grid.Wpf/Upstream/FastGridCellAddress.cs" Link="Grid/FastGridCellAddress.cs" />
     <Compile Remove="WorkerFixture\**\*.cs" />
     <Compile Remove="SandboxHostFixture\**\*.cs" />
     <ProjectReference Include="WorkerFixture\WorkerFixture.csproj" ReferenceOutputAssembly="false" />

@@ -57,6 +57,7 @@ public partial class MainWindow
     private void ApplyRibbonStyle(CellStylePatch patch)
     {
         var snapshot = _document.Snapshot;
+        CurrentView.RequireCurrentFilter(snapshot);
         var sheet = snapshot.Sheets[_sheetIndex];
         var selection = GridSurface.Selection.Count == 0 ? [new CellPosition(_selectedRow, _selectedColumn)] : GridSurface.Selection;
         var addresses = selection.Where(p => !CurrentView.IsFilteredOut(snapshot, _sheetIndex, p.Row))

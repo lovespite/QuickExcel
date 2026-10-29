@@ -1,5 +1,7 @@
 # QuickExcel 0.6 交互预览版
 
+2026-10-29 源码更新：数据标题行筛选、多列条件和多级排序已接入；视图页新增 FastWpfGrid 试验工作区。默认仍是 DataGrid，候选功能对等与真实 IME/DPI 门禁未关闭。操作、专项测试和性能对照见 [实施记录](QuickExcel.Desktop/docs/23-fast-grid-implementation.md)。本轮独立试用目录为 `artifacts/QuickExcel-fastgrid-20261029`。
+
 最新 `0.6.0-preview.3`：正式界面基础已接入，启动页、底部/左/右工作表标签、脚本专页、模块编辑、查找替换、基础图片/合并呈现和兼容/导出入口；范围与证据见 [M5 正式界面](QuickExcel.Desktop/docs/19-m5-product-workspace.md)。候选程序位于 `artifacts/QuickExcel/QuickExcel.exe`，也可双击 `Start-QuickExcel.cmd`。
 
 2026-10-28 M5 首切片：UI-002 / UI-003 本切片完成，网格适配、按需行/可见行刷新、键盘导航/矩形选择及 TSV 粘贴已接入；32 项 WPF 交互断言与本机中文拼音实机验收通过。测试、性能探索及验收范围见 [M5 网格与输入](QuickExcel.Desktop/docs/17-m5-grid-and-input.md)。M5 整体与 Beta 尚未完成。
@@ -31,6 +33,7 @@ QuickExcel 与同级 `../ExcelIO` 是独立 Git 仓库。ExcelIO 是源码构建
 | `QuickExcel.Scripting` | QuickJS 托管桥和固定来源的原生引擎 |
 | `QuickExcel.ScriptContracts` / `QuickExcel.ScriptWorker` | 有界 IPC 协议与独立脚本执行进程 |
 | `QuickExcel.Desktop` | WPF、组合根、编辑控制器和集成 smoke |
+| `QuickExcel.Grid.Wpf` | 固定上游来源的通用候选网格、位图绘制、范围选区与坐标映射；不引用领域或脚本 |
 | `QuickExcel.Core.Test` | 领域、会话、存储、计算和格式异常回归 |
 
 ## 构建

@@ -11,7 +11,7 @@ namespace QuickExcel.Desktop;
 
 public partial class MainWindow
 {
-    private async Task RunCellLayoutSmokeAsync(string folder, Action<bool, string> check, Func<int, int, Task> click)
+    private async Task RunCellLayoutSmokeAsync(string folder, Action<bool, string> check, Func<int, int, Task> click, Func<int, int, Task> doubleClick)
     {
         async Task Idle() => await Dispatcher.InvokeAsync(() => UpdateLayout(), DispatcherPriority.ApplicationIdle);
         static Rect Bounds(FrameworkElement element, Visual relative) => element.TransformToAncestor(relative).TransformBounds(new Rect(element.RenderSize));
@@ -45,7 +45,9 @@ public partial class MainWindow
                         $"Selection preserves text bounds and baseline: alignment {row}, zoom {zoom:P0}");
                     check(editor.IsKeyboardFocused && ((ScrollViewer)editor.Template.FindName("PART_ContentHost", editor)).Opacity == 0,
                         $"Prepared input remains focused at zoom {zoom:P0}, alignment {row}");
-                    await click(row, 0); await Idle();
+                    await doubleClick(row, 0); await Idle();
+                    editor = (TextBox)SheetGrid.Columns[0].GetCellContent(_rows[row]);
+                    prepared = (TextBlock)editor.Template.FindName("PreparedText", editor);
                     check(!prepared.IsVisible && editor.IsKeyboardFocused && editor.IsHitTestVisible,
                         $"Explicit editing exposes native text input at zoom {zoom:P0}, alignment {row}");
                     var editOrigin = editor.TranslatePoint(editor.GetRectFromCharacterIndex(0).TopLeft, cell);

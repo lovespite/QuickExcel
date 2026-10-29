@@ -32,6 +32,7 @@ public partial class MainWindow
             if (!args.Handled) throw new Exception("Grid did not handle routed key: " + key);
             await _gridInput;
         }
+        var selectionDragReady = false;
         async Task ClickCellAsync(int row, int column)
         {
             SheetGrid.ScrollIntoView(_rows[row], SheetGrid.Columns[column]);
@@ -42,8 +43,22 @@ public partial class MainWindow
             var args = new MouseButtonEventArgs(Mouse.PrimaryDevice, 0, MouseButton.Left)
                 { RoutedEvent = Mouse.PreviewMouseDownEvent };
             source.RaiseEvent(args);
+            // The native DataGrid starts dragging only when the clicked cell does not
+            // already own keyboard focus. Synthetic input has no OS mouse capture provider.
+            var cell = content.Parent as DataGridCell ?? source as DataGridCell;
+            selectionDragReady = !args.Handled && cell is { IsKeyboardFocusWithin: false };
             args.RoutedEvent = Mouse.MouseDownEvent;
             source.RaiseEvent(args);
+            SheetGrid.RaiseEvent(new MouseButtonEventArgs(Mouse.PrimaryDevice, 0, MouseButton.Left)
+                { RoutedEvent = Mouse.MouseUpEvent });
+            await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
+        }
+        async Task DoubleClickCellAsync(int row, int column)
+        {
+            await ClickCellAsync(row, column);
+            var content = SheetGrid.Columns[column].GetCellContent(_rows[row]);
+            SheetGrid.RaiseEvent(new MouseButtonEventArgs(Mouse.PrimaryDevice, 0, MouseButton.Left)
+            { RoutedEvent = Control.PreviewMouseDoubleClickEvent, Source = content.Parent });
             await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
         }
         InstallDocument(WorkbookDocument.CreateBlank(_services), Path.Combine(folder, "interaction.xlsq"), "交互验收.xlsq");
@@ -202,15 +217,21 @@ public partial class MainWindow
             "Selected cell retains a visible green cell border independent of its workbook border style");
         CaptureGridEvidence(Path.Combine(folder, "QuickExcel-click-selected.png"));
         await ClickCellAsync(6, 0);
+        editor = (TextBox)SheetGrid.Columns[0].GetCellContent(_rows[6]);
+        Check(_gridEditorArmed && !_editState.GridEditing && !editor.IsHitTestVisible && editor.Text == "3" &&
+            selectionDragReady && _document.Snapshot.Revision == revision,
+            "Repeated single click preserves formula and reaches native drag selection without editing");
+        await DoubleClickCellAsync(6, 0);
+        editor = (TextBox)SheetGrid.Columns[0].GetCellContent(_rows[6]);
         Check(!_gridEditorArmed && _editState.GridEditing && editor.Text == "=1+2" && editor.IsHitTestVisible &&
             editor.SelectionOpacity > 0 && editor.CaretBrush != Brushes.Transparent && _document.Snapshot.Revision == revision,
-            "Second mouse click on the selected cell starts editing its original formula without committing it");
+            "Double click starts editing the original formula without committing it");
         CaptureGridEvidence(Path.Combine(folder, "QuickExcel-click-editing.png"));
         await RoutedKeyAsync(Key.Escape);
         Check(_document.GetCellInput(0, 6, 0) == "=1+2" && _document.Snapshot.Revision == revision,
             "Escape after mouse editing preserves the original formula and history");
         await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
-        await ClickCellAsync(6, 0);
+        await DoubleClickCellAsync(6, 0);
         editor = (TextBox)SheetGrid.Columns[0].GetCellContent(_rows[6]);
         editor.Text = "=2+3";
         await ClickCellAsync(6, 1);
@@ -223,10 +244,12 @@ public partial class MainWindow
         Check(GridSurface.Selection.SequenceEqual(new[] { new CellPosition(6, 0) }) && _gridEditorArmed && !_editState.GridEditing,
             "First click on an active cell in a multi-cell selection collapses the range without editing");
         await ClickCellAsync(6, 0);
-        Check(_editState.GridEditing && !_gridEditorArmed,
-            "Next click after collapsing a range enters cell editing");
+        Check(!_editState.GridEditing && _gridEditorArmed && selectionDragReady,
+            "Another single click after collapsing a range still reaches native drag selection");
+        await DoubleClickCellAsync(6, 0);
+        Check(_editState.GridEditing && !_gridEditorArmed, "Double click after collapsing a range enters cell editing");
         await RoutedKeyAsync(Key.Escape);
-        await RunCellLayoutSmokeAsync(folder, Check, ClickCellAsync);
+        await RunCellLayoutSmokeAsync(folder, Check, ClickCellAsync, DoubleClickCellAsync);
         RefreshSheet();
         await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
         CaptureGridEvidence(Path.Combine(folder, "QuickExcel-interaction.png"));

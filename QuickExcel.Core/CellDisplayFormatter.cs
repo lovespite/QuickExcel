@@ -11,6 +11,12 @@ public static class CellDisplayFormatter
     private static readonly ConditionalWeakTable<StyleDefinition, ParsedFormat> Formats = new();
     private static readonly CultureInfo Invariant = CultureInfo.InvariantCulture;
 
+    public static bool IsDateFormat(StyleDefinition style, double serial)
+    {
+        var section = Formats.GetValue(style, s => Parse(s.NumberFormatCode ?? BuiltIn(s.NumberFormatId))).Select(serial);
+        return section is { Supported: true } && section.Tokens.Any(t => t.Kind is 'y' or 'd');
+    }
+
     public static string Format(CellValue value, StyleDefinition style, ExcelDateSystem dateSystem, CultureInfo? culture = null)
     {
         if (value.Kind != CellValueKind.Number) return CellInput.DisplayText(value);

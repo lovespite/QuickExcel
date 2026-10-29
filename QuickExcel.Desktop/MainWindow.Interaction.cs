@@ -54,6 +54,7 @@ public partial class MainWindow
             }));
         };
         SheetGrid.PreviewMouseLeftButtonDown += Grid_MouseLeftButtonDown;
+        SheetGrid.PreviewMouseDoubleClick += Grid_MouseDoubleClick;
         // While a text editor owns focus, its Ctrl+Z/C/Y/V remain normal text commands.
         SheetGrid.CommandBindings.Add(new CommandBinding(ApplicationCommands.Copy,
             (_, e) =>
@@ -76,20 +77,28 @@ public partial class MainWindow
         var source = e.OriginalSource as DependencyObject;
         while (source is not null and not DataGridCell)
             source = source is Visual ? VisualTreeHelper.GetParent(source) : LogicalTreeHelper.GetParent(source);
-        if (!_gridEditorArmed || modifiers != ModifierKeys.None || source is not DataGridCell { IsSelected: true, Content: TextBox editor } cell ||
+        if (!_gridEditorArmed || modifiers != ModifierKeys.None || source is not DataGridCell { IsSelected: true, Content: TextBox editor } ||
             !ReferenceEquals(editor, SheetGrid.CurrentColumn?.GetCellContent(SheetGrid.CurrentItem))) return;
 
-        if (SheetGrid.SelectedCells.Count == 1)
-        {
-            BeginExplicitGridEdit(editor);
-            editor.Focus();
-            editor.CaretIndex = Math.Max(0, editor.GetCharacterIndexFromPoint(e.GetPosition(editor), true));
-        }
-        else if (cell.DataContext is SheetRow row)
-        {
-            // Clicking the active cell of a range first reduces it to one selected cell.
-            GridSurface.Select(new(row.Index, cell.Column.DisplayIndex));
-        }
+        // WPF treats a focused, selected cell as an edit click and does not start dragging.
+        // Retire only the prepared input context and let its native selection path capture
+        // the mouse, extend the range and auto-scroll. No document draft exists here.
+        GridSurface.Cancel();
+        Keyboard.ClearFocus();
+    }
+
+    private void Grid_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+    {
+        if (_busy || _editState.IsComposing || e.ChangedButton != MouseButton.Left || Keyboard.Modifiers != ModifierKeys.None) return;
+        var source = e.OriginalSource as DependencyObject;
+        while (source is not null and not DataGridCell)
+            source = source is Visual ? VisualTreeHelper.GetParent(source) : LogicalTreeHelper.GetParent(source);
+        if (!_gridEditorArmed || source is not DataGridCell { IsSelected: true, Content: TextBox editor } ||
+            !ReferenceEquals(editor, SheetGrid.CurrentColumn?.GetCellContent(SheetGrid.CurrentItem))) return;
+
+        BeginExplicitGridEdit(editor);
+        editor.Focus();
+        editor.CaretIndex = Math.Max(0, editor.GetCharacterIndexFromPoint(e.GetPosition(editor), true));
         e.Handled = true;
     }
 
@@ -166,7 +175,16 @@ public partial class MainWindow
         var modifiers = Keyboard.Modifiers;
         var editing = !_gridEditorArmed && (e.OriginalSource is TextBox || _editState.GridEditing);
         var ctrl = modifiers.HasFlag(ModifierKeys.Control);
-        if (modifiers.HasFlag(ModifierKeys.Alt)) return;
+        if (modifiers.HasFlag(ModifierKeys.Alt))
+        {
+            if ((e.Key == Key.Down || e.SystemKey == Key.Down) && CurrentView.Region is not null)
+            {
+                e.Handled = true;
+                var target = SheetGrid.CurrentColumn?.GetCellContent(SheetGrid.CurrentItem) as FrameworkElement ?? SheetGrid;
+                await (_workspaceInput = OpenHeaderFilterAsync(_selectedColumn, target));
+            }
+            return;
+        }
         var navigation = e.Key is Key.Enter or Key.Tab or Key.Left or Key.Right or Key.Up or Key.Down or Key.Home or Key.End;
         var handled = editing
             ? !ctrl && e.Key is Key.Enter or Key.Tab or Key.Escape
@@ -220,6 +238,7 @@ public partial class MainWindow
             var selected = GridSurface.Selection;
             if (selected.Count > GridClipboard.MaxEditCells) throw new ArgumentException("单次清空上限为 20,000 格。");
             if (!CommitEditors()) return;
+            CurrentView.RequireCurrentFilter(_document.Snapshot);
             var result = _editor.ClearCells(_sheetIndex, selected.Where(p => !CurrentView.IsFilteredOut(_document.Snapshot, _sheetIndex, p.Row)).Select(p => (p.Row, p.Column)));
             _calculationPending |= result.Changed;
             UpdateChrome();
@@ -268,6 +287,7 @@ public partial class MainWindow
     private void CopySelection()
     {
         if (!CommitEditors()) return;
+        CurrentView.RequireCurrentFilter(_document.Snapshot);
         bool Excluded(int row) => CurrentView.IsFilteredOut(_document.Snapshot, _sheetIndex, row);
         var range = GridRange.Rectangle(GridSurface.Selection, Excluded);
         var text = GridClipboard.Write(range, (r, c) => _document.GetCellValue(_sheetIndex, r, c), Excluded);
@@ -280,8 +300,8 @@ public partial class MainWindow
         var selection = GridSurface.Selection;
         var range = selection.Count == 0 ? new GridRange(_selectedRow, _selectedColumn, _selectedRow, _selectedColumn) : GridRange.Rectangle(selection);
         var edits = GridClipboard.Prepare(text, range, allowFormulas);
-        CurrentView.RequireVisibleTargets(_document.Snapshot, _sheetIndex, edits.Select(edit => edit.Row));
         if (!CommitEditors()) return;
+        CurrentView.RequireVisibleTargets(_document.Snapshot, _sheetIndex, edits.Select(edit => edit.Row));
         ApplyValues(edits);
         RefreshSheet(true);
         GridSurface.SelectRange(new(range.Top, range.Left, edits.Max(e => e.Row), edits.Max(e => e.Column)), new(range.Top, range.Left));

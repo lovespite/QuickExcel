@@ -42,10 +42,16 @@ public partial class MainWindow
             _artwork = new(SheetGrid, _grid, false); _frozenArtwork = new(FrozenGrid, _grid, true);
             AdornerLayer.GetAdornerLayer(SheetGrid)?.Add(_artwork);
             AdornerLayer.GetAdornerLayer(FrozenGrid)?.Add(_frozenArtwork);
+            _filterHeaders = new(SheetGrid, _grid, OpenHeaderFilter);
+            _frozenFilterHeaders = new(FrozenGrid, _grid, OpenHeaderFilter);
+            RefreshFilterHeaderLayers();
             _artwork.Refresh(); _frozenArtwork.Refresh();
         };
         SheetGrid.SizeChanged += (_, _) => _artwork?.InvalidateVisual();
         SheetGrid.LayoutUpdated += (_, _) => _artwork?.RefreshLayout();
+        SheetGrid.LayoutUpdated += (_, _) => _filterHeaders?.Refresh();
+        FrozenGrid.LayoutUpdated += (_, _) => _frozenFilterHeaders?.Refresh();
+        Deactivated += (_, _) => _filterPopup?.Close();
         FrozenGrid.LayoutUpdated += (_, _) => _frozenArtwork?.RefreshLayout();
         SheetGrid.CurrentCellChanged += (_, _) => _artwork?.InvalidateVisual();
         SheetGrid.PreparingCellForEdit += (_, _) => _artwork?.InvalidateVisual();
@@ -55,6 +61,7 @@ public partial class MainWindow
         SheetGrid.AddHandler(ScrollViewer.ScrollChangedEvent, new ScrollChangedEventHandler((_, e) =>
         {
             _artwork?.InvalidateVisual();
+            if (e.HorizontalChange != 0 || e.VerticalChange != 0) _filterPopup?.Close();
             if (e.HorizontalChange != 0) VisualChild<ScrollViewer>(FrozenGrid)?.ScrollToHorizontalOffset(e.HorizontalOffset);
         }));
         FrozenGrid.LoadingRow += (_, e) =>
@@ -68,7 +75,10 @@ public partial class MainWindow
     private void RefreshWorkspaceView()
     {
         var view = CurrentView;
-        ViewStatus.Text = (view.FilterRange is null ? "" : $"筛选 {ColumnName(view.FilterColumn)} · {view.FilterText}  ") +
+        RefreshFilterHeaderLayers();
+        view.RefreshFilter(_document.Snapshot);
+        ViewStatus.Text = (view.FilterRange is null ? "" : view.Region is null ? $"筛选 {ColumnName(view.FilterColumn)} · {view.FilterText}  " :
+            view.FilterError is not null ? $"筛选待更新：{view.FilterError}（暂显示全部行）  " : $"筛选区域 · {view.Filters.Count} 列条件  ") +
             (view.FrozenRows + view.FrozenColumns == 0 ? "" : $"冻结 {view.FrozenRows} 行 / {view.FrozenColumns} 列");
         ViewStatus.ToolTip = "筛选首行为表头；视图设置仅本次工作区有效。";
         ViewStatus.Visibility = view.FilterRange is not null || view.FrozenRows + view.FrozenColumns > 0 ? Visibility.Visible : Visibility.Collapsed;
@@ -130,8 +140,13 @@ public partial class MainWindow
             return view;
         }
     }
-    private GridRange SelectedRange() => GridRange.Rectangle(GridSurface.Selection.Count == 0
-        ? new[] { new CellPosition(_selectedRow, _selectedColumn) } : GridSurface.Selection);
+    private GridRange SelectedRange()
+    {
+        var ranges = GridSurface.SelectionRanges;
+        if (ranges.Count == 0) return new(_selectedRow, _selectedColumn, _selectedRow, _selectedColumn);
+        if (ranges.Count == 1) return ranges[0];
+        throw new ArgumentException("请使用连续矩形选区。");
+    }
 
     private string? PromptText(string title, string label, string initial)
     {
@@ -242,6 +257,11 @@ public partial class MainWindow
         if (_busy || !await FlushEditsAsync()) return;
         try
         {
+            if (CurrentView.Region is { } region)
+            {
+                var column = Math.Clamp(_selectedColumn, region.Range.Left, region.Range.Right);
+                await SortDataRegionAsync(region, [new(column, descending)]); return;
+            }
             if (CurrentView.FilterRange is not null) throw new InvalidOperationException("请清除筛选后排序，避免隐藏行的参与范围不明确。");
             var range = SelectedRange();
             if (range.Rows < 2) throw new ArgumentException("请选中至少两行数据（不含表头）；按当前单元格所在列排序。");
@@ -264,9 +284,9 @@ public partial class MainWindow
         try
         {
             var range = SelectedRange();
-            if (range.Rows < 2) throw new ArgumentException("请选择含表头和数据的矩形，按当前列筛选。");
-            var text = PromptText("筛选显示文本", "按当前列包含文本筛选（忽略大小写），第一行保留为表头。筛选仅影响本次工作区。", CurrentView.FilterText);
-            if (text is not null) ApplyFilter(range, _selectedColumn, text);
+            if (range.Rows >= 2) EstablishDataRegion(range);
+            else if (CurrentView.Region is null) throw new ArgumentException("请选择含表头和数据的矩形，再建立筛选区域。");
+            else await OpenHeaderFilterAsync(_selectedColumn, sender as FrameworkElement ?? SheetGrid);
         }
         catch (Exception ex) { ReportEditFailure(ex); }
     }

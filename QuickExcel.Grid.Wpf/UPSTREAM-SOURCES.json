@@ -1,0 +1,186 @@
+{
+  "repository": "https://github.com/janproch/fastwpfgrid",
+  "commit": "8bcfaf37df343e0b7ccffb3718d9a973a1f58b40",
+  "files": [
+    {
+      "path": "FastWpfGrid/ActiveSeries.cs",
+      "sha256": "64d3516789ae9a71e13abb0e4ef16bd9428db76cee995145e516ec8273ceab10"
+    },
+    {
+      "path": "FastWpfGrid/DataTableGridModel.cs",
+      "sha256": "9bceed06ae6e033308ec236dc717f126d84b7d809b906c06e9f9ba553f17b141"
+    },
+    {
+      "path": "FastWpfGrid/EventArgs.cs",
+      "sha256": "b97838bbcb6510d13ce14d1c17d37b4d16a71a2a16b586f8308f411211a800d5"
+    },
+    {
+      "path": "FastWpfGrid/ExplicitColumnDefinition.cs",
+      "sha256": "2cffbe54eb5dc25247b99051fd0b48fab8609bacf0aa98ed49f1a805766bee35"
+    },
+    {
+      "path": "FastWpfGrid/FastGridCellAddress.cs",
+      "sha256": "a67f55719e81c29205b3dcb05951a080719769399599de424cae4526e891f976"
+    },
+    {
+      "path": "FastWpfGrid/FastGridCellImpl.cs",
+      "sha256": "2d3c370e4568448f8d62430b9b5bf0a74063dfd9c762b0b1717b0247939dc63e"
+    },
+    {
+      "path": "FastWpfGrid/FastGridControl.xaml",
+      "sha256": "0e76e3cca87497c42d90e6952fc1ad4e5f034462641c205edc5766540f5187c4"
+    },
+    {
+      "path": "FastWpfGrid/FastGridControl.xaml.cs",
+      "sha256": "484c8810c8c64328057b8a4755dd199d3a94df0c11b9428471735dc6c5cbb63a"
+    },
+    {
+      "path": "FastWpfGrid/FastGridControl_Arrange.cs",
+      "sha256": "818c7367af22b34b808464f3baac127ee58a43eedd8ff2be2c4b4709df547033"
+    },
+    {
+      "path": "FastWpfGrid/FastGridControl_DependencyProps.cs",
+      "sha256": "54000090bc6f228c0a2c393682b8cca6612c1ffbbe828b9ffa873b86a0628ad7"
+    },
+    {
+      "path": "FastWpfGrid/FastGridControl_Input.cs",
+      "sha256": "2909e105f6e31e36a6d26c0a004f163390e998e8f7a1e62cedbb280f7218976b"
+    },
+    {
+      "path": "FastWpfGrid/FastGridControl_Invalidation.cs",
+      "sha256": "0268cf7e4e1d602591a26a32f5751cf9a93172962a1a9e2dfec1ec9f82c44362"
+    },
+    {
+      "path": "FastWpfGrid/FastGridControl_Render.cs",
+      "sha256": "d5e4dbe853fb754a63603b7a56c083020f65fd5f0c24ad4c994f65ba1d2b76b0"
+    },
+    {
+      "path": "FastWpfGrid/FastGridControl_Selection.cs",
+      "sha256": "c24e83ac2420b0d9288109e83716a200c8cfed6788ba59ef605fd33ffda43958"
+    },
+    {
+      "path": "FastWpfGrid/FastGridControl_StyleProps.cs",
+      "sha256": "43f9f67c2cbd7eb5d08adea88ed0a9fd798ee56ef4a9ade61e0ed4e395438f55"
+    },
+    {
+      "path": "FastWpfGrid/FastGridModelBase.cs",
+      "sha256": "164825c1a169679fcb1003a40e1ff590e64ae27cd52fb381fb606a2e03289f3c"
+    },
+    {
+      "path": "FastWpfGrid/IFastGridCell.cs",
+      "sha256": "6c1ee66403225250f9b29e977abd7550444971f176911c2f4cb8a8156f3d9e3a"
+    },
+    {
+      "path": "FastWpfGrid/IFastGridCellBlock.cs",
+      "sha256": "0111c9e66ba4f48d64043749ee5465a776b0a1a02be08db4f7368deca677b352"
+    },
+    {
+      "path": "FastWpfGrid/IFastGridModel.cs",
+      "sha256": "aba4028616416f6a99c25935663694dc1f5a3cd3ce8bce929c7d89e3cfcecedc"
+    },
+    {
+      "path": "FastWpfGrid/IFastGridView.cs",
+      "sha256": "b6ff00e24f55d4859638d16348d2a876f8c005019eba478366c0981196a757bd"
+    },
+    {
+      "path": "FastWpfGrid/ImageHolder.cs",
+      "sha256": "8be4efd37fb9b6639df72125c4cf1affef7b92c808b5e9fec53aae0bdd56efb6"
+    },
+    {
+      "path": "FastWpfGrid/SelectionChangedEventArgs.cs",
+      "sha256": "55abf02b9cad172bae5893fb457d80110d8a42a563fbfadb8cc4c4882117cd2c"
+    },
+    {
+      "path": "FastWpfGrid/SelectionQuickCommand.cs",
+      "sha256": "7f54fcfabf81a73805c14ec6763083455f70943e95b6e492404725374e6be54c"
+    },
+    {
+      "path": "FastWpfGrid/SeriesSizes.cs",
+      "sha256": "ac5875bb24b7a4c7e28bcfb154d8244051509423a673792928f2f4d99dcdc6b1"
+    },
+    {
+      "path": "WriteableBitmapEx/BitmapContext.cs",
+      "sha256": "98d441abdcba87b91cbbe9777cfe2900be6b00450acdd54a9c6cf27158324123"
+    },
+    {
+      "path": "WriteableBitmapEx/BitmapFactory.cs",
+      "sha256": "95d996cbefb28da0ff8bb51ee1412a22ca584a62642b0d6952084fd3b70580f5"
+    },
+    {
+      "path": "WriteableBitmapEx/ClearTypeLetterGlyph.cs",
+      "sha256": "f4e8b3fb13b481ed4f3dbeff9981a77f539430e8c0f25e85e47f384cc33ee4d2"
+    },
+    {
+      "path": "WriteableBitmapEx/DpiDetector.cs",
+      "sha256": "2959175519ccb635053329105531d861292ce5c8a06af9ded6dd3d067403a97b"
+    },
+    {
+      "path": "WriteableBitmapEx/GrayScaleLetterGlyph.cs",
+      "sha256": "4eac7b69c1f84989b043790483097dba73c1feb47b4e534f471a047b90dc675e"
+    },
+    {
+      "path": "WriteableBitmapEx/IntGeometry.cs",
+      "sha256": "df1bebb5f22b8c87be322a4d32c38e9b9ecefc815dd18833976a5bafdcc9a638"
+    },
+    {
+      "path": "WriteableBitmapEx/LetterGlyphTool.cs",
+      "sha256": "22635d95a1c6f6d54a02863ff9419ae2ce0dcf68b4d12dd1ecb3eef81cbd483d"
+    },
+    {
+      "path": "WriteableBitmapEx/NativeMethods.cs",
+      "sha256": "758fde72c5d7046c84720dd7708a9df7dde48dcc1d7a86d7c74a860e5863eab6"
+    },
+    {
+      "path": "WriteableBitmapEx/PortableFontDesc.cs",
+      "sha256": "ca5c9f0999fc80aabab34f761f042545252eee86f755f730f7343bd4a774ab32"
+    },
+    {
+      "path": "WriteableBitmapEx/ScrollingTool.cs",
+      "sha256": "0f5997d54c23434845b89217b848c72083a65c80e391919961fc8fce3a4c5d9b"
+    },
+    {
+      "path": "WriteableBitmapEx/WriteableBitmapAntialiasingExtensions.cs",
+      "sha256": "f2bc4a177ba2e189012f129ea8692df23838136988bd72ff20d42273c474044f"
+    },
+    {
+      "path": "WriteableBitmapEx/WriteableBitmapBaseExtensions.cs",
+      "sha256": "127792614d76840a7b7c124581a6058e333ba21189eb2c226249d0e6618b84fa"
+    },
+    {
+      "path": "WriteableBitmapEx/WriteableBitmapBlitExtensions.cs",
+      "sha256": "992f2d9ee98a513f9a8c254ed576ee2aea630b755a94ed6775138e72f0860b03"
+    },
+    {
+      "path": "WriteableBitmapEx/WriteableBitmapContextExtensions.cs",
+      "sha256": "87c81b4b6d0771fa8d3074717abad150cd396df4b5ee239602562d95e9a7bd1b"
+    },
+    {
+      "path": "WriteableBitmapEx/WriteableBitmapConvertExtensions.cs",
+      "sha256": "504e135e29b5123760e3bdac350eb21f1d076f4c41210ac81f6406601450f286"
+    },
+    {
+      "path": "WriteableBitmapEx/WriteableBitmapFillExtensions.cs",
+      "sha256": "05be1ad7414e0bb3bc17ed6ce9a159ad7d890f48d97cc5f3687869915825fce5"
+    },
+    {
+      "path": "WriteableBitmapEx/WriteableBitmapFilterExtensions.cs",
+      "sha256": "97bf8c55bada2b5e3abcf4023c3beafd013b6f4d957aac54a9ec9a8d85b008f2"
+    },
+    {
+      "path": "WriteableBitmapEx/WriteableBitmapLineExtensions.cs",
+      "sha256": "5712ba83b6058d59002846e34ba659f9cc6e0a0eff671c907ca383ae4480d7ff"
+    },
+    {
+      "path": "WriteableBitmapEx/WriteableBitmapShapeExtensions.cs",
+      "sha256": "79444463ca0bb4c4d9c4647cde247a874af62cc50802aefb0fe2fa59afcc91a8"
+    },
+    {
+      "path": "WriteableBitmapEx/WriteableBitmapSplineExtensions.cs",
+      "sha256": "d0bdba922a4f46bb7e0cf45b9e56eb0840d64ccf643b3b10775c1289b4c99628"
+    },
+    {
+      "path": "WriteableBitmapEx/WriteableBitmapTransformationExtensions.cs",
+      "sha256": "a9566565b91c55b5a483ac908f87596c6ce4463b37f99fa4b5574d70d2284ff1"
+    }
+  ]
+}
