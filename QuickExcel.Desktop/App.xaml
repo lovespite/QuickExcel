@@ -3,7 +3,7 @@
  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
  <Application.Resources>
   <ResourceDictionary>
-  <ResourceDictionary.MergedDictionaries><ResourceDictionary Source="Themes/Ribbon.xaml"/></ResourceDictionary.MergedDictionaries>
+  <ResourceDictionary.MergedDictionaries><ResourceDictionary Source="Themes/Ribbon.xaml"/><ResourceDictionary Source="Themes/Grid.xaml"/></ResourceDictionary.MergedDictionaries>
   <SolidColorBrush x:Key="Ink" Color="#22352E"/>
   <SolidColorBrush x:Key="Muted" Color="#718078"/>
   <SolidColorBrush x:Key="Accent" Color="#187553"/>

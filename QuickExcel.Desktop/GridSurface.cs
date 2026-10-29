@@ -59,7 +59,9 @@ internal sealed class WpfGridSurface : IGridSurface
         var newSheet = _sheetId != Sheet.Id;
         var rebuildColumns = newSheet || _grid.Columns.Count != columns;
         _sheetId = Sheet.Id;
-        _grid.GridLinesVisibility = Sheet.ShowGridLines ? DataGridGridLinesVisibility.All : DataGridGridLinesVisibility.None;
+        // Paint grid lines inside the cell template. Native lines reserve a separate strip
+        // outside cell fills/borders, leaving visible gutters between formatted cells.
+        _grid.GridLinesVisibility = DataGridGridLinesVisibility.None;
         if (newSheet || Rows.Count != rows)
         {
             _anchor = null;
@@ -69,13 +71,17 @@ internal sealed class WpfGridSurface : IGridSurface
         if (rebuildColumns)
         {
             _grid.Columns.Clear();
+            var textPadding = (Thickness)_grid.FindResource("SheetCellTextPadding");
+            // WPF's native TextBoxView adds a fixed 2 DIP horizontal margin. Its host
+            // already receives TextBox.Padding; do not pad it a second time in the template.
+            var editorPadding = new Thickness(textPadding.Left - 2, textPadding.Top, textPadding.Right - 2, textPadding.Bottom);
             for (var column = 0; column < columns; column++)
             {
                 var style = new Style(typeof(TextBlock));
-                style.Setters.Add(new Setter(TextBlock.PaddingProperty, new Thickness(8, 4, 5, 3)));
+                style.Setters.Add(new Setter(TextBlock.PaddingProperty, textPadding));
+                style.Setters.Add(new Setter(FrameworkElement.MarginProperty, new Thickness(0)));
                 style.Setters.Add(new Setter(TextBlock.TextTrimmingProperty, TextTrimming.CharacterEllipsis));
                 style.Setters.Add(new Setter(TextBlock.ForegroundProperty, new Binding(nameof(SheetRow.Appearance)) { Converter = new AppearanceConverter(column, "foreground") }));
-                style.Setters.Add(new Setter(TextBlock.BackgroundProperty, new Binding(nameof(SheetRow.Appearance)) { Converter = new AppearanceConverter(column, "background") }));
                 style.Setters.Add(new Setter(TextBlock.FontWeightProperty, new Binding(nameof(SheetRow.Appearance)) { Converter = new AppearanceConverter(column, "weight") }));
                 style.Setters.Add(new Setter(TextBlock.FontStyleProperty, new Binding(nameof(SheetRow.Appearance)) { Converter = new AppearanceConverter(column, "italic") }));
                 style.Setters.Add(new Setter(TextBlock.FontFamilyProperty, new Binding(nameof(SheetRow.Appearance)) { Converter = new AppearanceConverter(column, "family") }));
@@ -83,14 +89,11 @@ internal sealed class WpfGridSurface : IGridSurface
                 style.Setters.Add(new Setter(TextBlock.TextWrappingProperty, new Binding(nameof(SheetRow.Appearance)) { Converter = new AppearanceConverter(column, "wrap") }));
                 style.Setters.Add(new Setter(FrameworkElement.VerticalAlignmentProperty, new Binding(nameof(SheetRow.Appearance)) { Converter = new AppearanceConverter(column, "vertical") }));
                 style.Setters.Add(new Setter(TextBlock.TextAlignmentProperty, new Binding(nameof(SheetRow.Appearance)) { Converter = new AppearanceConverter(column, "alignment") }));
-                var cellStyle = new Style(typeof(DataGridCell), (Style)_grid.FindResource(typeof(DataGridCell)));
+                var cellStyle = new Style(typeof(DataGridCell), (Style)_grid.FindResource("SheetCell"));
                 cellStyle.Setters.Add(new Setter(AutomationProperties.NameProperty, new Binding(nameof(SheetRow.Appearance)) { Converter = new AppearanceConverter(column, "automation") }));
                 cellStyle.Setters.Add(new Setter(Control.BorderThicknessProperty, new Binding(nameof(SheetRow.Appearance)) { Converter = new AppearanceConverter(column, "border") }));
                 cellStyle.Setters.Add(new Setter(Control.BorderBrushProperty, new Binding(nameof(SheetRow.Appearance)) { Converter = new AppearanceConverter(column, "borderColor") }));
                 cellStyle.Setters.Add(new Setter(Control.BackgroundProperty, new Binding(nameof(SheetRow.Appearance)) { Converter = new AppearanceConverter(column, "background") }));
-                cellStyle.Triggers.Add(new Trigger { Property = DataGridCell.IsSelectedProperty, Value = true,
-                    Setters = { new Setter(Control.BorderThicknessProperty, new Thickness(1)),
-                        new Setter(Control.BorderBrushProperty, new SolidColorBrush(Color.FromRgb(24, 117, 83))) } });
                 cellStyle.Triggers.Add(new Trigger { Property = DataGridCell.IsSelectedProperty, Value = true,
                     Setters = { new Setter(Control.BorderThicknessProperty, new Thickness(1)),
                         new Setter(Control.BorderBrushProperty, new SolidColorBrush(Color.FromRgb(24, 117, 83))) } });
@@ -104,9 +107,11 @@ internal sealed class WpfGridSurface : IGridSurface
                     ElementStyle = style,
                     CellStyle = cellStyle,
                     EditingElementStyle = new Style(typeof(TextBox))
-                    { Setters = { new Setter(TextBox.PaddingProperty, new Thickness(5, 3, 4, 2)),
+                    { Setters = { new Setter(TextBox.PaddingProperty, editorPadding),
+                        new Setter(FrameworkElement.MarginProperty, new Thickness(0)),
+                        new Setter(Control.BorderThicknessProperty, new Thickness(0)),
+                        new Setter(Control.TemplateProperty, _grid.FindResource("SheetCellEditor")),
                         new Setter(TextBox.ForegroundProperty, new Binding(nameof(SheetRow.Appearance)) { Converter = new AppearanceConverter(column, "foreground") }),
-                        new Setter(TextBox.BackgroundProperty, new Binding(nameof(SheetRow.Appearance)) { Converter = new AppearanceConverter(column, "background") }),
                         new Setter(TextBox.FontWeightProperty, new Binding(nameof(SheetRow.Appearance)) { Converter = new AppearanceConverter(column, "weight") }),
                         new Setter(TextBox.FontStyleProperty, new Binding(nameof(SheetRow.Appearance)) { Converter = new AppearanceConverter(column, "italic") }),
                         new Setter(TextBox.FontFamilyProperty, new Binding(nameof(SheetRow.Appearance)) { Converter = new AppearanceConverter(column, "family") }),
@@ -206,8 +211,10 @@ internal sealed class SheetRow(WpfGridSurface owner, int index) : INotifyPropert
 {
     private (CellValue Value, StyleDefinition Style)[] _presentation = [];
     private ExcelDateSystem? _dateSystem;
+    private bool? _showGridLines;
     public int Index { get; } = index;
     public SheetRow Appearance => this;
+    public bool ShowGridLines => owner.Sheet.ShowGridLines;
     public string GetInput(int column) => owner.Sheet.GetCell(Index, column) is { } cell ? CellInput.EditText(cell.Content) : "";
     public string this[int column]
     {
@@ -217,10 +224,11 @@ internal sealed class SheetRow(WpfGridSurface owner, int index) : INotifyPropert
     }
     public StyleDefinition GetStyle(int column) => owner.Snapshot.Styles[owner.Sheet.GetStyleId(Index, column)];
     public event PropertyChangedEventHandler? PropertyChanged;
-    public void ReleasePresentation() { _presentation = []; _dateSystem = null; }
+    public void ReleasePresentation() { _presentation = []; _dateSystem = null; _showGridLines = null; }
     public void Refresh()
     {
-        var changed = _presentation.Length != owner.ColumnCount || _dateSystem != owner.Snapshot.DateSystem;
+        var changed = _presentation.Length != owner.ColumnCount || _dateSystem != owner.Snapshot.DateSystem || _showGridLines != ShowGridLines;
+        _showGridLines = ShowGridLines;
         if (_presentation.Length != owner.ColumnCount) _presentation = new (CellValue, StyleDefinition)[owner.ColumnCount];
         _dateSystem = owner.Snapshot.DateSystem;
         for (var column = 0; column < _presentation.Length; column++)
@@ -243,6 +251,8 @@ internal sealed class GridInputColumn(int column) : DataGridTextColumn
         "IsPrepared", typeof(bool), typeof(GridInputColumn), new PropertyMetadata(false));
 
     internal static void SetPrepared(TextBox editor, bool prepared) => editor.SetValue(IsPreparedProperty, prepared);
+    public static bool GetIsPrepared(DependencyObject element) => (bool)element.GetValue(IsPreparedProperty);
+    public static void SetIsPrepared(DependencyObject element, bool value) => element.SetValue(IsPreparedProperty, value);
 
     protected override FrameworkElement GenerateEditingElement(DataGridCell cell, object dataItem)
     {

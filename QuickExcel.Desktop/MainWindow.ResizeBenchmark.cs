@@ -60,7 +60,8 @@ public partial class MainWindow
                     for (var move = 0; move < 8; move++)
                     {
                         var delta = sample % 2 == 0 ? 0.5 : -0.5;
-                        grip.RaiseEvent(new DragDeltaEventArgs(axis == "column" ? delta : 0, axis == "row" ? delta : 0) { RoutedEvent = Thumb.DragDeltaEvent });
+                        // Thumb offsets overlap until layout moves the grip to the pointer.
+                        grip.RaiseEvent(new DragDeltaEventArgs(axis == "column" ? delta * (move + 1) : 0, axis == "row" ? delta * (move + 1) : 0) { RoutedEvent = Thumb.DragDeltaEvent });
                     }
                     await Dispatcher.InvokeAsync(() => SheetGrid.UpdateLayout(), DispatcherPriority.ApplicationIdle);
                     preview.Add(timer.Elapsed.TotalMilliseconds);

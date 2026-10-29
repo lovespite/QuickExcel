@@ -226,6 +226,7 @@ public partial class MainWindow
         Check(_editState.GridEditing && !_gridEditorArmed,
             "Next click after collapsing a range enters cell editing");
         await RoutedKeyAsync(Key.Escape);
+        await RunCellLayoutSmokeAsync(folder, Check, ClickCellAsync);
         RefreshSheet();
         await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
         CaptureGridEvidence(Path.Combine(folder, "QuickExcel-interaction.png"));

@@ -248,23 +248,19 @@
      </StackPanel>
      <AdornerDecorator Grid.Row="1">
      <DataGrid x:Name="FrozenGrid" Visibility="Collapsed" MaxHeight="220" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" CanUserDeleteRows="False" CanUserReorderColumns="False" CanUserSortColumns="False" CanUserResizeColumns="False" MinColumnWidth="12" MaxColumnWidth="400"
-       HeadersVisibility="Row" RowHeaderWidth="45" CanUserResizeRows="True" SelectionUnit="Cell" SelectionMode="Single" Background="#F1F5F1" BorderThickness="0,0,0,2" BorderBrush="#187553" HorizontalGridLinesBrush="#E7ECE8" VerticalGridLinesBrush="#E7ECE8"
+       HeadersVisibility="Row" RowHeaderWidth="45" CanUserResizeRows="True" SelectionUnit="Cell" SelectionMode="Single" Background="#F1F5F1" BorderThickness="0,0,0,2" BorderBrush="#187553" GridLinesVisibility="None" SnapsToDevicePixels="True"
        ScrollViewer.HorizontalScrollBarVisibility="Hidden" CurrentCellChanged="FrozenGrid_CurrentCellChanged" AutomationProperties.Name="冻结行，选择后定位编辑"/>
      </AdornerDecorator>
      <AdornerDecorator Grid.Row="2">
      <DataGrid x:Name="SheetGrid" AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False" CanUserReorderColumns="False" CanUserSortColumns="False" CanUserResizeColumns="True" MinColumnWidth="12" MaxColumnWidth="400" CanUserResizeRows="True"
        SelectionUnit="Cell" SelectionMode="Extended" HeadersVisibility="All" RowHeaderWidth="45" ColumnHeaderHeight="32"
-       GridLinesVisibility="All" HorizontalGridLinesBrush="#E7ECE8" VerticalGridLinesBrush="#E7ECE8" Background="White" BorderThickness="0,1,0,1" BorderBrush="#DCE5DF"
+       GridLinesVisibility="None" Background="White" BorderThickness="0,1,0,1" BorderBrush="#DCE5DF" SnapsToDevicePixels="True"
        EnableRowVirtualization="True" EnableColumnVirtualization="True" VirtualizingPanel.VirtualizationMode="Recycling" ScrollViewer.CanContentScroll="True"
        ClipboardCopyMode="None" CurrentCellChanged="Grid_CurrentCellChanged" BeginningEdit="Grid_BeginningEdit" CellEditEnding="Grid_CellEditEnding" PreviewKeyDown="Grid_KeyDown"
        AutomationProperties.Name="工作表网格" ToolTip="单击选中，再次单击编辑；F2 编辑；Enter 向下；Tab 向右；Shift 扩展选区；Ctrl+C 复制结果；Ctrl+V 粘贴值；Ctrl+Shift+V 按输入解析公式">
       <DataGrid.Resources>
        <Style TargetType="DataGridColumnHeader"><Setter Property="Background" Value="#F3F6F3"/><Setter Property="Foreground" Value="#75847A"/><Setter Property="HorizontalContentAlignment" Value="Center"/><Setter Property="BorderThickness" Value="0,0,1,0"/><Setter Property="BorderBrush" Value="#DCE5DF"/><Setter Property="FontSize" Value="11"/></Style>
        <Style TargetType="DataGridRowHeader"><Setter Property="Background" Value="#F3F6F3"/><Setter Property="Foreground" Value="#75847A"/><Setter Property="HorizontalContentAlignment" Value="Center"/><Setter Property="FontSize" Value="11"/></Style>
-       <Style TargetType="DataGridCell">
-        <Setter Property="BorderThickness" Value="1"/><Setter Property="BorderBrush" Value="Transparent"/>
-        <Style.Triggers><Trigger Property="IsSelected" Value="True"><Setter Property="Background" Value="#E3F3E9"/><Setter Property="Foreground" Value="#174D36"/><Setter Property="BorderBrush" Value="#187553"/></Trigger></Style.Triggers>
-       </Style>
       </DataGrid.Resources>
      </DataGrid>
      </AdornerDecorator>

@@ -154,11 +154,17 @@ public partial class MainWindow
         try
         {
             grip = ColumnGrip(0); Start(grip);
-            for (var i = 0; i < 8; i++) grip.RaiseEvent(new DragDeltaEventArgs(2, 0) { RoutedEvent = Thumb.DragDeltaEvent });
+            for (var i = 0; i < 8; i++) grip.RaiseEvent(new DragDeltaEventArgs((i + 1) * 2, 0) { RoutedEvent = Thumb.DragDeltaEvent });
             check(widthWrites == 0, "Native column resize is suppressed and queued pointer moves do not repeatedly write widths");
             await Idle();
             check(widthWrites == 1 && Near(SheetGrid.Columns[0].ActualWidth, 176), "A burst of pointer moves produces one layout preview with the final width");
             check(Near(FrozenGrid.Columns[0].ActualWidth, 176), "Frozen column widths follow the live preview");
+            grip.RaiseEvent(new DragDeltaEventArgs(8, 0) { RoutedEvent = Thumb.DragDeltaEvent });
+            grip.RaiseEvent(new DragDeltaEventArgs(-6, 0) { RoutedEvent = Thumb.DragDeltaEvent });
+            await Idle();
+            check(Near(SheetGrid.Columns[0].ActualWidth, 170), "Reversing before layout follows the latest pointer instead of adding overlapping offsets");
+            grip.RaiseEvent(new DragDeltaEventArgs(6, 0) { RoutedEvent = Thumb.DragDeltaEvent });
+            await Idle();
             End(grip); await Idle();
             check(calculations == 0 && disabled == 0 && !_calculationPending, "Pure resize never starts calculation or disables the workspace");
             check(ReferenceEquals(frozenColumn, FrozenGrid.Columns[0]) && ReferenceEquals(frozenItems, FrozenGrid.ItemsSource) && frozenResets == 0,
@@ -168,7 +174,7 @@ public partial class MainWindow
             check(cache.State == CalculationState.Fresh && cache.InputRevision == _document.Snapshot.Revision, "Resize retains valid formula results at the current revision");
 
             grip = RowGrip(SheetGrid, 0); Start(grip);
-            grip.RaiseEvent(new DragDeltaEventArgs(0, 10) { RoutedEvent = Thumb.DragDeltaEvent });
+            for (var i = 1; i <= 5; i++) grip.RaiseEvent(new DragDeltaEventArgs(0, i * 2) { RoutedEvent = Thumb.DragDeltaEvent });
             check(VisualChild<DataGridCellsPresenter>(Row(SheetGrid, 0))!.ReadLocalValue(HeightProperty) == DependencyProperty.UnsetValue,
                 "Native row resize does not compete with the row container height");
             await Idle();

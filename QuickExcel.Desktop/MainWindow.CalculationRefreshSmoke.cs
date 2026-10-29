@@ -79,7 +79,9 @@ public partial class MainWindow
             ApplyRibbonStyle(new(Bold: true, FillColor: "FFFFFF00", NumberFormatId: 2)); await Idle();
             var content = (TextBlock)SheetGrid.Columns[1].GetCellContent(frozenRow);
             check(content.Text == "6.00" && content.FontWeight == FontWeights.SemiBold &&
-                content.Background.ToString() == "#FFFFFF00" && ((TextBlock)FrozenGrid.Columns[1].GetCellContent(frozenRow)).Text == "6.00",
+                ((DataGridCell)content.Parent).Background.ToString() == "#FFFFFF00" &&
+                ((DataGridCell)FrozenGrid.Columns[1].GetCellContent(frozenRow).Parent).Background.ToString() == "#FFFFFF00" &&
+                ((TextBlock)FrozenGrid.Columns[1].GetCellContent(frozenRow)).Text == "6.00",
                 "Style bindings update font, fill and number display immediately in both panes");
             check(calculator.Calls == calls && !_calculationPending && selection.SequenceEqual(GridSurface.Selection),
                 "Formatting preserves the range selection and never schedules calculation");

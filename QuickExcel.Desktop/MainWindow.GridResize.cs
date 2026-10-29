@@ -9,10 +9,12 @@ namespace QuickExcel.Desktop;
 
 public partial class MainWindow
 {
-    private sealed class GridResize(Thumb grip, SheetId sheetId, SheetAxis axis, int index,
+    private sealed class GridResize(DataGrid grid, Thumb grip, SheetId sheetId, SheetAxis axis, int index,
         DataGridRow? row, DataGridColumn? column, double pixels)
     {
         public Thumb Grip { get; } = grip;
+        public DataGrid Grid { get; } = grid;
+        public Point Origin { get; } = grip.TranslatePoint(new Point(), grid);
         public SheetId SheetId { get; } = sheetId;
         public SheetAxis Axis { get; } = axis;
         public int Index { get; } = index;
@@ -46,7 +48,7 @@ public partial class MainWindow
                 _ => null
             };
             if (column is { CanUserResize: true })
-                return new(grip, sheet.Id, SheetAxis.Column, column.DisplayIndex, null, column, column.ActualWidth);
+                return new(grid, grip, sheet.Id, SheetAxis.Column, column.DisplayIndex, null, column, column.ActualWidth);
         }
         if (grip.TemplatedParent is DataGridRowHeader rowHeader && grid.CanUserResizeRows &&
             ItemsControl.ContainerFromElement(grid, rowHeader) is DataGridRow headerRow)
@@ -60,7 +62,7 @@ public partial class MainWindow
             else if (grip.Name != "PART_BottomHeaderGripper") return null;
             if (row?.Item is SheetRow item && row.ActualHeight > 0 &&
                 sheet.Rows.GetValueOrDefault(item.Index)?.Hidden != true && !_grid.IsFiltered(item.Index))
-                return new(grip, sheet.Id, SheetAxis.Row, item.Index, row, null, row.ActualHeight);
+                return new(grid, grip, sheet.Id, SheetAxis.Row, item.Index, row, null, row.ActualHeight);
         }
         return null;
     }
@@ -78,7 +80,12 @@ public partial class MainWindow
         if (_gridResize is not { } resize || !ReferenceEquals(e.OriginalSource, resize.Grip)) return;
         var change = resize.Axis == SheetAxis.Row ? e.VerticalChange : e.HorizontalChange;
         if (!double.IsFinite(change)) return;
-        resize.Pixels = Math.Clamp(resize.Pixels + change, resize.Axis == SheetAxis.Row ? 1 : 12, 400);
+        // Thumb reports pointer displacement from its initial local grab point, NOT from
+        // the preceding event. Before queued layout moves the grip, those deltas overlap.
+        // Recover displacement in grid coordinates instead of summing pending deltas.
+        var gripPosition = resize.Grip.TranslatePoint(new Point(), resize.Grid);
+        var moved = resize.Axis == SheetAxis.Row ? gripPosition.Y - resize.Origin.Y : gripPosition.X - resize.Origin.X;
+        resize.Pixels = Math.Clamp(resize.OriginalPixels + moved + change, resize.Axis == SheetAxis.Row ? 1 : 12, 400);
         // Merge queued pointer moves before layout; only the latest size reaches the view.
         _resizePreview ??= Dispatcher.BeginInvoke(DispatcherPriority.Render, new Action(ApplyResizePreview));
     }

@@ -1,5 +1,7 @@
 # QuickExcel 架构与实施文档
 
+新增目标设计 [FastWpfGrid 增强与 Excel 式筛选排序](22-fastwpfgrid-and-data-operations.md)：网格派生、架构边界、输入与选区改造，以及首阶段必验的列头筛选、多列条件和高级排序。尚未替换 DataGrid，性能与交互验收待实施。
+
 新增 [类 Excel 功能区](21-excel-ribbon.md)：选项卡、分组、FluentIcons 图标、字体与对齐控制、窄窗口行为及专项验证。
 
 新增 [工作簿脚本数字签名与证书信任](20-script-signatures.md)：签名、自签证书、自动授权和兼容性；此策略更新历史文档中“打开一律不执行脚本”的描述。
@@ -14,6 +16,7 @@
 
 | 文档 | 解决的问题 |
 | --- | --- |
+| [FastWpfGrid 增强与筛选排序方案](22-fastwpfgrid-and-data-operations.md) | 目标网格架构、Excel 式列头筛选/高级排序、迁移阶段与验收条件；待实施 |
 | [M5 结构与工作区](18-m5-structure-and-workspace.md) | 结构、排序引用、筛选/冻结、基础样式、最近文件与外部冲突 |
 | [M5 网格与输入](17-m5-grid-and-input.md) | 网格适配、虚拟化测量、键盘/选区/剪贴板、IME 验收边界 |
 | [M4 回收与部署](16-m4-recovery-and-deployment.md) | 宿主崩溃回收、部署证据与未关闭项 |

@@ -128,3 +128,24 @@ Release solution 构建 **0 警告、0 错误**；发布轮 `20261028-070742-a83
 本轮验证：Release solution/Desktop 构建成功；NuGet 漏洞服务无法联网产生 NU1900 警告，编译无错误。仅运行相关 Core 测试 **104 通过**（PresentationCalculation、M5Dimension、M5Workspace、DocumentSession、M3Calculation），未运行全量回归或发布脚本。WPF 工作区 **109**、输入交互 **40**、功能区 **21** 项断言通过；新增 17 项覆盖计算期间不灰显、焦点/实例/滚动保留、相同结果无刷新、离屏冻结更新、格式不调计算器、草稿提交及取消重试。鼠标和组合输入为合成路由事件，不代表本轮完成真实 OS IME 验收。
 
 证据使用当前构建 `artifacts/build/bin/QuickExcel.Desktop/release`：工作区 `artifacts/validation/m5-grid/20261029-030415-86aeb194/Workspace`，交互 `artifacts/validation/m5-grid/20261029-030110-b1f3d724/Interaction`，功能区 `artifacts/validation/m5-grid/20261029-030345-76e57f80/Ribbon`。既有发布候选未覆盖。
+
+### 2026-10-29：单元格位移、接缝与尺寸拖动修正
+
+`Themes/Grid.xaml` 统一单元格显示和输入模板。选中/样式边框叠加绘制，不参与内容测量；填色由整个单元格绘制，文字控件不再单独铺背景。网格线也在单元格内部绘制，去掉原生 DataGrid 在填色/边框之外预留的分隔条，主表与冻结区使用同一规则，并继续尊重工作表 `ShowGridLines`。
+
+预备输入框保留焦点及原生输入上下文，通过与普通显示相同的 TextBlock 呈现值；进入真实编辑时使用原生文本视图。移除模板重复内边距，并抵消 TextBoxView 的横向固有边距，使首次选中和再次点击编辑均保持文字位置。输入、撤销、公式原文、组合输入门禁仍走原路径。
+
+尺寸拖动根因是把 Thumb 的局部偏移当作相邻事件的增量：布局尚未移动拖动柄时，连续事件的偏移重叠，累加会导致过冲及反向跳动。现在从原始尺寸、拖动柄相对起点的位置及当前偏移还原尺寸，每批只呈现最后位置。依据为 [WPF Thumb.OnMouseMove](https://github.com/dotnet/wpf/blob/main/src/Microsoft.DotNet.Wpf/src/PresentationFramework/System/Windows/Controls/Primitives/Thumb.cs) 的事件生成规则。更新合成输入夹具，按真实局部偏移生成批次，覆盖列/行连续输入、批内反向移动、取消、冻结和单次撤销。此前重复发送固定增量的合成用例没有覆盖这类过冲。
+
+本轮仅修改 Desktop，未运行 Core 全量、native smoke 或完整脚本安全回归。Release 构建与发布成功生成二进制；NuGet 漏洞服务不可达产生 NU1900 警告，无编译错误。发布脚本使用 `-SkipTests`，复制默认目录时因旧文档权限中止，随后在正常用户环境完整复制同一发布树并校验 DLL 哈希；没有把失败后的旧包测试混作新包证据。
+
+| 验证 | 结果与证据 |
+| --- | --- |
+| 默认启动包输入/布局 | **78 项通过**，`artifacts/validation/m5-grid/20261029-033043-3afb4ca2/Interaction`；新增 38 项覆盖 100%/125%/150% 缩放、上中下及水平对齐、不同字号、换行、选中前后边界/基线、编辑字符位置、连续容器与边缘填色像素 |
+| 默认启动包工作区 | **110 项通过**，`artifacts/validation/m5-grid/20261029-033047-33110a5b/Workspace`；尺寸及批内反向移动、筛选、冻结、草稿、保存重开和计算刷新 |
+| 同源码 Release 功能区/产品 | **21 / 41 项通过**，分别在 `20261029-032755-d937899f/Ribbon`、`20261029-032848-0cb94401/Product`；后者在正常 Windows 用户环境运行，包含图片、合并及缩放像素检查 |
+| 独立尺寸测量 | `artifacts/validation/m5-grid/20261029-033055-6cb24cb2/ResizeBenchmark`；10,000 格含 1,000 公式、冻结 2 行/2 列，5 次预热加每轴 10 个样本，每个样本 4 批、共 32 次合成 Thumb 偏移 |
+
+最终尺寸预览批次 P50 为列 **3.83 ms** / 行 **2.71 ms**，P95 为 **7.80 / 13.93 ms**；松手到 ApplicationIdle 的 P95 为 **16.86 / 27.60 ms**。重算、工作区禁用、冻结列重建计数均为 0。原始样本与环境记录保留；事件语义已修正，不使用早前合成基准推导速度倍数。这不是物理鼠标到显示器的帧延迟，本轮未重新进行物理输入或 OS IME 验收，也未关闭 M6 性能门禁。
+
+默认启动目录为 `artifacts/QuickExcel`，来源 `artifacts/publish/20261029-032855-8b654dc4`，`QuickExcel.dll` SHA-256 为 `C46AC80C3C1FA7C04DB826B1D9825F98FBE85430C06700C0D5C57EFDF71F8BFB`。包内 metadata 的完整测试状态保持 skipped，以上定向验证另存证据。早期夹具失败及受限 Product 脚本失败均保留，最终通过数不包含它们。
