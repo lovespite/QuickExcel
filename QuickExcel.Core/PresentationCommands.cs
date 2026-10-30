@@ -181,7 +181,7 @@ public sealed class SetAxisMetadataCommand(SheetId sheetId, SheetAxis axis, int 
             else { var old = columns.GetValueOrDefault(i) ?? new(); columns[i] = old with { Width = size ?? old.Width, Hidden = hidden ?? old.Hidden }; }
         if (rows.SequenceEqual(sheet.Rows) && columns.SequenceEqual(sheet.Columns)) return new(snapshot, [], false);
         var updated = new WorksheetSnapshot(sheet.Id, sheet.Name, sheet.Cells, rows, columns, sheet.MergedCells, sheet.Images,
-            sheet.ShowGridLines, sheet.DefaultRowHeight, sheet.TabColor, sheet.View, sheet.Visibility);
+            sheet.ShowGridLines, sheet.DefaultRowHeight, sheet.TabColor, sheet.View, sheet.Visibility, sheet.Printing);
         return new(snapshot.WithSheets(snapshot.Sheets.Select(s => s.Id == sheetId ? updated : s)), [], true,
             CalculationUnchanged: size.HasValue && hidden is null);
     }

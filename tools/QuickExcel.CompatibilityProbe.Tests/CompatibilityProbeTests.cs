@@ -17,6 +17,7 @@ public sealed partial class CompatibilityProbeTests
     [InlineData("date-ledger-1904")]
     [InlineData("cross-sheet")]
     [InlineData("print-template")]
+    [InlineData("protected-print-template")]
     [InlineData("unknown-function")]
     [InlineData("array-formula")]
     [InlineData("rich-links-notes")]
@@ -92,7 +93,7 @@ public sealed partial class CompatibilityProbeTests
     public void EveryEditPathKeepsOriginalAndLabelsLossyCopiesAndPendingExcel()
     {
         var directory = NewEvidenceDirectory();
-        var report = ProbeRunner.Run(Fixture("print-template"), directory);
+        var report = ProbeRunner.Run(Fixture("protected-print-template"), directory);
         Assert.True(report.SourceUnchanged);
         Assert.Equal("pending-real-excel", report.ExcelVerification);
         Assert.Null(report.ExcelBuild);
@@ -107,7 +108,27 @@ public sealed partial class CompatibilityProbeTests
         Assert.NotNull(value.Error);
         Assert.Contains("diagnostic-lossy-copy", value.OutputFile!);
         Assert.Contains(value.Differences, d => d.Category == "cells" && d.Location.EndsWith("A2/value") && d.After!.Contains("99"));
-        Assert.Throws<IOException>(() => ProbeRunner.Run(Fixture("print-template"), directory));
+        Assert.Throws<IOException>(() => ProbeRunner.Run(Fixture("protected-print-template"), directory));
+    }
+
+    [Fact]
+    public void SupportedPrintTemplateEditsSaveNormallyAndPreservePageSemantics()
+    {
+        var directory = NewEvidenceDirectory(); var report = ProbeRunner.Run(Fixture("print-template"), directory);
+        Assert.True(report.SourceUnchanged);
+        Assert.All(report.Paths, path =>
+        {
+            Assert.Equal(path.Mode == "unchanged" ? "preserved-original" : "saved-modeled-subset", path.Status);
+            Assert.Empty(path.CompatibilityIssues); Assert.NotNull(path.Output); Assert.Empty(path.Output.Issues);
+        });
+        var storage = new TypedWorkbookStorage();
+        var source = storage.Open(Path.Combine(directory, "source.xlsx"));
+        foreach (var mode in new[] { "value", "style", "rename" })
+        {
+            var path = report.Paths.Single(p => p.Mode == mode);
+            var output = storage.Open(Path.Combine(directory, path.OutputFile!));
+            Assert.True(source.Sheets[0].Printing.ContentEquals(output.Sheets[0].Printing));
+        }
     }
 
     [Fact]

@@ -118,7 +118,7 @@ public sealed class WorksheetSnapshot
         IEnumerable<KeyValuePair<int, ColumnMetadata>>? columns = null,
         IEnumerable<string>? mergedCells = null, IEnumerable<SheetImage>? images = null,
         bool showGridLines = true, double? defaultRowHeight = null, string? tabColor = null,
-        WorksheetView? view = null, SheetVisibility visibility = SheetVisibility.Visible)
+        WorksheetView? view = null, SheetVisibility visibility = SheetVisibility.Visible, WorksheetPrinting? printing = null)
     {
         if (id.Value == Guid.Empty) throw new ArgumentException("A sheet requires a nonempty stable identity.", nameof(id));
         WorkbookLimits.ValidateSheetName(name);
@@ -160,6 +160,7 @@ public sealed class WorksheetSnapshot
         View = view ?? new(); View.Validate();
         if (!Enum.IsDefined(visibility)) throw new ArgumentException("工作表可见性无效。");
         Visibility = visibility;
+        Printing = printing ?? new(); Printing.Validate();
     }
 
     public SheetId Id { get; }
@@ -174,6 +175,7 @@ public sealed class WorksheetSnapshot
     public string? TabColor { get; }
     public WorksheetView View { get; }
     public SheetVisibility Visibility { get; }
+    public WorksheetPrinting Printing { get; }
     /// <summary>The last stored cell's zero-based row plus one; row metadata does not allocate cells.</summary>
     public int UsedRowCount { get; }
     public int UsedColumnCount { get; }
@@ -199,15 +201,17 @@ public sealed class WorksheetSnapshot
     public WorksheetSnapshot WithCells(ImmutableDictionary<CellPosition, CellSnapshot> cells)
     {
         ArgumentNullException.ThrowIfNull(cells);
-        return new(Id, Name, cells, Rows, Columns, MergedCells, Images, ShowGridLines, DefaultRowHeight, TabColor, View, Visibility);
+        return new(Id, Name, cells, Rows, Columns, MergedCells, Images, ShowGridLines, DefaultRowHeight, TabColor, View, Visibility, Printing);
     }
 
     public WorksheetSnapshot WithName(string name) =>
-        new(Id, name, Cells, Rows, Columns, MergedCells, Images, ShowGridLines, DefaultRowHeight, TabColor, View, Visibility);
+        new(Id, name, Cells, Rows, Columns, MergedCells, Images, ShowGridLines, DefaultRowHeight, TabColor, View, Visibility, Printing);
     public WorksheetSnapshot WithView(WorksheetView view) =>
-        new(Id, Name, Cells, Rows, Columns, MergedCells, Images, ShowGridLines, DefaultRowHeight, TabColor, view, Visibility);
+        new(Id, Name, Cells, Rows, Columns, MergedCells, Images, ShowGridLines, DefaultRowHeight, TabColor, view, Visibility, Printing);
     public WorksheetSnapshot WithVisibility(SheetVisibility visibility) =>
-        new(Id, Name, Cells, Rows, Columns, MergedCells, Images, ShowGridLines, DefaultRowHeight, TabColor, View, visibility);
+        new(Id, Name, Cells, Rows, Columns, MergedCells, Images, ShowGridLines, DefaultRowHeight, TabColor, View, visibility, Printing);
+    public WorksheetSnapshot WithPrinting(WorksheetPrinting printing) =>
+        new(Id, Name, Cells, Rows, Columns, MergedCells, Images, ShowGridLines, DefaultRowHeight, TabColor, View, Visibility, printing);
 }
 
 /// <summary>A shareable committed document state, independent of IO libraries and mutable sessions.</summary>
@@ -271,6 +275,7 @@ public sealed class WorkbookSnapshot
             if (name is null || name.Formula is null || !name.Formula.StartsWith('=') || string.IsNullOrWhiteSpace(name.Name) || name.Name.Length > 255 ||
                 !System.Text.RegularExpressions.Regex.IsMatch(name.Name, @"^[\p{L}_][\p{L}\p{N}_.]*$") ||
                 QuickExcel.Formulas.FormulaSyntax.IsCellName(name.Name) ||
+                name.Name.Equals("_xlnm.Print_Area", StringComparison.OrdinalIgnoreCase) || name.Name.Equals("_xlnm.Print_Titles", StringComparison.OrdinalIgnoreCase) ||
                 name.Name.Equals("TRUE", StringComparison.OrdinalIgnoreCase) || name.Name.Equals("FALSE", StringComparison.OrdinalIgnoreCase) ||
                 name.Scope is { } scope && !Sheets.Any(s => s.Id == scope) ||
                 !seenNames.Add((name.Scope, name.Name.ToUpperInvariant())))

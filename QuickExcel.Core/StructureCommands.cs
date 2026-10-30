@@ -40,6 +40,8 @@ public sealed class ShiftAxisCommand(SheetId sheetId, SheetAxis axis, int index,
         var limit = axis == SheetAxis.Row ? WorkbookLimits.MaxRows : WorkbookLimits.MaxColumns;
         if (!Enum.IsDefined(axis) || index < 0 || count < 1 || index > limit - count) throw new ArgumentOutOfRangeException(nameof(index));
         var target = snapshot.GetSheet(sheetId);
+        if (delete && (!target.Printing.RowBreaks.IsEmpty || !target.Printing.ColumnBreaks.IsEmpty))
+            throw new NotSupportedException("含分页信息的工作表暂不支持删除行列；Excel 的分页重建规则尚未完整对齐，操作未应用。");
         int? Position(int value)
         {
             if (!delete) return value < index ? value : checked(value + count);
@@ -94,6 +96,8 @@ public sealed class MoveAxisCommand(SheetId sheetId, SheetAxis axis, int start, 
             throw new ArgumentOutOfRangeException(nameof(start));
         if (start == destination) return new(snapshot, [], false);
         var target = snapshot.GetSheet(sheetId);
+        if (!target.Printing.RowBreaks.IsEmpty || !target.Printing.ColumnBreaks.IsEmpty)
+            throw new NotSupportedException("含分页信息的工作表暂不支持移动行列；操作未应用。");
         int? Position(int value)
         {
             if (value >= start && value < start + count) return destination + value - start;
@@ -126,6 +130,8 @@ public sealed class MoveCellsCommand(SheetId sourceSheet, CellPosition first, Ce
         WorkbookLimits.ValidatePosition(last.Row + dr, last.Column + dc);
         if (sourceSheet == destinationSheet && dr == 0 && dc == 0) return new(snapshot, [], false);
         var source = snapshot.GetSheet(sourceSheet); var target = snapshot.GetSheet(destinationSheet);
+        if (source.Printing.HasReferences || target.Printing.HasReferences)
+            throw new NotSupportedException("含打印区域或重复标题的工作表暂不支持移动单元格，请先使用复制；操作未应用。");
         StructureEdits.RequireSimpleStructure(source); StructureEdits.RequireSimpleStructure(target);
         bool Inside(CellPosition p) => p.Row >= first.Row && p.Row <= last.Row && p.Column >= first.Column && p.Column <= last.Column;
         var sourceRange = new ReferenceNode(source.Name, first.Row, first.Column, last.Row, last.Column, IsRange: true);
@@ -244,7 +250,8 @@ internal static class StructureEdits
             }
             return new(sheet.Id, sheet.Name, relocated, axis == SheetAxis.Row ? Metadata(sheet.Rows) : sheet.Rows,
                 axis == SheetAxis.Column ? Metadata(sheet.Columns) : sheet.Columns, merges.Select(m => m.ToString()), images,
-                sheet.ShowGridLines, sheet.DefaultRowHeight, sheet.TabColor, sheet.View, sheet.Visibility);
+                sheet.ShowGridLines, sheet.DefaultRowHeight, sheet.TabColor, sheet.View, sheet.Visibility,
+                PrintingStructure.Axis(sheet.Printing, axis, position, interval));
         });
     }
 

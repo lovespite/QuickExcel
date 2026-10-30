@@ -8,6 +8,7 @@ try
     if (args is ["styles", var styleSource, var styleDirectory]) return StyleProbe.Run(styleSource, styleDirectory);
     if (args is ["metadata", var metadataSource, var metadataDirectory]) return MetadataProbe.Run(metadataSource, metadataDirectory);
     if (args is ["views", var viewSource, var viewDirectory]) return ViewProbe.Run(viewSource, viewDirectory);
+    if (args is ["printing", var printSource, var printDirectory]) return PrintingProbe.Run(printSource, printDirectory);
     if (args is ["baseline", var directory])
     {
         directory = Path.GetFullPath(directory);

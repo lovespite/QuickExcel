@@ -9,7 +9,7 @@ namespace QuickExcel.CompatibilityProbe.Tests;
 public sealed partial class CompatibilityProbeTests
 {
     [Theory]
-    [InlineData("print-template", "worksheet/pageSetup", "数据")]
+    [InlineData("protected-print-template", "worksheet/sheetProtection", "数据")]
     [InlineData("rich-links-notes", "text/richText", "数据")]
     public void ImportedFeatureLocationsChangeToLossOnEditAndUndoRestoresPreservation(string fixture, string feature, string? sheetName)
     {

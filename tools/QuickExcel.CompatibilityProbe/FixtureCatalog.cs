@@ -76,6 +76,10 @@ public static class FixtureCatalog
             new XAttribute("Type", "http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties"), new XAttribute("Target", "docProps/core.xml"))));
         yield return Fixture("print-template", "打印模板：属性、冻结/缩放/活动格、veryHidden、打印定义", ["XC-0103", "XC-0104", "XC-0105"], print);
 
+        var protectedPrint = print.ToDictionary(p => p.Key, p => p.Value);
+        Edit(protectedPrint, "xl/worksheets/sheet1.xml", root => root.Element(Main + "sheetData")!.AddAfterSelf(new XElement(Main + "sheetProtection", new XAttribute("sheet", 1))));
+        yield return Fixture("protected-print-template", "受保护打印模板：页面设置已支持，工作表保护仍需报告", ["XC-0404"], protectedPrint);
+
         yield return Fixture("unknown-function", "未知函数与版本前缀：源码和旧缓存不等于可计算", ["XC-0106"], Base("""
             <row r="2"><c r="A2"><f>_xlfn.XLOOKUP(1,B2:B3,C2:C3)</f><v>7</v></c><c r="B2"><v>1</v></c><c r="C2"><v>7</v></c></row>
             """));

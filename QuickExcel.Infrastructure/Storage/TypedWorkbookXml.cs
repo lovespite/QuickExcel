@@ -69,7 +69,7 @@ internal static class TypedWorkbookXml
             var visibility = XlsxViews.Visibility(definition);
             var sheet = package.XmlPart(path).Root!;
             if (sheet.Name != Main + "worksheet") throw new InvalidDataException("无效工作表部件。");
-            package.Shape(sheet, "dimension sheetPr sheetViews sheetFormatPr cols sheetData mergeCells drawing", "", path);
+            package.Shape(sheet, "dimension sheetPr sheetViews sheetFormatPr cols sheetData mergeCells printOptions pageMargins pageSetup headerFooter rowBreaks colBreaks drawing", "", path);
             var sharedFormulas = new SharedFormulaExpander(sheet);
             var cells = new Dictionary<CellPosition, CellSnapshot>();
             var rows = new Dictionary<int, RowMetadata>();
@@ -135,7 +135,7 @@ internal static class TypedWorkbookXml
             var format = sheet.Element(Main + "sheetFormatPr");
             if (format is not null) package.Shape(format, "", "defaultRowHeight", path);
             var properties = sheet.Element(Main + "sheetPr");
-            if (properties is not null) package.Shape(properties, "tabColor", "", path);
+            if (properties is not null) package.Shape(properties, "tabColor pageSetUpPr", "", path);
             var tabColor = properties?.Element(Main + "tabColor");
             if (tabColor is not null) package.Shape(tabColor, "", "rgb", path);
             var merges = sheet.Element(Main + "mergeCells")?.Elements(Main + "mergeCell").Select(e => Attr(e, "ref")).ToArray() ?? [];
@@ -143,19 +143,34 @@ internal static class TypedWorkbookXml
             var images = TypedImages.Read(package, path, sheet);
             sheets.Add(new WorksheetSnapshot(SheetId.New(), Decode(Attr(definition, "name")), cells, rows, columns, merges, images,
                 view?.Attribute("showGridLines") is null || Bool((string?)view.Attribute("showGridLines")), OptionalDouble(format?.Attribute("defaultRowHeight")) / 0.75, (string?)tabColor?.Attribute("rgb"),
-                viewState, visibility));
+                viewState, visibility, XlsxPrinting.Read(package, path, sheet)));
             bindings.Add(new(sheetId, path));
         }
         if (sheets.Count == 0) throw new InvalidDataException("工作簿没有工作表。");
         if (selectedTabs > 1) package.Loss(workbookPart + ": 成组选择工作表尚不支持编辑。", "sheetViews/grouped-tabs", workbookPart);
         var window = XlsxViews.ReadWorkbook(package, workbookPart, root, sheets);
         var names = new List<QuickExcel.Formulas.DefinedName>();
+        var printNames = new HashSet<(int, string)>();
         foreach (var element in root.Element(Main + "definedNames")?.Elements() ?? [])
         {
             if (names.Count >= 4096) throw new InvalidDataException("名称数量超过 4096。");
             package.Shape(element, "", "name localSheetId", workbookPart);
             var name = Attr(element, "name");
             var scopeIndex = element.Attribute("localSheetId") is { } local ? Int(local.Value, sheets.Count - 1) : -1;
+            if (name is "_xlnm.Print_Area" or "_xlnm.Print_Titles")
+            {
+                if (!printNames.Add((scopeIndex, name))) throw new InvalidDataException("重复的打印名称。");
+                try
+                {
+                    if (scopeIndex < 0) throw new NotSupportedException("打印名称必须为工作表局部名称。");
+                    var target = sheets[scopeIndex];
+                    sheets[scopeIndex] = target.WithPrinting(XlsxPrinting.ReadName(target, Decode(element.Value), name == "_xlnm.Print_Titles"));
+                }
+                catch (Exception e) when (e is NotSupportedException or ArgumentException or FormatException or OverflowException)
+                { package.Loss($"{workbookPart}: 打印名称 {name} 未支持：{e.Message}", "definedName/" + name, workbookPart, range: element.Value,
+                    sheetName: scopeIndex < 0 ? null : sheets[scopeIndex].Name); }
+                continue;
+            }
             var definition = new QuickExcel.Formulas.DefinedName(name, "=" + element.Value.TrimStart('='), scopeIndex < 0 ? null : sheets[scopeIndex].Id);
             try
             {
@@ -237,6 +252,7 @@ internal static class TypedWorkbookXml
                 if (cell.Value.Kind == CellValueKind.Text) allocation += cell.Value.TextValue.Length * 8L;
             }
             imageBytes += sheet.Images.Sum(image => (long)image.Data.Length);
+            imageBytes += sheet.Printing.PrinterSettings.Length;
         }
         if (allocation > FileReadBudget.MaxExpandedBytes || imageBytes > FileReadBudget.MaxFileBytes)
             throw new InvalidDataException("写出 XML/图片预算超限，请缩小工作簿。");
@@ -274,7 +290,9 @@ internal static class TypedWorkbookXml
             rels.Add(Relationship($"sheet{i + 1}", "worksheet", $"worksheets/sheet{i + 1}.xml"));
             Override(path, SheetType);
             var root = new XElement(Main + "worksheet", new XAttribute(XNamespace.Xmlns + "r", Rel));
-            if (sheet.TabColor is not null) root.Add(new XElement(Main + "sheetPr", new XElement(Main + "tabColor", new XAttribute("rgb", sheet.TabColor))));
+            if (sheet.TabColor is not null || sheet.Printing.Properties is not null)
+                root.Add(new XElement(Main + "sheetPr", sheet.TabColor is not null ? new XElement(Main + "tabColor", new XAttribute("rgb", sheet.TabColor)) : null,
+                    XlsxPrinting.WriteProperties(sheet.Printing)));
             root.Add(XlsxViews.WriteSheet(sheet, sheet.Id == snapshot.ActiveSheetId));
             if (sheet.DefaultRowHeight is { } height) root.Add(new XElement(Main + "sheetFormatPr", new XAttribute("defaultRowHeight", height * 0.75)));
             if (sheet.Columns.Count > 0)
@@ -303,11 +321,13 @@ internal static class TypedWorkbookXml
                 foreach (var merge in sheet.MergedCells) ValidateRange(merge);
                 root.Add(new XElement(Main + "mergeCells", new XAttribute("count", sheet.MergedCells.Length), sheet.MergedCells.Select(m => new XElement(Main + "mergeCell", new XAttribute("ref", m)))));
             }
+            XlsxPrinting.WriteSheet(sheet.Printing, root);
             TypedImages.Write(sheet, i + 1, parts, root, types);
+            XlsxPrinting.WritePrinter(sheet.Printing, i + 1, parts, types);
             parts[path] = XmlBytes(new XDocument(root));
         }
         workbook.Add(sheets);
-        if (!snapshot.DefinedNames.IsEmpty)
+        if (!snapshot.DefinedNames.IsEmpty || snapshot.Sheets.Any(s => s.Printing.HasReferences))
         {
             var names = new XElement(Main + "definedNames");
             foreach (var name in snapshot.DefinedNames)
@@ -316,6 +336,7 @@ internal static class TypedWorkbookXml
                 if (name.Scope is { } scope) element.SetAttributeValue("localSheetId", snapshot.Sheets.IndexOf(snapshot.GetSheet(scope)));
                 names.Add(element);
             }
+            for (var i = 0; i < snapshot.Sheets.Length; i++) names.Add(XlsxPrinting.WriteNames(snapshot.Sheets[i], i));
             workbook.Add(names);
         }
         workbook.Add(new XElement(Main + "calcPr", new XAttribute("fullCalcOnLoad", 1)));
