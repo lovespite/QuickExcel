@@ -25,6 +25,14 @@ internal static class TypedWorkbookXml
         if (root.Name != Main + "workbook") throw new InvalidDataException("无效工作簿。");
         package.Shape(root, "workbookPr sheets definedNames calcPr", "", workbookPart);
         if (root.Element(Main + "workbookPr") is { } pr) package.Shape(pr, "", "date1904", workbookPart);
+        if (root.Element(Main + "calcPr") is { } calc)
+        {
+            package.Shape(calc, "", "calcId fullCalcOnLoad forceFullCalc", workbookPart);
+            foreach (var flag in new[] { "fullCalcOnLoad", "forceFullCalc" })
+                if (calc.Attribute(flag) is { } value) _ = Bool(value.Value);
+            if (calc.Attribute("calcId") is { } id && !uint.TryParse(id.Value, NumberStyles.None, CultureInfo.InvariantCulture, out _))
+                throw new InvalidDataException("计算引擎版本编号无效。");
+        }
         var dateSystem = Bool((string?)root.Element(Main + "workbookPr")?.Attribute("date1904")) ? ExcelDateSystem.Mac1904 : ExcelDateSystem.Windows1900;
         var styles = TypedStyles.Read(package, workbookPart);
         var strings = new List<string>();
@@ -155,6 +163,7 @@ internal static class TypedWorkbookXml
             { package.Loss($"{workbookPart}: 名称 {name} 未支持：{e.Message}", "definedName/" + name, workbookPart,
                 range: element.Value, sheetName: scopeIndex < 0 ? null : sheets[scopeIndex].Name); }
         }
+        XlsxMetadata.Inspect(package, sheets.Select(s => s.Name).ToArray());
         package.FinishInventory();
         return new(new WorkbookSnapshot(Guid.NewGuid(), 0, dateSystem, sheets, styles: styles, definedNames: names), bindings,
             package.Issues.ToArray(), package.Diagnostics);
@@ -239,7 +248,9 @@ internal static class TypedWorkbookXml
         Override("xl/workbook.xml", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml");
         Override("xl/styles.xml", "application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml");
         rels.Add(Relationship("styles", "styles", "styles.xml"));
-        parts["_rels/.rels"] = XmlBytes(new XDocument(new XElement(PackageRel + "Relationships", Relationship("workbook", "officeDocument", "xl/workbook.xml"))));
+        var rootRels = new XElement(PackageRel + "Relationships", Relationship("workbook", "officeDocument", "xl/workbook.xml"));
+        XlsxMetadata.Write(snapshot, parts, rootRels, types, cancellationToken);
+        parts["_rels/.rels"] = XmlBytes(new XDocument(rootRels));
         var stylePackage = XlsxStylePreservation.Write(snapshot, cancellationToken);
         parts["xl/styles.xml"] = XmlBytes(stylePackage.Styles);
         if (stylePackage.Theme is { } theme)

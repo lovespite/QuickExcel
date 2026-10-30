@@ -137,7 +137,7 @@ public partial class MainWindow : Window
         _viewModel = new DocumentViewModel(document);
         _editor = new EditorController(document);
         DataContext = _viewModel;
-        _filePath = path != null && Path.GetExtension(path).Equals(".xlsq", StringComparison.OrdinalIgnoreCase) ? path : null;
+        _filePath = path;
         _versionPath = _filePath is null ? null : Path.GetFullPath(_filePath);
         _fileVersion = fileVersion;
         _sheetViews.Clear();
@@ -589,6 +589,8 @@ public partial class MainWindow : Window
 
     private async void Save_Click(object sender, RoutedEventArgs e) => await SaveAsync(false);
     private async void SaveAs_Click(object sender, RoutedEventArgs e) => await SaveAsync(true);
+    private Func<SaveFileDialog, bool?>? _smokeSaveDialog;
+    private MessageBoxResult? _smokeCompatibilitySaveDecision;
     private async Task<bool> SaveAsync(bool saveAs)
     {
         if (_busy || !await FlushEditsAsync()) return false;
@@ -597,7 +599,7 @@ public partial class MainWindow : Window
         var discardUnsupported = false;
         if (issues.Count > 0)
         {
-            var choice = MessageBox.Show(this, "以下内容不能在编辑后可靠保留：\n" + string.Join("\n", issues.Take(15)) +
+            var choice = _smokeMode && _smokeCompatibilitySaveDecision is { } decision ? decision : MessageBox.Show(this, "以下内容不能在编辑后可靠保留：\n" + string.Join("\n", issues.Take(15)) +
                 "\n\n是否另存受支持副本？原文件将保留，副本会移除上述内容。选择“否”取消保存。", "另存兼容副本", MessageBoxButton.YesNo, MessageBoxImage.Warning);
             if (choice != MessageBoxResult.Yes) return false;
             discardUnsupported = true;
@@ -605,12 +607,18 @@ public partial class MainWindow : Window
         }
         var migration = snapshot.FileState is { RequiresMigration: true } provenance &&
             (_filePath is null || string.Equals(Path.GetFullPath(_filePath), provenance.SourcePath, StringComparison.OrdinalIgnoreCase));
-        string? path = saveAs || migration ? null : _filePath;
+        var needsScripts = TypedWorkbookStorage.RequiresScriptContainer(snapshot);
+        var needsContainer = needsScripts && _filePath is not null && Path.GetExtension(_filePath).Equals(".xlsx", StringComparison.OrdinalIgnoreCase);
+        string? path = saveAs || migration || needsContainer ? null : _filePath;
         if (path is null)
         {
-            var dialog = new SaveFileDialog { Filter = "QuickExcel 工作簿 (*.xlsq)|*.xlsq", DefaultExt = ".xlsq", AddExtension = true,
-                FileName = Path.GetFileNameWithoutExtension(_displayName) + (migration ? "-v2" : discardUnsupported ? "-受支持副本" : "") + ".xlsq", Title = "保存 XLSQ v2 工作簿和 JavaScript" };
-            if (dialog.ShowDialog(this) != true) return false;
+            var xlsx = !needsScripts && !migration && (_filePath is null || Path.GetExtension(_filePath).Equals(".xlsx", StringComparison.OrdinalIgnoreCase));
+            var extension = xlsx ? ".xlsx" : ".xlsq";
+            var dialog = new SaveFileDialog { Filter = needsScripts ? "QuickExcel 工作簿（含脚本） (*.xlsq)|*.xlsq" : "Excel 工作簿（保留公式） (*.xlsx)|*.xlsx|QuickExcel 工作簿 (*.xlsq)|*.xlsq",
+                FilterIndex = needsScripts || xlsx ? 1 : 2, DefaultExt = extension, AddExtension = true,
+                FileName = Path.GetFileNameWithoutExtension(_displayName) + (migration ? "-v2" : discardUnsupported ? "-受支持副本" : "") + extension,
+                Title = needsScripts ? "脚本主文件保存为 XLSQ；交付 Excel 请另用 XLSX 导出副本" : "保存工作簿（保留公式源码和格式）" };
+            if ((_smokeMode && _smokeSaveDialog is not null ? _smokeSaveDialog(dialog) : dialog.ShowDialog(this)) != true) return false;
             path = dialog.FileName;
         }
         FileVersion? expected = null;

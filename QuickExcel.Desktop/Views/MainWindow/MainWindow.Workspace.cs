@@ -310,7 +310,7 @@ public partial class MainWindow
     private async Task<bool> SaveToPathAsync(string path, bool discardUnsupported, FileVersion expected)
     {
         FileVersion? savedVersion = null;
-        if (!await WorkAsync("保存 .xlsq…", () => savedVersion = _document.SaveChecked(path, expected, discardUnsupported))) return false;
+        if (!await WorkAsync("保存 " + Path.GetExtension(path).ToLowerInvariant() + "…", () => savedVersion = _document.SaveChecked(path, expected, discardUnsupported))) return false;
         _filePath = Path.GetFullPath(path); _fileVersion = savedVersion; _versionPath = _filePath;
         _displayName = Path.GetFileName(path);
         RememberFile(_filePath);

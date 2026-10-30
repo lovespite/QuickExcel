@@ -29,7 +29,7 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage
     {
         byte[] workbookBytes = bytes;
         var version = 0;
-        var modules = ScriptModuleSet.Single(WorkbookDocument.DefaultScript);
+        var modules = ScriptModuleSet.Single("");
         JsonDocument? manifest = null, state = null;
         try
         {
@@ -170,17 +170,20 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage
         SaveCore(path, snapshot, discardUnsupported, CancellationToken.None, expected);
     private FileVersion SaveCore(string path, WorkbookSnapshot snapshot, bool discardUnsupported, CancellationToken cancellationToken, FileVersion? expected)
     {
-        RequireExtension(path, ".xlsq");
+        RequireExtension(path, ".xlsq", ".xlsx");
         ArgumentNullException.ThrowIfNull(snapshot);
         cancellationToken.ThrowIfCancellationRequested();
         if (expected is not null) FileVersions.Require(path, expected);
         GuardOriginal(path, snapshot, discardUnsupported);
+        if (Path.GetExtension(path).Equals(".xlsx", StringComparison.OrdinalIgnoreCase))
+            return SaveXlsx(path, snapshot, discardUnsupported, cancellationToken, expected);
         if (snapshot.ScriptModules.Modules.Sum(m => (long)Utf8.GetByteCount(m.Value.Source)) > 1024 * 1024) throw new InvalidOperationException("Combined script source exceeds 1 MiB.");
         var unchanged = snapshot.FileState is { } state && ContentEquals(snapshot, state.OriginalModel);
         var issues = SaveIssues(snapshot);
         if (!discardUnsupported && issues.Count > 0) throw new WorkbookCompatibilityException(issues);
         var preserve = unchanged && !discardUnsupported;
         var workbook = preserve ? snapshot.FileState!.OriginalWorkbook.ToArray() : TypedWorkbookXml.Write(snapshot, false, cancellationToken);
+        if (!preserve) XlsxMetadata.VerifyWritten(snapshot, workbook, cancellationToken);
         var parts = new Dictionary<string, byte[]> { ["workbook.xlsx"] = workbook };
         var sheetParts = preserve ? snapshot.FileState!.SheetParts.ToArray() : snapshot.Sheets.Select((_, i) => new WorkbookPartBinding((i + 1).ToString(System.Globalization.CultureInfo.InvariantCulture), $"xl/worksheets/sheet{i + 1}.xml")).ToArray();
         JsonObject Object(string? json) => json is null ? new() : JsonNode.Parse(json)!.AsObject();

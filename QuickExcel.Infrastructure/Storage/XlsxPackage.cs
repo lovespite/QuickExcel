@@ -88,22 +88,24 @@ internal sealed class XlsxPackage
     public byte[] BinaryPart(string path) { _used.Add(path); return Required(Parts, path); }
     public IReadOnlyDictionary<string, PartRelationship> Relationships(string source) =>
         _relationships.GetValueOrDefault(source) ?? new Dictionary<string, PartRelationship>();
-    public string Related(string source, string id, string type)
+    public string Related(string source, string id, string type) => RelatedUri(source, id, Rel.NamespaceName + "/" + type);
+    private string RelatedUri(string source, string id, string type)
     {
         _used.Add(RelationshipPart(source));
-        if (!Relationships(source).TryGetValue(id, out var relation) || relation.External || relation.Type != (Rel.NamespaceName + "/" + type))
+        if (!Relationships(source).TryGetValue(id, out var relation) || relation.External || relation.Type != type)
             throw new InvalidDataException($"{source}: 缺少有效的 {type} 关系 {id}。");
         _usedRelationships.Add((source, id));
         _used.Add(relation.Target);
         if (_sheetNames.TryGetValue(source, out var sheetName)) _sheetNames.TryAdd(relation.Target, sheetName);
         return relation.Target;
     }
-    public string? RelatedByType(string source, string type, bool required = false)
+    public string? RelatedByType(string source, string type, bool required = false) => RelatedByUri(source, Rel.NamespaceName + "/" + type, required);
+    public string? RelatedByUri(string source, string type, bool required = false)
     {
-        var matches = Relationships(source).Values.Where(r => r.Type == (Rel.NamespaceName + "/" + type)).ToArray();
+        var matches = Relationships(source).Values.Where(r => r.Type == type).ToArray();
         if (matches.Length == 0 && !required) return null;
         if (matches.Length != 1) throw new InvalidDataException($"{source}: {type} 关系数量无效。");
-        return Related(source, matches[0].Id, type);
+        return RelatedUri(source, matches[0].Id, type);
     }
     public void RequireType(string path, string type)
     {

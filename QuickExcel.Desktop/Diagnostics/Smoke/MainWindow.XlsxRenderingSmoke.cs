@@ -79,6 +79,7 @@ public partial class MainWindow
             await RunRowStyleInheritanceSmokeAsync(folder, Check);
             await RunNumberFormatSmokeAsync(folder, Check);
             await RunExtendedStyleSmokeAsync(folder, Check);
+            await RunXlsxSaveSmokeAsync(folder, Check);
 
             if (source is not null)
             {

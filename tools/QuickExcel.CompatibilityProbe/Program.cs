@@ -6,6 +6,7 @@ try
 {
     if (args is ["number-formats", var reference, var numberDirectory]) return NumberFormatProbe.Run(reference, numberDirectory);
     if (args is ["styles", var styleSource, var styleDirectory]) return StyleProbe.Run(styleSource, styleDirectory);
+    if (args is ["metadata", var metadataSource, var metadataDirectory]) return MetadataProbe.Run(metadataSource, metadataDirectory);
     if (args is ["baseline", var directory])
     {
         directory = Path.GetFullPath(directory);

@@ -52,7 +52,7 @@ public sealed class WorkbookDocument : IDisposable
 
     public static WorkbookDocument CreateBlank(WorkbookServices services) => new(
         new WorkbookSnapshot(Guid.NewGuid(), 0, ExcelDateSystem.Windows1900,
-            [new WorksheetSnapshot(SheetId.New(), "Sheet1")], DefaultScript), services);
+            [new WorksheetSnapshot(SheetId.New(), "Sheet1")]), services);
 
     public static WorkbookDocument CreateDemo(WorkbookServices services)
     {
