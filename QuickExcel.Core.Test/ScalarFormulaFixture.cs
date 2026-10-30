@@ -44,6 +44,6 @@ internal static class ScalarFormulaFixture
             var same = cell.Value.Kind == value.Kind && (value.Kind == CellValueKind.Number ? Math.Abs(cell.Value.NumberValue - value.NumberValue) <= 1e-12 * Math.Max(1, Math.Abs(value.NumberValue)) : cell.Value == value);
             if (!same || cell.Calculation?.State is not (CalculationState.Fresh or CalculationState.Error)) differences.Add($"{id} {c.GetProperty("Formula").GetString()}: expected {value}, actual {cell.Value} ({cell.Calculation?.State})");
         }
-        Assert.True(differences.Count == 0, $"{differences.Count} mismatches\n" + string.Join("\n", differences.Take(45)));
+        Assert.True(differences.Count == 0, $"{differences.Count} mismatches\n" + string.Join("\n", differences.Take(100)));
     }
 }

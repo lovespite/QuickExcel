@@ -63,6 +63,51 @@ public static class FormulaSyntax
     }
 
     public static string SheetPrefix(string? sheet) => sheet is null ? "" : "'" + sheet.Replace("'", "''") + "'!";
+
+    /// <summary>Print an expanded formula with a bounded allocation; false means it cannot be retained in a portable file.</summary>
+    public static bool TryPrintPortable(FormulaNode node, out string formula)
+    {
+        const int limit = 8192;
+        var output = new StringBuilder("="); var nodes = 0;
+        bool Append(string text)
+        {
+            if (text.Length > limit - output.Length) return false;
+            output.Append(text); return true;
+        }
+        bool Write(FormulaNode part, int depth)
+        {
+            if (depth > 128 || ++nodes > 2048) return false;
+            switch (part)
+            {
+                case MissingNode: return true;
+                case ValueNode { Value.Kind: CellValueKind.Text } value:
+                    if (!Append("\"")) return false;
+                    foreach (var ch in value.Value.TextValue)
+                        if (!Append(ch == '"' ? "\"\"" : ch.ToString())) return false;
+                    return Append("\"");
+                case ValueNode or NameNode or ReferenceNode: return Append(Print(part));
+                case UnaryNode unary:
+                    return Append(unary.Operator == "%" ? "(" : unary.Operator + "(") && Write(unary.Operand, depth + 1)
+                        && Append(unary.Operator == "%" ? ")%" : ")");
+                case BinaryNode binary:
+                    return Append("(") && Write(binary.Left, depth + 1) && Append(binary.Operator) && Write(binary.Right, depth + 1) && Append(")");
+                case FunctionNode function:
+                    if (!Append(function.Name) || !Append("(")) return false;
+                    for (var i = 0; i < function.Arguments.Count; i++)
+                        if (i > 0 && !Append(",") || !Write(function.Arguments[i], depth + 1)) return false;
+                    return Append(")");
+                default: return false;
+            }
+        }
+        formula = "";
+        if (!Write(node, 0)) return false;
+        var result = output.ToString();
+        if (ExcelFormulaNames.Encode(result).Length > limit) return false;
+        // Printing inserts parentheses and qualified sheet names. Confirm our own reader can reopen the result.
+        try { _ = Parse(result); } catch (FormatException) { return false; }
+        formula = result; return true;
+    }
+
     public static string Print(FormulaNode node) => node switch
     {
         MissingNode => "",

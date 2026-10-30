@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using QuickExcel.Core;
 using QuickExcel.Domain;
+using QuickExcel.Formulas;
 
 namespace QuickExcel.Storage;
 
@@ -43,6 +44,25 @@ public sealed partial class TypedWorkbookStorage
         var issues = SaveIssues(snapshot);
         if (!discardUnsupported && issues.Count > 0) throw new WorkbookCompatibilityException(issues);
         var preserve = !discardUnsupported && snapshot.FileState is { } source && ContentEquals(snapshot, source.OriginalModel);
+        if (!preserve)
+        {
+            void ValidateArity(string formula, string location)
+            {
+                FormulaNode expression;
+                try { expression = FormulaSyntax.Parse(formula); }
+                catch (Exception ex) when (ex is FormatException or OverflowException) { return; } // Opaque Excel syntax follows the existing preservation rules.
+                if (FormulaSyntax.Walk(expression).OfType<FunctionNode>().Any(f => StandardFunctions.Signatures.ContainsKey(f.Name) && !StandardFunctions.AcceptsArguments(f.Name, f.Arguments.Count)))
+                    throw new InvalidOperationException($"{location} 的函数参数个数不在受支持范围内。请修正公式，或使用明确的值/可移植公式导出。");
+            }
+            foreach (var name in snapshot.DefinedNames) ValidateArity(name.Formula, "名称 " + name.Name);
+            foreach (var sheet in snapshot.Sheets)
+            foreach (var (position, cell) in sheet.Cells)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (cell.Content.Kind != CellContentKind.Formula) continue;
+                ValidateArity(cell.Content.FormulaText, sheet.Name + "!" + TypedWorkbookXml.Reference(position));
+            }
+        }
         var bytes = preserve ? snapshot.FileState!.OriginalWorkbook.ToArray() : TypedWorkbookXml.Write(snapshot, false, cancellationToken);
         PackageIO.AtomicWrite(path, bytes, temp =>
         {

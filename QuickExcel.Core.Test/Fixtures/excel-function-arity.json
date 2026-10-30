@@ -1,0 +1,1900 @@
+{
+  "Version": "16.0",
+  "Build": "20527",
+  "Language": 2052,
+  "SpecSha256": "9A4664E41312BC5DC896B0FE60C076313A1C24B5BB0FFAE900345F09404B77D4",
+  "NormalReopen": true,
+  "OracleSha256": "A044F695B069D18919DAEE2F5E458B46B35143E48A164AEB5B3F4244D3DA76E2",
+  "Cases": [
+    {
+      "Function": "SUM",
+      "Count": 0,
+      "Formula": "=SUM()",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "SUM",
+      "Count": 1,
+      "Formula": "=SUM(0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "SUM",
+      "Count": 255,
+      "Formula": "=SUM(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "SUM",
+      "Count": 256,
+      "Formula": "=SUM(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "AVERAGE",
+      "Count": 0,
+      "Formula": "=AVERAGE()",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "AVERAGE",
+      "Count": 1,
+      "Formula": "=AVERAGE(0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "AVERAGE",
+      "Count": 255,
+      "Formula": "=AVERAGE(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "AVERAGE",
+      "Count": 256,
+      "Formula": "=AVERAGE(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "MIN",
+      "Count": 0,
+      "Formula": "=MIN()",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "MIN",
+      "Count": 1,
+      "Formula": "=MIN(0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "MIN",
+      "Count": 255,
+      "Formula": "=MIN(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "MIN",
+      "Count": 256,
+      "Formula": "=MIN(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "MAX",
+      "Count": 0,
+      "Formula": "=MAX()",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "MAX",
+      "Count": 1,
+      "Formula": "=MAX(0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "MAX",
+      "Count": 255,
+      "Formula": "=MAX(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "MAX",
+      "Count": 256,
+      "Formula": "=MAX(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "COUNT",
+      "Count": 0,
+      "Formula": "=COUNT()",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "COUNT",
+      "Count": 1,
+      "Formula": "=COUNT(0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "COUNT",
+      "Count": 255,
+      "Formula": "=COUNT(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "COUNT",
+      "Count": 256,
+      "Formula": "=COUNT(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "COUNTA",
+      "Count": 0,
+      "Formula": "=COUNTA()",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "COUNTA",
+      "Count": 1,
+      "Formula": "=COUNTA(0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "COUNTA",
+      "Count": 255,
+      "Formula": "=COUNTA(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "COUNTA",
+      "Count": 256,
+      "Formula": "=COUNTA(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "PRODUCT",
+      "Count": 0,
+      "Formula": "=PRODUCT()",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "PRODUCT",
+      "Count": 1,
+      "Formula": "=PRODUCT(0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "PRODUCT",
+      "Count": 255,
+      "Formula": "=PRODUCT(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "PRODUCT",
+      "Count": 256,
+      "Formula": "=PRODUCT(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "SUMIF",
+      "Count": 0,
+      "Formula": "=SUMIF()",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "SUMIF",
+      "Count": 1,
+      "Formula": "=SUMIF($B$1)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "SUMIF",
+      "Count": 2,
+      "Formula": "=SUMIF($B$1,0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "SUMIF",
+      "Count": 3,
+      "Formula": "=SUMIF($B$1,0,$B$1)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "SUMIF",
+      "Count": 4,
+      "Formula": "=SUMIF($B$1,0,$B$1,0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "SUMIFS",
+      "Count": 0,
+      "Formula": "=SUMIFS()",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "SUMIFS",
+      "Count": 2,
+      "Formula": "=SUMIFS($B$1,$B$1)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "SUMIFS",
+      "Count": 3,
+      "Formula": "=SUMIFS($B$1,$B$1,0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "SUMIFS",
+      "Count": 255,
+      "Formula": "=SUMIFS($B$1,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "SUMIFS",
+      "Count": 256,
+      "Formula": "=SUMIFS($B$1,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "COUNTIF",
+      "Count": 0,
+      "Formula": "=COUNTIF()",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "COUNTIF",
+      "Count": 1,
+      "Formula": "=COUNTIF($B$1)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "COUNTIF",
+      "Count": 2,
+      "Formula": "=COUNTIF($B$1,0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "COUNTIF",
+      "Count": 3,
+      "Formula": "=COUNTIF($B$1,0,0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "COUNTIFS",
+      "Count": 0,
+      "Formula": "=COUNTIFS()",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "COUNTIFS",
+      "Count": 1,
+      "Formula": "=COUNTIFS($B$1)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "COUNTIFS",
+      "Count": 2,
+      "Formula": "=COUNTIFS($B$1,0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "COUNTIFS",
+      "Count": 254,
+      "Formula": "=COUNTIFS($B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "COUNTIFS",
+      "Count": 255,
+      "Formula": "=COUNTIFS($B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "AVERAGEIF",
+      "Count": 0,
+      "Formula": "=AVERAGEIF()",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "AVERAGEIF",
+      "Count": 1,
+      "Formula": "=AVERAGEIF($B$1)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "AVERAGEIF",
+      "Count": 2,
+      "Formula": "=AVERAGEIF($B$1,0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "AVERAGEIF",
+      "Count": 3,
+      "Formula": "=AVERAGEIF($B$1,0,$B$1)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "AVERAGEIF",
+      "Count": 4,
+      "Formula": "=AVERAGEIF($B$1,0,$B$1,0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "AVERAGEIFS",
+      "Count": 0,
+      "Formula": "=AVERAGEIFS()",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "AVERAGEIFS",
+      "Count": 2,
+      "Formula": "=AVERAGEIFS($B$1,$B$1)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "AVERAGEIFS",
+      "Count": 3,
+      "Formula": "=AVERAGEIFS($B$1,$B$1,0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "AVERAGEIFS",
+      "Count": 255,
+      "Formula": "=AVERAGEIFS($B$1,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "AVERAGEIFS",
+      "Count": 256,
+      "Formula": "=AVERAGEIFS($B$1,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1,0,$B$1)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "COUNTBLANK",
+      "Count": 0,
+      "Formula": "=COUNTBLANK()",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "COUNTBLANK",
+      "Count": 1,
+      "Formula": "=COUNTBLANK($B$1)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "COUNTBLANK",
+      "Count": 2,
+      "Formula": "=COUNTBLANK($B$1,0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "ROUND",
+      "Count": 0,
+      "Formula": "=ROUND()",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "ROUND",
+      "Count": 1,
+      "Formula": "=ROUND(0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "ROUND",
+      "Count": 2,
+      "Formula": "=ROUND(0,0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "ROUND",
+      "Count": 3,
+      "Formula": "=ROUND(0,0,0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "ABS",
+      "Count": 0,
+      "Formula": "=ABS()",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "ABS",
+      "Count": 1,
+      "Formula": "=ABS(0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "ABS",
+      "Count": 2,
+      "Formula": "=ABS(0,0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "IF",
+      "Count": 0,
+      "Formula": "=IF()",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "IF",
+      "Count": 1,
+      "Formula": "=IF(0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "IF",
+      "Count": 2,
+      "Formula": "=IF(0,0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "IF",
+      "Count": 3,
+      "Formula": "=IF(0,0,0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "IF",
+      "Count": 4,
+      "Formula": "=IF(0,0,0,0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "IFERROR",
+      "Count": 0,
+      "Formula": "=IFERROR()",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "IFERROR",
+      "Count": 1,
+      "Formula": "=IFERROR(0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "IFERROR",
+      "Count": 2,
+      "Formula": "=IFERROR(0,0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "IFERROR",
+      "Count": 3,
+      "Formula": "=IFERROR(0,0,0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "AND",
+      "Count": 0,
+      "Formula": "=AND()",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "AND",
+      "Count": 1,
+      "Formula": "=AND(0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "AND",
+      "Count": 255,
+      "Formula": "=AND(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "AND",
+      "Count": 256,
+      "Formula": "=AND(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "OR",
+      "Count": 0,
+      "Formula": "=OR()",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "OR",
+      "Count": 1,
+      "Formula": "=OR(0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "OR",
+      "Count": 255,
+      "Formula": "=OR(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "OR",
+      "Count": 256,
+      "Formula": "=OR(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "NOT",
+      "Count": 0,
+      "Formula": "=NOT()",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "NOT",
+      "Count": 1,
+      "Formula": "=NOT(0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "NOT",
+      "Count": 2,
+      "Formula": "=NOT(0,0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "CONCATENATE",
+      "Count": 0,
+      "Formula": "=CONCATENATE()",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "CONCATENATE",
+      "Count": 1,
+      "Formula": "=CONCATENATE(0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "CONCATENATE",
+      "Count": 255,
+      "Formula": "=CONCATENATE(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "CONCATENATE",
+      "Count": 256,
+      "Formula": "=CONCATENATE(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "LEFT",
+      "Count": 0,
+      "Formula": "=LEFT()",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "LEFT",
+      "Count": 1,
+      "Formula": "=LEFT(0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "LEFT",
+      "Count": 2,
+      "Formula": "=LEFT(0,0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "LEFT",
+      "Count": 3,
+      "Formula": "=LEFT(0,0,0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "RIGHT",
+      "Count": 0,
+      "Formula": "=RIGHT()",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "RIGHT",
+      "Count": 1,
+      "Formula": "=RIGHT(0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "RIGHT",
+      "Count": 2,
+      "Formula": "=RIGHT(0,0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "RIGHT",
+      "Count": 3,
+      "Formula": "=RIGHT(0,0,0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "MID",
+      "Count": 0,
+      "Formula": "=MID()",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "MID",
+      "Count": 2,
+      "Formula": "=MID(0,0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "MID",
+      "Count": 3,
+      "Formula": "=MID(0,0,0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "MID",
+      "Count": 4,
+      "Formula": "=MID(0,0,0,0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "LEN",
+      "Count": 0,
+      "Formula": "=LEN()",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "LEN",
+      "Count": 1,
+      "Formula": "=LEN(0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "LEN",
+      "Count": 2,
+      "Formula": "=LEN(0,0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "TRIM",
+      "Count": 0,
+      "Formula": "=TRIM()",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "TRIM",
+      "Count": 1,
+      "Formula": "=TRIM(0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "TRIM",
+      "Count": 2,
+      "Formula": "=TRIM(0,0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "UPPER",
+      "Count": 0,
+      "Formula": "=UPPER()",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "UPPER",
+      "Count": 1,
+      "Formula": "=UPPER(0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "UPPER",
+      "Count": 2,
+      "Formula": "=UPPER(0,0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "LOWER",
+      "Count": 0,
+      "Formula": "=LOWER()",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "LOWER",
+      "Count": 1,
+      "Formula": "=LOWER(0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "LOWER",
+      "Count": 2,
+      "Formula": "=LOWER(0,0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "VLOOKUP",
+      "Count": 0,
+      "Formula": "=VLOOKUP()",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "VLOOKUP",
+      "Count": 2,
+      "Formula": "=VLOOKUP(0,0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "VLOOKUP",
+      "Count": 3,
+      "Formula": "=VLOOKUP(0,0,0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "VLOOKUP",
+      "Count": 4,
+      "Formula": "=VLOOKUP(0,0,0,0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "VLOOKUP",
+      "Count": 5,
+      "Formula": "=VLOOKUP(0,0,0,0,0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "MATCH",
+      "Count": 0,
+      "Formula": "=MATCH()",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "MATCH",
+      "Count": 1,
+      "Formula": "=MATCH(0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "MATCH",
+      "Count": 2,
+      "Formula": "=MATCH(0,0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "MATCH",
+      "Count": 3,
+      "Formula": "=MATCH(0,0,0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "MATCH",
+      "Count": 4,
+      "Formula": "=MATCH(0,0,0,0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "INDEX",
+      "Count": 0,
+      "Formula": "=INDEX()",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "INDEX",
+      "Count": 1,
+      "Formula": "=INDEX(0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "INDEX",
+      "Count": 2,
+      "Formula": "=INDEX(0,0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "INDEX",
+      "Count": 3,
+      "Formula": "=INDEX(0,0,0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "INDEX",
+      "Count": 4,
+      "Formula": "=INDEX(0,0,0,0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "HLOOKUP",
+      "Count": 0,
+      "Formula": "=HLOOKUP()",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "HLOOKUP",
+      "Count": 2,
+      "Formula": "=HLOOKUP(0,0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "HLOOKUP",
+      "Count": 3,
+      "Formula": "=HLOOKUP(0,0,0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "HLOOKUP",
+      "Count": 4,
+      "Formula": "=HLOOKUP(0,0,0,0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "HLOOKUP",
+      "Count": 5,
+      "Formula": "=HLOOKUP(0,0,0,0,0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "XLOOKUP",
+      "Count": 0,
+      "Formula": "=XLOOKUP()",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "XLOOKUP",
+      "Count": 2,
+      "Formula": "=XLOOKUP(0,0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "XLOOKUP",
+      "Count": 3,
+      "Formula": "=XLOOKUP(0,0,0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "XLOOKUP",
+      "Count": 6,
+      "Formula": "=XLOOKUP(0,0,0,0,0,0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "XLOOKUP",
+      "Count": 7,
+      "Formula": "=XLOOKUP(0,0,0,0,0,0,0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "XMATCH",
+      "Count": 0,
+      "Formula": "=XMATCH()",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "XMATCH",
+      "Count": 1,
+      "Formula": "=XMATCH(0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "XMATCH",
+      "Count": 2,
+      "Formula": "=XMATCH(0,0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "XMATCH",
+      "Count": 4,
+      "Formula": "=XMATCH(0,0,0,0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "XMATCH",
+      "Count": 5,
+      "Formula": "=XMATCH(0,0,0,0,0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "DATE",
+      "Count": 0,
+      "Formula": "=DATE()",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "DATE",
+      "Count": 2,
+      "Formula": "=DATE(0,0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "DATE",
+      "Count": 3,
+      "Formula": "=DATE(0,0,0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "DATE",
+      "Count": 4,
+      "Formula": "=DATE(0,0,0,0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "YEAR",
+      "Count": 0,
+      "Formula": "=YEAR()",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "YEAR",
+      "Count": 1,
+      "Formula": "=YEAR(0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "YEAR",
+      "Count": 2,
+      "Formula": "=YEAR(0,0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "MONTH",
+      "Count": 0,
+      "Formula": "=MONTH()",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "MONTH",
+      "Count": 1,
+      "Formula": "=MONTH(0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "MONTH",
+      "Count": 2,
+      "Formula": "=MONTH(0,0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "DAY",
+      "Count": 0,
+      "Formula": "=DAY()",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "DAY",
+      "Count": 1,
+      "Formula": "=DAY(0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "DAY",
+      "Count": 2,
+      "Formula": "=DAY(0,0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "TIME",
+      "Count": 0,
+      "Formula": "=TIME()",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "TIME",
+      "Count": 2,
+      "Formula": "=TIME(0,0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "TIME",
+      "Count": 3,
+      "Formula": "=TIME(0,0,0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "TIME",
+      "Count": 4,
+      "Formula": "=TIME(0,0,0,0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "HOUR",
+      "Count": 0,
+      "Formula": "=HOUR()",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "HOUR",
+      "Count": 1,
+      "Formula": "=HOUR(0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "HOUR",
+      "Count": 2,
+      "Formula": "=HOUR(0,0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "MINUTE",
+      "Count": 0,
+      "Formula": "=MINUTE()",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "MINUTE",
+      "Count": 1,
+      "Formula": "=MINUTE(0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "MINUTE",
+      "Count": 2,
+      "Formula": "=MINUTE(0,0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "SECOND",
+      "Count": 0,
+      "Formula": "=SECOND()",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "SECOND",
+      "Count": 1,
+      "Formula": "=SECOND(0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "SECOND",
+      "Count": 2,
+      "Formula": "=SECOND(0,0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "EDATE",
+      "Count": 0,
+      "Formula": "=EDATE()",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "EDATE",
+      "Count": 1,
+      "Formula": "=EDATE(0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "EDATE",
+      "Count": 2,
+      "Formula": "=EDATE(0,0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "EDATE",
+      "Count": 3,
+      "Formula": "=EDATE(0,0,0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "EOMONTH",
+      "Count": 0,
+      "Formula": "=EOMONTH()",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "EOMONTH",
+      "Count": 1,
+      "Formula": "=EOMONTH(0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "EOMONTH",
+      "Count": 2,
+      "Formula": "=EOMONTH(0,0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "EOMONTH",
+      "Count": 3,
+      "Formula": "=EOMONTH(0,0,0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "WEEKDAY",
+      "Count": 0,
+      "Formula": "=WEEKDAY()",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "WEEKDAY",
+      "Count": 1,
+      "Formula": "=WEEKDAY(0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "WEEKDAY",
+      "Count": 2,
+      "Formula": "=WEEKDAY(0,0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "WEEKDAY",
+      "Count": 3,
+      "Formula": "=WEEKDAY(0,0,0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "WORKDAY",
+      "Count": 0,
+      "Formula": "=WORKDAY()",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "WORKDAY",
+      "Count": 1,
+      "Formula": "=WORKDAY(0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "WORKDAY",
+      "Count": 2,
+      "Formula": "=WORKDAY(0,0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "WORKDAY",
+      "Count": 3,
+      "Formula": "=WORKDAY(0,0,0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "WORKDAY",
+      "Count": 4,
+      "Formula": "=WORKDAY(0,0,0,0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "NETWORKDAYS",
+      "Count": 0,
+      "Formula": "=NETWORKDAYS()",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "NETWORKDAYS",
+      "Count": 1,
+      "Formula": "=NETWORKDAYS(0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "NETWORKDAYS",
+      "Count": 2,
+      "Formula": "=NETWORKDAYS(0,0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "NETWORKDAYS",
+      "Count": 3,
+      "Formula": "=NETWORKDAYS(0,0,0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "NETWORKDAYS",
+      "Count": 4,
+      "Formula": "=NETWORKDAYS(0,0,0,0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "ROUNDUP",
+      "Count": 0,
+      "Formula": "=ROUNDUP()",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "ROUNDUP",
+      "Count": 1,
+      "Formula": "=ROUNDUP(0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "ROUNDUP",
+      "Count": 2,
+      "Formula": "=ROUNDUP(0,0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "ROUNDUP",
+      "Count": 3,
+      "Formula": "=ROUNDUP(0,0,0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "ROUNDDOWN",
+      "Count": 0,
+      "Formula": "=ROUNDDOWN()",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "ROUNDDOWN",
+      "Count": 1,
+      "Formula": "=ROUNDDOWN(0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "ROUNDDOWN",
+      "Count": 2,
+      "Formula": "=ROUNDDOWN(0,0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "ROUNDDOWN",
+      "Count": 3,
+      "Formula": "=ROUNDDOWN(0,0,0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "INT",
+      "Count": 0,
+      "Formula": "=INT()",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "INT",
+      "Count": 1,
+      "Formula": "=INT(0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "INT",
+      "Count": 2,
+      "Formula": "=INT(0,0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "MOD",
+      "Count": 0,
+      "Formula": "=MOD()",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "MOD",
+      "Count": 1,
+      "Formula": "=MOD(0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "MOD",
+      "Count": 2,
+      "Formula": "=MOD(0,0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "MOD",
+      "Count": 3,
+      "Formula": "=MOD(0,0,0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "TEXT",
+      "Count": 0,
+      "Formula": "=TEXT()",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "TEXT",
+      "Count": 1,
+      "Formula": "=TEXT(0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "TEXT",
+      "Count": 2,
+      "Formula": "=TEXT(0,0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "TEXT",
+      "Count": 3,
+      "Formula": "=TEXT(0,0,0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "VALUE",
+      "Count": 0,
+      "Formula": "=VALUE()",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "VALUE",
+      "Count": 1,
+      "Formula": "=VALUE(0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "VALUE",
+      "Count": 2,
+      "Formula": "=VALUE(0,0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "SUBSTITUTE",
+      "Count": 0,
+      "Formula": "=SUBSTITUTE()",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "SUBSTITUTE",
+      "Count": 2,
+      "Formula": "=SUBSTITUTE(0,0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "SUBSTITUTE",
+      "Count": 3,
+      "Formula": "=SUBSTITUTE(0,0,0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "SUBSTITUTE",
+      "Count": 4,
+      "Formula": "=SUBSTITUTE(0,0,0,0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "SUBSTITUTE",
+      "Count": 5,
+      "Formula": "=SUBSTITUTE(0,0,0,0,0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "REPLACE",
+      "Count": 0,
+      "Formula": "=REPLACE()",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "REPLACE",
+      "Count": 3,
+      "Formula": "=REPLACE(0,0,0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "REPLACE",
+      "Count": 4,
+      "Formula": "=REPLACE(0,0,0,0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "REPLACE",
+      "Count": 5,
+      "Formula": "=REPLACE(0,0,0,0,0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "FIND",
+      "Count": 0,
+      "Formula": "=FIND()",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "FIND",
+      "Count": 1,
+      "Formula": "=FIND(0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "FIND",
+      "Count": 2,
+      "Formula": "=FIND(0,0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "FIND",
+      "Count": 3,
+      "Formula": "=FIND(0,0,0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "FIND",
+      "Count": 4,
+      "Formula": "=FIND(0,0,0,0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "SEARCH",
+      "Count": 0,
+      "Formula": "=SEARCH()",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "SEARCH",
+      "Count": 1,
+      "Formula": "=SEARCH(0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "SEARCH",
+      "Count": 2,
+      "Formula": "=SEARCH(0,0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "SEARCH",
+      "Count": 3,
+      "Formula": "=SEARCH(0,0,0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "SEARCH",
+      "Count": 4,
+      "Formula": "=SEARCH(0,0,0,0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "TEXTJOIN",
+      "Count": 0,
+      "Formula": "=TEXTJOIN()",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "TEXTJOIN",
+      "Count": 2,
+      "Formula": "=TEXTJOIN(0,0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "TEXTJOIN",
+      "Count": 3,
+      "Formula": "=TEXTJOIN(0,0,0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "TEXTJOIN",
+      "Count": 254,
+      "Formula": "=TEXTJOIN(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "TEXTJOIN",
+      "Count": 255,
+      "Formula": "=TEXTJOIN(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "CONCAT",
+      "Count": 0,
+      "Formula": "=CONCAT()",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "CONCAT",
+      "Count": 1,
+      "Formula": "=CONCAT(0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "CONCAT",
+      "Count": 253,
+      "Formula": "=CONCAT(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "CONCAT",
+      "Count": 254,
+      "Formula": "=CONCAT(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "ISBLANK",
+      "Count": 0,
+      "Formula": "=ISBLANK()",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "ISBLANK",
+      "Count": 1,
+      "Formula": "=ISBLANK(0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "ISBLANK",
+      "Count": 2,
+      "Formula": "=ISBLANK(0,0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "ISNUMBER",
+      "Count": 0,
+      "Formula": "=ISNUMBER()",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "ISNUMBER",
+      "Count": 1,
+      "Formula": "=ISNUMBER(0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "ISNUMBER",
+      "Count": 2,
+      "Formula": "=ISNUMBER(0,0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "ISTEXT",
+      "Count": 0,
+      "Formula": "=ISTEXT()",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "ISTEXT",
+      "Count": 1,
+      "Formula": "=ISTEXT(0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "ISTEXT",
+      "Count": 2,
+      "Formula": "=ISTEXT(0,0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "ISERROR",
+      "Count": 0,
+      "Formula": "=ISERROR()",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "ISERROR",
+      "Count": 1,
+      "Formula": "=ISERROR(0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "ISERROR",
+      "Count": 2,
+      "Formula": "=ISERROR(0,0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "IFNA",
+      "Count": 0,
+      "Formula": "=IFNA()",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "IFNA",
+      "Count": 1,
+      "Formula": "=IFNA(0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "IFNA",
+      "Count": 2,
+      "Formula": "=IFNA(0,0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "IFNA",
+      "Count": 3,
+      "Formula": "=IFNA(0,0,0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "TODAY",
+      "Count": 0,
+      "Formula": "=TODAY()",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "TODAY",
+      "Count": 1,
+      "Formula": "=TODAY(0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "NOW",
+      "Count": 0,
+      "Formula": "=NOW()",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "NOW",
+      "Count": 1,
+      "Formula": "=NOW(0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "CONCAT",
+      "Count": 255,
+      "Formula": "=CONCAT(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "CONCAT",
+      "Count": 256,
+      "Formula": "=CONCAT(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "CONCAT",
+      "Count": 257,
+      "Formula": "=CONCAT(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "TEXTJOIN",
+      "Count": 256,
+      "Formula": "=TEXTJOIN(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "TEXTJOIN",
+      "Count": 257,
+      "Formula": "=TEXTJOIN(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "CONCATENATE",
+      "Count": 254,
+      "Formula": "=CONCATENATE(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "CONCATENATE",
+      "Count": 257,
+      "Formula": "=CONCATENATE(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    }
+  ]
+}

@@ -171,6 +171,7 @@ public partial class MainWindow
             Check(texts.Select((c, i) => textReopened.Sheets[0].GetCell(i, 10)!.Value == c.Value && textReopened.Sheets[0].GetCell(i, 10)!.Content.FormulaText == c.Formula).All(x => x),
                 "All thirteen text/type functions retain formulas and caches in ordinary XLSX save/reopen");
             GridSurface.Select(new(0, 10)); await Idle(); CaptureGridEvidence(Path.Combine(folder, "text-type-entry.png"));
+            await RunPortableExportSmokeAsync(folder, Check);
             File.WriteAllLines(Path.Combine(folder, "formula-entry-result.txt"), new[] { $"PASS: {checks.Count} checks" }.Concat(checks));
         }
         finally { _suppressAutoCalculation = false; EndReferenceGesture(); CloseFormulaHelp(); }

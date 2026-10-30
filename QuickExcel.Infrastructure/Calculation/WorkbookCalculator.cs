@@ -193,7 +193,7 @@ public sealed class WorkbookCalculator(IScriptRuntimeFactory runtimeFactory) : I
                     else
                     {
                         Flush();
-                        StoreEvaluated(address, () => prepared is CellValue error ? error : evaluator.Scalar(node.Expression));
+                        StoreEvaluated(address, () => prepared is CellValue error ? error : evaluator.CellResult(node.Expression));
                     }
                     goto ReleaseDependents;
                 }

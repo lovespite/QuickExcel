@@ -28,9 +28,8 @@ internal sealed partial class TypedEvaluator
         string S(int i) => FormulaText(Arg(i));
         if (name == "IFNA")
         {
-            static CellValue Result(CellValue value) => value.Kind == CellValueKind.Blank ? CellValue.FromNumber(0) : value;
-            try { var value = Raw(0); return Result(value is { Kind: CellValueKind.Error, ErrorCode: CellErrorCode.NotAvailable } ? Raw(1) : value); }
-            catch (FormulaValueException e) when (e.Code == CellErrorCode.NotAvailable) { return Result(Raw(1)); }
+            try { var value = Raw(0); return value is { Kind: CellValueKind.Error, ErrorCode: CellErrorCode.NotAvailable } ? Raw(1) : value; }
+            catch (FormulaValueException e) when (e.Code == CellErrorCode.NotAvailable) { return Raw(1); }
         }
         if (name is "ISBLANK" or "ISNUMBER" or "ISTEXT" or "ISERROR")
         {
@@ -95,12 +94,11 @@ internal sealed partial class TypedEvaluator
         return Error(CellErrorCode.Name);
     }
 
-    private double ParseTextNumber(CellValue value)
+    private static bool TryNumericText(string text, out double result)
     {
-        if (value.Kind is CellValueKind.Number or CellValueKind.Blank) return Number(value);
-        if (value.Kind != CellValueKind.Text) throw new FormulaValueException(CellErrorCode.Value, "VALUE 不接受布尔值。");
-        var text = new string(value.TextValue.Select(c => c is >= '０' and <= '９' ? (char)(c - '０' + '0') : c).ToArray()).Trim();
-        var original = text; var sign = 1; var parenthesized = text.StartsWith('(') && text.EndsWith(')');
+        result = 0;
+        text = new string(text.Select(c => c is >= '０' and <= '９' ? (char)(c - '０' + '0') : c).ToArray()).Trim();
+        var sign = 1; var parenthesized = text.StartsWith('(') && text.EndsWith(')');
         if (parenthesized) { sign = -1; text = text[1..^1].Trim(); }
         var percent = text.StartsWith('%') || text.EndsWith('%');
         if (percent) text = (text.StartsWith('%') ? text[1..] : text[..^1]).Trim();
@@ -115,14 +113,23 @@ internal sealed partial class TypedEvaluator
         }
         if (Regex.IsMatch(text, @"^(?:(?:[1-9]\d*(?:,\d{3,})+|\d+)(?:\.\d*)?|\.\d+)(?:[Ee][+-]?\d+)?$", RegexOptions.CultureInvariant, TimeSpan.FromMilliseconds(100)) &&
             double.TryParse(text, NumberStyles.Float | NumberStyles.AllowThousands, CultureInfo.InvariantCulture, out var number) && double.IsFinite(number))
-            return sign * number / (percent ? 100 : 1);
-        if (original == text && Regex.IsMatch(text, @"^\d{1,5}:\d{1,2}(?::\d{1,2}(?:\.\d{1,7})?)?$", RegexOptions.CultureInvariant, TimeSpan.FromMilliseconds(100)))
+        { result = sign * number / (percent ? 100 : 1); return true; }
+        return false;
+    }
+
+    private double ParseTextNumber(CellValue value)
+    {
+        if (value.Kind is CellValueKind.Number or CellValueKind.Blank) return Number(value);
+        if (value.Kind != CellValueKind.Text) throw new FormulaValueException(CellErrorCode.Value, "VALUE 不接受布尔值。");
+        var text = new string(value.TextValue.Select(c => c is >= '０' and <= '９' ? (char)(c - '０' + '0') : c).ToArray()).Trim();
+        if (TryNumericText(text, out var number)) return number;
+        if (Regex.IsMatch(text, @"^\d{1,5}:\d{1,2}(?::\d{1,2}(?:\.\d{1,7})?)?$", RegexOptions.CultureInvariant, TimeSpan.FromMilliseconds(100)))
         {
             var parts = text.Split(':'); var h = double.Parse(parts[0], CultureInfo.InvariantCulture); var m = double.Parse(parts[1], CultureInfo.InvariantCulture);
             var s = parts.Length == 3 ? double.Parse(parts[2], CultureInfo.InvariantCulture) : 0;
             if (h <= 9999 && m < 60 && s < 60) return (h * 3600 + m * 60 + s) / 86400;
         }
-        if (original == text && text.Length >= 8 && int.TryParse(text.AsSpan(0, 4), out var year) && year >= 1900)
+        if (text.Length >= 8 && int.TryParse(text.AsSpan(0, 4), out var year) && year >= 1900)
         {
             try { var date = DateNumber(CellValue.FromText(text)); if (date >= 0 && date < LastDate + 1d) return date; }
             catch (FormulaValueException) { }

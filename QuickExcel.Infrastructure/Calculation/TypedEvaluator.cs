@@ -24,7 +24,14 @@ internal sealed partial class TypedEvaluator(WorkbookSnapshot snapshot, IReadOnl
     public CellValue Scalar(FormulaNode node)
     {
         var value = Evaluate(node);
+        if (value is Range range && ConditionalRanges.Shape(range.Reference) == (1, 1)) value = Read(range.Sheet, range.Reference.Row, range.Reference.Column);
         return value is CellValue scalar ? scalar : Error(CellErrorCode.Value);
+    }
+    public CellValue CellResult(FormulaNode node)
+    {
+        var value = Scalar(node);
+        return value.Kind == CellValueKind.Blank && node is ReferenceNode or FunctionNode { Name: "IF" or "IFERROR" or "IFNA" or "INDEX" }
+            ? CellValue.FromNumber(0) : value;
     }
 
     private object Evaluate(FormulaNode node)
@@ -69,14 +76,15 @@ internal sealed partial class TypedEvaluator(WorkbookSnapshot snapshot, IReadOnl
         }
         var left = Number(a); var right = Number(b);
         if (binary.Operator == "/" && right == 0) return Error(CellErrorCode.DivisionByZero);
+        if (binary.Operator == "^" && left == 0 && right <= 0) return Error(right == 0 ? CellErrorCode.Number : CellErrorCode.DivisionByZero);
         return CellValue.FromNumber(binary.Operator switch { "+" => left + right, "-" => left - right, "*" => left * right, "/" => left / right, "^" => Math.Pow(left, right), _ => double.NaN });
     }
 
     private CellValue Function(FunctionNode function)
     {
         if (scripts.TryGetValue(function.Name, out var descriptor)) return Script(function, descriptor);
-        if (!StandardFunctions.Signatures.TryGetValue(function.Name, out var signature)) return Error(CellErrorCode.Name);
-        if (function.Arguments.Count < signature.Min || function.Arguments.Count > signature.Max) return Error(CellErrorCode.Value);
+        if (!StandardFunctions.Signatures.ContainsKey(function.Name)) return Error(CellErrorCode.Name);
+        if (!StandardFunctions.AcceptsArguments(function.Name, function.Arguments.Count)) return Error(CellErrorCode.Value);
         if (function.Name == "IF")
         {
             var condition = Scalar(function.Arguments[0]);
@@ -98,8 +106,10 @@ internal sealed partial class TypedEvaluator(WorkbookSnapshot snapshot, IReadOnl
         if (LookupModes.IsFunction(function.Name)) return LookupValue(function);
         if (DateMathFunctions.IsFunction(function.Name)) return DateMath(function);
         if (TextFunctions.IsFunction(function.Name)) return TextFunction(function);
-        var args = function.Arguments.Select(Evaluate).ToArray();
-        if (function.Name is "SUM" or "AVERAGE" or "MIN" or "MAX" or "COUNT" or "COUNTA" or "PRODUCT") return Aggregate(function, args);
+        var aggregate = function.Name is "SUM" or "AVERAGE" or "MIN" or "MAX" or "COUNT" or "COUNTA" or "PRODUCT";
+        var contextual = aggregate || function.Name is "AND" or "OR" ? function.Arguments.Select(AggregateArgument).ToArray() : null;
+        var args = contextual is null ? function.Arguments.Select(Evaluate).ToArray() : contextual.Select(a => a.Value).ToArray();
+        if (aggregate) return Aggregate(function, args, contextual!.Select(a => a.Reference).ToArray());
         foreach (var arg in args) if (arg is CellValue { Kind: CellValueKind.Error } error) return error;
         if (function.Name == "INDEX") return Index(args);
         if (function.Name is "AND" or "OR")
@@ -109,43 +119,44 @@ internal sealed partial class TypedEvaluator(WorkbookSnapshot snapshot, IReadOnl
             foreach (var value in Values(args[i]))
             {
                 if (value.Kind == CellValueKind.Error) return value;
-                if (function.Arguments[i] is ReferenceNode && value.Kind is CellValueKind.Text or CellValueKind.Blank) continue;
+                if (contextual![i].Reference && value.Kind is CellValueKind.Text or CellValueKind.Blank) continue;
                 var logical = Boolean(value); logicalCount++; all &= logical; any |= logical;
             }
             return logicalCount == 0 ? Error(CellErrorCode.Value) : CellValue.FromBoolean(function.Name == "AND" ? all : any);
         }
+        for (var i = 0; i < args.Length; i++)
+            if (args[i] is Range range && ConditionalRanges.Shape(range.Reference) == (1, 1)) args[i] = Read(range.Sheet, range.Reference.Row, range.Reference.Column);
         if (args.Any(a => a is Range)) return Error(CellErrorCode.Value);
         var values = args.Cast<CellValue>().ToArray();
         CellValue A(int i) => values[i];
-        int Integer(int i) => checked((int)Math.Truncate(Number(A(i))));
         string S(int i) => Text(A(i));
         switch (function.Name)
         {
             case "ABS": return CellValue.FromNumber(Math.Abs(Number(A(0))));
             case "NOT": return CellValue.FromBoolean(!Boolean(A(0)));
             case "ROUND":
-                var digits = Integer(1); var factor = Math.Pow(10, Math.Abs((double)digits));
-                var n = Number(A(0));
+                var digits = Math.Truncate(Number(A(1))); var factor = Math.Pow(10, Math.Abs(digits));
+                var n = Significant15(Number(A(0)));
                 if (digits >= 0)
-                    return CellValue.FromNumber(!double.IsFinite(n * factor) ? n : Math.Round(n * factor, MidpointRounding.AwayFromZero) / factor);
-                return CellValue.FromNumber(!double.IsFinite(factor) ? 0 : Math.Round(n / factor, MidpointRounding.AwayFromZero) * factor);
+                    return CellValue.FromNumber(!double.IsFinite(n * factor) ? n : Math.Round(Significant15(n * factor), MidpointRounding.AwayFromZero) / factor);
+                return CellValue.FromNumber(!double.IsFinite(factor) ? 0 : Math.Round(Significant15(n / factor), MidpointRounding.AwayFromZero) * factor);
             case "CONCATENATE": return CellValue.FromText(string.Concat(values.Select(Text)));
             case "LEN": return CellValue.FromNumber(TextOffsets(S(0)).Length - 1);
-            case "UPPER": return CellValue.FromText(S(0).ToUpperInvariant());
-            case "LOWER": return CellValue.FromText(S(0).ToLowerInvariant());
+            case "UPPER": return CellValue.FromText(S(0).ToUpper(CultureInfo.GetCultureInfo("en-US")));
+            case "LOWER": return CellValue.FromText(S(0).ToLower(CultureInfo.GetCultureInfo("en-US")));
             case "TRIM": return CellValue.FromText(string.Join(" ", S(0).Split(' ', StringSplitOptions.RemoveEmptyEntries)));
             case "LEFT":
             case "RIGHT":
-                var count = args.Length == 1 ? 1 : Integer(1);
-                if (count < 0) return Error(CellErrorCode.Value);
-                var text = S(0); var textOffsets = TextOffsets(text, alwaysUnicode: true); count = Math.Min(count, textOffsets.Length - 1);
+                var requested = args.Length == 1 ? 1 : Math.Floor(Number(A(1)));
+                if (requested < 0) return Error(CellErrorCode.Value);
+                var text = S(0); var textOffsets = TextOffsets(text, alwaysUnicode: true); var count = (int)Math.Min(requested, textOffsets.Length - 1);
                 return CellValue.FromText(function.Name == "LEFT" ? text[..textOffsets[count]] : text[textOffsets[textOffsets.Length - count - 1]..]);
             case "MID":
-                var start = Integer(1); var length = Integer(2); var source = S(0);
-                if (start < 1 || length < 0) return Error(CellErrorCode.Value);
+                var start = Math.Floor(Number(A(1))); var length = Math.Floor(Number(A(2))); var source = S(0);
+                if (start < 1 || start - 1 > int.MaxValue || length < 0 || length > int.MaxValue) return Error(CellErrorCode.Value);
                 var sourceOffsets = TextOffsets(source);
                 if (start >= sourceOffsets.Length) return CellValue.FromText("");
-                return CellValue.FromText(source[sourceOffsets[start - 1]..sourceOffsets[(int)Math.Min((long)start - 1 + length, sourceOffsets.Length - 1)]]);
+                return CellValue.FromText(source[sourceOffsets[(int)start - 1]..sourceOffsets[(int)Math.Min(start - 1 + length, sourceOffsets.Length - 1)]]);
             case "TODAY": return Serial(_now.Date);
             case "NOW": return Serial(_now);
             default: return Error(CellErrorCode.Name);
@@ -160,7 +171,24 @@ internal sealed partial class TypedEvaluator(WorkbookSnapshot snapshot, IReadOnl
         return CellValue.FromNumber(serial);
     }
 
-    private CellValue Aggregate(FunctionNode function, object[] args)
+    private (object Value, bool Reference) AggregateArgument(FormulaNode expression)
+    {
+        // IF and INDEX can return a reference. Preserve that origin only in aggregate/logical contexts;
+        // evaluating the selected branch once also keeps UDF side effects and lazy branches intact.
+        if (expression is FunctionNode { Name: "IF", Arguments.Count: 2 or 3 } choice)
+        {
+            var condition = Scalar(choice.Arguments[0]);
+            if (condition.Kind == CellValueKind.Error) return (condition, false);
+            return Boolean(condition) ? AggregateArgument(choice.Arguments[1])
+                : choice.Arguments.Count == 3 ? AggregateArgument(choice.Arguments[2]) : (CellValue.FromBoolean(false), false);
+        }
+        var value = Evaluate(expression);
+        var reference = expression is ReferenceNode || expression is FunctionNode { Name: "INDEX", Arguments.Count: > 0 } index && index.Arguments[0] is ReferenceNode;
+        if (value is CellValue { Kind: CellValueKind.Blank } && expression is FunctionNode { Name: "IFERROR" or "IFNA" }) value = CellValue.FromNumber(0);
+        return (value, reference);
+    }
+
+    private CellValue Aggregate(FunctionNode function, object[] args, bool[] references)
     {
         var numberCount = 0; var count = 0; double sum = 0, product = 1, minimum = double.PositiveInfinity, maximum = double.NegativeInfinity;
         void Add(double number) { numberCount++; sum += number; product *= number; minimum = Math.Min(minimum, number); maximum = Math.Max(maximum, number); }
@@ -171,10 +199,12 @@ internal sealed partial class TypedEvaluator(WorkbookSnapshot snapshot, IReadOnl
             if (function.Name == "COUNTA") { if (value.Kind != CellValueKind.Blank) count++; continue; }
             if (value.Kind == CellValueKind.Error) { if (function.Name == "COUNT") continue; return value; }
             if (value.Kind == CellValueKind.Number) { Add(value.NumberValue); continue; }
-            if (function.Arguments[i] is ReferenceNode || value.Kind == CellValueKind.Blank) continue;
+            if (references[i] || value.Kind == CellValueKind.Blank) continue;
             if (function.Name == "COUNT")
             {
-                if (value.Kind == CellValueKind.Boolean || value.Kind == CellValueKind.Text && double.TryParse(value.TextValue, NumberStyles.Float, CultureInfo.InvariantCulture, out _)) Add(0);
+                if (value.Kind == CellValueKind.Boolean) Add(0);
+                else if (value.Kind == CellValueKind.Text)
+                { try { _ = Number(value); Add(0); } catch (FormulaValueException) { } }
             }
             else Add(Number(value));
         }
@@ -211,12 +241,14 @@ internal sealed partial class TypedEvaluator(WorkbookSnapshot snapshot, IReadOnl
 
     private CellValue Index(object[] args)
     {
-        if (args.Skip(1).Any(a => a is not CellValue) || args[0] is not Range range) return Error(CellErrorCode.Value);
-        var (rows, columns) = Shape(range);
-        var r = range.Reference;
-        var row = checked((int)Math.Truncate(Number((CellValue)args[1]))) - 1;
-        var column = args.Length == 3 ? checked((int)Math.Truncate(Number((CellValue)args[2]))) - 1 : 0;
-        return row < 0 || row >= rows || column < 0 || column >= columns ? Error(CellErrorCode.Reference) : Read(range.Sheet, r.Row + row, r.Column + column);
+        if (args.Skip(1).Any(a => a is not CellValue)) return Error(CellErrorCode.Value);
+        var row = Math.Floor(Number((CellValue)args[1])); var column = args.Length == 3 ? Math.Floor(Number((CellValue)args[2])) : 1;
+        if (args[0] is CellValue scalar) return row is 0 or 1 && column is 0 or 1 ? scalar : Error(CellErrorCode.Reference);
+        var range = (Range)args[0]; var r = range.Reference; var (rows, columns) = ConditionalRanges.Shape(r);
+        if (rows == 1 && args.Length == 2) { column = row; row = 1; }
+        if (row == 0 && rows == 1) row = 1;
+        if (column == 0 && columns == 1) column = 1;
+        return row < 1 || row > rows || column < 1 || column > columns ? Error(CellErrorCode.Reference) : Read(range.Sheet, r.Row + (int)row - 1, r.Column + (int)column - 1);
     }
 
     private CellValue Script(FunctionNode function, ScriptFunctionDescriptor descriptor)
@@ -307,7 +339,7 @@ internal sealed partial class TypedEvaluator(WorkbookSnapshot snapshot, IReadOnl
     {
         CellValueKind.Blank => 0, CellValueKind.Number => value.NumberValue,
         CellValueKind.Boolean => value.BooleanValue ? 1 : 0,
-        CellValueKind.Text when double.TryParse(value.TextValue, NumberStyles.Float, CultureInfo.InvariantCulture, out var n) && double.IsFinite(n) => n,
+        CellValueKind.Text when TryNumericText(value.TextValue, out var n) => n,
         _ => throw new FormulaValueException(CellErrorCode.Value, "值不能转换为有限数字。")
     };
     private static bool Boolean(CellValue value) => value.Kind switch
@@ -316,7 +348,7 @@ internal sealed partial class TypedEvaluator(WorkbookSnapshot snapshot, IReadOnl
         CellValueKind.Text when bool.TryParse(value.TextValue, out var b) => b,
         _ => throw new FormulaValueException(CellErrorCode.Value, "值不能转换为逻辑值。")
     };
-    private static string Text(CellValue value) => CellInput.DisplayText(value);
+    private static string Text(CellValue value) => value.Kind == CellValueKind.Number ? value.NumberValue.ToString("G15", CultureInfo.InvariantCulture) : CellInput.DisplayText(value);
     private static int Compare(CellValue a, CellValue b)
     {
         if (a.Kind == CellValueKind.Blank) a = b.Kind switch { CellValueKind.Text => CellValue.FromText(""), CellValueKind.Boolean => CellValue.FromBoolean(false), _ => CellValue.FromNumber(0) };

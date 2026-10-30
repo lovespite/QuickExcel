@@ -14,6 +14,7 @@ public sealed class WorkbookDependencyIndex
         public string? ParseError { get; set; }
         public bool Script { get; set; }
         public bool Volatile { get; set; }
+        public string? PortableFormula { get; set; }
         public HashSet<CellAddress> Dependencies { get; } = [];
         public HashSet<CellAddress> Dependents { get; } = [];
     }
@@ -68,6 +69,7 @@ public sealed class WorkbookDependencyIndex
                     if (++referenceCount > 2_000_000) throw new InvalidOperationException("公式引用索引超过 2,000,000 项。");
                     entries.Add(new(reference, address));
                 }
+                if (FormulaSyntax.TryPrintPortable(node.Expression, out var portable)) node.PortableFormula = portable;
             }
             catch (Exception e) when (e is FormatException or OverflowException)
             { node.ParseError = e.Message; node.Expression = new ValueNode(CellValue.FromError(CellErrorCode.Value)); }
@@ -85,7 +87,8 @@ public sealed class WorkbookDependencyIndex
             }
         }
         CycleMembers = FindCycles(check);
-        NonPortableCells = Closure(Nodes.Where(p => p.Value.Script || p.Value.ParseError is not null || p.Value.Expression is ReferenceNode { IsRange: true }
+        NonPortableCells = Closure(Nodes.Where(p => p.Value.Script || p.Value.ParseError is not null || p.Value.PortableFormula is null || p.Value.Expression is ReferenceNode { IsRange: true }
+            || FormulaSyntax.Walk(p.Value.Expression).OfType<FunctionNode>().Any(f => !StandardFunctions.AcceptsArguments(f.Name, f.Arguments.Count))
             || FormulaSyntax.Walk(p.Value.Expression).OfType<ValueNode>().Any(n => n.Value.Kind == CellValueKind.Error && n.Value.ErrorCode is CellErrorCode.Cycle or CellErrorCode.Script))
             .Select(p => p.Key).Concat(CycleMembers), check);
     }

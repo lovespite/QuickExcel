@@ -15,6 +15,7 @@ public static class FormulaBinding
         LookupModes.Validate(bound);
         DateMathFunctions.Validate(bound);
         TextFunctions.Validate(bound, snapshot);
+        ScalarFormulaModes.Validate(bound);
         return bound;
     }
 
@@ -68,6 +69,12 @@ public static class FormulaBinding
 
 public static class StandardFunctions
 {
+    public static bool AcceptsArguments(string name, int count)
+    {
+        name = name.ToUpperInvariant();
+        return Signatures.TryGetValue(name, out var bounds) && count >= bounds.Min && count <= bounds.Max &&
+            (name is "SUMIFS" or "AVERAGEIFS" ? count % 2 == 1 : name != "COUNTIFS" || count % 2 == 0);
+    }
     public static IReadOnlyDictionary<string, (int Min, int Max)> Signatures { get; } =
         new Dictionary<string, (int, int)>(StringComparer.OrdinalIgnoreCase)
         {
@@ -87,7 +94,7 @@ public static class StandardFunctions
             ["WORKDAY"] = (2, 3), ["NETWORKDAYS"] = (2, 3),
             ["ROUNDUP"] = (2, 2), ["ROUNDDOWN"] = (2, 2), ["INT"] = (1, 1), ["MOD"] = (2, 2),
             ["TEXT"] = (2, 2), ["VALUE"] = (1, 1), ["SUBSTITUTE"] = (3, 4), ["REPLACE"] = (4, 4),
-            ["FIND"] = (2, 3), ["SEARCH"] = (2, 3), ["TEXTJOIN"] = (3, 254), ["CONCAT"] = (1, 253),
+            ["FIND"] = (2, 3), ["SEARCH"] = (2, 3), ["TEXTJOIN"] = (3, 254), ["CONCAT"] = (1, 254),
             ["ISBLANK"] = (1, 1), ["ISNUMBER"] = (1, 1), ["ISTEXT"] = (1, 1), ["ISERROR"] = (1, 1), ["IFNA"] = (2, 2),
             ["TODAY"] = (0, 0), ["NOW"] = (0, 0)
         };

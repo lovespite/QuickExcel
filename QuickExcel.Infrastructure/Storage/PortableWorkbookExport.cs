@@ -48,7 +48,7 @@ public sealed partial class TypedWorkbookStorage : IPortableWorkbookStorage
             }
             // Expand names so no remaining definition can hide a UDF. Stale standard caches are omitted;
             // Excel will recalculate retained formulas via fullCalcOnLoad.
-            var formula = "=" + FormulaSyntax.Print(index.Nodes[address].Expression);
+            var formula = index.Nodes[address].PortableFormula!;
             var cache = cell.Calculation is { } c && c.InputRevision == snapshot.Revision
                 && c.State is CalculationState.Fresh or CalculationState.Error ? c : null;
             return new CellSnapshot(CellContent.FromFormula(formula, cell.Content.StyleId), cache);
@@ -58,7 +58,7 @@ public sealed partial class TypedWorkbookStorage : IPortableWorkbookStorage
         AtomicWrite(path, bytes, temp =>
         {
             var read = TypedWorkbookXml.Read(ReadFile(temp, new(CancellationToken.None)), new(CancellationToken.None));
-            if (!ContentEquals(exported, read.Snapshot)) throw new InvalidDataException("可移植公式导出后校验未通过。");
+            if (!ContentEquals(exported, read.Snapshot, allowRowHeightRounding: true)) throw new InvalidDataException("可移植公式导出后校验未通过。");
         }, CancellationToken.None);
     }
 

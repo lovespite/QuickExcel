@@ -68,7 +68,7 @@ try{
             $book=$excel.Workbooks.Open($bootstrap,0,$false)
         }
         foreach($item in $spec.Inputs){Put $book $item}
-        foreach($case in $spec.Cases){Put $book @{Sheet=$case.Sheet;Address=$case.Address;Kind=$(if($case.Legacy){'FormulaLegacy'}else{'Formula'});Value=$case.Formula}}
+        foreach($case in $spec.Cases){if($case.Formula){Put $book @{Sheet=$case.Sheet;Address=$case.Address;Kind=$(if($case.Legacy){'FormulaLegacy'}else{'Formula'});Value=$case.Formula}}}
     }
     $excel.CalculateFullRebuild();$initial=Capture $book
     $initialPath=Join-Path $target 'initial.xlsx';$book.SaveAs($initialPath,51);$book.Close($false);Release-Com $book;$book=$null

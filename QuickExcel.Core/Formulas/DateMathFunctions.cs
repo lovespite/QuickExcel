@@ -24,7 +24,7 @@ public static class DateMathFunctions
         ReferenceNode reference => ConditionalRanges.Shape(reference) != (1, 1),
         UnaryNode unary => ArrayResult(unary.Operand),
         BinaryNode binary => ArrayResult(binary.Left) || ArrayResult(binary.Right),
-        FunctionNode { Name: "IF" } function => function.Arguments.Skip(1).Any(ArrayResult),
+        FunctionNode { Name: "IF" } function => function.Arguments.Any(ArrayResult),
         FunctionNode { Name: "IFERROR" or "IFNA" } function => function.Arguments.Any(ArrayResult),
         _ => false
     };

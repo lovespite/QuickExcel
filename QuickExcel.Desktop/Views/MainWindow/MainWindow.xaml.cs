@@ -653,25 +653,32 @@ public partial class MainWindow : Window
         return true;
     }
 
-    private async void ExportPortable_Click(object sender, RoutedEventArgs e)
+    private Task _portableExportTask = Task.CompletedTask;
+    private Func<string, MessageBoxResult>? _smokePortableExportDecision;
+    private async void ExportPortable_Click(object sender, RoutedEventArgs e) => await (_portableExportTask = ExportPortableAsync());
+    private async Task ExportPortableAsync()
     {
         if (_busy || !await FlushEditsAsync()) return;
+        if (_document.Snapshot.FileState?.FormulaReadOnly == true)
+        { StatusText.Text = "只读公式工作簿的依赖范围未知，请使用明确的已有缓存值快照导出。"; return; }
         PortableExportReport? report = null;
         if (!await WorkAsync("准备可移植公式…", () => report = _document.InspectPortableExport())) return;
         if (report!.MissingResults > 0)
         {
-            MessageBox.Show(this, $"{report.MissingResults} 个脚本相关公式缺少结果，请先完成计算。", "不能导出", MessageBoxButton.OK, MessageBoxImage.Warning);
+            StatusText.Text = $"{report.MissingResults} 个需要冻结的公式缺少结果，请先完成计算。";
             return;
         }
         var losses = _document.Snapshot.FileState?.CompatibilityIssues.ToArray() ?? [];
         var message = $"保留 {report.RetainedFormulas} 个独立标准公式；将 {report.FrozenFormulas} 个脚本、循环或不支持公式及其传递依赖冻结为值。名称会展开为引用。";
         if (report.StaleResults > 0) message += $"\n其中 {report.StaleResults} 个结果可能过期，继续将使用已有缓存。";
         if (losses.Length > 0) message += "\n副本将移除以下未支持内容：\n" + string.Join("\n", losses.Take(15));
-        if (MessageBox.Show(this, message + "\n\n是否导出？", "可移植公式", MessageBoxButton.YesNo,
-            report.StaleResults > 0 || losses.Length > 0 ? MessageBoxImage.Warning : MessageBoxImage.Information) != MessageBoxResult.Yes) return;
+        var decision = _smokeMode && _smokePortableExportDecision is not null ? _smokePortableExportDecision(message) :
+            MessageBox.Show(this, message + "\n\n是否导出？", "可移植公式", MessageBoxButton.YesNo,
+                report.StaleResults > 0 || losses.Length > 0 ? MessageBoxImage.Warning : MessageBoxImage.Information);
+        if (decision != MessageBoxResult.Yes) return;
         var dialog = new SaveFileDialog { Filter = "Excel 工作簿 (*.xlsx)|*.xlsx", DefaultExt = ".xlsx", AddExtension = true,
             FileName = Path.GetFileNameWithoutExtension(_displayName) + "-公式.xlsx", Title = "导出可移植公式" };
-        if (dialog.ShowDialog(this) != true) return;
+        if ((_smokeMode && _smokeSaveDialog is not null ? _smokeSaveDialog(dialog) : dialog.ShowDialog(this)) != true) return;
         if (await WorkAsync("导出可移植公式…", () => _document.ExportPortableXlsx(dialog.FileName, report.StaleResults > 0, losses.Length > 0)))
             AppendLog($"已导出 .xlsx：保留 {report.RetainedFormulas} 个公式，冻结 {report.FrozenFormulas} 个结果。");
     }

@@ -130,7 +130,7 @@ public sealed class M3CalculationTests
         var result = Calculate(Book(sheet));
         Assert.Equal(CellValue.FromText("#DIV/0!"), C(result, sheet, 0, 1).Value);
         Assert.Equal(CellValue.FromText(""), C(result, sheet, 1, 1).Value);
-        Assert.Equal(CellValue.Blank, C(result, sheet, 2, 1).Value);
+        Assert.Equal(CellValue.FromNumber(0), C(result, sheet, 2, 1).Value);
         Assert.Equal(CellValue.FromError(CellErrorCode.DivisionByZero), C(result, sheet, 3, 1).Value);
         Assert.Equal(CellValue.FromText("a\"b"), C(result, sheet, 4, 1).Value);
         Assert.Equal(CellValue.FromNumber(8), C(result, sheet, 5, 1).Value);
