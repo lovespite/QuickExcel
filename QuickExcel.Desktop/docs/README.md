@@ -1,5 +1,11 @@
 # QuickExcel 架构与实施文档
 
+**当前进度入口：[实施计划](05-implementation-plan.md)（2026-10-30 同步）。** M1–M3 受支持子集已交付；当前为 M5 桌面交互收敛，M4 严格策略/完整部署与 M6 恢复/性能/发布仍未完成。横向拖动导致整桌面停顿已由用户确认解决，关闭记录见 [24 号文档](24-main-grid-migration.md)。
+
+**当前重点工程：[XLSX 兼容性与 Excel 功能对齐计划](26-excel-compatibility-roadmap.md)。** 2026-10-30 按用户要求提升为当前优先工作，提供 E0–E5 阶段、已交付基线和待完成清单，逐项标记重要性、常用程度、复杂度及验收条件。
+
+阅读时先看实施计划的当前状态和下一轮切片，再查专题契约与证据。日期早于当前状态的“下一步”“默认网格”“尚未交付”属于当时记录，不覆盖新状态。源码版本仍为 `0.6.0-preview.3`；旧发布目录不会随构建自动更新，身份以包内 `BUILD-METADATA.json` 为准。
+
 新增 [XLSX 渲染修复](25-xlsx-rendering.md)：行高单位、字体行框裁剪、主题色、宽列与滚动定位，以及兼容性报告和附件复现证据。
 
 新增 [主网格迁移记录](24-main-grid-migration.md)：主界面已切换到 `QuickExcel.Grid.Wpf`，旧 DataGrid 与试验窗口已移除。编辑、尺寸、冻结、筛选、样式和图片迁移有专项证据；真实 IME、跨屏 DPI、辅助功能及完整性能门禁仍待验收。[23 号记录](23-fast-grid-implementation.md) 保留试验阶段和历史性能对照。
@@ -8,9 +14,9 @@
 
 新增 [工作簿脚本数字签名与证书信任](20-script-signatures.md)：签名、自签证书、自动授权和兼容性；此策略更新历史文档中“打开一律不执行脚本”的描述。
 
-最新 `0.6.0-preview.3` 请先读 [M5 正式界面与桌面流程](19-m5-product-workspace.md)：启动、导航、脚本专页、查找替换、基础图片/合并，以及验证和未关闭门禁。下述原型切片记录保留为历史证据。
+`0.6.0-preview.3` 的正式界面基础见 [M5 正式界面与桌面流程](19-m5-product-workspace.md)：启动、导航、脚本专页、查找替换、基础图片/合并，以及当时验证范围。后续主网格迁移和修复以 24/25 号记录为准。
 
-设计基线：2026-10-22；最新阶段：2026-10-28 的 **M5 结构与工作区切片**。先读 [UI-004 / UI-005 实现与验收](18-m5-structure-and-workspace.md)、[UI-002 / UI-003](17-m5-grid-and-input.md)、[M4 回收与部署](16-m4-recovery-and-deployment.md)及[隔离 ADR](15-m4-os-isolation-adr.md)。M4 未关闭项、M5 后续交互和 M6 Beta 门禁继续按计划推进。
+设计基线：2026-10-22；17/18 号文档保留旧网格的 M5 首切片与结构工作区证据。新主网格真实 IME、跨屏 DPI、辅助功能仍待验收；自动恢复目前只有手动打开副本入口。M4 部署和隔离边界继续见 [16](16-m4-recovery-and-deployment.md) 与 [15](15-m4-os-isolation-adr.md)。
 
 当前使用 XLSQ v2、类型化跨表计算及独立 AppContainer worker。Core 保持纯 .NET；ExcelIO 与脚本适配位于 Infrastructure。下文明确标记 0.2 的内容保留为历史。
 
@@ -18,9 +24,11 @@
 
 | 文档 | 解决的问题 |
 | --- | --- |
+| [XLSX / Excel 对齐专项](26-excel-compatibility-roadmap.md) | 当前重点工程的阶段、优先级、支持维度及完成清单 |
+| [实施计划](05-implementation-plan.md) | 当前 M1–M6 状态、已关闭缺陷、后续顺序与退出条件；进度统一入口 |
 | [主网格迁移](24-main-grid-migration.md) | 当前主界面接线、旧控件移除、功能回归、性能样本及剩余验收边界 |
 | [FastWpfGrid 实施记录](23-fast-grid-implementation.md) | 使用入口、筛选/排序支持矩阵、专项测试、性能证据和候选迁移缺口 |
-| [FastWpfGrid 增强与筛选排序方案](22-fastwpfgrid-and-data-operations.md) | 目标网格架构、Excel 式列头筛选/高级排序、迁移阶段与验收条件；实施中 |
+| [FastWpfGrid 增强与筛选排序方案](22-fastwpfgrid-and-data-operations.md) | 当前实现状态、目标支持范围、迁移阶段与剩余验收；主网格已切换 |
 | [M5 结构与工作区](18-m5-structure-and-workspace.md) | 结构、排序引用、筛选/冻结、基础样式、最近文件与外部冲突 |
 | [M5 网格与输入](17-m5-grid-and-input.md) | 网格适配、虚拟化测量、键盘/选区/剪贴板、IME 验收边界 |
 | [M4 回收与部署](16-m4-recovery-and-deployment.md) | 宿主崩溃回收、部署证据与未关闭项 |
@@ -29,9 +37,8 @@
 | [M4 独立脚本进程](11-m4-worker.md) | worker 首切片的取消、故障和资源边界；保留历史发布证据 |
 | [产品范围](01-product-and-scope.md) | 长期 Beta 的产品边界和暂缓功能 |
 | [系统架构](02-system-architecture.md) | 当前模块依赖及后续数据/计算设计 |
-| [文件格式与兼容性](03-file-format-and-compatibility.md) | 当前 XLSQ v1、目标 v2、类型与保存协议 |
-| [脚本与运行时](04-scripting-and-runtime.md) | 当前 QuickJS 适配、目标 worker/动作/权限边界 |
-| [实施计划](05-implementation-plan.md) | M1 进展、M2–M6 依赖与退出条件 |
+| [文件格式与兼容性](03-file-format-and-compatibility.md) | XLSQ v2、v1 历史设计、类型与保存协议；当前支持子集另见 09/25 |
+| [脚本与运行时](04-scripting-and-runtime.md) | worker/模块/actions 的当前入口与历史设计、严格策略及权限边界 |
 | [质量性能与交付](06-quality-performance-and-delivery.md) | 已有证据、候选包验收和未来质量门禁 |
 | [架构决策](07-architecture-decisions.md) | 已选方向、取舍及待验证事项 |
 | [基线与实施记录](08-baseline-and-progress.md) | 初始 102 例基线和 0.2 新验证分别记载 |
@@ -49,7 +56,7 @@
 - **待验证决策**：有明确实验或里程碑，未完成取证前不视为通过。
 - **后续范围**：本次 0.2 交付不包含的功能，不因已有基础类或局部测试而关闭整个任务。
 
-DOM-001/002、APP-001/002/003、CMD-001/002、UI-001 的 M1 实现与交付验收已完成。Release solution 构建 0 警告、0 错误，Core 221 例通过，最终发布包 native/WPF smoke 和 ZIP 解压后 WPF 复验均通过；包与 SHA-256 见实施记录第 6 节。0.3 在此基线上推进 M2；性能数字仍是目标。
+历史 M1：DOM-001/002、APP-001/002/003、CMD-001/002、UI-001 的实现与交付验收完成。当时 Release 构建、Core 221 例、native/WPF smoke 和 ZIP 解压后复验通过，见实施记录第 6 节。这些是 0.2 的证据，不代表本次文档同步重新测试或当前候选包已通过全部验收。
 
 ## 0.2 历史实现
 
@@ -69,4 +76,4 @@ DOM-001/002、APP-001/002/003、CMD-001/002、UI-001 的 M1 实现与交付验�
 
 ## 文档维护
 
-任务状态、契约和验证证据一起更新。保留初始 102 例与原型 smoke 的历史结论，新增记录不冒充历史测试。修改格式、授权或编译边界时同步 ADR 与专题。发布包元数据记录 Git HEAD 和工作树状态；本次实现尚未提交，不能只用旧 HEAD 表示实际构建源码。
+任务状态在实施计划统一更新，契约与验证证据留在对应专题；入口文档同步摘要和链接，历史记录标明当时范围。用户确认关闭的缺陷须注明确认日期和来源，不冒充新增自动测试或扩展其他门禁。修改格式、授权或编译边界时同步 ADR 与专题。发布包元数据记录实际 Git HEAD 和工作树状态，文档更新不能重写旧包身份或将其视为新包。

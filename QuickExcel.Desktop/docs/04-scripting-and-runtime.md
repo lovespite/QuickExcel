@@ -1,12 +1,14 @@
 # 04 · 脚本与运行时
 
+> 2026-10-30 状态同步：M4 worker、模块、actions、有界合批、AppContainer 和宿主崩溃资源回收已接入；严格策略、完整部署与最终 OS 门禁仍待完成。桌面已增加 [脚本签名与证书信任](20-script-signatures.md)，受信任有效签名可触发启用，恢复副本不自动执行。当前进度见 [实施计划](05-implementation-plan.md)，回收/部署见 [16](16-m4-recovery-and-deployment.md)。
+
 > 2026-10-28 更新：独立 worker、模块、actions 事务、有界 UDF 合批和实际 worker 的无能力 AppContainer 已接入，IPC 当前协议 4、消息上限 16 MiB。当前事实以 [合批记录](14-m4-batching.md)、[隔离 ADR](15-m4-os-isolation-adr.md)及 [actions 记录](13-m4-actions.md)为准；回环/DNS 已取到本机拒绝证据，严格策略、部署矩阵和 M6 OS 门禁仍待完成。下面 M1/M3 现状及 M4 目标保留用于追踪，实际 API 与限制见最新记录。
 
 本文定义 QuickExcel 的 JavaScript 执行边界、值协议、工作进程和操作脚本提交机制。
-“当前”指 **0.2 试用版 M1** 的实际代码；“目标”及所有标注为“拟议”的 API 都需要后续实现。当前没有 ScriptWorker、IPC、动作脚本或 OS 隔离，不能视为 M4/M6 已交付。
+下文第 1 节的“当前”仅指 **0.2 试用版 M1 的历史实现**；后续章节保留当时的目标与拟议 API，不作为当前缺口清单。ScriptWorker、IPC、模块/actions 和 AppContainer 已按 11–16 号专题接入；具体协议/容量/支持范围以专题为准，仍不能据此宣布完整 M4/M6 通过。
 整体职责见 [系统架构](02-system-architecture.md)，文件持久化见 [文件格式与兼容性](03-file-format-and-compatibility.md)。
 
-## 1. 当前实现与目标边界
+## 1. 0.2 历史实现与当时目标边界
 
 当前端口定义在纯 Core 的 [WorkbookPorts.cs](../../QuickExcel.Core/WorkbookPorts.cs)。具体实现位于 Infrastructure 的 [QuickJsRuntimeFactory](../../QuickExcel.Infrastructure/Scripting/QuickJsRuntimeFactory.cs) 和 [LegacyWorkbookCalculator](../../QuickExcel.Infrastructure/Calculation/LegacyWorkbookCalculator.cs)，分别使用 `QuickExcel.Runtime`、`QuickExcel.Calculation` 命名空间；它们封装 [QuickJsSession](../../QuickExcel.Scripting/QuickJsSession.cs) 与 [原生桥接](../../QuickExcel.Scripting/native/quickexcel-js.c)。Core 不引用 ExcelIO、QuickExcel.Scripting 或 native DLL。
 

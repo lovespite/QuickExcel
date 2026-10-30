@@ -1,5 +1,7 @@
 # M5：结构、数据视图与文件工作区（UI-004 / UI-005）
 
+2026-10-30 状态说明：本页保留 UI-004/005 首轮契约和验收；旧 DataGrid、顶部冻结参照区及“筛选下拒绝排序”等已由 [23](23-fast-grid-implementation.md)/[24](24-main-grid-migration.md) 更新。当前为同一 FastGrid 冻结行列、显式数据区域多键排序；筛选/冻结仍为会话状态。文件持久化扩展按 [XLSX / Excel 对齐计划](26-excel-compatibility-roadmap.md) 推进，既有验证不冒充新增能力。
+
 2026-10-28，源码基线 `c6aa615` 加当前工作区修改，候选版本 `0.6.0-preview.2`。在 UI-002/UI-003 的未提交成果上继续实现，没有修改同级 ExcelIO 源码。本记录补充 [网格与输入](17-m5-grid-and-input.md)，不关闭 M5 整体、M4 未完成项或 M6 Beta 门禁。
 
 ## 交付范围

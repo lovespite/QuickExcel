@@ -1,14 +1,36 @@
 # QuickExcel 系统架构
 
+## 当前实现（2026-10-30）
+
+当前源码版本为 `0.6.0-preview.3`，主线为 M5 桌面交互收敛。里程碑与剩余项统一见 [实施计划](05-implementation-plan.md)，以下先列实际接线，随后保留早期架构演进记录。
+
+当前优先扩展 [XLSX / Excel 对齐工程](26-excel-compatibility-roadmap.md)，新增文件元数据、公式和编辑能力继续遵循下表边界；阶段计划不代表已有实现。
+
+| 模块 / 入口 | 当前职责 |
+| --- | --- |
+| `QuickExcel.Core` / `DocumentSession` | 纯 .NET 类型化稀疏模型、不可变快照、命令事务、历史、修订和计算代次门禁；不引用 ExcelIO/WPF/native |
+| `QuickExcel.Infrastructure` / `TypedWorkbookStorage` | XLSX/XLSQ v2、v1 迁移、兼容报告、原包保留、保存校验与版本指纹；Legacy 适配只作历史回归 |
+| `WorkbookCalculator` / `TypedEvaluator` | 跨表、名称、依赖和标准公式增量求值；JS 继续每轮重建上下文并保守完整重算 |
+| `ScriptWorkerRuntimeFactory` / `ScriptWorkerActionExecutor` | 公式与 actions 的强制 AppContainer worker 客户端、快照/patch 校验、取消与生命周期；无进程内或同权限回退 |
+| `QuickExcel.ScriptContracts` / `QuickExcel.ScriptWorker` / `QuickExcel.Scripting` | BCL-only IPC 契约、独立执行程序、托管 QuickJS 桥与固定来源的原生引擎；协议 4、16 MiB 帧上限 |
+| `QuickExcel.Grid.Wpf` / `FastGridSurface` | 主网格绘制、范围选区、命中与几何、冻结/尺寸视图；旧 DataGrid 与试验窗口已移除，不直接写文档 |
+| Desktop / `EditorController` / `DesktopComposition` | Ribbon、公式栏/原生 TextBox、脚本专页、文件与信任流程；组合根注入 typed storage、calculator 和 worker，全部文档写入经会话 |
+
+脚本签名与受信任证书可在桌面验证后触发启用；存储读取不执行脚本，恢复副本不自动授权，见 [签名策略](20-script-signatures.md)。M4 的 profile/payload 崩溃回收已经实现，它与尚未实现的工作簿自动恢复后端是两项不同功能。当前恢复 UI 仅手动打开副本。
+
+主网格行为与专项证据见 [24](24-main-grid-migration.md)，XLSX 呈现见 [25](25-xlsx-rendering.md)。横向拖动整桌面停顿已于 2026-10-30 经用户确认解决；真实 IME/DPI/辅助功能、M4 严格策略/部署和 M6 最终门禁仍按计划跟踪。
+
+## 架构演进背景（历史）
+
 M5 UI-004/UI-005 的结构/排序/样式/尺寸命令在 Core，由 EditorController 提交。筛选/冻结属于按 SheetId 隔离的临时视图，最近文件属于用户配置。桌面保存使用 IVersionedWorkbookStorage 的指纹检查；Core 只传递令牌，Infrastructure 读取并在替换前核对文件。具体边界见 [结构与工作区](18-m5-structure-and-workspace.md)。
 
 > 2026-10-28 M5 更新：桌面新增 IGridSurface / WpfGridSurface，按需行对象、可见行刷新和独立输入规则；写入继续经过 EditorController / DocumentSession。UI-002/003 实现与验收以 [M5 记录](17-m5-grid-and-input.md) 为准。下方旧阶段描述保留为历史。
 
 > 2026-10-27 更新：当前 M4 首切片已增加 ScriptContracts、ScriptWorker 和桌面客户端。每轮一个专用进程，取消与代次失效结合；模块/动作尚未接入。见 [M4 记录](11-m4-worker.md) 和 ADR-019，以下旧阶段架构保留为历史。
 
-当前为 **0.3 文件预览**：M1 文档会话与 M2 类型化文件路径已接入。WPF 组合根使用 TypedWorkbookStorage，核心依然不引用 ExcelIO；XLSQ v2 的 workbook.xlsx 是值/公式/缓存/样式的唯一权威。LegacyWorkbookStorage 保留为 v1 回归适配。下文注明 0.2 的段落为历史，M4 worker/动作及完整 Beta 仍未交付。实现范围见 [M2 记录](09-m2-files-and-types.md)。
+**0.3 文件预览阶段**已接入 M1 文档会话与 M2 类型化文件路径。WPF 组合根使用 TypedWorkbookStorage，核心不引用 ExcelIO；XLSQ v2 的 workbook.xlsx 是值/公式/缓存/样式的唯一权威。下文的 0.2/0.3 现状与后续目标用于保留演进依据，不表示当前仍未接入 M4 worker/动作；实际接线以上方当前实现为准。
 
-## 当前实现与演进起点
+## 0.2/0.3 历史实现与演进起点
 
 | 当前代码 | 当前职责与限制 | 演进方式 |
 | --- | --- | --- |
