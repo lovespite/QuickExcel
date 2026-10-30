@@ -85,6 +85,7 @@ public partial class MainWindow
             await RunCellTextSmokeAsync(folder, Check);
             await RunCompatibilityClosureSmokeAsync(folder, Check);
             await RunClipboardSmokeAsync(folder, Check);
+            await RunFillSmokeAsync(folder, Check);
 
             if (source is not null)
             {

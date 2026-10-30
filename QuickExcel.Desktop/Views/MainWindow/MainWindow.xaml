@@ -377,6 +377,18 @@
               <GroupBox Header="编辑"
                         Style="{StaticResource RibbonGroup}">
                 <StackPanel>
+                  <Button Content="填充 / 清除 ▾" local:Ribbon.Icon="ClipboardPaste" Style="{StaticResource RibbonButton}" Click="RibbonMenu_Click">
+                    <Button.ContextMenu>
+                      <ContextMenu>
+                        <MenuItem Header="向下填充 · Ctrl+D" Tag="down" Click="Fill_Click"/>
+                        <MenuItem Header="向右填充 · Ctrl+R" Tag="right" Click="Fill_Click"/>
+                        <MenuItem Header="数字 / 日期序列…" Tag="series" Click="Fill_Click"/>
+                        <Separator/>
+                        <MenuItem Header="清除内容 · Delete" Click="RibbonClear_Click"/>
+                        <MenuItem Header="清除格式（保留内容）" Tag="clear-formats" Click="Fill_Click"/>
+                      </ContextMenu>
+                    </Button.ContextMenu>
+                  </Button>
                   <Button Content="查找替换"
                           local:Ribbon.Icon="Search"
                           Style="{StaticResource RibbonButton}"

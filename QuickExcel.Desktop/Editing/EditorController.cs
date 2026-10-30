@@ -30,7 +30,7 @@ internal sealed class EditorController(WorkbookDocument document)
     }
 
     public WorksheetSnapshot AddSheet(string name) => document.AddSheet(name);
-    public CommandResult Execute(DocumentCommand command) => document.Session.Execute(command);
+    public CommandResult Execute(DocumentCommand command, long? expectedRevision = null) => document.Session.Execute(command, expectedRevision);
     public void UpdateScriptSource(string source) => document.ScriptSource = source;
     public CommandResult Undo() => document.Session.UndoWithResult();
     public CommandResult Redo() => document.Session.RedoWithResult();

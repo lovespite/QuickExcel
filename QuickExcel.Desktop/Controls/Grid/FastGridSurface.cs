@@ -63,8 +63,11 @@ internal sealed partial class FastGridSurface : IGridSurface
         Artwork = new(this);
         Control.SetContentDecoration(Artwork);
         Element.Children.Add(Control); Element.Children.Add(_overlay); _overlay.Children.Add(Editor);
+        InstallFillHandle();
         Control.SelectedCellsChanged += (_, _) =>
         {
+            _fillSelectionDirty = true;
+            if (Control.IsSelectionDragging) FillHandle.Visibility = Visibility.Hidden;
             if (_selecting || Control.CurrentModelCell is not { IsCell: true } cell) return;
             _current = MergeOwner(cell.Row!.Value, cell.Column!.Value);
             if (!Keyboard.Modifiers.HasFlag(ModifierKeys.Shift)) _anchor = _current;
@@ -139,6 +142,7 @@ internal sealed partial class FastGridSurface : IGridSurface
 
     public void Bind(WorkbookSnapshot snapshot, int sheetIndex, int rows, int columns)
     {
+        CancelFillGesture();
         _editing = false; IsComposing = false; EditingChanged?.Invoke();
         // Dimension notifications can lay out the editor before the new selection is installed.
         _anchor = _current = new(0, 0);
@@ -302,10 +306,16 @@ internal sealed partial class FastGridSurface : IGridSurface
     private void PositionOverlay()
     {
         if (_snapshot is null) return;
+        PositionFillHandle();
         Rect? VisibleClip(int row, int column)
         {
             var fragments = Control.GetModelRangeFragments(new(row, column, row, column));
-            return fragments.Count == 0 ? null : Rect.Intersect(fragments[0].Bounds, fragments[0].Clip);
+            foreach (var fragment in fragments)
+            {
+                var clipped = Rect.Intersect(fragment.Bounds, fragment.Clip);
+                if (!clipped.IsEmpty && clipped.Width > 0 && clipped.Height > 0) return clipped;
+            }
+            return null;
         }
         static void ClipToCell(FrameworkElement element, Rect bounds, Rect clip)
         {
@@ -314,8 +324,9 @@ internal sealed partial class FastGridSurface : IGridSurface
             local.Offset(-bounds.Left, -bounds.Top);
             element.Clip = new RectangleGeometry(local);
         }
-        var editorFragments = Control.GetModelRangeFragments(CurrentRange);
-        if (!Control.IsSelectionDragging && editorFragments.Count > 0 && editorFragments[0].Bounds is var rect && rect.Width > 0 && rect.Height > 0)
+        var editorFragments = Control.GetModelRangeFragments(CurrentRange).Where(f => f.Bounds.IntersectsWith(f.Clip) &&
+            Rect.Intersect(f.Bounds, f.Clip) is { Width: > 0, Height: > 0 }).ToArray();
+        if (!Control.IsSelectionDragging && editorFragments.Length > 0 && editorFragments[0].Bounds is var rect && rect.Width > 0 && rect.Height > 0)
         {
             Editor.Visibility = Visibility.Visible; Editor.Width = rect.Width; Editor.Height = rect.Height;
             Canvas.SetLeft(Editor, rect.Left); Canvas.SetTop(Editor, rect.Top);

@@ -119,7 +119,7 @@ public partial class MainWindow
         var navigation = e.Key is Key.Enter or Key.Tab or Key.Left or Key.Right or Key.Up or Key.Down or Key.Home or Key.End;
         var handled = editing
             ? !ctrl && e.Key is Key.Enter or Key.Tab or Key.Escape
-            : navigation || e.Key is Key.F2 or Key.Delete or Key.Escape || ctrl && e.Key is Key.C or Key.X or Key.V or Key.A;
+            : navigation || e.Key is Key.F2 or Key.Delete or Key.Escape || ctrl && e.Key is Key.C or Key.X or Key.V or Key.A or Key.D or Key.R;
         if (handled)
         {
             e.Handled = true;
@@ -134,6 +134,7 @@ public partial class MainWindow
         var ctrl = modifiers.HasFlag(ModifierKeys.Control);
         if (key == Key.Escape)
         {
+            _grid.CancelFillGesture();
             _workbookClipboard = null;
             GridSurface.Cancel();
             _editState.EndGrid();
@@ -143,6 +144,7 @@ public partial class MainWindow
         }
         if (ctrl && key == Key.C) { CopySelection(); return; }
         if (ctrl && key == Key.X) { CopySelection(cut: true); return; }
+        if (ctrl && key is Key.D or Key.R) { await FillSelectionAsync(key == Key.R); return; }
         if (ctrl && key == Key.V)
         {
             await PasteClipboardAsync(modifiers.HasFlag(ModifierKeys.Shift) ? "formulas" : "all");

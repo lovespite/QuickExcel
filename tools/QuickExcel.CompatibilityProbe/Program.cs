@@ -4,6 +4,8 @@ using QuickExcel.CompatibilityProbe;
 
 try
 {
+    if (args is ["fill", var fillOracle, var fillDirectory]) return FillProbe.Run(fillOracle, fillDirectory);
+    if (args is ["verify-fill", var fillExpected, var fillActual, var fillModel, var fillVerdict]) return FillProbe.Verify(fillExpected, fillActual, fillModel, fillVerdict);
     if (args is ["clipboard", var clipboardOracle, var clipboardDirectory]) return ClipboardProbe.Run(clipboardOracle, clipboardDirectory);
     if (args is ["verify-clipboard", var clipboardExpected, var clipboardActual, var clipboardModel, var clipboardVerdict]) return ClipboardProbe.Verify(clipboardExpected, clipboardActual, clipboardModel, clipboardVerdict);
     if (args is ["business-baseline", var businessReference, var businessDirectory]) return BusinessBaselineProbe.Run(businessReference, businessDirectory);

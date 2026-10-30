@@ -1,6 +1,6 @@
 # QuickExcel 0.6 交互预览版
 
-XC-0201 已接入工作簿内复制/剪切及选择性粘贴，Ctrl+C/X/V 保留类型、格式并调整公式引用，可整批撤销；开始菜单提供只贴值/公式/格式和转置。真实 Excel 对照与限制见 [内部剪贴板](docs/40-internal-clipboard.md)。下一项为填充与序列。
+XC-0201 已接入工作簿内复制/剪切及选择性粘贴，Ctrl+C/X/V 保留类型、格式并调整公式引用，可整批撤销；开始菜单提供只贴值/公式/格式和转置。真实 Excel 对照与限制见 [内部剪贴板](docs/40-internal-clipboard.md)。XC-0202 已补齐 Ctrl+D/R、填充柄复制、数字/日期序列和清除格式，真实 Excel 对照及限制见 [填充记录](docs/41-fill-and-series.md)。下一项为录入与公式编辑。
 
 XC-0107 已完成常见富文本、超链接和传统批注的读显写；右键显式转换富文本后可普通编辑，支持撤销。真实 Excel 对照及限制见 [内容记录](docs/36-xlsx-rich-text-links-and-notes.md)。[E0 证据及诊断收尾](docs/39-xlsx-diagnostic-closure.md) 已完成。
 
