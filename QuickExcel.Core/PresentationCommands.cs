@@ -227,6 +227,9 @@ public sealed class DeleteSheetCommand(SheetId sheetId) : DocumentCommand
         var sheet = snapshot.GetSheet(sheetId);
         var transformed = StructureEdits.Transform(snapshot, (node, _) => node switch
         {
+            StructuredReferenceNode r when string.Equals(r.Sheet, sheet.Name, StringComparison.OrdinalIgnoreCase) ||
+                sheet.Data.Tables.Any(t => string.Equals(t.Name, r.Table, StringComparison.OrdinalIgnoreCase)) => new ValueNode(CellValue.FromError(CellErrorCode.Reference)),
+            NameNode n when sheet.Data.Tables.Any(t => t.Name.Equals(n.Name, StringComparison.OrdinalIgnoreCase)) => new ValueNode(CellValue.FromError(CellErrorCode.Reference)),
             ReferenceNode r when string.Equals(r.Sheet, sheet.Name, StringComparison.OrdinalIgnoreCase) => new ValueNode(CellValue.FromError(CellErrorCode.Reference)),
             NameNode n when string.Equals(n.Sheet, sheet.Name, StringComparison.OrdinalIgnoreCase) => new ValueNode(CellValue.FromError(CellErrorCode.Reference)),
             _ => node

@@ -344,19 +344,21 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage
         bool SameHeight(double? a, double? b) => a == b || allowRowHeightRounding && a.HasValue && b.HasValue &&
             Math.Abs(a.Value - b.Value) <= Math.Max(1, Math.Max(Math.Abs(a.Value), Math.Abs(b.Value))) * 1e-14;
         string NameKey(WorkbookSnapshot book, QuickExcel.Formulas.DefinedName name) =>
-            (name.Scope is { } scope ? book.GetSheet(scope).Name : "") + "\0" + name.Name + "\0" + name.Formula;
+            (name.Scope is { } scope ? book.GetSheet(scope).Name : "") + "\0" + name.Name + "\0" + (allowRowHeightRounding ? QuickExcel.Formulas.StructuredReferences.CanonicalFormula(name.Formula) : name.Formula);
+        bool SameContent(CellContent a, CellContent b) => a == b || allowRowHeightRounding && a.Kind == CellContentKind.Formula && b.Kind == CellContentKind.Formula &&
+            a.StyleId == b.StyleId && QuickExcel.Formulas.StructuredReferences.CanonicalFormula(a.FormulaText) == QuickExcel.Formulas.StructuredReferences.CanonicalFormula(b.FormulaText);
         if (!left.DefinedNames.Select(n => NameKey(left, n)).Order().SequenceEqual(right.DefinedNames.Select(n => NameKey(right, n)).Order())) return false;
         if (left.GetSheet(left.ActiveSheetId).Name != right.GetSheet(right.ActiveSheetId).Name || left.Window != right.Window) return false;
         if (left.TextCompatibilityVersion != right.TextCompatibilityVersion || left.DateSystem != right.DateSystem || !left.Styles.SequenceEqual(right.Styles) || left.Sheets.Length != right.Sheets.Length) return false;
         for (var i = 0; i < left.Sheets.Length; i++)
         {
             var a = left.Sheets[i]; var b = right.Sheets[i];
-            if (a.Name != b.Name || a.View != b.View || a.Visibility != b.Visibility || !a.Printing.ContentEquals(b.Printing) || !a.Annotations.ContentEquals(b.Annotations) || !a.Data.ContentEquals(b.Data) || a.ShowGridLines != b.ShowGridLines || !SameHeight(a.DefaultRowHeight, b.DefaultRowHeight) || a.TabColor != b.TabColor ||
+            if (a.Name != b.Name || a.View != b.View || a.Visibility != b.Visibility || !a.Printing.ContentEquals(b.Printing) || !a.Annotations.ContentEquals(b.Annotations) || !a.Data.ContentEquals(b.Data, allowRowHeightRounding) || a.ShowGridLines != b.ShowGridLines || !SameHeight(a.DefaultRowHeight, b.DefaultRowHeight) || a.TabColor != b.TabColor ||
                 !a.MergedCells.SequenceEqual(b.MergedCells) || a.Cells.Count != b.Cells.Count || a.Rows.Count != b.Rows.Count || a.Columns.Count != b.Columns.Count || a.Images.Length != b.Images.Length) return false;
             if (a.Rows.Any(p => !b.Rows.TryGetValue(p.Key, out var value) || value.Hidden != p.Value.Hidden || value.StyleId != p.Value.StyleId || value.ApplyStyle != p.Value.ApplyStyle ||
                     !SameHeight(value.Height, p.Value.Height)) || a.Columns.Any(p => !b.Columns.TryGetValue(p.Key, out var value) || value != p.Value)) return false;
             foreach (var (position, cell) in a.Cells)
-                if (!b.Cells.TryGetValue(position, out var value) || cell.Content != value.Content ||
+                if (!b.Cells.TryGetValue(position, out var value) || !SameContent(cell.Content, value.Content) ||
                     (cell.Content.Kind == CellContentKind.Formula && cell.Calculation?.Value != value.Calculation?.Value)) return false;
             for (var image = 0; image < a.Images.Length; image++)
             {

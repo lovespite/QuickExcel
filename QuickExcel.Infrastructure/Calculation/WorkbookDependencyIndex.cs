@@ -41,7 +41,7 @@ public sealed class WorkbookDependencyIndex
             var node = new Node(cell, order++); Nodes.Add(address, node);
             try
             {
-                node.Expression = FormulaBinding.Bind(FormulaSyntax.Parse(cell.Content.FormulaText), snapshot, sheet.Id);
+                node.Expression = FormulaBinding.Bind(FormulaSyntax.Parse(cell.Content.FormulaText), snapshot, sheet.Id, position);
                 var depthCheck = new Stack<(FormulaNode Node, int Depth)>();
                 depthCheck.Push((node.Expression, 0));
                 while (depthCheck.TryPop(out var item))

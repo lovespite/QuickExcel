@@ -85,7 +85,7 @@ public static class FormulaSyntax
                     foreach (var ch in value.Value.TextValue)
                         if (!Append(ch == '"' ? "\"\"" : ch.ToString())) return false;
                     return Append("\"");
-                case ValueNode or NameNode or ReferenceNode: return Append(Print(part));
+                case ValueNode or NameNode or ReferenceNode or StructuredReferenceNode: return Append(Print(part));
                 case UnaryNode unary:
                     return Append(unary.Operator == "%" ? "(" : unary.Operator + "(") && Write(unary.Operand, depth + 1)
                         && Append(unary.Operator == "%" ? ")%" : ")");
@@ -121,6 +121,7 @@ public static class FormulaSyntax
         },
         NameNode n => SheetPrefix(n.Sheet) + n.Name,
         ReferenceNode r => PrintReference(r),
+        StructuredReferenceNode r => StructuredReferences.Print(r),
         UnaryNode u => u.Operator == "%" ? "(" + Print(u.Operand) + ")%" : u.Operator + "(" + Print(u.Operand) + ")",
         BinaryNode b => "(" + Print(b.Left) + b.Operator + Print(b.Right) + ")",
         FunctionNode f => f.Name + "(" + string.Join(",", f.Arguments.Select(Print)) + ")",
@@ -154,6 +155,7 @@ public static class FormulaSyntax
             {
                 var ch = input[pos];
                 if (char.IsWhiteSpace(ch)) { pos++; continue; }
+                if (ch == '[') { _tokens.Add(new("table", StructuredReferences.Token(input, ref pos))); continue; }
                 if (ch is '"' or '\'')
                 {
                     var quote = ch; var text = new StringBuilder(); pos++; var closed = false;
@@ -227,6 +229,7 @@ public static class FormulaSyntax
             if (first.Kind is "+" or "-") left = new UnaryNode(first.Kind, Expression(70, depth + 1));
             else if (first.Kind == "(") { left = Expression(0, depth + 1); Expect(")"); }
             else if (first.Kind == "text") left = new ValueNode(CellValue.FromText(first.Text));
+            else if (first.Kind == "table") left = StructuredReferences.Parse(first.Text);
             else if (first.Kind == "error") { CellInput.TryFromErrorText(first.Text, out var error); left = new ValueNode(error); }
             else if (first.Kind == "number" && Current.Kind != "!")
                 left = new ValueNode(CellValue.FromNumber(double.Parse(first.Text, NumberStyles.Float, CultureInfo.InvariantCulture)));
@@ -252,6 +255,7 @@ public static class FormulaSyntax
             if (sheet is not null && token.Kind == "error" && token.Text.Equals("#REF!", StringComparison.OrdinalIgnoreCase))
                 return new ValueNode(CellValue.FromError(CellErrorCode.Reference));
             if (token.Kind != "word") throw new FormatException("工作表引用缺少地址。");
+            if (Current.Kind == "table") return StructuredReferences.Parse(Take().Text, token.Text, sheet);
             if (Current.Kind == "(" && sheet is null)
             {
                 Take(); var args = new List<FormulaNode>(); var functionName = ExcelFormulaNames.CanonicalName(token.Text);

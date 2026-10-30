@@ -38,7 +38,7 @@ internal static class XlsxTables
             if (root.Name != Main + "table") throw new InvalidDataException("无效表部件。");
             try
             {
-                Shape(root, "autoFilter sortState tableColumns tableStyleInfo", "id name displayName ref headerRowCount totalsRowCount totalsRowShown");
+                Shape(root, "autoFilter sortState tableColumns tableStyleInfo", "id name displayName ref headerRowCount totalsRowCount totalsRowShown insertRow");
                 if (root.Elements().GroupBy(e => e.Name).Any(g => g.Count() > 1)) throw new InvalidDataException("表对象子元素重复。");
                 var name = Decode(Attr(root, "displayName"));
                 if (root.Attribute("name") is { } storedName && Decode(storedName.Value) != name) throw new NotSupportedException("表 name 与 displayName 不同，尚不支持受控编辑。");
@@ -56,7 +56,7 @@ internal static class XlsxTables
                     string? Formula(string field)
                     {
                         if (column.Element(Main + field) is not { } value) return null;
-                        Shape(value, "", ""); if (value.Value.Length == 0) throw new InvalidDataException("表公式为空。"); return "=" + Decode(value.Value).TrimStart('=');
+                        Shape(value, "", ""); if (value.Value.Length == 0) throw new InvalidDataException("表公式为空。"); return XlsxStructuredFormula.Read("=" + Decode(value.Value).TrimStart('='));
                     }
                     list.Add(new(Int(Attr(column, "id"), int.MaxValue), Decode(Attr(column, "name")), (string?)column.Attribute("totalsRowFunction"),
                         column.Attribute("totalsRowLabel") is { } label ? Decode(label.Value) : null, Formula("calculatedColumnFormula"), Formula("totalsRowFormula"))
@@ -75,9 +75,12 @@ internal static class XlsxTables
                         Bool((string?)info.Attribute("showRowStripes")), Bool((string?)info.Attribute("showColumnStripes"))) { Elements = XlsxTableStyles.Resolve(package, workbook, styleName) };
                 }
                 var data = XlsxFiltering.Read(package, workbook, path, root);
-                var table = new WorksheetTable(Int(Attr(root, "id"), int.MaxValue), name, range, list, header, total, shown, style, data.Filter, data.Sort);
+                var table = new WorksheetTable(Int(Attr(root, "id"), int.MaxValue), name, range, list, header, total, shown, style, data.Filter, data.Sort, Bool((string?)root.Attribute("insertRow")));
                 foreach (var column in list.Where(c => c.CalculatedFormula is not null || c.TotalsFormula is not null))
-                    formulas.Add(new(PreservedFormulaKind.StructuredReference, path, sheetName, range.ToString(), range.ToString(), column.CalculatedFormula ?? column.TotalsFormula!));
+                    foreach (var expression in new[] { column.CalculatedFormula, column.TotalsFormula }.OfType<string>())
+                        try { _ = QuickExcel.Formulas.FormulaSyntax.Parse(expression); }
+                        catch (Exception ex) when (ex is FormatException or OverflowException)
+                        { formulas.Add(new(PreservedFormulaKind.StructuredReference, path, sheetName, range.ToString(), range.ToString(), expression)); }
                 tables.Add(table);
             }
             catch (NotSupportedException ex) { package.Loss(ex.Message + " 表对象只随原包保留。", "table", path, root); }
@@ -97,6 +100,7 @@ internal static class XlsxTables
             types.Add(new XElement(ContentTypes + "Override", new XAttribute("PartName", "/" + tablePath), new XAttribute("ContentType", ContentType)));
             var xml = new XElement(Main + "table", new XAttribute("id", table.Id), new XAttribute("name", Encode(table.Name)), new XAttribute("displayName", Encode(table.Name)), new XAttribute("ref", table.Range),
                 new XAttribute("headerRowCount", table.HeaderRow ? 1 : 0), new XAttribute("totalsRowCount", table.TotalsRow ? 1 : 0), new XAttribute("totalsRowShown", table.TotalsRowShown ? 1 : 0));
+                if (table.InsertRow) xml.Add(new XAttribute("insertRow", 1));
             var sort = XlsxFiltering.WriteSort(table.Sort, styles); xml.Add(XlsxFiltering.WriteFilter(table.Filter, sort)); if (table.Filter is null) xml.Add(sort);
             xml.Add(new XElement(Main + "tableColumns", new XAttribute("count", table.Columns.Length), table.Columns.Select(column =>
             {
@@ -105,8 +109,8 @@ internal static class XlsxTables
                 if (column.TotalsLabel is { } label) element.Add(new XAttribute("totalsRowLabel", Encode(label)));
                 foreach (var (attribute, style) in new[] { ("dataDxfId", column.DataStyle), ("headerRowDxfId", column.HeaderStyle), ("totalsRowDxfId", column.TotalsStyle) })
                     if (style is not null) element.Add(new XAttribute(attribute, XlsxTableStyles.WriteDxf(style, styles)));
-                if (!valuesOnly && column.CalculatedFormula is { } calculated) element.Add(new XElement(Main + "calculatedColumnFormula", Encode(calculated.TrimStart('='))));
-                if (!valuesOnly && column.TotalsFormula is { } formula) element.Add(new XElement(Main + "totalsRowFormula", Encode(formula.TrimStart('='))));
+                if (!valuesOnly && column.CalculatedFormula is { } calculated) element.Add(new XElement(Main + "calculatedColumnFormula", Encode(XlsxStructuredFormula.Write(calculated).TrimStart('='))));
+                if (!valuesOnly && column.TotalsFormula is { } formula) element.Add(new XElement(Main + "totalsRowFormula", Encode(XlsxStructuredFormula.Write(formula).TrimStart('='))));
                 return element;
             })));
             XlsxTableStyles.WriteCustom(table.Style, styles);

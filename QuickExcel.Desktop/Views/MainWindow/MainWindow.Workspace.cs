@@ -115,7 +115,7 @@ public partial class MainWindow
                 return true;
             }
             _sheetIndex = _document.Snapshot.Sheets.IndexOf(_document.Snapshot.GetSheet(_document.Snapshot.ActiveSheetId));
-            if (clearView && _document.Snapshot.Sheets[_sheetIndex].Data.Filter is null) CurrentView.FilterRange = null;
+            if (clearView && CurrentView.TableId is null && _document.Snapshot.Sheets[_sheetIndex].Data.Filter is null) CurrentView.FilterRange = null;
             SynchronizeSheets();
             var position = target ?? new CellPosition(_selectedRow, _selectedColumn);
             GridSurface.Select(new(Math.Clamp(position.Row, 0, _rowCount - 1), Math.Clamp(position.Column, 0, _columnCount - 1)));
@@ -131,7 +131,7 @@ public partial class MainWindow
         if (_busy || !CommitEditors()) return;
         try
         {
-            if (CurrentView.FilterRange is not null && _document.Snapshot.Sheets[_sheetIndex].Data.Filter is null)
+            if (CurrentView.FilterRange is not null && CurrentView.TableId is null && _document.Snapshot.Sheets[_sheetIndex].Data.Filter is null)
                 throw new InvalidOperationException("请先清除临时筛选，再进行结构操作。");
             var operation = ((FrameworkElement)sender).Tag.ToString()!;
             var sheet = _document.Snapshot.Sheets[_sheetIndex];

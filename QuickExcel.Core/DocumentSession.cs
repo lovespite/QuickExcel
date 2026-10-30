@@ -90,6 +90,7 @@ public sealed class DocumentSession : IDisposable
             }
             CheckRevision(expectedRevision);
             var before = _snapshot;
+            if (before.FileState?.FormulaReadOnly == true) throw new InvalidOperationException(WorkbookFileState.FormulaReadOnlyMessage);
             var draft = command.Prepare(before); // No session state is changed until every check succeeds.
             TableSafety.ValidateEdit(before, draft.Snapshot);
             cancellationToken.ThrowIfCancellationRequested();
@@ -98,7 +99,6 @@ public sealed class DocumentSession : IDisposable
                 if (action is not null) { AdvanceCalculationGeneration(); _diagnostics = diagnostics; }
                 return new(false, before.Revision);
             }
-            if (before.FileState?.FormulaReadOnly == true) throw new InvalidOperationException(WorkbookFileState.FormulaReadOnlyMessage);
             var sourceChanged = command is UpdateScriptSourceCommand or UpdateScriptModulesCommand or UpdateScriptSignatureCommand;
             var revised = draft.Snapshot.WithRevision(checked(before.Revision + 1));
             var after = draft.CalculationUnchanged ? CarryCalculationRevision(revised, before.Revision) : Invalidate(revised);

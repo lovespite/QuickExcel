@@ -30,6 +30,12 @@ public static class ExcelFormulaNames
                     break;
                 }
             }
+            else if (ch == '[')
+            {
+                var start = index;
+                try { output.Append(StructuredReferences.Token(formula, ref index)); }
+                catch (FormatException) { output.Append(formula[start..]); break; }
+            }
             else if (char.IsLetterOrDigit(ch) || ch == '_')
             {
                 var start = index++;

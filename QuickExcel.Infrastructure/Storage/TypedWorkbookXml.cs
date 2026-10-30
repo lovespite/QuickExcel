@@ -176,6 +176,7 @@ internal static class TypedWorkbookXml
                         if (expression.Length == 0) throw new InvalidDataException("公式内容缺失。");
                         if (!preserved)
                         {
+                            expression = XlsxStructuredFormula.Read("=" + expression.TrimStart('=')).TrimStart('=');
                             try { _ = QuickExcel.Formulas.FormulaSyntax.Parse("=" + expression.TrimStart('=')); }
                             catch (Exception ex) when (ex is FormatException or OverflowException)
                             {
@@ -184,7 +185,7 @@ internal static class TypedWorkbookXml
                                 preservedFormulas.Add(new(kind, path, Decode(Attr(definition, "name")), Reference(position), null, expression));
                             }
                         }
-                        cell = new(CellContent.FromFormula("=" + expression.TrimStart('='), style),
+                        cell = new(CellContent.FromFormula(XlsxStructuredFormula.Read("=" + expression.TrimStart('=')), style),
                             new CellCalculation(element.Element(Main + "v") is null ? null : value, CalculationState.Stale, 0, 0, 0));
                     }
                     else cell = new(richText is null ? CellContent.FromLiteral(value, style) : CellContent.FromRichText(richText, style));
@@ -263,7 +264,7 @@ internal static class TypedWorkbookXml
                     sheetName: scopeIndex < 0 ? null : sheets[scopeIndex].Name); }
                 continue;
             }
-            var definition = new QuickExcel.Formulas.DefinedName(name, "=" + element.Value.TrimStart('='), scopeIndex < 0 ? null : sheets[scopeIndex].Id);
+            var definition = new QuickExcel.Formulas.DefinedName(name, XlsxStructuredFormula.Read("=" + element.Value.TrimStart('=')), scopeIndex < 0 ? null : sheets[scopeIndex].Id);
             try
             {
                 _ = new WorkbookSnapshot(Guid.NewGuid(), 0, dateSystem, sheets, styles: styles, definedNames: [definition]);
@@ -283,6 +284,20 @@ internal static class TypedWorkbookXml
         package.SetReadContext(workbookPart, null, "workbook/model");
         var snapshot = new WorkbookSnapshot(Guid.NewGuid(), 0, dateSystem, sheets, styles: styles, definedNames: names, activeSheetId: window.Active, window: window.Window, textCompatibilityVersion: textCompatibility);
         var preservedLocations = preservedFormulas.Select(f => (f.Part, f.Cell)).ToHashSet();
+        foreach (var name in snapshot.DefinedNames)
+            try { _ = QuickExcel.Formulas.FormulaBinding.Bind(new QuickExcel.Formulas.FunctionNode("SUM", [new QuickExcel.Formulas.NameNode(name.Name)]), snapshot, name.Scope ?? snapshot.Sheets[0].Id); }
+            catch (Exception ex) when (ex is FormatException or OverflowException)
+            { preservedFormulas.Add(new(PreservedFormulaKind.DefinedName, workbookPart, name.Scope is { } scope ? snapshot.GetSheet(scope).Name : "(工作簿)", name.Name, null, name.Formula)); }
+        foreach (var owner in snapshot.Sheets)
+        foreach (var table in owner.Data.Tables)
+        foreach (var (column, index) in table.Columns.Select((c, i) => (c, i)))
+        foreach (var (formula, row) in new[] { (column.CalculatedFormula, table.Range.Top + (table.HeaderRow ? 1 : 0)), (column.TotalsFormula, table.Range.Bottom) })
+        {
+            if (formula is null) continue;
+            try { _ = QuickExcel.Formulas.FormulaBinding.Bind(QuickExcel.Formulas.FormulaSyntax.Parse(formula), snapshot, owner.Id, new(row, table.Range.Left + index)); }
+            catch (Exception ex) when (ex is FormatException or OverflowException)
+            { preservedFormulas.Add(new(PreservedFormulaKind.StructuredReference, bindings[sheets.IndexOf(owner)].Part, owner.Name, table.Range.ToString(), table.Range.ToString(), formula)); }
+        }
         // Names can hide unsupported syntax or circular/oversized binding behind an otherwise simple formula.
         foreach (var sheet in sheets)
         foreach (var (position, cell) in sheet.Cells)
@@ -297,11 +312,11 @@ internal static class TypedWorkbookXml
                 var parsed = QuickExcel.Formulas.FormulaSyntax.Parse(cell.Content.FormulaText);
                 if (QuickExcel.Formulas.FormulaSyntax.Walk(parsed).OfType<QuickExcel.Formulas.NameNode>().Any(n => rejectedNames.Contains(n.Name)))
                     throw new FormatException("公式引用了未建模的名称。");
-                _ = QuickExcel.Formulas.FormulaBinding.Bind(parsed, snapshot, sheet.Id);
+                _ = QuickExcel.Formulas.FormulaBinding.Bind(parsed, snapshot, sheet.Id, position);
             }
             catch (Exception e) when (e is FormatException or OverflowException)
             {
-                preservedFormulas.Add(new(PreservedFormulaKind.UnsupportedSyntax, part, sheet.Name, address, null, cell.Content.FormulaText));
+                preservedFormulas.Add(new(cell.Content.FormulaText.Contains('[') ? PreservedFormulaKind.StructuredReference : PreservedFormulaKind.UnsupportedSyntax, part, sheet.Name, address, null, cell.Content.FormulaText));
             }
         }
         XlsxMetadata.Inspect(package, sheets.Select(s => s.Name).ToArray());
@@ -471,7 +486,7 @@ internal static class TypedWorkbookXml
             var names = new XElement(Main + "definedNames");
             foreach (var name in snapshot.DefinedNames)
             {
-                var element = new XElement(Main + "definedName", new XAttribute("name", name.Name), QuickExcel.Formulas.ExcelFormulaNames.Encode(name.Formula).TrimStart('='));
+                var element = new XElement(Main + "definedName", new XAttribute("name", name.Name), XlsxStructuredFormula.Write(name.Formula).TrimStart('='));
                 if (name.Scope is { } scope) element.SetAttributeValue("localSheetId", snapshot.Sheets.IndexOf(snapshot.GetSheet(scope)));
                 names.Add(element);
             }
@@ -497,7 +512,7 @@ internal static class TypedWorkbookXml
     {
         var result = new XElement(Main + "c", new XAttribute("r", Reference(position)), new XAttribute("s", cell.Content.StyleId));
         var formula = !valuesOnly && cell.Content.Kind == CellContentKind.Formula;
-        if (formula) result.Add(new XElement(Main + "f", QuickExcel.Formulas.ExcelFormulaNames.Encode(cell.Content.FormulaText)[1..]));
+        if (formula) result.Add(new XElement(Main + "f", XlsxStructuredFormula.Write(cell.Content.FormulaText)[1..]));
         if (formula && cell.Calculation?.Value is null) return result;
         var value = cell.Value;
         switch (value.Kind)

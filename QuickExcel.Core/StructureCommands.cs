@@ -15,6 +15,7 @@ public sealed class RenameSheetCommand(SheetId sheetId, string name) : DocumentC
         {
             ReferenceNode r when string.Equals(r.Sheet, old.Name, StringComparison.OrdinalIgnoreCase) => r with { Sheet = name },
             NameNode n when string.Equals(n.Sheet, old.Name, StringComparison.OrdinalIgnoreCase) => n with { Sheet = name },
+            StructuredReferenceNode r when string.Equals(r.Sheet, old.Name, StringComparison.OrdinalIgnoreCase) => r with { Sheet = name },
             _ => node
         }, (sheet, cells) => sheet.Id == sheetId ? sheet.WithCells(cells).WithName(name) : sheet.WithCells(cells));
         return StructureEdits.Draft(snapshot, renamed);
@@ -56,7 +57,11 @@ public sealed class ShiftAxisCommand(SheetId sheetId, SheetAxis axis, int index,
             return left > right ? null : (Position(left)!.Value, Position(right)!.Value);
         }
         var transformed = StructureEdits.Axis(snapshot, target, axis, Position, Interval);
-        if (!delete) transformed = InheritInsertedFormatting(transformed, target, axis, index, count);
+        if (!delete)
+        {
+            transformed = InheritInsertedFormatting(transformed, target, axis, index, count);
+            transformed = TableStructure.FillInserted(transformed, target, p => (axis == SheetAxis.Row ? p.Row : p.Column) >= index && (axis == SheetAxis.Row ? p.Row : p.Column) < index + count);
+        }
         var view = target.View;
         var boundary = axis == SheetAxis.Row ? view.FrozenRows : view.FrozenColumns;
         if (index < boundary)
@@ -122,6 +127,7 @@ public sealed class MoveAxisCommand(SheetId sheetId, SheetAxis axis, int start, 
             throw new ArgumentOutOfRangeException(nameof(start));
         if (start == destination) return new(snapshot, [], false);
         var target = snapshot.GetSheet(sheetId);
+        if (!target.Data.Tables.IsEmpty) throw new NotSupportedException("整行列搬移的表列重排尚未支持；表插入和删除可单独使用。");
         if (!target.Printing.RowBreaks.IsEmpty || !target.Printing.ColumnBreaks.IsEmpty)
             throw new NotSupportedException("含分页信息的工作表暂不支持移动行列；操作未应用。");
         int? Position(int value)
@@ -213,11 +219,11 @@ internal static class StructureEdits
             throw new NotSupportedException("含超链接/批注的工作簿尚不能安全变换链接目标或批注绘图；结构操作和排序未应用。值、样式和尺寸仍可编辑。");
         if (snapshot.FileState is null) return;
         foreach (var sheet in snapshot.Sheets)
-        foreach (var cell in sheet.Cells.Values.Where(c => c.Content.Kind == CellContentKind.Formula))
+        foreach (var (position, cell) in sheet.Cells.Where(p => p.Value.Content.Kind == CellContentKind.Formula))
         {
             try
             {
-                var expression = FormulaBinding.Bind(FormulaSyntax.Parse(cell.Content.FormulaText), snapshot, sheet.Id);
+                var expression = FormulaBinding.Bind(FormulaSyntax.Parse(cell.Content.FormulaText), snapshot, sheet.Id, position);
                 var unknown = FormulaSyntax.Walk(expression).OfType<FunctionNode>().FirstOrDefault(f => !StandardFunctions.Signatures.ContainsKey(f.Name));
                 if (unknown is not null) throw new NotSupportedException($"导入公式 {unknown.Name} 的引用语义尚未确认，结构变换/排序未应用；值和样式仍可在受支持范围内编辑。");
             }
@@ -230,6 +236,11 @@ internal static class StructureEdits
                 .FirstOrDefault(f => !StandardFunctions.Signatures.ContainsKey(f.Name));
             if (unknown is not null) throw new NotSupportedException($"导入名称 {name.Name} 使用尚未确认引用语义的函数 {unknown.Name}，结构操作未应用。");
         }
+        foreach (var formula in snapshot.Sheets.SelectMany(s => s.Data.Tables).SelectMany(t => t.Columns).SelectMany(c => new[] { c.CalculatedFormula, c.TotalsFormula }).OfType<string>())
+        {
+            var unknown = FormulaSyntax.Walk(FormulaSyntax.Parse(formula)).OfType<FunctionNode>().FirstOrDefault(f => !StandardFunctions.Signatures.ContainsKey(f.Name));
+            if (unknown is not null) throw new NotSupportedException($"导入表公式使用尚未确认引用语义的函数 {unknown.Name}，结构操作未应用。");
+        }
     }
     internal static void RequireSimpleStructure(WorksheetSnapshot sheet)
     {
@@ -241,8 +252,10 @@ internal static class StructureEdits
         Func<int, int?> position, Func<int, int, (int Start, int End)?> interval)
     {
         var limit = axis == SheetAxis.Row ? WorkbookLimits.MaxRows : WorkbookLimits.MaxColumns;
-        FormulaNode Transform(FormulaNode node, SheetId context)
+        FormulaNode Transform(FormulaNode node, SheetId context, CellPosition? currentCell)
         {
+            if (node is StructuredReferenceNode || node is NameNode)
+                return TableStructure.TransformReference(snapshot, target, axis, position, interval, node, context, currentCell);
             if (node is not ReferenceNode r || !string.Equals(r.Sheet ?? snapshot.GetSheet(context).Name, target.Name, StringComparison.OrdinalIgnoreCase)
                 || axis == SheetAxis.Row && r.WholeColumns) return node;
             var mapped = interval(axis == SheetAxis.Row ? r.Row : r.Column, axis == SheetAxis.Row ? r.EndRow : r.EndColumn);
@@ -251,7 +264,7 @@ internal static class StructureEdits
             return axis == SheetAxis.Row ? r with { Row = mapped.Value.Start, EndRow = mapped.Value.End }
                 : r with { Column = mapped.Value.Start, EndColumn = mapped.Value.End };
         }
-        return StructureEdits.Transform(snapshot, Transform, (sheet, cells) =>
+        return StructureEdits.TransformAt(snapshot, Transform, (sheet, cells) =>
         {
             if (sheet.Id != target.Id) return sheet.WithCells(cells);
             var relocated = ImmutableDictionary.CreateBuilder<CellPosition, CellSnapshot>();
@@ -304,22 +317,26 @@ internal static class StructureEdits
                 axis == SheetAxis.Column ? Metadata(sheet.Columns) : sheet.Columns, merges.Select(m => m.ToString()), images,
                 sheet.ShowGridLines, sheet.DefaultRowHeight, sheet.TabColor, sheet.View, sheet.Visibility,
                 PrintingStructure.Axis(sheet.Printing, axis, position, interval), sheet.Annotations,
-                DataStructure.Axis(sheet.Data, axis, position, interval));
+                TableStructure.NormalizeTemplates(target, DataStructure.Axis(sheet.Data, axis, position, interval), axis, position, Transform));
         });
     }
 
     internal static WorkbookSnapshot Transform(WorkbookSnapshot snapshot, Func<FormulaNode, SheetId, FormulaNode> transform,
         Func<WorksheetSnapshot, ImmutableDictionary<CellPosition, CellSnapshot>, WorksheetSnapshot>? finish = null)
+        => TransformAt(snapshot, (node, context, _) => transform(node, context), finish);
+
+    internal static WorkbookSnapshot TransformAt(WorkbookSnapshot snapshot, Func<FormulaNode, SheetId, CellPosition?, FormulaNode> transform,
+        Func<WorksheetSnapshot, ImmutableDictionary<CellPosition, CellSnapshot>, WorksheetSnapshot>? finish = null)
     {
         RequireTransformableFunctions(snapshot);
-        string Formula(string text, SheetId context)
+        string Formula(string text, SheetId context, CellPosition? position)
         {
             try
             {
                 var changed = false;
                 var expression = FormulaSyntax.Map(FormulaSyntax.Parse(text), node =>
                 {
-                    var next = transform(node, context);
+                    var next = transform(node, context, position);
                     changed |= next != node;
                     return next;
                 });
@@ -333,12 +350,18 @@ internal static class StructureEdits
             foreach (var (p, cell) in sheet.Cells)
             {
                 if (cell.Content.Kind != CellContentKind.Formula) continue;
-                var formula = Formula(cell.Content.FormulaText, sheet.Id);
+                var formula = Formula(cell.Content.FormulaText, sheet.Id, p);
                 if (formula != cell.Content.FormulaText) cells[p] = new(CellContent.FromFormula(formula, cell.Content.StyleId));
             }
-            return finish?.Invoke(sheet, cells.ToImmutable()) ?? sheet.WithCells(cells.ToImmutable());
+            var data = sheet.Data with { Tables = sheet.Data.Tables.Select(t => t.WithColumns(t.Columns.Select((c, i) => c with
+            {
+                CalculatedFormula = c.CalculatedFormula is { } calculated ? Formula(calculated, sheet.Id, new(t.Range.Top + (t.HeaderRow ? 1 : 0), t.Range.Left + i)) : null,
+                TotalsFormula = c.TotalsFormula is { } total ? Formula(total, sheet.Id, new(t.Range.Bottom, t.Range.Left + i)) : null
+            }))).ToImmutableArray() };
+            var updated = sheet.WithData(data);
+            return finish?.Invoke(updated, cells.ToImmutable()) ?? updated.WithCells(cells.ToImmutable());
         }).ToArray();
-        var names = snapshot.DefinedNames.Select(n => n with { Formula = Formula(n.Formula, n.Scope ?? snapshot.Sheets[0].Id) });
+        var names = snapshot.DefinedNames.Select(n => n with { Formula = Formula(n.Formula, n.Scope ?? snapshot.Sheets[0].Id, null) });
         // Rename and names must validate together.
         return new(snapshot.DocumentId, snapshot.Revision, snapshot.DateSystem, sheets, snapshot.ScriptSource,
             snapshot.Styles, snapshot.ScriptModules, snapshot.FileState, names, snapshot.ActiveSheetId, snapshot.Window, snapshot.TextCompatibilityVersion);

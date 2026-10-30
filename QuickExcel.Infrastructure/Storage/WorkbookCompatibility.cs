@@ -49,7 +49,7 @@ public sealed partial class TypedWorkbookStorage
         foreach (var sheet in snapshot.Sheets)
         foreach (var table in sheet.Data.Tables)
             diagnostics.Add(new("worksheet.table-modeled", snapshot.FileState?.FormulaReadOnly == true ? CompatibilityKind.PreservedOnly : CompatibilityKind.Editable, "Excel Table",
-                $"表 {table.Name}：名称、范围、表头、汇总行、样式与筛选可显示和保存。普通数据格可编辑；表头/汇总定义及整行列结构暂受保护，计算列/结构化公式仍按只读规则保留。",
+                $"表 {table.Name}：名称、范围、表头、汇总行、样式与筛选可显示和保存。支持表/列重命名、计算列、扩表及表内行列插删；未支持公式仍受来源保留策略保护。",
                 SheetName: sheet.Name, Range: table.Range.ToString()));
         var formulaCount = 0;
         var cachedCount = 0;
@@ -86,7 +86,7 @@ public sealed partial class TypedWorkbookStorage
             var feature = "formula/function";
             try
             {
-                var expression = FormulaBinding.Bind(FormulaSyntax.Parse(cell.Content.FormulaText), snapshot, sheet.Id);
+                var expression = FormulaBinding.Bind(FormulaSyntax.Parse(cell.Content.FormulaText), snapshot, sheet.Id, position);
                 var unknown = FormulaSyntax.Walk(expression).OfType<FunctionNode>().Select(f => f.Name)
                     .Where(name => !StandardFunctions.Signatures.ContainsKey(name)).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
                 if (unknown.Length > 0)

@@ -445,9 +445,16 @@
           <TabItem Header="数据">
             <StackPanel Orientation="Horizontal">
               <GroupBox Header="Excel 表" Style="{StaticResource RibbonGroup}">
+                <StackPanel Orientation="Horizontal">
                 <StackPanel>
                   <Button Content="创建表…" local:Ribbon.Icon="TableAdd" Style="{StaticResource RibbonButton}" Click="CreateTable_Click" ToolTip="以选区首行为表头创建 Excel Table，保存名称、样式与筛选"/>
                   <Button Content="调整表范围…" local:Ribbon.Icon="TableSettings" Style="{StaticResource RibbonButton}" Click="ResizeTable_Click" ToolTip="选择表内单元格，调整数据区末行；内容保留，可撤销"/>
+                  <Button Content="设置计算列…" local:Ribbon.Icon="TableSettings" Style="{StaticResource RibbonButton}" Click="CalculatedTableColumn_Click" ToolTip="明确替换当前表列的数据区公式，可一次撤销"/>
+                </StackPanel>
+                <StackPanel>
+                  <Button Content="重命名表…" local:Ribbon.Icon="TableSettings" Style="{StaticResource RibbonButton}" Click="RenameTable_Click"/>
+                  <Button Content="重命名列…" local:Ribbon.Icon="TableSettings" Style="{StaticResource RibbonButton}" Click="RenameTableColumn_Click"/>
+                </StackPanel>
                 </StackPanel>
               </GroupBox>
               <GroupBox Header="排序和筛选"

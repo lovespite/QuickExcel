@@ -20,7 +20,8 @@ S = 支持该行限定子集；P = 部分支持；O = 仅原包保留；N = 不�
 | 普通/共享公式、跨表 A1、定义名称 | P | P | P | P | P | `cross-sheet`、`M3StorageTests`；支持函数与参数见 [10](10-m3-calculation.md)，缓存不等于重算 |
 | 未知函数、`_xlfn` 前缀 | S | P | N | P | S | XC-0106：原公式/旧缓存保留，函数和依赖为 Blocked，独立公式可重算；结构变换拒绝，值/样式受限编辑可保存，见 [35](35-xlsx-preserved-formulas.md) |
 | 数组公式 | S | P | N | N | O | XC-0106：整簿只读显示来源缓存，原 XLSX 包复制或 XLSQ 包装；不计算/编辑，见 [35](35-xlsx-preserved-formulas.md) |
-| 结构化引用/动态数组语义 | S | P | N | N | O | XC-0106：真实 Excel 结构化引用/SEQUENCE 样本只读保留通过；计算/编辑仍待 XC-0303/0501 |
+| 结构化引用 | P | P | P | P | P | XC-0303 支持连续表列/当前行/特殊行、计算列、改名/插删/复制；20,891 项往返与 Excel/WPF 通过，边界见 [52](52-structured-references-and-table-editing.md) |
+| 动态数组语义 | S | P | N | N | O | XC-0106 SEQUENCE 样本只读保留；计算/编辑待 XC-0501 |
 | 文档属性白名单 | S | N | — | N | S | XC-0103 支持 core/app/custom 白名单；其他分组/结构仍报告，见 [32](32-xlsx-save-and-metadata.md) |
 | 单窗口普通视图、冻结/缩放/活动表格、hidden/veryHidden | S | P | — | P | S | XC-0104 已持久化，视图命令可撤销、导航不 dirty；显示容量及拆分/多窗口限制见 [33](33-xlsx-workbook-views.md) |
 | 页面/打印区域/重复标题/页眉页脚/分页 | S | N | — | N | S | XC-0105 的 R/W 子集；有分页时删除/移动行列拒绝，未提供实际打印或页面编辑，见 [34](34-xlsx-page-and-print-metadata.md) |
@@ -28,7 +29,7 @@ S = 支持该行限定子集；P = 部分支持；O = 仅原包保留；N = 不�
 | 验证、条件格式、图表、透视表 | O | N | N | N | O | [09](09-m2-files-and-types.md) 的未建模内容保护；本轮未扩充这些夹具，仍需 E3/E4/E5 |
 | 普通复制/TSV 粘贴、内部剪贴板/冻结 | — | P | — | P | P | 冻结 XC-0104、内部富剪贴板 XC-0201 已完成声明子集 |
 | AutoFilter / sortState | P | P | — | P | P | XC-0301 多列列表/比较、排序设置和手动隐藏区分已持久化；37 个真实 Excel 案例及范围/来源限制见 [50](50-filter-and-sort-persistence.md) |
-| Excel Table 基础 | P | P | — | P | P | XC-0302 名称/范围/列/表头/汇总/60 内置样式及独立筛选读显写、受限创建/底边调整；60,336 项往返和 Excel 复验见 [51](51-excel-table-basics.md)，结构化公式待 XC-0303 |
+| Excel Table 基础 | P | P | — | P | P | XC-0302 名称/范围/列/表头/汇总/60 内置样式及独立筛选读显写、受限创建/底边调整；60,336 项往返和 Excel 复验见 [51](51-excel-table-basics.md)；结构化公式见 [52](52-structured-references-and-table-editing.md) |
 | 未知部件与关系 | O | N | — | N | O | 不变保留原 XLSX 字节；变更时可能阻止普通保存，不复制未知失效关系 |
 
 矩阵的 S/P/O 不是互相替代的验收结论。对于一个含多种特性的文件，即使修改的单元格本身属于 S，其他特性的兼容问题仍可能阻止普通保存。未知函数的旧缓存已在后续报告中单独说明，但仍不能据此承诺安全重算或任意结构编辑。

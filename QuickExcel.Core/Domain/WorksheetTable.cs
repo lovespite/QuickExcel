@@ -40,7 +40,7 @@ public sealed class WorksheetTable
     private static readonly HashSet<string> TotalsFunctions = ["none", "sum", "min", "max", "average", "count", "countNums", "stdDev", "var", "custom"];
     public WorksheetTable(int id, string name, CellRectangle range, IEnumerable<TableColumn> columns,
         bool headerRow = true, bool totalsRow = false, bool totalsRowShown = false, TableStyleInfo? style = null,
-        WorksheetAutoFilter? filter = null, WorksheetSortState? sort = null)
+        WorksheetAutoFilter? filter = null, WorksheetSortState? sort = null, bool insertRow = false)
     {
         WorkbookLimits.ValidatePosition(range.Top, range.Left); WorkbookLimits.ValidatePosition(range.Bottom, range.Right);
         ValidateName(name);
@@ -61,6 +61,7 @@ public sealed class WorksheetTable
             sort.Range.Top < range.Top + (headerRow ? 1 : 0) || sort.Range.Bottom > range.Bottom - (totalsRow ? 1 : 0)))
             throw new ArgumentException("表排序超出数据区。");
         Id = id; Name = name; Range = range; HeaderRow = headerRow; TotalsRow = totalsRow; TotalsRowShown = totalsRowShown;
+        InsertRow = insertRow;
         Style = style ?? new(); Filter = filter; Sort = sort;
         if (Style.Name?.Length > 255 || Style.Elements.IsDefault || Style.Elements.Any(e => e is null) ||
             Style.Name is null && !Style.Elements.IsEmpty || Style.Elements.Length > 20 || Style.Elements.Select(e => e.Type).Distinct().Count() != Style.Elements.Length)
@@ -82,16 +83,23 @@ public sealed class WorksheetTable
     public bool HeaderRow { get; }
     public bool TotalsRow { get; }
     public bool TotalsRowShown { get; }
+    public bool InsertRow { get; }
     public TableStyleInfo Style { get; }
     public WorksheetAutoFilter? Filter { get; }
     public WorksheetSortState? Sort { get; }
     public bool HasFormulas => Columns.Any(c => c.CalculatedFormula is not null || c.TotalsFormula is not null);
-    public bool ContentEquals(WorksheetTable other) => Id == other.Id && Name == other.Name && Range == other.Range && Columns.SequenceEqual(other.Columns) &&
-        HeaderRow == other.HeaderRow && TotalsRow == other.TotalsRow && TotalsRowShown == other.TotalsRowShown && Style.ContentEquals(other.Style) &&
+    public bool ContentEquals(WorksheetTable other, bool equivalentFormulas = false) => Id == other.Id && Name == other.Name && Range == other.Range &&
+        (equivalentFormulas ? Columns.Select(Normalize).SequenceEqual(other.Columns.Select(Normalize)) : Columns.SequenceEqual(other.Columns)) &&
+        HeaderRow == other.HeaderRow && TotalsRow == other.TotalsRow && TotalsRowShown == other.TotalsRowShown && InsertRow == other.InsertRow && Style.ContentEquals(other.Style) &&
         (Filter is null ? other.Filter is null : other.Filter is not null && Filter.ContentEquals(other.Filter)) &&
         (Sort is null ? other.Sort is null : other.Sort is not null && Sort.ContentEquals(other.Sort));
+    private static TableColumn Normalize(TableColumn column) => column with { CalculatedFormula = QuickExcel.Formulas.StructuredReferences.CanonicalFormula(column.CalculatedFormula),
+        TotalsFormula = QuickExcel.Formulas.StructuredReferences.CanonicalFormula(column.TotalsFormula) };
     public WorksheetTable WithRange(CellRectangle range, WorksheetAutoFilter? filter, WorksheetSortState? sort = null) =>
-        new(Id, Name, range, Columns, HeaderRow, TotalsRow, TotalsRowShown, Style, filter, sort);
-    public WorksheetTable WithFilter(WorksheetAutoFilter? filter) => new(Id, Name, Range, Columns, HeaderRow, TotalsRow, TotalsRowShown, Style, filter, Sort);
-    public WorksheetTable WithSort(WorksheetSortState? sort) => new(Id, Name, Range, Columns, HeaderRow, TotalsRow, TotalsRowShown, Style, Filter, sort);
+        new(Id, Name, range, Columns, HeaderRow, TotalsRow, TotalsRowShown, Style, filter, sort, InsertRow && range == Range);
+    public WorksheetTable WithFilter(WorksheetAutoFilter? filter) => new(Id, Name, Range, Columns, HeaderRow, TotalsRow, TotalsRowShown, Style, filter, Sort, InsertRow);
+    public WorksheetTable WithSort(WorksheetSortState? sort) => new(Id, Name, Range, Columns, HeaderRow, TotalsRow, TotalsRowShown, Style, Filter, sort, InsertRow);
+    public WorksheetTable WithColumns(IEnumerable<TableColumn> columns) => new(Id, Name, Range, columns, HeaderRow, TotalsRow, TotalsRowShown, Style, Filter, Sort, InsertRow);
+    public WorksheetTable WithName(string name) => new(Id, name, Range, Columns, HeaderRow, TotalsRow, TotalsRowShown, Style, Filter, Sort, InsertRow);
+    public WorksheetTable WithInsertRow(bool insertRow) => new(Id, Name, Range, Columns, HeaderRow, TotalsRow, TotalsRowShown, Style, Filter, Sort, insertRow);
 }

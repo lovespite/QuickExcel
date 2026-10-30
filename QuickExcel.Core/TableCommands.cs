@@ -35,6 +35,8 @@ internal static class TableSafety
             var next = after.Sheets.FirstOrDefault(s => s.Id == sheet.Id); if (next is null) continue;
             foreach (var table in sheet.Data.Tables)
             {
+                var nextTable = next.Data.Tables.FirstOrDefault(t => t.Id == table.Id);
+                if (nextTable is null || nextTable.Range != table.Range) continue;
                 for (var column = table.Range.Left; column <= table.Range.Right; column++)
                 {
                     bool Changed(int row)
@@ -42,10 +44,11 @@ internal static class TableSafety
                         var old = sheet.GetCell(row, column)?.Content; var current = next.GetCell(row, column)?.Content;
                         return old?.Kind != current?.Kind || (old?.Kind == CellContentKind.Formula ? old.FormulaText != current!.FormulaText : old?.LiteralValue != current?.LiteralValue);
                     }
-                    if (table.HeaderRow && Changed(table.Range.Top))
+                    if (table.HeaderRow && nextTable.Columns[column - table.Range.Left].Name == table.Columns[column - table.Range.Left].Name && Changed(table.Range.Top))
                         throw new InvalidOperationException("当前表头受控编辑尚不支持改列名，请保持表头内容；本次修改未应用。");
                     var definition = table.Columns[column - table.Range.Left];
-                    if (table.TotalsRow && (definition.TotalsFunction is not null || definition.TotalsFormula is not null || definition.TotalsLabel is not null) && Changed(table.Range.Bottom))
+                    if (table.TotalsRow && definition == nextTable.Columns[column - table.Range.Left] &&
+                        (definition.TotalsFunction is not null || definition.TotalsFormula is not null || definition.TotalsLabel is not null) && Changed(table.Range.Bottom))
                         throw new InvalidOperationException("当前汇总行定义受保护，请在 Excel 修改汇总标签/公式；本次修改未应用。");
                 }
             }
@@ -70,7 +73,7 @@ public sealed class CreateTableCommand(SheetId sheetId, CellRectangle range, str
         var table = new WorksheetTable(id, name, range, columns, style: style, filter: new(range));
         var data = sheet.Data with { Tables = sheet.Data.Tables.Add(table) };
         var next = snapshot.WithSheets(snapshot.Sheets.Select(s => s.Id == sheetId ? s.WithData(data) : s));
-        return new(next, [], false) { CalculationUnchanged = true };
+        return new(next, [], true);
     }
 }
 
@@ -81,14 +84,18 @@ public sealed class ResizeTableCommand(SheetId sheetId, int tableId, int bottomR
     {
         var sheet = snapshot.GetSheet(sheetId); var table = sheet.Data.Tables.Single(t => t.Id == tableId);
         if (table.Range.Bottom == bottomRow) return new(snapshot, [], false);
-        if (table.TotalsRow || table.HasFormulas) throw new NotSupportedException("含汇总行或计算列的表暂不能调整边界；本次没有修改。");
+        if (table.TotalsRow) throw new NotSupportedException("含汇总行的表请使用表内插删行，底边调整暂未支持移动汇总格；本次没有修改。");
         if (bottomRow < table.Range.Top + (table.HeaderRow ? 1 : 0)) throw new ArgumentException("表范围至少保留一行数据。");
         var range = table.Range with { Bottom = bottomRow };
+        var working = bottomRow < table.Range.Bottom ? StructureEdits.TransformAt(snapshot, (node, context, position) =>
+            node is QuickExcel.Formulas.StructuredReferenceNode { Table: null } reference && context == sheetId && position is { } p && !range.Contains(p.Row, p.Column) &&
+                QuickExcel.Formulas.StructuredReferences.Resolve(snapshot, context, position, reference)?.Table.Id == tableId ? reference with { Table = table.Name } : node) : snapshot;
         var resized = table.WithRange(range, table.Filter is null ? null : new(range, table.Filter.Columns));
         var data = sheet.Data with { Tables = sheet.Data.Tables.Replace(table, resized) };
-        var next = snapshot.WithSheets(snapshot.Sheets.Select(s => s.Id == sheetId ? s.WithData(data) : s));
+        var next = working.WithSheets(working.Sheets.Select(s => s.Id == sheetId ? s.WithData(data) : s));
+        next = TableStructure.FillInserted(next, sheet, p => p.Row > table.Range.Bottom && p.Row <= bottomRow);
         _ = WorksheetFilterEngine.Evaluate(next, sheetId);
-        return new(next, [], false) { CalculationUnchanged = true };
+        return StructureEdits.Draft(snapshot, next);
     }
 }
 

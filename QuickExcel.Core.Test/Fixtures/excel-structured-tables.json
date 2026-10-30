@@ -1,0 +1,5794 @@
+{
+  "Version": "16.0",
+  "Build": 20527.0,
+  "Language": 2052,
+  "Stages": {
+    "initial": {
+      "Sha256": "AED6924E821A27D3E9D9B4CBBF1E5C81FFA0FA520B6A11D8FF5F31E6D6EA04A0",
+      "After": [
+        {
+          "Tables": [
+            {
+              "Range": "B2:E6",
+              "Headers": [
+                "Qty",
+                "Price",
+                "Amount",
+                "Tax"
+              ],
+              "Name": "Sales",
+              "Totals": true
+            }
+          ],
+          "Sheet": "Data",
+          "Cells": [
+            {
+              "Value": "Qty",
+              "Formula": null,
+              "Address": "B2",
+              "Kind": "Text"
+            },
+            {
+              "Value": "Price",
+              "Formula": null,
+              "Address": "C2",
+              "Kind": "Text"
+            },
+            {
+              "Value": "Amount",
+              "Formula": null,
+              "Address": "D2",
+              "Kind": "Text"
+            },
+            {
+              "Value": "Tax",
+              "Formula": null,
+              "Address": "E2",
+              "Kind": "Text"
+            },
+            {
+              "Value": 2.0,
+              "Formula": null,
+              "Address": "B3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 10.0,
+              "Formula": null,
+              "Address": "C3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 20.0,
+              "Formula": "=[@Qty]*[@Price]",
+              "Address": "D3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 2.0,
+              "Formula": "=[@Amount]*0.1",
+              "Address": "E3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 3.0,
+              "Formula": null,
+              "Address": "B4",
+              "Kind": "Number"
+            },
+            {
+              "Value": 20.0,
+              "Formula": null,
+              "Address": "C4",
+              "Kind": "Number"
+            },
+            {
+              "Value": 60.0,
+              "Formula": "=[@Qty]*[@Price]",
+              "Address": "D4",
+              "Kind": "Number"
+            },
+            {
+              "Value": 6.0,
+              "Formula": "=[@Amount]*0.1",
+              "Address": "E4",
+              "Kind": "Number"
+            },
+            {
+              "Value": 4.0,
+              "Formula": null,
+              "Address": "B5",
+              "Kind": "Number"
+            },
+            {
+              "Value": 30.0,
+              "Formula": null,
+              "Address": "C5",
+              "Kind": "Number"
+            },
+            {
+              "Value": 120.0,
+              "Formula": "=[@Qty]*[@Price]",
+              "Address": "D5",
+              "Kind": "Number"
+            },
+            {
+              "Value": 12.0,
+              "Formula": "=[@Amount]*0.1",
+              "Address": "E5",
+              "Kind": "Number"
+            },
+            {
+              "Value": 200.0,
+              "Formula": "=SUM([Amount])",
+              "Address": "D6",
+              "Kind": "Number"
+            }
+          ]
+        },
+        {
+          "Tables": [],
+          "Sheet": "Summary",
+          "Cells": [
+            {
+              "Value": 200.0,
+              "Formula": "=SUM(Sales[Amount])",
+              "Address": "A1",
+              "Kind": "Number"
+            },
+            {
+              "Value": "#VALUE!",
+              "Formula": "=Sales[@Amount]",
+              "Address": "B1",
+              "Kind": "Error"
+            },
+            {
+              "Value": 289.0,
+              "Formula": "=SUM(Sales)",
+              "Address": "A2",
+              "Kind": "Number"
+            },
+            {
+              "Value": "#VALUE!",
+              "Formula": "=Sales[@Amount]",
+              "Address": "B2",
+              "Kind": "Error"
+            },
+            {
+              "Value": 200.0,
+              "Formula": "=SUM(Sales[[#Headers],[#Data],[Amount]])",
+              "Address": "A3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 20.0,
+              "Formula": "=Sales[@Amount]",
+              "Address": "B3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 400.0,
+              "Formula": "=SUM(Sales[[#All],[Amount]])",
+              "Address": "A4",
+              "Kind": "Number"
+            },
+            {
+              "Value": 60.0,
+              "Formula": "=Sales[@Amount]",
+              "Address": "B4",
+              "Kind": "Number"
+            },
+            {
+              "Value": "Price",
+              "Formula": "=Sales[[#Headers],[Price]]",
+              "Address": "A5",
+              "Kind": "Text"
+            },
+            {
+              "Value": 120.0,
+              "Formula": "=Sales[@Amount]",
+              "Address": "B5",
+              "Kind": "Number"
+            },
+            {
+              "Value": 200.0,
+              "Formula": "=Sales[[#Totals],[Amount]]",
+              "Address": "A6",
+              "Kind": "Number"
+            },
+            {
+              "Value": "#VALUE!",
+              "Formula": "=Sales[@Amount]",
+              "Address": "B6",
+              "Kind": "Error"
+            },
+            {
+              "Value": 269.0,
+              "Formula": "=SUM(Sales[[Qty]:[Amount]])",
+              "Address": "A7",
+              "Kind": "Number"
+            },
+            {
+              "Value": "#VALUE!",
+              "Formula": "=Sales[@Amount]",
+              "Address": "B7",
+              "Kind": "Error"
+            },
+            {
+              "Value": 69.0,
+              "Formula": "=SUM(Sales[[#Data],[Qty]:[Price]])",
+              "Address": "A8",
+              "Kind": "Number"
+            },
+            {
+              "Value": 60.0,
+              "Formula": "=INDEX(Sales[Amount],2)",
+              "Address": "A9",
+              "Kind": "Number"
+            },
+            {
+              "Value": 0.0,
+              "Formula": "=SUM(Sales[#Headers])",
+              "Address": "A10",
+              "Kind": "Number"
+            },
+            {
+              "Value": 200.0,
+              "Formula": "=SUM(Sales[#Totals])",
+              "Address": "A11",
+              "Kind": "Number"
+            },
+            {
+              "Value": 200.0,
+              "Formula": "=SUM(SalesAmount)",
+              "Address": "A12",
+              "Kind": "Number"
+            }
+          ]
+        },
+        {
+          "Tables": [
+            {
+              "Range": "A1:C3",
+              "Headers": [
+                "Qty",
+                "Price",
+                "Amount"
+              ],
+              "Name": "Plain",
+              "Totals": false
+            }
+          ],
+          "Sheet": "A1Column",
+          "Cells": [
+            {
+              "Value": "Qty",
+              "Formula": null,
+              "Address": "A1",
+              "Kind": "Text"
+            },
+            {
+              "Value": "Price",
+              "Formula": null,
+              "Address": "B1",
+              "Kind": "Text"
+            },
+            {
+              "Value": "Amount",
+              "Formula": null,
+              "Address": "C1",
+              "Kind": "Text"
+            },
+            {
+              "Value": 2.0,
+              "Formula": null,
+              "Address": "A2",
+              "Kind": "Number"
+            },
+            {
+              "Value": 4.0,
+              "Formula": null,
+              "Address": "B2",
+              "Kind": "Number"
+            },
+            {
+              "Value": 8.0,
+              "Formula": "=A2*B2",
+              "Address": "C2",
+              "Kind": "Number"
+            },
+            {
+              "Value": 3.0,
+              "Formula": null,
+              "Address": "A3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 5.0,
+              "Formula": null,
+              "Address": "B3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 15.0,
+              "Formula": "=A3*B3",
+              "Address": "C3",
+              "Kind": "Number"
+            }
+          ]
+        },
+        {
+          "Tables": [
+            {
+              "Range": "A1:D3",
+              "Headers": [
+                "#Tag",
+                "@Value",
+                "[net]",
+                "O'Neil"
+              ],
+              "Name": "Escapes",
+              "Totals": false
+            }
+          ],
+          "Sheet": "Special",
+          "Cells": [
+            {
+              "Value": "#Tag",
+              "Formula": null,
+              "Address": "A1",
+              "Kind": "Text"
+            },
+            {
+              "Value": "@Value",
+              "Formula": null,
+              "Address": "B1",
+              "Kind": "Text"
+            },
+            {
+              "Value": "[net]",
+              "Formula": null,
+              "Address": "C1",
+              "Kind": "Text"
+            },
+            {
+              "Value": "O'Neil",
+              "Formula": null,
+              "Address": "D1",
+              "Kind": "Text"
+            },
+            {
+              "Value": 2.0,
+              "Formula": null,
+              "Address": "A2",
+              "Kind": "Number"
+            },
+            {
+              "Value": 4.0,
+              "Formula": null,
+              "Address": "B2",
+              "Kind": "Number"
+            },
+            {
+              "Value": 6.0,
+              "Formula": null,
+              "Address": "C2",
+              "Kind": "Number"
+            },
+            {
+              "Value": 8.0,
+              "Formula": null,
+              "Address": "D2",
+              "Kind": "Number"
+            },
+            {
+              "Value": 5.0,
+              "Formula": "=SUM(Escapes['#Tag])",
+              "Address": "F2",
+              "Kind": "Number"
+            },
+            {
+              "Value": 3.0,
+              "Formula": null,
+              "Address": "A3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 6.0,
+              "Formula": null,
+              "Address": "B3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 9.0,
+              "Formula": null,
+              "Address": "C3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 12.0,
+              "Formula": null,
+              "Address": "D3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 10.0,
+              "Formula": "=SUM(Escapes['@Value])",
+              "Address": "F3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 15.0,
+              "Formula": "=SUM(Escapes['[net']])",
+              "Address": "F4",
+              "Kind": "Number"
+            },
+            {
+              "Value": 20.0,
+              "Formula": "=SUM(Escapes[O''Neil])",
+              "Address": "F5",
+              "Kind": "Number"
+            }
+          ]
+        },
+        {
+          "Tables": [
+            {
+              "Range": "A1:B2",
+              "Headers": [
+                "Qty",
+                "Amount"
+              ],
+              "Name": "EmptyTable",
+              "Totals": false
+            }
+          ],
+          "Sheet": "Boundaries",
+          "Cells": [
+            {
+              "Value": "Qty",
+              "Formula": null,
+              "Address": "A1",
+              "Kind": "Text"
+            },
+            {
+              "Value": "Amount",
+              "Formula": null,
+              "Address": "B1",
+              "Kind": "Text"
+            },
+            {
+              "Value": 0.0,
+              "Formula": "=SUM(EmptyTable[Qty])",
+              "Address": "D1",
+              "Kind": "Number"
+            },
+            {
+              "Value": 0.0,
+              "Formula": "=COUNT(EmptyTable[Qty])",
+              "Address": "D2",
+              "Kind": "Number"
+            },
+            {
+              "Value": 0.0,
+              "Formula": "=COUNTA(EmptyTable[Qty])",
+              "Address": "D3",
+              "Kind": "Number"
+            },
+            {
+              "Value": "#DIV/0!",
+              "Formula": "=AVERAGE(EmptyTable[Qty])",
+              "Address": "D4",
+              "Kind": "Error"
+            },
+            {
+              "Value": 0.0,
+              "Formula": "=INDEX(EmptyTable[Qty],1)",
+              "Address": "D5",
+              "Kind": "Number"
+            },
+            {
+              "Value": "#REF!",
+              "Formula": "=SUM(EmptyTable[#Totals])",
+              "Address": "D6",
+              "Kind": "Error"
+            },
+            {
+              "Value": 0.0,
+              "Formula": "=SUM(EmptyTable[#Headers])",
+              "Address": "D7",
+              "Kind": "Number"
+            },
+            {
+              "Value": 0.0,
+              "Formula": "=SUM(EmptyTable[#All])",
+              "Address": "D8",
+              "Kind": "Number"
+            }
+          ]
+        }
+      ]
+    },
+    "rename": {
+      "Sha256": "25537338CB9379A7AF1128363FE18C9AA15984A884935409293F134C18FBA9E0",
+      "After": [
+        {
+          "Tables": [
+            {
+              "Range": "B2:E6",
+              "Headers": [
+                "Qty",
+                "Unit Price",
+                "Amount",
+                "Tax"
+              ],
+              "Name": "Revenue",
+              "Totals": true
+            }
+          ],
+          "Sheet": "Data",
+          "Cells": [
+            {
+              "Value": "Qty",
+              "Formula": null,
+              "Address": "B2",
+              "Kind": "Text"
+            },
+            {
+              "Value": "Unit Price",
+              "Formula": null,
+              "Address": "C2",
+              "Kind": "Text"
+            },
+            {
+              "Value": "Amount",
+              "Formula": null,
+              "Address": "D2",
+              "Kind": "Text"
+            },
+            {
+              "Value": "Tax",
+              "Formula": null,
+              "Address": "E2",
+              "Kind": "Text"
+            },
+            {
+              "Value": 2.0,
+              "Formula": null,
+              "Address": "B3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 10.0,
+              "Formula": null,
+              "Address": "C3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 20.0,
+              "Formula": "=[@Qty]*[@[Unit Price]]",
+              "Address": "D3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 2.0,
+              "Formula": "=[@Amount]*0.1",
+              "Address": "E3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 3.0,
+              "Formula": null,
+              "Address": "B4",
+              "Kind": "Number"
+            },
+            {
+              "Value": 20.0,
+              "Formula": null,
+              "Address": "C4",
+              "Kind": "Number"
+            },
+            {
+              "Value": 60.0,
+              "Formula": "=[@Qty]*[@[Unit Price]]",
+              "Address": "D4",
+              "Kind": "Number"
+            },
+            {
+              "Value": 6.0,
+              "Formula": "=[@Amount]*0.1",
+              "Address": "E4",
+              "Kind": "Number"
+            },
+            {
+              "Value": 4.0,
+              "Formula": null,
+              "Address": "B5",
+              "Kind": "Number"
+            },
+            {
+              "Value": 30.0,
+              "Formula": null,
+              "Address": "C5",
+              "Kind": "Number"
+            },
+            {
+              "Value": 120.0,
+              "Formula": "=[@Qty]*[@[Unit Price]]",
+              "Address": "D5",
+              "Kind": "Number"
+            },
+            {
+              "Value": 12.0,
+              "Formula": "=[@Amount]*0.1",
+              "Address": "E5",
+              "Kind": "Number"
+            },
+            {
+              "Value": 200.0,
+              "Formula": "=SUM([Amount])",
+              "Address": "D6",
+              "Kind": "Number"
+            }
+          ]
+        },
+        {
+          "Tables": [],
+          "Sheet": "Summary",
+          "Cells": [
+            {
+              "Value": 200.0,
+              "Formula": "=SUM(Revenue[Amount])",
+              "Address": "A1",
+              "Kind": "Number"
+            },
+            {
+              "Value": "#VALUE!",
+              "Formula": "=Revenue[@Amount]",
+              "Address": "B1",
+              "Kind": "Error"
+            },
+            {
+              "Value": 289.0,
+              "Formula": "=SUM(Revenue)",
+              "Address": "A2",
+              "Kind": "Number"
+            },
+            {
+              "Value": "#VALUE!",
+              "Formula": "=Revenue[@Amount]",
+              "Address": "B2",
+              "Kind": "Error"
+            },
+            {
+              "Value": 200.0,
+              "Formula": "=SUM(Revenue[[#Headers],[#Data],[Amount]])",
+              "Address": "A3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 20.0,
+              "Formula": "=Revenue[@Amount]",
+              "Address": "B3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 400.0,
+              "Formula": "=SUM(Revenue[[#All],[Amount]])",
+              "Address": "A4",
+              "Kind": "Number"
+            },
+            {
+              "Value": 60.0,
+              "Formula": "=Revenue[@Amount]",
+              "Address": "B4",
+              "Kind": "Number"
+            },
+            {
+              "Value": "Unit Price",
+              "Formula": "=Revenue[[#Headers],[Unit Price]]",
+              "Address": "A5",
+              "Kind": "Text"
+            },
+            {
+              "Value": 120.0,
+              "Formula": "=Revenue[@Amount]",
+              "Address": "B5",
+              "Kind": "Number"
+            },
+            {
+              "Value": 200.0,
+              "Formula": "=Revenue[[#Totals],[Amount]]",
+              "Address": "A6",
+              "Kind": "Number"
+            },
+            {
+              "Value": "#VALUE!",
+              "Formula": "=Revenue[@Amount]",
+              "Address": "B6",
+              "Kind": "Error"
+            },
+            {
+              "Value": 269.0,
+              "Formula": "=SUM(Revenue[[Qty]:[Amount]])",
+              "Address": "A7",
+              "Kind": "Number"
+            },
+            {
+              "Value": "#VALUE!",
+              "Formula": "=Revenue[@Amount]",
+              "Address": "B7",
+              "Kind": "Error"
+            },
+            {
+              "Value": 69.0,
+              "Formula": "=SUM(Revenue[[#Data],[Qty]:[Unit Price]])",
+              "Address": "A8",
+              "Kind": "Number"
+            },
+            {
+              "Value": 60.0,
+              "Formula": "=INDEX(Revenue[Amount],2)",
+              "Address": "A9",
+              "Kind": "Number"
+            },
+            {
+              "Value": 0.0,
+              "Formula": "=SUM(Revenue[#Headers])",
+              "Address": "A10",
+              "Kind": "Number"
+            },
+            {
+              "Value": 200.0,
+              "Formula": "=SUM(Revenue[#Totals])",
+              "Address": "A11",
+              "Kind": "Number"
+            },
+            {
+              "Value": 200.0,
+              "Formula": "=SUM(SalesAmount)",
+              "Address": "A12",
+              "Kind": "Number"
+            }
+          ]
+        },
+        {
+          "Tables": [
+            {
+              "Range": "A1:C3",
+              "Headers": [
+                "Qty",
+                "Price",
+                "Amount"
+              ],
+              "Name": "Plain",
+              "Totals": false
+            }
+          ],
+          "Sheet": "A1Column",
+          "Cells": [
+            {
+              "Value": "Qty",
+              "Formula": null,
+              "Address": "A1",
+              "Kind": "Text"
+            },
+            {
+              "Value": "Price",
+              "Formula": null,
+              "Address": "B1",
+              "Kind": "Text"
+            },
+            {
+              "Value": "Amount",
+              "Formula": null,
+              "Address": "C1",
+              "Kind": "Text"
+            },
+            {
+              "Value": 2.0,
+              "Formula": null,
+              "Address": "A2",
+              "Kind": "Number"
+            },
+            {
+              "Value": 4.0,
+              "Formula": null,
+              "Address": "B2",
+              "Kind": "Number"
+            },
+            {
+              "Value": 8.0,
+              "Formula": "=A2*B2",
+              "Address": "C2",
+              "Kind": "Number"
+            },
+            {
+              "Value": 3.0,
+              "Formula": null,
+              "Address": "A3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 5.0,
+              "Formula": null,
+              "Address": "B3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 15.0,
+              "Formula": "=A3*B3",
+              "Address": "C3",
+              "Kind": "Number"
+            }
+          ]
+        },
+        {
+          "Tables": [
+            {
+              "Range": "A1:D3",
+              "Headers": [
+                "#Tag",
+                "@Value",
+                "[net]",
+                "O'Neil"
+              ],
+              "Name": "Escapes",
+              "Totals": false
+            }
+          ],
+          "Sheet": "Special",
+          "Cells": [
+            {
+              "Value": "#Tag",
+              "Formula": null,
+              "Address": "A1",
+              "Kind": "Text"
+            },
+            {
+              "Value": "@Value",
+              "Formula": null,
+              "Address": "B1",
+              "Kind": "Text"
+            },
+            {
+              "Value": "[net]",
+              "Formula": null,
+              "Address": "C1",
+              "Kind": "Text"
+            },
+            {
+              "Value": "O'Neil",
+              "Formula": null,
+              "Address": "D1",
+              "Kind": "Text"
+            },
+            {
+              "Value": 2.0,
+              "Formula": null,
+              "Address": "A2",
+              "Kind": "Number"
+            },
+            {
+              "Value": 4.0,
+              "Formula": null,
+              "Address": "B2",
+              "Kind": "Number"
+            },
+            {
+              "Value": 6.0,
+              "Formula": null,
+              "Address": "C2",
+              "Kind": "Number"
+            },
+            {
+              "Value": 8.0,
+              "Formula": null,
+              "Address": "D2",
+              "Kind": "Number"
+            },
+            {
+              "Value": 5.0,
+              "Formula": "=SUM(Escapes['#Tag])",
+              "Address": "F2",
+              "Kind": "Number"
+            },
+            {
+              "Value": 3.0,
+              "Formula": null,
+              "Address": "A3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 6.0,
+              "Formula": null,
+              "Address": "B3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 9.0,
+              "Formula": null,
+              "Address": "C3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 12.0,
+              "Formula": null,
+              "Address": "D3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 10.0,
+              "Formula": "=SUM(Escapes['@Value])",
+              "Address": "F3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 15.0,
+              "Formula": "=SUM(Escapes['[net']])",
+              "Address": "F4",
+              "Kind": "Number"
+            },
+            {
+              "Value": 20.0,
+              "Formula": "=SUM(Escapes[O''Neil])",
+              "Address": "F5",
+              "Kind": "Number"
+            }
+          ]
+        },
+        {
+          "Tables": [
+            {
+              "Range": "A1:B2",
+              "Headers": [
+                "Qty",
+                "Amount"
+              ],
+              "Name": "EmptyTable",
+              "Totals": false
+            }
+          ],
+          "Sheet": "Boundaries",
+          "Cells": [
+            {
+              "Value": "Qty",
+              "Formula": null,
+              "Address": "A1",
+              "Kind": "Text"
+            },
+            {
+              "Value": "Amount",
+              "Formula": null,
+              "Address": "B1",
+              "Kind": "Text"
+            },
+            {
+              "Value": 0.0,
+              "Formula": "=SUM(EmptyTable[Qty])",
+              "Address": "D1",
+              "Kind": "Number"
+            },
+            {
+              "Value": 0.0,
+              "Formula": "=COUNT(EmptyTable[Qty])",
+              "Address": "D2",
+              "Kind": "Number"
+            },
+            {
+              "Value": 0.0,
+              "Formula": "=COUNTA(EmptyTable[Qty])",
+              "Address": "D3",
+              "Kind": "Number"
+            },
+            {
+              "Value": "#DIV/0!",
+              "Formula": "=AVERAGE(EmptyTable[Qty])",
+              "Address": "D4",
+              "Kind": "Error"
+            },
+            {
+              "Value": 0.0,
+              "Formula": "=INDEX(EmptyTable[Qty],1)",
+              "Address": "D5",
+              "Kind": "Number"
+            },
+            {
+              "Value": "#REF!",
+              "Formula": "=SUM(EmptyTable[#Totals])",
+              "Address": "D6",
+              "Kind": "Error"
+            },
+            {
+              "Value": 0.0,
+              "Formula": "=SUM(EmptyTable[#Headers])",
+              "Address": "D7",
+              "Kind": "Number"
+            },
+            {
+              "Value": 0.0,
+              "Formula": "=SUM(EmptyTable[#All])",
+              "Address": "D8",
+              "Kind": "Number"
+            }
+          ]
+        }
+      ]
+    },
+    "insert-row": {
+      "Sha256": "2A1D9DF20BD145AAAD7B2B52328480C83F9B49944EBCF254C6855B4230EC8C0C",
+      "After": [
+        {
+          "Tables": [
+            {
+              "Range": "B2:E7",
+              "Headers": [
+                "Qty",
+                "Unit Price",
+                "Amount",
+                "Tax"
+              ],
+              "Name": "Revenue",
+              "Totals": true
+            }
+          ],
+          "Sheet": "Data",
+          "Cells": [
+            {
+              "Value": "Qty",
+              "Formula": null,
+              "Address": "B2",
+              "Kind": "Text"
+            },
+            {
+              "Value": "Unit Price",
+              "Formula": null,
+              "Address": "C2",
+              "Kind": "Text"
+            },
+            {
+              "Value": "Amount",
+              "Formula": null,
+              "Address": "D2",
+              "Kind": "Text"
+            },
+            {
+              "Value": "Tax",
+              "Formula": null,
+              "Address": "E2",
+              "Kind": "Text"
+            },
+            {
+              "Value": 2.0,
+              "Formula": null,
+              "Address": "B3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 10.0,
+              "Formula": null,
+              "Address": "C3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 20.0,
+              "Formula": "=[@Qty]*[@[Unit Price]]",
+              "Address": "D3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 2.0,
+              "Formula": "=[@Amount]*0.1",
+              "Address": "E3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 0.0,
+              "Formula": "=[@Qty]*[@[Unit Price]]",
+              "Address": "D4",
+              "Kind": "Number"
+            },
+            {
+              "Value": 0.0,
+              "Formula": "=[@Amount]*0.1",
+              "Address": "E4",
+              "Kind": "Number"
+            },
+            {
+              "Value": 3.0,
+              "Formula": null,
+              "Address": "B5",
+              "Kind": "Number"
+            },
+            {
+              "Value": 20.0,
+              "Formula": null,
+              "Address": "C5",
+              "Kind": "Number"
+            },
+            {
+              "Value": 60.0,
+              "Formula": "=[@Qty]*[@[Unit Price]]",
+              "Address": "D5",
+              "Kind": "Number"
+            },
+            {
+              "Value": 6.0,
+              "Formula": "=[@Amount]*0.1",
+              "Address": "E5",
+              "Kind": "Number"
+            },
+            {
+              "Value": 4.0,
+              "Formula": null,
+              "Address": "B6",
+              "Kind": "Number"
+            },
+            {
+              "Value": 30.0,
+              "Formula": null,
+              "Address": "C6",
+              "Kind": "Number"
+            },
+            {
+              "Value": 120.0,
+              "Formula": "=[@Qty]*[@[Unit Price]]",
+              "Address": "D6",
+              "Kind": "Number"
+            },
+            {
+              "Value": 12.0,
+              "Formula": "=[@Amount]*0.1",
+              "Address": "E6",
+              "Kind": "Number"
+            },
+            {
+              "Value": 200.0,
+              "Formula": "=SUM([Amount])",
+              "Address": "D7",
+              "Kind": "Number"
+            }
+          ]
+        },
+        {
+          "Tables": [],
+          "Sheet": "Summary",
+          "Cells": [
+            {
+              "Value": 200.0,
+              "Formula": "=SUM(Revenue[Amount])",
+              "Address": "A1",
+              "Kind": "Number"
+            },
+            {
+              "Value": "#VALUE!",
+              "Formula": "=Revenue[@Amount]",
+              "Address": "B1",
+              "Kind": "Error"
+            },
+            {
+              "Value": 289.0,
+              "Formula": "=SUM(Revenue)",
+              "Address": "A2",
+              "Kind": "Number"
+            },
+            {
+              "Value": "#VALUE!",
+              "Formula": "=Revenue[@Amount]",
+              "Address": "B2",
+              "Kind": "Error"
+            },
+            {
+              "Value": 200.0,
+              "Formula": "=SUM(Revenue[[#Headers],[#Data],[Amount]])",
+              "Address": "A3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 20.0,
+              "Formula": "=Revenue[@Amount]",
+              "Address": "B3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 400.0,
+              "Formula": "=SUM(Revenue[[#All],[Amount]])",
+              "Address": "A4",
+              "Kind": "Number"
+            },
+            {
+              "Value": 0.0,
+              "Formula": "=Revenue[@Amount]",
+              "Address": "B4",
+              "Kind": "Number"
+            },
+            {
+              "Value": "Unit Price",
+              "Formula": "=Revenue[[#Headers],[Unit Price]]",
+              "Address": "A5",
+              "Kind": "Text"
+            },
+            {
+              "Value": 60.0,
+              "Formula": "=Revenue[@Amount]",
+              "Address": "B5",
+              "Kind": "Number"
+            },
+            {
+              "Value": 200.0,
+              "Formula": "=Revenue[[#Totals],[Amount]]",
+              "Address": "A6",
+              "Kind": "Number"
+            },
+            {
+              "Value": 120.0,
+              "Formula": "=Revenue[@Amount]",
+              "Address": "B6",
+              "Kind": "Number"
+            },
+            {
+              "Value": 269.0,
+              "Formula": "=SUM(Revenue[[Qty]:[Amount]])",
+              "Address": "A7",
+              "Kind": "Number"
+            },
+            {
+              "Value": "#VALUE!",
+              "Formula": "=Revenue[@Amount]",
+              "Address": "B7",
+              "Kind": "Error"
+            },
+            {
+              "Value": 69.0,
+              "Formula": "=SUM(Revenue[[#Data],[Qty]:[Unit Price]])",
+              "Address": "A8",
+              "Kind": "Number"
+            },
+            {
+              "Value": 0.0,
+              "Formula": "=INDEX(Revenue[Amount],2)",
+              "Address": "A9",
+              "Kind": "Number"
+            },
+            {
+              "Value": 0.0,
+              "Formula": "=SUM(Revenue[#Headers])",
+              "Address": "A10",
+              "Kind": "Number"
+            },
+            {
+              "Value": 200.0,
+              "Formula": "=SUM(Revenue[#Totals])",
+              "Address": "A11",
+              "Kind": "Number"
+            },
+            {
+              "Value": 200.0,
+              "Formula": "=SUM(SalesAmount)",
+              "Address": "A12",
+              "Kind": "Number"
+            }
+          ]
+        },
+        {
+          "Tables": [
+            {
+              "Range": "A1:C3",
+              "Headers": [
+                "Qty",
+                "Price",
+                "Amount"
+              ],
+              "Name": "Plain",
+              "Totals": false
+            }
+          ],
+          "Sheet": "A1Column",
+          "Cells": [
+            {
+              "Value": "Qty",
+              "Formula": null,
+              "Address": "A1",
+              "Kind": "Text"
+            },
+            {
+              "Value": "Price",
+              "Formula": null,
+              "Address": "B1",
+              "Kind": "Text"
+            },
+            {
+              "Value": "Amount",
+              "Formula": null,
+              "Address": "C1",
+              "Kind": "Text"
+            },
+            {
+              "Value": 2.0,
+              "Formula": null,
+              "Address": "A2",
+              "Kind": "Number"
+            },
+            {
+              "Value": 4.0,
+              "Formula": null,
+              "Address": "B2",
+              "Kind": "Number"
+            },
+            {
+              "Value": 8.0,
+              "Formula": "=A2*B2",
+              "Address": "C2",
+              "Kind": "Number"
+            },
+            {
+              "Value": 3.0,
+              "Formula": null,
+              "Address": "A3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 5.0,
+              "Formula": null,
+              "Address": "B3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 15.0,
+              "Formula": "=A3*B3",
+              "Address": "C3",
+              "Kind": "Number"
+            }
+          ]
+        },
+        {
+          "Tables": [
+            {
+              "Range": "A1:D3",
+              "Headers": [
+                "#Tag",
+                "@Value",
+                "[net]",
+                "O'Neil"
+              ],
+              "Name": "Escapes",
+              "Totals": false
+            }
+          ],
+          "Sheet": "Special",
+          "Cells": [
+            {
+              "Value": "#Tag",
+              "Formula": null,
+              "Address": "A1",
+              "Kind": "Text"
+            },
+            {
+              "Value": "@Value",
+              "Formula": null,
+              "Address": "B1",
+              "Kind": "Text"
+            },
+            {
+              "Value": "[net]",
+              "Formula": null,
+              "Address": "C1",
+              "Kind": "Text"
+            },
+            {
+              "Value": "O'Neil",
+              "Formula": null,
+              "Address": "D1",
+              "Kind": "Text"
+            },
+            {
+              "Value": 2.0,
+              "Formula": null,
+              "Address": "A2",
+              "Kind": "Number"
+            },
+            {
+              "Value": 4.0,
+              "Formula": null,
+              "Address": "B2",
+              "Kind": "Number"
+            },
+            {
+              "Value": 6.0,
+              "Formula": null,
+              "Address": "C2",
+              "Kind": "Number"
+            },
+            {
+              "Value": 8.0,
+              "Formula": null,
+              "Address": "D2",
+              "Kind": "Number"
+            },
+            {
+              "Value": 5.0,
+              "Formula": "=SUM(Escapes['#Tag])",
+              "Address": "F2",
+              "Kind": "Number"
+            },
+            {
+              "Value": 3.0,
+              "Formula": null,
+              "Address": "A3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 6.0,
+              "Formula": null,
+              "Address": "B3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 9.0,
+              "Formula": null,
+              "Address": "C3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 12.0,
+              "Formula": null,
+              "Address": "D3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 10.0,
+              "Formula": "=SUM(Escapes['@Value])",
+              "Address": "F3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 15.0,
+              "Formula": "=SUM(Escapes['[net']])",
+              "Address": "F4",
+              "Kind": "Number"
+            },
+            {
+              "Value": 20.0,
+              "Formula": "=SUM(Escapes[O''Neil])",
+              "Address": "F5",
+              "Kind": "Number"
+            }
+          ]
+        },
+        {
+          "Tables": [
+            {
+              "Range": "A1:B2",
+              "Headers": [
+                "Qty",
+                "Amount"
+              ],
+              "Name": "EmptyTable",
+              "Totals": false
+            }
+          ],
+          "Sheet": "Boundaries",
+          "Cells": [
+            {
+              "Value": "Qty",
+              "Formula": null,
+              "Address": "A1",
+              "Kind": "Text"
+            },
+            {
+              "Value": "Amount",
+              "Formula": null,
+              "Address": "B1",
+              "Kind": "Text"
+            },
+            {
+              "Value": 0.0,
+              "Formula": "=SUM(EmptyTable[Qty])",
+              "Address": "D1",
+              "Kind": "Number"
+            },
+            {
+              "Value": 0.0,
+              "Formula": "=COUNT(EmptyTable[Qty])",
+              "Address": "D2",
+              "Kind": "Number"
+            },
+            {
+              "Value": 0.0,
+              "Formula": "=COUNTA(EmptyTable[Qty])",
+              "Address": "D3",
+              "Kind": "Number"
+            },
+            {
+              "Value": "#DIV/0!",
+              "Formula": "=AVERAGE(EmptyTable[Qty])",
+              "Address": "D4",
+              "Kind": "Error"
+            },
+            {
+              "Value": 0.0,
+              "Formula": "=INDEX(EmptyTable[Qty],1)",
+              "Address": "D5",
+              "Kind": "Number"
+            },
+            {
+              "Value": "#REF!",
+              "Formula": "=SUM(EmptyTable[#Totals])",
+              "Address": "D6",
+              "Kind": "Error"
+            },
+            {
+              "Value": 0.0,
+              "Formula": "=SUM(EmptyTable[#Headers])",
+              "Address": "D7",
+              "Kind": "Number"
+            },
+            {
+              "Value": 0.0,
+              "Formula": "=SUM(EmptyTable[#All])",
+              "Address": "D8",
+              "Kind": "Number"
+            }
+          ]
+        }
+      ]
+    },
+    "insert-column": {
+      "Sha256": "A48EBB4D3EC3FB31C8F3FB3548277949E643E70BC3D5523B20FF2A250A8FAF69",
+      "After": [
+        {
+          "Tables": [
+            {
+              "Range": "B2:F7",
+              "Headers": [
+                "Qty",
+                "列1",
+                "Unit Price",
+                "Amount",
+                "Tax"
+              ],
+              "Name": "Revenue",
+              "Totals": true
+            }
+          ],
+          "Sheet": "Data",
+          "Cells": [
+            {
+              "Value": "Qty",
+              "Formula": null,
+              "Address": "B2",
+              "Kind": "Text"
+            },
+            {
+              "Value": "列1",
+              "Formula": null,
+              "Address": "C2",
+              "Kind": "Text"
+            },
+            {
+              "Value": "Unit Price",
+              "Formula": null,
+              "Address": "D2",
+              "Kind": "Text"
+            },
+            {
+              "Value": "Amount",
+              "Formula": null,
+              "Address": "E2",
+              "Kind": "Text"
+            },
+            {
+              "Value": "Tax",
+              "Formula": null,
+              "Address": "F2",
+              "Kind": "Text"
+            },
+            {
+              "Value": 2.0,
+              "Formula": null,
+              "Address": "B3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 10.0,
+              "Formula": null,
+              "Address": "D3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 20.0,
+              "Formula": "=[@Qty]*[@[Unit Price]]",
+              "Address": "E3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 2.0,
+              "Formula": "=[@Amount]*0.1",
+              "Address": "F3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 0.0,
+              "Formula": "=[@Qty]*[@[Unit Price]]",
+              "Address": "E4",
+              "Kind": "Number"
+            },
+            {
+              "Value": 0.0,
+              "Formula": "=[@Amount]*0.1",
+              "Address": "F4",
+              "Kind": "Number"
+            },
+            {
+              "Value": 3.0,
+              "Formula": null,
+              "Address": "B5",
+              "Kind": "Number"
+            },
+            {
+              "Value": 20.0,
+              "Formula": null,
+              "Address": "D5",
+              "Kind": "Number"
+            },
+            {
+              "Value": 60.0,
+              "Formula": "=[@Qty]*[@[Unit Price]]",
+              "Address": "E5",
+              "Kind": "Number"
+            },
+            {
+              "Value": 6.0,
+              "Formula": "=[@Amount]*0.1",
+              "Address": "F5",
+              "Kind": "Number"
+            },
+            {
+              "Value": 4.0,
+              "Formula": null,
+              "Address": "B6",
+              "Kind": "Number"
+            },
+            {
+              "Value": 30.0,
+              "Formula": null,
+              "Address": "D6",
+              "Kind": "Number"
+            },
+            {
+              "Value": 120.0,
+              "Formula": "=[@Qty]*[@[Unit Price]]",
+              "Address": "E6",
+              "Kind": "Number"
+            },
+            {
+              "Value": 12.0,
+              "Formula": "=[@Amount]*0.1",
+              "Address": "F6",
+              "Kind": "Number"
+            },
+            {
+              "Value": 200.0,
+              "Formula": "=SUM([Amount])",
+              "Address": "E7",
+              "Kind": "Number"
+            }
+          ]
+        },
+        {
+          "Tables": [],
+          "Sheet": "Summary",
+          "Cells": [
+            {
+              "Value": 200.0,
+              "Formula": "=SUM(Revenue[Amount])",
+              "Address": "A1",
+              "Kind": "Number"
+            },
+            {
+              "Value": "#VALUE!",
+              "Formula": "=Revenue[@Amount]",
+              "Address": "B1",
+              "Kind": "Error"
+            },
+            {
+              "Value": 289.0,
+              "Formula": "=SUM(Revenue)",
+              "Address": "A2",
+              "Kind": "Number"
+            },
+            {
+              "Value": "#VALUE!",
+              "Formula": "=Revenue[@Amount]",
+              "Address": "B2",
+              "Kind": "Error"
+            },
+            {
+              "Value": 200.0,
+              "Formula": "=SUM(Revenue[[#Headers],[#Data],[Amount]])",
+              "Address": "A3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 20.0,
+              "Formula": "=Revenue[@Amount]",
+              "Address": "B3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 400.0,
+              "Formula": "=SUM(Revenue[[#All],[Amount]])",
+              "Address": "A4",
+              "Kind": "Number"
+            },
+            {
+              "Value": 0.0,
+              "Formula": "=Revenue[@Amount]",
+              "Address": "B4",
+              "Kind": "Number"
+            },
+            {
+              "Value": "Unit Price",
+              "Formula": "=Revenue[[#Headers],[Unit Price]]",
+              "Address": "A5",
+              "Kind": "Text"
+            },
+            {
+              "Value": 60.0,
+              "Formula": "=Revenue[@Amount]",
+              "Address": "B5",
+              "Kind": "Number"
+            },
+            {
+              "Value": 200.0,
+              "Formula": "=Revenue[[#Totals],[Amount]]",
+              "Address": "A6",
+              "Kind": "Number"
+            },
+            {
+              "Value": 120.0,
+              "Formula": "=Revenue[@Amount]",
+              "Address": "B6",
+              "Kind": "Number"
+            },
+            {
+              "Value": 269.0,
+              "Formula": "=SUM(Revenue[[Qty]:[Amount]])",
+              "Address": "A7",
+              "Kind": "Number"
+            },
+            {
+              "Value": "#VALUE!",
+              "Formula": "=Revenue[@Amount]",
+              "Address": "B7",
+              "Kind": "Error"
+            },
+            {
+              "Value": 69.0,
+              "Formula": "=SUM(Revenue[[#Data],[Qty]:[Unit Price]])",
+              "Address": "A8",
+              "Kind": "Number"
+            },
+            {
+              "Value": 0.0,
+              "Formula": "=INDEX(Revenue[Amount],2)",
+              "Address": "A9",
+              "Kind": "Number"
+            },
+            {
+              "Value": 0.0,
+              "Formula": "=SUM(Revenue[#Headers])",
+              "Address": "A10",
+              "Kind": "Number"
+            },
+            {
+              "Value": 200.0,
+              "Formula": "=SUM(Revenue[#Totals])",
+              "Address": "A11",
+              "Kind": "Number"
+            },
+            {
+              "Value": 200.0,
+              "Formula": "=SUM(SalesAmount)",
+              "Address": "A12",
+              "Kind": "Number"
+            }
+          ]
+        },
+        {
+          "Tables": [
+            {
+              "Range": "A1:C3",
+              "Headers": [
+                "Qty",
+                "Price",
+                "Amount"
+              ],
+              "Name": "Plain",
+              "Totals": false
+            }
+          ],
+          "Sheet": "A1Column",
+          "Cells": [
+            {
+              "Value": "Qty",
+              "Formula": null,
+              "Address": "A1",
+              "Kind": "Text"
+            },
+            {
+              "Value": "Price",
+              "Formula": null,
+              "Address": "B1",
+              "Kind": "Text"
+            },
+            {
+              "Value": "Amount",
+              "Formula": null,
+              "Address": "C1",
+              "Kind": "Text"
+            },
+            {
+              "Value": 2.0,
+              "Formula": null,
+              "Address": "A2",
+              "Kind": "Number"
+            },
+            {
+              "Value": 4.0,
+              "Formula": null,
+              "Address": "B2",
+              "Kind": "Number"
+            },
+            {
+              "Value": 8.0,
+              "Formula": "=A2*B2",
+              "Address": "C2",
+              "Kind": "Number"
+            },
+            {
+              "Value": 3.0,
+              "Formula": null,
+              "Address": "A3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 5.0,
+              "Formula": null,
+              "Address": "B3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 15.0,
+              "Formula": "=A3*B3",
+              "Address": "C3",
+              "Kind": "Number"
+            }
+          ]
+        },
+        {
+          "Tables": [
+            {
+              "Range": "A1:D3",
+              "Headers": [
+                "#Tag",
+                "@Value",
+                "[net]",
+                "O'Neil"
+              ],
+              "Name": "Escapes",
+              "Totals": false
+            }
+          ],
+          "Sheet": "Special",
+          "Cells": [
+            {
+              "Value": "#Tag",
+              "Formula": null,
+              "Address": "A1",
+              "Kind": "Text"
+            },
+            {
+              "Value": "@Value",
+              "Formula": null,
+              "Address": "B1",
+              "Kind": "Text"
+            },
+            {
+              "Value": "[net]",
+              "Formula": null,
+              "Address": "C1",
+              "Kind": "Text"
+            },
+            {
+              "Value": "O'Neil",
+              "Formula": null,
+              "Address": "D1",
+              "Kind": "Text"
+            },
+            {
+              "Value": 2.0,
+              "Formula": null,
+              "Address": "A2",
+              "Kind": "Number"
+            },
+            {
+              "Value": 4.0,
+              "Formula": null,
+              "Address": "B2",
+              "Kind": "Number"
+            },
+            {
+              "Value": 6.0,
+              "Formula": null,
+              "Address": "C2",
+              "Kind": "Number"
+            },
+            {
+              "Value": 8.0,
+              "Formula": null,
+              "Address": "D2",
+              "Kind": "Number"
+            },
+            {
+              "Value": 5.0,
+              "Formula": "=SUM(Escapes['#Tag])",
+              "Address": "F2",
+              "Kind": "Number"
+            },
+            {
+              "Value": 3.0,
+              "Formula": null,
+              "Address": "A3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 6.0,
+              "Formula": null,
+              "Address": "B3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 9.0,
+              "Formula": null,
+              "Address": "C3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 12.0,
+              "Formula": null,
+              "Address": "D3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 10.0,
+              "Formula": "=SUM(Escapes['@Value])",
+              "Address": "F3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 15.0,
+              "Formula": "=SUM(Escapes['[net']])",
+              "Address": "F4",
+              "Kind": "Number"
+            },
+            {
+              "Value": 20.0,
+              "Formula": "=SUM(Escapes[O''Neil])",
+              "Address": "F5",
+              "Kind": "Number"
+            }
+          ]
+        },
+        {
+          "Tables": [
+            {
+              "Range": "A1:B2",
+              "Headers": [
+                "Qty",
+                "Amount"
+              ],
+              "Name": "EmptyTable",
+              "Totals": false
+            }
+          ],
+          "Sheet": "Boundaries",
+          "Cells": [
+            {
+              "Value": "Qty",
+              "Formula": null,
+              "Address": "A1",
+              "Kind": "Text"
+            },
+            {
+              "Value": "Amount",
+              "Formula": null,
+              "Address": "B1",
+              "Kind": "Text"
+            },
+            {
+              "Value": 0.0,
+              "Formula": "=SUM(EmptyTable[Qty])",
+              "Address": "D1",
+              "Kind": "Number"
+            },
+            {
+              "Value": 0.0,
+              "Formula": "=COUNT(EmptyTable[Qty])",
+              "Address": "D2",
+              "Kind": "Number"
+            },
+            {
+              "Value": 0.0,
+              "Formula": "=COUNTA(EmptyTable[Qty])",
+              "Address": "D3",
+              "Kind": "Number"
+            },
+            {
+              "Value": "#DIV/0!",
+              "Formula": "=AVERAGE(EmptyTable[Qty])",
+              "Address": "D4",
+              "Kind": "Error"
+            },
+            {
+              "Value": 0.0,
+              "Formula": "=INDEX(EmptyTable[Qty],1)",
+              "Address": "D5",
+              "Kind": "Number"
+            },
+            {
+              "Value": "#REF!",
+              "Formula": "=SUM(EmptyTable[#Totals])",
+              "Address": "D6",
+              "Kind": "Error"
+            },
+            {
+              "Value": 0.0,
+              "Formula": "=SUM(EmptyTable[#Headers])",
+              "Address": "D7",
+              "Kind": "Number"
+            },
+            {
+              "Value": 0.0,
+              "Formula": "=SUM(EmptyTable[#All])",
+              "Address": "D8",
+              "Kind": "Number"
+            }
+          ]
+        }
+      ]
+    },
+    "delete-inserted": {
+      "Sha256": "D97AA547AD6C5DCF08B5B85DDC01E518DAA982051918383D3ADA9BAE497243E2",
+      "After": [
+        {
+          "Tables": [
+            {
+              "Range": "B2:E6",
+              "Headers": [
+                "Qty",
+                "Unit Price",
+                "Amount",
+                "Tax"
+              ],
+              "Name": "Revenue",
+              "Totals": true
+            }
+          ],
+          "Sheet": "Data",
+          "Cells": [
+            {
+              "Value": "Qty",
+              "Formula": null,
+              "Address": "B2",
+              "Kind": "Text"
+            },
+            {
+              "Value": "Unit Price",
+              "Formula": null,
+              "Address": "C2",
+              "Kind": "Text"
+            },
+            {
+              "Value": "Amount",
+              "Formula": null,
+              "Address": "D2",
+              "Kind": "Text"
+            },
+            {
+              "Value": "Tax",
+              "Formula": null,
+              "Address": "E2",
+              "Kind": "Text"
+            },
+            {
+              "Value": 2.0,
+              "Formula": null,
+              "Address": "B3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 10.0,
+              "Formula": null,
+              "Address": "C3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 20.0,
+              "Formula": "=[@Qty]*[@[Unit Price]]",
+              "Address": "D3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 2.0,
+              "Formula": "=[@Amount]*0.1",
+              "Address": "E3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 3.0,
+              "Formula": null,
+              "Address": "B4",
+              "Kind": "Number"
+            },
+            {
+              "Value": 20.0,
+              "Formula": null,
+              "Address": "C4",
+              "Kind": "Number"
+            },
+            {
+              "Value": 60.0,
+              "Formula": "=[@Qty]*[@[Unit Price]]",
+              "Address": "D4",
+              "Kind": "Number"
+            },
+            {
+              "Value": 6.0,
+              "Formula": "=[@Amount]*0.1",
+              "Address": "E4",
+              "Kind": "Number"
+            },
+            {
+              "Value": 4.0,
+              "Formula": null,
+              "Address": "B5",
+              "Kind": "Number"
+            },
+            {
+              "Value": 30.0,
+              "Formula": null,
+              "Address": "C5",
+              "Kind": "Number"
+            },
+            {
+              "Value": 120.0,
+              "Formula": "=[@Qty]*[@[Unit Price]]",
+              "Address": "D5",
+              "Kind": "Number"
+            },
+            {
+              "Value": 12.0,
+              "Formula": "=[@Amount]*0.1",
+              "Address": "E5",
+              "Kind": "Number"
+            },
+            {
+              "Value": 200.0,
+              "Formula": "=SUM([Amount])",
+              "Address": "D6",
+              "Kind": "Number"
+            }
+          ]
+        },
+        {
+          "Tables": [],
+          "Sheet": "Summary",
+          "Cells": [
+            {
+              "Value": 200.0,
+              "Formula": "=SUM(Revenue[Amount])",
+              "Address": "A1",
+              "Kind": "Number"
+            },
+            {
+              "Value": "#VALUE!",
+              "Formula": "=Revenue[@Amount]",
+              "Address": "B1",
+              "Kind": "Error"
+            },
+            {
+              "Value": 289.0,
+              "Formula": "=SUM(Revenue)",
+              "Address": "A2",
+              "Kind": "Number"
+            },
+            {
+              "Value": "#VALUE!",
+              "Formula": "=Revenue[@Amount]",
+              "Address": "B2",
+              "Kind": "Error"
+            },
+            {
+              "Value": 200.0,
+              "Formula": "=SUM(Revenue[[#Headers],[#Data],[Amount]])",
+              "Address": "A3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 20.0,
+              "Formula": "=Revenue[@Amount]",
+              "Address": "B3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 400.0,
+              "Formula": "=SUM(Revenue[[#All],[Amount]])",
+              "Address": "A4",
+              "Kind": "Number"
+            },
+            {
+              "Value": 60.0,
+              "Formula": "=Revenue[@Amount]",
+              "Address": "B4",
+              "Kind": "Number"
+            },
+            {
+              "Value": "Unit Price",
+              "Formula": "=Revenue[[#Headers],[Unit Price]]",
+              "Address": "A5",
+              "Kind": "Text"
+            },
+            {
+              "Value": 120.0,
+              "Formula": "=Revenue[@Amount]",
+              "Address": "B5",
+              "Kind": "Number"
+            },
+            {
+              "Value": 200.0,
+              "Formula": "=Revenue[[#Totals],[Amount]]",
+              "Address": "A6",
+              "Kind": "Number"
+            },
+            {
+              "Value": "#VALUE!",
+              "Formula": "=Revenue[@Amount]",
+              "Address": "B6",
+              "Kind": "Error"
+            },
+            {
+              "Value": 269.0,
+              "Formula": "=SUM(Revenue[[Qty]:[Amount]])",
+              "Address": "A7",
+              "Kind": "Number"
+            },
+            {
+              "Value": "#VALUE!",
+              "Formula": "=Revenue[@Amount]",
+              "Address": "B7",
+              "Kind": "Error"
+            },
+            {
+              "Value": 69.0,
+              "Formula": "=SUM(Revenue[[#Data],[Qty]:[Unit Price]])",
+              "Address": "A8",
+              "Kind": "Number"
+            },
+            {
+              "Value": 60.0,
+              "Formula": "=INDEX(Revenue[Amount],2)",
+              "Address": "A9",
+              "Kind": "Number"
+            },
+            {
+              "Value": 0.0,
+              "Formula": "=SUM(Revenue[#Headers])",
+              "Address": "A10",
+              "Kind": "Number"
+            },
+            {
+              "Value": 200.0,
+              "Formula": "=SUM(Revenue[#Totals])",
+              "Address": "A11",
+              "Kind": "Number"
+            },
+            {
+              "Value": 200.0,
+              "Formula": "=SUM(SalesAmount)",
+              "Address": "A12",
+              "Kind": "Number"
+            }
+          ]
+        },
+        {
+          "Tables": [
+            {
+              "Range": "A1:C3",
+              "Headers": [
+                "Qty",
+                "Price",
+                "Amount"
+              ],
+              "Name": "Plain",
+              "Totals": false
+            }
+          ],
+          "Sheet": "A1Column",
+          "Cells": [
+            {
+              "Value": "Qty",
+              "Formula": null,
+              "Address": "A1",
+              "Kind": "Text"
+            },
+            {
+              "Value": "Price",
+              "Formula": null,
+              "Address": "B1",
+              "Kind": "Text"
+            },
+            {
+              "Value": "Amount",
+              "Formula": null,
+              "Address": "C1",
+              "Kind": "Text"
+            },
+            {
+              "Value": 2.0,
+              "Formula": null,
+              "Address": "A2",
+              "Kind": "Number"
+            },
+            {
+              "Value": 4.0,
+              "Formula": null,
+              "Address": "B2",
+              "Kind": "Number"
+            },
+            {
+              "Value": 8.0,
+              "Formula": "=A2*B2",
+              "Address": "C2",
+              "Kind": "Number"
+            },
+            {
+              "Value": 3.0,
+              "Formula": null,
+              "Address": "A3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 5.0,
+              "Formula": null,
+              "Address": "B3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 15.0,
+              "Formula": "=A3*B3",
+              "Address": "C3",
+              "Kind": "Number"
+            }
+          ]
+        },
+        {
+          "Tables": [
+            {
+              "Range": "A1:D3",
+              "Headers": [
+                "#Tag",
+                "@Value",
+                "[net]",
+                "O'Neil"
+              ],
+              "Name": "Escapes",
+              "Totals": false
+            }
+          ],
+          "Sheet": "Special",
+          "Cells": [
+            {
+              "Value": "#Tag",
+              "Formula": null,
+              "Address": "A1",
+              "Kind": "Text"
+            },
+            {
+              "Value": "@Value",
+              "Formula": null,
+              "Address": "B1",
+              "Kind": "Text"
+            },
+            {
+              "Value": "[net]",
+              "Formula": null,
+              "Address": "C1",
+              "Kind": "Text"
+            },
+            {
+              "Value": "O'Neil",
+              "Formula": null,
+              "Address": "D1",
+              "Kind": "Text"
+            },
+            {
+              "Value": 2.0,
+              "Formula": null,
+              "Address": "A2",
+              "Kind": "Number"
+            },
+            {
+              "Value": 4.0,
+              "Formula": null,
+              "Address": "B2",
+              "Kind": "Number"
+            },
+            {
+              "Value": 6.0,
+              "Formula": null,
+              "Address": "C2",
+              "Kind": "Number"
+            },
+            {
+              "Value": 8.0,
+              "Formula": null,
+              "Address": "D2",
+              "Kind": "Number"
+            },
+            {
+              "Value": 5.0,
+              "Formula": "=SUM(Escapes['#Tag])",
+              "Address": "F2",
+              "Kind": "Number"
+            },
+            {
+              "Value": 3.0,
+              "Formula": null,
+              "Address": "A3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 6.0,
+              "Formula": null,
+              "Address": "B3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 9.0,
+              "Formula": null,
+              "Address": "C3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 12.0,
+              "Formula": null,
+              "Address": "D3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 10.0,
+              "Formula": "=SUM(Escapes['@Value])",
+              "Address": "F3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 15.0,
+              "Formula": "=SUM(Escapes['[net']])",
+              "Address": "F4",
+              "Kind": "Number"
+            },
+            {
+              "Value": 20.0,
+              "Formula": "=SUM(Escapes[O''Neil])",
+              "Address": "F5",
+              "Kind": "Number"
+            }
+          ]
+        },
+        {
+          "Tables": [
+            {
+              "Range": "A1:B2",
+              "Headers": [
+                "Qty",
+                "Amount"
+              ],
+              "Name": "EmptyTable",
+              "Totals": false
+            }
+          ],
+          "Sheet": "Boundaries",
+          "Cells": [
+            {
+              "Value": "Qty",
+              "Formula": null,
+              "Address": "A1",
+              "Kind": "Text"
+            },
+            {
+              "Value": "Amount",
+              "Formula": null,
+              "Address": "B1",
+              "Kind": "Text"
+            },
+            {
+              "Value": 0.0,
+              "Formula": "=SUM(EmptyTable[Qty])",
+              "Address": "D1",
+              "Kind": "Number"
+            },
+            {
+              "Value": 0.0,
+              "Formula": "=COUNT(EmptyTable[Qty])",
+              "Address": "D2",
+              "Kind": "Number"
+            },
+            {
+              "Value": 0.0,
+              "Formula": "=COUNTA(EmptyTable[Qty])",
+              "Address": "D3",
+              "Kind": "Number"
+            },
+            {
+              "Value": "#DIV/0!",
+              "Formula": "=AVERAGE(EmptyTable[Qty])",
+              "Address": "D4",
+              "Kind": "Error"
+            },
+            {
+              "Value": 0.0,
+              "Formula": "=INDEX(EmptyTable[Qty],1)",
+              "Address": "D5",
+              "Kind": "Number"
+            },
+            {
+              "Value": "#REF!",
+              "Formula": "=SUM(EmptyTable[#Totals])",
+              "Address": "D6",
+              "Kind": "Error"
+            },
+            {
+              "Value": 0.0,
+              "Formula": "=SUM(EmptyTable[#Headers])",
+              "Address": "D7",
+              "Kind": "Number"
+            },
+            {
+              "Value": 0.0,
+              "Formula": "=SUM(EmptyTable[#All])",
+              "Address": "D8",
+              "Kind": "Number"
+            }
+          ]
+        }
+      ]
+    },
+    "copy-sheet": {
+      "Sha256": "A5A4D1349936DB12890E6F7EF8B4B3050A12C35A5A17B79092A27557B1207EAB",
+      "After": [
+        {
+          "Tables": [
+            {
+              "Range": "B2:E6",
+              "Headers": [
+                "Qty",
+                "Unit Price",
+                "Amount",
+                "Tax"
+              ],
+              "Name": "Revenue",
+              "Totals": true
+            }
+          ],
+          "Sheet": "Data",
+          "Cells": [
+            {
+              "Value": "Qty",
+              "Formula": null,
+              "Address": "B2",
+              "Kind": "Text"
+            },
+            {
+              "Value": "Unit Price",
+              "Formula": null,
+              "Address": "C2",
+              "Kind": "Text"
+            },
+            {
+              "Value": "Amount",
+              "Formula": null,
+              "Address": "D2",
+              "Kind": "Text"
+            },
+            {
+              "Value": "Tax",
+              "Formula": null,
+              "Address": "E2",
+              "Kind": "Text"
+            },
+            {
+              "Value": 2.0,
+              "Formula": null,
+              "Address": "B3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 10.0,
+              "Formula": null,
+              "Address": "C3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 20.0,
+              "Formula": "=[@Qty]*[@[Unit Price]]",
+              "Address": "D3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 2.0,
+              "Formula": "=[@Amount]*0.1",
+              "Address": "E3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 3.0,
+              "Formula": null,
+              "Address": "B4",
+              "Kind": "Number"
+            },
+            {
+              "Value": 20.0,
+              "Formula": null,
+              "Address": "C4",
+              "Kind": "Number"
+            },
+            {
+              "Value": 60.0,
+              "Formula": "=[@Qty]*[@[Unit Price]]",
+              "Address": "D4",
+              "Kind": "Number"
+            },
+            {
+              "Value": 6.0,
+              "Formula": "=[@Amount]*0.1",
+              "Address": "E4",
+              "Kind": "Number"
+            },
+            {
+              "Value": 4.0,
+              "Formula": null,
+              "Address": "B5",
+              "Kind": "Number"
+            },
+            {
+              "Value": 30.0,
+              "Formula": null,
+              "Address": "C5",
+              "Kind": "Number"
+            },
+            {
+              "Value": 120.0,
+              "Formula": "=[@Qty]*[@[Unit Price]]",
+              "Address": "D5",
+              "Kind": "Number"
+            },
+            {
+              "Value": 12.0,
+              "Formula": "=[@Amount]*0.1",
+              "Address": "E5",
+              "Kind": "Number"
+            },
+            {
+              "Value": 200.0,
+              "Formula": "=SUM([Amount])",
+              "Address": "D6",
+              "Kind": "Number"
+            }
+          ]
+        },
+        {
+          "Tables": [],
+          "Sheet": "Summary",
+          "Cells": [
+            {
+              "Value": 200.0,
+              "Formula": "=SUM(Revenue[Amount])",
+              "Address": "A1",
+              "Kind": "Number"
+            },
+            {
+              "Value": "#VALUE!",
+              "Formula": "=Revenue[@Amount]",
+              "Address": "B1",
+              "Kind": "Error"
+            },
+            {
+              "Value": 289.0,
+              "Formula": "=SUM(Revenue)",
+              "Address": "A2",
+              "Kind": "Number"
+            },
+            {
+              "Value": "#VALUE!",
+              "Formula": "=Revenue[@Amount]",
+              "Address": "B2",
+              "Kind": "Error"
+            },
+            {
+              "Value": 200.0,
+              "Formula": "=SUM(Revenue[[#Headers],[#Data],[Amount]])",
+              "Address": "A3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 20.0,
+              "Formula": "=Revenue[@Amount]",
+              "Address": "B3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 400.0,
+              "Formula": "=SUM(Revenue[[#All],[Amount]])",
+              "Address": "A4",
+              "Kind": "Number"
+            },
+            {
+              "Value": 60.0,
+              "Formula": "=Revenue[@Amount]",
+              "Address": "B4",
+              "Kind": "Number"
+            },
+            {
+              "Value": "Unit Price",
+              "Formula": "=Revenue[[#Headers],[Unit Price]]",
+              "Address": "A5",
+              "Kind": "Text"
+            },
+            {
+              "Value": 120.0,
+              "Formula": "=Revenue[@Amount]",
+              "Address": "B5",
+              "Kind": "Number"
+            },
+            {
+              "Value": 200.0,
+              "Formula": "=Revenue[[#Totals],[Amount]]",
+              "Address": "A6",
+              "Kind": "Number"
+            },
+            {
+              "Value": "#VALUE!",
+              "Formula": "=Revenue[@Amount]",
+              "Address": "B6",
+              "Kind": "Error"
+            },
+            {
+              "Value": 269.0,
+              "Formula": "=SUM(Revenue[[Qty]:[Amount]])",
+              "Address": "A7",
+              "Kind": "Number"
+            },
+            {
+              "Value": "#VALUE!",
+              "Formula": "=Revenue[@Amount]",
+              "Address": "B7",
+              "Kind": "Error"
+            },
+            {
+              "Value": 69.0,
+              "Formula": "=SUM(Revenue[[#Data],[Qty]:[Unit Price]])",
+              "Address": "A8",
+              "Kind": "Number"
+            },
+            {
+              "Value": 60.0,
+              "Formula": "=INDEX(Revenue[Amount],2)",
+              "Address": "A9",
+              "Kind": "Number"
+            },
+            {
+              "Value": 0.0,
+              "Formula": "=SUM(Revenue[#Headers])",
+              "Address": "A10",
+              "Kind": "Number"
+            },
+            {
+              "Value": 200.0,
+              "Formula": "=SUM(Revenue[#Totals])",
+              "Address": "A11",
+              "Kind": "Number"
+            },
+            {
+              "Value": 200.0,
+              "Formula": "=SUM(SalesAmount)",
+              "Address": "A12",
+              "Kind": "Number"
+            }
+          ]
+        },
+        {
+          "Tables": [
+            {
+              "Range": "A1:C3",
+              "Headers": [
+                "Qty",
+                "Price",
+                "Amount"
+              ],
+              "Name": "Plain",
+              "Totals": false
+            }
+          ],
+          "Sheet": "A1Column",
+          "Cells": [
+            {
+              "Value": "Qty",
+              "Formula": null,
+              "Address": "A1",
+              "Kind": "Text"
+            },
+            {
+              "Value": "Price",
+              "Formula": null,
+              "Address": "B1",
+              "Kind": "Text"
+            },
+            {
+              "Value": "Amount",
+              "Formula": null,
+              "Address": "C1",
+              "Kind": "Text"
+            },
+            {
+              "Value": 2.0,
+              "Formula": null,
+              "Address": "A2",
+              "Kind": "Number"
+            },
+            {
+              "Value": 4.0,
+              "Formula": null,
+              "Address": "B2",
+              "Kind": "Number"
+            },
+            {
+              "Value": 8.0,
+              "Formula": "=A2*B2",
+              "Address": "C2",
+              "Kind": "Number"
+            },
+            {
+              "Value": 3.0,
+              "Formula": null,
+              "Address": "A3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 5.0,
+              "Formula": null,
+              "Address": "B3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 15.0,
+              "Formula": "=A3*B3",
+              "Address": "C3",
+              "Kind": "Number"
+            }
+          ]
+        },
+        {
+          "Tables": [
+            {
+              "Range": "A1:D3",
+              "Headers": [
+                "#Tag",
+                "@Value",
+                "[net]",
+                "O'Neil"
+              ],
+              "Name": "Escapes",
+              "Totals": false
+            }
+          ],
+          "Sheet": "Special",
+          "Cells": [
+            {
+              "Value": "#Tag",
+              "Formula": null,
+              "Address": "A1",
+              "Kind": "Text"
+            },
+            {
+              "Value": "@Value",
+              "Formula": null,
+              "Address": "B1",
+              "Kind": "Text"
+            },
+            {
+              "Value": "[net]",
+              "Formula": null,
+              "Address": "C1",
+              "Kind": "Text"
+            },
+            {
+              "Value": "O'Neil",
+              "Formula": null,
+              "Address": "D1",
+              "Kind": "Text"
+            },
+            {
+              "Value": 2.0,
+              "Formula": null,
+              "Address": "A2",
+              "Kind": "Number"
+            },
+            {
+              "Value": 4.0,
+              "Formula": null,
+              "Address": "B2",
+              "Kind": "Number"
+            },
+            {
+              "Value": 6.0,
+              "Formula": null,
+              "Address": "C2",
+              "Kind": "Number"
+            },
+            {
+              "Value": 8.0,
+              "Formula": null,
+              "Address": "D2",
+              "Kind": "Number"
+            },
+            {
+              "Value": 5.0,
+              "Formula": "=SUM(Escapes['#Tag])",
+              "Address": "F2",
+              "Kind": "Number"
+            },
+            {
+              "Value": 3.0,
+              "Formula": null,
+              "Address": "A3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 6.0,
+              "Formula": null,
+              "Address": "B3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 9.0,
+              "Formula": null,
+              "Address": "C3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 12.0,
+              "Formula": null,
+              "Address": "D3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 10.0,
+              "Formula": "=SUM(Escapes['@Value])",
+              "Address": "F3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 15.0,
+              "Formula": "=SUM(Escapes['[net']])",
+              "Address": "F4",
+              "Kind": "Number"
+            },
+            {
+              "Value": 20.0,
+              "Formula": "=SUM(Escapes[O''Neil])",
+              "Address": "F5",
+              "Kind": "Number"
+            }
+          ]
+        },
+        {
+          "Tables": [
+            {
+              "Range": "A1:B2",
+              "Headers": [
+                "Qty",
+                "Amount"
+              ],
+              "Name": "EmptyTable",
+              "Totals": false
+            }
+          ],
+          "Sheet": "Boundaries",
+          "Cells": [
+            {
+              "Value": "Qty",
+              "Formula": null,
+              "Address": "A1",
+              "Kind": "Text"
+            },
+            {
+              "Value": "Amount",
+              "Formula": null,
+              "Address": "B1",
+              "Kind": "Text"
+            },
+            {
+              "Value": 0.0,
+              "Formula": "=SUM(EmptyTable[Qty])",
+              "Address": "D1",
+              "Kind": "Number"
+            },
+            {
+              "Value": 0.0,
+              "Formula": "=COUNT(EmptyTable[Qty])",
+              "Address": "D2",
+              "Kind": "Number"
+            },
+            {
+              "Value": 0.0,
+              "Formula": "=COUNTA(EmptyTable[Qty])",
+              "Address": "D3",
+              "Kind": "Number"
+            },
+            {
+              "Value": "#DIV/0!",
+              "Formula": "=AVERAGE(EmptyTable[Qty])",
+              "Address": "D4",
+              "Kind": "Error"
+            },
+            {
+              "Value": 0.0,
+              "Formula": "=INDEX(EmptyTable[Qty],1)",
+              "Address": "D5",
+              "Kind": "Number"
+            },
+            {
+              "Value": "#REF!",
+              "Formula": "=SUM(EmptyTable[#Totals])",
+              "Address": "D6",
+              "Kind": "Error"
+            },
+            {
+              "Value": 0.0,
+              "Formula": "=SUM(EmptyTable[#Headers])",
+              "Address": "D7",
+              "Kind": "Number"
+            },
+            {
+              "Value": 0.0,
+              "Formula": "=SUM(EmptyTable[#All])",
+              "Address": "D8",
+              "Kind": "Number"
+            }
+          ]
+        },
+        {
+          "Tables": [
+            {
+              "Range": "B2:E6",
+              "Headers": [
+                "Qty",
+                "Unit Price",
+                "Amount",
+                "Tax"
+              ],
+              "Name": "Revenue_Copy",
+              "Totals": true
+            }
+          ],
+          "Sheet": "Copy",
+          "Cells": [
+            {
+              "Value": "Qty",
+              "Formula": null,
+              "Address": "B2",
+              "Kind": "Text"
+            },
+            {
+              "Value": "Unit Price",
+              "Formula": null,
+              "Address": "C2",
+              "Kind": "Text"
+            },
+            {
+              "Value": "Amount",
+              "Formula": null,
+              "Address": "D2",
+              "Kind": "Text"
+            },
+            {
+              "Value": "Tax",
+              "Formula": null,
+              "Address": "E2",
+              "Kind": "Text"
+            },
+            {
+              "Value": 7.0,
+              "Formula": null,
+              "Address": "B3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 10.0,
+              "Formula": null,
+              "Address": "C3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 70.0,
+              "Formula": "=[@Qty]*[@[Unit Price]]",
+              "Address": "D3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 7.0,
+              "Formula": "=[@Amount]*0.1",
+              "Address": "E3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 3.0,
+              "Formula": null,
+              "Address": "B4",
+              "Kind": "Number"
+            },
+            {
+              "Value": 20.0,
+              "Formula": null,
+              "Address": "C4",
+              "Kind": "Number"
+            },
+            {
+              "Value": 60.0,
+              "Formula": "=[@Qty]*[@[Unit Price]]",
+              "Address": "D4",
+              "Kind": "Number"
+            },
+            {
+              "Value": 6.0,
+              "Formula": "=[@Amount]*0.1",
+              "Address": "E4",
+              "Kind": "Number"
+            },
+            {
+              "Value": 4.0,
+              "Formula": null,
+              "Address": "B5",
+              "Kind": "Number"
+            },
+            {
+              "Value": 30.0,
+              "Formula": null,
+              "Address": "C5",
+              "Kind": "Number"
+            },
+            {
+              "Value": 120.0,
+              "Formula": "=[@Qty]*[@[Unit Price]]",
+              "Address": "D5",
+              "Kind": "Number"
+            },
+            {
+              "Value": 12.0,
+              "Formula": "=[@Amount]*0.1",
+              "Address": "E5",
+              "Kind": "Number"
+            },
+            {
+              "Value": 250.0,
+              "Formula": "=SUM([Amount])",
+              "Address": "D6",
+              "Kind": "Number"
+            }
+          ]
+        }
+      ]
+    },
+    "copy-formula": {
+      "Sha256": "55D91CC1A746A60B14A6ACA6BF5690CD246EAA7870441F06457744E7F01AD615",
+      "After": [
+        {
+          "Tables": [
+            {
+              "Range": "B2:E6",
+              "Headers": [
+                "Qty",
+                "Unit Price",
+                "Amount",
+                "Tax"
+              ],
+              "Name": "Revenue",
+              "Totals": true
+            }
+          ],
+          "Sheet": "Data",
+          "Cells": [
+            {
+              "Value": "Qty",
+              "Formula": null,
+              "Address": "B2",
+              "Kind": "Text"
+            },
+            {
+              "Value": "Unit Price",
+              "Formula": null,
+              "Address": "C2",
+              "Kind": "Text"
+            },
+            {
+              "Value": "Amount",
+              "Formula": null,
+              "Address": "D2",
+              "Kind": "Text"
+            },
+            {
+              "Value": "Tax",
+              "Formula": null,
+              "Address": "E2",
+              "Kind": "Text"
+            },
+            {
+              "Value": 2.0,
+              "Formula": null,
+              "Address": "B3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 10.0,
+              "Formula": null,
+              "Address": "C3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 20.0,
+              "Formula": "=[@Qty]*[@[Unit Price]]",
+              "Address": "D3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 2.0,
+              "Formula": "=[@Amount]*0.1",
+              "Address": "E3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 20.0,
+              "Formula": "=Revenue[@Qty]*Revenue[@[Unit Price]]",
+              "Address": "K3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 3.0,
+              "Formula": null,
+              "Address": "B4",
+              "Kind": "Number"
+            },
+            {
+              "Value": 20.0,
+              "Formula": null,
+              "Address": "C4",
+              "Kind": "Number"
+            },
+            {
+              "Value": 60.0,
+              "Formula": "=[@Qty]*[@[Unit Price]]",
+              "Address": "D4",
+              "Kind": "Number"
+            },
+            {
+              "Value": 6.0,
+              "Formula": "=[@Amount]*0.1",
+              "Address": "E4",
+              "Kind": "Number"
+            },
+            {
+              "Value": 4.0,
+              "Formula": null,
+              "Address": "B5",
+              "Kind": "Number"
+            },
+            {
+              "Value": 30.0,
+              "Formula": null,
+              "Address": "C5",
+              "Kind": "Number"
+            },
+            {
+              "Value": 120.0,
+              "Formula": "=[@Qty]*[@[Unit Price]]",
+              "Address": "D5",
+              "Kind": "Number"
+            },
+            {
+              "Value": 12.0,
+              "Formula": "=[@Amount]*0.1",
+              "Address": "E5",
+              "Kind": "Number"
+            },
+            {
+              "Value": 200.0,
+              "Formula": "=SUM([Amount])",
+              "Address": "D6",
+              "Kind": "Number"
+            }
+          ]
+        },
+        {
+          "Tables": [],
+          "Sheet": "Summary",
+          "Cells": [
+            {
+              "Value": 200.0,
+              "Formula": "=SUM(Revenue[Amount])",
+              "Address": "A1",
+              "Kind": "Number"
+            },
+            {
+              "Value": "#VALUE!",
+              "Formula": "=Revenue[@Amount]",
+              "Address": "B1",
+              "Kind": "Error"
+            },
+            {
+              "Value": 289.0,
+              "Formula": "=SUM(Revenue)",
+              "Address": "A2",
+              "Kind": "Number"
+            },
+            {
+              "Value": "#VALUE!",
+              "Formula": "=Revenue[@Amount]",
+              "Address": "B2",
+              "Kind": "Error"
+            },
+            {
+              "Value": 200.0,
+              "Formula": "=SUM(Revenue[[#Headers],[#Data],[Amount]])",
+              "Address": "A3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 20.0,
+              "Formula": "=Revenue[@Amount]",
+              "Address": "B3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 400.0,
+              "Formula": "=SUM(Revenue[[#All],[Amount]])",
+              "Address": "A4",
+              "Kind": "Number"
+            },
+            {
+              "Value": 60.0,
+              "Formula": "=Revenue[@Amount]",
+              "Address": "B4",
+              "Kind": "Number"
+            },
+            {
+              "Value": "Unit Price",
+              "Formula": "=Revenue[[#Headers],[Unit Price]]",
+              "Address": "A5",
+              "Kind": "Text"
+            },
+            {
+              "Value": 120.0,
+              "Formula": "=Revenue[@Amount]",
+              "Address": "B5",
+              "Kind": "Number"
+            },
+            {
+              "Value": 200.0,
+              "Formula": "=Revenue[[#Totals],[Amount]]",
+              "Address": "A6",
+              "Kind": "Number"
+            },
+            {
+              "Value": "#VALUE!",
+              "Formula": "=Revenue[@Amount]",
+              "Address": "B6",
+              "Kind": "Error"
+            },
+            {
+              "Value": 269.0,
+              "Formula": "=SUM(Revenue[[Qty]:[Amount]])",
+              "Address": "A7",
+              "Kind": "Number"
+            },
+            {
+              "Value": "#VALUE!",
+              "Formula": "=Revenue[@Amount]",
+              "Address": "B7",
+              "Kind": "Error"
+            },
+            {
+              "Value": 69.0,
+              "Formula": "=SUM(Revenue[[#Data],[Qty]:[Unit Price]])",
+              "Address": "A8",
+              "Kind": "Number"
+            },
+            {
+              "Value": 60.0,
+              "Formula": "=INDEX(Revenue[Amount],2)",
+              "Address": "A9",
+              "Kind": "Number"
+            },
+            {
+              "Value": 0.0,
+              "Formula": "=SUM(Revenue[#Headers])",
+              "Address": "A10",
+              "Kind": "Number"
+            },
+            {
+              "Value": 200.0,
+              "Formula": "=SUM(Revenue[#Totals])",
+              "Address": "A11",
+              "Kind": "Number"
+            },
+            {
+              "Value": 200.0,
+              "Formula": "=SUM(SalesAmount)",
+              "Address": "A12",
+              "Kind": "Number"
+            },
+            {
+              "Value": "#VALUE!",
+              "Formula": "=Revenue[@Qty]*Revenue[@[Unit Price]]",
+              "Address": "D12",
+              "Kind": "Error"
+            }
+          ]
+        },
+        {
+          "Tables": [
+            {
+              "Range": "A1:C3",
+              "Headers": [
+                "Qty",
+                "Price",
+                "Amount"
+              ],
+              "Name": "Plain",
+              "Totals": false
+            }
+          ],
+          "Sheet": "A1Column",
+          "Cells": [
+            {
+              "Value": "Qty",
+              "Formula": null,
+              "Address": "A1",
+              "Kind": "Text"
+            },
+            {
+              "Value": "Price",
+              "Formula": null,
+              "Address": "B1",
+              "Kind": "Text"
+            },
+            {
+              "Value": "Amount",
+              "Formula": null,
+              "Address": "C1",
+              "Kind": "Text"
+            },
+            {
+              "Value": 2.0,
+              "Formula": null,
+              "Address": "A2",
+              "Kind": "Number"
+            },
+            {
+              "Value": 4.0,
+              "Formula": null,
+              "Address": "B2",
+              "Kind": "Number"
+            },
+            {
+              "Value": 8.0,
+              "Formula": "=A2*B2",
+              "Address": "C2",
+              "Kind": "Number"
+            },
+            {
+              "Value": 3.0,
+              "Formula": null,
+              "Address": "A3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 5.0,
+              "Formula": null,
+              "Address": "B3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 15.0,
+              "Formula": "=A3*B3",
+              "Address": "C3",
+              "Kind": "Number"
+            }
+          ]
+        },
+        {
+          "Tables": [
+            {
+              "Range": "A1:D3",
+              "Headers": [
+                "#Tag",
+                "@Value",
+                "[net]",
+                "O'Neil"
+              ],
+              "Name": "Escapes",
+              "Totals": false
+            }
+          ],
+          "Sheet": "Special",
+          "Cells": [
+            {
+              "Value": "#Tag",
+              "Formula": null,
+              "Address": "A1",
+              "Kind": "Text"
+            },
+            {
+              "Value": "@Value",
+              "Formula": null,
+              "Address": "B1",
+              "Kind": "Text"
+            },
+            {
+              "Value": "[net]",
+              "Formula": null,
+              "Address": "C1",
+              "Kind": "Text"
+            },
+            {
+              "Value": "O'Neil",
+              "Formula": null,
+              "Address": "D1",
+              "Kind": "Text"
+            },
+            {
+              "Value": 2.0,
+              "Formula": null,
+              "Address": "A2",
+              "Kind": "Number"
+            },
+            {
+              "Value": 4.0,
+              "Formula": null,
+              "Address": "B2",
+              "Kind": "Number"
+            },
+            {
+              "Value": 6.0,
+              "Formula": null,
+              "Address": "C2",
+              "Kind": "Number"
+            },
+            {
+              "Value": 8.0,
+              "Formula": null,
+              "Address": "D2",
+              "Kind": "Number"
+            },
+            {
+              "Value": 5.0,
+              "Formula": "=SUM(Escapes['#Tag])",
+              "Address": "F2",
+              "Kind": "Number"
+            },
+            {
+              "Value": 3.0,
+              "Formula": null,
+              "Address": "A3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 6.0,
+              "Formula": null,
+              "Address": "B3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 9.0,
+              "Formula": null,
+              "Address": "C3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 12.0,
+              "Formula": null,
+              "Address": "D3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 10.0,
+              "Formula": "=SUM(Escapes['@Value])",
+              "Address": "F3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 15.0,
+              "Formula": "=SUM(Escapes['[net']])",
+              "Address": "F4",
+              "Kind": "Number"
+            },
+            {
+              "Value": 20.0,
+              "Formula": "=SUM(Escapes[O''Neil])",
+              "Address": "F5",
+              "Kind": "Number"
+            }
+          ]
+        },
+        {
+          "Tables": [
+            {
+              "Range": "A1:B2",
+              "Headers": [
+                "Qty",
+                "Amount"
+              ],
+              "Name": "EmptyTable",
+              "Totals": false
+            }
+          ],
+          "Sheet": "Boundaries",
+          "Cells": [
+            {
+              "Value": "Qty",
+              "Formula": null,
+              "Address": "A1",
+              "Kind": "Text"
+            },
+            {
+              "Value": "Amount",
+              "Formula": null,
+              "Address": "B1",
+              "Kind": "Text"
+            },
+            {
+              "Value": 0.0,
+              "Formula": "=SUM(EmptyTable[Qty])",
+              "Address": "D1",
+              "Kind": "Number"
+            },
+            {
+              "Value": 0.0,
+              "Formula": "=COUNT(EmptyTable[Qty])",
+              "Address": "D2",
+              "Kind": "Number"
+            },
+            {
+              "Value": 0.0,
+              "Formula": "=COUNTA(EmptyTable[Qty])",
+              "Address": "D3",
+              "Kind": "Number"
+            },
+            {
+              "Value": "#DIV/0!",
+              "Formula": "=AVERAGE(EmptyTable[Qty])",
+              "Address": "D4",
+              "Kind": "Error"
+            },
+            {
+              "Value": 0.0,
+              "Formula": "=INDEX(EmptyTable[Qty],1)",
+              "Address": "D5",
+              "Kind": "Number"
+            },
+            {
+              "Value": "#REF!",
+              "Formula": "=SUM(EmptyTable[#Totals])",
+              "Address": "D6",
+              "Kind": "Error"
+            },
+            {
+              "Value": 0.0,
+              "Formula": "=SUM(EmptyTable[#Headers])",
+              "Address": "D7",
+              "Kind": "Number"
+            },
+            {
+              "Value": 0.0,
+              "Formula": "=SUM(EmptyTable[#All])",
+              "Address": "D8",
+              "Kind": "Number"
+            }
+          ]
+        },
+        {
+          "Tables": [
+            {
+              "Range": "B2:E6",
+              "Headers": [
+                "Qty",
+                "Unit Price",
+                "Amount",
+                "Tax"
+              ],
+              "Name": "Revenue_Copy",
+              "Totals": true
+            }
+          ],
+          "Sheet": "Copy",
+          "Cells": [
+            {
+              "Value": "Qty",
+              "Formula": null,
+              "Address": "B2",
+              "Kind": "Text"
+            },
+            {
+              "Value": "Unit Price",
+              "Formula": null,
+              "Address": "C2",
+              "Kind": "Text"
+            },
+            {
+              "Value": "Amount",
+              "Formula": null,
+              "Address": "D2",
+              "Kind": "Text"
+            },
+            {
+              "Value": "Tax",
+              "Formula": null,
+              "Address": "E2",
+              "Kind": "Text"
+            },
+            {
+              "Value": 7.0,
+              "Formula": null,
+              "Address": "B3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 10.0,
+              "Formula": null,
+              "Address": "C3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 70.0,
+              "Formula": "=[@Qty]*[@[Unit Price]]",
+              "Address": "D3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 7.0,
+              "Formula": "=[@Amount]*0.1",
+              "Address": "E3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 3.0,
+              "Formula": null,
+              "Address": "B4",
+              "Kind": "Number"
+            },
+            {
+              "Value": 20.0,
+              "Formula": null,
+              "Address": "C4",
+              "Kind": "Number"
+            },
+            {
+              "Value": 60.0,
+              "Formula": "=[@Qty]*[@[Unit Price]]",
+              "Address": "D4",
+              "Kind": "Number"
+            },
+            {
+              "Value": 6.0,
+              "Formula": "=[@Amount]*0.1",
+              "Address": "E4",
+              "Kind": "Number"
+            },
+            {
+              "Value": 4.0,
+              "Formula": null,
+              "Address": "B5",
+              "Kind": "Number"
+            },
+            {
+              "Value": 30.0,
+              "Formula": null,
+              "Address": "C5",
+              "Kind": "Number"
+            },
+            {
+              "Value": 120.0,
+              "Formula": "=[@Qty]*[@[Unit Price]]",
+              "Address": "D5",
+              "Kind": "Number"
+            },
+            {
+              "Value": 12.0,
+              "Formula": "=[@Amount]*0.1",
+              "Address": "E5",
+              "Kind": "Number"
+            },
+            {
+              "Value": 250.0,
+              "Formula": "=SUM([Amount])",
+              "Address": "D6",
+              "Kind": "Number"
+            }
+          ]
+        }
+      ]
+    },
+    "expand": {
+      "Sha256": "EB008CE2CF49506ED4D35532AC8D1A8D93AF69A449D435974E7CFA8DA1CB4E89",
+      "After": [
+        {
+          "Tables": [
+            {
+              "Range": "B2:E6",
+              "Headers": [
+                "Qty",
+                "Unit Price",
+                "Amount",
+                "Tax"
+              ],
+              "Name": "Revenue",
+              "Totals": true
+            }
+          ],
+          "Sheet": "Data",
+          "Cells": [
+            {
+              "Value": "Qty",
+              "Formula": null,
+              "Address": "B2",
+              "Kind": "Text"
+            },
+            {
+              "Value": "Unit Price",
+              "Formula": null,
+              "Address": "C2",
+              "Kind": "Text"
+            },
+            {
+              "Value": "Amount",
+              "Formula": null,
+              "Address": "D2",
+              "Kind": "Text"
+            },
+            {
+              "Value": "Tax",
+              "Formula": null,
+              "Address": "E2",
+              "Kind": "Text"
+            },
+            {
+              "Value": 2.0,
+              "Formula": null,
+              "Address": "B3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 10.0,
+              "Formula": null,
+              "Address": "C3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 20.0,
+              "Formula": "=[@Qty]*[@[Unit Price]]",
+              "Address": "D3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 2.0,
+              "Formula": "=[@Amount]*0.1",
+              "Address": "E3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 20.0,
+              "Formula": "=Revenue[@Qty]*Revenue[@[Unit Price]]",
+              "Address": "K3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 3.0,
+              "Formula": null,
+              "Address": "B4",
+              "Kind": "Number"
+            },
+            {
+              "Value": 20.0,
+              "Formula": null,
+              "Address": "C4",
+              "Kind": "Number"
+            },
+            {
+              "Value": 60.0,
+              "Formula": "=[@Qty]*[@[Unit Price]]",
+              "Address": "D4",
+              "Kind": "Number"
+            },
+            {
+              "Value": 6.0,
+              "Formula": "=[@Amount]*0.1",
+              "Address": "E4",
+              "Kind": "Number"
+            },
+            {
+              "Value": 4.0,
+              "Formula": null,
+              "Address": "B5",
+              "Kind": "Number"
+            },
+            {
+              "Value": 30.0,
+              "Formula": null,
+              "Address": "C5",
+              "Kind": "Number"
+            },
+            {
+              "Value": 120.0,
+              "Formula": "=[@Qty]*[@[Unit Price]]",
+              "Address": "D5",
+              "Kind": "Number"
+            },
+            {
+              "Value": 12.0,
+              "Formula": "=[@Amount]*0.1",
+              "Address": "E5",
+              "Kind": "Number"
+            },
+            {
+              "Value": 200.0,
+              "Formula": "=SUM([Amount])",
+              "Address": "D6",
+              "Kind": "Number"
+            }
+          ]
+        },
+        {
+          "Tables": [],
+          "Sheet": "Summary",
+          "Cells": [
+            {
+              "Value": 200.0,
+              "Formula": "=SUM(Revenue[Amount])",
+              "Address": "A1",
+              "Kind": "Number"
+            },
+            {
+              "Value": "#VALUE!",
+              "Formula": "=Revenue[@Amount]",
+              "Address": "B1",
+              "Kind": "Error"
+            },
+            {
+              "Value": 289.0,
+              "Formula": "=SUM(Revenue)",
+              "Address": "A2",
+              "Kind": "Number"
+            },
+            {
+              "Value": "#VALUE!",
+              "Formula": "=Revenue[@Amount]",
+              "Address": "B2",
+              "Kind": "Error"
+            },
+            {
+              "Value": 200.0,
+              "Formula": "=SUM(Revenue[[#Headers],[#Data],[Amount]])",
+              "Address": "A3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 20.0,
+              "Formula": "=Revenue[@Amount]",
+              "Address": "B3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 400.0,
+              "Formula": "=SUM(Revenue[[#All],[Amount]])",
+              "Address": "A4",
+              "Kind": "Number"
+            },
+            {
+              "Value": 60.0,
+              "Formula": "=Revenue[@Amount]",
+              "Address": "B4",
+              "Kind": "Number"
+            },
+            {
+              "Value": "Unit Price",
+              "Formula": "=Revenue[[#Headers],[Unit Price]]",
+              "Address": "A5",
+              "Kind": "Text"
+            },
+            {
+              "Value": 120.0,
+              "Formula": "=Revenue[@Amount]",
+              "Address": "B5",
+              "Kind": "Number"
+            },
+            {
+              "Value": 200.0,
+              "Formula": "=Revenue[[#Totals],[Amount]]",
+              "Address": "A6",
+              "Kind": "Number"
+            },
+            {
+              "Value": "#VALUE!",
+              "Formula": "=Revenue[@Amount]",
+              "Address": "B6",
+              "Kind": "Error"
+            },
+            {
+              "Value": 269.0,
+              "Formula": "=SUM(Revenue[[Qty]:[Amount]])",
+              "Address": "A7",
+              "Kind": "Number"
+            },
+            {
+              "Value": "#VALUE!",
+              "Formula": "=Revenue[@Amount]",
+              "Address": "B7",
+              "Kind": "Error"
+            },
+            {
+              "Value": 69.0,
+              "Formula": "=SUM(Revenue[[#Data],[Qty]:[Unit Price]])",
+              "Address": "A8",
+              "Kind": "Number"
+            },
+            {
+              "Value": 60.0,
+              "Formula": "=INDEX(Revenue[Amount],2)",
+              "Address": "A9",
+              "Kind": "Number"
+            },
+            {
+              "Value": 0.0,
+              "Formula": "=SUM(Revenue[#Headers])",
+              "Address": "A10",
+              "Kind": "Number"
+            },
+            {
+              "Value": 200.0,
+              "Formula": "=SUM(Revenue[#Totals])",
+              "Address": "A11",
+              "Kind": "Number"
+            },
+            {
+              "Value": 200.0,
+              "Formula": "=SUM(SalesAmount)",
+              "Address": "A12",
+              "Kind": "Number"
+            },
+            {
+              "Value": "#VALUE!",
+              "Formula": "=Revenue[@Qty]*Revenue[@[Unit Price]]",
+              "Address": "D12",
+              "Kind": "Error"
+            }
+          ]
+        },
+        {
+          "Tables": [
+            {
+              "Range": "A1:C5",
+              "Headers": [
+                "Qty",
+                "Price",
+                "Amount"
+              ],
+              "Name": "Plain",
+              "Totals": false
+            }
+          ],
+          "Sheet": "A1Column",
+          "Cells": [
+            {
+              "Value": "Qty",
+              "Formula": null,
+              "Address": "A1",
+              "Kind": "Text"
+            },
+            {
+              "Value": "Price",
+              "Formula": null,
+              "Address": "B1",
+              "Kind": "Text"
+            },
+            {
+              "Value": "Amount",
+              "Formula": null,
+              "Address": "C1",
+              "Kind": "Text"
+            },
+            {
+              "Value": 2.0,
+              "Formula": null,
+              "Address": "A2",
+              "Kind": "Number"
+            },
+            {
+              "Value": 4.0,
+              "Formula": null,
+              "Address": "B2",
+              "Kind": "Number"
+            },
+            {
+              "Value": 8.0,
+              "Formula": "=A2*B2",
+              "Address": "C2",
+              "Kind": "Number"
+            },
+            {
+              "Value": 3.0,
+              "Formula": null,
+              "Address": "A3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 5.0,
+              "Formula": null,
+              "Address": "B3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 15.0,
+              "Formula": "=A3*B3",
+              "Address": "C3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 0.0,
+              "Formula": "=A4*B4",
+              "Address": "C4",
+              "Kind": "Number"
+            },
+            {
+              "Value": 0.0,
+              "Formula": "=A5*B5",
+              "Address": "C5",
+              "Kind": "Number"
+            }
+          ]
+        },
+        {
+          "Tables": [
+            {
+              "Range": "A1:D3",
+              "Headers": [
+                "#Tag",
+                "@Value",
+                "[net]",
+                "O'Neil"
+              ],
+              "Name": "Escapes",
+              "Totals": false
+            }
+          ],
+          "Sheet": "Special",
+          "Cells": [
+            {
+              "Value": "#Tag",
+              "Formula": null,
+              "Address": "A1",
+              "Kind": "Text"
+            },
+            {
+              "Value": "@Value",
+              "Formula": null,
+              "Address": "B1",
+              "Kind": "Text"
+            },
+            {
+              "Value": "[net]",
+              "Formula": null,
+              "Address": "C1",
+              "Kind": "Text"
+            },
+            {
+              "Value": "O'Neil",
+              "Formula": null,
+              "Address": "D1",
+              "Kind": "Text"
+            },
+            {
+              "Value": 2.0,
+              "Formula": null,
+              "Address": "A2",
+              "Kind": "Number"
+            },
+            {
+              "Value": 4.0,
+              "Formula": null,
+              "Address": "B2",
+              "Kind": "Number"
+            },
+            {
+              "Value": 6.0,
+              "Formula": null,
+              "Address": "C2",
+              "Kind": "Number"
+            },
+            {
+              "Value": 8.0,
+              "Formula": null,
+              "Address": "D2",
+              "Kind": "Number"
+            },
+            {
+              "Value": 5.0,
+              "Formula": "=SUM(Escapes['#Tag])",
+              "Address": "F2",
+              "Kind": "Number"
+            },
+            {
+              "Value": 3.0,
+              "Formula": null,
+              "Address": "A3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 6.0,
+              "Formula": null,
+              "Address": "B3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 9.0,
+              "Formula": null,
+              "Address": "C3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 12.0,
+              "Formula": null,
+              "Address": "D3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 10.0,
+              "Formula": "=SUM(Escapes['@Value])",
+              "Address": "F3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 15.0,
+              "Formula": "=SUM(Escapes['[net']])",
+              "Address": "F4",
+              "Kind": "Number"
+            },
+            {
+              "Value": 20.0,
+              "Formula": "=SUM(Escapes[O''Neil])",
+              "Address": "F5",
+              "Kind": "Number"
+            }
+          ]
+        },
+        {
+          "Tables": [
+            {
+              "Range": "A1:B2",
+              "Headers": [
+                "Qty",
+                "Amount"
+              ],
+              "Name": "EmptyTable",
+              "Totals": false
+            }
+          ],
+          "Sheet": "Boundaries",
+          "Cells": [
+            {
+              "Value": "Qty",
+              "Formula": null,
+              "Address": "A1",
+              "Kind": "Text"
+            },
+            {
+              "Value": "Amount",
+              "Formula": null,
+              "Address": "B1",
+              "Kind": "Text"
+            },
+            {
+              "Value": 0.0,
+              "Formula": "=SUM(EmptyTable[Qty])",
+              "Address": "D1",
+              "Kind": "Number"
+            },
+            {
+              "Value": 0.0,
+              "Formula": "=COUNT(EmptyTable[Qty])",
+              "Address": "D2",
+              "Kind": "Number"
+            },
+            {
+              "Value": 0.0,
+              "Formula": "=COUNTA(EmptyTable[Qty])",
+              "Address": "D3",
+              "Kind": "Number"
+            },
+            {
+              "Value": "#DIV/0!",
+              "Formula": "=AVERAGE(EmptyTable[Qty])",
+              "Address": "D4",
+              "Kind": "Error"
+            },
+            {
+              "Value": 0.0,
+              "Formula": "=INDEX(EmptyTable[Qty],1)",
+              "Address": "D5",
+              "Kind": "Number"
+            },
+            {
+              "Value": "#REF!",
+              "Formula": "=SUM(EmptyTable[#Totals])",
+              "Address": "D6",
+              "Kind": "Error"
+            },
+            {
+              "Value": 0.0,
+              "Formula": "=SUM(EmptyTable[#Headers])",
+              "Address": "D7",
+              "Kind": "Number"
+            },
+            {
+              "Value": 0.0,
+              "Formula": "=SUM(EmptyTable[#All])",
+              "Address": "D8",
+              "Kind": "Number"
+            }
+          ]
+        },
+        {
+          "Tables": [
+            {
+              "Range": "B2:E6",
+              "Headers": [
+                "Qty",
+                "Unit Price",
+                "Amount",
+                "Tax"
+              ],
+              "Name": "Revenue_Copy",
+              "Totals": true
+            }
+          ],
+          "Sheet": "Copy",
+          "Cells": [
+            {
+              "Value": "Qty",
+              "Formula": null,
+              "Address": "B2",
+              "Kind": "Text"
+            },
+            {
+              "Value": "Unit Price",
+              "Formula": null,
+              "Address": "C2",
+              "Kind": "Text"
+            },
+            {
+              "Value": "Amount",
+              "Formula": null,
+              "Address": "D2",
+              "Kind": "Text"
+            },
+            {
+              "Value": "Tax",
+              "Formula": null,
+              "Address": "E2",
+              "Kind": "Text"
+            },
+            {
+              "Value": 7.0,
+              "Formula": null,
+              "Address": "B3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 10.0,
+              "Formula": null,
+              "Address": "C3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 70.0,
+              "Formula": "=[@Qty]*[@[Unit Price]]",
+              "Address": "D3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 7.0,
+              "Formula": "=[@Amount]*0.1",
+              "Address": "E3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 3.0,
+              "Formula": null,
+              "Address": "B4",
+              "Kind": "Number"
+            },
+            {
+              "Value": 20.0,
+              "Formula": null,
+              "Address": "C4",
+              "Kind": "Number"
+            },
+            {
+              "Value": 60.0,
+              "Formula": "=[@Qty]*[@[Unit Price]]",
+              "Address": "D4",
+              "Kind": "Number"
+            },
+            {
+              "Value": 6.0,
+              "Formula": "=[@Amount]*0.1",
+              "Address": "E4",
+              "Kind": "Number"
+            },
+            {
+              "Value": 4.0,
+              "Formula": null,
+              "Address": "B5",
+              "Kind": "Number"
+            },
+            {
+              "Value": 30.0,
+              "Formula": null,
+              "Address": "C5",
+              "Kind": "Number"
+            },
+            {
+              "Value": 120.0,
+              "Formula": "=[@Qty]*[@[Unit Price]]",
+              "Address": "D5",
+              "Kind": "Number"
+            },
+            {
+              "Value": 12.0,
+              "Formula": "=[@Amount]*0.1",
+              "Address": "E5",
+              "Kind": "Number"
+            },
+            {
+              "Value": 250.0,
+              "Formula": "=SUM([Amount])",
+              "Address": "D6",
+              "Kind": "Number"
+            }
+          ]
+        }
+      ]
+    },
+    "insert-first": {
+      "Sha256": "54DCFB31700B660DBA8F1B942300C311C6BF3B8F5B1AD283D1455010E9430A19",
+      "After": [
+        {
+          "Tables": [
+            {
+              "Range": "B2:E6",
+              "Headers": [
+                "Qty",
+                "Unit Price",
+                "Amount",
+                "Tax"
+              ],
+              "Name": "Revenue",
+              "Totals": true
+            }
+          ],
+          "Sheet": "Data",
+          "Cells": [
+            {
+              "Value": "Qty",
+              "Formula": null,
+              "Address": "B2",
+              "Kind": "Text"
+            },
+            {
+              "Value": "Unit Price",
+              "Formula": null,
+              "Address": "C2",
+              "Kind": "Text"
+            },
+            {
+              "Value": "Amount",
+              "Formula": null,
+              "Address": "D2",
+              "Kind": "Text"
+            },
+            {
+              "Value": "Tax",
+              "Formula": null,
+              "Address": "E2",
+              "Kind": "Text"
+            },
+            {
+              "Value": 2.0,
+              "Formula": null,
+              "Address": "B3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 10.0,
+              "Formula": null,
+              "Address": "C3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 20.0,
+              "Formula": "=[@Qty]*[@[Unit Price]]",
+              "Address": "D3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 2.0,
+              "Formula": "=[@Amount]*0.1",
+              "Address": "E3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 20.0,
+              "Formula": "=Revenue[@Qty]*Revenue[@[Unit Price]]",
+              "Address": "K3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 3.0,
+              "Formula": null,
+              "Address": "B4",
+              "Kind": "Number"
+            },
+            {
+              "Value": 20.0,
+              "Formula": null,
+              "Address": "C4",
+              "Kind": "Number"
+            },
+            {
+              "Value": 60.0,
+              "Formula": "=[@Qty]*[@[Unit Price]]",
+              "Address": "D4",
+              "Kind": "Number"
+            },
+            {
+              "Value": 6.0,
+              "Formula": "=[@Amount]*0.1",
+              "Address": "E4",
+              "Kind": "Number"
+            },
+            {
+              "Value": 4.0,
+              "Formula": null,
+              "Address": "B5",
+              "Kind": "Number"
+            },
+            {
+              "Value": 30.0,
+              "Formula": null,
+              "Address": "C5",
+              "Kind": "Number"
+            },
+            {
+              "Value": 120.0,
+              "Formula": "=[@Qty]*[@[Unit Price]]",
+              "Address": "D5",
+              "Kind": "Number"
+            },
+            {
+              "Value": 12.0,
+              "Formula": "=[@Amount]*0.1",
+              "Address": "E5",
+              "Kind": "Number"
+            },
+            {
+              "Value": 200.0,
+              "Formula": "=SUM([Amount])",
+              "Address": "D6",
+              "Kind": "Number"
+            }
+          ]
+        },
+        {
+          "Tables": [],
+          "Sheet": "Summary",
+          "Cells": [
+            {
+              "Value": 200.0,
+              "Formula": "=SUM(Revenue[Amount])",
+              "Address": "A1",
+              "Kind": "Number"
+            },
+            {
+              "Value": "#VALUE!",
+              "Formula": "=Revenue[@Amount]",
+              "Address": "B1",
+              "Kind": "Error"
+            },
+            {
+              "Value": 289.0,
+              "Formula": "=SUM(Revenue)",
+              "Address": "A2",
+              "Kind": "Number"
+            },
+            {
+              "Value": "#VALUE!",
+              "Formula": "=Revenue[@Amount]",
+              "Address": "B2",
+              "Kind": "Error"
+            },
+            {
+              "Value": 200.0,
+              "Formula": "=SUM(Revenue[[#Headers],[#Data],[Amount]])",
+              "Address": "A3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 20.0,
+              "Formula": "=Revenue[@Amount]",
+              "Address": "B3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 400.0,
+              "Formula": "=SUM(Revenue[[#All],[Amount]])",
+              "Address": "A4",
+              "Kind": "Number"
+            },
+            {
+              "Value": 60.0,
+              "Formula": "=Revenue[@Amount]",
+              "Address": "B4",
+              "Kind": "Number"
+            },
+            {
+              "Value": "Unit Price",
+              "Formula": "=Revenue[[#Headers],[Unit Price]]",
+              "Address": "A5",
+              "Kind": "Text"
+            },
+            {
+              "Value": 120.0,
+              "Formula": "=Revenue[@Amount]",
+              "Address": "B5",
+              "Kind": "Number"
+            },
+            {
+              "Value": 200.0,
+              "Formula": "=Revenue[[#Totals],[Amount]]",
+              "Address": "A6",
+              "Kind": "Number"
+            },
+            {
+              "Value": "#VALUE!",
+              "Formula": "=Revenue[@Amount]",
+              "Address": "B6",
+              "Kind": "Error"
+            },
+            {
+              "Value": 269.0,
+              "Formula": "=SUM(Revenue[[Qty]:[Amount]])",
+              "Address": "A7",
+              "Kind": "Number"
+            },
+            {
+              "Value": "#VALUE!",
+              "Formula": "=Revenue[@Amount]",
+              "Address": "B7",
+              "Kind": "Error"
+            },
+            {
+              "Value": 69.0,
+              "Formula": "=SUM(Revenue[[#Data],[Qty]:[Unit Price]])",
+              "Address": "A8",
+              "Kind": "Number"
+            },
+            {
+              "Value": 60.0,
+              "Formula": "=INDEX(Revenue[Amount],2)",
+              "Address": "A9",
+              "Kind": "Number"
+            },
+            {
+              "Value": 0.0,
+              "Formula": "=SUM(Revenue[#Headers])",
+              "Address": "A10",
+              "Kind": "Number"
+            },
+            {
+              "Value": 200.0,
+              "Formula": "=SUM(Revenue[#Totals])",
+              "Address": "A11",
+              "Kind": "Number"
+            },
+            {
+              "Value": 200.0,
+              "Formula": "=SUM(SalesAmount)",
+              "Address": "A12",
+              "Kind": "Number"
+            },
+            {
+              "Value": "#VALUE!",
+              "Formula": "=Revenue[@Qty]*Revenue[@[Unit Price]]",
+              "Address": "D12",
+              "Kind": "Error"
+            }
+          ]
+        },
+        {
+          "Tables": [
+            {
+              "Range": "A1:C6",
+              "Headers": [
+                "Qty",
+                "Price",
+                "Amount"
+              ],
+              "Name": "Plain",
+              "Totals": false
+            }
+          ],
+          "Sheet": "A1Column",
+          "Cells": [
+            {
+              "Value": "Qty",
+              "Formula": null,
+              "Address": "A1",
+              "Kind": "Text"
+            },
+            {
+              "Value": "Price",
+              "Formula": null,
+              "Address": "B1",
+              "Kind": "Text"
+            },
+            {
+              "Value": "Amount",
+              "Formula": null,
+              "Address": "C1",
+              "Kind": "Text"
+            },
+            {
+              "Value": 0.0,
+              "Formula": "=A2*B2",
+              "Address": "C2",
+              "Kind": "Number"
+            },
+            {
+              "Value": 2.0,
+              "Formula": null,
+              "Address": "A3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 4.0,
+              "Formula": null,
+              "Address": "B3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 8.0,
+              "Formula": "=A3*B3",
+              "Address": "C3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 3.0,
+              "Formula": null,
+              "Address": "A4",
+              "Kind": "Number"
+            },
+            {
+              "Value": 5.0,
+              "Formula": null,
+              "Address": "B4",
+              "Kind": "Number"
+            },
+            {
+              "Value": 15.0,
+              "Formula": "=A4*B4",
+              "Address": "C4",
+              "Kind": "Number"
+            },
+            {
+              "Value": 0.0,
+              "Formula": "=A5*B5",
+              "Address": "C5",
+              "Kind": "Number"
+            },
+            {
+              "Value": 0.0,
+              "Formula": "=A6*B6",
+              "Address": "C6",
+              "Kind": "Number"
+            }
+          ]
+        },
+        {
+          "Tables": [
+            {
+              "Range": "A1:D3",
+              "Headers": [
+                "#Tag",
+                "@Value",
+                "[net]",
+                "O'Neil"
+              ],
+              "Name": "Escapes",
+              "Totals": false
+            }
+          ],
+          "Sheet": "Special",
+          "Cells": [
+            {
+              "Value": "#Tag",
+              "Formula": null,
+              "Address": "A1",
+              "Kind": "Text"
+            },
+            {
+              "Value": "@Value",
+              "Formula": null,
+              "Address": "B1",
+              "Kind": "Text"
+            },
+            {
+              "Value": "[net]",
+              "Formula": null,
+              "Address": "C1",
+              "Kind": "Text"
+            },
+            {
+              "Value": "O'Neil",
+              "Formula": null,
+              "Address": "D1",
+              "Kind": "Text"
+            },
+            {
+              "Value": 2.0,
+              "Formula": null,
+              "Address": "A2",
+              "Kind": "Number"
+            },
+            {
+              "Value": 4.0,
+              "Formula": null,
+              "Address": "B2",
+              "Kind": "Number"
+            },
+            {
+              "Value": 6.0,
+              "Formula": null,
+              "Address": "C2",
+              "Kind": "Number"
+            },
+            {
+              "Value": 8.0,
+              "Formula": null,
+              "Address": "D2",
+              "Kind": "Number"
+            },
+            {
+              "Value": 5.0,
+              "Formula": "=SUM(Escapes['#Tag])",
+              "Address": "F2",
+              "Kind": "Number"
+            },
+            {
+              "Value": 3.0,
+              "Formula": null,
+              "Address": "A3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 6.0,
+              "Formula": null,
+              "Address": "B3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 9.0,
+              "Formula": null,
+              "Address": "C3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 12.0,
+              "Formula": null,
+              "Address": "D3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 10.0,
+              "Formula": "=SUM(Escapes['@Value])",
+              "Address": "F3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 15.0,
+              "Formula": "=SUM(Escapes['[net']])",
+              "Address": "F4",
+              "Kind": "Number"
+            },
+            {
+              "Value": 20.0,
+              "Formula": "=SUM(Escapes[O''Neil])",
+              "Address": "F5",
+              "Kind": "Number"
+            }
+          ]
+        },
+        {
+          "Tables": [
+            {
+              "Range": "A1:B2",
+              "Headers": [
+                "Qty",
+                "Amount"
+              ],
+              "Name": "EmptyTable",
+              "Totals": false
+            }
+          ],
+          "Sheet": "Boundaries",
+          "Cells": [
+            {
+              "Value": "Qty",
+              "Formula": null,
+              "Address": "A1",
+              "Kind": "Text"
+            },
+            {
+              "Value": "Amount",
+              "Formula": null,
+              "Address": "B1",
+              "Kind": "Text"
+            },
+            {
+              "Value": 0.0,
+              "Formula": "=SUM(EmptyTable[Qty])",
+              "Address": "D1",
+              "Kind": "Number"
+            },
+            {
+              "Value": 0.0,
+              "Formula": "=COUNT(EmptyTable[Qty])",
+              "Address": "D2",
+              "Kind": "Number"
+            },
+            {
+              "Value": 0.0,
+              "Formula": "=COUNTA(EmptyTable[Qty])",
+              "Address": "D3",
+              "Kind": "Number"
+            },
+            {
+              "Value": "#DIV/0!",
+              "Formula": "=AVERAGE(EmptyTable[Qty])",
+              "Address": "D4",
+              "Kind": "Error"
+            },
+            {
+              "Value": 0.0,
+              "Formula": "=INDEX(EmptyTable[Qty],1)",
+              "Address": "D5",
+              "Kind": "Number"
+            },
+            {
+              "Value": "#REF!",
+              "Formula": "=SUM(EmptyTable[#Totals])",
+              "Address": "D6",
+              "Kind": "Error"
+            },
+            {
+              "Value": 0.0,
+              "Formula": "=SUM(EmptyTable[#Headers])",
+              "Address": "D7",
+              "Kind": "Number"
+            },
+            {
+              "Value": 0.0,
+              "Formula": "=SUM(EmptyTable[#All])",
+              "Address": "D8",
+              "Kind": "Number"
+            }
+          ]
+        },
+        {
+          "Tables": [
+            {
+              "Range": "B2:E6",
+              "Headers": [
+                "Qty",
+                "Unit Price",
+                "Amount",
+                "Tax"
+              ],
+              "Name": "Revenue_Copy",
+              "Totals": true
+            }
+          ],
+          "Sheet": "Copy",
+          "Cells": [
+            {
+              "Value": "Qty",
+              "Formula": null,
+              "Address": "B2",
+              "Kind": "Text"
+            },
+            {
+              "Value": "Unit Price",
+              "Formula": null,
+              "Address": "C2",
+              "Kind": "Text"
+            },
+            {
+              "Value": "Amount",
+              "Formula": null,
+              "Address": "D2",
+              "Kind": "Text"
+            },
+            {
+              "Value": "Tax",
+              "Formula": null,
+              "Address": "E2",
+              "Kind": "Text"
+            },
+            {
+              "Value": 7.0,
+              "Formula": null,
+              "Address": "B3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 10.0,
+              "Formula": null,
+              "Address": "C3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 70.0,
+              "Formula": "=[@Qty]*[@[Unit Price]]",
+              "Address": "D3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 7.0,
+              "Formula": "=[@Amount]*0.1",
+              "Address": "E3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 3.0,
+              "Formula": null,
+              "Address": "B4",
+              "Kind": "Number"
+            },
+            {
+              "Value": 20.0,
+              "Formula": null,
+              "Address": "C4",
+              "Kind": "Number"
+            },
+            {
+              "Value": 60.0,
+              "Formula": "=[@Qty]*[@[Unit Price]]",
+              "Address": "D4",
+              "Kind": "Number"
+            },
+            {
+              "Value": 6.0,
+              "Formula": "=[@Amount]*0.1",
+              "Address": "E4",
+              "Kind": "Number"
+            },
+            {
+              "Value": 4.0,
+              "Formula": null,
+              "Address": "B5",
+              "Kind": "Number"
+            },
+            {
+              "Value": 30.0,
+              "Formula": null,
+              "Address": "C5",
+              "Kind": "Number"
+            },
+            {
+              "Value": 120.0,
+              "Formula": "=[@Qty]*[@[Unit Price]]",
+              "Address": "D5",
+              "Kind": "Number"
+            },
+            {
+              "Value": 12.0,
+              "Formula": "=[@Amount]*0.1",
+              "Address": "E5",
+              "Kind": "Number"
+            },
+            {
+              "Value": 250.0,
+              "Formula": "=SUM([Amount])",
+              "Address": "D6",
+              "Kind": "Number"
+            }
+          ]
+        }
+      ]
+    },
+    "delete-column": {
+      "Sha256": "15D168BA94ED72D8F57E3800675E6C1C33024EE2BF9143B91CF3BDC021050715",
+      "After": [
+        {
+          "Tables": [
+            {
+              "Range": "B2:D6",
+              "Headers": [
+                "Qty",
+                "Amount",
+                "Tax"
+              ],
+              "Name": "Revenue",
+              "Totals": true
+            }
+          ],
+          "Sheet": "Data",
+          "Cells": [
+            {
+              "Value": "Qty",
+              "Formula": null,
+              "Address": "B2",
+              "Kind": "Text"
+            },
+            {
+              "Value": "Amount",
+              "Formula": null,
+              "Address": "C2",
+              "Kind": "Text"
+            },
+            {
+              "Value": "Tax",
+              "Formula": null,
+              "Address": "D2",
+              "Kind": "Text"
+            },
+            {
+              "Value": 2.0,
+              "Formula": null,
+              "Address": "B3",
+              "Kind": "Number"
+            },
+            {
+              "Value": "#REF!",
+              "Formula": "=[@Qty]*#REF!",
+              "Address": "C3",
+              "Kind": "Error"
+            },
+            {
+              "Value": "#REF!",
+              "Formula": "=[@Amount]*0.1",
+              "Address": "D3",
+              "Kind": "Error"
+            },
+            {
+              "Value": "#REF!",
+              "Formula": "=Revenue[@Qty]*#REF!",
+              "Address": "J3",
+              "Kind": "Error"
+            },
+            {
+              "Value": 3.0,
+              "Formula": null,
+              "Address": "B4",
+              "Kind": "Number"
+            },
+            {
+              "Value": "#REF!",
+              "Formula": "=[@Qty]*#REF!",
+              "Address": "C4",
+              "Kind": "Error"
+            },
+            {
+              "Value": "#REF!",
+              "Formula": "=[@Amount]*0.1",
+              "Address": "D4",
+              "Kind": "Error"
+            },
+            {
+              "Value": 4.0,
+              "Formula": null,
+              "Address": "B5",
+              "Kind": "Number"
+            },
+            {
+              "Value": "#REF!",
+              "Formula": "=[@Qty]*#REF!",
+              "Address": "C5",
+              "Kind": "Error"
+            },
+            {
+              "Value": "#REF!",
+              "Formula": "=[@Amount]*0.1",
+              "Address": "D5",
+              "Kind": "Error"
+            },
+            {
+              "Value": "#REF!",
+              "Formula": "=SUM([Amount])",
+              "Address": "C6",
+              "Kind": "Error"
+            }
+          ]
+        },
+        {
+          "Tables": [],
+          "Sheet": "Summary",
+          "Cells": [
+            {
+              "Value": "#REF!",
+              "Formula": "=SUM(Revenue[Amount])",
+              "Address": "A1",
+              "Kind": "Error"
+            },
+            {
+              "Value": "#VALUE!",
+              "Formula": "=Revenue[@Amount]",
+              "Address": "B1",
+              "Kind": "Error"
+            },
+            {
+              "Value": "#REF!",
+              "Formula": "=SUM(Revenue)",
+              "Address": "A2",
+              "Kind": "Error"
+            },
+            {
+              "Value": "#VALUE!",
+              "Formula": "=Revenue[@Amount]",
+              "Address": "B2",
+              "Kind": "Error"
+            },
+            {
+              "Value": "#REF!",
+              "Formula": "=SUM(Revenue[[#Headers],[#Data],[Amount]])",
+              "Address": "A3",
+              "Kind": "Error"
+            },
+            {
+              "Value": "#REF!",
+              "Formula": "=Revenue[@Amount]",
+              "Address": "B3",
+              "Kind": "Error"
+            },
+            {
+              "Value": "#REF!",
+              "Formula": "=SUM(Revenue[[#All],[Amount]])",
+              "Address": "A4",
+              "Kind": "Error"
+            },
+            {
+              "Value": "#REF!",
+              "Formula": "=Revenue[@Amount]",
+              "Address": "B4",
+              "Kind": "Error"
+            },
+            {
+              "Value": "#REF!",
+              "Formula": "=#REF!",
+              "Address": "A5",
+              "Kind": "Error"
+            },
+            {
+              "Value": "#REF!",
+              "Formula": "=Revenue[@Amount]",
+              "Address": "B5",
+              "Kind": "Error"
+            },
+            {
+              "Value": "#REF!",
+              "Formula": "=Revenue[[#Totals],[Amount]]",
+              "Address": "A6",
+              "Kind": "Error"
+            },
+            {
+              "Value": "#VALUE!",
+              "Formula": "=Revenue[@Amount]",
+              "Address": "B6",
+              "Kind": "Error"
+            },
+            {
+              "Value": "#REF!",
+              "Formula": "=SUM(Revenue[[Qty]:[Amount]])",
+              "Address": "A7",
+              "Kind": "Error"
+            },
+            {
+              "Value": "#VALUE!",
+              "Formula": "=Revenue[@Amount]",
+              "Address": "B7",
+              "Kind": "Error"
+            },
+            {
+              "Value": "#REF!",
+              "Formula": "=SUM(#REF!)",
+              "Address": "A8",
+              "Kind": "Error"
+            },
+            {
+              "Value": "#REF!",
+              "Formula": "=INDEX(Revenue[Amount],2)",
+              "Address": "A9",
+              "Kind": "Error"
+            },
+            {
+              "Value": 0.0,
+              "Formula": "=SUM(Revenue[#Headers])",
+              "Address": "A10",
+              "Kind": "Number"
+            },
+            {
+              "Value": "#REF!",
+              "Formula": "=SUM(Revenue[#Totals])",
+              "Address": "A11",
+              "Kind": "Error"
+            },
+            {
+              "Value": "#REF!",
+              "Formula": "=SUM(SalesAmount)",
+              "Address": "A12",
+              "Kind": "Error"
+            },
+            {
+              "Value": "#VALUE!",
+              "Formula": "=Revenue[@Qty]*#REF!",
+              "Address": "D12",
+              "Kind": "Error"
+            }
+          ]
+        },
+        {
+          "Tables": [
+            {
+              "Range": "A1:C6",
+              "Headers": [
+                "Qty",
+                "Price",
+                "Amount"
+              ],
+              "Name": "Plain",
+              "Totals": false
+            }
+          ],
+          "Sheet": "A1Column",
+          "Cells": [
+            {
+              "Value": "Qty",
+              "Formula": null,
+              "Address": "A1",
+              "Kind": "Text"
+            },
+            {
+              "Value": "Price",
+              "Formula": null,
+              "Address": "B1",
+              "Kind": "Text"
+            },
+            {
+              "Value": "Amount",
+              "Formula": null,
+              "Address": "C1",
+              "Kind": "Text"
+            },
+            {
+              "Value": 0.0,
+              "Formula": "=A2*B2",
+              "Address": "C2",
+              "Kind": "Number"
+            },
+            {
+              "Value": 2.0,
+              "Formula": null,
+              "Address": "A3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 4.0,
+              "Formula": null,
+              "Address": "B3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 8.0,
+              "Formula": "=A3*B3",
+              "Address": "C3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 3.0,
+              "Formula": null,
+              "Address": "A4",
+              "Kind": "Number"
+            },
+            {
+              "Value": 5.0,
+              "Formula": null,
+              "Address": "B4",
+              "Kind": "Number"
+            },
+            {
+              "Value": 15.0,
+              "Formula": "=A4*B4",
+              "Address": "C4",
+              "Kind": "Number"
+            },
+            {
+              "Value": 0.0,
+              "Formula": "=A5*B5",
+              "Address": "C5",
+              "Kind": "Number"
+            },
+            {
+              "Value": 0.0,
+              "Formula": "=A6*B6",
+              "Address": "C6",
+              "Kind": "Number"
+            }
+          ]
+        },
+        {
+          "Tables": [
+            {
+              "Range": "A1:D3",
+              "Headers": [
+                "#Tag",
+                "@Value",
+                "[net]",
+                "O'Neil"
+              ],
+              "Name": "Escapes",
+              "Totals": false
+            }
+          ],
+          "Sheet": "Special",
+          "Cells": [
+            {
+              "Value": "#Tag",
+              "Formula": null,
+              "Address": "A1",
+              "Kind": "Text"
+            },
+            {
+              "Value": "@Value",
+              "Formula": null,
+              "Address": "B1",
+              "Kind": "Text"
+            },
+            {
+              "Value": "[net]",
+              "Formula": null,
+              "Address": "C1",
+              "Kind": "Text"
+            },
+            {
+              "Value": "O'Neil",
+              "Formula": null,
+              "Address": "D1",
+              "Kind": "Text"
+            },
+            {
+              "Value": 2.0,
+              "Formula": null,
+              "Address": "A2",
+              "Kind": "Number"
+            },
+            {
+              "Value": 4.0,
+              "Formula": null,
+              "Address": "B2",
+              "Kind": "Number"
+            },
+            {
+              "Value": 6.0,
+              "Formula": null,
+              "Address": "C2",
+              "Kind": "Number"
+            },
+            {
+              "Value": 8.0,
+              "Formula": null,
+              "Address": "D2",
+              "Kind": "Number"
+            },
+            {
+              "Value": 5.0,
+              "Formula": "=SUM(Escapes['#Tag])",
+              "Address": "F2",
+              "Kind": "Number"
+            },
+            {
+              "Value": 3.0,
+              "Formula": null,
+              "Address": "A3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 6.0,
+              "Formula": null,
+              "Address": "B3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 9.0,
+              "Formula": null,
+              "Address": "C3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 12.0,
+              "Formula": null,
+              "Address": "D3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 10.0,
+              "Formula": "=SUM(Escapes['@Value])",
+              "Address": "F3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 15.0,
+              "Formula": "=SUM(Escapes['[net']])",
+              "Address": "F4",
+              "Kind": "Number"
+            },
+            {
+              "Value": 20.0,
+              "Formula": "=SUM(Escapes[O''Neil])",
+              "Address": "F5",
+              "Kind": "Number"
+            }
+          ]
+        },
+        {
+          "Tables": [
+            {
+              "Range": "A1:B2",
+              "Headers": [
+                "Qty",
+                "Amount"
+              ],
+              "Name": "EmptyTable",
+              "Totals": false
+            }
+          ],
+          "Sheet": "Boundaries",
+          "Cells": [
+            {
+              "Value": "Qty",
+              "Formula": null,
+              "Address": "A1",
+              "Kind": "Text"
+            },
+            {
+              "Value": "Amount",
+              "Formula": null,
+              "Address": "B1",
+              "Kind": "Text"
+            },
+            {
+              "Value": 0.0,
+              "Formula": "=SUM(EmptyTable[Qty])",
+              "Address": "D1",
+              "Kind": "Number"
+            },
+            {
+              "Value": 0.0,
+              "Formula": "=COUNT(EmptyTable[Qty])",
+              "Address": "D2",
+              "Kind": "Number"
+            },
+            {
+              "Value": 0.0,
+              "Formula": "=COUNTA(EmptyTable[Qty])",
+              "Address": "D3",
+              "Kind": "Number"
+            },
+            {
+              "Value": "#DIV/0!",
+              "Formula": "=AVERAGE(EmptyTable[Qty])",
+              "Address": "D4",
+              "Kind": "Error"
+            },
+            {
+              "Value": 0.0,
+              "Formula": "=INDEX(EmptyTable[Qty],1)",
+              "Address": "D5",
+              "Kind": "Number"
+            },
+            {
+              "Value": "#REF!",
+              "Formula": "=SUM(EmptyTable[#Totals])",
+              "Address": "D6",
+              "Kind": "Error"
+            },
+            {
+              "Value": 0.0,
+              "Formula": "=SUM(EmptyTable[#Headers])",
+              "Address": "D7",
+              "Kind": "Number"
+            },
+            {
+              "Value": 0.0,
+              "Formula": "=SUM(EmptyTable[#All])",
+              "Address": "D8",
+              "Kind": "Number"
+            }
+          ]
+        },
+        {
+          "Tables": [
+            {
+              "Range": "B2:E6",
+              "Headers": [
+                "Qty",
+                "Unit Price",
+                "Amount",
+                "Tax"
+              ],
+              "Name": "Revenue_Copy",
+              "Totals": true
+            }
+          ],
+          "Sheet": "Copy",
+          "Cells": [
+            {
+              "Value": "Qty",
+              "Formula": null,
+              "Address": "B2",
+              "Kind": "Text"
+            },
+            {
+              "Value": "Unit Price",
+              "Formula": null,
+              "Address": "C2",
+              "Kind": "Text"
+            },
+            {
+              "Value": "Amount",
+              "Formula": null,
+              "Address": "D2",
+              "Kind": "Text"
+            },
+            {
+              "Value": "Tax",
+              "Formula": null,
+              "Address": "E2",
+              "Kind": "Text"
+            },
+            {
+              "Value": 7.0,
+              "Formula": null,
+              "Address": "B3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 10.0,
+              "Formula": null,
+              "Address": "C3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 70.0,
+              "Formula": "=[@Qty]*[@[Unit Price]]",
+              "Address": "D3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 7.0,
+              "Formula": "=[@Amount]*0.1",
+              "Address": "E3",
+              "Kind": "Number"
+            },
+            {
+              "Value": 3.0,
+              "Formula": null,
+              "Address": "B4",
+              "Kind": "Number"
+            },
+            {
+              "Value": 20.0,
+              "Formula": null,
+              "Address": "C4",
+              "Kind": "Number"
+            },
+            {
+              "Value": 60.0,
+              "Formula": "=[@Qty]*[@[Unit Price]]",
+              "Address": "D4",
+              "Kind": "Number"
+            },
+            {
+              "Value": 6.0,
+              "Formula": "=[@Amount]*0.1",
+              "Address": "E4",
+              "Kind": "Number"
+            },
+            {
+              "Value": 4.0,
+              "Formula": null,
+              "Address": "B5",
+              "Kind": "Number"
+            },
+            {
+              "Value": 30.0,
+              "Formula": null,
+              "Address": "C5",
+              "Kind": "Number"
+            },
+            {
+              "Value": 120.0,
+              "Formula": "=[@Qty]*[@[Unit Price]]",
+              "Address": "D5",
+              "Kind": "Number"
+            },
+            {
+              "Value": 12.0,
+              "Formula": "=[@Amount]*0.1",
+              "Address": "E5",
+              "Kind": "Number"
+            },
+            {
+              "Value": 250.0,
+              "Formula": "=SUM([Amount])",
+              "Address": "D6",
+              "Kind": "Number"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "Parts": {
+    "[Content_Types].xml": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\"><Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/><Default Extension=\"xml\" ContentType=\"application/xml\"/><Override PartName=\"/xl/workbook.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml\"/><Override PartName=\"/xl/worksheets/sheet1.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml\"/><Override PartName=\"/xl/worksheets/sheet2.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml\"/><Override PartName=\"/xl/worksheets/sheet3.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml\"/><Override PartName=\"/xl/worksheets/sheet4.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml\"/><Override PartName=\"/xl/worksheets/sheet5.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml\"/><Override PartName=\"/xl/theme/theme1.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.theme+xml\"/><Override PartName=\"/xl/styles.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml\"/><Override PartName=\"/xl/sharedStrings.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml\"/><Override PartName=\"/xl/tables/table1.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.table+xml\"/><Override PartName=\"/xl/tables/table2.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.table+xml\"/><Override PartName=\"/xl/tables/table3.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.table+xml\"/><Override PartName=\"/xl/tables/table4.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.table+xml\"/><Override PartName=\"/xl/calcChain.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.calcChain+xml\"/><Override PartName=\"/docProps/core.xml\" ContentType=\"application/vnd.openxmlformats-package.core-properties+xml\"/><Override PartName=\"/docProps/app.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.extended-properties+xml\"/></Types>",
+    "_rels/.rels": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId3\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties\" Target=\"docProps/app.xml\"/><Relationship Id=\"rId2\" Type=\"http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties\" Target=\"docProps/core.xml\"/><Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument\" Target=\"xl/workbook.xml\"/></Relationships>",
+    "xl/workbook.xml": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<workbook xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" mc:Ignorable=\"x15 xr xr6 xr10 xr2\" xmlns:x15=\"http://schemas.microsoft.com/office/spreadsheetml/2010/11/main\" xmlns:xr=\"http://schemas.microsoft.com/office/spreadsheetml/2014/revision\" xmlns:xr6=\"http://schemas.microsoft.com/office/spreadsheetml/2016/revision6\" xmlns:xr10=\"http://schemas.microsoft.com/office/spreadsheetml/2016/revision10\" xmlns:xr2=\"http://schemas.microsoft.com/office/spreadsheetml/2015/revision2\"><fileVersion appName=\"xl\" lastEdited=\"7\" lowestEdited=\"7\" rupBuild=\"30527\"/><workbookPr defaultThemeVersion=\"202300\"/><mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\"><mc:Choice Requires=\"x15\"><x15ac:absPath url=\"D:\\Projects\\QuickExcel\\artifacts\\compatibility\\xc0303-excel-04\\\" xmlns:x15ac=\"http://schemas.microsoft.com/office/spreadsheetml/2010/11/ac\"/></mc:Choice></mc:AlternateContent><xr:revisionPtr revIDLastSave=\"0\" documentId=\"8_{E72A3C0D-DA70-4C1E-B0AA-DD98EDA0DE88}\" xr6:coauthVersionLast=\"47\" xr6:coauthVersionMax=\"47\" xr10:uidLastSave=\"{00000000-0000-0000-0000-000000000000}\"/><bookViews><workbookView xWindow=\"-108\" yWindow=\"-108\" windowWidth=\"30936\" windowHeight=\"18696\" activeTab=\"4\" xr2:uid=\"{BE336BF5-2862-404F-80EB-2AADDABA399D}\"/></bookViews><sheets><sheet name=\"Data\" sheetId=\"1\" r:id=\"rId1\"/><sheet name=\"Summary\" sheetId=\"2\" r:id=\"rId2\"/><sheet name=\"A1Column\" sheetId=\"3\" r:id=\"rId3\"/><sheet name=\"Special\" sheetId=\"4\" r:id=\"rId4\"/><sheet name=\"Boundaries\" sheetId=\"5\" r:id=\"rId5\"/></sheets><definedNames><definedName name=\"SalesAmount\">Sales[Amount]</definedName></definedNames><calcPr calcId=\"191029\"/><extLst><ext uri=\"{140A7094-0E35-4892-8432-C4D2E57EDEB5}\" xmlns:x15=\"http://schemas.microsoft.com/office/spreadsheetml/2010/11/main\"><x15:workbookPr chartTrackingRefBase=\"1\"/></ext><ext uri=\"{B58B0392-4F1F-4190-BB64-5DF3571DCE5F}\" xmlns:xcalcf=\"http://schemas.microsoft.com/office/spreadsheetml/2018/calcfeatures\"><xcalcf:calcFeatures><xcalcf:feature name=\"microsoft.com:RD\"/><xcalcf:feature name=\"microsoft.com:Single\"/><xcalcf:feature name=\"microsoft.com:FV\"/><xcalcf:feature name=\"microsoft.com:CNMTM\"/><xcalcf:feature name=\"microsoft.com:LET_WF\"/><xcalcf:feature name=\"microsoft.com:LAMBDA_WF\"/><xcalcf:feature name=\"microsoft.com:ARRAYTEXT_WF\"/></xcalcf:calcFeatures></ext><ext uri=\"{D14903EA-33C4-47F7-8F05-3474C54BE107}\" xmlns:xlwcv=\"http://schemas.microsoft.com/office/spreadsheetml/2024/workbookCompatibilityVersion\"><xlwcv:version setVersion=\"2\"/></ext></extLst></workbook>",
+    "xl/_rels/workbook.xml.rels": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId8\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings\" Target=\"sharedStrings.xml\"/><Relationship Id=\"rId3\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet\" Target=\"worksheets/sheet3.xml\"/><Relationship Id=\"rId7\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles\" Target=\"styles.xml\"/><Relationship Id=\"rId2\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet\" Target=\"worksheets/sheet2.xml\"/><Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet\" Target=\"worksheets/sheet1.xml\"/><Relationship Id=\"rId6\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme\" Target=\"theme/theme1.xml\"/><Relationship Id=\"rId5\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet\" Target=\"worksheets/sheet5.xml\"/><Relationship Id=\"rId4\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet\" Target=\"worksheets/sheet4.xml\"/><Relationship Id=\"rId9\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/calcChain\" Target=\"calcChain.xml\"/></Relationships>",
+    "xl/worksheets/sheet1.xml": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" mc:Ignorable=\"x14ac xr xr2 xr3\" xmlns:x14ac=\"http://schemas.microsoft.com/office/spreadsheetml/2009/9/ac\" xmlns:xr=\"http://schemas.microsoft.com/office/spreadsheetml/2014/revision\" xmlns:xr2=\"http://schemas.microsoft.com/office/spreadsheetml/2015/revision2\" xmlns:xr3=\"http://schemas.microsoft.com/office/spreadsheetml/2016/revision3\" xr:uid=\"{A98B27E2-38FE-44FD-8380-D9DFCA796D54}\"><dimension ref=\"B2:E6\"/><sheetViews><sheetView workbookViewId=\"0\"/></sheetViews><sheetFormatPr defaultRowHeight=\"13.8\" x14ac:dyDescent=\"0.25\"/><cols><col min=\"4\" max=\"4\" width=\"10.44140625\" customWidth=\"1\"/></cols><sheetData><row r=\"2\" spans=\"2:5\" x14ac:dyDescent=\"0.25\"><c r=\"B2\" t=\"s\"><v>0</v></c><c r=\"C2\" t=\"s\"><v>1</v></c><c r=\"D2\" t=\"s\"><v>2</v></c><c r=\"E2\" t=\"s\"><v>3</v></c></row><row r=\"3\" spans=\"2:5\" x14ac:dyDescent=\"0.25\"><c r=\"B3\"><v>2</v></c><c r=\"C3\"><v>10</v></c><c r=\"D3\"><f>Sales[[#This Row],[Qty]]*Sales[[#This Row],[Price]]</f><v>20</v></c><c r=\"E3\"><f>Sales[[#This Row],[Amount]]*0.1</f><v>2</v></c></row><row r=\"4\" spans=\"2:5\" x14ac:dyDescent=\"0.25\"><c r=\"B4\"><v>3</v></c><c r=\"C4\"><v>20</v></c><c r=\"D4\"><f>Sales[[#This Row],[Qty]]*Sales[[#This Row],[Price]]</f><v>60</v></c><c r=\"E4\"><f>Sales[[#This Row],[Amount]]*0.1</f><v>6</v></c></row><row r=\"5\" spans=\"2:5\" x14ac:dyDescent=\"0.25\"><c r=\"B5\"><v>4</v></c><c r=\"C5\"><v>30</v></c><c r=\"D5\"><f>Sales[[#This Row],[Qty]]*Sales[[#This Row],[Price]]</f><v>120</v></c><c r=\"E5\"><f>Sales[[#This Row],[Amount]]*0.1</f><v>12</v></c></row><row r=\"6\" spans=\"2:5\" x14ac:dyDescent=\"0.25\"><c r=\"D6\"><f>SUM(Sales[Amount])</f><v>200</v></c></row></sheetData><phoneticPr fontId=\"1\" type=\"noConversion\"/><pageMargins left=\"0.7\" right=\"0.7\" top=\"0.75\" bottom=\"0.75\" header=\"0.3\" footer=\"0.3\"/><tableParts count=\"1\"><tablePart r:id=\"rId1\"/></tableParts></worksheet>",
+    "xl/worksheets/sheet2.xml": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" mc:Ignorable=\"x14ac xr xr2 xr3\" xmlns:x14ac=\"http://schemas.microsoft.com/office/spreadsheetml/2009/9/ac\" xmlns:xr=\"http://schemas.microsoft.com/office/spreadsheetml/2014/revision\" xmlns:xr2=\"http://schemas.microsoft.com/office/spreadsheetml/2015/revision2\" xmlns:xr3=\"http://schemas.microsoft.com/office/spreadsheetml/2016/revision3\" xr:uid=\"{A1DA3E3A-2039-4905-934C-B1A3F05C5753}\"><dimension ref=\"A1:B12\"/><sheetViews><sheetView workbookViewId=\"0\"/></sheetViews><sheetFormatPr defaultRowHeight=\"13.8\" x14ac:dyDescent=\"0.25\"/><sheetData><row r=\"1\" spans=\"1:2\" x14ac:dyDescent=\"0.25\"><c r=\"A1\"><f>SUM(Sales[Amount])</f><v>200</v></c><c r=\"B1\" t=\"e\"><f>Sales[[#This Row],[Amount]]</f><v>#VALUE!</v></c></row><row r=\"2\" spans=\"1:2\" x14ac:dyDescent=\"0.25\"><c r=\"A2\"><f>SUM(Sales[])</f><v>289</v></c><c r=\"B2\" t=\"e\"><f>Sales[[#This Row],[Amount]]</f><v>#VALUE!</v></c></row><row r=\"3\" spans=\"1:2\" x14ac:dyDescent=\"0.25\"><c r=\"A3\"><f>SUM(Sales[[#Headers],[#Data],[Amount]])</f><v>200</v></c><c r=\"B3\"><f>Sales[[#This Row],[Amount]]</f><v>20</v></c></row><row r=\"4\" spans=\"1:2\" x14ac:dyDescent=\"0.25\"><c r=\"A4\"><f>SUM(Sales[[#All],[Amount]])</f><v>400</v></c><c r=\"B4\"><f>Sales[[#This Row],[Amount]]</f><v>60</v></c></row><row r=\"5\" spans=\"1:2\" x14ac:dyDescent=\"0.25\"><c r=\"A5\" t=\"str\"><f>Sales[[#Headers],[Price]]</f><v>Price</v></c><c r=\"B5\"><f>Sales[[#This Row],[Amount]]</f><v>120</v></c></row><row r=\"6\" spans=\"1:2\" x14ac:dyDescent=\"0.25\"><c r=\"A6\"><f>Sales[[#Totals],[Amount]]</f><v>200</v></c><c r=\"B6\" t=\"e\"><f>Sales[[#This Row],[Amount]]</f><v>#VALUE!</v></c></row><row r=\"7\" spans=\"1:2\" x14ac:dyDescent=\"0.25\"><c r=\"A7\"><f>SUM(Sales[[Qty]:[Amount]])</f><v>269</v></c><c r=\"B7\" t=\"e\"><f>Sales[[#This Row],[Amount]]</f><v>#VALUE!</v></c></row><row r=\"8\" spans=\"1:2\" x14ac:dyDescent=\"0.25\"><c r=\"A8\"><f>SUM(Sales[[#Data],[Qty]:[Price]])</f><v>69</v></c></row><row r=\"9\" spans=\"1:2\" x14ac:dyDescent=\"0.25\"><c r=\"A9\"><f>INDEX(Sales[Amount],2)</f><v>60</v></c></row><row r=\"10\" spans=\"1:2\" x14ac:dyDescent=\"0.25\"><c r=\"A10\"><f>SUM(Sales[#Headers])</f><v>0</v></c></row><row r=\"11\" spans=\"1:2\" x14ac:dyDescent=\"0.25\"><c r=\"A11\"><f>SUM(Sales[#Totals])</f><v>200</v></c></row><row r=\"12\" spans=\"1:2\" x14ac:dyDescent=\"0.25\"><c r=\"A12\"><f>SUM(SalesAmount)</f><v>200</v></c></row></sheetData><phoneticPr fontId=\"1\" type=\"noConversion\"/><pageMargins left=\"0.7\" right=\"0.7\" top=\"0.75\" bottom=\"0.75\" header=\"0.3\" footer=\"0.3\"/></worksheet>",
+    "xl/worksheets/sheet3.xml": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" mc:Ignorable=\"x14ac xr xr2 xr3\" xmlns:x14ac=\"http://schemas.microsoft.com/office/spreadsheetml/2009/9/ac\" xmlns:xr=\"http://schemas.microsoft.com/office/spreadsheetml/2014/revision\" xmlns:xr2=\"http://schemas.microsoft.com/office/spreadsheetml/2015/revision2\" xmlns:xr3=\"http://schemas.microsoft.com/office/spreadsheetml/2016/revision3\" xr:uid=\"{E6E539C4-1856-4685-963B-4AA1B77CD54F}\"><dimension ref=\"A1:C3\"/><sheetViews><sheetView workbookViewId=\"0\"/></sheetViews><sheetFormatPr defaultRowHeight=\"13.8\" x14ac:dyDescent=\"0.25\"/><cols><col min=\"3\" max=\"3\" width=\"10.44140625\" customWidth=\"1\"/></cols><sheetData><row r=\"1\" spans=\"1:3\" x14ac:dyDescent=\"0.25\"><c r=\"A1\" t=\"s\"><v>0</v></c><c r=\"B1\" t=\"s\"><v>1</v></c><c r=\"C1\" t=\"s\"><v>2</v></c></row><row r=\"2\" spans=\"1:3\" x14ac:dyDescent=\"0.25\"><c r=\"A2\"><v>2</v></c><c r=\"B2\"><v>4</v></c><c r=\"C2\"><f t=\"shared\" ref=\"C2:C3\" si=\"0\">A2*B2</f><v>8</v></c></row><row r=\"3\" spans=\"1:3\" x14ac:dyDescent=\"0.25\"><c r=\"A3\"><v>3</v></c><c r=\"B3\"><v>5</v></c><c r=\"C3\"><f>A3*B3</f><v>15</v></c></row></sheetData><phoneticPr fontId=\"1\" type=\"noConversion\"/><pageMargins left=\"0.7\" right=\"0.7\" top=\"0.75\" bottom=\"0.75\" header=\"0.3\" footer=\"0.3\"/><tableParts count=\"1\"><tablePart r:id=\"rId1\"/></tableParts></worksheet>",
+    "xl/worksheets/sheet4.xml": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" mc:Ignorable=\"x14ac xr xr2 xr3\" xmlns:x14ac=\"http://schemas.microsoft.com/office/spreadsheetml/2009/9/ac\" xmlns:xr=\"http://schemas.microsoft.com/office/spreadsheetml/2014/revision\" xmlns:xr2=\"http://schemas.microsoft.com/office/spreadsheetml/2015/revision2\" xmlns:xr3=\"http://schemas.microsoft.com/office/spreadsheetml/2016/revision3\" xr:uid=\"{259D25B2-4EA6-47E9-AA85-5E110B269FE5}\"><dimension ref=\"A1:F5\"/><sheetViews><sheetView workbookViewId=\"0\"/></sheetViews><sheetFormatPr defaultRowHeight=\"13.8\" x14ac:dyDescent=\"0.25\"/><cols><col min=\"2\" max=\"2\" width=\"10\" customWidth=\"1\"/></cols><sheetData><row r=\"1\" spans=\"1:6\" x14ac:dyDescent=\"0.25\"><c r=\"A1\" t=\"s\"><v>4</v></c><c r=\"B1\" t=\"s\"><v>5</v></c><c r=\"C1\" t=\"s\"><v>6</v></c><c r=\"D1\" t=\"s\"><v>7</v></c></row><row r=\"2\" spans=\"1:6\" x14ac:dyDescent=\"0.25\"><c r=\"A2\"><v>2</v></c><c r=\"B2\"><v>4</v></c><c r=\"C2\"><v>6</v></c><c r=\"D2\"><v>8</v></c><c r=\"F2\"><f>SUM(Escapes['#Tag])</f><v>5</v></c></row><row r=\"3\" spans=\"1:6\" x14ac:dyDescent=\"0.25\"><c r=\"A3\"><v>3</v></c><c r=\"B3\"><v>6</v></c><c r=\"C3\"><v>9</v></c><c r=\"D3\"><v>12</v></c><c r=\"F3\"><f>SUM(Escapes[@Value])</f><v>10</v></c></row><row r=\"4\" spans=\"1:6\" x14ac:dyDescent=\"0.25\"><c r=\"F4\"><f>SUM(Escapes['[net']])</f><v>15</v></c></row><row r=\"5\" spans=\"1:6\" x14ac:dyDescent=\"0.25\"><c r=\"F5\"><f>SUM(Escapes[O''Neil])</f><v>20</v></c></row></sheetData><phoneticPr fontId=\"1\" type=\"noConversion\"/><pageMargins left=\"0.7\" right=\"0.7\" top=\"0.75\" bottom=\"0.75\" header=\"0.3\" footer=\"0.3\"/><tableParts count=\"1\"><tablePart r:id=\"rId1\"/></tableParts></worksheet>",
+    "xl/worksheets/sheet5.xml": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" mc:Ignorable=\"x14ac xr xr2 xr3\" xmlns:x14ac=\"http://schemas.microsoft.com/office/spreadsheetml/2009/9/ac\" xmlns:xr=\"http://schemas.microsoft.com/office/spreadsheetml/2014/revision\" xmlns:xr2=\"http://schemas.microsoft.com/office/spreadsheetml/2015/revision2\" xmlns:xr3=\"http://schemas.microsoft.com/office/spreadsheetml/2016/revision3\" xr:uid=\"{8E48714D-CF3A-42D0-AA18-39B00231D930}\"><dimension ref=\"A1:D8\"/><sheetViews><sheetView tabSelected=\"1\" workbookViewId=\"0\"/></sheetViews><sheetFormatPr defaultRowHeight=\"13.8\" x14ac:dyDescent=\"0.25\"/><cols><col min=\"2\" max=\"2\" width=\"10.44140625\" customWidth=\"1\"/></cols><sheetData><row r=\"1\" spans=\"1:4\" x14ac:dyDescent=\"0.25\"><c r=\"A1\" t=\"s\"><v>0</v></c><c r=\"B1\" t=\"s\"><v>2</v></c><c r=\"D1\"><f>SUM(EmptyTable[Qty])</f><v>0</v></c></row><row r=\"2\" spans=\"1:4\" x14ac:dyDescent=\"0.25\"><c r=\"D2\"><f>COUNT(EmptyTable[Qty])</f><v>0</v></c></row><row r=\"3\" spans=\"1:4\" x14ac:dyDescent=\"0.25\"><c r=\"D3\"><f>COUNTA(EmptyTable[Qty])</f><v>0</v></c></row><row r=\"4\" spans=\"1:4\" x14ac:dyDescent=\"0.25\"><c r=\"D4\" t=\"e\"><f>AVERAGE(EmptyTable[Qty])</f><v>#DIV/0!</v></c></row><row r=\"5\" spans=\"1:4\" x14ac:dyDescent=\"0.25\"><c r=\"D5\"><f>INDEX(EmptyTable[Qty],1)</f><v>0</v></c></row><row r=\"6\" spans=\"1:4\" x14ac:dyDescent=\"0.25\"><c r=\"D6\" t=\"e\"><f>SUM(EmptyTable[#Totals])</f><v>#REF!</v></c></row><row r=\"7\" spans=\"1:4\" x14ac:dyDescent=\"0.25\"><c r=\"D7\"><f>SUM(EmptyTable[#Headers])</f><v>0</v></c></row><row r=\"8\" spans=\"1:4\" x14ac:dyDescent=\"0.25\"><c r=\"D8\"><f>SUM(EmptyTable[#All])</f><v>0</v></c></row></sheetData><phoneticPr fontId=\"1\" type=\"noConversion\"/><pageMargins left=\"0.7\" right=\"0.7\" top=\"0.75\" bottom=\"0.75\" header=\"0.3\" footer=\"0.3\"/><tableParts count=\"1\"><tablePart r:id=\"rId1\"/></tableParts></worksheet>",
+    "xl/theme/theme1.xml": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<a:theme xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" name=\"Office 主题​​\"><a:themeElements><a:clrScheme name=\"Office\"><a:dk1><a:sysClr val=\"windowText\" lastClr=\"000000\"/></a:dk1><a:lt1><a:sysClr val=\"window\" lastClr=\"FFFFFF\"/></a:lt1><a:dk2><a:srgbClr val=\"0E2841\"/></a:dk2><a:lt2><a:srgbClr val=\"E8E8E8\"/></a:lt2><a:accent1><a:srgbClr val=\"156082\"/></a:accent1><a:accent2><a:srgbClr val=\"E97132\"/></a:accent2><a:accent3><a:srgbClr val=\"196B24\"/></a:accent3><a:accent4><a:srgbClr val=\"0F9ED5\"/></a:accent4><a:accent5><a:srgbClr val=\"A02B93\"/></a:accent5><a:accent6><a:srgbClr val=\"4EA72E\"/></a:accent6><a:hlink><a:srgbClr val=\"467886\"/></a:hlink><a:folHlink><a:srgbClr val=\"96607D\"/></a:folHlink></a:clrScheme><a:fontScheme name=\"Office\"><a:majorFont><a:latin typeface=\"Aptos Display\" panose=\"02110004020202020204\"/><a:ea typeface=\"\"/><a:cs typeface=\"\"/><a:font script=\"Jpan\" typeface=\"游ゴシック Light\"/><a:font script=\"Hang\" typeface=\"맑은 고딕\"/><a:font script=\"Hans\" typeface=\"等线 Light\"/><a:font script=\"Hant\" typeface=\"新細明體\"/><a:font script=\"Arab\" typeface=\"Times New Roman\"/><a:font script=\"Hebr\" typeface=\"Times New Roman\"/><a:font script=\"Thai\" typeface=\"Tahoma\"/><a:font script=\"Ethi\" typeface=\"Nyala\"/><a:font script=\"Beng\" typeface=\"Vrinda\"/><a:font script=\"Gujr\" typeface=\"Shruti\"/><a:font script=\"Khmr\" typeface=\"MoolBoran\"/><a:font script=\"Knda\" typeface=\"Tunga\"/><a:font script=\"Guru\" typeface=\"Raavi\"/><a:font script=\"Cans\" typeface=\"Euphemia\"/><a:font script=\"Cher\" typeface=\"Plantagenet Cherokee\"/><a:font script=\"Yiii\" typeface=\"Microsoft Yi Baiti\"/><a:font script=\"Tibt\" typeface=\"Microsoft Himalaya\"/><a:font script=\"Thaa\" typeface=\"MV Boli\"/><a:font script=\"Deva\" typeface=\"Mangal\"/><a:font script=\"Telu\" typeface=\"Gautami\"/><a:font script=\"Taml\" typeface=\"Latha\"/><a:font script=\"Syrc\" typeface=\"Estrangelo Edessa\"/><a:font script=\"Orya\" typeface=\"Kalinga\"/><a:font script=\"Mlym\" typeface=\"Kartika\"/><a:font script=\"Laoo\" typeface=\"DokChampa\"/><a:font script=\"Sinh\" typeface=\"Iskoola Pota\"/><a:font script=\"Mong\" typeface=\"Mongolian Baiti\"/><a:font script=\"Viet\" typeface=\"Times New Roman\"/><a:font script=\"Uigh\" typeface=\"Microsoft Uighur\"/><a:font script=\"Geor\" typeface=\"Sylfaen\"/><a:font script=\"Armn\" typeface=\"Arial\"/><a:font script=\"Bugi\" typeface=\"Leelawadee UI\"/><a:font script=\"Bopo\" typeface=\"Microsoft JhengHei\"/><a:font script=\"Java\" typeface=\"Javanese Text\"/><a:font script=\"Lisu\" typeface=\"Segoe UI\"/><a:font script=\"Mymr\" typeface=\"Myanmar Text\"/><a:font script=\"Nkoo\" typeface=\"Ebrima\"/><a:font script=\"Olck\" typeface=\"Nirmala UI\"/><a:font script=\"Osma\" typeface=\"Ebrima\"/><a:font script=\"Phag\" typeface=\"Phagspa\"/><a:font script=\"Syrn\" typeface=\"Estrangelo Edessa\"/><a:font script=\"Syrj\" typeface=\"Estrangelo Edessa\"/><a:font script=\"Syre\" typeface=\"Estrangelo Edessa\"/><a:font script=\"Sora\" typeface=\"Nirmala UI\"/><a:font script=\"Tale\" typeface=\"Microsoft Tai Le\"/><a:font script=\"Talu\" typeface=\"Microsoft New Tai Lue\"/><a:font script=\"Tfng\" typeface=\"Ebrima\"/></a:majorFont><a:minorFont><a:latin typeface=\"Aptos Narrow\" panose=\"02110004020202020204\"/><a:ea typeface=\"\"/><a:cs typeface=\"\"/><a:font script=\"Jpan\" typeface=\"游ゴシック\"/><a:font script=\"Hang\" typeface=\"맑은 고딕\"/><a:font script=\"Hans\" typeface=\"等线\"/><a:font script=\"Hant\" typeface=\"新細明體\"/><a:font script=\"Arab\" typeface=\"Arial\"/><a:font script=\"Hebr\" typeface=\"Arial\"/><a:font script=\"Thai\" typeface=\"Tahoma\"/><a:font script=\"Ethi\" typeface=\"Nyala\"/><a:font script=\"Beng\" typeface=\"Vrinda\"/><a:font script=\"Gujr\" typeface=\"Shruti\"/><a:font script=\"Khmr\" typeface=\"DaunPenh\"/><a:font script=\"Knda\" typeface=\"Tunga\"/><a:font script=\"Guru\" typeface=\"Raavi\"/><a:font script=\"Cans\" typeface=\"Euphemia\"/><a:font script=\"Cher\" typeface=\"Plantagenet Cherokee\"/><a:font script=\"Yiii\" typeface=\"Microsoft Yi Baiti\"/><a:font script=\"Tibt\" typeface=\"Microsoft Himalaya\"/><a:font script=\"Thaa\" typeface=\"MV Boli\"/><a:font script=\"Deva\" typeface=\"Mangal\"/><a:font script=\"Telu\" typeface=\"Gautami\"/><a:font script=\"Taml\" typeface=\"Latha\"/><a:font script=\"Syrc\" typeface=\"Estrangelo Edessa\"/><a:font script=\"Orya\" typeface=\"Kalinga\"/><a:font script=\"Mlym\" typeface=\"Kartika\"/><a:font script=\"Laoo\" typeface=\"DokChampa\"/><a:font script=\"Sinh\" typeface=\"Iskoola Pota\"/><a:font script=\"Mong\" typeface=\"Mongolian Baiti\"/><a:font script=\"Viet\" typeface=\"Arial\"/><a:font script=\"Uigh\" typeface=\"Microsoft Uighur\"/><a:font script=\"Geor\" typeface=\"Sylfaen\"/><a:font script=\"Armn\" typeface=\"Arial\"/><a:font script=\"Bugi\" typeface=\"Leelawadee UI\"/><a:font script=\"Bopo\" typeface=\"Microsoft JhengHei\"/><a:font script=\"Java\" typeface=\"Javanese Text\"/><a:font script=\"Lisu\" typeface=\"Segoe UI\"/><a:font script=\"Mymr\" typeface=\"Myanmar Text\"/><a:font script=\"Nkoo\" typeface=\"Ebrima\"/><a:font script=\"Olck\" typeface=\"Nirmala UI\"/><a:font script=\"Osma\" typeface=\"Ebrima\"/><a:font script=\"Phag\" typeface=\"Phagspa\"/><a:font script=\"Syrn\" typeface=\"Estrangelo Edessa\"/><a:font script=\"Syrj\" typeface=\"Estrangelo Edessa\"/><a:font script=\"Syre\" typeface=\"Estrangelo Edessa\"/><a:font script=\"Sora\" typeface=\"Nirmala UI\"/><a:font script=\"Tale\" typeface=\"Microsoft Tai Le\"/><a:font script=\"Talu\" typeface=\"Microsoft New Tai Lue\"/><a:font script=\"Tfng\" typeface=\"Ebrima\"/></a:minorFont></a:fontScheme><a:fmtScheme name=\"Office\"><a:fillStyleLst><a:solidFill><a:schemeClr val=\"phClr\"/></a:solidFill><a:gradFill rotWithShape=\"1\"><a:gsLst><a:gs pos=\"0\"><a:schemeClr val=\"phClr\"><a:lumMod val=\"110000\"/><a:satMod val=\"105000\"/><a:tint val=\"67000\"/></a:schemeClr></a:gs><a:gs pos=\"50000\"><a:schemeClr val=\"phClr\"><a:lumMod val=\"105000\"/><a:satMod val=\"103000\"/><a:tint val=\"73000\"/></a:schemeClr></a:gs><a:gs pos=\"100000\"><a:schemeClr val=\"phClr\"><a:lumMod val=\"105000\"/><a:satMod val=\"109000\"/><a:tint val=\"81000\"/></a:schemeClr></a:gs></a:gsLst><a:lin ang=\"5400000\" scaled=\"0\"/></a:gradFill><a:gradFill rotWithShape=\"1\"><a:gsLst><a:gs pos=\"0\"><a:schemeClr val=\"phClr\"><a:satMod val=\"103000\"/><a:lumMod val=\"102000\"/><a:tint val=\"94000\"/></a:schemeClr></a:gs><a:gs pos=\"50000\"><a:schemeClr val=\"phClr\"><a:satMod val=\"110000\"/><a:lumMod val=\"100000\"/><a:shade val=\"100000\"/></a:schemeClr></a:gs><a:gs pos=\"100000\"><a:schemeClr val=\"phClr\"><a:lumMod val=\"99000\"/><a:satMod val=\"120000\"/><a:shade val=\"78000\"/></a:schemeClr></a:gs></a:gsLst><a:lin ang=\"5400000\" scaled=\"0\"/></a:gradFill></a:fillStyleLst><a:lnStyleLst><a:ln w=\"12700\" cap=\"flat\" cmpd=\"sng\" algn=\"ctr\"><a:solidFill><a:schemeClr val=\"phClr\"/></a:solidFill><a:prstDash val=\"solid\"/><a:miter lim=\"800000\"/></a:ln><a:ln w=\"19050\" cap=\"flat\" cmpd=\"sng\" algn=\"ctr\"><a:solidFill><a:schemeClr val=\"phClr\"/></a:solidFill><a:prstDash val=\"solid\"/><a:miter lim=\"800000\"/></a:ln><a:ln w=\"25400\" cap=\"flat\" cmpd=\"sng\" algn=\"ctr\"><a:solidFill><a:schemeClr val=\"phClr\"/></a:solidFill><a:prstDash val=\"solid\"/><a:miter lim=\"800000\"/></a:ln></a:lnStyleLst><a:effectStyleLst><a:effectStyle><a:effectLst/></a:effectStyle><a:effectStyle><a:effectLst/></a:effectStyle><a:effectStyle><a:effectLst><a:outerShdw blurRad=\"57150\" dist=\"19050\" dir=\"5400000\" algn=\"ctr\" rotWithShape=\"0\"><a:srgbClr val=\"000000\"><a:alpha val=\"63000\"/></a:srgbClr></a:outerShdw></a:effectLst></a:effectStyle></a:effectStyleLst><a:bgFillStyleLst><a:solidFill><a:schemeClr val=\"phClr\"/></a:solidFill><a:solidFill><a:schemeClr val=\"phClr\"><a:tint val=\"95000\"/><a:satMod val=\"170000\"/></a:schemeClr></a:solidFill><a:gradFill rotWithShape=\"1\"><a:gsLst><a:gs pos=\"0\"><a:schemeClr val=\"phClr\"><a:tint val=\"93000\"/><a:satMod val=\"150000\"/><a:shade val=\"98000\"/><a:lumMod val=\"102000\"/></a:schemeClr></a:gs><a:gs pos=\"50000\"><a:schemeClr val=\"phClr\"><a:tint val=\"98000\"/><a:satMod val=\"130000\"/><a:shade val=\"90000\"/><a:lumMod val=\"103000\"/></a:schemeClr></a:gs><a:gs pos=\"100000\"><a:schemeClr val=\"phClr\"><a:shade val=\"63000\"/><a:satMod val=\"120000\"/></a:schemeClr></a:gs></a:gsLst><a:lin ang=\"5400000\" scaled=\"0\"/></a:gradFill></a:bgFillStyleLst></a:fmtScheme></a:themeElements><a:objectDefaults><a:lnDef><a:spPr/><a:bodyPr/><a:lstStyle/><a:style><a:lnRef idx=\"2\"><a:schemeClr val=\"accent1\"/></a:lnRef><a:fillRef idx=\"0\"><a:schemeClr val=\"accent1\"/></a:fillRef><a:effectRef idx=\"1\"><a:schemeClr val=\"accent1\"/></a:effectRef><a:fontRef idx=\"minor\"><a:schemeClr val=\"tx1\"/></a:fontRef></a:style></a:lnDef></a:objectDefaults><a:extraClrSchemeLst/><a:extLst><a:ext uri=\"{05A4C25C-085E-4340-85A3-A5531E510DB2}\"><thm15:themeFamily xmlns:thm15=\"http://schemas.microsoft.com/office/thememl/2012/main\" name=\"Office Theme\" id=\"{2E142A2C-CD16-42D6-873A-C26D2A0506FA}\" vid=\"{1BDDFF52-6CD6-40A5-AB3C-68EB2F1E4D0A}\"/></a:ext></a:extLst></a:theme>",
+    "xl/styles.xml": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<styleSheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" mc:Ignorable=\"x14ac x16r2 xr\" xmlns:x14ac=\"http://schemas.microsoft.com/office/spreadsheetml/2009/9/ac\" xmlns:x16r2=\"http://schemas.microsoft.com/office/spreadsheetml/2015/02/main\" xmlns:xr=\"http://schemas.microsoft.com/office/spreadsheetml/2014/revision\"><fonts count=\"2\" x14ac:knownFonts=\"1\"><font><sz val=\"11\"/><color theme=\"1\"/><name val=\"等线\"/><family val=\"2\"/><charset val=\"134\"/><scheme val=\"minor\"/></font><font><sz val=\"9\"/><name val=\"等线\"/><family val=\"2\"/><charset val=\"134\"/><scheme val=\"minor\"/></font></fonts><fills count=\"2\"><fill><patternFill patternType=\"none\"/></fill><fill><patternFill patternType=\"gray125\"/></fill></fills><borders count=\"1\"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count=\"1\"><xf numFmtId=\"0\" fontId=\"0\" fillId=\"0\" borderId=\"0\"><alignment vertical=\"center\"/></xf></cellStyleXfs><cellXfs count=\"1\"><xf numFmtId=\"0\" fontId=\"0\" fillId=\"0\" borderId=\"0\" xfId=\"0\"><alignment vertical=\"center\"/></xf></cellXfs><cellStyles count=\"1\"><cellStyle name=\"常规\" xfId=\"0\" builtinId=\"0\"/></cellStyles><dxfs count=\"1\"><dxf><numFmt numFmtId=\"0\" formatCode=\"General\"/></dxf></dxfs><tableStyles count=\"0\" defaultTableStyle=\"TableStyleMedium2\" defaultPivotStyle=\"PivotStyleLight16\"/><extLst><ext uri=\"{EB79DEF2-80B8-43e5-95BD-54CBDDF9020C}\" xmlns:x14=\"http://schemas.microsoft.com/office/spreadsheetml/2009/9/main\"><x14:slicerStyles defaultSlicerStyle=\"SlicerStyleLight1\"/></ext><ext uri=\"{9260A510-F301-46a8-8635-F512D64BE5F5}\" xmlns:x15=\"http://schemas.microsoft.com/office/spreadsheetml/2010/11/main\"><x15:timelineStyles defaultTimelineStyle=\"TimeSlicerStyleLight1\"/></ext></extLst></styleSheet>",
+    "xl/sharedStrings.xml": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<sst xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" count=\"13\" uniqueCount=\"8\"><si><t>Qty</t></si><si><t>Price</t></si><si><t>Amount</t></si><si><t>Tax</t></si><si><t>#Tag</t></si><si><t>@Value</t></si><si><t>[net]</t></si><si><t>O'Neil</t></si></sst>",
+    "xl/worksheets/_rels/sheet1.xml.rels": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/table\" Target=\"../tables/table1.xml\"/></Relationships>",
+    "xl/worksheets/_rels/sheet3.xml.rels": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/table\" Target=\"../tables/table2.xml\"/></Relationships>",
+    "xl/worksheets/_rels/sheet4.xml.rels": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/table\" Target=\"../tables/table3.xml\"/></Relationships>",
+    "xl/worksheets/_rels/sheet5.xml.rels": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/table\" Target=\"../tables/table4.xml\"/></Relationships>",
+    "xl/tables/table1.xml": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<table xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" mc:Ignorable=\"xr xr3\" xmlns:xr=\"http://schemas.microsoft.com/office/spreadsheetml/2014/revision\" xmlns:xr3=\"http://schemas.microsoft.com/office/spreadsheetml/2016/revision3\" id=\"1\" xr:uid=\"{5B2E06FC-C69D-4A1C-BC8F-A7AD58356C9C}\" name=\"Sales\" displayName=\"Sales\" ref=\"B2:E6\" totalsRowCount=\"1\"><autoFilter ref=\"B2:E5\" xr:uid=\"{5B2E06FC-C69D-4A1C-BC8F-A7AD58356C9C}\"/><tableColumns count=\"4\"><tableColumn id=\"1\" xr3:uid=\"{74C1B7F9-2712-4A21-8E4C-2D2FAA85FB26}\" name=\"Qty\"/><tableColumn id=\"2\" xr3:uid=\"{F1B51ADC-DE82-4261-9673-126608CF303A}\" name=\"Price\"/><tableColumn id=\"3\" xr3:uid=\"{FA369371-BE49-41DB-80B6-7279A9F0B8D1}\" name=\"Amount\" totalsRowFunction=\"custom\"><calculatedColumnFormula>Sales[[#This Row],[Qty]]*Sales[[#This Row],[Price]]</calculatedColumnFormula><totalsRowFormula>SUM(Sales[Amount])</totalsRowFormula></tableColumn><tableColumn id=\"4\" xr3:uid=\"{0E27C274-69AC-4675-8897-433F807CC1C0}\" name=\"Tax\"><calculatedColumnFormula>Sales[[#This Row],[Amount]]*0.1</calculatedColumnFormula></tableColumn></tableColumns><tableStyleInfo name=\"TableStyleMedium2\" showFirstColumn=\"0\" showLastColumn=\"0\" showRowStripes=\"1\" showColumnStripes=\"0\"/></table>",
+    "xl/tables/table2.xml": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<table xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" mc:Ignorable=\"xr xr3\" xmlns:xr=\"http://schemas.microsoft.com/office/spreadsheetml/2014/revision\" xmlns:xr3=\"http://schemas.microsoft.com/office/spreadsheetml/2016/revision3\" id=\"2\" xr:uid=\"{2A4226AE-352A-4040-85A3-E49B59E8D45D}\" name=\"Plain\" displayName=\"Plain\" ref=\"A1:C3\" totalsRowShown=\"0\"><autoFilter ref=\"A1:C3\" xr:uid=\"{2A4226AE-352A-4040-85A3-E49B59E8D45D}\"/><tableColumns count=\"3\"><tableColumn id=\"1\" xr3:uid=\"{583B448E-0A10-4E6B-95EC-71FC51ACCEA4}\" name=\"Qty\"/><tableColumn id=\"2\" xr3:uid=\"{E0BCDB2C-EDCE-44E4-92AE-72AE6A17D910}\" name=\"Price\"/><tableColumn id=\"3\" xr3:uid=\"{CB4772CA-C9D8-4E76-9F92-EABA0CF0D5C7}\" name=\"Amount\" dataDxfId=\"0\"><calculatedColumnFormula>A2*B2</calculatedColumnFormula></tableColumn></tableColumns><tableStyleInfo name=\"TableStyleMedium2\" showFirstColumn=\"0\" showLastColumn=\"0\" showRowStripes=\"1\" showColumnStripes=\"0\"/></table>",
+    "xl/tables/table3.xml": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<table xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" mc:Ignorable=\"xr xr3\" xmlns:xr=\"http://schemas.microsoft.com/office/spreadsheetml/2014/revision\" xmlns:xr3=\"http://schemas.microsoft.com/office/spreadsheetml/2016/revision3\" id=\"3\" xr:uid=\"{8E4973DC-D1FA-443A-AF41-4E35BE1A6D44}\" name=\"Escapes\" displayName=\"Escapes\" ref=\"A1:D3\" totalsRowShown=\"0\"><autoFilter ref=\"A1:D3\" xr:uid=\"{8E4973DC-D1FA-443A-AF41-4E35BE1A6D44}\"/><tableColumns count=\"4\"><tableColumn id=\"1\" xr3:uid=\"{7DCC886F-6B6A-4EF5-AE0E-B2D2E172E0C8}\" name=\"#Tag\"/><tableColumn id=\"2\" xr3:uid=\"{F19E30AE-9FB6-4841-B297-A2E70A61CCFB}\" name=\"@Value\"/><tableColumn id=\"3\" xr3:uid=\"{F14E1185-5142-46B5-86A7-A6FDCCBD7828}\" name=\"[net]\"/><tableColumn id=\"4\" xr3:uid=\"{55338F7B-6424-4ED0-BF4B-5CD507CEBEF4}\" name=\"O'Neil\"/></tableColumns><tableStyleInfo name=\"TableStyleMedium2\" showFirstColumn=\"0\" showLastColumn=\"0\" showRowStripes=\"1\" showColumnStripes=\"0\"/></table>",
+    "xl/tables/table4.xml": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<table xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" mc:Ignorable=\"xr xr3\" xmlns:xr=\"http://schemas.microsoft.com/office/spreadsheetml/2014/revision\" xmlns:xr3=\"http://schemas.microsoft.com/office/spreadsheetml/2016/revision3\" id=\"4\" xr:uid=\"{7F8C4F1B-39BB-4F4F-9C66-A92C09C4017F}\" name=\"EmptyTable\" displayName=\"EmptyTable\" ref=\"A1:B2\" insertRow=\"1\" totalsRowShown=\"0\"><autoFilter ref=\"A1:B2\" xr:uid=\"{7F8C4F1B-39BB-4F4F-9C66-A92C09C4017F}\"/><tableColumns count=\"2\"><tableColumn id=\"1\" xr3:uid=\"{95A3C7E7-2012-463B-968A-D2992A60A752}\" name=\"Qty\"/><tableColumn id=\"2\" xr3:uid=\"{55000E33-B4DA-4A2B-95BA-D2531E2E15CC}\" name=\"Amount\"/></tableColumns><tableStyleInfo name=\"TableStyleMedium2\" showFirstColumn=\"0\" showLastColumn=\"0\" showRowStripes=\"1\" showColumnStripes=\"0\"/></table>",
+    "xl/calcChain.xml": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<calcChain xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\"><c r=\"D8\" i=\"5\" l=\"1\"/><c r=\"D7\" i=\"5\"/><c r=\"D6\" i=\"5\"/><c r=\"D5\" i=\"5\"/><c r=\"D4\" i=\"5\"/><c r=\"D3\" i=\"5\"/><c r=\"D2\" i=\"5\"/><c r=\"D1\" i=\"5\"/><c r=\"F5\" i=\"4\"/><c r=\"F4\" i=\"4\"/><c r=\"F3\" i=\"4\"/><c r=\"F2\" i=\"4\"/><c r=\"C3\" i=\"3\"/><c r=\"C2\" i=\"3\"/><c r=\"B7\" i=\"2\"/><c r=\"B6\" i=\"2\"/><c r=\"B2\" i=\"2\"/><c r=\"B1\" i=\"2\"/><c r=\"A10\" i=\"2\"/><c r=\"A8\" i=\"2\"/><c r=\"A5\" i=\"2\"/><c r=\"D3\" i=\"1\"/><c r=\"D4\" i=\"1\"/><c r=\"D5\" i=\"1\"/><c r=\"A12\" i=\"2\" l=\"1\"/><c r=\"A7\" i=\"2\"/><c r=\"A2\" i=\"2\"/><c r=\"D6\" i=\"1\"/><c r=\"B3\" i=\"2\"/><c r=\"A3\" i=\"2\"/><c r=\"A1\" i=\"2\"/><c r=\"E3\" i=\"1\"/><c r=\"B4\" i=\"2\"/><c r=\"E4\" i=\"1\"/><c r=\"A9\" i=\"2\"/><c r=\"E5\" i=\"1\"/><c r=\"B5\" i=\"2\"/><c r=\"A6\" i=\"2\" l=\"1\"/><c r=\"A4\" i=\"2\"/><c r=\"A11\" i=\"2\"/></calcChain>",
+    "docProps/core.xml": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<cp:coreProperties xmlns:cp=\"http://schemas.openxmlformats.org/package/2006/metadata/core-properties\" xmlns:dc=\"http://purl.org/dc/elements/1.1/\" xmlns:dcterms=\"http://purl.org/dc/terms/\" xmlns:dcmitype=\"http://purl.org/dc/dcmitype/\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"><dc:creator>Carlos Rain</dc:creator><cp:lastModifiedBy>Carlos Rain</cp:lastModifiedBy><dcterms:created xsi:type=\"dcterms:W3CDTF\">2026-10-30T17:56:55Z</dcterms:created><dcterms:modified xsi:type=\"dcterms:W3CDTF\">2026-10-30T17:56:56Z</dcterms:modified></cp:coreProperties>",
+    "docProps/app.xml": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<Properties xmlns=\"http://schemas.openxmlformats.org/officeDocument/2006/extended-properties\" xmlns:vt=\"http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes\"><Application>Microsoft Excel</Application><DocSecurity>0</DocSecurity><ScaleCrop>false</ScaleCrop><HeadingPairs><vt:vector size=\"4\" baseType=\"variant\"><vt:variant><vt:lpstr>工作表</vt:lpstr></vt:variant><vt:variant><vt:i4>5</vt:i4></vt:variant><vt:variant><vt:lpstr>命名范围</vt:lpstr></vt:variant><vt:variant><vt:i4>1</vt:i4></vt:variant></vt:vector></HeadingPairs><TitlesOfParts><vt:vector size=\"6\" baseType=\"lpstr\"><vt:lpstr>Data</vt:lpstr><vt:lpstr>Summary</vt:lpstr><vt:lpstr>A1Column</vt:lpstr><vt:lpstr>Special</vt:lpstr><vt:lpstr>Boundaries</vt:lpstr><vt:lpstr>SalesAmount</vt:lpstr></vt:vector></TitlesOfParts><Company></Company><LinksUpToDate>false</LinksUpToDate><SharedDoc>false</SharedDoc><HyperlinksChanged>false</HyperlinksChanged><AppVersion>16.0300</AppVersion></Properties>"
+  }
+}

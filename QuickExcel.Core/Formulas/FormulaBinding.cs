@@ -7,10 +7,10 @@ public sealed record DefinedName(string Name, string Formula, SheetId? Scope = n
 /// <summary>Binds sheet names and defined names without reading cached cell values.</summary>
 public static class FormulaBinding
 {
-    public static FormulaNode Bind(FormulaNode expression, WorkbookSnapshot snapshot, SheetId currentSheet)
+    public static FormulaNode Bind(FormulaNode expression, WorkbookSnapshot snapshot, SheetId currentSheet, CellPosition? position = null)
     {
         if (snapshot.TextCompatibilityVersion > 2) throw new FormatException("未知文本计算兼容版本；不能确认公式语义。");
-        var bound = Bind(expression, snapshot, currentSheet, new HashSet<(SheetId?, string)>(), new BindingBudget(), 0, false);
+        var bound = Bind(expression, snapshot, currentSheet, new HashSet<(SheetId?, string)>(), new BindingBudget(), 0, false, position);
         ConditionalRanges.ValidateModes(bound);
         LookupModes.Validate(bound);
         DateMathFunctions.Validate(bound);
@@ -30,12 +30,13 @@ public static class FormulaBinding
 
     private sealed class BindingBudget { public int Nodes; }
     private static FormulaNode Bind(FormulaNode expression, WorkbookSnapshot snapshot, SheetId currentSheet,
-        HashSet<(SheetId?, string)> visiting, BindingBudget budget, int depth, bool inDefinition)
+        HashSet<(SheetId?, string)> visiting, BindingBudget budget, int depth, bool inDefinition, CellPosition? position)
     {
         if (depth > 16) throw new FormatException("名称引用嵌套过深。");
         return FormulaSyntax.Map(expression, node =>
         {
             if (++budget.Nodes > 16384) throw new FormatException("名称展开超过 16384 个语法节点。");
+            if (node is StructuredReferenceNode structured) return StructuredReferences.Bind(structured, snapshot, currentSheet, position);
             if (node is ReferenceNode reference)
             {
                 var sheet = reference.Sheet is null ? snapshot.GetSheet(currentSheet)
@@ -49,6 +50,9 @@ public static class FormulaBinding
             var definition = ResolveName(snapshot, context.Id, name, inDefinition);
             if (definition is null)
             {
+                var table = new StructuredReferenceNode(name.Name, Sheet: name.Sheet);
+                if (StructuredReferences.Resolve(snapshot, currentSheet, position, table) is not null)
+                    return StructuredReferences.Bind(table, snapshot, currentSheet, position);
                 // Preserve the legacy bare-column spelling, after defined-name resolution.
                 if (depth == 0 && name.Name.Length is >= 1 and <= 3 && name.Name.All(char.IsAsciiLetter))
                 {
@@ -61,7 +65,7 @@ public static class FormulaBinding
             }
             var key = (definition.Scope, definition.Name.ToUpperInvariant());
             if (!visiting.Add(key)) throw new FormatException("名称之间存在循环引用。");
-            try { return Bind(FormulaSyntax.Parse(definition.Formula), snapshot, definition.Scope ?? context.Id, visiting, budget, depth + 1, true); }
+            try { return Bind(FormulaSyntax.Parse(definition.Formula), snapshot, definition.Scope ?? context.Id, visiting, budget, depth + 1, true, position); }
             finally { visiting.Remove(key); }
         });
     }

@@ -69,9 +69,8 @@ public sealed class TableBasicsTests : IDisposable
         session.Execute(new CreateTableCommand(id, new(0, 0, 2, 1), "Orders")); var before = session.Snapshot;
         Assert.Throws<InvalidOperationException>(() => session.Execute(new SetCellsCommand([new(new(id, 0, 0), CellContent.FromLiteral(CellValue.FromText("Rename")))])));
         Assert.Throws<ArgumentException>(() => session.Execute(new CreateTableCommand(id, new(0, 0, 2, 1), "Overlap")));
-        Assert.Throws<NotSupportedException>(() => session.Execute(new ShiftAxisCommand(id, SheetAxis.Row, 2, 1)));
+        Assert.Throws<NotSupportedException>(() => session.Execute(new MoveAxisCommand(id, SheetAxis.Row, 2, 1, 1)));
         Assert.Throws<InvalidOperationException>(() => session.Execute(new SortRangeCommand(id, new(1, 1), new(2, 1), 1)));
-        Assert.Throws<ArgumentException>(() => session.Execute(new CopySheetCommand(id, "Copy", 1)));
         Assert.Same(before, session.Snapshot);
         session.Execute(new SetCellsCommand([new(new(id, 1, 0), CellContent.FromLiteral(CellValue.FromText("body edit")))]));
         session.Execute(new SetCellStyleCommand([new(id, 0, 0)], new(Bold: true))); Assert.True(session.CanUndo);
@@ -170,7 +169,7 @@ public sealed class TableBasicsTests : IDisposable
         using var modified = new DocumentSession(read); modified.Execute(new SetCellsCommand([new(new(read.Sheets[0].Id, 10, 0), CellContent.FromLiteral(CellValue.FromNumber(3)))]));
         Assert.Throws<WorkbookCompatibilityException>(() => _storage.Save(path, modified.Snapshot)); Assert.Equal(bytes, File.ReadAllBytes(path));
         XNamespace ns = "http://schemas.openxmlformats.org/spreadsheetml/2006/main";
-        Edit(root => { root.Attribute("connectionId")!.Remove(); root.Element(ns + "tableColumns")!.Elements().Last().Add(new XElement(ns + "calculatedColumnFormula", "Orders[@Amount]*2")); });
+        Edit(root => { root.Attribute("connectionId")!.Remove(); root.Element(ns + "tableColumns")!.Elements().Last().Add(new XElement(ns + "calculatedColumnFormula", "Orders[[Amount],[Group]]*2")); });
         var formula = _storage.Open(path); Assert.True(formula.FileState!.FormulaReadOnly); Assert.True(formula.Sheets[0].Data.Tables[0].HasFormulas);
         using var locked = new DocumentSession(formula);
         Assert.Throws<InvalidOperationException>(() => locked.Execute(new SetCellsCommand([new(new(formula.Sheets[0].Id, 1, 0), CellContent.FromLiteral(CellValue.FromText("blocked")))])));

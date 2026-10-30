@@ -67,6 +67,15 @@ public sealed class SetCellsCommand : DocumentCommand
         if (changes.Count == 0) return new(snapshot, [], false);
         for (var index = 0; index < sheets.Length; index++)
             if (builders.TryGetValue(sheets[index].Id, out var builder)) sheets[index] = sheets[index].WithCells(builder.ToImmutable());
+        var activated = sheets.SelectMany(s => s.Data.Tables.Where(t => t.InsertRow && changes.Any(p => p.Address.SheetId == s.Id && t.Range.Contains(p.Address.Row, p.Address.Column) &&
+            p.Address.Row >= t.Range.Top + (t.HeaderRow ? 1 : 0) && p.After is { } cell && (cell.Content.Kind == CellContentKind.Formula || cell.Value.Kind != CellValueKind.Blank))).Select(t => (Sheet: s.Id, Table: t))).ToArray();
+        if (activated.Length > 0)
+        {
+            var after = snapshot.WithSheets(sheets.Select(s => s.WithData(s.Data with { Tables = s.Data.Tables.Select(t => activated.Any(a => a.Table.Id == t.Id) ? t.WithInsertRow(false) : t).ToImmutableArray() })));
+            foreach (var group in activated.GroupBy(a => a.Sheet))
+                after = TableStructure.FillInserted(after, snapshot.GetSheet(group.Key), p => group.Any(a => a.Table.Range.Contains(p.Row, p.Column) && p.Row >= a.Table.Range.Top + (a.Table.HeaderRow ? 1 : 0)));
+            return StructureEdits.Draft(snapshot, after);
+        }
         return new(snapshot.WithSheets(sheets), changes.ToImmutableArray(), false);
     }
 }

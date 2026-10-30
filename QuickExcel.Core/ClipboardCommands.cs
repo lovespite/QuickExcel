@@ -140,12 +140,19 @@ public sealed class PasteCellsCommand(WorkbookClipboard clipboard, SheetId sheet
         CellPosition source, CellPosition target, bool transpose = false)
     {
         var expression = FormulaSyntax.Parse(formula);
-        if (snapshot.FileState is not null && FormulaSyntax.Walk(FormulaBinding.Bind(expression, snapshot, sourceSheet))
+        if (snapshot.FileState is not null && FormulaSyntax.Walk(FormulaBinding.Bind(expression, snapshot, sourceSheet, source))
             .OfType<FunctionNode>().Any(f => !StandardFunctions.Signatures.ContainsKey(f.Name)))
             throw new NotSupportedException("导入公式含未支持函数，其复制引用语义尚未确认；请使用只贴值。");
         if (sourceSheet != targetSheet && FormulaSyntax.Walk(expression).OfType<NameNode>().Any(n => n.Sheet is null &&
             snapshot.DefinedNames.Any(d => (d.Scope == sourceSheet || d.Scope == targetSheet) && d.Name.Equals(n.Name, StringComparison.OrdinalIgnoreCase))))
             throw new NotSupportedException("跨表复制涉及局部名称，尚不能安全确定目标作用域；整批操作未应用。");
-        return FormulaCopy.Translate(formula, source, target, transpose);
+        var qualified = false;
+        expression = FormulaSyntax.Map(expression, node =>
+        {
+            if (node is not StructuredReferenceNode { Table: null } r || StructuredReferences.Resolve(snapshot, sourceSheet, source, r) is not { } owner) return node;
+            if (targetSheet == owner.Sheet.Id && owner.Table.Range.Contains(target.Row, target.Column)) return node;
+            qualified = true; return r with { Table = owner.Table.Name };
+        });
+        return FormulaCopy.Translate(qualified ? "=" + FormulaSyntax.Print(expression) : formula, source, target, transpose);
     }
 }

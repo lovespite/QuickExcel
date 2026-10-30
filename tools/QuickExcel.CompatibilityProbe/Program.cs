@@ -4,6 +4,7 @@ using QuickExcel.CompatibilityProbe;
 
 try
 {
+    if (args is ["structured-tables", var structuredOracle, var structuredDirectory]) return StructuredTablesProbe.Run(structuredOracle, structuredDirectory);
     if (args is ["table-basics", var tableOracle, var tableDirectory]) return TableBasicsProbe.Run(tableOracle, tableDirectory);
     if (args is ["table-edits", var tableSource, var tableEdits, var tableEditDirectory]) return TableBasicsProbe.Run(tableSource, tableEditDirectory, tableEdits);
     if (args is ["filter-persistence", var filterOracle, var filterDirectory]) return FilterPersistenceProbe.Run(filterOracle, filterDirectory);
