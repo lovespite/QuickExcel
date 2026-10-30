@@ -99,7 +99,7 @@ dotnet publish .\QuickExcel.Desktop\QuickExcel.Desktop.csproj -c Release --artif
 
 [native smoke](../../QuickExcel.Scripting/smoke/Program.cs) 的固定脚本覆盖大小写函数名、数字和一维区域参数、中文字符串、布尔和 null、console 日志、宿主 API 缺失、对象/Promise 拒绝、递归栈限制、无限循环中断、中断后恢复、跨线程串行访问、非法函数名、载入超时和 80 MiB 分配失败。最后记录 10,000 次 DISCOUNT 调用耗时；它是单次探索样本，不是 P06 的 p95 或 worker 性能结论。
 
-[WPF smoke](../MainWindow.xaml.cs) 固定检查 DOUBLE 计算 `42`→公式栏编辑 `50`→撤销 `42`→重做 `50`；停用脚本后撤销恢复公式缓存；非法粘贴不部分提交；活动 DataGrid 编辑 `30` 在保存前提交，使 B1 缓存为 `60`；XLSQ 重开不自动启用脚本，显式启用后仍为 `60`，随后导出值快照并渲染示例。
+[WPF smoke](../Views/MainWindow/MainWindow.xaml.cs) 固定检查 DOUBLE 计算 `42`→公式栏编辑 `50`→撤销 `42`→重做 `50`；停用脚本后撤销恢复公式缓存；非法粘贴不部分提交；活动 DataGrid 编辑 `30` 在保存前提交，使 B1 缓存为 `60`；XLSQ 重开不自动启用脚本，显式启用后仍为 `60`，随后导出值快照并渲染示例。
 
 本轮开始前已经存在 `artifacts/migration-smoke-74797fb22b2444469d6740947e294bfb`。其中 `smoke-result.txt` 写有 PASS，但未关联本轮执行的进程退出码；这些文件只作历史可检查样例，不能为新源码背书。2026-10-22 读取的哈希如下：
 
@@ -201,7 +201,7 @@ QuickJS 许可证随包提供，ExcelIO 两个 .NET 项目声明 MIT；依赖 no
 
 修复将整个确认/保存流程放入 Dispatcher 队列，Closing 立即取消并返回。待关闭标记防止重入，取消或失败后清除；文档释放从 Closing 移到实际 Closed。排队自动重算在待关闭及关闭后不执行，取消关闭后可恢复。App 在 smoke 模式下将未处理 Dispatcher 异常写入证据并以非零状态退出，避免错误对话框阻塞无人值守检查。
 
-[MainWindow.CloseSmoke.cs](../MainWindow.CloseSmoke.cs) 使用真实 WPF 子窗口调用 `Close()`，覆盖 8 类场景：干净关闭（重复请求）、丢弃修改且阻止排队重算、取消后继续编辑并重试、非法待编辑内容、保存后关闭、保存失败保留文档与原文件、正在执行工作时拒绝关闭、最终 Closing 被其他处理器取消时不释放会话。测试成功路径不预设关闭批准标记。确认选项采用注入，未自动操作原生另存为对话框。
+[MainWindow.CloseSmoke.cs](../Diagnostics/Smoke/MainWindow.CloseSmoke.cs) 使用真实 WPF 子窗口调用 `Close()`，覆盖 8 类场景：干净关闭（重复请求）、丢弃修改且阻止排队重算、取消后继续编辑并重试、非法待编辑内容、保存后关闭、保存失败保留文档与原文件、正在执行工作时拒绝关闭、最终 Closing 被其他处理器取消时不释放会话。测试成功路径不预设关闭批准标记。确认选项采用注入，未自动操作原生另存为对话框。
 
 验证已完成：源码构建 0 警告、0 错误；Core 221/221 通过；native smoke 通过；发布包和 ZIP 解压后的 WPF smoke 均以 0 退出，上述 8 类真实关闭场景及既有编辑/保存回归全部通过。证据位于 `artifacts/validation/release-0.2.1/release.log`、`archive-validation.json`，发布 smoke 目录为 `artifacts/smoke/20261022-031511-ba477dd9`，解压复验目录为 `artifacts/validation/release-0.2.1/extracted-smoke-364b785b62a24c84ab784cdbf3608cd7`；均包含新生成的 `close-smoke-result.txt`。
 

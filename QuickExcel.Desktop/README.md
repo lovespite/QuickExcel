@@ -62,6 +62,33 @@ quickExcel.functions.register("DOUBLE", value => value * 2);
 
 跨表计算已接入；未授权脚本和依赖仍保留 Blocked 缓存。主题颜色已解析，主题字体/效果/关联、富文本、图表/透视表、复杂锚点、单元格内图片与数组公式等仍有保真限制；见 [M2 文件与类型](docs/09-m2-files-and-types.md)及 [XLSX 渲染](docs/25-xlsx-rendering.md)。基础图片/合并、排序筛选已接入。恢复目前只有手动打开 `.xlsq` 副本，自动恢复写入/发现及完整无障碍矩阵仍待完成。
 
+## 源码目录
+
+Desktop 按界面职责组织，根目录保留 `App.xaml` / `App.xaml.cs`、项目文件、说明和许可证。
+
+```text
+QuickExcel.Desktop/
+├─ Composition/          具体存储、计算和脚本运行时的依赖组装
+├─ Controls/
+│  ├─ Grid/              网格视图接口、FastGrid 适配、自动尺寸与绘制
+│  └─ Ribbon/            Ribbon 附加属性
+├─ Views/
+│  ├─ MainWindow/        主窗口 XAML、code-behind 和各功能 partial
+│  └─ Dialogs/           排序对话框、筛选弹层
+├─ Editing/              统一文档编辑入口、原生文本编辑器辅助
+├─ ViewModels/           文档状态的只读视图模型
+├─ Interaction/          不依赖 WPF 的输入、筛选、搜索和工作区规则
+├─ Themes/               应用共享的 XAML 样式与模板
+├─ Diagnostics/
+│  ├─ Smoke/             WPF smoke 场景、回归检查及共用验证辅助
+│  └─ Benchmarks/        网格、拖动、滚动和尺寸调整的性能诊断
+└─ docs/                 产品、架构、契约与验收记录
+```
+
+新增主窗口功能放入 `Views/MainWindow/MainWindow.<功能>.cs`；独立控件和对话框分别放入 `Controls` 与 `Views/Dialogs`。诊断场景放入 `Diagnostics`，避免继续堆积在界面实现旁。`Interaction` 继续由 Core.Test 链接编译，不能引入 WPF 依赖；所有文档修改仍经 `Editing/EditorController` 和 `DocumentSession`。
+
+这次整理只调整物理路径，保留 `QuickExcel.Desktop` 命名空间和现有类型；主窗口诊断仍是同一 `MainWindow` 的 partial，继续随 Desktop 编译并通过原命令行入口运行。SDK 自动包含子目录中的 C# / XAML 文件，无需逐文件维护项目项。`App` 仍直接创建窗口，主题资源路径保持 `Themes/Ribbon.xaml`。
+
 ## 构建与验收
 
 ```powershell

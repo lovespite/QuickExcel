@@ -20,6 +20,8 @@
 
 主网格行为与专项证据见 [24](24-main-grid-migration.md)，XLSX 呈现见 [25](25-xlsx-rendering.md)。横向拖动整桌面停顿已于 2026-10-30 经用户确认解决；真实 IME/DPI/辅助功能、M4 严格策略/部署和 M6 最终门禁仍按计划跟踪。
 
+Desktop 的物理目录、源码归属及新增文件约定见 [源码目录](../README.md#源码目录)。主窗口位于 `Views/MainWindow`，网格与 Ribbon 组件位于 `Controls`，WPF 验证与性能诊断位于 `Diagnostics`。
+
 ## 架构演进背景（历史）
 
 M5 UI-004/UI-005 的结构/排序/样式/尺寸命令在 Core，由 EditorController 提交。筛选/冻结属于按 SheetId 隔离的临时视图，最近文件属于用户配置。桌面保存使用 IVersionedWorkbookStorage 的指纹检查；Core 只传递令牌，Infrastructure 读取并在替换前核对文件。具体边界见 [结构与工作区](18-m5-structure-and-workspace.md)。
@@ -34,7 +36,7 @@ M5 UI-004/UI-005 的结构/排序/样式/尺寸命令在 Core，由 EditorContro
 
 | 当前代码 | 当前职责与限制 | 演进方式 |
 | --- | --- | --- |
-| [MainWindow.xaml.cs](../MainWindow.xaml.cs)、[EditorController.cs](../EditorController.cs)、[DocumentViewModel.cs](../DocumentViewModel.cs) | 控件提交、统一编辑/粘贴/撤销入口、会话状态投影；保留 DataGrid | M5 扩展视图拆分、网格和交互验收 |
+| [MainWindow.xaml.cs](../Views/MainWindow/MainWindow.xaml.cs)、[EditorController.cs](../Editing/EditorController.cs)、[DocumentViewModel.cs](../ViewModels/DocumentViewModel.cs) | 控件提交、统一编辑/粘贴/撤销入口、会话状态投影；保留 DataGrid | M5 扩展视图拆分、网格和交互验收 |
 | [WorkbookDocument.cs](../../QuickExcel.Core/WorkbookDocument.cs)、[DocumentSession.cs](../../QuickExcel.Core/DocumentSession.cs) | facade、不可变快照、串行写入门禁、事务历史、计算代次与保存修订 | M3 扩展计算协调，M4 接入动作事务 |
 | [LegacyWorkbookStorage.cs](../../QuickExcel.Infrastructure/Storage/LegacyWorkbookStorage.cs)、[DocumentPackage.cs](../../QuickExcel.Infrastructure/DocumentPackage.cs) | Infrastructure 内的 XLSQ v1/XLSX 适配、容量预检、同目录原子保存 | M2 实现类型保真、v2 格式和损失报告 |
 | [LegacyWorkbookCalculator.cs](../../QuickExcel.Infrastructure/Calculation/LegacyWorkbookCalculator.cs) | 消费稀疏快照，按类型求值和同表依赖完整重算 | M3 完成跨表、名称、增量和完整公式契约 |
@@ -46,7 +48,7 @@ M5 UI-004/UI-005 的结构/排序/样式/尺寸命令在 Core，由 EditorContro
 
 ## 模块和依赖
 
-0.2 已建立真实编译边界：`QuickExcel.Core` 仅引用 .NET，包含 `QuickExcel.Domain`、会话及存储/计算/脚本端口；`QuickExcel.Infrastructure` 引用 Core、ExcelIO、ExcelIO.Formula 和 QuickExcel.Scripting，承载 `QuickExcel.Storage`、`QuickExcel.Calculation`、`QuickExcel.Runtime` 具体适配器。Desktop 的 [应用组合根](../DesktopComposition.cs) 注入服务；Core 不构造旧库模型或 native 会话。
+0.2 已建立真实编译边界：`QuickExcel.Core` 仅引用 .NET，包含 `QuickExcel.Domain`、会话及存储/计算/脚本端口；`QuickExcel.Infrastructure` 引用 Core、ExcelIO、ExcelIO.Formula 和 QuickExcel.Scripting，承载 `QuickExcel.Storage`、`QuickExcel.Calculation`、`QuickExcel.Runtime` 具体适配器。Desktop 的 [应用组合根](../Composition/DesktopComposition.cs) 注入服务；Core 不构造旧库模型或 native 会话。
 
 以下为后续目标模块，不表示这些项目已全部建立。按实际编译、独立发布或测试需求继续拆分，避免仅靠命名空间宣称隔离。
 

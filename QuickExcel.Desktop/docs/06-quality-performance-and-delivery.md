@@ -37,7 +37,7 @@ XLSQ v2 的单元格权威数据仍在内嵌 `workbook.xlsx`，`state/document.j
 | 事务与会话 | [DocumentSessionTests.cs](../../QuickExcel.Core.Test/DocumentSessionTests.cs)、[WorkbookFacadeTests.cs](../../QuickExcel.Core.Test/WorkbookFacadeTests.cs)：预检/历史/通知、乱序结果、保存期间编辑与失败修订 | 已具备 worker 六元组协议或完整自动恢复 |
 | 计算与文件 | [CalculationAdapterTests.cs](../../QuickExcel.Core.Test/CalculationAdapterTests.cs)、[StorageAdapterTests.cs](../../QuickExcel.Core.Test/StorageAdapterTests.cs)：typed 输入边界、缓存阻塞、深复制、原子替换失败 | 跨表重算、增量计算、数字/日期类型往返或任意 XLSX 无损保真 |
 | 原生运行时 | [smoke/Program.cs](../../QuickExcel.Scripting/smoke/Program.cs) 覆盖标量/数组、中文、中断恢复、跨线程串行调用、栈/内存限制 | 独立进程、原生崩溃隔离或 OS 沙箱；旧 smoke 等于新包通过 |
-| WPF 集成 | [MainWindow.xaml.cs](../MainWindow.xaml.cs) 采用控制器并扩展 `--smoke-test`：待编辑保存、双向编辑器切换、撤销、新增表、脚本授权和计算失败恢复；发布版与 ZIP 解压后新目录复验通过 | 真实键盘、IME、读屏、所有焦点与竞态均已覆盖 |
+| WPF 集成 | [MainWindow.xaml.cs](../Views/MainWindow/MainWindow.xaml.cs) 采用控制器并扩展 `--smoke-test`：待编辑保存、双向编辑器切换、撤销、新增表、脚本授权和计算失败恢复；发布版与 ZIP 解压后新目录复验通过 | 真实键盘、IME、读屏、所有焦点与竞态均已覆盖 |
 | 发布 | [build-quickexcel.ps1](../../scripts/build-quickexcel.ps1) 支持 fresh publish、native/WPF smoke、45 秒看门狗、metadata 和 ZIP/hash | 全部 ExcelIO 独立回归、原生干净重建或无 SDK 干净机器已通过 |
 
 当前 GUI smoke 会写出结果文本、示例 XLSQ、导出 XLSX 和预览 PNG；失败时写出 `smoke-error.txt`。

@@ -72,7 +72,7 @@
 | 兼容元数据 | 保留原型受支持的样式、尺寸、隐藏、合并与图片；界面呈现与完整类型保真尚不完整 |
 | 验证与产物 | 本轮 build/Core 日志位于 `artifacts/validation/release-0.2`；最终包 smoke、ZIP/hash 记录见实施记录 |
 
-源码入口：[桌面组合根](../DesktopComposition.cs)、[编辑控制器](../EditorController.cs)、[文档 facade](../../QuickExcel.Core/WorkbookDocument.cs)、[会话](../../QuickExcel.Core/DocumentSession.cs)、[存储适配](../../QuickExcel.Infrastructure/Storage/LegacyWorkbookStorage.cs)、[包封装](../../QuickExcel.Infrastructure/DocumentPackage.cs)、[原生桥](../../QuickExcel.Scripting/QuickJsSession.cs)。
+源码入口：[Desktop 目录约定](../README.md#源码目录)、[桌面组合根](../Composition/DesktopComposition.cs)、[编辑控制器](../Editing/EditorController.cs)、[文档 facade](../../QuickExcel.Core/WorkbookDocument.cs)、[会话](../../QuickExcel.Core/DocumentSession.cs)、[存储适配](../../QuickExcel.Infrastructure/Storage/LegacyWorkbookStorage.cs)、[包封装](../../QuickExcel.Infrastructure/DocumentPackage.cs)、[原生桥](../../QuickExcel.Scripting/QuickJsSession.cs)。
 
 ## 文档维护
 

@@ -37,7 +37,7 @@ QuickExcel 已有稀疏不可变工作簿、类型化计算、存储、命令及
 
 读取链路为“已提交快照 → 视图投影 → 网格”；写入链路为“用户意图 → EditorController → DocumentSession → 新快照 → 刷新”。控件不能绕过会话直接修改工作簿，也不另建一套公式计算或文档撤销栈。
 
-[`IGridSurface`](../GridSurface.cs) 已提供范围选区及编辑生命周期入口，`FastGridSurface` 负责当前格、几何、视口和尺寸预览适配。范围选择不枚举整个大选区；需要显式枚举、复制或修改时分别执行容量检查。冻结、图片和输入不再访问旧 DataGrid 容器，具体契约见 [主网格迁移](24-main-grid-migration.md)。
+[`IGridSurface`](../Controls/Grid/GridSurface.cs) 已提供范围选区及编辑生命周期入口，`FastGridSurface` 负责当前格、几何、视口和尺寸预览适配。范围选择不枚举整个大选区；需要显式枚举、复制或修改时分别执行容量检查。冻结、图片和输入不再访问旧 DataGrid 容器，具体契约见 [主网格迁移](24-main-grid-migration.md)。
 
 ## 3. 网格增强范围
 
