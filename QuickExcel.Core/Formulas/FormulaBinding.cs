@@ -8,11 +8,20 @@ public sealed record DefinedName(string Name, string Formula, SheetId? Scope = n
 public static class FormulaBinding
 {
     public static FormulaNode Bind(FormulaNode expression, WorkbookSnapshot snapshot, SheetId currentSheet)
-        => Bind(expression, snapshot, currentSheet, new HashSet<(SheetId?, string)>(), new BindingBudget(), 0);
+        => Bind(expression, snapshot, currentSheet, new HashSet<(SheetId?, string)>(), new BindingBudget(), 0, false);
+
+    /// <summary>Unqualified names in a name definition bind globally; cell expressions prefer their local scope.</summary>
+    internal static DefinedName? ResolveName(WorkbookSnapshot snapshot, SheetId context, NameNode name, bool inDefinition = false)
+    {
+        var sheet = name.Sheet is null ? snapshot.GetSheet(context) : snapshot.Sheets.FirstOrDefault(s => s.Name.Equals(name.Sheet, StringComparison.OrdinalIgnoreCase));
+        if (sheet is null) return null;
+        return (inDefinition && name.Sheet is null ? null : snapshot.DefinedNames.FirstOrDefault(n => n.Scope == sheet.Id && n.Name.Equals(name.Name, StringComparison.OrdinalIgnoreCase)))
+            ?? snapshot.DefinedNames.FirstOrDefault(n => n.Scope is null && n.Name.Equals(name.Name, StringComparison.OrdinalIgnoreCase));
+    }
 
     private sealed class BindingBudget { public int Nodes; }
     private static FormulaNode Bind(FormulaNode expression, WorkbookSnapshot snapshot, SheetId currentSheet,
-        HashSet<(SheetId?, string)> visiting, BindingBudget budget, int depth)
+        HashSet<(SheetId?, string)> visiting, BindingBudget budget, int depth, bool inDefinition)
     {
         if (depth > 16) throw new FormatException("名称引用嵌套过深。");
         return FormulaSyntax.Map(expression, node =>
@@ -28,8 +37,7 @@ public static class FormulaBinding
             var context = name.Sheet is null ? snapshot.GetSheet(currentSheet)
                 : snapshot.Sheets.FirstOrDefault(s => s.Name.Equals(name.Sheet, StringComparison.OrdinalIgnoreCase));
             if (context is null) return new ValueNode(CellValue.FromError(CellErrorCode.Reference));
-            var definition = snapshot.DefinedNames.FirstOrDefault(n => n.Scope == context.Id && n.Name.Equals(name.Name, StringComparison.OrdinalIgnoreCase))
-                ?? snapshot.DefinedNames.FirstOrDefault(n => n.Scope is null && n.Name.Equals(name.Name, StringComparison.OrdinalIgnoreCase));
+            var definition = ResolveName(snapshot, context.Id, name, inDefinition);
             if (definition is null)
             {
                 // Preserve the legacy bare-column spelling, after defined-name resolution.
@@ -44,7 +52,7 @@ public static class FormulaBinding
             }
             var key = (definition.Scope, definition.Name.ToUpperInvariant());
             if (!visiting.Add(key)) throw new FormatException("名称之间存在循环引用。");
-            try { return Bind(FormulaSyntax.Parse(definition.Formula), snapshot, context.Id, visiting, budget, depth + 1); }
+            try { return Bind(FormulaSyntax.Parse(definition.Formula), snapshot, definition.Scope ?? context.Id, visiting, budget, depth + 1, true); }
             finally { visiting.Remove(key); }
         });
     }

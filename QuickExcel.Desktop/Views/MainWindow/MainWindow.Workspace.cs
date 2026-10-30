@@ -112,7 +112,7 @@ public partial class MainWindow
                 QueueRecalculation();
                 return true;
             }
-            _sheetIndex = Math.Min(_sheetIndex, _document.Snapshot.Sheets.Length - 1);
+            _sheetIndex = _document.Snapshot.Sheets.IndexOf(_document.Snapshot.GetSheet(_document.Snapshot.ActiveSheetId));
             if (clearView) CurrentView.FilterRange = null;
             SynchronizeSheets();
             var position = target ?? new CellPosition(_selectedRow, _selectedColumn);

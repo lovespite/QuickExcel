@@ -23,7 +23,7 @@ public partial class App : Application
             !arg.Equals("--default-rendering", StringComparison.OrdinalIgnoreCase)).ToArray();
         RenderOptions.ProcessRenderMode = softwareRendering ? RenderMode.SoftwareOnly : RenderMode.Default;
         base.OnStartup(e);
-        if (args.Length > 0 && args[0] is "--smoke-test" or "--interaction-smoke" or "--workspace-smoke" or "--product-smoke" or "--ribbon-smoke" or "--grid-benchmark" or "--resize-benchmark" or "--data-operations-smoke" or "--signature-smoke" or "--horizontal-scroll-benchmark" or "--fast-grid-benchmark" or "--fast-grid-drag-benchmark" or "--grid-integration-smoke" or "--xlsx-rendering-smoke" or "--fill-smoke" or "--formula-entry-smoke")
+        if (args.Length > 0 && args[0] is "--smoke-test" or "--interaction-smoke" or "--workspace-smoke" or "--product-smoke" or "--ribbon-smoke" or "--grid-benchmark" or "--resize-benchmark" or "--data-operations-smoke" or "--signature-smoke" or "--horizontal-scroll-benchmark" or "--fast-grid-benchmark" or "--fast-grid-drag-benchmark" or "--grid-integration-smoke" or "--xlsx-rendering-smoke" or "--fill-smoke" or "--formula-entry-smoke" or "--sheet-management-smoke")
             _smokeEvidenceDirectory = args.Length > 1 ? args[1] : Path.Combine(AppContext.BaseDirectory, "smoke");
         if (_smokeEvidenceDirectory is { } evidence)
         {

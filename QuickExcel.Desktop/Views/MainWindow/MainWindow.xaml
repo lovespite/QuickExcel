@@ -429,11 +429,11 @@
               </GroupBox>
               <GroupBox Header="工作表"
                         Style="{StaticResource RibbonGroup}">
-                <Button Content="新建工作表"
-                        local:Ribbon.Icon="TableAdd"
-                        Style="{StaticResource RibbonLargeButton}"
-                        Click="AddSheet_Click"
-                        ToolTip="新建工作表"/>
+                <StackPanel>
+                  <Button Content="新建工作表" local:Ribbon.Icon="TableAdd" Style="{StaticResource RibbonButton}" Click="AddSheet_Click"/>
+                  <Button Content="复制工作表…" local:Ribbon.Icon="Copy" Style="{StaticResource RibbonButton}" Click="SheetManage_Click" Tag="copy"/>
+                  <Button Content="名称管理…" local:Ribbon.Icon="TableSearch" Style="{StaticResource RibbonButton}" Click="NameManager_Click"/>
+                </StackPanel>
               </GroupBox>
             </StackPanel>
           </TabItem>
@@ -622,6 +622,18 @@
                      ScrollViewer.CanContentScroll="False"
                      AutomationProperties.Name="工作表标签"
                      ItemContainerStyle="{StaticResource SheetTab}">
+              <ListBox.ContextMenu>
+                <ContextMenu>
+                  <MenuItem Header="复制工作表…" Tag="copy" Click="SheetManage_Click"/>
+                  <MenuItem Header="向前移动" Tag="left" Click="SheetManage_Click"/>
+                  <MenuItem Header="向后移动" Tag="right" Click="SheetManage_Click"/>
+                  <Separator/>
+                  <MenuItem Header="重命名…" Tag="rename" Click="Structure_Click"/>
+                  <MenuItem Header="删除工作表" Tag="deleteSheet" Click="Structure_Click"/>
+                  <Separator/>
+                  <MenuItem Header="名称管理…" Click="NameManager_Click"/>
+                </ContextMenu>
+              </ListBox.ContextMenu>
               <ListBox.ItemsPanel>
                 <ItemsPanelTemplate>
                   <StackPanel Orientation="Horizontal"/>

@@ -26,7 +26,7 @@ public sealed class M3StorageTests : IDisposable
         document.Calculate();
         var path = PathFor("names.xlsq"); document.Save(path);
         var reopened = new TypedWorkbookStorage().Open(path);
-        Assert.Equal(book.DefinedNames.ToArray(), reopened.DefinedNames.ToArray());
+        Assert.Equal(book.DefinedNames.OrderBy(n => n.Name), reopened.DefinedNames.OrderBy(n => n.Name));
         Assert.Equal(report.Id, reopened.Sheets[1].Id);
         Assert.Equal(CellValue.FromNumber(10), reopened.Sheets[1].GetCell(0, 0)!.Value);
         Assert.Equal(CalculationState.Stale, reopened.Sheets[1].GetCell(0, 0)!.Calculation!.State);

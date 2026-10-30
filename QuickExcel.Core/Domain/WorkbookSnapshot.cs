@@ -285,6 +285,8 @@ public sealed class WorkbookSnapshot
             if (name is null || name.Formula is null || !name.Formula.StartsWith('=') || string.IsNullOrWhiteSpace(name.Name) || name.Name.Length > 255 ||
                 !System.Text.RegularExpressions.Regex.IsMatch(name.Name, @"^[\p{L}_][\p{L}\p{N}_.]*$") ||
                 QuickExcel.Formulas.FormulaSyntax.IsCellName(name.Name) ||
+                name.Name.Equals("R", StringComparison.OrdinalIgnoreCase) || name.Name.Equals("C", StringComparison.OrdinalIgnoreCase) ||
+                System.Text.RegularExpressions.Regex.IsMatch(name.Name, @"^R[0-9]+C[0-9]+$", System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.CultureInvariant) ||
                 name.Name.Equals("_xlnm.Print_Area", StringComparison.OrdinalIgnoreCase) || name.Name.Equals("_xlnm.Print_Titles", StringComparison.OrdinalIgnoreCase) ||
                 name.Name.Equals("TRUE", StringComparison.OrdinalIgnoreCase) || name.Name.Equals("FALSE", StringComparison.OrdinalIgnoreCase) ||
                 name.Scope is { } scope && !Sheets.Any(s => s.Id == scope) ||

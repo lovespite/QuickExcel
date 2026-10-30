@@ -25,6 +25,7 @@ public sealed class DefineNameCommand(DefinedName definition) : DocumentCommand
 {
     internal override CommandDraft Prepare(WorkbookSnapshot snapshot)
     {
+        if (snapshot.DefinedNames.Contains(definition)) return new(snapshot, [], false);
         var names = snapshot.DefinedNames.Where(n => n.Scope != definition.Scope || !n.Name.Equals(definition.Name, StringComparison.OrdinalIgnoreCase)).Append(definition);
         return StructureEdits.Draft(snapshot, snapshot.WithDefinedNames(names));
     }
@@ -219,6 +220,13 @@ internal static class StructureEdits
                 if (unknown is not null) throw new NotSupportedException($"导入公式 {unknown.Name} 的引用语义尚未确认，结构变换/排序未应用；值和样式仍可在受支持范围内编辑。");
             }
             catch (FormatException e) { throw new NotSupportedException("导入公式不能安全变换，结构操作未应用。", e); }
+        }
+        // Unused definitions also participate in copying/renaming and must not bypass this guard.
+        foreach (var name in snapshot.DefinedNames)
+        {
+            var unknown = FormulaSyntax.Walk(FormulaSyntax.Parse(name.Formula)).OfType<FunctionNode>()
+                .FirstOrDefault(f => !StandardFunctions.Signatures.ContainsKey(f.Name));
+            if (unknown is not null) throw new NotSupportedException($"导入名称 {name.Name} 使用尚未确认引用语义的函数 {unknown.Name}，结构操作未应用。");
         }
     }
     internal static void RequireSimpleStructure(WorksheetSnapshot sheet)

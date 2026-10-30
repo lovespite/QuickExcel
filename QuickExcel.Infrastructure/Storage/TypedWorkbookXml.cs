@@ -444,6 +444,10 @@ internal static class TypedWorkbookXml
                 names.Add(element);
             }
             for (var i = 0; i < snapshot.Sheets.Length; i++) names.Add(XlsxPrinting.WriteNames(snapshot.Sheets[i], i));
+            // Excel resolves same-spelling local/global names incorrectly when appended copies split
+            // their groups. Match its serialization: name groups, local scopes before the global name.
+            names.ReplaceNodes(names.Elements().OrderBy(n => (string)n.Attribute("name")!, StringComparer.OrdinalIgnoreCase)
+                .ThenByDescending(n => (int?)n.Attribute("localSheetId") ?? -1).ToArray());
             workbook.Add(names);
         }
         workbook.Add(new XElement(Main + "calcPr", new XAttribute("fullCalcOnLoad", 1)));

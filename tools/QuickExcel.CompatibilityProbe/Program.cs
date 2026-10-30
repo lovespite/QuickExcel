@@ -4,6 +4,8 @@ using QuickExcel.CompatibilityProbe;
 
 try
 {
+    if (args is ["sheet-names", var sheetNamesOracle, var sheetNamesDirectory]) return SheetNamesProbe.Run(sheetNamesOracle, sheetNamesDirectory);
+    if (args is ["verify-sheet-names", var sheetNamesExpected, var sheetNamesActual, var sheetNamesModel, var sheetNamesVerdict]) return SheetNamesProbe.Verify(sheetNamesExpected, sheetNamesActual, sheetNamesModel, sheetNamesVerdict);
     if (args is ["fill", var fillOracle, var fillDirectory]) return FillProbe.Run(fillOracle, fillDirectory);
     if (args is ["verify-fill", var fillExpected, var fillActual, var fillModel, var fillVerdict]) return FillProbe.Verify(fillExpected, fillActual, fillModel, fillVerdict);
     if (args is ["clipboard", var clipboardOracle, var clipboardDirectory]) return ClipboardProbe.Run(clipboardOracle, clipboardDirectory);
