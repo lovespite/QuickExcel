@@ -6,6 +6,7 @@ using QuickExcel.Domain;
 namespace QuickExcel.Formulas;
 
 public abstract record FormulaNode;
+public sealed record MissingNode : FormulaNode;
 public sealed record ValueNode(CellValue Value) : FormulaNode;
 public sealed record NameNode(string Name, string? Sheet = null) : FormulaNode;
 public sealed record UnaryNode(string Operator, FormulaNode Operand) : FormulaNode;
@@ -64,6 +65,7 @@ public static class FormulaSyntax
     public static string SheetPrefix(string? sheet) => sheet is null ? "" : "'" + sheet.Replace("'", "''") + "'!";
     public static string Print(FormulaNode node) => node switch
     {
+        MissingNode => "",
         ValueNode v => v.Value.Kind switch
         {
             CellValueKind.Text => "\"" + v.Value.TextValue.Replace("\"", "\"\"") + "\"",
@@ -207,18 +209,23 @@ public static class FormulaSyntax
             if (token.Kind != "word") throw new FormatException("工作表引用缺少地址。");
             if (Current.Kind == "(" && sheet is null)
             {
-                Take(); var args = new List<FormulaNode>();
+                Take(); var args = new List<FormulaNode>(); var functionName = ExcelFormulaNames.CanonicalName(token.Text);
                 if (Current.Kind != ")")
                 {
                     while (true)
                     {
-                        args.Add(Expression(0, depth + 1));
+                        if (Current.Kind is "," or ")" && (functionName == "XLOOKUP" && (args.Count == 0 || args.Count >= 3) || functionName == "XMATCH" && args.Count >= 2))
+                        {
+                            if (++_nodes > 2048) throw new FormatException("公式过长。");
+                            args.Add(new MissingNode());
+                        }
+                        else args.Add(Expression(0, depth + 1));
                         if (Current.Kind != ",") break;
                         Take();
                     }
                 }
                 Expect(")");
-                return new FunctionNode(token.Text.ToUpperInvariant(), args);
+                return new FunctionNode(functionName, args);
             }
             if (sheet is null && token.Text.Equals("TRUE", StringComparison.OrdinalIgnoreCase)) return new ValueNode(CellValue.FromBoolean(true));
             if (sheet is null && token.Text.Equals("FALSE", StringComparison.OrdinalIgnoreCase)) return new ValueNode(CellValue.FromBoolean(false));

@@ -439,7 +439,7 @@ internal static class TypedWorkbookXml
             var names = new XElement(Main + "definedNames");
             foreach (var name in snapshot.DefinedNames)
             {
-                var element = new XElement(Main + "definedName", new XAttribute("name", name.Name), name.Formula.TrimStart('='));
+                var element = new XElement(Main + "definedName", new XAttribute("name", name.Name), QuickExcel.Formulas.ExcelFormulaNames.Encode(name.Formula).TrimStart('='));
                 if (name.Scope is { } scope) element.SetAttributeValue("localSheetId", snapshot.Sheets.IndexOf(snapshot.GetSheet(scope)));
                 names.Add(element);
             }
@@ -464,7 +464,7 @@ internal static class TypedWorkbookXml
     {
         var result = new XElement(Main + "c", new XAttribute("r", Reference(position)), new XAttribute("s", cell.Content.StyleId));
         var formula = !valuesOnly && cell.Content.Kind == CellContentKind.Formula;
-        if (formula) result.Add(new XElement(Main + "f", cell.Content.FormulaText[1..]));
+        if (formula) result.Add(new XElement(Main + "f", QuickExcel.Formulas.ExcelFormulaNames.Encode(cell.Content.FormulaText)[1..]));
         if (formula && cell.Calculation?.Value is null) return result;
         var value = cell.Value;
         switch (value.Kind)

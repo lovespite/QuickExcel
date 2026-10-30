@@ -36,7 +36,7 @@ public sealed class CompatibilityReportTests
     [Fact]
     public void CapabilityInspectionKeepsCachesAndSeparatesUnknownFunctionsFromSaveLosses()
     {
-        var snapshot = Model("=_xlfn.XLOOKUP(1,B1:B2,C1:C2)", "=SUM(1,2)", "=MY_CUSTOM(7)", "=LEN(\"XLOOKUP(1)\")");
+        var snapshot = Model("=_xlfn.FUTURELOOKUP(1,B1:B2,C1:C2)", "=SUM(1,2)", "=MY_CUSTOM(7)", "=LEN(\"XLOOKUP(1)\")");
         var report = TypedWorkbookStorage.InspectCompatibility(snapshot);
         var warnings = report.Diagnostics.Where(d => d.Kind == CompatibilityKind.CannotCalculate).ToArray();
         Assert.Equal(new[] { "A1", "A3" }, warnings.Select(d => d.Range));
@@ -54,7 +54,7 @@ public sealed class CompatibilityReportTests
     public void NamesAreExpandedAndCurrentEditsRemoveOutdatedFormulaWarnings()
     {
         var snapshot = Model("=PendingResult");
-        snapshot = snapshot.WithDefinedNames([new DefinedName("PendingResult", "=_xlfn.XLOOKUP(1,'当前表'!$B$1:$B$2,'当前表'!$C$1:$C$2)")]);
+        snapshot = snapshot.WithDefinedNames([new DefinedName("PendingResult", "=_xlfn.FUTURELOOKUP(1,'当前表'!$B$1:$B$2,'当前表'!$C$1:$C$2)")]);
         Assert.Contains(TypedWorkbookStorage.InspectCompatibility(snapshot).Diagnostics, d => d.Kind == CompatibilityKind.CannotCalculate);
         using var session = new DocumentSession(snapshot);
         session.Execute(new SetCellsCommand([new(new(snapshot.Sheets[0].Id, 0, 0), CellContent.FromFormula("=1+2"))]));

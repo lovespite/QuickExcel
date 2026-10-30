@@ -278,6 +278,15 @@ public sealed class WorkbookSnapshot
         ScriptSource = scriptSource;
         FileState = fileState;
         DefinedNames = definedNames?.ToImmutableArray() ?? [];
+        ImmutableArray<QuickExcel.Formulas.DefinedName>.Builder? normalizedNames = null;
+        for (var i = 0; i < DefinedNames.Length; i++)
+        {
+            var definition = DefinedNames[i];
+            if (definition?.Formula is not { } formula) continue;
+            var decoded = QuickExcel.Formulas.ExcelFormulaNames.Decode(formula);
+            if (decoded != formula) (normalizedNames ??= DefinedNames.ToBuilder())[i] = definition with { Formula = decoded };
+        }
+        if (normalizedNames is not null) DefinedNames = normalizedNames.ToImmutable();
         if (DefinedNames.Length > 4096) throw new ArgumentException("名称数量超过 4096。", nameof(definedNames));
         var seenNames = new HashSet<(SheetId?, string)>();
         foreach (var name in DefinedNames)

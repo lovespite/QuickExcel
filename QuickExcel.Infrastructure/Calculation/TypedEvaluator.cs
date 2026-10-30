@@ -95,10 +95,11 @@ internal sealed partial class TypedEvaluator(WorkbookSnapshot snapshot, IReadOnl
             { return Scalar(function.Arguments[1]); }
         }
         if (ConditionalRanges.IsFunction(function.Name)) return Conditional(function);
+        if (LookupModes.IsFunction(function.Name)) return LookupValue(function);
         var args = function.Arguments.Select(Evaluate).ToArray();
         if (function.Name is "SUM" or "AVERAGE" or "MIN" or "MAX" or "COUNT" or "COUNTA" or "PRODUCT") return Aggregate(function, args);
         foreach (var arg in args) if (arg is CellValue { Kind: CellValueKind.Error } error) return error;
-        if (function.Name is "INDEX" or "MATCH" or "VLOOKUP") return Lookup(function.Name, args);
+        if (function.Name == "INDEX") return Index(args);
         if (function.Name is "AND" or "OR")
         {
             var logicalCount = 0; var all = true; var any = false;
@@ -204,38 +205,14 @@ internal sealed partial class TypedEvaluator(WorkbookSnapshot snapshot, IReadOnl
         return (r.WholeColumns ? range.Sheet.UsedRowCount : r.EndRow - r.Row + 1, r.EndColumn - r.Column + 1);
     }
 
-    private CellValue Lookup(string name, object[] args)
+    private CellValue Index(object[] args)
     {
-        var index = name == "INDEX" ? 0 : 1;
-        if (args.Where((_, i) => i != index).Any(a => a is not CellValue)) return Error(CellErrorCode.Value);
-        if (args[index] is not Range range) return Error(CellErrorCode.Value);
+        if (args.Skip(1).Any(a => a is not CellValue) || args[0] is not Range range) return Error(CellErrorCode.Value);
         var (rows, columns) = Shape(range);
         var r = range.Reference;
-        CellValue At(int row, int column) => Read(range.Sheet, r.Row + row, r.Column + column);
-        if (name == "INDEX")
-        {
-            var row = checked((int)Math.Truncate(Number((CellValue)args[1]))) - 1;
-            var column = args.Length == 3 ? checked((int)Math.Truncate(Number((CellValue)args[2]))) - 1 : 0;
-            return row < 0 || row >= rows || column < 0 || column >= columns ? Error(CellErrorCode.Reference) : At(row, column);
-        }
-        if (args[0] is not CellValue needle) return Error(CellErrorCode.Value);
-        var output = name == "VLOOKUP" ? checked((int)Math.Truncate(Number((CellValue)args[2]))) - 1 : 0;
-        if (output < 0 || output >= columns) return Error(CellErrorCode.Reference);
-        var mode = name == "MATCH" ? (args.Length == 3 ? Number((CellValue)args[2]) : 1)
-            : (args.Length < 4 || Boolean((CellValue)args[3]) ? 1 : 0);
-        if (mode is not (0 or 1 or -1) || name == "MATCH" && rows > 1 && columns > 1) return Error(CellErrorCode.Value);
-        var count = name == "MATCH" && rows == 1 ? columns : rows;
-        var best = -1;
-        for (var i = 0; i < count; i++)
-        {
-            check();
-            var candidate = name == "MATCH" && rows == 1 ? At(0, i) : At(i, 0);
-            if (candidate.Kind == CellValueKind.Error) return candidate;
-            var comparison = Compare(candidate, needle);
-            if (comparison == 0) { best = i; if (mode == 0) break; }
-            if (mode == 1 && comparison < 0 || mode == -1 && comparison > 0) best = i;
-        }
-        return best < 0 ? Error(CellErrorCode.NotAvailable) : name == "MATCH" ? CellValue.FromNumber(best + 1) : At(best, output);
+        var row = checked((int)Math.Truncate(Number((CellValue)args[1]))) - 1;
+        var column = args.Length == 3 ? checked((int)Math.Truncate(Number((CellValue)args[2]))) - 1 : 0;
+        return row < 0 || row >= rows || column < 0 || column >= columns ? Error(CellErrorCode.Reference) : Read(range.Sheet, r.Row + row, r.Column + column);
     }
 
     private CellValue Script(FunctionNode function, ScriptFunctionDescriptor descriptor)

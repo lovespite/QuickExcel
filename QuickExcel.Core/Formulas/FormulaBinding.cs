@@ -11,6 +11,7 @@ public static class FormulaBinding
     {
         var bound = Bind(expression, snapshot, currentSheet, new HashSet<(SheetId?, string)>(), new BindingBudget(), 0, false);
         ConditionalRanges.ValidateModes(bound);
+        LookupModes.Validate(bound);
         return bound;
     }
 
@@ -76,6 +77,7 @@ public static class StandardFunctions
             ["LEFT"] = (1, 2), ["RIGHT"] = (1, 2), ["MID"] = (3, 3), ["LEN"] = (1, 1),
             ["TRIM"] = (1, 1), ["UPPER"] = (1, 1), ["LOWER"] = (1, 1),
             ["VLOOKUP"] = (3, 4), ["MATCH"] = (2, 3), ["INDEX"] = (2, 3),
+            ["HLOOKUP"] = (3, 4), ["XLOOKUP"] = (3, 6), ["XMATCH"] = (2, 4),
             ["TODAY"] = (0, 0), ["NOW"] = (0, 0)
         };
 }

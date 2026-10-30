@@ -1,0 +1,6052 @@
+{
+  "Version": "16.0",
+  "Build": "20527",
+  "Language": 2052,
+  "Calculation": -2146826246,
+  "SpecSha256": "BDCCFD037A845373166BE757A3A63D8175323F411AA6EA45C4EA3395626880AB",
+  "OracleSha256": "4266b5b9cd46acd9a6ef28434cc727f05db92a62277177390068a306497585da",
+  "Initial": [
+    {
+      "Id": "approx-v-0",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "approx-h-0",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "approx-ma-0",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "approx-md-0",
+      "Kind": "Number",
+      "Value": 7.0
+    },
+    {
+      "Id": "x-near-0--1-1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-near-0--1-1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-near-0--1--1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-near-0--1--1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-near-0-0-1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-near-0-0-1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-near-0-0--1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-near-0-0--1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-near-0-1-1",
+      "Kind": "Number",
+      "Value": 70.0
+    },
+    {
+      "Id": "xm-near-0-1-1",
+      "Kind": "Number",
+      "Value": 7.0
+    },
+    {
+      "Id": "x-near-0-1--1",
+      "Kind": "Number",
+      "Value": 70.0
+    },
+    {
+      "Id": "xm-near-0-1--1",
+      "Kind": "Number",
+      "Value": 7.0
+    },
+    {
+      "Id": "approx-v-1",
+      "Kind": "Number",
+      "Value": 10.0
+    },
+    {
+      "Id": "approx-h-1",
+      "Kind": "Number",
+      "Value": 10.0
+    },
+    {
+      "Id": "approx-ma-1",
+      "Kind": "Number",
+      "Value": 1.0
+    },
+    {
+      "Id": "approx-md-1",
+      "Kind": "Number",
+      "Value": 7.0
+    },
+    {
+      "Id": "x-near-1--1-1",
+      "Kind": "Number",
+      "Value": 70.0
+    },
+    {
+      "Id": "xm-near-1--1-1",
+      "Kind": "Number",
+      "Value": 7.0
+    },
+    {
+      "Id": "x-near-1--1--1",
+      "Kind": "Number",
+      "Value": 70.0
+    },
+    {
+      "Id": "xm-near-1--1--1",
+      "Kind": "Number",
+      "Value": 7.0
+    },
+    {
+      "Id": "x-near-1-0-1",
+      "Kind": "Number",
+      "Value": 70.0
+    },
+    {
+      "Id": "xm-near-1-0-1",
+      "Kind": "Number",
+      "Value": 7.0
+    },
+    {
+      "Id": "x-near-1-0--1",
+      "Kind": "Number",
+      "Value": 70.0
+    },
+    {
+      "Id": "xm-near-1-0--1",
+      "Kind": "Number",
+      "Value": 7.0
+    },
+    {
+      "Id": "x-near-1-1-1",
+      "Kind": "Number",
+      "Value": 70.0
+    },
+    {
+      "Id": "xm-near-1-1-1",
+      "Kind": "Number",
+      "Value": 7.0
+    },
+    {
+      "Id": "x-near-1-1--1",
+      "Kind": "Number",
+      "Value": 70.0
+    },
+    {
+      "Id": "xm-near-1-1--1",
+      "Kind": "Number",
+      "Value": 7.0
+    },
+    {
+      "Id": "approx-v-2",
+      "Kind": "Number",
+      "Value": 10.0
+    },
+    {
+      "Id": "approx-h-2",
+      "Kind": "Number",
+      "Value": 10.0
+    },
+    {
+      "Id": "approx-ma-2",
+      "Kind": "Number",
+      "Value": 1.0
+    },
+    {
+      "Id": "approx-md-2",
+      "Kind": "Number",
+      "Value": 6.0
+    },
+    {
+      "Id": "x-near-2--1-1",
+      "Kind": "Number",
+      "Value": 70.0
+    },
+    {
+      "Id": "xm-near-2--1-1",
+      "Kind": "Number",
+      "Value": 7.0
+    },
+    {
+      "Id": "x-near-2--1--1",
+      "Kind": "Number",
+      "Value": 70.0
+    },
+    {
+      "Id": "xm-near-2--1--1",
+      "Kind": "Number",
+      "Value": 7.0
+    },
+    {
+      "Id": "x-near-2-0-1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-near-2-0-1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-near-2-0--1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-near-2-0--1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-near-2-1-1",
+      "Kind": "Number",
+      "Value": 60.0
+    },
+    {
+      "Id": "xm-near-2-1-1",
+      "Kind": "Number",
+      "Value": 6.0
+    },
+    {
+      "Id": "x-near-2-1--1",
+      "Kind": "Number",
+      "Value": 60.0
+    },
+    {
+      "Id": "xm-near-2-1--1",
+      "Kind": "Number",
+      "Value": 6.0
+    },
+    {
+      "Id": "approx-v-3",
+      "Kind": "Number",
+      "Value": 20.0
+    },
+    {
+      "Id": "approx-h-3",
+      "Kind": "Number",
+      "Value": 20.0
+    },
+    {
+      "Id": "approx-ma-3",
+      "Kind": "Number",
+      "Value": 2.0
+    },
+    {
+      "Id": "approx-md-3",
+      "Kind": "Number",
+      "Value": 6.0
+    },
+    {
+      "Id": "x-near-3--1-1",
+      "Kind": "Number",
+      "Value": 60.0
+    },
+    {
+      "Id": "xm-near-3--1-1",
+      "Kind": "Number",
+      "Value": 6.0
+    },
+    {
+      "Id": "x-near-3--1--1",
+      "Kind": "Number",
+      "Value": 60.0
+    },
+    {
+      "Id": "xm-near-3--1--1",
+      "Kind": "Number",
+      "Value": 6.0
+    },
+    {
+      "Id": "x-near-3-0-1",
+      "Kind": "Number",
+      "Value": 60.0
+    },
+    {
+      "Id": "xm-near-3-0-1",
+      "Kind": "Number",
+      "Value": 6.0
+    },
+    {
+      "Id": "x-near-3-0--1",
+      "Kind": "Number",
+      "Value": 60.0
+    },
+    {
+      "Id": "xm-near-3-0--1",
+      "Kind": "Number",
+      "Value": 6.0
+    },
+    {
+      "Id": "x-near-3-1-1",
+      "Kind": "Number",
+      "Value": 60.0
+    },
+    {
+      "Id": "xm-near-3-1-1",
+      "Kind": "Number",
+      "Value": 6.0
+    },
+    {
+      "Id": "x-near-3-1--1",
+      "Kind": "Number",
+      "Value": 60.0
+    },
+    {
+      "Id": "xm-near-3-1--1",
+      "Kind": "Number",
+      "Value": 6.0
+    },
+    {
+      "Id": "approx-v-4",
+      "Kind": "Number",
+      "Value": 20.0
+    },
+    {
+      "Id": "approx-h-4",
+      "Kind": "Number",
+      "Value": 20.0
+    },
+    {
+      "Id": "approx-ma-4",
+      "Kind": "Number",
+      "Value": 2.0
+    },
+    {
+      "Id": "approx-md-4",
+      "Kind": "Number",
+      "Value": 5.0
+    },
+    {
+      "Id": "x-near-4--1-1",
+      "Kind": "Number",
+      "Value": 60.0
+    },
+    {
+      "Id": "xm-near-4--1-1",
+      "Kind": "Number",
+      "Value": 6.0
+    },
+    {
+      "Id": "x-near-4--1--1",
+      "Kind": "Number",
+      "Value": 60.0
+    },
+    {
+      "Id": "xm-near-4--1--1",
+      "Kind": "Number",
+      "Value": 6.0
+    },
+    {
+      "Id": "x-near-4-0-1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-near-4-0-1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-near-4-0--1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-near-4-0--1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-near-4-1-1",
+      "Kind": "Number",
+      "Value": 20.0
+    },
+    {
+      "Id": "xm-near-4-1-1",
+      "Kind": "Number",
+      "Value": 2.0
+    },
+    {
+      "Id": "x-near-4-1--1",
+      "Kind": "Number",
+      "Value": 20.0
+    },
+    {
+      "Id": "xm-near-4-1--1",
+      "Kind": "Number",
+      "Value": 2.0
+    },
+    {
+      "Id": "approx-v-5",
+      "Kind": "Number",
+      "Value": 30.0
+    },
+    {
+      "Id": "approx-h-5",
+      "Kind": "Number",
+      "Value": 30.0
+    },
+    {
+      "Id": "approx-ma-5",
+      "Kind": "Number",
+      "Value": 3.0
+    },
+    {
+      "Id": "approx-md-5",
+      "Kind": "Number",
+      "Value": 5.0
+    },
+    {
+      "Id": "x-near-5--1-1",
+      "Kind": "Number",
+      "Value": 20.0
+    },
+    {
+      "Id": "xm-near-5--1-1",
+      "Kind": "Number",
+      "Value": 2.0
+    },
+    {
+      "Id": "x-near-5--1--1",
+      "Kind": "Number",
+      "Value": 20.0
+    },
+    {
+      "Id": "xm-near-5--1--1",
+      "Kind": "Number",
+      "Value": 2.0
+    },
+    {
+      "Id": "x-near-5-0-1",
+      "Kind": "Number",
+      "Value": 20.0
+    },
+    {
+      "Id": "xm-near-5-0-1",
+      "Kind": "Number",
+      "Value": 2.0
+    },
+    {
+      "Id": "x-near-5-0--1",
+      "Kind": "Number",
+      "Value": 20.0
+    },
+    {
+      "Id": "xm-near-5-0--1",
+      "Kind": "Number",
+      "Value": 2.0
+    },
+    {
+      "Id": "x-near-5-1-1",
+      "Kind": "Number",
+      "Value": 20.0
+    },
+    {
+      "Id": "xm-near-5-1-1",
+      "Kind": "Number",
+      "Value": 2.0
+    },
+    {
+      "Id": "x-near-5-1--1",
+      "Kind": "Number",
+      "Value": 20.0
+    },
+    {
+      "Id": "xm-near-5-1--1",
+      "Kind": "Number",
+      "Value": 2.0
+    },
+    {
+      "Id": "approx-v-6",
+      "Kind": "Number",
+      "Value": 50.0
+    },
+    {
+      "Id": "approx-h-6",
+      "Kind": "Number",
+      "Value": 50.0
+    },
+    {
+      "Id": "approx-ma-6",
+      "Kind": "Number",
+      "Value": 5.0
+    },
+    {
+      "Id": "approx-md-6",
+      "Kind": "Number",
+      "Value": 3.0
+    },
+    {
+      "Id": "x-near-6--1-1",
+      "Kind": "Number",
+      "Value": 40.0
+    },
+    {
+      "Id": "xm-near-6--1-1",
+      "Kind": "Number",
+      "Value": 4.0
+    },
+    {
+      "Id": "x-near-6--1--1",
+      "Kind": "Number",
+      "Value": 50.0
+    },
+    {
+      "Id": "xm-near-6--1--1",
+      "Kind": "Number",
+      "Value": 5.0
+    },
+    {
+      "Id": "x-near-6-0-1",
+      "Kind": "Number",
+      "Value": 40.0
+    },
+    {
+      "Id": "xm-near-6-0-1",
+      "Kind": "Number",
+      "Value": 4.0
+    },
+    {
+      "Id": "x-near-6-0--1",
+      "Kind": "Number",
+      "Value": 50.0
+    },
+    {
+      "Id": "xm-near-6-0--1",
+      "Kind": "Number",
+      "Value": 5.0
+    },
+    {
+      "Id": "x-near-6-1-1",
+      "Kind": "Number",
+      "Value": 40.0
+    },
+    {
+      "Id": "xm-near-6-1-1",
+      "Kind": "Number",
+      "Value": 4.0
+    },
+    {
+      "Id": "x-near-6-1--1",
+      "Kind": "Number",
+      "Value": 50.0
+    },
+    {
+      "Id": "xm-near-6-1--1",
+      "Kind": "Number",
+      "Value": 5.0
+    },
+    {
+      "Id": "approx-v-7",
+      "Kind": "Number",
+      "Value": 50.0
+    },
+    {
+      "Id": "approx-h-7",
+      "Kind": "Number",
+      "Value": 50.0
+    },
+    {
+      "Id": "approx-ma-7",
+      "Kind": "Number",
+      "Value": 5.0
+    },
+    {
+      "Id": "approx-md-7",
+      "Kind": "Number",
+      "Value": 2.0
+    },
+    {
+      "Id": "x-near-7--1-1",
+      "Kind": "Number",
+      "Value": 40.0
+    },
+    {
+      "Id": "xm-near-7--1-1",
+      "Kind": "Number",
+      "Value": 4.0
+    },
+    {
+      "Id": "x-near-7--1--1",
+      "Kind": "Number",
+      "Value": 50.0
+    },
+    {
+      "Id": "xm-near-7--1--1",
+      "Kind": "Number",
+      "Value": 5.0
+    },
+    {
+      "Id": "x-near-7-0-1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-near-7-0-1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-near-7-0--1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-near-7-0--1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-near-7-1-1",
+      "Kind": "Number",
+      "Value": 10.0
+    },
+    {
+      "Id": "xm-near-7-1-1",
+      "Kind": "Number",
+      "Value": 1.0
+    },
+    {
+      "Id": "x-near-7-1--1",
+      "Kind": "Number",
+      "Value": 10.0
+    },
+    {
+      "Id": "xm-near-7-1--1",
+      "Kind": "Number",
+      "Value": 1.0
+    },
+    {
+      "Id": "approx-v-8",
+      "Kind": "Number",
+      "Value": 50.0
+    },
+    {
+      "Id": "approx-h-8",
+      "Kind": "Number",
+      "Value": 50.0
+    },
+    {
+      "Id": "approx-ma-8",
+      "Kind": "Number",
+      "Value": 5.0
+    },
+    {
+      "Id": "approx-md-8",
+      "Kind": "Number",
+      "Value": 2.0
+    },
+    {
+      "Id": "x-near-8--1-1",
+      "Kind": "Number",
+      "Value": 40.0
+    },
+    {
+      "Id": "xm-near-8--1-1",
+      "Kind": "Number",
+      "Value": 4.0
+    },
+    {
+      "Id": "x-near-8--1--1",
+      "Kind": "Number",
+      "Value": 50.0
+    },
+    {
+      "Id": "xm-near-8--1--1",
+      "Kind": "Number",
+      "Value": 5.0
+    },
+    {
+      "Id": "x-near-8-0-1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-near-8-0-1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-near-8-0--1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-near-8-0--1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-near-8-1-1",
+      "Kind": "Number",
+      "Value": 10.0
+    },
+    {
+      "Id": "xm-near-8-1-1",
+      "Kind": "Number",
+      "Value": 1.0
+    },
+    {
+      "Id": "x-near-8-1--1",
+      "Kind": "Number",
+      "Value": 10.0
+    },
+    {
+      "Id": "xm-near-8-1--1",
+      "Kind": "Number",
+      "Value": 1.0
+    },
+    {
+      "Id": "approx-v-9",
+      "Kind": "Number",
+      "Value": 60.0
+    },
+    {
+      "Id": "approx-h-9",
+      "Kind": "Number",
+      "Value": 60.0
+    },
+    {
+      "Id": "approx-ma-9",
+      "Kind": "Number",
+      "Value": 6.0
+    },
+    {
+      "Id": "approx-md-9",
+      "Kind": "Number",
+      "Value": 2.0
+    },
+    {
+      "Id": "x-near-9--1-1",
+      "Kind": "Number",
+      "Value": 10.0
+    },
+    {
+      "Id": "xm-near-9--1-1",
+      "Kind": "Number",
+      "Value": 1.0
+    },
+    {
+      "Id": "x-near-9--1--1",
+      "Kind": "Number",
+      "Value": 10.0
+    },
+    {
+      "Id": "xm-near-9--1--1",
+      "Kind": "Number",
+      "Value": 1.0
+    },
+    {
+      "Id": "x-near-9-0-1",
+      "Kind": "Number",
+      "Value": 10.0
+    },
+    {
+      "Id": "xm-near-9-0-1",
+      "Kind": "Number",
+      "Value": 1.0
+    },
+    {
+      "Id": "x-near-9-0--1",
+      "Kind": "Number",
+      "Value": 10.0
+    },
+    {
+      "Id": "xm-near-9-0--1",
+      "Kind": "Number",
+      "Value": 1.0
+    },
+    {
+      "Id": "x-near-9-1-1",
+      "Kind": "Number",
+      "Value": 10.0
+    },
+    {
+      "Id": "xm-near-9-1-1",
+      "Kind": "Number",
+      "Value": 1.0
+    },
+    {
+      "Id": "x-near-9-1--1",
+      "Kind": "Number",
+      "Value": 10.0
+    },
+    {
+      "Id": "xm-near-9-1--1",
+      "Kind": "Number",
+      "Value": 1.0
+    },
+    {
+      "Id": "approx-v-10",
+      "Kind": "Number",
+      "Value": 60.0
+    },
+    {
+      "Id": "approx-h-10",
+      "Kind": "Number",
+      "Value": 60.0
+    },
+    {
+      "Id": "approx-ma-10",
+      "Kind": "Number",
+      "Value": 6.0
+    },
+    {
+      "Id": "approx-md-10",
+      "Kind": "Number",
+      "Value": 1.0
+    },
+    {
+      "Id": "x-near-10--1-1",
+      "Kind": "Number",
+      "Value": 10.0
+    },
+    {
+      "Id": "xm-near-10--1-1",
+      "Kind": "Number",
+      "Value": 1.0
+    },
+    {
+      "Id": "x-near-10--1--1",
+      "Kind": "Number",
+      "Value": 10.0
+    },
+    {
+      "Id": "xm-near-10--1--1",
+      "Kind": "Number",
+      "Value": 1.0
+    },
+    {
+      "Id": "x-near-10-0-1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-near-10-0-1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-near-10-0--1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-near-10-0--1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-near-10-1-1",
+      "Kind": "Number",
+      "Value": 30.0
+    },
+    {
+      "Id": "xm-near-10-1-1",
+      "Kind": "Number",
+      "Value": 3.0
+    },
+    {
+      "Id": "x-near-10-1--1",
+      "Kind": "Number",
+      "Value": 30.0
+    },
+    {
+      "Id": "xm-near-10-1--1",
+      "Kind": "Number",
+      "Value": 3.0
+    },
+    {
+      "Id": "approx-v-11",
+      "Kind": "Number",
+      "Value": 70.0
+    },
+    {
+      "Id": "approx-h-11",
+      "Kind": "Number",
+      "Value": 70.0
+    },
+    {
+      "Id": "approx-ma-11",
+      "Kind": "Number",
+      "Value": 7.0
+    },
+    {
+      "Id": "approx-md-11",
+      "Kind": "Number",
+      "Value": 1.0
+    },
+    {
+      "Id": "x-near-11--1-1",
+      "Kind": "Number",
+      "Value": 30.0
+    },
+    {
+      "Id": "xm-near-11--1-1",
+      "Kind": "Number",
+      "Value": 3.0
+    },
+    {
+      "Id": "x-near-11--1--1",
+      "Kind": "Number",
+      "Value": 30.0
+    },
+    {
+      "Id": "xm-near-11--1--1",
+      "Kind": "Number",
+      "Value": 3.0
+    },
+    {
+      "Id": "x-near-11-0-1",
+      "Kind": "Number",
+      "Value": 30.0
+    },
+    {
+      "Id": "xm-near-11-0-1",
+      "Kind": "Number",
+      "Value": 3.0
+    },
+    {
+      "Id": "x-near-11-0--1",
+      "Kind": "Number",
+      "Value": 30.0
+    },
+    {
+      "Id": "xm-near-11-0--1",
+      "Kind": "Number",
+      "Value": 3.0
+    },
+    {
+      "Id": "x-near-11-1-1",
+      "Kind": "Number",
+      "Value": 30.0
+    },
+    {
+      "Id": "xm-near-11-1-1",
+      "Kind": "Number",
+      "Value": 3.0
+    },
+    {
+      "Id": "x-near-11-1--1",
+      "Kind": "Number",
+      "Value": 30.0
+    },
+    {
+      "Id": "xm-near-11-1--1",
+      "Kind": "Number",
+      "Value": 3.0
+    },
+    {
+      "Id": "approx-v-12",
+      "Kind": "Number",
+      "Value": 70.0
+    },
+    {
+      "Id": "approx-h-12",
+      "Kind": "Number",
+      "Value": 70.0
+    },
+    {
+      "Id": "approx-ma-12",
+      "Kind": "Number",
+      "Value": 7.0
+    },
+    {
+      "Id": "approx-md-12",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-near-12--1-1",
+      "Kind": "Number",
+      "Value": 30.0
+    },
+    {
+      "Id": "xm-near-12--1-1",
+      "Kind": "Number",
+      "Value": 3.0
+    },
+    {
+      "Id": "x-near-12--1--1",
+      "Kind": "Number",
+      "Value": 30.0
+    },
+    {
+      "Id": "xm-near-12--1--1",
+      "Kind": "Number",
+      "Value": 3.0
+    },
+    {
+      "Id": "x-near-12-0-1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-near-12-0-1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-near-12-0--1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-near-12-0--1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-near-12-1-1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-near-12-1-1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-near-12-1--1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-near-12-1--1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "approx-v-13",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "approx-h-13",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "approx-ma-13",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "approx-md-13",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-near-13--1-1",
+      "Kind": "Number",
+      "Value": 30.0
+    },
+    {
+      "Id": "xm-near-13--1-1",
+      "Kind": "Number",
+      "Value": 3.0
+    },
+    {
+      "Id": "x-near-13--1--1",
+      "Kind": "Number",
+      "Value": 30.0
+    },
+    {
+      "Id": "xm-near-13--1--1",
+      "Kind": "Number",
+      "Value": 3.0
+    },
+    {
+      "Id": "x-near-13-0-1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-near-13-0-1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-near-13-0--1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-near-13-0--1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-near-13-1-1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-near-13-1-1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-near-13-1--1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-near-13-1--1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "approx-v-14",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "approx-h-14",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "approx-ma-14",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "approx-md-14",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-near-14--1-1",
+      "Kind": "Number",
+      "Value": 30.0
+    },
+    {
+      "Id": "xm-near-14--1-1",
+      "Kind": "Number",
+      "Value": 3.0
+    },
+    {
+      "Id": "x-near-14--1--1",
+      "Kind": "Number",
+      "Value": 30.0
+    },
+    {
+      "Id": "xm-near-14--1--1",
+      "Kind": "Number",
+      "Value": 3.0
+    },
+    {
+      "Id": "x-near-14-0-1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-near-14-0-1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-near-14-0--1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-near-14-0--1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-near-14-1-1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-near-14-1-1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-near-14-1--1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-near-14-1--1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "approx-v-15",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "approx-h-15",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "approx-ma-15",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "approx-md-15",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-near-15--1-1",
+      "Kind": "Number",
+      "Value": 30.0
+    },
+    {
+      "Id": "xm-near-15--1-1",
+      "Kind": "Number",
+      "Value": 3.0
+    },
+    {
+      "Id": "x-near-15--1--1",
+      "Kind": "Number",
+      "Value": 30.0
+    },
+    {
+      "Id": "xm-near-15--1--1",
+      "Kind": "Number",
+      "Value": 3.0
+    },
+    {
+      "Id": "x-near-15-0-1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-near-15-0-1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-near-15-0--1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-near-15-0--1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-near-15-1-1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-near-15-1-1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-near-15-1--1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-near-15-1--1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "approx-v-16",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "approx-h-16",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "approx-ma-16",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "approx-md-16",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-near-16--1-1",
+      "Kind": "Number",
+      "Value": 30.0
+    },
+    {
+      "Id": "xm-near-16--1-1",
+      "Kind": "Number",
+      "Value": 3.0
+    },
+    {
+      "Id": "x-near-16--1--1",
+      "Kind": "Number",
+      "Value": 30.0
+    },
+    {
+      "Id": "xm-near-16--1--1",
+      "Kind": "Number",
+      "Value": 3.0
+    },
+    {
+      "Id": "x-near-16-0-1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-near-16-0-1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-near-16-0--1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-near-16-0--1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-near-16-1-1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-near-16-1-1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-near-16-1--1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-near-16-1--1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "exact-v-0",
+      "Kind": "Number",
+      "Value": 20.0
+    },
+    {
+      "Id": "exact-h-0",
+      "Kind": "Number",
+      "Value": 20.0
+    },
+    {
+      "Id": "exact-m-0",
+      "Kind": "Number",
+      "Value": 2.0
+    },
+    {
+      "Id": "x-exact-0-0-1",
+      "Kind": "Number",
+      "Value": 20.0
+    },
+    {
+      "Id": "xm-exact-0-0-1",
+      "Kind": "Number",
+      "Value": 2.0
+    },
+    {
+      "Id": "x-exact-0-0--1",
+      "Kind": "Number",
+      "Value": 20.0
+    },
+    {
+      "Id": "xm-exact-0-0--1",
+      "Kind": "Number",
+      "Value": 2.0
+    },
+    {
+      "Id": "x-exact-0-2-1",
+      "Kind": "Number",
+      "Value": 20.0
+    },
+    {
+      "Id": "xm-exact-0-2-1",
+      "Kind": "Number",
+      "Value": 2.0
+    },
+    {
+      "Id": "x-exact-0-2--1",
+      "Kind": "Number",
+      "Value": 20.0
+    },
+    {
+      "Id": "xm-exact-0-2--1",
+      "Kind": "Number",
+      "Value": 2.0
+    },
+    {
+      "Id": "exact-v-1",
+      "Kind": "Number",
+      "Value": 80.0
+    },
+    {
+      "Id": "exact-h-1",
+      "Kind": "Number",
+      "Value": 80.0
+    },
+    {
+      "Id": "exact-m-1",
+      "Kind": "Number",
+      "Value": 8.0
+    },
+    {
+      "Id": "x-exact-1-0-1",
+      "Kind": "Number",
+      "Value": 80.0
+    },
+    {
+      "Id": "xm-exact-1-0-1",
+      "Kind": "Number",
+      "Value": 8.0
+    },
+    {
+      "Id": "x-exact-1-0--1",
+      "Kind": "Number",
+      "Value": 80.0
+    },
+    {
+      "Id": "xm-exact-1-0--1",
+      "Kind": "Number",
+      "Value": 8.0
+    },
+    {
+      "Id": "x-exact-1-2-1",
+      "Kind": "Number",
+      "Value": 80.0
+    },
+    {
+      "Id": "xm-exact-1-2-1",
+      "Kind": "Number",
+      "Value": 8.0
+    },
+    {
+      "Id": "x-exact-1-2--1",
+      "Kind": "Number",
+      "Value": 80.0
+    },
+    {
+      "Id": "xm-exact-1-2--1",
+      "Kind": "Number",
+      "Value": 8.0
+    },
+    {
+      "Id": "exact-v-2",
+      "Kind": "Number",
+      "Value": 160.0
+    },
+    {
+      "Id": "exact-h-2",
+      "Kind": "Number",
+      "Value": 160.0
+    },
+    {
+      "Id": "exact-m-2",
+      "Kind": "Number",
+      "Value": 16.0
+    },
+    {
+      "Id": "x-exact-2-0-1",
+      "Kind": "Number",
+      "Value": 160.0
+    },
+    {
+      "Id": "xm-exact-2-0-1",
+      "Kind": "Number",
+      "Value": 16.0
+    },
+    {
+      "Id": "x-exact-2-0--1",
+      "Kind": "Number",
+      "Value": 160.0
+    },
+    {
+      "Id": "xm-exact-2-0--1",
+      "Kind": "Number",
+      "Value": 16.0
+    },
+    {
+      "Id": "x-exact-2-2-1",
+      "Kind": "Number",
+      "Value": 160.0
+    },
+    {
+      "Id": "xm-exact-2-2-1",
+      "Kind": "Number",
+      "Value": 16.0
+    },
+    {
+      "Id": "x-exact-2-2--1",
+      "Kind": "Number",
+      "Value": 160.0
+    },
+    {
+      "Id": "xm-exact-2-2--1",
+      "Kind": "Number",
+      "Value": 16.0
+    },
+    {
+      "Id": "exact-v-3",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "exact-h-3",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "exact-m-3",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-exact-3-0-1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-exact-3-0-1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-exact-3-0--1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-exact-3-0--1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-exact-3-2-1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-exact-3-2-1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-exact-3-2--1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-exact-3-2--1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "exact-v-4",
+      "Kind": "Number",
+      "Value": 30.0
+    },
+    {
+      "Id": "exact-h-4",
+      "Kind": "Number",
+      "Value": 30.0
+    },
+    {
+      "Id": "exact-m-4",
+      "Kind": "Number",
+      "Value": 3.0
+    },
+    {
+      "Id": "x-exact-4-0-1",
+      "Kind": "Number",
+      "Value": 30.0
+    },
+    {
+      "Id": "xm-exact-4-0-1",
+      "Kind": "Number",
+      "Value": 3.0
+    },
+    {
+      "Id": "x-exact-4-0--1",
+      "Kind": "Number",
+      "Value": 30.0
+    },
+    {
+      "Id": "xm-exact-4-0--1",
+      "Kind": "Number",
+      "Value": 3.0
+    },
+    {
+      "Id": "x-exact-4-2-1",
+      "Kind": "Number",
+      "Value": 30.0
+    },
+    {
+      "Id": "xm-exact-4-2-1",
+      "Kind": "Number",
+      "Value": 3.0
+    },
+    {
+      "Id": "x-exact-4-2--1",
+      "Kind": "Number",
+      "Value": 30.0
+    },
+    {
+      "Id": "xm-exact-4-2--1",
+      "Kind": "Number",
+      "Value": 3.0
+    },
+    {
+      "Id": "exact-v-5",
+      "Kind": "Number",
+      "Value": 170.0
+    },
+    {
+      "Id": "exact-h-5",
+      "Kind": "Number",
+      "Value": 170.0
+    },
+    {
+      "Id": "exact-m-5",
+      "Kind": "Number",
+      "Value": 17.0
+    },
+    {
+      "Id": "x-exact-5-0-1",
+      "Kind": "Number",
+      "Value": 170.0
+    },
+    {
+      "Id": "xm-exact-5-0-1",
+      "Kind": "Number",
+      "Value": 17.0
+    },
+    {
+      "Id": "x-exact-5-0--1",
+      "Kind": "Number",
+      "Value": 170.0
+    },
+    {
+      "Id": "xm-exact-5-0--1",
+      "Kind": "Number",
+      "Value": 17.0
+    },
+    {
+      "Id": "x-exact-5-2-1",
+      "Kind": "Number",
+      "Value": 170.0
+    },
+    {
+      "Id": "xm-exact-5-2-1",
+      "Kind": "Number",
+      "Value": 17.0
+    },
+    {
+      "Id": "x-exact-5-2--1",
+      "Kind": "Number",
+      "Value": 170.0
+    },
+    {
+      "Id": "xm-exact-5-2--1",
+      "Kind": "Number",
+      "Value": 17.0
+    },
+    {
+      "Id": "exact-v-6",
+      "Kind": "Number",
+      "Value": 40.0
+    },
+    {
+      "Id": "exact-h-6",
+      "Kind": "Number",
+      "Value": 40.0
+    },
+    {
+      "Id": "exact-m-6",
+      "Kind": "Number",
+      "Value": 4.0
+    },
+    {
+      "Id": "x-exact-6-0-1",
+      "Kind": "Number",
+      "Value": 40.0
+    },
+    {
+      "Id": "xm-exact-6-0-1",
+      "Kind": "Number",
+      "Value": 4.0
+    },
+    {
+      "Id": "x-exact-6-0--1",
+      "Kind": "Number",
+      "Value": 40.0
+    },
+    {
+      "Id": "xm-exact-6-0--1",
+      "Kind": "Number",
+      "Value": 4.0
+    },
+    {
+      "Id": "x-exact-6-2-1",
+      "Kind": "Number",
+      "Value": 40.0
+    },
+    {
+      "Id": "xm-exact-6-2-1",
+      "Kind": "Number",
+      "Value": 4.0
+    },
+    {
+      "Id": "x-exact-6-2--1",
+      "Kind": "Number",
+      "Value": 40.0
+    },
+    {
+      "Id": "xm-exact-6-2--1",
+      "Kind": "Number",
+      "Value": 4.0
+    },
+    {
+      "Id": "exact-v-7",
+      "Kind": "Number",
+      "Value": 50.0
+    },
+    {
+      "Id": "exact-h-7",
+      "Kind": "Number",
+      "Value": 50.0
+    },
+    {
+      "Id": "exact-m-7",
+      "Kind": "Number",
+      "Value": 5.0
+    },
+    {
+      "Id": "x-exact-7-0-1",
+      "Kind": "Number",
+      "Value": 50.0
+    },
+    {
+      "Id": "xm-exact-7-0-1",
+      "Kind": "Number",
+      "Value": 5.0
+    },
+    {
+      "Id": "x-exact-7-0--1",
+      "Kind": "Number",
+      "Value": 50.0
+    },
+    {
+      "Id": "xm-exact-7-0--1",
+      "Kind": "Number",
+      "Value": 5.0
+    },
+    {
+      "Id": "x-exact-7-2-1",
+      "Kind": "Number",
+      "Value": 50.0
+    },
+    {
+      "Id": "xm-exact-7-2-1",
+      "Kind": "Number",
+      "Value": 5.0
+    },
+    {
+      "Id": "x-exact-7-2--1",
+      "Kind": "Number",
+      "Value": 50.0
+    },
+    {
+      "Id": "xm-exact-7-2--1",
+      "Kind": "Number",
+      "Value": 5.0
+    },
+    {
+      "Id": "exact-v-8",
+      "Kind": "Number",
+      "Value": 60.0
+    },
+    {
+      "Id": "exact-h-8",
+      "Kind": "Number",
+      "Value": 60.0
+    },
+    {
+      "Id": "exact-m-8",
+      "Kind": "Number",
+      "Value": 6.0
+    },
+    {
+      "Id": "x-exact-8-0-1",
+      "Kind": "Number",
+      "Value": 60.0
+    },
+    {
+      "Id": "xm-exact-8-0-1",
+      "Kind": "Number",
+      "Value": 6.0
+    },
+    {
+      "Id": "x-exact-8-0--1",
+      "Kind": "Number",
+      "Value": 60.0
+    },
+    {
+      "Id": "xm-exact-8-0--1",
+      "Kind": "Number",
+      "Value": 6.0
+    },
+    {
+      "Id": "x-exact-8-2-1",
+      "Kind": "Number",
+      "Value": 60.0
+    },
+    {
+      "Id": "xm-exact-8-2-1",
+      "Kind": "Number",
+      "Value": 6.0
+    },
+    {
+      "Id": "x-exact-8-2--1",
+      "Kind": "Number",
+      "Value": 60.0
+    },
+    {
+      "Id": "xm-exact-8-2--1",
+      "Kind": "Number",
+      "Value": 6.0
+    },
+    {
+      "Id": "exact-v-9",
+      "Kind": "Number",
+      "Value": 70.0
+    },
+    {
+      "Id": "exact-h-9",
+      "Kind": "Number",
+      "Value": 70.0
+    },
+    {
+      "Id": "exact-m-9",
+      "Kind": "Number",
+      "Value": 7.0
+    },
+    {
+      "Id": "x-exact-9-0-1",
+      "Kind": "Number",
+      "Value": 70.0
+    },
+    {
+      "Id": "xm-exact-9-0-1",
+      "Kind": "Number",
+      "Value": 7.0
+    },
+    {
+      "Id": "x-exact-9-0--1",
+      "Kind": "Number",
+      "Value": 70.0
+    },
+    {
+      "Id": "xm-exact-9-0--1",
+      "Kind": "Number",
+      "Value": 7.0
+    },
+    {
+      "Id": "x-exact-9-2-1",
+      "Kind": "Number",
+      "Value": 70.0
+    },
+    {
+      "Id": "xm-exact-9-2-1",
+      "Kind": "Number",
+      "Value": 7.0
+    },
+    {
+      "Id": "x-exact-9-2--1",
+      "Kind": "Number",
+      "Value": 70.0
+    },
+    {
+      "Id": "xm-exact-9-2--1",
+      "Kind": "Number",
+      "Value": 7.0
+    },
+    {
+      "Id": "exact-v-10",
+      "Kind": "Number",
+      "Value": 20.0
+    },
+    {
+      "Id": "exact-h-10",
+      "Kind": "Number",
+      "Value": 20.0
+    },
+    {
+      "Id": "exact-m-10",
+      "Kind": "Number",
+      "Value": 2.0
+    },
+    {
+      "Id": "x-exact-10-0-1",
+      "Kind": "Number",
+      "Value": 0.0
+    },
+    {
+      "Id": "xm-exact-10-0-1",
+      "Kind": "Number",
+      "Value": 1.0
+    },
+    {
+      "Id": "x-exact-10-0--1",
+      "Kind": "Number",
+      "Value": 0.0
+    },
+    {
+      "Id": "xm-exact-10-0--1",
+      "Kind": "Number",
+      "Value": 1.0
+    },
+    {
+      "Id": "x-exact-10-2-1",
+      "Kind": "Number",
+      "Value": 0.0
+    },
+    {
+      "Id": "xm-exact-10-2-1",
+      "Kind": "Number",
+      "Value": 1.0
+    },
+    {
+      "Id": "x-exact-10-2--1",
+      "Kind": "Number",
+      "Value": 0.0
+    },
+    {
+      "Id": "xm-exact-10-2--1",
+      "Kind": "Number",
+      "Value": 1.0
+    },
+    {
+      "Id": "exact-v-11",
+      "Kind": "Number",
+      "Value": 100.0
+    },
+    {
+      "Id": "exact-h-11",
+      "Kind": "Number",
+      "Value": 100.0
+    },
+    {
+      "Id": "exact-m-11",
+      "Kind": "Number",
+      "Value": 10.0
+    },
+    {
+      "Id": "x-exact-11-0-1",
+      "Kind": "Number",
+      "Value": 100.0
+    },
+    {
+      "Id": "xm-exact-11-0-1",
+      "Kind": "Number",
+      "Value": 10.0
+    },
+    {
+      "Id": "x-exact-11-0--1",
+      "Kind": "Number",
+      "Value": 110.0
+    },
+    {
+      "Id": "xm-exact-11-0--1",
+      "Kind": "Number",
+      "Value": 11.0
+    },
+    {
+      "Id": "x-exact-11-2-1",
+      "Kind": "Number",
+      "Value": 100.0
+    },
+    {
+      "Id": "xm-exact-11-2-1",
+      "Kind": "Number",
+      "Value": 10.0
+    },
+    {
+      "Id": "x-exact-11-2--1",
+      "Kind": "Number",
+      "Value": 110.0
+    },
+    {
+      "Id": "xm-exact-11-2--1",
+      "Kind": "Number",
+      "Value": 11.0
+    },
+    {
+      "Id": "exact-v-12",
+      "Kind": "Number",
+      "Value": 100.0
+    },
+    {
+      "Id": "exact-h-12",
+      "Kind": "Number",
+      "Value": 100.0
+    },
+    {
+      "Id": "exact-m-12",
+      "Kind": "Number",
+      "Value": 10.0
+    },
+    {
+      "Id": "x-exact-12-0-1",
+      "Kind": "Number",
+      "Value": 100.0
+    },
+    {
+      "Id": "xm-exact-12-0-1",
+      "Kind": "Number",
+      "Value": 10.0
+    },
+    {
+      "Id": "x-exact-12-0--1",
+      "Kind": "Number",
+      "Value": 110.0
+    },
+    {
+      "Id": "xm-exact-12-0--1",
+      "Kind": "Number",
+      "Value": 11.0
+    },
+    {
+      "Id": "x-exact-12-2-1",
+      "Kind": "Number",
+      "Value": 100.0
+    },
+    {
+      "Id": "xm-exact-12-2-1",
+      "Kind": "Number",
+      "Value": 10.0
+    },
+    {
+      "Id": "x-exact-12-2--1",
+      "Kind": "Number",
+      "Value": 110.0
+    },
+    {
+      "Id": "xm-exact-12-2--1",
+      "Kind": "Number",
+      "Value": 11.0
+    },
+    {
+      "Id": "exact-v-13",
+      "Kind": "Number",
+      "Value": 100.0
+    },
+    {
+      "Id": "exact-h-13",
+      "Kind": "Number",
+      "Value": 100.0
+    },
+    {
+      "Id": "exact-m-13",
+      "Kind": "Number",
+      "Value": 10.0
+    },
+    {
+      "Id": "x-exact-13-0-1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-exact-13-0-1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-exact-13-0--1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-exact-13-0--1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-exact-13-2-1",
+      "Kind": "Number",
+      "Value": 100.0
+    },
+    {
+      "Id": "xm-exact-13-2-1",
+      "Kind": "Number",
+      "Value": 10.0
+    },
+    {
+      "Id": "x-exact-13-2--1",
+      "Kind": "Number",
+      "Value": 190.0
+    },
+    {
+      "Id": "xm-exact-13-2--1",
+      "Kind": "Number",
+      "Value": 19.0
+    },
+    {
+      "Id": "exact-v-14",
+      "Kind": "Text",
+      "Value": "00123"
+    },
+    {
+      "Id": "exact-h-14",
+      "Kind": "Text",
+      "Value": "00123"
+    },
+    {
+      "Id": "exact-m-14",
+      "Kind": "Number",
+      "Value": 12.0
+    },
+    {
+      "Id": "x-exact-14-0-1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-exact-14-0-1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-exact-14-0--1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-exact-14-0--1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-exact-14-2-1",
+      "Kind": "Text",
+      "Value": "00123"
+    },
+    {
+      "Id": "xm-exact-14-2-1",
+      "Kind": "Number",
+      "Value": 12.0
+    },
+    {
+      "Id": "x-exact-14-2--1",
+      "Kind": "Text",
+      "Value": "00123"
+    },
+    {
+      "Id": "xm-exact-14-2--1",
+      "Kind": "Number",
+      "Value": 12.0
+    },
+    {
+      "Id": "exact-v-15",
+      "Kind": "Error",
+      "Value": "#REF!"
+    },
+    {
+      "Id": "exact-h-15",
+      "Kind": "Error",
+      "Value": "#REF!"
+    },
+    {
+      "Id": "exact-m-15",
+      "Kind": "Number",
+      "Value": 13.0
+    },
+    {
+      "Id": "x-exact-15-0-1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-exact-15-0-1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-exact-15-0--1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-exact-15-0--1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-exact-15-2-1",
+      "Kind": "Error",
+      "Value": "#REF!"
+    },
+    {
+      "Id": "xm-exact-15-2-1",
+      "Kind": "Number",
+      "Value": 13.0
+    },
+    {
+      "Id": "x-exact-15-2--1",
+      "Kind": "Error",
+      "Value": "#REF!"
+    },
+    {
+      "Id": "xm-exact-15-2--1",
+      "Kind": "Number",
+      "Value": 13.0
+    },
+    {
+      "Id": "exact-v-16",
+      "Kind": "Number",
+      "Value": 140.0
+    },
+    {
+      "Id": "exact-h-16",
+      "Kind": "Number",
+      "Value": 140.0
+    },
+    {
+      "Id": "exact-m-16",
+      "Kind": "Number",
+      "Value": 14.0
+    },
+    {
+      "Id": "x-exact-16-0-1",
+      "Kind": "Number",
+      "Value": 190.0
+    },
+    {
+      "Id": "xm-exact-16-0-1",
+      "Kind": "Number",
+      "Value": 19.0
+    },
+    {
+      "Id": "x-exact-16-0--1",
+      "Kind": "Number",
+      "Value": 190.0
+    },
+    {
+      "Id": "xm-exact-16-0--1",
+      "Kind": "Number",
+      "Value": 19.0
+    },
+    {
+      "Id": "x-exact-16-2-1",
+      "Kind": "Number",
+      "Value": 140.0
+    },
+    {
+      "Id": "xm-exact-16-2-1",
+      "Kind": "Number",
+      "Value": 14.0
+    },
+    {
+      "Id": "x-exact-16-2--1",
+      "Kind": "Number",
+      "Value": 140.0
+    },
+    {
+      "Id": "xm-exact-16-2--1",
+      "Kind": "Number",
+      "Value": 14.0
+    },
+    {
+      "Id": "exact-v-17",
+      "Kind": "Number",
+      "Value": 70.0
+    },
+    {
+      "Id": "exact-h-17",
+      "Kind": "Number",
+      "Value": 70.0
+    },
+    {
+      "Id": "exact-m-17",
+      "Kind": "Number",
+      "Value": 7.0
+    },
+    {
+      "Id": "x-exact-17-0-1",
+      "Kind": "Number",
+      "Value": 150.0
+    },
+    {
+      "Id": "xm-exact-17-0-1",
+      "Kind": "Number",
+      "Value": 15.0
+    },
+    {
+      "Id": "x-exact-17-0--1",
+      "Kind": "Number",
+      "Value": 150.0
+    },
+    {
+      "Id": "xm-exact-17-0--1",
+      "Kind": "Number",
+      "Value": 15.0
+    },
+    {
+      "Id": "x-exact-17-2-1",
+      "Kind": "Number",
+      "Value": 70.0
+    },
+    {
+      "Id": "xm-exact-17-2-1",
+      "Kind": "Number",
+      "Value": 7.0
+    },
+    {
+      "Id": "x-exact-17-2--1",
+      "Kind": "Number",
+      "Value": 70.0
+    },
+    {
+      "Id": "xm-exact-17-2--1",
+      "Kind": "Number",
+      "Value": 7.0
+    },
+    {
+      "Id": "exact-v-18",
+      "Kind": "Number",
+      "Value": 150.0
+    },
+    {
+      "Id": "exact-h-18",
+      "Kind": "Number",
+      "Value": 150.0
+    },
+    {
+      "Id": "exact-m-18",
+      "Kind": "Number",
+      "Value": 15.0
+    },
+    {
+      "Id": "x-exact-18-0-1",
+      "Kind": "Number",
+      "Value": 200.0
+    },
+    {
+      "Id": "xm-exact-18-0-1",
+      "Kind": "Number",
+      "Value": 20.0
+    },
+    {
+      "Id": "x-exact-18-0--1",
+      "Kind": "Number",
+      "Value": 200.0
+    },
+    {
+      "Id": "xm-exact-18-0--1",
+      "Kind": "Number",
+      "Value": 20.0
+    },
+    {
+      "Id": "x-exact-18-2-1",
+      "Kind": "Number",
+      "Value": 150.0
+    },
+    {
+      "Id": "xm-exact-18-2-1",
+      "Kind": "Number",
+      "Value": 15.0
+    },
+    {
+      "Id": "x-exact-18-2--1",
+      "Kind": "Number",
+      "Value": 150.0
+    },
+    {
+      "Id": "xm-exact-18-2--1",
+      "Kind": "Number",
+      "Value": 15.0
+    },
+    {
+      "Id": "exact-v-19",
+      "Kind": "Number",
+      "Value": 30.0
+    },
+    {
+      "Id": "exact-h-19",
+      "Kind": "Number",
+      "Value": 30.0
+    },
+    {
+      "Id": "exact-m-19",
+      "Kind": "Number",
+      "Value": 3.0
+    },
+    {
+      "Id": "x-exact-19-0-1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-exact-19-0-1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-exact-19-0--1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-exact-19-0--1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-exact-19-2-1",
+      "Kind": "Number",
+      "Value": 30.0
+    },
+    {
+      "Id": "xm-exact-19-2-1",
+      "Kind": "Number",
+      "Value": 3.0
+    },
+    {
+      "Id": "x-exact-19-2--1",
+      "Kind": "Number",
+      "Value": 170.0
+    },
+    {
+      "Id": "xm-exact-19-2--1",
+      "Kind": "Number",
+      "Value": 17.0
+    },
+    {
+      "Id": "exact-v-20",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "exact-h-20",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "exact-m-20",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-exact-20-0-1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "xm-exact-20-0-1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-exact-20-0--1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "xm-exact-20-0--1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-exact-20-2-1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "xm-exact-20-2-1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-exact-20-2--1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "xm-exact-20-2--1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "exact-v-21",
+      "Kind": "Error",
+      "Value": "#DIV/0!"
+    },
+    {
+      "Id": "exact-h-21",
+      "Kind": "Error",
+      "Value": "#DIV/0!"
+    },
+    {
+      "Id": "exact-m-21",
+      "Kind": "Error",
+      "Value": "#DIV/0!"
+    },
+    {
+      "Id": "x-exact-21-0-1",
+      "Kind": "Error",
+      "Value": "#DIV/0!"
+    },
+    {
+      "Id": "xm-exact-21-0-1",
+      "Kind": "Error",
+      "Value": "#DIV/0!"
+    },
+    {
+      "Id": "x-exact-21-0--1",
+      "Kind": "Error",
+      "Value": "#DIV/0!"
+    },
+    {
+      "Id": "xm-exact-21-0--1",
+      "Kind": "Error",
+      "Value": "#DIV/0!"
+    },
+    {
+      "Id": "x-exact-21-2-1",
+      "Kind": "Error",
+      "Value": "#DIV/0!"
+    },
+    {
+      "Id": "xm-exact-21-2-1",
+      "Kind": "Error",
+      "Value": "#DIV/0!"
+    },
+    {
+      "Id": "x-exact-21-2--1",
+      "Kind": "Error",
+      "Value": "#DIV/0!"
+    },
+    {
+      "Id": "xm-exact-21-2--1",
+      "Kind": "Error",
+      "Value": "#DIV/0!"
+    },
+    {
+      "Id": "exact-v-22",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "exact-h-22",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "exact-m-22",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-exact-22-0-1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-exact-22-0-1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-exact-22-0--1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-exact-22-0--1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-exact-22-2-1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-exact-22-2-1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-exact-22-2--1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-exact-22-2--1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "edge-0",
+      "Kind": "Error",
+      "Value": "#VALUE!"
+    },
+    {
+      "Id": "edge-1",
+      "Kind": "Error",
+      "Value": "#VALUE!"
+    },
+    {
+      "Id": "edge-2",
+      "Kind": "Error",
+      "Value": "#REF!"
+    },
+    {
+      "Id": "edge-3",
+      "Kind": "Number",
+      "Value": 40.0
+    },
+    {
+      "Id": "edge-4",
+      "Kind": "Error",
+      "Value": "#VALUE!"
+    },
+    {
+      "Id": "edge-5",
+      "Kind": "Error",
+      "Value": "#REF!"
+    },
+    {
+      "Id": "edge-6",
+      "Kind": "Number",
+      "Value": 5.0
+    },
+    {
+      "Id": "edge-7",
+      "Kind": "Number",
+      "Value": 3.0
+    },
+    {
+      "Id": "edge-8",
+      "Kind": "Number",
+      "Value": 5.0
+    },
+    {
+      "Id": "edge-9",
+      "Kind": "Number",
+      "Value": 3.0
+    },
+    {
+      "Id": "edge-10",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "edge-11",
+      "Kind": "Number",
+      "Value": 40.0
+    },
+    {
+      "Id": "edge-12",
+      "Kind": "Error",
+      "Value": "#DIV/0!"
+    },
+    {
+      "Id": "edge-13",
+      "Kind": "Error",
+      "Value": "#VALUE!"
+    },
+    {
+      "Id": "edge-14",
+      "Kind": "Error",
+      "Value": "#VALUE!"
+    },
+    {
+      "Id": "edge-15",
+      "Kind": "Error",
+      "Value": "#VALUE!"
+    },
+    {
+      "Id": "edge-16",
+      "Kind": "Number",
+      "Value": 40.0
+    },
+    {
+      "Id": "edge-17",
+      "Kind": "Number",
+      "Value": 50.0
+    },
+    {
+      "Id": "edge-18",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "edge-19",
+      "Kind": "Number",
+      "Value": 5.0
+    },
+    {
+      "Id": "edge-20",
+      "Kind": "Number",
+      "Value": 0.0
+    },
+    {
+      "Id": "edge-21",
+      "Kind": "Error",
+      "Value": "#VALUE!"
+    },
+    {
+      "Id": "edge-22",
+      "Kind": "Error",
+      "Value": "#VALUE!"
+    },
+    {
+      "Id": "edge-23",
+      "Kind": "Error",
+      "Value": "#VALUE!"
+    },
+    {
+      "Id": "edge-24",
+      "Kind": "Error",
+      "Value": "#VALUE!"
+    },
+    {
+      "Id": "edge-25",
+      "Kind": "Number",
+      "Value": 2.0
+    },
+    {
+      "Id": "edge-26",
+      "Kind": "Number",
+      "Value": 2.0
+    },
+    {
+      "Id": "edge-27",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "edge-28",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "edge-29",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "edge-30",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "edge-31",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "edge-32",
+      "Kind": "Number",
+      "Value": 40.0
+    },
+    {
+      "Id": "edge-33",
+      "Kind": "Number",
+      "Value": 99.0
+    },
+    {
+      "Id": "edge-34",
+      "Kind": "Number",
+      "Value": 30.0
+    },
+    {
+      "Id": "edge-35",
+      "Kind": "Number",
+      "Value": 1.0
+    },
+    {
+      "Id": "edge-36",
+      "Kind": "Number",
+      "Value": 1.0
+    },
+    {
+      "Id": "edge-37",
+      "Kind": "Number",
+      "Value": 30.0
+    },
+    {
+      "Id": "whole-blank-forward",
+      "Kind": "Number",
+      "Value": 8.0
+    },
+    {
+      "Id": "whole-blank-reverse",
+      "Kind": "Number",
+      "Value": 1048576.0
+    },
+    {
+      "Id": "whole-lookup-blank",
+      "Kind": "Number",
+      "Value": 0.0
+    },
+    {
+      "Id": "blank-near--1-0",
+      "Kind": "Number",
+      "Value": 0.0
+    },
+    {
+      "Id": "blank-near--1-1",
+      "Kind": "Number",
+      "Value": 20.0
+    },
+    {
+      "Id": "blank-near--1-2",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "blank-near--1-3",
+      "Kind": "Number",
+      "Value": 70.0
+    },
+    {
+      "Id": "blank-near-1-0",
+      "Kind": "Number",
+      "Value": 0.0
+    },
+    {
+      "Id": "blank-near-1-1",
+      "Kind": "Number",
+      "Value": 80.0
+    },
+    {
+      "Id": "blank-near-1-2",
+      "Kind": "Number",
+      "Value": 20.0
+    },
+    {
+      "Id": "blank-near-1-3",
+      "Kind": "Number",
+      "Value": 70.0
+    },
+    {
+      "Id": "mode-0",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "mode-1",
+      "Kind": "Number",
+      "Value": 60.0
+    },
+    {
+      "Id": "mode-2",
+      "Kind": "Number",
+      "Value": 40.0
+    },
+    {
+      "Id": "mode-3",
+      "Kind": "Error",
+      "Value": "#VALUE!"
+    },
+    {
+      "Id": "mode-4",
+      "Kind": "Number",
+      "Value": 60.0
+    },
+    {
+      "Id": "mode-5",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "mode-6",
+      "Kind": "Number",
+      "Value": 60.0
+    },
+    {
+      "Id": "search-0",
+      "Kind": "Number",
+      "Value": 4.0
+    },
+    {
+      "Id": "search-2",
+      "Kind": "Number",
+      "Value": 4.0
+    },
+    {
+      "Id": "search-3",
+      "Kind": "Error",
+      "Value": "#VALUE!"
+    },
+    {
+      "Id": "search-4",
+      "Kind": "Number",
+      "Value": 5.0
+    },
+    {
+      "Id": "escape-other",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "late-0",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "late-1",
+      "Kind": "Error",
+      "Value": "#REF!"
+    },
+    {
+      "Id": "late-2",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "late-3",
+      "Kind": "Error",
+      "Value": "#REF!"
+    },
+    {
+      "Id": "late-4",
+      "Kind": "Number",
+      "Value": 70.0
+    },
+    {
+      "Id": "late-5",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "bounds-0",
+      "Kind": "Number",
+      "Value": 0.0
+    },
+    {
+      "Id": "bounds-1",
+      "Kind": "Text",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "bounds-2",
+      "Kind": "Number",
+      "Value": 40.0
+    },
+    {
+      "Id": "bounds-3",
+      "Kind": "Number",
+      "Value": 50.0
+    },
+    {
+      "Id": "bounds-4",
+      "Kind": "Error",
+      "Value": "#VALUE!"
+    },
+    {
+      "Id": "bounds-5",
+      "Kind": "Error",
+      "Value": "#VALUE!"
+    },
+    {
+      "Id": "bounds-6",
+      "Kind": "Number",
+      "Value": 5.0
+    },
+    {
+      "Id": "bounds-7",
+      "Kind": "Error",
+      "Value": "#VALUE!"
+    },
+    {
+      "Id": "bounds-8",
+      "Kind": "Error",
+      "Value": "#VALUE!"
+    },
+    {
+      "Id": "bounds-9",
+      "Kind": "Number",
+      "Value": 210.0
+    },
+    {
+      "Id": "bounds-10",
+      "Kind": "Number",
+      "Value": 21.0
+    },
+    {
+      "Id": "bounds-11",
+      "Kind": "Number",
+      "Value": 210.0
+    }
+  ],
+  "Edited": [
+    {
+      "Id": "approx-v-0",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "approx-h-0",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "approx-ma-0",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "approx-md-0",
+      "Kind": "Number",
+      "Value": 7.0
+    },
+    {
+      "Id": "x-near-0--1-1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-near-0--1-1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-near-0--1--1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-near-0--1--1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-near-0-0-1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-near-0-0-1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-near-0-0--1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-near-0-0--1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-near-0-1-1",
+      "Kind": "Number",
+      "Value": 70.0
+    },
+    {
+      "Id": "xm-near-0-1-1",
+      "Kind": "Number",
+      "Value": 7.0
+    },
+    {
+      "Id": "x-near-0-1--1",
+      "Kind": "Number",
+      "Value": 70.0
+    },
+    {
+      "Id": "xm-near-0-1--1",
+      "Kind": "Number",
+      "Value": 7.0
+    },
+    {
+      "Id": "approx-v-1",
+      "Kind": "Number",
+      "Value": 10.0
+    },
+    {
+      "Id": "approx-h-1",
+      "Kind": "Number",
+      "Value": 10.0
+    },
+    {
+      "Id": "approx-ma-1",
+      "Kind": "Number",
+      "Value": 1.0
+    },
+    {
+      "Id": "approx-md-1",
+      "Kind": "Number",
+      "Value": 7.0
+    },
+    {
+      "Id": "x-near-1--1-1",
+      "Kind": "Number",
+      "Value": 70.0
+    },
+    {
+      "Id": "xm-near-1--1-1",
+      "Kind": "Number",
+      "Value": 7.0
+    },
+    {
+      "Id": "x-near-1--1--1",
+      "Kind": "Number",
+      "Value": 70.0
+    },
+    {
+      "Id": "xm-near-1--1--1",
+      "Kind": "Number",
+      "Value": 7.0
+    },
+    {
+      "Id": "x-near-1-0-1",
+      "Kind": "Number",
+      "Value": 70.0
+    },
+    {
+      "Id": "xm-near-1-0-1",
+      "Kind": "Number",
+      "Value": 7.0
+    },
+    {
+      "Id": "x-near-1-0--1",
+      "Kind": "Number",
+      "Value": 70.0
+    },
+    {
+      "Id": "xm-near-1-0--1",
+      "Kind": "Number",
+      "Value": 7.0
+    },
+    {
+      "Id": "x-near-1-1-1",
+      "Kind": "Number",
+      "Value": 70.0
+    },
+    {
+      "Id": "xm-near-1-1-1",
+      "Kind": "Number",
+      "Value": 7.0
+    },
+    {
+      "Id": "x-near-1-1--1",
+      "Kind": "Number",
+      "Value": 70.0
+    },
+    {
+      "Id": "xm-near-1-1--1",
+      "Kind": "Number",
+      "Value": 7.0
+    },
+    {
+      "Id": "approx-v-2",
+      "Kind": "Number",
+      "Value": 10.0
+    },
+    {
+      "Id": "approx-h-2",
+      "Kind": "Number",
+      "Value": 10.0
+    },
+    {
+      "Id": "approx-ma-2",
+      "Kind": "Number",
+      "Value": 1.0
+    },
+    {
+      "Id": "approx-md-2",
+      "Kind": "Number",
+      "Value": 6.0
+    },
+    {
+      "Id": "x-near-2--1-1",
+      "Kind": "Number",
+      "Value": 70.0
+    },
+    {
+      "Id": "xm-near-2--1-1",
+      "Kind": "Number",
+      "Value": 7.0
+    },
+    {
+      "Id": "x-near-2--1--1",
+      "Kind": "Number",
+      "Value": 70.0
+    },
+    {
+      "Id": "xm-near-2--1--1",
+      "Kind": "Number",
+      "Value": 7.0
+    },
+    {
+      "Id": "x-near-2-0-1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-near-2-0-1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-near-2-0--1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-near-2-0--1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-near-2-1-1",
+      "Kind": "Number",
+      "Value": 60.0
+    },
+    {
+      "Id": "xm-near-2-1-1",
+      "Kind": "Number",
+      "Value": 6.0
+    },
+    {
+      "Id": "x-near-2-1--1",
+      "Kind": "Number",
+      "Value": 60.0
+    },
+    {
+      "Id": "xm-near-2-1--1",
+      "Kind": "Number",
+      "Value": 6.0
+    },
+    {
+      "Id": "approx-v-3",
+      "Kind": "Number",
+      "Value": 20.0
+    },
+    {
+      "Id": "approx-h-3",
+      "Kind": "Number",
+      "Value": 20.0
+    },
+    {
+      "Id": "approx-ma-3",
+      "Kind": "Number",
+      "Value": 2.0
+    },
+    {
+      "Id": "approx-md-3",
+      "Kind": "Number",
+      "Value": 6.0
+    },
+    {
+      "Id": "x-near-3--1-1",
+      "Kind": "Number",
+      "Value": 60.0
+    },
+    {
+      "Id": "xm-near-3--1-1",
+      "Kind": "Number",
+      "Value": 6.0
+    },
+    {
+      "Id": "x-near-3--1--1",
+      "Kind": "Number",
+      "Value": 60.0
+    },
+    {
+      "Id": "xm-near-3--1--1",
+      "Kind": "Number",
+      "Value": 6.0
+    },
+    {
+      "Id": "x-near-3-0-1",
+      "Kind": "Number",
+      "Value": 60.0
+    },
+    {
+      "Id": "xm-near-3-0-1",
+      "Kind": "Number",
+      "Value": 6.0
+    },
+    {
+      "Id": "x-near-3-0--1",
+      "Kind": "Number",
+      "Value": 60.0
+    },
+    {
+      "Id": "xm-near-3-0--1",
+      "Kind": "Number",
+      "Value": 6.0
+    },
+    {
+      "Id": "x-near-3-1-1",
+      "Kind": "Number",
+      "Value": 60.0
+    },
+    {
+      "Id": "xm-near-3-1-1",
+      "Kind": "Number",
+      "Value": 6.0
+    },
+    {
+      "Id": "x-near-3-1--1",
+      "Kind": "Number",
+      "Value": 60.0
+    },
+    {
+      "Id": "xm-near-3-1--1",
+      "Kind": "Number",
+      "Value": 6.0
+    },
+    {
+      "Id": "approx-v-4",
+      "Kind": "Number",
+      "Value": 20.0
+    },
+    {
+      "Id": "approx-h-4",
+      "Kind": "Number",
+      "Value": 20.0
+    },
+    {
+      "Id": "approx-ma-4",
+      "Kind": "Number",
+      "Value": 2.0
+    },
+    {
+      "Id": "approx-md-4",
+      "Kind": "Number",
+      "Value": 5.0
+    },
+    {
+      "Id": "x-near-4--1-1",
+      "Kind": "Number",
+      "Value": 60.0
+    },
+    {
+      "Id": "xm-near-4--1-1",
+      "Kind": "Number",
+      "Value": 6.0
+    },
+    {
+      "Id": "x-near-4--1--1",
+      "Kind": "Number",
+      "Value": 60.0
+    },
+    {
+      "Id": "xm-near-4--1--1",
+      "Kind": "Number",
+      "Value": 6.0
+    },
+    {
+      "Id": "x-near-4-0-1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-near-4-0-1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-near-4-0--1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-near-4-0--1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-near-4-1-1",
+      "Kind": "Number",
+      "Value": 20.0
+    },
+    {
+      "Id": "xm-near-4-1-1",
+      "Kind": "Number",
+      "Value": 2.0
+    },
+    {
+      "Id": "x-near-4-1--1",
+      "Kind": "Number",
+      "Value": 20.0
+    },
+    {
+      "Id": "xm-near-4-1--1",
+      "Kind": "Number",
+      "Value": 2.0
+    },
+    {
+      "Id": "approx-v-5",
+      "Kind": "Number",
+      "Value": 30.0
+    },
+    {
+      "Id": "approx-h-5",
+      "Kind": "Number",
+      "Value": 30.0
+    },
+    {
+      "Id": "approx-ma-5",
+      "Kind": "Number",
+      "Value": 3.0
+    },
+    {
+      "Id": "approx-md-5",
+      "Kind": "Number",
+      "Value": 5.0
+    },
+    {
+      "Id": "x-near-5--1-1",
+      "Kind": "Number",
+      "Value": 20.0
+    },
+    {
+      "Id": "xm-near-5--1-1",
+      "Kind": "Number",
+      "Value": 2.0
+    },
+    {
+      "Id": "x-near-5--1--1",
+      "Kind": "Number",
+      "Value": 20.0
+    },
+    {
+      "Id": "xm-near-5--1--1",
+      "Kind": "Number",
+      "Value": 2.0
+    },
+    {
+      "Id": "x-near-5-0-1",
+      "Kind": "Number",
+      "Value": 20.0
+    },
+    {
+      "Id": "xm-near-5-0-1",
+      "Kind": "Number",
+      "Value": 2.0
+    },
+    {
+      "Id": "x-near-5-0--1",
+      "Kind": "Number",
+      "Value": 20.0
+    },
+    {
+      "Id": "xm-near-5-0--1",
+      "Kind": "Number",
+      "Value": 2.0
+    },
+    {
+      "Id": "x-near-5-1-1",
+      "Kind": "Number",
+      "Value": 20.0
+    },
+    {
+      "Id": "xm-near-5-1-1",
+      "Kind": "Number",
+      "Value": 2.0
+    },
+    {
+      "Id": "x-near-5-1--1",
+      "Kind": "Number",
+      "Value": 20.0
+    },
+    {
+      "Id": "xm-near-5-1--1",
+      "Kind": "Number",
+      "Value": 2.0
+    },
+    {
+      "Id": "approx-v-6",
+      "Kind": "Number",
+      "Value": 50.0
+    },
+    {
+      "Id": "approx-h-6",
+      "Kind": "Number",
+      "Value": 50.0
+    },
+    {
+      "Id": "approx-ma-6",
+      "Kind": "Number",
+      "Value": 5.0
+    },
+    {
+      "Id": "approx-md-6",
+      "Kind": "Number",
+      "Value": 3.0
+    },
+    {
+      "Id": "x-near-6--1-1",
+      "Kind": "Number",
+      "Value": 40.0
+    },
+    {
+      "Id": "xm-near-6--1-1",
+      "Kind": "Number",
+      "Value": 4.0
+    },
+    {
+      "Id": "x-near-6--1--1",
+      "Kind": "Number",
+      "Value": 50.0
+    },
+    {
+      "Id": "xm-near-6--1--1",
+      "Kind": "Number",
+      "Value": 5.0
+    },
+    {
+      "Id": "x-near-6-0-1",
+      "Kind": "Number",
+      "Value": 40.0
+    },
+    {
+      "Id": "xm-near-6-0-1",
+      "Kind": "Number",
+      "Value": 4.0
+    },
+    {
+      "Id": "x-near-6-0--1",
+      "Kind": "Number",
+      "Value": 50.0
+    },
+    {
+      "Id": "xm-near-6-0--1",
+      "Kind": "Number",
+      "Value": 5.0
+    },
+    {
+      "Id": "x-near-6-1-1",
+      "Kind": "Number",
+      "Value": 40.0
+    },
+    {
+      "Id": "xm-near-6-1-1",
+      "Kind": "Number",
+      "Value": 4.0
+    },
+    {
+      "Id": "x-near-6-1--1",
+      "Kind": "Number",
+      "Value": 50.0
+    },
+    {
+      "Id": "xm-near-6-1--1",
+      "Kind": "Number",
+      "Value": 5.0
+    },
+    {
+      "Id": "approx-v-7",
+      "Kind": "Number",
+      "Value": 50.0
+    },
+    {
+      "Id": "approx-h-7",
+      "Kind": "Number",
+      "Value": 50.0
+    },
+    {
+      "Id": "approx-ma-7",
+      "Kind": "Number",
+      "Value": 5.0
+    },
+    {
+      "Id": "approx-md-7",
+      "Kind": "Number",
+      "Value": 2.0
+    },
+    {
+      "Id": "x-near-7--1-1",
+      "Kind": "Number",
+      "Value": 40.0
+    },
+    {
+      "Id": "xm-near-7--1-1",
+      "Kind": "Number",
+      "Value": 4.0
+    },
+    {
+      "Id": "x-near-7--1--1",
+      "Kind": "Number",
+      "Value": 50.0
+    },
+    {
+      "Id": "xm-near-7--1--1",
+      "Kind": "Number",
+      "Value": 5.0
+    },
+    {
+      "Id": "x-near-7-0-1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-near-7-0-1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-near-7-0--1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-near-7-0--1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-near-7-1-1",
+      "Kind": "Number",
+      "Value": 10.0
+    },
+    {
+      "Id": "xm-near-7-1-1",
+      "Kind": "Number",
+      "Value": 1.0
+    },
+    {
+      "Id": "x-near-7-1--1",
+      "Kind": "Number",
+      "Value": 10.0
+    },
+    {
+      "Id": "xm-near-7-1--1",
+      "Kind": "Number",
+      "Value": 1.0
+    },
+    {
+      "Id": "approx-v-8",
+      "Kind": "Number",
+      "Value": 50.0
+    },
+    {
+      "Id": "approx-h-8",
+      "Kind": "Number",
+      "Value": 50.0
+    },
+    {
+      "Id": "approx-ma-8",
+      "Kind": "Number",
+      "Value": 5.0
+    },
+    {
+      "Id": "approx-md-8",
+      "Kind": "Number",
+      "Value": 2.0
+    },
+    {
+      "Id": "x-near-8--1-1",
+      "Kind": "Number",
+      "Value": 40.0
+    },
+    {
+      "Id": "xm-near-8--1-1",
+      "Kind": "Number",
+      "Value": 4.0
+    },
+    {
+      "Id": "x-near-8--1--1",
+      "Kind": "Number",
+      "Value": 50.0
+    },
+    {
+      "Id": "xm-near-8--1--1",
+      "Kind": "Number",
+      "Value": 5.0
+    },
+    {
+      "Id": "x-near-8-0-1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-near-8-0-1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-near-8-0--1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-near-8-0--1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-near-8-1-1",
+      "Kind": "Number",
+      "Value": 10.0
+    },
+    {
+      "Id": "xm-near-8-1-1",
+      "Kind": "Number",
+      "Value": 1.0
+    },
+    {
+      "Id": "x-near-8-1--1",
+      "Kind": "Number",
+      "Value": 10.0
+    },
+    {
+      "Id": "xm-near-8-1--1",
+      "Kind": "Number",
+      "Value": 1.0
+    },
+    {
+      "Id": "approx-v-9",
+      "Kind": "Number",
+      "Value": 60.0
+    },
+    {
+      "Id": "approx-h-9",
+      "Kind": "Number",
+      "Value": 60.0
+    },
+    {
+      "Id": "approx-ma-9",
+      "Kind": "Number",
+      "Value": 6.0
+    },
+    {
+      "Id": "approx-md-9",
+      "Kind": "Number",
+      "Value": 2.0
+    },
+    {
+      "Id": "x-near-9--1-1",
+      "Kind": "Number",
+      "Value": 10.0
+    },
+    {
+      "Id": "xm-near-9--1-1",
+      "Kind": "Number",
+      "Value": 1.0
+    },
+    {
+      "Id": "x-near-9--1--1",
+      "Kind": "Number",
+      "Value": 10.0
+    },
+    {
+      "Id": "xm-near-9--1--1",
+      "Kind": "Number",
+      "Value": 1.0
+    },
+    {
+      "Id": "x-near-9-0-1",
+      "Kind": "Number",
+      "Value": 10.0
+    },
+    {
+      "Id": "xm-near-9-0-1",
+      "Kind": "Number",
+      "Value": 1.0
+    },
+    {
+      "Id": "x-near-9-0--1",
+      "Kind": "Number",
+      "Value": 10.0
+    },
+    {
+      "Id": "xm-near-9-0--1",
+      "Kind": "Number",
+      "Value": 1.0
+    },
+    {
+      "Id": "x-near-9-1-1",
+      "Kind": "Number",
+      "Value": 10.0
+    },
+    {
+      "Id": "xm-near-9-1-1",
+      "Kind": "Number",
+      "Value": 1.0
+    },
+    {
+      "Id": "x-near-9-1--1",
+      "Kind": "Number",
+      "Value": 10.0
+    },
+    {
+      "Id": "xm-near-9-1--1",
+      "Kind": "Number",
+      "Value": 1.0
+    },
+    {
+      "Id": "approx-v-10",
+      "Kind": "Number",
+      "Value": 60.0
+    },
+    {
+      "Id": "approx-h-10",
+      "Kind": "Number",
+      "Value": 60.0
+    },
+    {
+      "Id": "approx-ma-10",
+      "Kind": "Number",
+      "Value": 6.0
+    },
+    {
+      "Id": "approx-md-10",
+      "Kind": "Number",
+      "Value": 1.0
+    },
+    {
+      "Id": "x-near-10--1-1",
+      "Kind": "Number",
+      "Value": 10.0
+    },
+    {
+      "Id": "xm-near-10--1-1",
+      "Kind": "Number",
+      "Value": 1.0
+    },
+    {
+      "Id": "x-near-10--1--1",
+      "Kind": "Number",
+      "Value": 10.0
+    },
+    {
+      "Id": "xm-near-10--1--1",
+      "Kind": "Number",
+      "Value": 1.0
+    },
+    {
+      "Id": "x-near-10-0-1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-near-10-0-1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-near-10-0--1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-near-10-0--1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-near-10-1-1",
+      "Kind": "Number",
+      "Value": 30.0
+    },
+    {
+      "Id": "xm-near-10-1-1",
+      "Kind": "Number",
+      "Value": 3.0
+    },
+    {
+      "Id": "x-near-10-1--1",
+      "Kind": "Number",
+      "Value": 30.0
+    },
+    {
+      "Id": "xm-near-10-1--1",
+      "Kind": "Number",
+      "Value": 3.0
+    },
+    {
+      "Id": "approx-v-11",
+      "Kind": "Number",
+      "Value": 70.0
+    },
+    {
+      "Id": "approx-h-11",
+      "Kind": "Number",
+      "Value": 70.0
+    },
+    {
+      "Id": "approx-ma-11",
+      "Kind": "Number",
+      "Value": 7.0
+    },
+    {
+      "Id": "approx-md-11",
+      "Kind": "Number",
+      "Value": 1.0
+    },
+    {
+      "Id": "x-near-11--1-1",
+      "Kind": "Number",
+      "Value": 30.0
+    },
+    {
+      "Id": "xm-near-11--1-1",
+      "Kind": "Number",
+      "Value": 3.0
+    },
+    {
+      "Id": "x-near-11--1--1",
+      "Kind": "Number",
+      "Value": 30.0
+    },
+    {
+      "Id": "xm-near-11--1--1",
+      "Kind": "Number",
+      "Value": 3.0
+    },
+    {
+      "Id": "x-near-11-0-1",
+      "Kind": "Number",
+      "Value": 30.0
+    },
+    {
+      "Id": "xm-near-11-0-1",
+      "Kind": "Number",
+      "Value": 3.0
+    },
+    {
+      "Id": "x-near-11-0--1",
+      "Kind": "Number",
+      "Value": 30.0
+    },
+    {
+      "Id": "xm-near-11-0--1",
+      "Kind": "Number",
+      "Value": 3.0
+    },
+    {
+      "Id": "x-near-11-1-1",
+      "Kind": "Number",
+      "Value": 30.0
+    },
+    {
+      "Id": "xm-near-11-1-1",
+      "Kind": "Number",
+      "Value": 3.0
+    },
+    {
+      "Id": "x-near-11-1--1",
+      "Kind": "Number",
+      "Value": 30.0
+    },
+    {
+      "Id": "xm-near-11-1--1",
+      "Kind": "Number",
+      "Value": 3.0
+    },
+    {
+      "Id": "approx-v-12",
+      "Kind": "Number",
+      "Value": 70.0
+    },
+    {
+      "Id": "approx-h-12",
+      "Kind": "Number",
+      "Value": 70.0
+    },
+    {
+      "Id": "approx-ma-12",
+      "Kind": "Number",
+      "Value": 7.0
+    },
+    {
+      "Id": "approx-md-12",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-near-12--1-1",
+      "Kind": "Number",
+      "Value": 30.0
+    },
+    {
+      "Id": "xm-near-12--1-1",
+      "Kind": "Number",
+      "Value": 3.0
+    },
+    {
+      "Id": "x-near-12--1--1",
+      "Kind": "Number",
+      "Value": 30.0
+    },
+    {
+      "Id": "xm-near-12--1--1",
+      "Kind": "Number",
+      "Value": 3.0
+    },
+    {
+      "Id": "x-near-12-0-1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-near-12-0-1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-near-12-0--1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-near-12-0--1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-near-12-1-1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-near-12-1-1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-near-12-1--1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-near-12-1--1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "approx-v-13",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "approx-h-13",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "approx-ma-13",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "approx-md-13",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-near-13--1-1",
+      "Kind": "Number",
+      "Value": 30.0
+    },
+    {
+      "Id": "xm-near-13--1-1",
+      "Kind": "Number",
+      "Value": 3.0
+    },
+    {
+      "Id": "x-near-13--1--1",
+      "Kind": "Number",
+      "Value": 30.0
+    },
+    {
+      "Id": "xm-near-13--1--1",
+      "Kind": "Number",
+      "Value": 3.0
+    },
+    {
+      "Id": "x-near-13-0-1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-near-13-0-1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-near-13-0--1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-near-13-0--1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-near-13-1-1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-near-13-1-1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-near-13-1--1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-near-13-1--1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "approx-v-14",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "approx-h-14",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "approx-ma-14",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "approx-md-14",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-near-14--1-1",
+      "Kind": "Number",
+      "Value": 30.0
+    },
+    {
+      "Id": "xm-near-14--1-1",
+      "Kind": "Number",
+      "Value": 3.0
+    },
+    {
+      "Id": "x-near-14--1--1",
+      "Kind": "Number",
+      "Value": 30.0
+    },
+    {
+      "Id": "xm-near-14--1--1",
+      "Kind": "Number",
+      "Value": 3.0
+    },
+    {
+      "Id": "x-near-14-0-1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-near-14-0-1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-near-14-0--1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-near-14-0--1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-near-14-1-1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-near-14-1-1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-near-14-1--1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-near-14-1--1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "approx-v-15",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "approx-h-15",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "approx-ma-15",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "approx-md-15",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-near-15--1-1",
+      "Kind": "Number",
+      "Value": 30.0
+    },
+    {
+      "Id": "xm-near-15--1-1",
+      "Kind": "Number",
+      "Value": 3.0
+    },
+    {
+      "Id": "x-near-15--1--1",
+      "Kind": "Number",
+      "Value": 30.0
+    },
+    {
+      "Id": "xm-near-15--1--1",
+      "Kind": "Number",
+      "Value": 3.0
+    },
+    {
+      "Id": "x-near-15-0-1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-near-15-0-1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-near-15-0--1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-near-15-0--1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-near-15-1-1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-near-15-1-1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-near-15-1--1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-near-15-1--1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "approx-v-16",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "approx-h-16",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "approx-ma-16",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "approx-md-16",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-near-16--1-1",
+      "Kind": "Number",
+      "Value": 30.0
+    },
+    {
+      "Id": "xm-near-16--1-1",
+      "Kind": "Number",
+      "Value": 3.0
+    },
+    {
+      "Id": "x-near-16--1--1",
+      "Kind": "Number",
+      "Value": 30.0
+    },
+    {
+      "Id": "xm-near-16--1--1",
+      "Kind": "Number",
+      "Value": 3.0
+    },
+    {
+      "Id": "x-near-16-0-1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-near-16-0-1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-near-16-0--1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-near-16-0--1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-near-16-1-1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-near-16-1-1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-near-16-1--1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-near-16-1--1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "exact-v-0",
+      "Kind": "Number",
+      "Value": 20.0
+    },
+    {
+      "Id": "exact-h-0",
+      "Kind": "Number",
+      "Value": 20.0
+    },
+    {
+      "Id": "exact-m-0",
+      "Kind": "Number",
+      "Value": 2.0
+    },
+    {
+      "Id": "x-exact-0-0-1",
+      "Kind": "Number",
+      "Value": 20.0
+    },
+    {
+      "Id": "xm-exact-0-0-1",
+      "Kind": "Number",
+      "Value": 2.0
+    },
+    {
+      "Id": "x-exact-0-0--1",
+      "Kind": "Number",
+      "Value": 20.0
+    },
+    {
+      "Id": "xm-exact-0-0--1",
+      "Kind": "Number",
+      "Value": 2.0
+    },
+    {
+      "Id": "x-exact-0-2-1",
+      "Kind": "Number",
+      "Value": 20.0
+    },
+    {
+      "Id": "xm-exact-0-2-1",
+      "Kind": "Number",
+      "Value": 2.0
+    },
+    {
+      "Id": "x-exact-0-2--1",
+      "Kind": "Number",
+      "Value": 20.0
+    },
+    {
+      "Id": "xm-exact-0-2--1",
+      "Kind": "Number",
+      "Value": 2.0
+    },
+    {
+      "Id": "exact-v-1",
+      "Kind": "Number",
+      "Value": 80.0
+    },
+    {
+      "Id": "exact-h-1",
+      "Kind": "Number",
+      "Value": 80.0
+    },
+    {
+      "Id": "exact-m-1",
+      "Kind": "Number",
+      "Value": 8.0
+    },
+    {
+      "Id": "x-exact-1-0-1",
+      "Kind": "Number",
+      "Value": 80.0
+    },
+    {
+      "Id": "xm-exact-1-0-1",
+      "Kind": "Number",
+      "Value": 8.0
+    },
+    {
+      "Id": "x-exact-1-0--1",
+      "Kind": "Number",
+      "Value": 80.0
+    },
+    {
+      "Id": "xm-exact-1-0--1",
+      "Kind": "Number",
+      "Value": 8.0
+    },
+    {
+      "Id": "x-exact-1-2-1",
+      "Kind": "Number",
+      "Value": 80.0
+    },
+    {
+      "Id": "xm-exact-1-2-1",
+      "Kind": "Number",
+      "Value": 8.0
+    },
+    {
+      "Id": "x-exact-1-2--1",
+      "Kind": "Number",
+      "Value": 80.0
+    },
+    {
+      "Id": "xm-exact-1-2--1",
+      "Kind": "Number",
+      "Value": 8.0
+    },
+    {
+      "Id": "exact-v-2",
+      "Kind": "Number",
+      "Value": 160.0
+    },
+    {
+      "Id": "exact-h-2",
+      "Kind": "Number",
+      "Value": 160.0
+    },
+    {
+      "Id": "exact-m-2",
+      "Kind": "Number",
+      "Value": 16.0
+    },
+    {
+      "Id": "x-exact-2-0-1",
+      "Kind": "Number",
+      "Value": 160.0
+    },
+    {
+      "Id": "xm-exact-2-0-1",
+      "Kind": "Number",
+      "Value": 16.0
+    },
+    {
+      "Id": "x-exact-2-0--1",
+      "Kind": "Number",
+      "Value": 160.0
+    },
+    {
+      "Id": "xm-exact-2-0--1",
+      "Kind": "Number",
+      "Value": 16.0
+    },
+    {
+      "Id": "x-exact-2-2-1",
+      "Kind": "Number",
+      "Value": 160.0
+    },
+    {
+      "Id": "xm-exact-2-2-1",
+      "Kind": "Number",
+      "Value": 16.0
+    },
+    {
+      "Id": "x-exact-2-2--1",
+      "Kind": "Number",
+      "Value": 160.0
+    },
+    {
+      "Id": "xm-exact-2-2--1",
+      "Kind": "Number",
+      "Value": 16.0
+    },
+    {
+      "Id": "exact-v-3",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "exact-h-3",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "exact-m-3",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-exact-3-0-1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-exact-3-0-1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-exact-3-0--1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-exact-3-0--1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-exact-3-2-1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-exact-3-2-1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-exact-3-2--1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-exact-3-2--1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "exact-v-4",
+      "Kind": "Number",
+      "Value": 30.0
+    },
+    {
+      "Id": "exact-h-4",
+      "Kind": "Number",
+      "Value": 30.0
+    },
+    {
+      "Id": "exact-m-4",
+      "Kind": "Number",
+      "Value": 3.0
+    },
+    {
+      "Id": "x-exact-4-0-1",
+      "Kind": "Number",
+      "Value": 30.0
+    },
+    {
+      "Id": "xm-exact-4-0-1",
+      "Kind": "Number",
+      "Value": 3.0
+    },
+    {
+      "Id": "x-exact-4-0--1",
+      "Kind": "Number",
+      "Value": 30.0
+    },
+    {
+      "Id": "xm-exact-4-0--1",
+      "Kind": "Number",
+      "Value": 3.0
+    },
+    {
+      "Id": "x-exact-4-2-1",
+      "Kind": "Number",
+      "Value": 30.0
+    },
+    {
+      "Id": "xm-exact-4-2-1",
+      "Kind": "Number",
+      "Value": 3.0
+    },
+    {
+      "Id": "x-exact-4-2--1",
+      "Kind": "Number",
+      "Value": 30.0
+    },
+    {
+      "Id": "xm-exact-4-2--1",
+      "Kind": "Number",
+      "Value": 3.0
+    },
+    {
+      "Id": "exact-v-5",
+      "Kind": "Number",
+      "Value": 170.0
+    },
+    {
+      "Id": "exact-h-5",
+      "Kind": "Number",
+      "Value": 170.0
+    },
+    {
+      "Id": "exact-m-5",
+      "Kind": "Number",
+      "Value": 17.0
+    },
+    {
+      "Id": "x-exact-5-0-1",
+      "Kind": "Number",
+      "Value": 170.0
+    },
+    {
+      "Id": "xm-exact-5-0-1",
+      "Kind": "Number",
+      "Value": 17.0
+    },
+    {
+      "Id": "x-exact-5-0--1",
+      "Kind": "Number",
+      "Value": 170.0
+    },
+    {
+      "Id": "xm-exact-5-0--1",
+      "Kind": "Number",
+      "Value": 17.0
+    },
+    {
+      "Id": "x-exact-5-2-1",
+      "Kind": "Number",
+      "Value": 170.0
+    },
+    {
+      "Id": "xm-exact-5-2-1",
+      "Kind": "Number",
+      "Value": 17.0
+    },
+    {
+      "Id": "x-exact-5-2--1",
+      "Kind": "Number",
+      "Value": 170.0
+    },
+    {
+      "Id": "xm-exact-5-2--1",
+      "Kind": "Number",
+      "Value": 17.0
+    },
+    {
+      "Id": "exact-v-6",
+      "Kind": "Number",
+      "Value": 40.0
+    },
+    {
+      "Id": "exact-h-6",
+      "Kind": "Number",
+      "Value": 40.0
+    },
+    {
+      "Id": "exact-m-6",
+      "Kind": "Number",
+      "Value": 4.0
+    },
+    {
+      "Id": "x-exact-6-0-1",
+      "Kind": "Number",
+      "Value": 40.0
+    },
+    {
+      "Id": "xm-exact-6-0-1",
+      "Kind": "Number",
+      "Value": 4.0
+    },
+    {
+      "Id": "x-exact-6-0--1",
+      "Kind": "Number",
+      "Value": 40.0
+    },
+    {
+      "Id": "xm-exact-6-0--1",
+      "Kind": "Number",
+      "Value": 4.0
+    },
+    {
+      "Id": "x-exact-6-2-1",
+      "Kind": "Number",
+      "Value": 40.0
+    },
+    {
+      "Id": "xm-exact-6-2-1",
+      "Kind": "Number",
+      "Value": 4.0
+    },
+    {
+      "Id": "x-exact-6-2--1",
+      "Kind": "Number",
+      "Value": 40.0
+    },
+    {
+      "Id": "xm-exact-6-2--1",
+      "Kind": "Number",
+      "Value": 4.0
+    },
+    {
+      "Id": "exact-v-7",
+      "Kind": "Text",
+      "Value": "changed"
+    },
+    {
+      "Id": "exact-h-7",
+      "Kind": "Number",
+      "Value": 50.0
+    },
+    {
+      "Id": "exact-m-7",
+      "Kind": "Number",
+      "Value": 5.0
+    },
+    {
+      "Id": "x-exact-7-0-1",
+      "Kind": "Text",
+      "Value": "changed"
+    },
+    {
+      "Id": "xm-exact-7-0-1",
+      "Kind": "Number",
+      "Value": 5.0
+    },
+    {
+      "Id": "x-exact-7-0--1",
+      "Kind": "Text",
+      "Value": "changed"
+    },
+    {
+      "Id": "xm-exact-7-0--1",
+      "Kind": "Number",
+      "Value": 5.0
+    },
+    {
+      "Id": "x-exact-7-2-1",
+      "Kind": "Text",
+      "Value": "changed"
+    },
+    {
+      "Id": "xm-exact-7-2-1",
+      "Kind": "Number",
+      "Value": 5.0
+    },
+    {
+      "Id": "x-exact-7-2--1",
+      "Kind": "Text",
+      "Value": "changed"
+    },
+    {
+      "Id": "xm-exact-7-2--1",
+      "Kind": "Number",
+      "Value": 5.0
+    },
+    {
+      "Id": "exact-v-8",
+      "Kind": "Number",
+      "Value": 60.0
+    },
+    {
+      "Id": "exact-h-8",
+      "Kind": "Number",
+      "Value": 60.0
+    },
+    {
+      "Id": "exact-m-8",
+      "Kind": "Number",
+      "Value": 6.0
+    },
+    {
+      "Id": "x-exact-8-0-1",
+      "Kind": "Number",
+      "Value": 60.0
+    },
+    {
+      "Id": "xm-exact-8-0-1",
+      "Kind": "Number",
+      "Value": 6.0
+    },
+    {
+      "Id": "x-exact-8-0--1",
+      "Kind": "Number",
+      "Value": 60.0
+    },
+    {
+      "Id": "xm-exact-8-0--1",
+      "Kind": "Number",
+      "Value": 6.0
+    },
+    {
+      "Id": "x-exact-8-2-1",
+      "Kind": "Number",
+      "Value": 60.0
+    },
+    {
+      "Id": "xm-exact-8-2-1",
+      "Kind": "Number",
+      "Value": 6.0
+    },
+    {
+      "Id": "x-exact-8-2--1",
+      "Kind": "Number",
+      "Value": 60.0
+    },
+    {
+      "Id": "xm-exact-8-2--1",
+      "Kind": "Number",
+      "Value": 6.0
+    },
+    {
+      "Id": "exact-v-9",
+      "Kind": "Number",
+      "Value": 70.0
+    },
+    {
+      "Id": "exact-h-9",
+      "Kind": "Number",
+      "Value": 70.0
+    },
+    {
+      "Id": "exact-m-9",
+      "Kind": "Number",
+      "Value": 7.0
+    },
+    {
+      "Id": "x-exact-9-0-1",
+      "Kind": "Number",
+      "Value": 70.0
+    },
+    {
+      "Id": "xm-exact-9-0-1",
+      "Kind": "Number",
+      "Value": 7.0
+    },
+    {
+      "Id": "x-exact-9-0--1",
+      "Kind": "Number",
+      "Value": 70.0
+    },
+    {
+      "Id": "xm-exact-9-0--1",
+      "Kind": "Number",
+      "Value": 7.0
+    },
+    {
+      "Id": "x-exact-9-2-1",
+      "Kind": "Number",
+      "Value": 70.0
+    },
+    {
+      "Id": "xm-exact-9-2-1",
+      "Kind": "Number",
+      "Value": 7.0
+    },
+    {
+      "Id": "x-exact-9-2--1",
+      "Kind": "Number",
+      "Value": 70.0
+    },
+    {
+      "Id": "xm-exact-9-2--1",
+      "Kind": "Number",
+      "Value": 7.0
+    },
+    {
+      "Id": "exact-v-10",
+      "Kind": "Number",
+      "Value": 20.0
+    },
+    {
+      "Id": "exact-h-10",
+      "Kind": "Number",
+      "Value": 20.0
+    },
+    {
+      "Id": "exact-m-10",
+      "Kind": "Number",
+      "Value": 2.0
+    },
+    {
+      "Id": "x-exact-10-0-1",
+      "Kind": "Number",
+      "Value": 0.0
+    },
+    {
+      "Id": "xm-exact-10-0-1",
+      "Kind": "Number",
+      "Value": 1.0
+    },
+    {
+      "Id": "x-exact-10-0--1",
+      "Kind": "Number",
+      "Value": 0.0
+    },
+    {
+      "Id": "xm-exact-10-0--1",
+      "Kind": "Number",
+      "Value": 1.0
+    },
+    {
+      "Id": "x-exact-10-2-1",
+      "Kind": "Number",
+      "Value": 0.0
+    },
+    {
+      "Id": "xm-exact-10-2-1",
+      "Kind": "Number",
+      "Value": 1.0
+    },
+    {
+      "Id": "x-exact-10-2--1",
+      "Kind": "Number",
+      "Value": 0.0
+    },
+    {
+      "Id": "xm-exact-10-2--1",
+      "Kind": "Number",
+      "Value": 1.0
+    },
+    {
+      "Id": "exact-v-11",
+      "Kind": "Number",
+      "Value": 100.0
+    },
+    {
+      "Id": "exact-h-11",
+      "Kind": "Number",
+      "Value": 100.0
+    },
+    {
+      "Id": "exact-m-11",
+      "Kind": "Number",
+      "Value": 10.0
+    },
+    {
+      "Id": "x-exact-11-0-1",
+      "Kind": "Number",
+      "Value": 100.0
+    },
+    {
+      "Id": "xm-exact-11-0-1",
+      "Kind": "Number",
+      "Value": 10.0
+    },
+    {
+      "Id": "x-exact-11-0--1",
+      "Kind": "Number",
+      "Value": 110.0
+    },
+    {
+      "Id": "xm-exact-11-0--1",
+      "Kind": "Number",
+      "Value": 11.0
+    },
+    {
+      "Id": "x-exact-11-2-1",
+      "Kind": "Number",
+      "Value": 100.0
+    },
+    {
+      "Id": "xm-exact-11-2-1",
+      "Kind": "Number",
+      "Value": 10.0
+    },
+    {
+      "Id": "x-exact-11-2--1",
+      "Kind": "Number",
+      "Value": 110.0
+    },
+    {
+      "Id": "xm-exact-11-2--1",
+      "Kind": "Number",
+      "Value": 11.0
+    },
+    {
+      "Id": "exact-v-12",
+      "Kind": "Number",
+      "Value": 100.0
+    },
+    {
+      "Id": "exact-h-12",
+      "Kind": "Number",
+      "Value": 100.0
+    },
+    {
+      "Id": "exact-m-12",
+      "Kind": "Number",
+      "Value": 10.0
+    },
+    {
+      "Id": "x-exact-12-0-1",
+      "Kind": "Number",
+      "Value": 100.0
+    },
+    {
+      "Id": "xm-exact-12-0-1",
+      "Kind": "Number",
+      "Value": 10.0
+    },
+    {
+      "Id": "x-exact-12-0--1",
+      "Kind": "Number",
+      "Value": 110.0
+    },
+    {
+      "Id": "xm-exact-12-0--1",
+      "Kind": "Number",
+      "Value": 11.0
+    },
+    {
+      "Id": "x-exact-12-2-1",
+      "Kind": "Number",
+      "Value": 100.0
+    },
+    {
+      "Id": "xm-exact-12-2-1",
+      "Kind": "Number",
+      "Value": 10.0
+    },
+    {
+      "Id": "x-exact-12-2--1",
+      "Kind": "Number",
+      "Value": 110.0
+    },
+    {
+      "Id": "xm-exact-12-2--1",
+      "Kind": "Number",
+      "Value": 11.0
+    },
+    {
+      "Id": "exact-v-13",
+      "Kind": "Number",
+      "Value": 100.0
+    },
+    {
+      "Id": "exact-h-13",
+      "Kind": "Number",
+      "Value": 100.0
+    },
+    {
+      "Id": "exact-m-13",
+      "Kind": "Number",
+      "Value": 10.0
+    },
+    {
+      "Id": "x-exact-13-0-1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-exact-13-0-1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-exact-13-0--1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-exact-13-0--1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-exact-13-2-1",
+      "Kind": "Number",
+      "Value": 100.0
+    },
+    {
+      "Id": "xm-exact-13-2-1",
+      "Kind": "Number",
+      "Value": 10.0
+    },
+    {
+      "Id": "x-exact-13-2--1",
+      "Kind": "Number",
+      "Value": 190.0
+    },
+    {
+      "Id": "xm-exact-13-2--1",
+      "Kind": "Number",
+      "Value": 19.0
+    },
+    {
+      "Id": "exact-v-14",
+      "Kind": "Text",
+      "Value": "00123"
+    },
+    {
+      "Id": "exact-h-14",
+      "Kind": "Text",
+      "Value": "00123"
+    },
+    {
+      "Id": "exact-m-14",
+      "Kind": "Number",
+      "Value": 12.0
+    },
+    {
+      "Id": "x-exact-14-0-1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-exact-14-0-1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-exact-14-0--1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-exact-14-0--1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-exact-14-2-1",
+      "Kind": "Text",
+      "Value": "00123"
+    },
+    {
+      "Id": "xm-exact-14-2-1",
+      "Kind": "Number",
+      "Value": 12.0
+    },
+    {
+      "Id": "x-exact-14-2--1",
+      "Kind": "Text",
+      "Value": "00123"
+    },
+    {
+      "Id": "xm-exact-14-2--1",
+      "Kind": "Number",
+      "Value": 12.0
+    },
+    {
+      "Id": "exact-v-15",
+      "Kind": "Error",
+      "Value": "#REF!"
+    },
+    {
+      "Id": "exact-h-15",
+      "Kind": "Error",
+      "Value": "#REF!"
+    },
+    {
+      "Id": "exact-m-15",
+      "Kind": "Number",
+      "Value": 13.0
+    },
+    {
+      "Id": "x-exact-15-0-1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-exact-15-0-1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-exact-15-0--1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-exact-15-0--1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-exact-15-2-1",
+      "Kind": "Error",
+      "Value": "#REF!"
+    },
+    {
+      "Id": "xm-exact-15-2-1",
+      "Kind": "Number",
+      "Value": 13.0
+    },
+    {
+      "Id": "x-exact-15-2--1",
+      "Kind": "Error",
+      "Value": "#REF!"
+    },
+    {
+      "Id": "xm-exact-15-2--1",
+      "Kind": "Number",
+      "Value": 13.0
+    },
+    {
+      "Id": "exact-v-16",
+      "Kind": "Number",
+      "Value": 140.0
+    },
+    {
+      "Id": "exact-h-16",
+      "Kind": "Number",
+      "Value": 140.0
+    },
+    {
+      "Id": "exact-m-16",
+      "Kind": "Number",
+      "Value": 14.0
+    },
+    {
+      "Id": "x-exact-16-0-1",
+      "Kind": "Number",
+      "Value": 190.0
+    },
+    {
+      "Id": "xm-exact-16-0-1",
+      "Kind": "Number",
+      "Value": 19.0
+    },
+    {
+      "Id": "x-exact-16-0--1",
+      "Kind": "Number",
+      "Value": 190.0
+    },
+    {
+      "Id": "xm-exact-16-0--1",
+      "Kind": "Number",
+      "Value": 19.0
+    },
+    {
+      "Id": "x-exact-16-2-1",
+      "Kind": "Number",
+      "Value": 140.0
+    },
+    {
+      "Id": "xm-exact-16-2-1",
+      "Kind": "Number",
+      "Value": 14.0
+    },
+    {
+      "Id": "x-exact-16-2--1",
+      "Kind": "Number",
+      "Value": 140.0
+    },
+    {
+      "Id": "xm-exact-16-2--1",
+      "Kind": "Number",
+      "Value": 14.0
+    },
+    {
+      "Id": "exact-v-17",
+      "Kind": "Number",
+      "Value": 70.0
+    },
+    {
+      "Id": "exact-h-17",
+      "Kind": "Number",
+      "Value": 70.0
+    },
+    {
+      "Id": "exact-m-17",
+      "Kind": "Number",
+      "Value": 7.0
+    },
+    {
+      "Id": "x-exact-17-0-1",
+      "Kind": "Number",
+      "Value": 150.0
+    },
+    {
+      "Id": "xm-exact-17-0-1",
+      "Kind": "Number",
+      "Value": 15.0
+    },
+    {
+      "Id": "x-exact-17-0--1",
+      "Kind": "Number",
+      "Value": 150.0
+    },
+    {
+      "Id": "xm-exact-17-0--1",
+      "Kind": "Number",
+      "Value": 15.0
+    },
+    {
+      "Id": "x-exact-17-2-1",
+      "Kind": "Number",
+      "Value": 70.0
+    },
+    {
+      "Id": "xm-exact-17-2-1",
+      "Kind": "Number",
+      "Value": 7.0
+    },
+    {
+      "Id": "x-exact-17-2--1",
+      "Kind": "Number",
+      "Value": 70.0
+    },
+    {
+      "Id": "xm-exact-17-2--1",
+      "Kind": "Number",
+      "Value": 7.0
+    },
+    {
+      "Id": "exact-v-18",
+      "Kind": "Number",
+      "Value": 150.0
+    },
+    {
+      "Id": "exact-h-18",
+      "Kind": "Number",
+      "Value": 150.0
+    },
+    {
+      "Id": "exact-m-18",
+      "Kind": "Number",
+      "Value": 15.0
+    },
+    {
+      "Id": "x-exact-18-0-1",
+      "Kind": "Number",
+      "Value": 200.0
+    },
+    {
+      "Id": "xm-exact-18-0-1",
+      "Kind": "Number",
+      "Value": 20.0
+    },
+    {
+      "Id": "x-exact-18-0--1",
+      "Kind": "Number",
+      "Value": 200.0
+    },
+    {
+      "Id": "xm-exact-18-0--1",
+      "Kind": "Number",
+      "Value": 20.0
+    },
+    {
+      "Id": "x-exact-18-2-1",
+      "Kind": "Number",
+      "Value": 150.0
+    },
+    {
+      "Id": "xm-exact-18-2-1",
+      "Kind": "Number",
+      "Value": 15.0
+    },
+    {
+      "Id": "x-exact-18-2--1",
+      "Kind": "Number",
+      "Value": 150.0
+    },
+    {
+      "Id": "xm-exact-18-2--1",
+      "Kind": "Number",
+      "Value": 15.0
+    },
+    {
+      "Id": "exact-v-19",
+      "Kind": "Number",
+      "Value": 30.0
+    },
+    {
+      "Id": "exact-h-19",
+      "Kind": "Number",
+      "Value": 30.0
+    },
+    {
+      "Id": "exact-m-19",
+      "Kind": "Number",
+      "Value": 3.0
+    },
+    {
+      "Id": "x-exact-19-0-1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-exact-19-0-1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-exact-19-0--1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-exact-19-0--1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-exact-19-2-1",
+      "Kind": "Number",
+      "Value": 30.0
+    },
+    {
+      "Id": "xm-exact-19-2-1",
+      "Kind": "Number",
+      "Value": 3.0
+    },
+    {
+      "Id": "x-exact-19-2--1",
+      "Kind": "Number",
+      "Value": 170.0
+    },
+    {
+      "Id": "xm-exact-19-2--1",
+      "Kind": "Number",
+      "Value": 17.0
+    },
+    {
+      "Id": "exact-v-20",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "exact-h-20",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "exact-m-20",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-exact-20-0-1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "xm-exact-20-0-1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-exact-20-0--1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "xm-exact-20-0--1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-exact-20-2-1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "xm-exact-20-2-1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-exact-20-2--1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "xm-exact-20-2--1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "exact-v-21",
+      "Kind": "Error",
+      "Value": "#DIV/0!"
+    },
+    {
+      "Id": "exact-h-21",
+      "Kind": "Error",
+      "Value": "#DIV/0!"
+    },
+    {
+      "Id": "exact-m-21",
+      "Kind": "Error",
+      "Value": "#DIV/0!"
+    },
+    {
+      "Id": "x-exact-21-0-1",
+      "Kind": "Error",
+      "Value": "#DIV/0!"
+    },
+    {
+      "Id": "xm-exact-21-0-1",
+      "Kind": "Error",
+      "Value": "#DIV/0!"
+    },
+    {
+      "Id": "x-exact-21-0--1",
+      "Kind": "Error",
+      "Value": "#DIV/0!"
+    },
+    {
+      "Id": "xm-exact-21-0--1",
+      "Kind": "Error",
+      "Value": "#DIV/0!"
+    },
+    {
+      "Id": "x-exact-21-2-1",
+      "Kind": "Error",
+      "Value": "#DIV/0!"
+    },
+    {
+      "Id": "xm-exact-21-2-1",
+      "Kind": "Error",
+      "Value": "#DIV/0!"
+    },
+    {
+      "Id": "x-exact-21-2--1",
+      "Kind": "Error",
+      "Value": "#DIV/0!"
+    },
+    {
+      "Id": "xm-exact-21-2--1",
+      "Kind": "Error",
+      "Value": "#DIV/0!"
+    },
+    {
+      "Id": "exact-v-22",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "exact-h-22",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "exact-m-22",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-exact-22-0-1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-exact-22-0-1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-exact-22-0--1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-exact-22-0--1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-exact-22-2-1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-exact-22-2-1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "x-exact-22-2--1",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "xm-exact-22-2--1",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "edge-0",
+      "Kind": "Error",
+      "Value": "#VALUE!"
+    },
+    {
+      "Id": "edge-1",
+      "Kind": "Error",
+      "Value": "#VALUE!"
+    },
+    {
+      "Id": "edge-2",
+      "Kind": "Error",
+      "Value": "#REF!"
+    },
+    {
+      "Id": "edge-3",
+      "Kind": "Number",
+      "Value": 50.0
+    },
+    {
+      "Id": "edge-4",
+      "Kind": "Error",
+      "Value": "#VALUE!"
+    },
+    {
+      "Id": "edge-5",
+      "Kind": "Error",
+      "Value": "#REF!"
+    },
+    {
+      "Id": "edge-6",
+      "Kind": "Number",
+      "Value": 5.0
+    },
+    {
+      "Id": "edge-7",
+      "Kind": "Number",
+      "Value": 3.0
+    },
+    {
+      "Id": "edge-8",
+      "Kind": "Number",
+      "Value": 5.0
+    },
+    {
+      "Id": "edge-9",
+      "Kind": "Number",
+      "Value": 3.0
+    },
+    {
+      "Id": "edge-10",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "edge-11",
+      "Kind": "Number",
+      "Value": 50.0
+    },
+    {
+      "Id": "edge-12",
+      "Kind": "Error",
+      "Value": "#DIV/0!"
+    },
+    {
+      "Id": "edge-13",
+      "Kind": "Error",
+      "Value": "#VALUE!"
+    },
+    {
+      "Id": "edge-14",
+      "Kind": "Error",
+      "Value": "#VALUE!"
+    },
+    {
+      "Id": "edge-15",
+      "Kind": "Error",
+      "Value": "#VALUE!"
+    },
+    {
+      "Id": "edge-16",
+      "Kind": "Number",
+      "Value": 50.0
+    },
+    {
+      "Id": "edge-17",
+      "Kind": "Number",
+      "Value": 50.0
+    },
+    {
+      "Id": "edge-18",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "edge-19",
+      "Kind": "Number",
+      "Value": 5.0
+    },
+    {
+      "Id": "edge-20",
+      "Kind": "Number",
+      "Value": 0.0
+    },
+    {
+      "Id": "edge-21",
+      "Kind": "Error",
+      "Value": "#VALUE!"
+    },
+    {
+      "Id": "edge-22",
+      "Kind": "Error",
+      "Value": "#VALUE!"
+    },
+    {
+      "Id": "edge-23",
+      "Kind": "Error",
+      "Value": "#VALUE!"
+    },
+    {
+      "Id": "edge-24",
+      "Kind": "Error",
+      "Value": "#VALUE!"
+    },
+    {
+      "Id": "edge-25",
+      "Kind": "Number",
+      "Value": 2.0
+    },
+    {
+      "Id": "edge-26",
+      "Kind": "Number",
+      "Value": 2.0
+    },
+    {
+      "Id": "edge-27",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "edge-28",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "edge-29",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "edge-30",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "edge-31",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "edge-32",
+      "Kind": "Number",
+      "Value": 50.0
+    },
+    {
+      "Id": "edge-33",
+      "Kind": "Number",
+      "Value": 99.0
+    },
+    {
+      "Id": "edge-34",
+      "Kind": "Number",
+      "Value": 30.0
+    },
+    {
+      "Id": "edge-35",
+      "Kind": "Number",
+      "Value": 1.0
+    },
+    {
+      "Id": "edge-36",
+      "Kind": "Number",
+      "Value": 1.0
+    },
+    {
+      "Id": "edge-37",
+      "Kind": "Number",
+      "Value": 30.0
+    },
+    {
+      "Id": "whole-blank-forward",
+      "Kind": "Number",
+      "Value": 8.0
+    },
+    {
+      "Id": "whole-blank-reverse",
+      "Kind": "Number",
+      "Value": 1048576.0
+    },
+    {
+      "Id": "whole-lookup-blank",
+      "Kind": "Number",
+      "Value": 0.0
+    },
+    {
+      "Id": "blank-near--1-0",
+      "Kind": "Number",
+      "Value": 0.0
+    },
+    {
+      "Id": "blank-near--1-1",
+      "Kind": "Number",
+      "Value": 20.0
+    },
+    {
+      "Id": "blank-near--1-2",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "blank-near--1-3",
+      "Kind": "Number",
+      "Value": 70.0
+    },
+    {
+      "Id": "blank-near-1-0",
+      "Kind": "Number",
+      "Value": 0.0
+    },
+    {
+      "Id": "blank-near-1-1",
+      "Kind": "Number",
+      "Value": 80.0
+    },
+    {
+      "Id": "blank-near-1-2",
+      "Kind": "Number",
+      "Value": 20.0
+    },
+    {
+      "Id": "blank-near-1-3",
+      "Kind": "Number",
+      "Value": 70.0
+    },
+    {
+      "Id": "mode-0",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "mode-1",
+      "Kind": "Number",
+      "Value": 60.0
+    },
+    {
+      "Id": "mode-2",
+      "Kind": "Number",
+      "Value": 50.0
+    },
+    {
+      "Id": "mode-3",
+      "Kind": "Error",
+      "Value": "#VALUE!"
+    },
+    {
+      "Id": "mode-4",
+      "Kind": "Number",
+      "Value": 60.0
+    },
+    {
+      "Id": "mode-5",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "mode-6",
+      "Kind": "Number",
+      "Value": 60.0
+    },
+    {
+      "Id": "search-0",
+      "Kind": "Number",
+      "Value": 5.0
+    },
+    {
+      "Id": "search-2",
+      "Kind": "Number",
+      "Value": 5.0
+    },
+    {
+      "Id": "search-3",
+      "Kind": "Error",
+      "Value": "#VALUE!"
+    },
+    {
+      "Id": "search-4",
+      "Kind": "Number",
+      "Value": 5.0
+    },
+    {
+      "Id": "escape-other",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "late-0",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "late-1",
+      "Kind": "Error",
+      "Value": "#REF!"
+    },
+    {
+      "Id": "late-2",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "late-3",
+      "Kind": "Error",
+      "Value": "#REF!"
+    },
+    {
+      "Id": "late-4",
+      "Kind": "Number",
+      "Value": 70.0
+    },
+    {
+      "Id": "late-5",
+      "Kind": "Text",
+      "Value": "missing"
+    },
+    {
+      "Id": "bounds-0",
+      "Kind": "Number",
+      "Value": 0.0
+    },
+    {
+      "Id": "bounds-1",
+      "Kind": "Text",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "bounds-2",
+      "Kind": "Number",
+      "Value": 50.0
+    },
+    {
+      "Id": "bounds-3",
+      "Kind": "Number",
+      "Value": 50.0
+    },
+    {
+      "Id": "bounds-4",
+      "Kind": "Error",
+      "Value": "#VALUE!"
+    },
+    {
+      "Id": "bounds-5",
+      "Kind": "Error",
+      "Value": "#VALUE!"
+    },
+    {
+      "Id": "bounds-6",
+      "Kind": "Number",
+      "Value": 5.0
+    },
+    {
+      "Id": "bounds-7",
+      "Kind": "Error",
+      "Value": "#VALUE!"
+    },
+    {
+      "Id": "bounds-8",
+      "Kind": "Error",
+      "Value": "#VALUE!"
+    },
+    {
+      "Id": "bounds-9",
+      "Kind": "Number",
+      "Value": 210.0
+    },
+    {
+      "Id": "bounds-10",
+      "Kind": "Number",
+      "Value": 21.0
+    },
+    {
+      "Id": "bounds-11",
+      "Kind": "Number",
+      "Value": 210.0
+    }
+  ]
+}

@@ -112,6 +112,23 @@ public partial class MainWindow
             Check(conditional.Select((c, i) => conditionalReopened.Sheets[0].GetCell(i, 4)!.Value.NumberValue == c.Value &&
                 conditionalReopened.Sheets[0].GetCell(i, 4)!.Content.FormulaText == c.Formula).All(x => x), "All seven conditional functions retain formulas and caches in normal XLSX save/reopen");
             await Idle(); CaptureGridEvidence(Path.Combine(folder, "conditional-entry.png"));
+            GridSurface.Select(new(0, 6)); FormulaBar.Focus(); FormulaBar.Text = "=X"; FormulaBar.CaretIndex = 2; await Idle();
+            Check(_completion?.Names.Contains("XLOOKUP") == true && _completion.Names.Contains("XMATCH"), "Modern lookup functions appear in completion");
+            FormulaBar.Text = "=XLOOKUP(2,A1:A3,"; FormulaBar.CaretIndex = FormulaBar.Text.Length; await Idle();
+            Check(_formulaHint.Text.Contains("return_array") && _formulaHint.Text.Contains("第 3"), "XLOOKUP hint identifies the return array and declared search modes");
+            var lookups = new (string Formula, double Value)[] { ("=VLOOKUP(2,A1:C3,3,FALSE)", 3), ("=HLOOKUP(6,A1:C3,2,FALSE)", 3),
+                ("=MATCH(2,A1:A3,0)", 2), ("=XLOOKUP(2,A1:A3,C1:C3)", 3), ("=XMATCH(2,A1:A3)", 2) };
+            for (var i = 0; i < lookups.Length; i++)
+            {
+                GridSurface.Select(new(i, 6)); FormulaBar.Focus(); FormulaBar.Text = lookups[i].Formula; await ApplyFormulaBarAsync();
+                Check(_document.Snapshot.Sheets[0].GetCell(i, 6)!.Value.NumberValue == lookups[i].Value, "Formula-bar commit calculates " + lookups[i].Formula);
+            }
+            await UndoAsync(false); Check(_document.Snapshot.Sheets[0].GetCell(4, 6) is null, "Modern lookup entry is one undo transaction");
+            await UndoAsync(true); Check(_document.Snapshot.Sheets[0].GetCell(4, 6)!.Value.NumberValue == 2, "Modern lookup redo recalculates its result");
+            var lookupPath = Path.Combine(folder, "lookup-entry.xlsx"); storage.Save(lookupPath, _document.Snapshot); var lookupReopened = storage.Open(lookupPath);
+            Check(lookups.Select((c, i) => lookupReopened.Sheets[0].GetCell(i, 6)!.Value.NumberValue == c.Value &&
+                lookupReopened.Sheets[0].GetCell(i, 6)!.Content.FormulaText == c.Formula).All(x => x), "Legacy and modern lookups retain formulas and caches in normal XLSX save/reopen");
+            await Idle(); CaptureGridEvidence(Path.Combine(folder, "lookup-entry.png"));
             File.WriteAllLines(Path.Combine(folder, "formula-entry-result.txt"), new[] { $"PASS: {checks.Count} checks" }.Concat(checks));
         }
         finally { _suppressAutoCalculation = false; EndReferenceGesture(); CloseFormulaHelp(); }

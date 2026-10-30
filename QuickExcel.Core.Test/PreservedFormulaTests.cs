@@ -32,7 +32,7 @@ public sealed class PreservedFormulaTests : IDisposable
         var formula = xml.Descendants(Main + "c").Single(c => (string?)c.Attribute("r") == "B1").Element(Main + "f")!;
         if (kind == "array") { formula.Value = "A1:A2*2"; formula.SetAttributeValue("t", "array"); formula.SetAttributeValue("ref", "B1:B2"); }
         else if (kind == "structured") formula.Value = "SUM(Table1[Amount])";
-        else if (kind == "prefix") formula.Value = "_xlfn.XLOOKUP(A1,A1:A2,B1:B2)";
+        else if (kind == "prefix") formula.Value = "_xlfn.FUTURELOOKUP(A1,A1:A2,B1:B2)";
         else if (kind == "shared")
         {
             formula.Value = "SUM(Table1[Amount])"; formula.SetAttributeValue("t", "shared"); formula.SetAttributeValue("si", "7"); formula.SetAttributeValue("ref", "B1:B2");
@@ -107,7 +107,7 @@ public sealed class PreservedFormulaTests : IDisposable
     {
         var book = _storage.Open(Source("prefix")); Assert.False(book.FileState!.FormulaReadOnly);
         Assert.Contains(TypedWorkbookStorage.InspectCompatibility(book).Diagnostics, d => d.Feature == "formula/version-prefix");
-        Assert.StartsWith("=_xlfn.XLOOKUP", book.Sheets[0].GetCell(0, 1)!.Content.FormulaText);
+        Assert.StartsWith("=_xlfn.FUTURELOOKUP", book.Sheets[0].GetCell(0, 1)!.Content.FormulaText);
     }
 
     [Fact]

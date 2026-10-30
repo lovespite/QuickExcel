@@ -4,6 +4,8 @@ using QuickExcel.CompatibilityProbe;
 
 try
 {
+    if (args is ["scalar-functions", var scalarSpec, var scalarOracle, var scalarDirectory]) return ScalarFunctionsProbe.Run(scalarSpec, scalarOracle, scalarDirectory);
+    if (args is ["verify-scalar-functions", var scalarExpected, var scalarInitial, var scalarEdited, var scalarModel, var scalarVerdict]) return ScalarFunctionsProbe.Verify(scalarExpected, scalarInitial, scalarEdited, scalarModel, scalarVerdict);
     if (args is ["conditional-functions", var conditionalOracle, var conditionalDirectory]) return ConditionalFunctionsProbe.Run(conditionalOracle, conditionalDirectory);
     if (args is ["verify-conditional-functions", var conditionalExpected, var conditionalInitial, var conditionalEdited, var conditionalModel, var conditionalVerdict]) return ConditionalFunctionsProbe.Verify(conditionalExpected, conditionalInitial, conditionalEdited, conditionalModel, conditionalVerdict);
     if (args is ["sheet-names", var sheetNamesOracle, var sheetNamesDirectory]) return SheetNamesProbe.Run(sheetNamesOracle, sheetNamesDirectory);

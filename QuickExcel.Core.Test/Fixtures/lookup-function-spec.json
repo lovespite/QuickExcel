@@ -1,0 +1,4546 @@
+{
+  "Id": "XC-0206",
+  "Date1904": false,
+  "Sheets": [
+    "Data",
+    "Desc",
+    "Mixed",
+    "Horizontal",
+    "MixedH",
+    "Unsorted",
+    "Results"
+  ],
+  "Inputs": [
+    {
+      "Sheet": "Data",
+      "Address": "A1",
+      "Kind": "Number",
+      "Value": -2
+    },
+    {
+      "Sheet": "Data",
+      "Address": "B1",
+      "Kind": "Number",
+      "Value": 10
+    },
+    {
+      "Sheet": "Data",
+      "Address": "A2",
+      "Kind": "Number",
+      "Value": 0
+    },
+    {
+      "Sheet": "Data",
+      "Address": "B2",
+      "Kind": "Number",
+      "Value": 20
+    },
+    {
+      "Sheet": "Data",
+      "Address": "A3",
+      "Kind": "Number",
+      "Value": 1
+    },
+    {
+      "Sheet": "Data",
+      "Address": "B3",
+      "Kind": "Number",
+      "Value": 30
+    },
+    {
+      "Sheet": "Data",
+      "Address": "A4",
+      "Kind": "Number",
+      "Value": 2
+    },
+    {
+      "Sheet": "Data",
+      "Address": "B4",
+      "Kind": "Number",
+      "Value": 40
+    },
+    {
+      "Sheet": "Data",
+      "Address": "A5",
+      "Kind": "Number",
+      "Value": 2
+    },
+    {
+      "Sheet": "Data",
+      "Address": "B5",
+      "Kind": "Number",
+      "Value": 50
+    },
+    {
+      "Sheet": "Data",
+      "Address": "A6",
+      "Kind": "Number",
+      "Value": 4
+    },
+    {
+      "Sheet": "Data",
+      "Address": "B6",
+      "Kind": "Number",
+      "Value": 60
+    },
+    {
+      "Sheet": "Data",
+      "Address": "A7",
+      "Kind": "Number",
+      "Value": 8
+    },
+    {
+      "Sheet": "Data",
+      "Address": "B7",
+      "Kind": "Number",
+      "Value": 70
+    },
+    {
+      "Sheet": "Desc",
+      "Address": "A1",
+      "Kind": "Number",
+      "Value": 8
+    },
+    {
+      "Sheet": "Desc",
+      "Address": "B1",
+      "Kind": "Number",
+      "Value": 10
+    },
+    {
+      "Sheet": "Desc",
+      "Address": "A2",
+      "Kind": "Number",
+      "Value": 4
+    },
+    {
+      "Sheet": "Desc",
+      "Address": "B2",
+      "Kind": "Number",
+      "Value": 20
+    },
+    {
+      "Sheet": "Desc",
+      "Address": "A3",
+      "Kind": "Number",
+      "Value": 2
+    },
+    {
+      "Sheet": "Desc",
+      "Address": "B3",
+      "Kind": "Number",
+      "Value": 30
+    },
+    {
+      "Sheet": "Desc",
+      "Address": "A4",
+      "Kind": "Number",
+      "Value": 2
+    },
+    {
+      "Sheet": "Desc",
+      "Address": "B4",
+      "Kind": "Number",
+      "Value": 40
+    },
+    {
+      "Sheet": "Desc",
+      "Address": "A5",
+      "Kind": "Number",
+      "Value": 1
+    },
+    {
+      "Sheet": "Desc",
+      "Address": "B5",
+      "Kind": "Number",
+      "Value": 50
+    },
+    {
+      "Sheet": "Desc",
+      "Address": "A6",
+      "Kind": "Number",
+      "Value": 0
+    },
+    {
+      "Sheet": "Desc",
+      "Address": "B6",
+      "Kind": "Number",
+      "Value": 60
+    },
+    {
+      "Sheet": "Desc",
+      "Address": "A7",
+      "Kind": "Number",
+      "Value": -2
+    },
+    {
+      "Sheet": "Desc",
+      "Address": "B7",
+      "Kind": "Number",
+      "Value": 70
+    },
+    {
+      "Sheet": "Unsorted",
+      "Address": "A1",
+      "Kind": "Number",
+      "Value": 4
+    },
+    {
+      "Sheet": "Unsorted",
+      "Address": "B1",
+      "Kind": "Number",
+      "Value": 10
+    },
+    {
+      "Sheet": "Unsorted",
+      "Address": "A2",
+      "Kind": "Number",
+      "Value": 1
+    },
+    {
+      "Sheet": "Unsorted",
+      "Address": "B2",
+      "Kind": "Number",
+      "Value": 20
+    },
+    {
+      "Sheet": "Unsorted",
+      "Address": "A3",
+      "Kind": "Number",
+      "Value": 8
+    },
+    {
+      "Sheet": "Unsorted",
+      "Address": "B3",
+      "Kind": "Number",
+      "Value": 30
+    },
+    {
+      "Sheet": "Unsorted",
+      "Address": "A4",
+      "Kind": "Number",
+      "Value": 2
+    },
+    {
+      "Sheet": "Unsorted",
+      "Address": "B4",
+      "Kind": "Number",
+      "Value": 40
+    },
+    {
+      "Sheet": "Unsorted",
+      "Address": "A5",
+      "Kind": "Number",
+      "Value": 2
+    },
+    {
+      "Sheet": "Unsorted",
+      "Address": "B5",
+      "Kind": "Number",
+      "Value": 50
+    },
+    {
+      "Sheet": "Unsorted",
+      "Address": "A6",
+      "Kind": "Number",
+      "Value": 0
+    },
+    {
+      "Sheet": "Unsorted",
+      "Address": "B6",
+      "Kind": "Number",
+      "Value": 60
+    },
+    {
+      "Sheet": "Unsorted",
+      "Address": "A7",
+      "Kind": "Number",
+      "Value": -2
+    },
+    {
+      "Sheet": "Unsorted",
+      "Address": "B7",
+      "Kind": "Number",
+      "Value": 70
+    },
+    {
+      "Sheet": "Horizontal",
+      "Address": "A1",
+      "Kind": "Number",
+      "Value": -2
+    },
+    {
+      "Sheet": "Horizontal",
+      "Address": "A2",
+      "Kind": "Number",
+      "Value": 10
+    },
+    {
+      "Sheet": "Horizontal",
+      "Address": "B1",
+      "Kind": "Number",
+      "Value": 0
+    },
+    {
+      "Sheet": "Horizontal",
+      "Address": "B2",
+      "Kind": "Number",
+      "Value": 20
+    },
+    {
+      "Sheet": "Horizontal",
+      "Address": "C1",
+      "Kind": "Number",
+      "Value": 1
+    },
+    {
+      "Sheet": "Horizontal",
+      "Address": "C2",
+      "Kind": "Number",
+      "Value": 30
+    },
+    {
+      "Sheet": "Horizontal",
+      "Address": "D1",
+      "Kind": "Number",
+      "Value": 2
+    },
+    {
+      "Sheet": "Horizontal",
+      "Address": "D2",
+      "Kind": "Number",
+      "Value": 40
+    },
+    {
+      "Sheet": "Horizontal",
+      "Address": "E1",
+      "Kind": "Number",
+      "Value": 2
+    },
+    {
+      "Sheet": "Horizontal",
+      "Address": "E2",
+      "Kind": "Number",
+      "Value": 50
+    },
+    {
+      "Sheet": "Horizontal",
+      "Address": "F1",
+      "Kind": "Number",
+      "Value": 4
+    },
+    {
+      "Sheet": "Horizontal",
+      "Address": "F2",
+      "Kind": "Number",
+      "Value": 60
+    },
+    {
+      "Sheet": "Horizontal",
+      "Address": "G1",
+      "Kind": "Number",
+      "Value": 8
+    },
+    {
+      "Sheet": "Horizontal",
+      "Address": "G2",
+      "Kind": "Number",
+      "Value": 70
+    },
+    {
+      "Sheet": "Mixed",
+      "Address": "A1",
+      "Kind": "Blank",
+      "Value": null
+    },
+    {
+      "Sheet": "MixedH",
+      "Address": "A1",
+      "Kind": "Blank",
+      "Value": null
+    },
+    {
+      "Sheet": "Mixed",
+      "Address": "B1",
+      "Kind": "Blank",
+      "Value": null
+    },
+    {
+      "Sheet": "MixedH",
+      "Address": "A2",
+      "Kind": "Blank",
+      "Value": null
+    },
+    {
+      "Sheet": "Mixed",
+      "Address": "A2",
+      "Kind": "Number",
+      "Value": 0
+    },
+    {
+      "Sheet": "MixedH",
+      "Address": "B1",
+      "Kind": "Number",
+      "Value": 0
+    },
+    {
+      "Sheet": "Mixed",
+      "Address": "B2",
+      "Kind": "Number",
+      "Value": 20
+    },
+    {
+      "Sheet": "MixedH",
+      "Address": "B2",
+      "Kind": "Number",
+      "Value": 20
+    },
+    {
+      "Sheet": "Mixed",
+      "Address": "A3",
+      "Kind": "Text",
+      "Value": "0"
+    },
+    {
+      "Sheet": "MixedH",
+      "Address": "C1",
+      "Kind": "Text",
+      "Value": "0"
+    },
+    {
+      "Sheet": "Mixed",
+      "Address": "B3",
+      "Kind": "Number",
+      "Value": 30
+    },
+    {
+      "Sheet": "MixedH",
+      "Address": "C2",
+      "Kind": "Number",
+      "Value": 30
+    },
+    {
+      "Sheet": "Mixed",
+      "Address": "A4",
+      "Kind": "Boolean",
+      "Value": true
+    },
+    {
+      "Sheet": "MixedH",
+      "Address": "D1",
+      "Kind": "Boolean",
+      "Value": true
+    },
+    {
+      "Sheet": "Mixed",
+      "Address": "B4",
+      "Kind": "Number",
+      "Value": 40
+    },
+    {
+      "Sheet": "MixedH",
+      "Address": "D2",
+      "Kind": "Number",
+      "Value": 40
+    },
+    {
+      "Sheet": "Mixed",
+      "Address": "A5",
+      "Kind": "Boolean",
+      "Value": false
+    },
+    {
+      "Sheet": "MixedH",
+      "Address": "E1",
+      "Kind": "Boolean",
+      "Value": false
+    },
+    {
+      "Sheet": "Mixed",
+      "Address": "B5",
+      "Kind": "Number",
+      "Value": 50
+    },
+    {
+      "Sheet": "MixedH",
+      "Address": "E2",
+      "Kind": "Number",
+      "Value": 50
+    },
+    {
+      "Sheet": "Mixed",
+      "Address": "A6",
+      "Kind": "Text",
+      "Value": "TRUE"
+    },
+    {
+      "Sheet": "MixedH",
+      "Address": "F1",
+      "Kind": "Text",
+      "Value": "TRUE"
+    },
+    {
+      "Sheet": "Mixed",
+      "Address": "B6",
+      "Kind": "Number",
+      "Value": 60
+    },
+    {
+      "Sheet": "MixedH",
+      "Address": "F2",
+      "Kind": "Number",
+      "Value": 60
+    },
+    {
+      "Sheet": "Mixed",
+      "Address": "A7",
+      "Kind": "Formula",
+      "Value": "=\"\""
+    },
+    {
+      "Sheet": "MixedH",
+      "Address": "G1",
+      "Kind": "Formula",
+      "Value": "=\"\""
+    },
+    {
+      "Sheet": "Mixed",
+      "Address": "B7",
+      "Kind": "Number",
+      "Value": 70
+    },
+    {
+      "Sheet": "MixedH",
+      "Address": "G2",
+      "Kind": "Number",
+      "Value": 70
+    },
+    {
+      "Sheet": "Mixed",
+      "Address": "A8",
+      "Kind": "Number",
+      "Value": 1
+    },
+    {
+      "Sheet": "MixedH",
+      "Address": "H1",
+      "Kind": "Number",
+      "Value": 1
+    },
+    {
+      "Sheet": "Mixed",
+      "Address": "B8",
+      "Kind": "Number",
+      "Value": 80
+    },
+    {
+      "Sheet": "MixedH",
+      "Address": "H2",
+      "Kind": "Number",
+      "Value": 80
+    },
+    {
+      "Sheet": "Mixed",
+      "Address": "A9",
+      "Kind": "Formula",
+      "Value": "=#N/A"
+    },
+    {
+      "Sheet": "MixedH",
+      "Address": "I1",
+      "Kind": "Formula",
+      "Value": "=#N/A"
+    },
+    {
+      "Sheet": "Mixed",
+      "Address": "B9",
+      "Kind": "Number",
+      "Value": 90
+    },
+    {
+      "Sheet": "MixedH",
+      "Address": "I2",
+      "Kind": "Number",
+      "Value": 90
+    },
+    {
+      "Sheet": "Mixed",
+      "Address": "A10",
+      "Kind": "Text",
+      "Value": "apple"
+    },
+    {
+      "Sheet": "MixedH",
+      "Address": "J1",
+      "Kind": "Text",
+      "Value": "apple"
+    },
+    {
+      "Sheet": "Mixed",
+      "Address": "B10",
+      "Kind": "Number",
+      "Value": 100
+    },
+    {
+      "Sheet": "MixedH",
+      "Address": "J2",
+      "Kind": "Number",
+      "Value": 100
+    },
+    {
+      "Sheet": "Mixed",
+      "Address": "A11",
+      "Kind": "Text",
+      "Value": "Apple"
+    },
+    {
+      "Sheet": "MixedH",
+      "Address": "K1",
+      "Kind": "Text",
+      "Value": "Apple"
+    },
+    {
+      "Sheet": "Mixed",
+      "Address": "B11",
+      "Kind": "Number",
+      "Value": 110
+    },
+    {
+      "Sheet": "MixedH",
+      "Address": "K2",
+      "Kind": "Number",
+      "Value": 110
+    },
+    {
+      "Sheet": "Mixed",
+      "Address": "A12",
+      "Kind": "Text",
+      "Value": "a*b"
+    },
+    {
+      "Sheet": "MixedH",
+      "Address": "L1",
+      "Kind": "Text",
+      "Value": "a*b"
+    },
+    {
+      "Sheet": "Mixed",
+      "Address": "B12",
+      "Kind": "Text",
+      "Value": "00123"
+    },
+    {
+      "Sheet": "MixedH",
+      "Address": "L2",
+      "Kind": "Text",
+      "Value": "00123"
+    },
+    {
+      "Sheet": "Mixed",
+      "Address": "A13",
+      "Kind": "Text",
+      "Value": "a?b"
+    },
+    {
+      "Sheet": "MixedH",
+      "Address": "M1",
+      "Kind": "Text",
+      "Value": "a?b"
+    },
+    {
+      "Sheet": "Mixed",
+      "Address": "B13",
+      "Kind": "Formula",
+      "Value": "=#REF!"
+    },
+    {
+      "Sheet": "MixedH",
+      "Address": "M2",
+      "Kind": "Formula",
+      "Value": "=#REF!"
+    },
+    {
+      "Sheet": "Mixed",
+      "Address": "A14",
+      "Kind": "Text",
+      "Value": "a~b"
+    },
+    {
+      "Sheet": "MixedH",
+      "Address": "N1",
+      "Kind": "Text",
+      "Value": "a~b"
+    },
+    {
+      "Sheet": "Mixed",
+      "Address": "B14",
+      "Kind": "Number",
+      "Value": 140
+    },
+    {
+      "Sheet": "MixedH",
+      "Address": "N2",
+      "Kind": "Number",
+      "Value": 140
+    },
+    {
+      "Sheet": "Mixed",
+      "Address": "A15",
+      "Kind": "Text",
+      "Value": "~"
+    },
+    {
+      "Sheet": "MixedH",
+      "Address": "O1",
+      "Kind": "Text",
+      "Value": "~"
+    },
+    {
+      "Sheet": "Mixed",
+      "Address": "B15",
+      "Kind": "Number",
+      "Value": 150
+    },
+    {
+      "Sheet": "MixedH",
+      "Address": "O2",
+      "Kind": "Number",
+      "Value": 150
+    },
+    {
+      "Sheet": "Mixed",
+      "Address": "A16",
+      "Kind": "Number",
+      "Value": 2
+    },
+    {
+      "Sheet": "MixedH",
+      "Address": "P1",
+      "Kind": "Number",
+      "Value": 2
+    },
+    {
+      "Sheet": "Mixed",
+      "Address": "B16",
+      "Kind": "Number",
+      "Value": 160
+    },
+    {
+      "Sheet": "MixedH",
+      "Address": "P2",
+      "Kind": "Number",
+      "Value": 160
+    },
+    {
+      "Sheet": "Mixed",
+      "Address": "A17",
+      "Kind": "Text",
+      "Value": "2"
+    },
+    {
+      "Sheet": "MixedH",
+      "Address": "Q1",
+      "Kind": "Text",
+      "Value": "2"
+    },
+    {
+      "Sheet": "Mixed",
+      "Address": "B17",
+      "Kind": "Number",
+      "Value": 170
+    },
+    {
+      "Sheet": "MixedH",
+      "Address": "Q2",
+      "Kind": "Number",
+      "Value": 170
+    },
+    {
+      "Sheet": "Mixed",
+      "Address": "A18",
+      "Kind": "Formula",
+      "Value": "=1/0"
+    },
+    {
+      "Sheet": "MixedH",
+      "Address": "R1",
+      "Kind": "Formula",
+      "Value": "=1/0"
+    },
+    {
+      "Sheet": "Mixed",
+      "Address": "B18",
+      "Kind": "Number",
+      "Value": 180
+    },
+    {
+      "Sheet": "MixedH",
+      "Address": "R2",
+      "Kind": "Number",
+      "Value": 180
+    },
+    {
+      "Sheet": "Mixed",
+      "Address": "A19",
+      "Kind": "Text",
+      "Value": "a~~b"
+    },
+    {
+      "Sheet": "MixedH",
+      "Address": "S1",
+      "Kind": "Text",
+      "Value": "a~~b"
+    },
+    {
+      "Sheet": "Mixed",
+      "Address": "B19",
+      "Kind": "Number",
+      "Value": 190
+    },
+    {
+      "Sheet": "MixedH",
+      "Address": "S2",
+      "Kind": "Number",
+      "Value": 190
+    },
+    {
+      "Sheet": "Mixed",
+      "Address": "A20",
+      "Kind": "Text",
+      "Value": "~~"
+    },
+    {
+      "Sheet": "MixedH",
+      "Address": "T1",
+      "Kind": "Text",
+      "Value": "~~"
+    },
+    {
+      "Sheet": "Mixed",
+      "Address": "B20",
+      "Kind": "Number",
+      "Value": 200
+    },
+    {
+      "Sheet": "MixedH",
+      "Address": "T2",
+      "Kind": "Number",
+      "Value": 200
+    },
+    {
+      "Sheet": "Data",
+      "Address": "C1",
+      "Kind": "Number",
+      "Value": 1
+    },
+    {
+      "Sheet": "Data",
+      "Address": "D1",
+      "Kind": "Text",
+      "Value": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+    },
+    {
+      "Sheet": "Mixed",
+      "Address": "A21",
+      "Kind": "Text",
+      "Value": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+    },
+    {
+      "Sheet": "Mixed",
+      "Address": "B21",
+      "Kind": "Number",
+      "Value": 210
+    }
+  ],
+  "Edits": [
+    {
+      "Sheet": "Data",
+      "Address": "A4",
+      "Kind": "Number",
+      "Value": 1.5
+    },
+    {
+      "Sheet": "Horizontal",
+      "Address": "D1",
+      "Kind": "Number",
+      "Value": 1.5
+    },
+    {
+      "Sheet": "Desc",
+      "Address": "A4",
+      "Kind": "Number",
+      "Value": 1.5
+    },
+    {
+      "Sheet": "Mixed",
+      "Address": "B5",
+      "Kind": "Text",
+      "Value": "changed"
+    }
+  ],
+  "Cases": [
+    {
+      "Id": "approx-v-0",
+      "Sheet": "Results",
+      "Address": "A1",
+      "Formula": "=VLOOKUP(-3,Data!A1:B7,2,TRUE)"
+    },
+    {
+      "Id": "approx-h-0",
+      "Sheet": "Results",
+      "Address": "A2",
+      "Formula": "=HLOOKUP(-3,Horizontal!A1:G2,2,TRUE)"
+    },
+    {
+      "Id": "approx-ma-0",
+      "Sheet": "Results",
+      "Address": "A3",
+      "Formula": "=MATCH(-3,Data!A1:A7,1)"
+    },
+    {
+      "Id": "approx-md-0",
+      "Sheet": "Results",
+      "Address": "A4",
+      "Formula": "=MATCH(-3,Desc!A1:A7,-1)"
+    },
+    {
+      "Id": "x-near-0--1-1",
+      "Sheet": "Results",
+      "Address": "A5",
+      "Formula": "=XLOOKUP(-3,Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",-1,1)"
+    },
+    {
+      "Id": "xm-near-0--1-1",
+      "Sheet": "Results",
+      "Address": "A6",
+      "Formula": "=XMATCH(-3,Unsorted!A1:A7,-1,1)"
+    },
+    {
+      "Id": "x-near-0--1--1",
+      "Sheet": "Results",
+      "Address": "A7",
+      "Formula": "=XLOOKUP(-3,Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",-1,-1)"
+    },
+    {
+      "Id": "xm-near-0--1--1",
+      "Sheet": "Results",
+      "Address": "A8",
+      "Formula": "=XMATCH(-3,Unsorted!A1:A7,-1,-1)"
+    },
+    {
+      "Id": "x-near-0-0-1",
+      "Sheet": "Results",
+      "Address": "A9",
+      "Formula": "=XLOOKUP(-3,Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",0,1)"
+    },
+    {
+      "Id": "xm-near-0-0-1",
+      "Sheet": "Results",
+      "Address": "A10",
+      "Formula": "=XMATCH(-3,Unsorted!A1:A7,0,1)"
+    },
+    {
+      "Id": "x-near-0-0--1",
+      "Sheet": "Results",
+      "Address": "A11",
+      "Formula": "=XLOOKUP(-3,Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",0,-1)"
+    },
+    {
+      "Id": "xm-near-0-0--1",
+      "Sheet": "Results",
+      "Address": "A12",
+      "Formula": "=XMATCH(-3,Unsorted!A1:A7,0,-1)"
+    },
+    {
+      "Id": "x-near-0-1-1",
+      "Sheet": "Results",
+      "Address": "A13",
+      "Formula": "=XLOOKUP(-3,Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",1,1)"
+    },
+    {
+      "Id": "xm-near-0-1-1",
+      "Sheet": "Results",
+      "Address": "A14",
+      "Formula": "=XMATCH(-3,Unsorted!A1:A7,1,1)"
+    },
+    {
+      "Id": "x-near-0-1--1",
+      "Sheet": "Results",
+      "Address": "A15",
+      "Formula": "=XLOOKUP(-3,Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",1,-1)"
+    },
+    {
+      "Id": "xm-near-0-1--1",
+      "Sheet": "Results",
+      "Address": "A16",
+      "Formula": "=XMATCH(-3,Unsorted!A1:A7,1,-1)"
+    },
+    {
+      "Id": "approx-v-1",
+      "Sheet": "Results",
+      "Address": "A17",
+      "Formula": "=VLOOKUP(-2,Data!A1:B7,2,TRUE)"
+    },
+    {
+      "Id": "approx-h-1",
+      "Sheet": "Results",
+      "Address": "A18",
+      "Formula": "=HLOOKUP(-2,Horizontal!A1:G2,2,TRUE)"
+    },
+    {
+      "Id": "approx-ma-1",
+      "Sheet": "Results",
+      "Address": "A19",
+      "Formula": "=MATCH(-2,Data!A1:A7,1)"
+    },
+    {
+      "Id": "approx-md-1",
+      "Sheet": "Results",
+      "Address": "A20",
+      "Formula": "=MATCH(-2,Desc!A1:A7,-1)"
+    },
+    {
+      "Id": "x-near-1--1-1",
+      "Sheet": "Results",
+      "Address": "A21",
+      "Formula": "=XLOOKUP(-2,Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",-1,1)"
+    },
+    {
+      "Id": "xm-near-1--1-1",
+      "Sheet": "Results",
+      "Address": "A22",
+      "Formula": "=XMATCH(-2,Unsorted!A1:A7,-1,1)"
+    },
+    {
+      "Id": "x-near-1--1--1",
+      "Sheet": "Results",
+      "Address": "A23",
+      "Formula": "=XLOOKUP(-2,Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",-1,-1)"
+    },
+    {
+      "Id": "xm-near-1--1--1",
+      "Sheet": "Results",
+      "Address": "A24",
+      "Formula": "=XMATCH(-2,Unsorted!A1:A7,-1,-1)"
+    },
+    {
+      "Id": "x-near-1-0-1",
+      "Sheet": "Results",
+      "Address": "A25",
+      "Formula": "=XLOOKUP(-2,Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",0,1)"
+    },
+    {
+      "Id": "xm-near-1-0-1",
+      "Sheet": "Results",
+      "Address": "A26",
+      "Formula": "=XMATCH(-2,Unsorted!A1:A7,0,1)"
+    },
+    {
+      "Id": "x-near-1-0--1",
+      "Sheet": "Results",
+      "Address": "A27",
+      "Formula": "=XLOOKUP(-2,Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",0,-1)"
+    },
+    {
+      "Id": "xm-near-1-0--1",
+      "Sheet": "Results",
+      "Address": "A28",
+      "Formula": "=XMATCH(-2,Unsorted!A1:A7,0,-1)"
+    },
+    {
+      "Id": "x-near-1-1-1",
+      "Sheet": "Results",
+      "Address": "A29",
+      "Formula": "=XLOOKUP(-2,Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",1,1)"
+    },
+    {
+      "Id": "xm-near-1-1-1",
+      "Sheet": "Results",
+      "Address": "A30",
+      "Formula": "=XMATCH(-2,Unsorted!A1:A7,1,1)"
+    },
+    {
+      "Id": "x-near-1-1--1",
+      "Sheet": "Results",
+      "Address": "A31",
+      "Formula": "=XLOOKUP(-2,Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",1,-1)"
+    },
+    {
+      "Id": "xm-near-1-1--1",
+      "Sheet": "Results",
+      "Address": "A32",
+      "Formula": "=XMATCH(-2,Unsorted!A1:A7,1,-1)"
+    },
+    {
+      "Id": "approx-v-2",
+      "Sheet": "Results",
+      "Address": "A33",
+      "Formula": "=VLOOKUP(-1,Data!A1:B7,2,TRUE)"
+    },
+    {
+      "Id": "approx-h-2",
+      "Sheet": "Results",
+      "Address": "A34",
+      "Formula": "=HLOOKUP(-1,Horizontal!A1:G2,2,TRUE)"
+    },
+    {
+      "Id": "approx-ma-2",
+      "Sheet": "Results",
+      "Address": "A35",
+      "Formula": "=MATCH(-1,Data!A1:A7,1)"
+    },
+    {
+      "Id": "approx-md-2",
+      "Sheet": "Results",
+      "Address": "A36",
+      "Formula": "=MATCH(-1,Desc!A1:A7,-1)"
+    },
+    {
+      "Id": "x-near-2--1-1",
+      "Sheet": "Results",
+      "Address": "A37",
+      "Formula": "=XLOOKUP(-1,Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",-1,1)"
+    },
+    {
+      "Id": "xm-near-2--1-1",
+      "Sheet": "Results",
+      "Address": "A38",
+      "Formula": "=XMATCH(-1,Unsorted!A1:A7,-1,1)"
+    },
+    {
+      "Id": "x-near-2--1--1",
+      "Sheet": "Results",
+      "Address": "A39",
+      "Formula": "=XLOOKUP(-1,Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",-1,-1)"
+    },
+    {
+      "Id": "xm-near-2--1--1",
+      "Sheet": "Results",
+      "Address": "A40",
+      "Formula": "=XMATCH(-1,Unsorted!A1:A7,-1,-1)"
+    },
+    {
+      "Id": "x-near-2-0-1",
+      "Sheet": "Results",
+      "Address": "A41",
+      "Formula": "=XLOOKUP(-1,Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",0,1)"
+    },
+    {
+      "Id": "xm-near-2-0-1",
+      "Sheet": "Results",
+      "Address": "A42",
+      "Formula": "=XMATCH(-1,Unsorted!A1:A7,0,1)"
+    },
+    {
+      "Id": "x-near-2-0--1",
+      "Sheet": "Results",
+      "Address": "A43",
+      "Formula": "=XLOOKUP(-1,Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",0,-1)"
+    },
+    {
+      "Id": "xm-near-2-0--1",
+      "Sheet": "Results",
+      "Address": "A44",
+      "Formula": "=XMATCH(-1,Unsorted!A1:A7,0,-1)"
+    },
+    {
+      "Id": "x-near-2-1-1",
+      "Sheet": "Results",
+      "Address": "A45",
+      "Formula": "=XLOOKUP(-1,Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",1,1)"
+    },
+    {
+      "Id": "xm-near-2-1-1",
+      "Sheet": "Results",
+      "Address": "A46",
+      "Formula": "=XMATCH(-1,Unsorted!A1:A7,1,1)"
+    },
+    {
+      "Id": "x-near-2-1--1",
+      "Sheet": "Results",
+      "Address": "A47",
+      "Formula": "=XLOOKUP(-1,Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",1,-1)"
+    },
+    {
+      "Id": "xm-near-2-1--1",
+      "Sheet": "Results",
+      "Address": "A48",
+      "Formula": "=XMATCH(-1,Unsorted!A1:A7,1,-1)"
+    },
+    {
+      "Id": "approx-v-3",
+      "Sheet": "Results",
+      "Address": "A49",
+      "Formula": "=VLOOKUP(0,Data!A1:B7,2,TRUE)"
+    },
+    {
+      "Id": "approx-h-3",
+      "Sheet": "Results",
+      "Address": "A50",
+      "Formula": "=HLOOKUP(0,Horizontal!A1:G2,2,TRUE)"
+    },
+    {
+      "Id": "approx-ma-3",
+      "Sheet": "Results",
+      "Address": "A51",
+      "Formula": "=MATCH(0,Data!A1:A7,1)"
+    },
+    {
+      "Id": "approx-md-3",
+      "Sheet": "Results",
+      "Address": "A52",
+      "Formula": "=MATCH(0,Desc!A1:A7,-1)"
+    },
+    {
+      "Id": "x-near-3--1-1",
+      "Sheet": "Results",
+      "Address": "A53",
+      "Formula": "=XLOOKUP(0,Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",-1,1)"
+    },
+    {
+      "Id": "xm-near-3--1-1",
+      "Sheet": "Results",
+      "Address": "A54",
+      "Formula": "=XMATCH(0,Unsorted!A1:A7,-1,1)"
+    },
+    {
+      "Id": "x-near-3--1--1",
+      "Sheet": "Results",
+      "Address": "A55",
+      "Formula": "=XLOOKUP(0,Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",-1,-1)"
+    },
+    {
+      "Id": "xm-near-3--1--1",
+      "Sheet": "Results",
+      "Address": "A56",
+      "Formula": "=XMATCH(0,Unsorted!A1:A7,-1,-1)"
+    },
+    {
+      "Id": "x-near-3-0-1",
+      "Sheet": "Results",
+      "Address": "A57",
+      "Formula": "=XLOOKUP(0,Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",0,1)"
+    },
+    {
+      "Id": "xm-near-3-0-1",
+      "Sheet": "Results",
+      "Address": "A58",
+      "Formula": "=XMATCH(0,Unsorted!A1:A7,0,1)"
+    },
+    {
+      "Id": "x-near-3-0--1",
+      "Sheet": "Results",
+      "Address": "A59",
+      "Formula": "=XLOOKUP(0,Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",0,-1)"
+    },
+    {
+      "Id": "xm-near-3-0--1",
+      "Sheet": "Results",
+      "Address": "A60",
+      "Formula": "=XMATCH(0,Unsorted!A1:A7,0,-1)"
+    },
+    {
+      "Id": "x-near-3-1-1",
+      "Sheet": "Results",
+      "Address": "A61",
+      "Formula": "=XLOOKUP(0,Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",1,1)"
+    },
+    {
+      "Id": "xm-near-3-1-1",
+      "Sheet": "Results",
+      "Address": "A62",
+      "Formula": "=XMATCH(0,Unsorted!A1:A7,1,1)"
+    },
+    {
+      "Id": "x-near-3-1--1",
+      "Sheet": "Results",
+      "Address": "A63",
+      "Formula": "=XLOOKUP(0,Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",1,-1)"
+    },
+    {
+      "Id": "xm-near-3-1--1",
+      "Sheet": "Results",
+      "Address": "A64",
+      "Formula": "=XMATCH(0,Unsorted!A1:A7,1,-1)"
+    },
+    {
+      "Id": "approx-v-4",
+      "Sheet": "Results",
+      "Address": "A65",
+      "Formula": "=VLOOKUP(0.5,Data!A1:B7,2,TRUE)"
+    },
+    {
+      "Id": "approx-h-4",
+      "Sheet": "Results",
+      "Address": "A66",
+      "Formula": "=HLOOKUP(0.5,Horizontal!A1:G2,2,TRUE)"
+    },
+    {
+      "Id": "approx-ma-4",
+      "Sheet": "Results",
+      "Address": "A67",
+      "Formula": "=MATCH(0.5,Data!A1:A7,1)"
+    },
+    {
+      "Id": "approx-md-4",
+      "Sheet": "Results",
+      "Address": "A68",
+      "Formula": "=MATCH(0.5,Desc!A1:A7,-1)"
+    },
+    {
+      "Id": "x-near-4--1-1",
+      "Sheet": "Results",
+      "Address": "A69",
+      "Formula": "=XLOOKUP(0.5,Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",-1,1)"
+    },
+    {
+      "Id": "xm-near-4--1-1",
+      "Sheet": "Results",
+      "Address": "A70",
+      "Formula": "=XMATCH(0.5,Unsorted!A1:A7,-1,1)"
+    },
+    {
+      "Id": "x-near-4--1--1",
+      "Sheet": "Results",
+      "Address": "A71",
+      "Formula": "=XLOOKUP(0.5,Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",-1,-1)"
+    },
+    {
+      "Id": "xm-near-4--1--1",
+      "Sheet": "Results",
+      "Address": "A72",
+      "Formula": "=XMATCH(0.5,Unsorted!A1:A7,-1,-1)"
+    },
+    {
+      "Id": "x-near-4-0-1",
+      "Sheet": "Results",
+      "Address": "A73",
+      "Formula": "=XLOOKUP(0.5,Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",0,1)"
+    },
+    {
+      "Id": "xm-near-4-0-1",
+      "Sheet": "Results",
+      "Address": "A74",
+      "Formula": "=XMATCH(0.5,Unsorted!A1:A7,0,1)"
+    },
+    {
+      "Id": "x-near-4-0--1",
+      "Sheet": "Results",
+      "Address": "A75",
+      "Formula": "=XLOOKUP(0.5,Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",0,-1)"
+    },
+    {
+      "Id": "xm-near-4-0--1",
+      "Sheet": "Results",
+      "Address": "A76",
+      "Formula": "=XMATCH(0.5,Unsorted!A1:A7,0,-1)"
+    },
+    {
+      "Id": "x-near-4-1-1",
+      "Sheet": "Results",
+      "Address": "A77",
+      "Formula": "=XLOOKUP(0.5,Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",1,1)"
+    },
+    {
+      "Id": "xm-near-4-1-1",
+      "Sheet": "Results",
+      "Address": "A78",
+      "Formula": "=XMATCH(0.5,Unsorted!A1:A7,1,1)"
+    },
+    {
+      "Id": "x-near-4-1--1",
+      "Sheet": "Results",
+      "Address": "A79",
+      "Formula": "=XLOOKUP(0.5,Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",1,-1)"
+    },
+    {
+      "Id": "xm-near-4-1--1",
+      "Sheet": "Results",
+      "Address": "A80",
+      "Formula": "=XMATCH(0.5,Unsorted!A1:A7,1,-1)"
+    },
+    {
+      "Id": "approx-v-5",
+      "Sheet": "Results",
+      "Address": "A81",
+      "Formula": "=VLOOKUP(1,Data!A1:B7,2,TRUE)"
+    },
+    {
+      "Id": "approx-h-5",
+      "Sheet": "Results",
+      "Address": "A82",
+      "Formula": "=HLOOKUP(1,Horizontal!A1:G2,2,TRUE)"
+    },
+    {
+      "Id": "approx-ma-5",
+      "Sheet": "Results",
+      "Address": "A83",
+      "Formula": "=MATCH(1,Data!A1:A7,1)"
+    },
+    {
+      "Id": "approx-md-5",
+      "Sheet": "Results",
+      "Address": "A84",
+      "Formula": "=MATCH(1,Desc!A1:A7,-1)"
+    },
+    {
+      "Id": "x-near-5--1-1",
+      "Sheet": "Results",
+      "Address": "A85",
+      "Formula": "=XLOOKUP(1,Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",-1,1)"
+    },
+    {
+      "Id": "xm-near-5--1-1",
+      "Sheet": "Results",
+      "Address": "A86",
+      "Formula": "=XMATCH(1,Unsorted!A1:A7,-1,1)"
+    },
+    {
+      "Id": "x-near-5--1--1",
+      "Sheet": "Results",
+      "Address": "A87",
+      "Formula": "=XLOOKUP(1,Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",-1,-1)"
+    },
+    {
+      "Id": "xm-near-5--1--1",
+      "Sheet": "Results",
+      "Address": "A88",
+      "Formula": "=XMATCH(1,Unsorted!A1:A7,-1,-1)"
+    },
+    {
+      "Id": "x-near-5-0-1",
+      "Sheet": "Results",
+      "Address": "A89",
+      "Formula": "=XLOOKUP(1,Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",0,1)"
+    },
+    {
+      "Id": "xm-near-5-0-1",
+      "Sheet": "Results",
+      "Address": "A90",
+      "Formula": "=XMATCH(1,Unsorted!A1:A7,0,1)"
+    },
+    {
+      "Id": "x-near-5-0--1",
+      "Sheet": "Results",
+      "Address": "A91",
+      "Formula": "=XLOOKUP(1,Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",0,-1)"
+    },
+    {
+      "Id": "xm-near-5-0--1",
+      "Sheet": "Results",
+      "Address": "A92",
+      "Formula": "=XMATCH(1,Unsorted!A1:A7,0,-1)"
+    },
+    {
+      "Id": "x-near-5-1-1",
+      "Sheet": "Results",
+      "Address": "A93",
+      "Formula": "=XLOOKUP(1,Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",1,1)"
+    },
+    {
+      "Id": "xm-near-5-1-1",
+      "Sheet": "Results",
+      "Address": "A94",
+      "Formula": "=XMATCH(1,Unsorted!A1:A7,1,1)"
+    },
+    {
+      "Id": "x-near-5-1--1",
+      "Sheet": "Results",
+      "Address": "A95",
+      "Formula": "=XLOOKUP(1,Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",1,-1)"
+    },
+    {
+      "Id": "xm-near-5-1--1",
+      "Sheet": "Results",
+      "Address": "A96",
+      "Formula": "=XMATCH(1,Unsorted!A1:A7,1,-1)"
+    },
+    {
+      "Id": "approx-v-6",
+      "Sheet": "Results",
+      "Address": "A97",
+      "Formula": "=VLOOKUP(2,Data!A1:B7,2,TRUE)"
+    },
+    {
+      "Id": "approx-h-6",
+      "Sheet": "Results",
+      "Address": "A98",
+      "Formula": "=HLOOKUP(2,Horizontal!A1:G2,2,TRUE)"
+    },
+    {
+      "Id": "approx-ma-6",
+      "Sheet": "Results",
+      "Address": "A99",
+      "Formula": "=MATCH(2,Data!A1:A7,1)"
+    },
+    {
+      "Id": "approx-md-6",
+      "Sheet": "Results",
+      "Address": "A100",
+      "Formula": "=MATCH(2,Desc!A1:A7,-1)"
+    },
+    {
+      "Id": "x-near-6--1-1",
+      "Sheet": "Results",
+      "Address": "A101",
+      "Formula": "=XLOOKUP(2,Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",-1,1)"
+    },
+    {
+      "Id": "xm-near-6--1-1",
+      "Sheet": "Results",
+      "Address": "A102",
+      "Formula": "=XMATCH(2,Unsorted!A1:A7,-1,1)"
+    },
+    {
+      "Id": "x-near-6--1--1",
+      "Sheet": "Results",
+      "Address": "A103",
+      "Formula": "=XLOOKUP(2,Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",-1,-1)"
+    },
+    {
+      "Id": "xm-near-6--1--1",
+      "Sheet": "Results",
+      "Address": "A104",
+      "Formula": "=XMATCH(2,Unsorted!A1:A7,-1,-1)"
+    },
+    {
+      "Id": "x-near-6-0-1",
+      "Sheet": "Results",
+      "Address": "A105",
+      "Formula": "=XLOOKUP(2,Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",0,1)"
+    },
+    {
+      "Id": "xm-near-6-0-1",
+      "Sheet": "Results",
+      "Address": "A106",
+      "Formula": "=XMATCH(2,Unsorted!A1:A7,0,1)"
+    },
+    {
+      "Id": "x-near-6-0--1",
+      "Sheet": "Results",
+      "Address": "A107",
+      "Formula": "=XLOOKUP(2,Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",0,-1)"
+    },
+    {
+      "Id": "xm-near-6-0--1",
+      "Sheet": "Results",
+      "Address": "A108",
+      "Formula": "=XMATCH(2,Unsorted!A1:A7,0,-1)"
+    },
+    {
+      "Id": "x-near-6-1-1",
+      "Sheet": "Results",
+      "Address": "A109",
+      "Formula": "=XLOOKUP(2,Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",1,1)"
+    },
+    {
+      "Id": "xm-near-6-1-1",
+      "Sheet": "Results",
+      "Address": "A110",
+      "Formula": "=XMATCH(2,Unsorted!A1:A7,1,1)"
+    },
+    {
+      "Id": "x-near-6-1--1",
+      "Sheet": "Results",
+      "Address": "A111",
+      "Formula": "=XLOOKUP(2,Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",1,-1)"
+    },
+    {
+      "Id": "xm-near-6-1--1",
+      "Sheet": "Results",
+      "Address": "A112",
+      "Formula": "=XMATCH(2,Unsorted!A1:A7,1,-1)"
+    },
+    {
+      "Id": "approx-v-7",
+      "Sheet": "Results",
+      "Address": "A113",
+      "Formula": "=VLOOKUP(2.5,Data!A1:B7,2,TRUE)"
+    },
+    {
+      "Id": "approx-h-7",
+      "Sheet": "Results",
+      "Address": "A114",
+      "Formula": "=HLOOKUP(2.5,Horizontal!A1:G2,2,TRUE)"
+    },
+    {
+      "Id": "approx-ma-7",
+      "Sheet": "Results",
+      "Address": "A115",
+      "Formula": "=MATCH(2.5,Data!A1:A7,1)"
+    },
+    {
+      "Id": "approx-md-7",
+      "Sheet": "Results",
+      "Address": "A116",
+      "Formula": "=MATCH(2.5,Desc!A1:A7,-1)"
+    },
+    {
+      "Id": "x-near-7--1-1",
+      "Sheet": "Results",
+      "Address": "A117",
+      "Formula": "=XLOOKUP(2.5,Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",-1,1)"
+    },
+    {
+      "Id": "xm-near-7--1-1",
+      "Sheet": "Results",
+      "Address": "A118",
+      "Formula": "=XMATCH(2.5,Unsorted!A1:A7,-1,1)"
+    },
+    {
+      "Id": "x-near-7--1--1",
+      "Sheet": "Results",
+      "Address": "A119",
+      "Formula": "=XLOOKUP(2.5,Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",-1,-1)"
+    },
+    {
+      "Id": "xm-near-7--1--1",
+      "Sheet": "Results",
+      "Address": "A120",
+      "Formula": "=XMATCH(2.5,Unsorted!A1:A7,-1,-1)"
+    },
+    {
+      "Id": "x-near-7-0-1",
+      "Sheet": "Results",
+      "Address": "A121",
+      "Formula": "=XLOOKUP(2.5,Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",0,1)"
+    },
+    {
+      "Id": "xm-near-7-0-1",
+      "Sheet": "Results",
+      "Address": "A122",
+      "Formula": "=XMATCH(2.5,Unsorted!A1:A7,0,1)"
+    },
+    {
+      "Id": "x-near-7-0--1",
+      "Sheet": "Results",
+      "Address": "A123",
+      "Formula": "=XLOOKUP(2.5,Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",0,-1)"
+    },
+    {
+      "Id": "xm-near-7-0--1",
+      "Sheet": "Results",
+      "Address": "A124",
+      "Formula": "=XMATCH(2.5,Unsorted!A1:A7,0,-1)"
+    },
+    {
+      "Id": "x-near-7-1-1",
+      "Sheet": "Results",
+      "Address": "A125",
+      "Formula": "=XLOOKUP(2.5,Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",1,1)"
+    },
+    {
+      "Id": "xm-near-7-1-1",
+      "Sheet": "Results",
+      "Address": "A126",
+      "Formula": "=XMATCH(2.5,Unsorted!A1:A7,1,1)"
+    },
+    {
+      "Id": "x-near-7-1--1",
+      "Sheet": "Results",
+      "Address": "A127",
+      "Formula": "=XLOOKUP(2.5,Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",1,-1)"
+    },
+    {
+      "Id": "xm-near-7-1--1",
+      "Sheet": "Results",
+      "Address": "A128",
+      "Formula": "=XMATCH(2.5,Unsorted!A1:A7,1,-1)"
+    },
+    {
+      "Id": "approx-v-8",
+      "Sheet": "Results",
+      "Address": "A129",
+      "Formula": "=VLOOKUP(3,Data!A1:B7,2,TRUE)"
+    },
+    {
+      "Id": "approx-h-8",
+      "Sheet": "Results",
+      "Address": "A130",
+      "Formula": "=HLOOKUP(3,Horizontal!A1:G2,2,TRUE)"
+    },
+    {
+      "Id": "approx-ma-8",
+      "Sheet": "Results",
+      "Address": "A131",
+      "Formula": "=MATCH(3,Data!A1:A7,1)"
+    },
+    {
+      "Id": "approx-md-8",
+      "Sheet": "Results",
+      "Address": "A132",
+      "Formula": "=MATCH(3,Desc!A1:A7,-1)"
+    },
+    {
+      "Id": "x-near-8--1-1",
+      "Sheet": "Results",
+      "Address": "A133",
+      "Formula": "=XLOOKUP(3,Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",-1,1)"
+    },
+    {
+      "Id": "xm-near-8--1-1",
+      "Sheet": "Results",
+      "Address": "A134",
+      "Formula": "=XMATCH(3,Unsorted!A1:A7,-1,1)"
+    },
+    {
+      "Id": "x-near-8--1--1",
+      "Sheet": "Results",
+      "Address": "A135",
+      "Formula": "=XLOOKUP(3,Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",-1,-1)"
+    },
+    {
+      "Id": "xm-near-8--1--1",
+      "Sheet": "Results",
+      "Address": "A136",
+      "Formula": "=XMATCH(3,Unsorted!A1:A7,-1,-1)"
+    },
+    {
+      "Id": "x-near-8-0-1",
+      "Sheet": "Results",
+      "Address": "A137",
+      "Formula": "=XLOOKUP(3,Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",0,1)"
+    },
+    {
+      "Id": "xm-near-8-0-1",
+      "Sheet": "Results",
+      "Address": "A138",
+      "Formula": "=XMATCH(3,Unsorted!A1:A7,0,1)"
+    },
+    {
+      "Id": "x-near-8-0--1",
+      "Sheet": "Results",
+      "Address": "A139",
+      "Formula": "=XLOOKUP(3,Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",0,-1)"
+    },
+    {
+      "Id": "xm-near-8-0--1",
+      "Sheet": "Results",
+      "Address": "A140",
+      "Formula": "=XMATCH(3,Unsorted!A1:A7,0,-1)"
+    },
+    {
+      "Id": "x-near-8-1-1",
+      "Sheet": "Results",
+      "Address": "A141",
+      "Formula": "=XLOOKUP(3,Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",1,1)"
+    },
+    {
+      "Id": "xm-near-8-1-1",
+      "Sheet": "Results",
+      "Address": "A142",
+      "Formula": "=XMATCH(3,Unsorted!A1:A7,1,1)"
+    },
+    {
+      "Id": "x-near-8-1--1",
+      "Sheet": "Results",
+      "Address": "A143",
+      "Formula": "=XLOOKUP(3,Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",1,-1)"
+    },
+    {
+      "Id": "xm-near-8-1--1",
+      "Sheet": "Results",
+      "Address": "A144",
+      "Formula": "=XMATCH(3,Unsorted!A1:A7,1,-1)"
+    },
+    {
+      "Id": "approx-v-9",
+      "Sheet": "Results",
+      "Address": "A145",
+      "Formula": "=VLOOKUP(4,Data!A1:B7,2,TRUE)"
+    },
+    {
+      "Id": "approx-h-9",
+      "Sheet": "Results",
+      "Address": "A146",
+      "Formula": "=HLOOKUP(4,Horizontal!A1:G2,2,TRUE)"
+    },
+    {
+      "Id": "approx-ma-9",
+      "Sheet": "Results",
+      "Address": "A147",
+      "Formula": "=MATCH(4,Data!A1:A7,1)"
+    },
+    {
+      "Id": "approx-md-9",
+      "Sheet": "Results",
+      "Address": "A148",
+      "Formula": "=MATCH(4,Desc!A1:A7,-1)"
+    },
+    {
+      "Id": "x-near-9--1-1",
+      "Sheet": "Results",
+      "Address": "A149",
+      "Formula": "=XLOOKUP(4,Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",-1,1)"
+    },
+    {
+      "Id": "xm-near-9--1-1",
+      "Sheet": "Results",
+      "Address": "A150",
+      "Formula": "=XMATCH(4,Unsorted!A1:A7,-1,1)"
+    },
+    {
+      "Id": "x-near-9--1--1",
+      "Sheet": "Results",
+      "Address": "A151",
+      "Formula": "=XLOOKUP(4,Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",-1,-1)"
+    },
+    {
+      "Id": "xm-near-9--1--1",
+      "Sheet": "Results",
+      "Address": "A152",
+      "Formula": "=XMATCH(4,Unsorted!A1:A7,-1,-1)"
+    },
+    {
+      "Id": "x-near-9-0-1",
+      "Sheet": "Results",
+      "Address": "A153",
+      "Formula": "=XLOOKUP(4,Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",0,1)"
+    },
+    {
+      "Id": "xm-near-9-0-1",
+      "Sheet": "Results",
+      "Address": "A154",
+      "Formula": "=XMATCH(4,Unsorted!A1:A7,0,1)"
+    },
+    {
+      "Id": "x-near-9-0--1",
+      "Sheet": "Results",
+      "Address": "A155",
+      "Formula": "=XLOOKUP(4,Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",0,-1)"
+    },
+    {
+      "Id": "xm-near-9-0--1",
+      "Sheet": "Results",
+      "Address": "A156",
+      "Formula": "=XMATCH(4,Unsorted!A1:A7,0,-1)"
+    },
+    {
+      "Id": "x-near-9-1-1",
+      "Sheet": "Results",
+      "Address": "A157",
+      "Formula": "=XLOOKUP(4,Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",1,1)"
+    },
+    {
+      "Id": "xm-near-9-1-1",
+      "Sheet": "Results",
+      "Address": "A158",
+      "Formula": "=XMATCH(4,Unsorted!A1:A7,1,1)"
+    },
+    {
+      "Id": "x-near-9-1--1",
+      "Sheet": "Results",
+      "Address": "A159",
+      "Formula": "=XLOOKUP(4,Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",1,-1)"
+    },
+    {
+      "Id": "xm-near-9-1--1",
+      "Sheet": "Results",
+      "Address": "A160",
+      "Formula": "=XMATCH(4,Unsorted!A1:A7,1,-1)"
+    },
+    {
+      "Id": "approx-v-10",
+      "Sheet": "Results",
+      "Address": "A161",
+      "Formula": "=VLOOKUP(7,Data!A1:B7,2,TRUE)"
+    },
+    {
+      "Id": "approx-h-10",
+      "Sheet": "Results",
+      "Address": "A162",
+      "Formula": "=HLOOKUP(7,Horizontal!A1:G2,2,TRUE)"
+    },
+    {
+      "Id": "approx-ma-10",
+      "Sheet": "Results",
+      "Address": "A163",
+      "Formula": "=MATCH(7,Data!A1:A7,1)"
+    },
+    {
+      "Id": "approx-md-10",
+      "Sheet": "Results",
+      "Address": "A164",
+      "Formula": "=MATCH(7,Desc!A1:A7,-1)"
+    },
+    {
+      "Id": "x-near-10--1-1",
+      "Sheet": "Results",
+      "Address": "A165",
+      "Formula": "=XLOOKUP(7,Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",-1,1)"
+    },
+    {
+      "Id": "xm-near-10--1-1",
+      "Sheet": "Results",
+      "Address": "A166",
+      "Formula": "=XMATCH(7,Unsorted!A1:A7,-1,1)"
+    },
+    {
+      "Id": "x-near-10--1--1",
+      "Sheet": "Results",
+      "Address": "A167",
+      "Formula": "=XLOOKUP(7,Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",-1,-1)"
+    },
+    {
+      "Id": "xm-near-10--1--1",
+      "Sheet": "Results",
+      "Address": "A168",
+      "Formula": "=XMATCH(7,Unsorted!A1:A7,-1,-1)"
+    },
+    {
+      "Id": "x-near-10-0-1",
+      "Sheet": "Results",
+      "Address": "A169",
+      "Formula": "=XLOOKUP(7,Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",0,1)"
+    },
+    {
+      "Id": "xm-near-10-0-1",
+      "Sheet": "Results",
+      "Address": "A170",
+      "Formula": "=XMATCH(7,Unsorted!A1:A7,0,1)"
+    },
+    {
+      "Id": "x-near-10-0--1",
+      "Sheet": "Results",
+      "Address": "A171",
+      "Formula": "=XLOOKUP(7,Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",0,-1)"
+    },
+    {
+      "Id": "xm-near-10-0--1",
+      "Sheet": "Results",
+      "Address": "A172",
+      "Formula": "=XMATCH(7,Unsorted!A1:A7,0,-1)"
+    },
+    {
+      "Id": "x-near-10-1-1",
+      "Sheet": "Results",
+      "Address": "A173",
+      "Formula": "=XLOOKUP(7,Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",1,1)"
+    },
+    {
+      "Id": "xm-near-10-1-1",
+      "Sheet": "Results",
+      "Address": "A174",
+      "Formula": "=XMATCH(7,Unsorted!A1:A7,1,1)"
+    },
+    {
+      "Id": "x-near-10-1--1",
+      "Sheet": "Results",
+      "Address": "A175",
+      "Formula": "=XLOOKUP(7,Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",1,-1)"
+    },
+    {
+      "Id": "xm-near-10-1--1",
+      "Sheet": "Results",
+      "Address": "A176",
+      "Formula": "=XMATCH(7,Unsorted!A1:A7,1,-1)"
+    },
+    {
+      "Id": "approx-v-11",
+      "Sheet": "Results",
+      "Address": "A177",
+      "Formula": "=VLOOKUP(8,Data!A1:B7,2,TRUE)"
+    },
+    {
+      "Id": "approx-h-11",
+      "Sheet": "Results",
+      "Address": "A178",
+      "Formula": "=HLOOKUP(8,Horizontal!A1:G2,2,TRUE)"
+    },
+    {
+      "Id": "approx-ma-11",
+      "Sheet": "Results",
+      "Address": "A179",
+      "Formula": "=MATCH(8,Data!A1:A7,1)"
+    },
+    {
+      "Id": "approx-md-11",
+      "Sheet": "Results",
+      "Address": "A180",
+      "Formula": "=MATCH(8,Desc!A1:A7,-1)"
+    },
+    {
+      "Id": "x-near-11--1-1",
+      "Sheet": "Results",
+      "Address": "A181",
+      "Formula": "=XLOOKUP(8,Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",-1,1)"
+    },
+    {
+      "Id": "xm-near-11--1-1",
+      "Sheet": "Results",
+      "Address": "A182",
+      "Formula": "=XMATCH(8,Unsorted!A1:A7,-1,1)"
+    },
+    {
+      "Id": "x-near-11--1--1",
+      "Sheet": "Results",
+      "Address": "A183",
+      "Formula": "=XLOOKUP(8,Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",-1,-1)"
+    },
+    {
+      "Id": "xm-near-11--1--1",
+      "Sheet": "Results",
+      "Address": "A184",
+      "Formula": "=XMATCH(8,Unsorted!A1:A7,-1,-1)"
+    },
+    {
+      "Id": "x-near-11-0-1",
+      "Sheet": "Results",
+      "Address": "A185",
+      "Formula": "=XLOOKUP(8,Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",0,1)"
+    },
+    {
+      "Id": "xm-near-11-0-1",
+      "Sheet": "Results",
+      "Address": "A186",
+      "Formula": "=XMATCH(8,Unsorted!A1:A7,0,1)"
+    },
+    {
+      "Id": "x-near-11-0--1",
+      "Sheet": "Results",
+      "Address": "A187",
+      "Formula": "=XLOOKUP(8,Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",0,-1)"
+    },
+    {
+      "Id": "xm-near-11-0--1",
+      "Sheet": "Results",
+      "Address": "A188",
+      "Formula": "=XMATCH(8,Unsorted!A1:A7,0,-1)"
+    },
+    {
+      "Id": "x-near-11-1-1",
+      "Sheet": "Results",
+      "Address": "A189",
+      "Formula": "=XLOOKUP(8,Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",1,1)"
+    },
+    {
+      "Id": "xm-near-11-1-1",
+      "Sheet": "Results",
+      "Address": "A190",
+      "Formula": "=XMATCH(8,Unsorted!A1:A7,1,1)"
+    },
+    {
+      "Id": "x-near-11-1--1",
+      "Sheet": "Results",
+      "Address": "A191",
+      "Formula": "=XLOOKUP(8,Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",1,-1)"
+    },
+    {
+      "Id": "xm-near-11-1--1",
+      "Sheet": "Results",
+      "Address": "A192",
+      "Formula": "=XMATCH(8,Unsorted!A1:A7,1,-1)"
+    },
+    {
+      "Id": "approx-v-12",
+      "Sheet": "Results",
+      "Address": "A193",
+      "Formula": "=VLOOKUP(9,Data!A1:B7,2,TRUE)"
+    },
+    {
+      "Id": "approx-h-12",
+      "Sheet": "Results",
+      "Address": "A194",
+      "Formula": "=HLOOKUP(9,Horizontal!A1:G2,2,TRUE)"
+    },
+    {
+      "Id": "approx-ma-12",
+      "Sheet": "Results",
+      "Address": "A195",
+      "Formula": "=MATCH(9,Data!A1:A7,1)"
+    },
+    {
+      "Id": "approx-md-12",
+      "Sheet": "Results",
+      "Address": "A196",
+      "Formula": "=MATCH(9,Desc!A1:A7,-1)"
+    },
+    {
+      "Id": "x-near-12--1-1",
+      "Sheet": "Results",
+      "Address": "A197",
+      "Formula": "=XLOOKUP(9,Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",-1,1)"
+    },
+    {
+      "Id": "xm-near-12--1-1",
+      "Sheet": "Results",
+      "Address": "A198",
+      "Formula": "=XMATCH(9,Unsorted!A1:A7,-1,1)"
+    },
+    {
+      "Id": "x-near-12--1--1",
+      "Sheet": "Results",
+      "Address": "A199",
+      "Formula": "=XLOOKUP(9,Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",-1,-1)"
+    },
+    {
+      "Id": "xm-near-12--1--1",
+      "Sheet": "Results",
+      "Address": "A200",
+      "Formula": "=XMATCH(9,Unsorted!A1:A7,-1,-1)"
+    },
+    {
+      "Id": "x-near-12-0-1",
+      "Sheet": "Results",
+      "Address": "A201",
+      "Formula": "=XLOOKUP(9,Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",0,1)"
+    },
+    {
+      "Id": "xm-near-12-0-1",
+      "Sheet": "Results",
+      "Address": "A202",
+      "Formula": "=XMATCH(9,Unsorted!A1:A7,0,1)"
+    },
+    {
+      "Id": "x-near-12-0--1",
+      "Sheet": "Results",
+      "Address": "A203",
+      "Formula": "=XLOOKUP(9,Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",0,-1)"
+    },
+    {
+      "Id": "xm-near-12-0--1",
+      "Sheet": "Results",
+      "Address": "A204",
+      "Formula": "=XMATCH(9,Unsorted!A1:A7,0,-1)"
+    },
+    {
+      "Id": "x-near-12-1-1",
+      "Sheet": "Results",
+      "Address": "A205",
+      "Formula": "=XLOOKUP(9,Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",1,1)"
+    },
+    {
+      "Id": "xm-near-12-1-1",
+      "Sheet": "Results",
+      "Address": "A206",
+      "Formula": "=XMATCH(9,Unsorted!A1:A7,1,1)"
+    },
+    {
+      "Id": "x-near-12-1--1",
+      "Sheet": "Results",
+      "Address": "A207",
+      "Formula": "=XLOOKUP(9,Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",1,-1)"
+    },
+    {
+      "Id": "xm-near-12-1--1",
+      "Sheet": "Results",
+      "Address": "A208",
+      "Formula": "=XMATCH(9,Unsorted!A1:A7,1,-1)"
+    },
+    {
+      "Id": "approx-v-13",
+      "Sheet": "Results",
+      "Address": "A209",
+      "Formula": "=VLOOKUP(\"2\",Data!A1:B7,2,TRUE)"
+    },
+    {
+      "Id": "approx-h-13",
+      "Sheet": "Results",
+      "Address": "A210",
+      "Formula": "=HLOOKUP(\"2\",Horizontal!A1:G2,2,TRUE)"
+    },
+    {
+      "Id": "approx-ma-13",
+      "Sheet": "Results",
+      "Address": "A211",
+      "Formula": "=MATCH(\"2\",Data!A1:A7,1)"
+    },
+    {
+      "Id": "approx-md-13",
+      "Sheet": "Results",
+      "Address": "A212",
+      "Formula": "=MATCH(\"2\",Desc!A1:A7,-1)"
+    },
+    {
+      "Id": "x-near-13--1-1",
+      "Sheet": "Results",
+      "Address": "A213",
+      "Formula": "=XLOOKUP(\"2\",Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",-1,1)"
+    },
+    {
+      "Id": "xm-near-13--1-1",
+      "Sheet": "Results",
+      "Address": "A214",
+      "Formula": "=XMATCH(\"2\",Unsorted!A1:A7,-1,1)"
+    },
+    {
+      "Id": "x-near-13--1--1",
+      "Sheet": "Results",
+      "Address": "A215",
+      "Formula": "=XLOOKUP(\"2\",Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",-1,-1)"
+    },
+    {
+      "Id": "xm-near-13--1--1",
+      "Sheet": "Results",
+      "Address": "A216",
+      "Formula": "=XMATCH(\"2\",Unsorted!A1:A7,-1,-1)"
+    },
+    {
+      "Id": "x-near-13-0-1",
+      "Sheet": "Results",
+      "Address": "A217",
+      "Formula": "=XLOOKUP(\"2\",Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",0,1)"
+    },
+    {
+      "Id": "xm-near-13-0-1",
+      "Sheet": "Results",
+      "Address": "A218",
+      "Formula": "=XMATCH(\"2\",Unsorted!A1:A7,0,1)"
+    },
+    {
+      "Id": "x-near-13-0--1",
+      "Sheet": "Results",
+      "Address": "A219",
+      "Formula": "=XLOOKUP(\"2\",Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",0,-1)"
+    },
+    {
+      "Id": "xm-near-13-0--1",
+      "Sheet": "Results",
+      "Address": "A220",
+      "Formula": "=XMATCH(\"2\",Unsorted!A1:A7,0,-1)"
+    },
+    {
+      "Id": "x-near-13-1-1",
+      "Sheet": "Results",
+      "Address": "A221",
+      "Formula": "=XLOOKUP(\"2\",Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",1,1)"
+    },
+    {
+      "Id": "xm-near-13-1-1",
+      "Sheet": "Results",
+      "Address": "A222",
+      "Formula": "=XMATCH(\"2\",Unsorted!A1:A7,1,1)"
+    },
+    {
+      "Id": "x-near-13-1--1",
+      "Sheet": "Results",
+      "Address": "A223",
+      "Formula": "=XLOOKUP(\"2\",Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",1,-1)"
+    },
+    {
+      "Id": "xm-near-13-1--1",
+      "Sheet": "Results",
+      "Address": "A224",
+      "Formula": "=XMATCH(\"2\",Unsorted!A1:A7,1,-1)"
+    },
+    {
+      "Id": "approx-v-14",
+      "Sheet": "Results",
+      "Address": "A225",
+      "Formula": "=VLOOKUP(TRUE,Data!A1:B7,2,TRUE)"
+    },
+    {
+      "Id": "approx-h-14",
+      "Sheet": "Results",
+      "Address": "A226",
+      "Formula": "=HLOOKUP(TRUE,Horizontal!A1:G2,2,TRUE)"
+    },
+    {
+      "Id": "approx-ma-14",
+      "Sheet": "Results",
+      "Address": "A227",
+      "Formula": "=MATCH(TRUE,Data!A1:A7,1)"
+    },
+    {
+      "Id": "approx-md-14",
+      "Sheet": "Results",
+      "Address": "A228",
+      "Formula": "=MATCH(TRUE,Desc!A1:A7,-1)"
+    },
+    {
+      "Id": "x-near-14--1-1",
+      "Sheet": "Results",
+      "Address": "A229",
+      "Formula": "=XLOOKUP(TRUE,Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",-1,1)"
+    },
+    {
+      "Id": "xm-near-14--1-1",
+      "Sheet": "Results",
+      "Address": "A230",
+      "Formula": "=XMATCH(TRUE,Unsorted!A1:A7,-1,1)"
+    },
+    {
+      "Id": "x-near-14--1--1",
+      "Sheet": "Results",
+      "Address": "A231",
+      "Formula": "=XLOOKUP(TRUE,Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",-1,-1)"
+    },
+    {
+      "Id": "xm-near-14--1--1",
+      "Sheet": "Results",
+      "Address": "A232",
+      "Formula": "=XMATCH(TRUE,Unsorted!A1:A7,-1,-1)"
+    },
+    {
+      "Id": "x-near-14-0-1",
+      "Sheet": "Results",
+      "Address": "A233",
+      "Formula": "=XLOOKUP(TRUE,Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",0,1)"
+    },
+    {
+      "Id": "xm-near-14-0-1",
+      "Sheet": "Results",
+      "Address": "A234",
+      "Formula": "=XMATCH(TRUE,Unsorted!A1:A7,0,1)"
+    },
+    {
+      "Id": "x-near-14-0--1",
+      "Sheet": "Results",
+      "Address": "A235",
+      "Formula": "=XLOOKUP(TRUE,Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",0,-1)"
+    },
+    {
+      "Id": "xm-near-14-0--1",
+      "Sheet": "Results",
+      "Address": "A236",
+      "Formula": "=XMATCH(TRUE,Unsorted!A1:A7,0,-1)"
+    },
+    {
+      "Id": "x-near-14-1-1",
+      "Sheet": "Results",
+      "Address": "A237",
+      "Formula": "=XLOOKUP(TRUE,Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",1,1)"
+    },
+    {
+      "Id": "xm-near-14-1-1",
+      "Sheet": "Results",
+      "Address": "A238",
+      "Formula": "=XMATCH(TRUE,Unsorted!A1:A7,1,1)"
+    },
+    {
+      "Id": "x-near-14-1--1",
+      "Sheet": "Results",
+      "Address": "A239",
+      "Formula": "=XLOOKUP(TRUE,Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",1,-1)"
+    },
+    {
+      "Id": "xm-near-14-1--1",
+      "Sheet": "Results",
+      "Address": "A240",
+      "Formula": "=XMATCH(TRUE,Unsorted!A1:A7,1,-1)"
+    },
+    {
+      "Id": "approx-v-15",
+      "Sheet": "Results",
+      "Address": "A241",
+      "Formula": "=VLOOKUP(FALSE,Data!A1:B7,2,TRUE)"
+    },
+    {
+      "Id": "approx-h-15",
+      "Sheet": "Results",
+      "Address": "A242",
+      "Formula": "=HLOOKUP(FALSE,Horizontal!A1:G2,2,TRUE)"
+    },
+    {
+      "Id": "approx-ma-15",
+      "Sheet": "Results",
+      "Address": "A243",
+      "Formula": "=MATCH(FALSE,Data!A1:A7,1)"
+    },
+    {
+      "Id": "approx-md-15",
+      "Sheet": "Results",
+      "Address": "A244",
+      "Formula": "=MATCH(FALSE,Desc!A1:A7,-1)"
+    },
+    {
+      "Id": "x-near-15--1-1",
+      "Sheet": "Results",
+      "Address": "A245",
+      "Formula": "=XLOOKUP(FALSE,Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",-1,1)"
+    },
+    {
+      "Id": "xm-near-15--1-1",
+      "Sheet": "Results",
+      "Address": "A246",
+      "Formula": "=XMATCH(FALSE,Unsorted!A1:A7,-1,1)"
+    },
+    {
+      "Id": "x-near-15--1--1",
+      "Sheet": "Results",
+      "Address": "A247",
+      "Formula": "=XLOOKUP(FALSE,Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",-1,-1)"
+    },
+    {
+      "Id": "xm-near-15--1--1",
+      "Sheet": "Results",
+      "Address": "A248",
+      "Formula": "=XMATCH(FALSE,Unsorted!A1:A7,-1,-1)"
+    },
+    {
+      "Id": "x-near-15-0-1",
+      "Sheet": "Results",
+      "Address": "A249",
+      "Formula": "=XLOOKUP(FALSE,Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",0,1)"
+    },
+    {
+      "Id": "xm-near-15-0-1",
+      "Sheet": "Results",
+      "Address": "A250",
+      "Formula": "=XMATCH(FALSE,Unsorted!A1:A7,0,1)"
+    },
+    {
+      "Id": "x-near-15-0--1",
+      "Sheet": "Results",
+      "Address": "A251",
+      "Formula": "=XLOOKUP(FALSE,Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",0,-1)"
+    },
+    {
+      "Id": "xm-near-15-0--1",
+      "Sheet": "Results",
+      "Address": "A252",
+      "Formula": "=XMATCH(FALSE,Unsorted!A1:A7,0,-1)"
+    },
+    {
+      "Id": "x-near-15-1-1",
+      "Sheet": "Results",
+      "Address": "A253",
+      "Formula": "=XLOOKUP(FALSE,Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",1,1)"
+    },
+    {
+      "Id": "xm-near-15-1-1",
+      "Sheet": "Results",
+      "Address": "A254",
+      "Formula": "=XMATCH(FALSE,Unsorted!A1:A7,1,1)"
+    },
+    {
+      "Id": "x-near-15-1--1",
+      "Sheet": "Results",
+      "Address": "A255",
+      "Formula": "=XLOOKUP(FALSE,Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",1,-1)"
+    },
+    {
+      "Id": "xm-near-15-1--1",
+      "Sheet": "Results",
+      "Address": "A256",
+      "Formula": "=XMATCH(FALSE,Unsorted!A1:A7,1,-1)"
+    },
+    {
+      "Id": "approx-v-16",
+      "Sheet": "Results",
+      "Address": "A257",
+      "Formula": "=VLOOKUP(\"apple\",Data!A1:B7,2,TRUE)"
+    },
+    {
+      "Id": "approx-h-16",
+      "Sheet": "Results",
+      "Address": "A258",
+      "Formula": "=HLOOKUP(\"apple\",Horizontal!A1:G2,2,TRUE)"
+    },
+    {
+      "Id": "approx-ma-16",
+      "Sheet": "Results",
+      "Address": "A259",
+      "Formula": "=MATCH(\"apple\",Data!A1:A7,1)"
+    },
+    {
+      "Id": "approx-md-16",
+      "Sheet": "Results",
+      "Address": "A260",
+      "Formula": "=MATCH(\"apple\",Desc!A1:A7,-1)"
+    },
+    {
+      "Id": "x-near-16--1-1",
+      "Sheet": "Results",
+      "Address": "A261",
+      "Formula": "=XLOOKUP(\"apple\",Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",-1,1)"
+    },
+    {
+      "Id": "xm-near-16--1-1",
+      "Sheet": "Results",
+      "Address": "A262",
+      "Formula": "=XMATCH(\"apple\",Unsorted!A1:A7,-1,1)"
+    },
+    {
+      "Id": "x-near-16--1--1",
+      "Sheet": "Results",
+      "Address": "A263",
+      "Formula": "=XLOOKUP(\"apple\",Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",-1,-1)"
+    },
+    {
+      "Id": "xm-near-16--1--1",
+      "Sheet": "Results",
+      "Address": "A264",
+      "Formula": "=XMATCH(\"apple\",Unsorted!A1:A7,-1,-1)"
+    },
+    {
+      "Id": "x-near-16-0-1",
+      "Sheet": "Results",
+      "Address": "A265",
+      "Formula": "=XLOOKUP(\"apple\",Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",0,1)"
+    },
+    {
+      "Id": "xm-near-16-0-1",
+      "Sheet": "Results",
+      "Address": "A266",
+      "Formula": "=XMATCH(\"apple\",Unsorted!A1:A7,0,1)"
+    },
+    {
+      "Id": "x-near-16-0--1",
+      "Sheet": "Results",
+      "Address": "A267",
+      "Formula": "=XLOOKUP(\"apple\",Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",0,-1)"
+    },
+    {
+      "Id": "xm-near-16-0--1",
+      "Sheet": "Results",
+      "Address": "A268",
+      "Formula": "=XMATCH(\"apple\",Unsorted!A1:A7,0,-1)"
+    },
+    {
+      "Id": "x-near-16-1-1",
+      "Sheet": "Results",
+      "Address": "A269",
+      "Formula": "=XLOOKUP(\"apple\",Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",1,1)"
+    },
+    {
+      "Id": "xm-near-16-1-1",
+      "Sheet": "Results",
+      "Address": "A270",
+      "Formula": "=XMATCH(\"apple\",Unsorted!A1:A7,1,1)"
+    },
+    {
+      "Id": "x-near-16-1--1",
+      "Sheet": "Results",
+      "Address": "A271",
+      "Formula": "=XLOOKUP(\"apple\",Unsorted!A1:A7,Unsorted!B1:B7,\"missing\",1,-1)"
+    },
+    {
+      "Id": "xm-near-16-1--1",
+      "Sheet": "Results",
+      "Address": "A272",
+      "Formula": "=XMATCH(\"apple\",Unsorted!A1:A7,1,-1)"
+    },
+    {
+      "Id": "exact-v-0",
+      "Sheet": "Results",
+      "Address": "A273",
+      "Formula": "=VLOOKUP(0,Mixed!A1:B20,2,FALSE)"
+    },
+    {
+      "Id": "exact-h-0",
+      "Sheet": "Results",
+      "Address": "A274",
+      "Formula": "=HLOOKUP(0,MixedH!A1:T2,2,FALSE)"
+    },
+    {
+      "Id": "exact-m-0",
+      "Sheet": "Results",
+      "Address": "A275",
+      "Formula": "=MATCH(0,Mixed!A1:A20,0)"
+    },
+    {
+      "Id": "x-exact-0-0-1",
+      "Sheet": "Results",
+      "Address": "A276",
+      "Formula": "=XLOOKUP(0,Mixed!A1:A20,Mixed!B1:B20,\"missing\",0,1)"
+    },
+    {
+      "Id": "xm-exact-0-0-1",
+      "Sheet": "Results",
+      "Address": "A277",
+      "Formula": "=XMATCH(0,Mixed!A1:A20,0,1)"
+    },
+    {
+      "Id": "x-exact-0-0--1",
+      "Sheet": "Results",
+      "Address": "A278",
+      "Formula": "=XLOOKUP(0,Mixed!A1:A20,Mixed!B1:B20,\"missing\",0,-1)"
+    },
+    {
+      "Id": "xm-exact-0-0--1",
+      "Sheet": "Results",
+      "Address": "A279",
+      "Formula": "=XMATCH(0,Mixed!A1:A20,0,-1)"
+    },
+    {
+      "Id": "x-exact-0-2-1",
+      "Sheet": "Results",
+      "Address": "A280",
+      "Formula": "=XLOOKUP(0,Mixed!A1:A20,Mixed!B1:B20,\"missing\",2,1)"
+    },
+    {
+      "Id": "xm-exact-0-2-1",
+      "Sheet": "Results",
+      "Address": "A281",
+      "Formula": "=XMATCH(0,Mixed!A1:A20,2,1)"
+    },
+    {
+      "Id": "x-exact-0-2--1",
+      "Sheet": "Results",
+      "Address": "A282",
+      "Formula": "=XLOOKUP(0,Mixed!A1:A20,Mixed!B1:B20,\"missing\",2,-1)"
+    },
+    {
+      "Id": "xm-exact-0-2--1",
+      "Sheet": "Results",
+      "Address": "A283",
+      "Formula": "=XMATCH(0,Mixed!A1:A20,2,-1)"
+    },
+    {
+      "Id": "exact-v-1",
+      "Sheet": "Results",
+      "Address": "A284",
+      "Formula": "=VLOOKUP(1,Mixed!A1:B20,2,FALSE)"
+    },
+    {
+      "Id": "exact-h-1",
+      "Sheet": "Results",
+      "Address": "A285",
+      "Formula": "=HLOOKUP(1,MixedH!A1:T2,2,FALSE)"
+    },
+    {
+      "Id": "exact-m-1",
+      "Sheet": "Results",
+      "Address": "A286",
+      "Formula": "=MATCH(1,Mixed!A1:A20,0)"
+    },
+    {
+      "Id": "x-exact-1-0-1",
+      "Sheet": "Results",
+      "Address": "A287",
+      "Formula": "=XLOOKUP(1,Mixed!A1:A20,Mixed!B1:B20,\"missing\",0,1)"
+    },
+    {
+      "Id": "xm-exact-1-0-1",
+      "Sheet": "Results",
+      "Address": "A288",
+      "Formula": "=XMATCH(1,Mixed!A1:A20,0,1)"
+    },
+    {
+      "Id": "x-exact-1-0--1",
+      "Sheet": "Results",
+      "Address": "A289",
+      "Formula": "=XLOOKUP(1,Mixed!A1:A20,Mixed!B1:B20,\"missing\",0,-1)"
+    },
+    {
+      "Id": "xm-exact-1-0--1",
+      "Sheet": "Results",
+      "Address": "A290",
+      "Formula": "=XMATCH(1,Mixed!A1:A20,0,-1)"
+    },
+    {
+      "Id": "x-exact-1-2-1",
+      "Sheet": "Results",
+      "Address": "A291",
+      "Formula": "=XLOOKUP(1,Mixed!A1:A20,Mixed!B1:B20,\"missing\",2,1)"
+    },
+    {
+      "Id": "xm-exact-1-2-1",
+      "Sheet": "Results",
+      "Address": "A292",
+      "Formula": "=XMATCH(1,Mixed!A1:A20,2,1)"
+    },
+    {
+      "Id": "x-exact-1-2--1",
+      "Sheet": "Results",
+      "Address": "A293",
+      "Formula": "=XLOOKUP(1,Mixed!A1:A20,Mixed!B1:B20,\"missing\",2,-1)"
+    },
+    {
+      "Id": "xm-exact-1-2--1",
+      "Sheet": "Results",
+      "Address": "A294",
+      "Formula": "=XMATCH(1,Mixed!A1:A20,2,-1)"
+    },
+    {
+      "Id": "exact-v-2",
+      "Sheet": "Results",
+      "Address": "A295",
+      "Formula": "=VLOOKUP(2,Mixed!A1:B20,2,FALSE)"
+    },
+    {
+      "Id": "exact-h-2",
+      "Sheet": "Results",
+      "Address": "A296",
+      "Formula": "=HLOOKUP(2,MixedH!A1:T2,2,FALSE)"
+    },
+    {
+      "Id": "exact-m-2",
+      "Sheet": "Results",
+      "Address": "A297",
+      "Formula": "=MATCH(2,Mixed!A1:A20,0)"
+    },
+    {
+      "Id": "x-exact-2-0-1",
+      "Sheet": "Results",
+      "Address": "A298",
+      "Formula": "=XLOOKUP(2,Mixed!A1:A20,Mixed!B1:B20,\"missing\",0,1)"
+    },
+    {
+      "Id": "xm-exact-2-0-1",
+      "Sheet": "Results",
+      "Address": "A299",
+      "Formula": "=XMATCH(2,Mixed!A1:A20,0,1)"
+    },
+    {
+      "Id": "x-exact-2-0--1",
+      "Sheet": "Results",
+      "Address": "A300",
+      "Formula": "=XLOOKUP(2,Mixed!A1:A20,Mixed!B1:B20,\"missing\",0,-1)"
+    },
+    {
+      "Id": "xm-exact-2-0--1",
+      "Sheet": "Results",
+      "Address": "A301",
+      "Formula": "=XMATCH(2,Mixed!A1:A20,0,-1)"
+    },
+    {
+      "Id": "x-exact-2-2-1",
+      "Sheet": "Results",
+      "Address": "A302",
+      "Formula": "=XLOOKUP(2,Mixed!A1:A20,Mixed!B1:B20,\"missing\",2,1)"
+    },
+    {
+      "Id": "xm-exact-2-2-1",
+      "Sheet": "Results",
+      "Address": "A303",
+      "Formula": "=XMATCH(2,Mixed!A1:A20,2,1)"
+    },
+    {
+      "Id": "x-exact-2-2--1",
+      "Sheet": "Results",
+      "Address": "A304",
+      "Formula": "=XLOOKUP(2,Mixed!A1:A20,Mixed!B1:B20,\"missing\",2,-1)"
+    },
+    {
+      "Id": "xm-exact-2-2--1",
+      "Sheet": "Results",
+      "Address": "A305",
+      "Formula": "=XMATCH(2,Mixed!A1:A20,2,-1)"
+    },
+    {
+      "Id": "exact-v-3",
+      "Sheet": "Results",
+      "Address": "A306",
+      "Formula": "=VLOOKUP(3,Mixed!A1:B20,2,FALSE)"
+    },
+    {
+      "Id": "exact-h-3",
+      "Sheet": "Results",
+      "Address": "A307",
+      "Formula": "=HLOOKUP(3,MixedH!A1:T2,2,FALSE)"
+    },
+    {
+      "Id": "exact-m-3",
+      "Sheet": "Results",
+      "Address": "A308",
+      "Formula": "=MATCH(3,Mixed!A1:A20,0)"
+    },
+    {
+      "Id": "x-exact-3-0-1",
+      "Sheet": "Results",
+      "Address": "A309",
+      "Formula": "=XLOOKUP(3,Mixed!A1:A20,Mixed!B1:B20,\"missing\",0,1)"
+    },
+    {
+      "Id": "xm-exact-3-0-1",
+      "Sheet": "Results",
+      "Address": "A310",
+      "Formula": "=XMATCH(3,Mixed!A1:A20,0,1)"
+    },
+    {
+      "Id": "x-exact-3-0--1",
+      "Sheet": "Results",
+      "Address": "A311",
+      "Formula": "=XLOOKUP(3,Mixed!A1:A20,Mixed!B1:B20,\"missing\",0,-1)"
+    },
+    {
+      "Id": "xm-exact-3-0--1",
+      "Sheet": "Results",
+      "Address": "A312",
+      "Formula": "=XMATCH(3,Mixed!A1:A20,0,-1)"
+    },
+    {
+      "Id": "x-exact-3-2-1",
+      "Sheet": "Results",
+      "Address": "A313",
+      "Formula": "=XLOOKUP(3,Mixed!A1:A20,Mixed!B1:B20,\"missing\",2,1)"
+    },
+    {
+      "Id": "xm-exact-3-2-1",
+      "Sheet": "Results",
+      "Address": "A314",
+      "Formula": "=XMATCH(3,Mixed!A1:A20,2,1)"
+    },
+    {
+      "Id": "x-exact-3-2--1",
+      "Sheet": "Results",
+      "Address": "A315",
+      "Formula": "=XLOOKUP(3,Mixed!A1:A20,Mixed!B1:B20,\"missing\",2,-1)"
+    },
+    {
+      "Id": "xm-exact-3-2--1",
+      "Sheet": "Results",
+      "Address": "A316",
+      "Formula": "=XMATCH(3,Mixed!A1:A20,2,-1)"
+    },
+    {
+      "Id": "exact-v-4",
+      "Sheet": "Results",
+      "Address": "A317",
+      "Formula": "=VLOOKUP(\"0\",Mixed!A1:B20,2,FALSE)"
+    },
+    {
+      "Id": "exact-h-4",
+      "Sheet": "Results",
+      "Address": "A318",
+      "Formula": "=HLOOKUP(\"0\",MixedH!A1:T2,2,FALSE)"
+    },
+    {
+      "Id": "exact-m-4",
+      "Sheet": "Results",
+      "Address": "A319",
+      "Formula": "=MATCH(\"0\",Mixed!A1:A20,0)"
+    },
+    {
+      "Id": "x-exact-4-0-1",
+      "Sheet": "Results",
+      "Address": "A320",
+      "Formula": "=XLOOKUP(\"0\",Mixed!A1:A20,Mixed!B1:B20,\"missing\",0,1)"
+    },
+    {
+      "Id": "xm-exact-4-0-1",
+      "Sheet": "Results",
+      "Address": "A321",
+      "Formula": "=XMATCH(\"0\",Mixed!A1:A20,0,1)"
+    },
+    {
+      "Id": "x-exact-4-0--1",
+      "Sheet": "Results",
+      "Address": "A322",
+      "Formula": "=XLOOKUP(\"0\",Mixed!A1:A20,Mixed!B1:B20,\"missing\",0,-1)"
+    },
+    {
+      "Id": "xm-exact-4-0--1",
+      "Sheet": "Results",
+      "Address": "A323",
+      "Formula": "=XMATCH(\"0\",Mixed!A1:A20,0,-1)"
+    },
+    {
+      "Id": "x-exact-4-2-1",
+      "Sheet": "Results",
+      "Address": "A324",
+      "Formula": "=XLOOKUP(\"0\",Mixed!A1:A20,Mixed!B1:B20,\"missing\",2,1)"
+    },
+    {
+      "Id": "xm-exact-4-2-1",
+      "Sheet": "Results",
+      "Address": "A325",
+      "Formula": "=XMATCH(\"0\",Mixed!A1:A20,2,1)"
+    },
+    {
+      "Id": "x-exact-4-2--1",
+      "Sheet": "Results",
+      "Address": "A326",
+      "Formula": "=XLOOKUP(\"0\",Mixed!A1:A20,Mixed!B1:B20,\"missing\",2,-1)"
+    },
+    {
+      "Id": "xm-exact-4-2--1",
+      "Sheet": "Results",
+      "Address": "A327",
+      "Formula": "=XMATCH(\"0\",Mixed!A1:A20,2,-1)"
+    },
+    {
+      "Id": "exact-v-5",
+      "Sheet": "Results",
+      "Address": "A328",
+      "Formula": "=VLOOKUP(\"2\",Mixed!A1:B20,2,FALSE)"
+    },
+    {
+      "Id": "exact-h-5",
+      "Sheet": "Results",
+      "Address": "A329",
+      "Formula": "=HLOOKUP(\"2\",MixedH!A1:T2,2,FALSE)"
+    },
+    {
+      "Id": "exact-m-5",
+      "Sheet": "Results",
+      "Address": "A330",
+      "Formula": "=MATCH(\"2\",Mixed!A1:A20,0)"
+    },
+    {
+      "Id": "x-exact-5-0-1",
+      "Sheet": "Results",
+      "Address": "A331",
+      "Formula": "=XLOOKUP(\"2\",Mixed!A1:A20,Mixed!B1:B20,\"missing\",0,1)"
+    },
+    {
+      "Id": "xm-exact-5-0-1",
+      "Sheet": "Results",
+      "Address": "A332",
+      "Formula": "=XMATCH(\"2\",Mixed!A1:A20,0,1)"
+    },
+    {
+      "Id": "x-exact-5-0--1",
+      "Sheet": "Results",
+      "Address": "A333",
+      "Formula": "=XLOOKUP(\"2\",Mixed!A1:A20,Mixed!B1:B20,\"missing\",0,-1)"
+    },
+    {
+      "Id": "xm-exact-5-0--1",
+      "Sheet": "Results",
+      "Address": "A334",
+      "Formula": "=XMATCH(\"2\",Mixed!A1:A20,0,-1)"
+    },
+    {
+      "Id": "x-exact-5-2-1",
+      "Sheet": "Results",
+      "Address": "A335",
+      "Formula": "=XLOOKUP(\"2\",Mixed!A1:A20,Mixed!B1:B20,\"missing\",2,1)"
+    },
+    {
+      "Id": "xm-exact-5-2-1",
+      "Sheet": "Results",
+      "Address": "A336",
+      "Formula": "=XMATCH(\"2\",Mixed!A1:A20,2,1)"
+    },
+    {
+      "Id": "x-exact-5-2--1",
+      "Sheet": "Results",
+      "Address": "A337",
+      "Formula": "=XLOOKUP(\"2\",Mixed!A1:A20,Mixed!B1:B20,\"missing\",2,-1)"
+    },
+    {
+      "Id": "xm-exact-5-2--1",
+      "Sheet": "Results",
+      "Address": "A338",
+      "Formula": "=XMATCH(\"2\",Mixed!A1:A20,2,-1)"
+    },
+    {
+      "Id": "exact-v-6",
+      "Sheet": "Results",
+      "Address": "A339",
+      "Formula": "=VLOOKUP(TRUE,Mixed!A1:B20,2,FALSE)"
+    },
+    {
+      "Id": "exact-h-6",
+      "Sheet": "Results",
+      "Address": "A340",
+      "Formula": "=HLOOKUP(TRUE,MixedH!A1:T2,2,FALSE)"
+    },
+    {
+      "Id": "exact-m-6",
+      "Sheet": "Results",
+      "Address": "A341",
+      "Formula": "=MATCH(TRUE,Mixed!A1:A20,0)"
+    },
+    {
+      "Id": "x-exact-6-0-1",
+      "Sheet": "Results",
+      "Address": "A342",
+      "Formula": "=XLOOKUP(TRUE,Mixed!A1:A20,Mixed!B1:B20,\"missing\",0,1)"
+    },
+    {
+      "Id": "xm-exact-6-0-1",
+      "Sheet": "Results",
+      "Address": "A343",
+      "Formula": "=XMATCH(TRUE,Mixed!A1:A20,0,1)"
+    },
+    {
+      "Id": "x-exact-6-0--1",
+      "Sheet": "Results",
+      "Address": "A344",
+      "Formula": "=XLOOKUP(TRUE,Mixed!A1:A20,Mixed!B1:B20,\"missing\",0,-1)"
+    },
+    {
+      "Id": "xm-exact-6-0--1",
+      "Sheet": "Results",
+      "Address": "A345",
+      "Formula": "=XMATCH(TRUE,Mixed!A1:A20,0,-1)"
+    },
+    {
+      "Id": "x-exact-6-2-1",
+      "Sheet": "Results",
+      "Address": "A346",
+      "Formula": "=XLOOKUP(TRUE,Mixed!A1:A20,Mixed!B1:B20,\"missing\",2,1)"
+    },
+    {
+      "Id": "xm-exact-6-2-1",
+      "Sheet": "Results",
+      "Address": "A347",
+      "Formula": "=XMATCH(TRUE,Mixed!A1:A20,2,1)"
+    },
+    {
+      "Id": "x-exact-6-2--1",
+      "Sheet": "Results",
+      "Address": "A348",
+      "Formula": "=XLOOKUP(TRUE,Mixed!A1:A20,Mixed!B1:B20,\"missing\",2,-1)"
+    },
+    {
+      "Id": "xm-exact-6-2--1",
+      "Sheet": "Results",
+      "Address": "A349",
+      "Formula": "=XMATCH(TRUE,Mixed!A1:A20,2,-1)"
+    },
+    {
+      "Id": "exact-v-7",
+      "Sheet": "Results",
+      "Address": "A350",
+      "Formula": "=VLOOKUP(FALSE,Mixed!A1:B20,2,FALSE)"
+    },
+    {
+      "Id": "exact-h-7",
+      "Sheet": "Results",
+      "Address": "A351",
+      "Formula": "=HLOOKUP(FALSE,MixedH!A1:T2,2,FALSE)"
+    },
+    {
+      "Id": "exact-m-7",
+      "Sheet": "Results",
+      "Address": "A352",
+      "Formula": "=MATCH(FALSE,Mixed!A1:A20,0)"
+    },
+    {
+      "Id": "x-exact-7-0-1",
+      "Sheet": "Results",
+      "Address": "A353",
+      "Formula": "=XLOOKUP(FALSE,Mixed!A1:A20,Mixed!B1:B20,\"missing\",0,1)"
+    },
+    {
+      "Id": "xm-exact-7-0-1",
+      "Sheet": "Results",
+      "Address": "A354",
+      "Formula": "=XMATCH(FALSE,Mixed!A1:A20,0,1)"
+    },
+    {
+      "Id": "x-exact-7-0--1",
+      "Sheet": "Results",
+      "Address": "A355",
+      "Formula": "=XLOOKUP(FALSE,Mixed!A1:A20,Mixed!B1:B20,\"missing\",0,-1)"
+    },
+    {
+      "Id": "xm-exact-7-0--1",
+      "Sheet": "Results",
+      "Address": "A356",
+      "Formula": "=XMATCH(FALSE,Mixed!A1:A20,0,-1)"
+    },
+    {
+      "Id": "x-exact-7-2-1",
+      "Sheet": "Results",
+      "Address": "A357",
+      "Formula": "=XLOOKUP(FALSE,Mixed!A1:A20,Mixed!B1:B20,\"missing\",2,1)"
+    },
+    {
+      "Id": "xm-exact-7-2-1",
+      "Sheet": "Results",
+      "Address": "A358",
+      "Formula": "=XMATCH(FALSE,Mixed!A1:A20,2,1)"
+    },
+    {
+      "Id": "x-exact-7-2--1",
+      "Sheet": "Results",
+      "Address": "A359",
+      "Formula": "=XLOOKUP(FALSE,Mixed!A1:A20,Mixed!B1:B20,\"missing\",2,-1)"
+    },
+    {
+      "Id": "xm-exact-7-2--1",
+      "Sheet": "Results",
+      "Address": "A360",
+      "Formula": "=XMATCH(FALSE,Mixed!A1:A20,2,-1)"
+    },
+    {
+      "Id": "exact-v-8",
+      "Sheet": "Results",
+      "Address": "A361",
+      "Formula": "=VLOOKUP(\"TRUE\",Mixed!A1:B20,2,FALSE)"
+    },
+    {
+      "Id": "exact-h-8",
+      "Sheet": "Results",
+      "Address": "A362",
+      "Formula": "=HLOOKUP(\"TRUE\",MixedH!A1:T2,2,FALSE)"
+    },
+    {
+      "Id": "exact-m-8",
+      "Sheet": "Results",
+      "Address": "A363",
+      "Formula": "=MATCH(\"TRUE\",Mixed!A1:A20,0)"
+    },
+    {
+      "Id": "x-exact-8-0-1",
+      "Sheet": "Results",
+      "Address": "A364",
+      "Formula": "=XLOOKUP(\"TRUE\",Mixed!A1:A20,Mixed!B1:B20,\"missing\",0,1)"
+    },
+    {
+      "Id": "xm-exact-8-0-1",
+      "Sheet": "Results",
+      "Address": "A365",
+      "Formula": "=XMATCH(\"TRUE\",Mixed!A1:A20,0,1)"
+    },
+    {
+      "Id": "x-exact-8-0--1",
+      "Sheet": "Results",
+      "Address": "A366",
+      "Formula": "=XLOOKUP(\"TRUE\",Mixed!A1:A20,Mixed!B1:B20,\"missing\",0,-1)"
+    },
+    {
+      "Id": "xm-exact-8-0--1",
+      "Sheet": "Results",
+      "Address": "A367",
+      "Formula": "=XMATCH(\"TRUE\",Mixed!A1:A20,0,-1)"
+    },
+    {
+      "Id": "x-exact-8-2-1",
+      "Sheet": "Results",
+      "Address": "A368",
+      "Formula": "=XLOOKUP(\"TRUE\",Mixed!A1:A20,Mixed!B1:B20,\"missing\",2,1)"
+    },
+    {
+      "Id": "xm-exact-8-2-1",
+      "Sheet": "Results",
+      "Address": "A369",
+      "Formula": "=XMATCH(\"TRUE\",Mixed!A1:A20,2,1)"
+    },
+    {
+      "Id": "x-exact-8-2--1",
+      "Sheet": "Results",
+      "Address": "A370",
+      "Formula": "=XLOOKUP(\"TRUE\",Mixed!A1:A20,Mixed!B1:B20,\"missing\",2,-1)"
+    },
+    {
+      "Id": "xm-exact-8-2--1",
+      "Sheet": "Results",
+      "Address": "A371",
+      "Formula": "=XMATCH(\"TRUE\",Mixed!A1:A20,2,-1)"
+    },
+    {
+      "Id": "exact-v-9",
+      "Sheet": "Results",
+      "Address": "A372",
+      "Formula": "=VLOOKUP(\"\",Mixed!A1:B20,2,FALSE)"
+    },
+    {
+      "Id": "exact-h-9",
+      "Sheet": "Results",
+      "Address": "A373",
+      "Formula": "=HLOOKUP(\"\",MixedH!A1:T2,2,FALSE)"
+    },
+    {
+      "Id": "exact-m-9",
+      "Sheet": "Results",
+      "Address": "A374",
+      "Formula": "=MATCH(\"\",Mixed!A1:A20,0)"
+    },
+    {
+      "Id": "x-exact-9-0-1",
+      "Sheet": "Results",
+      "Address": "A375",
+      "Formula": "=XLOOKUP(\"\",Mixed!A1:A20,Mixed!B1:B20,\"missing\",0,1)"
+    },
+    {
+      "Id": "xm-exact-9-0-1",
+      "Sheet": "Results",
+      "Address": "A376",
+      "Formula": "=XMATCH(\"\",Mixed!A1:A20,0,1)"
+    },
+    {
+      "Id": "x-exact-9-0--1",
+      "Sheet": "Results",
+      "Address": "A377",
+      "Formula": "=XLOOKUP(\"\",Mixed!A1:A20,Mixed!B1:B20,\"missing\",0,-1)"
+    },
+    {
+      "Id": "xm-exact-9-0--1",
+      "Sheet": "Results",
+      "Address": "A378",
+      "Formula": "=XMATCH(\"\",Mixed!A1:A20,0,-1)"
+    },
+    {
+      "Id": "x-exact-9-2-1",
+      "Sheet": "Results",
+      "Address": "A379",
+      "Formula": "=XLOOKUP(\"\",Mixed!A1:A20,Mixed!B1:B20,\"missing\",2,1)"
+    },
+    {
+      "Id": "xm-exact-9-2-1",
+      "Sheet": "Results",
+      "Address": "A380",
+      "Formula": "=XMATCH(\"\",Mixed!A1:A20,2,1)"
+    },
+    {
+      "Id": "x-exact-9-2--1",
+      "Sheet": "Results",
+      "Address": "A381",
+      "Formula": "=XLOOKUP(\"\",Mixed!A1:A20,Mixed!B1:B20,\"missing\",2,-1)"
+    },
+    {
+      "Id": "xm-exact-9-2--1",
+      "Sheet": "Results",
+      "Address": "A382",
+      "Formula": "=XMATCH(\"\",Mixed!A1:A20,2,-1)"
+    },
+    {
+      "Id": "exact-v-10",
+      "Sheet": "Results",
+      "Address": "A383",
+      "Formula": "=VLOOKUP(Mixed!D1,Mixed!A1:B20,2,FALSE)"
+    },
+    {
+      "Id": "exact-h-10",
+      "Sheet": "Results",
+      "Address": "A384",
+      "Formula": "=HLOOKUP(Mixed!D1,MixedH!A1:T2,2,FALSE)"
+    },
+    {
+      "Id": "exact-m-10",
+      "Sheet": "Results",
+      "Address": "A385",
+      "Formula": "=MATCH(Mixed!D1,Mixed!A1:A20,0)"
+    },
+    {
+      "Id": "x-exact-10-0-1",
+      "Sheet": "Results",
+      "Address": "A386",
+      "Formula": "=XLOOKUP(Mixed!D1,Mixed!A1:A20,Mixed!B1:B20,\"missing\",0,1)"
+    },
+    {
+      "Id": "xm-exact-10-0-1",
+      "Sheet": "Results",
+      "Address": "A387",
+      "Formula": "=XMATCH(Mixed!D1,Mixed!A1:A20,0,1)"
+    },
+    {
+      "Id": "x-exact-10-0--1",
+      "Sheet": "Results",
+      "Address": "A388",
+      "Formula": "=XLOOKUP(Mixed!D1,Mixed!A1:A20,Mixed!B1:B20,\"missing\",0,-1)"
+    },
+    {
+      "Id": "xm-exact-10-0--1",
+      "Sheet": "Results",
+      "Address": "A389",
+      "Formula": "=XMATCH(Mixed!D1,Mixed!A1:A20,0,-1)"
+    },
+    {
+      "Id": "x-exact-10-2-1",
+      "Sheet": "Results",
+      "Address": "A390",
+      "Formula": "=XLOOKUP(Mixed!D1,Mixed!A1:A20,Mixed!B1:B20,\"missing\",2,1)"
+    },
+    {
+      "Id": "xm-exact-10-2-1",
+      "Sheet": "Results",
+      "Address": "A391",
+      "Formula": "=XMATCH(Mixed!D1,Mixed!A1:A20,2,1)"
+    },
+    {
+      "Id": "x-exact-10-2--1",
+      "Sheet": "Results",
+      "Address": "A392",
+      "Formula": "=XLOOKUP(Mixed!D1,Mixed!A1:A20,Mixed!B1:B20,\"missing\",2,-1)"
+    },
+    {
+      "Id": "xm-exact-10-2--1",
+      "Sheet": "Results",
+      "Address": "A393",
+      "Formula": "=XMATCH(Mixed!D1,Mixed!A1:A20,2,-1)"
+    },
+    {
+      "Id": "exact-v-11",
+      "Sheet": "Results",
+      "Address": "A394",
+      "Formula": "=VLOOKUP(\"apple\",Mixed!A1:B20,2,FALSE)"
+    },
+    {
+      "Id": "exact-h-11",
+      "Sheet": "Results",
+      "Address": "A395",
+      "Formula": "=HLOOKUP(\"apple\",MixedH!A1:T2,2,FALSE)"
+    },
+    {
+      "Id": "exact-m-11",
+      "Sheet": "Results",
+      "Address": "A396",
+      "Formula": "=MATCH(\"apple\",Mixed!A1:A20,0)"
+    },
+    {
+      "Id": "x-exact-11-0-1",
+      "Sheet": "Results",
+      "Address": "A397",
+      "Formula": "=XLOOKUP(\"apple\",Mixed!A1:A20,Mixed!B1:B20,\"missing\",0,1)"
+    },
+    {
+      "Id": "xm-exact-11-0-1",
+      "Sheet": "Results",
+      "Address": "A398",
+      "Formula": "=XMATCH(\"apple\",Mixed!A1:A20,0,1)"
+    },
+    {
+      "Id": "x-exact-11-0--1",
+      "Sheet": "Results",
+      "Address": "A399",
+      "Formula": "=XLOOKUP(\"apple\",Mixed!A1:A20,Mixed!B1:B20,\"missing\",0,-1)"
+    },
+    {
+      "Id": "xm-exact-11-0--1",
+      "Sheet": "Results",
+      "Address": "A400",
+      "Formula": "=XMATCH(\"apple\",Mixed!A1:A20,0,-1)"
+    },
+    {
+      "Id": "x-exact-11-2-1",
+      "Sheet": "Results",
+      "Address": "A401",
+      "Formula": "=XLOOKUP(\"apple\",Mixed!A1:A20,Mixed!B1:B20,\"missing\",2,1)"
+    },
+    {
+      "Id": "xm-exact-11-2-1",
+      "Sheet": "Results",
+      "Address": "A402",
+      "Formula": "=XMATCH(\"apple\",Mixed!A1:A20,2,1)"
+    },
+    {
+      "Id": "x-exact-11-2--1",
+      "Sheet": "Results",
+      "Address": "A403",
+      "Formula": "=XLOOKUP(\"apple\",Mixed!A1:A20,Mixed!B1:B20,\"missing\",2,-1)"
+    },
+    {
+      "Id": "xm-exact-11-2--1",
+      "Sheet": "Results",
+      "Address": "A404",
+      "Formula": "=XMATCH(\"apple\",Mixed!A1:A20,2,-1)"
+    },
+    {
+      "Id": "exact-v-12",
+      "Sheet": "Results",
+      "Address": "A405",
+      "Formula": "=VLOOKUP(\"APPLE\",Mixed!A1:B20,2,FALSE)"
+    },
+    {
+      "Id": "exact-h-12",
+      "Sheet": "Results",
+      "Address": "A406",
+      "Formula": "=HLOOKUP(\"APPLE\",MixedH!A1:T2,2,FALSE)"
+    },
+    {
+      "Id": "exact-m-12",
+      "Sheet": "Results",
+      "Address": "A407",
+      "Formula": "=MATCH(\"APPLE\",Mixed!A1:A20,0)"
+    },
+    {
+      "Id": "x-exact-12-0-1",
+      "Sheet": "Results",
+      "Address": "A408",
+      "Formula": "=XLOOKUP(\"APPLE\",Mixed!A1:A20,Mixed!B1:B20,\"missing\",0,1)"
+    },
+    {
+      "Id": "xm-exact-12-0-1",
+      "Sheet": "Results",
+      "Address": "A409",
+      "Formula": "=XMATCH(\"APPLE\",Mixed!A1:A20,0,1)"
+    },
+    {
+      "Id": "x-exact-12-0--1",
+      "Sheet": "Results",
+      "Address": "A410",
+      "Formula": "=XLOOKUP(\"APPLE\",Mixed!A1:A20,Mixed!B1:B20,\"missing\",0,-1)"
+    },
+    {
+      "Id": "xm-exact-12-0--1",
+      "Sheet": "Results",
+      "Address": "A411",
+      "Formula": "=XMATCH(\"APPLE\",Mixed!A1:A20,0,-1)"
+    },
+    {
+      "Id": "x-exact-12-2-1",
+      "Sheet": "Results",
+      "Address": "A412",
+      "Formula": "=XLOOKUP(\"APPLE\",Mixed!A1:A20,Mixed!B1:B20,\"missing\",2,1)"
+    },
+    {
+      "Id": "xm-exact-12-2-1",
+      "Sheet": "Results",
+      "Address": "A413",
+      "Formula": "=XMATCH(\"APPLE\",Mixed!A1:A20,2,1)"
+    },
+    {
+      "Id": "x-exact-12-2--1",
+      "Sheet": "Results",
+      "Address": "A414",
+      "Formula": "=XLOOKUP(\"APPLE\",Mixed!A1:A20,Mixed!B1:B20,\"missing\",2,-1)"
+    },
+    {
+      "Id": "xm-exact-12-2--1",
+      "Sheet": "Results",
+      "Address": "A415",
+      "Formula": "=XMATCH(\"APPLE\",Mixed!A1:A20,2,-1)"
+    },
+    {
+      "Id": "exact-v-13",
+      "Sheet": "Results",
+      "Address": "A416",
+      "Formula": "=VLOOKUP(\"a*\",Mixed!A1:B20,2,FALSE)"
+    },
+    {
+      "Id": "exact-h-13",
+      "Sheet": "Results",
+      "Address": "A417",
+      "Formula": "=HLOOKUP(\"a*\",MixedH!A1:T2,2,FALSE)"
+    },
+    {
+      "Id": "exact-m-13",
+      "Sheet": "Results",
+      "Address": "A418",
+      "Formula": "=MATCH(\"a*\",Mixed!A1:A20,0)"
+    },
+    {
+      "Id": "x-exact-13-0-1",
+      "Sheet": "Results",
+      "Address": "A419",
+      "Formula": "=XLOOKUP(\"a*\",Mixed!A1:A20,Mixed!B1:B20,\"missing\",0,1)"
+    },
+    {
+      "Id": "xm-exact-13-0-1",
+      "Sheet": "Results",
+      "Address": "A420",
+      "Formula": "=XMATCH(\"a*\",Mixed!A1:A20,0,1)"
+    },
+    {
+      "Id": "x-exact-13-0--1",
+      "Sheet": "Results",
+      "Address": "A421",
+      "Formula": "=XLOOKUP(\"a*\",Mixed!A1:A20,Mixed!B1:B20,\"missing\",0,-1)"
+    },
+    {
+      "Id": "xm-exact-13-0--1",
+      "Sheet": "Results",
+      "Address": "A422",
+      "Formula": "=XMATCH(\"a*\",Mixed!A1:A20,0,-1)"
+    },
+    {
+      "Id": "x-exact-13-2-1",
+      "Sheet": "Results",
+      "Address": "A423",
+      "Formula": "=XLOOKUP(\"a*\",Mixed!A1:A20,Mixed!B1:B20,\"missing\",2,1)"
+    },
+    {
+      "Id": "xm-exact-13-2-1",
+      "Sheet": "Results",
+      "Address": "A424",
+      "Formula": "=XMATCH(\"a*\",Mixed!A1:A20,2,1)"
+    },
+    {
+      "Id": "x-exact-13-2--1",
+      "Sheet": "Results",
+      "Address": "A425",
+      "Formula": "=XLOOKUP(\"a*\",Mixed!A1:A20,Mixed!B1:B20,\"missing\",2,-1)"
+    },
+    {
+      "Id": "xm-exact-13-2--1",
+      "Sheet": "Results",
+      "Address": "A426",
+      "Formula": "=XMATCH(\"a*\",Mixed!A1:A20,2,-1)"
+    },
+    {
+      "Id": "exact-v-14",
+      "Sheet": "Results",
+      "Address": "A427",
+      "Formula": "=VLOOKUP(\"a~*b\",Mixed!A1:B20,2,FALSE)"
+    },
+    {
+      "Id": "exact-h-14",
+      "Sheet": "Results",
+      "Address": "A428",
+      "Formula": "=HLOOKUP(\"a~*b\",MixedH!A1:T2,2,FALSE)"
+    },
+    {
+      "Id": "exact-m-14",
+      "Sheet": "Results",
+      "Address": "A429",
+      "Formula": "=MATCH(\"a~*b\",Mixed!A1:A20,0)"
+    },
+    {
+      "Id": "x-exact-14-0-1",
+      "Sheet": "Results",
+      "Address": "A430",
+      "Formula": "=XLOOKUP(\"a~*b\",Mixed!A1:A20,Mixed!B1:B20,\"missing\",0,1)"
+    },
+    {
+      "Id": "xm-exact-14-0-1",
+      "Sheet": "Results",
+      "Address": "A431",
+      "Formula": "=XMATCH(\"a~*b\",Mixed!A1:A20,0,1)"
+    },
+    {
+      "Id": "x-exact-14-0--1",
+      "Sheet": "Results",
+      "Address": "A432",
+      "Formula": "=XLOOKUP(\"a~*b\",Mixed!A1:A20,Mixed!B1:B20,\"missing\",0,-1)"
+    },
+    {
+      "Id": "xm-exact-14-0--1",
+      "Sheet": "Results",
+      "Address": "A433",
+      "Formula": "=XMATCH(\"a~*b\",Mixed!A1:A20,0,-1)"
+    },
+    {
+      "Id": "x-exact-14-2-1",
+      "Sheet": "Results",
+      "Address": "A434",
+      "Formula": "=XLOOKUP(\"a~*b\",Mixed!A1:A20,Mixed!B1:B20,\"missing\",2,1)"
+    },
+    {
+      "Id": "xm-exact-14-2-1",
+      "Sheet": "Results",
+      "Address": "A435",
+      "Formula": "=XMATCH(\"a~*b\",Mixed!A1:A20,2,1)"
+    },
+    {
+      "Id": "x-exact-14-2--1",
+      "Sheet": "Results",
+      "Address": "A436",
+      "Formula": "=XLOOKUP(\"a~*b\",Mixed!A1:A20,Mixed!B1:B20,\"missing\",2,-1)"
+    },
+    {
+      "Id": "xm-exact-14-2--1",
+      "Sheet": "Results",
+      "Address": "A437",
+      "Formula": "=XMATCH(\"a~*b\",Mixed!A1:A20,2,-1)"
+    },
+    {
+      "Id": "exact-v-15",
+      "Sheet": "Results",
+      "Address": "A438",
+      "Formula": "=VLOOKUP(\"a~?b\",Mixed!A1:B20,2,FALSE)"
+    },
+    {
+      "Id": "exact-h-15",
+      "Sheet": "Results",
+      "Address": "A439",
+      "Formula": "=HLOOKUP(\"a~?b\",MixedH!A1:T2,2,FALSE)"
+    },
+    {
+      "Id": "exact-m-15",
+      "Sheet": "Results",
+      "Address": "A440",
+      "Formula": "=MATCH(\"a~?b\",Mixed!A1:A20,0)"
+    },
+    {
+      "Id": "x-exact-15-0-1",
+      "Sheet": "Results",
+      "Address": "A441",
+      "Formula": "=XLOOKUP(\"a~?b\",Mixed!A1:A20,Mixed!B1:B20,\"missing\",0,1)"
+    },
+    {
+      "Id": "xm-exact-15-0-1",
+      "Sheet": "Results",
+      "Address": "A442",
+      "Formula": "=XMATCH(\"a~?b\",Mixed!A1:A20,0,1)"
+    },
+    {
+      "Id": "x-exact-15-0--1",
+      "Sheet": "Results",
+      "Address": "A443",
+      "Formula": "=XLOOKUP(\"a~?b\",Mixed!A1:A20,Mixed!B1:B20,\"missing\",0,-1)"
+    },
+    {
+      "Id": "xm-exact-15-0--1",
+      "Sheet": "Results",
+      "Address": "A444",
+      "Formula": "=XMATCH(\"a~?b\",Mixed!A1:A20,0,-1)"
+    },
+    {
+      "Id": "x-exact-15-2-1",
+      "Sheet": "Results",
+      "Address": "A445",
+      "Formula": "=XLOOKUP(\"a~?b\",Mixed!A1:A20,Mixed!B1:B20,\"missing\",2,1)"
+    },
+    {
+      "Id": "xm-exact-15-2-1",
+      "Sheet": "Results",
+      "Address": "A446",
+      "Formula": "=XMATCH(\"a~?b\",Mixed!A1:A20,2,1)"
+    },
+    {
+      "Id": "x-exact-15-2--1",
+      "Sheet": "Results",
+      "Address": "A447",
+      "Formula": "=XLOOKUP(\"a~?b\",Mixed!A1:A20,Mixed!B1:B20,\"missing\",2,-1)"
+    },
+    {
+      "Id": "xm-exact-15-2--1",
+      "Sheet": "Results",
+      "Address": "A448",
+      "Formula": "=XMATCH(\"a~?b\",Mixed!A1:A20,2,-1)"
+    },
+    {
+      "Id": "exact-v-16",
+      "Sheet": "Results",
+      "Address": "A449",
+      "Formula": "=VLOOKUP(\"a~~b\",Mixed!A1:B20,2,FALSE)"
+    },
+    {
+      "Id": "exact-h-16",
+      "Sheet": "Results",
+      "Address": "A450",
+      "Formula": "=HLOOKUP(\"a~~b\",MixedH!A1:T2,2,FALSE)"
+    },
+    {
+      "Id": "exact-m-16",
+      "Sheet": "Results",
+      "Address": "A451",
+      "Formula": "=MATCH(\"a~~b\",Mixed!A1:A20,0)"
+    },
+    {
+      "Id": "x-exact-16-0-1",
+      "Sheet": "Results",
+      "Address": "A452",
+      "Formula": "=XLOOKUP(\"a~~b\",Mixed!A1:A20,Mixed!B1:B20,\"missing\",0,1)"
+    },
+    {
+      "Id": "xm-exact-16-0-1",
+      "Sheet": "Results",
+      "Address": "A453",
+      "Formula": "=XMATCH(\"a~~b\",Mixed!A1:A20,0,1)"
+    },
+    {
+      "Id": "x-exact-16-0--1",
+      "Sheet": "Results",
+      "Address": "A454",
+      "Formula": "=XLOOKUP(\"a~~b\",Mixed!A1:A20,Mixed!B1:B20,\"missing\",0,-1)"
+    },
+    {
+      "Id": "xm-exact-16-0--1",
+      "Sheet": "Results",
+      "Address": "A455",
+      "Formula": "=XMATCH(\"a~~b\",Mixed!A1:A20,0,-1)"
+    },
+    {
+      "Id": "x-exact-16-2-1",
+      "Sheet": "Results",
+      "Address": "A456",
+      "Formula": "=XLOOKUP(\"a~~b\",Mixed!A1:A20,Mixed!B1:B20,\"missing\",2,1)"
+    },
+    {
+      "Id": "xm-exact-16-2-1",
+      "Sheet": "Results",
+      "Address": "A457",
+      "Formula": "=XMATCH(\"a~~b\",Mixed!A1:A20,2,1)"
+    },
+    {
+      "Id": "x-exact-16-2--1",
+      "Sheet": "Results",
+      "Address": "A458",
+      "Formula": "=XLOOKUP(\"a~~b\",Mixed!A1:A20,Mixed!B1:B20,\"missing\",2,-1)"
+    },
+    {
+      "Id": "xm-exact-16-2--1",
+      "Sheet": "Results",
+      "Address": "A459",
+      "Formula": "=XMATCH(\"a~~b\",Mixed!A1:A20,2,-1)"
+    },
+    {
+      "Id": "exact-v-17",
+      "Sheet": "Results",
+      "Address": "A460",
+      "Formula": "=VLOOKUP(\"~\",Mixed!A1:B20,2,FALSE)"
+    },
+    {
+      "Id": "exact-h-17",
+      "Sheet": "Results",
+      "Address": "A461",
+      "Formula": "=HLOOKUP(\"~\",MixedH!A1:T2,2,FALSE)"
+    },
+    {
+      "Id": "exact-m-17",
+      "Sheet": "Results",
+      "Address": "A462",
+      "Formula": "=MATCH(\"~\",Mixed!A1:A20,0)"
+    },
+    {
+      "Id": "x-exact-17-0-1",
+      "Sheet": "Results",
+      "Address": "A463",
+      "Formula": "=XLOOKUP(\"~\",Mixed!A1:A20,Mixed!B1:B20,\"missing\",0,1)"
+    },
+    {
+      "Id": "xm-exact-17-0-1",
+      "Sheet": "Results",
+      "Address": "A464",
+      "Formula": "=XMATCH(\"~\",Mixed!A1:A20,0,1)"
+    },
+    {
+      "Id": "x-exact-17-0--1",
+      "Sheet": "Results",
+      "Address": "A465",
+      "Formula": "=XLOOKUP(\"~\",Mixed!A1:A20,Mixed!B1:B20,\"missing\",0,-1)"
+    },
+    {
+      "Id": "xm-exact-17-0--1",
+      "Sheet": "Results",
+      "Address": "A466",
+      "Formula": "=XMATCH(\"~\",Mixed!A1:A20,0,-1)"
+    },
+    {
+      "Id": "x-exact-17-2-1",
+      "Sheet": "Results",
+      "Address": "A467",
+      "Formula": "=XLOOKUP(\"~\",Mixed!A1:A20,Mixed!B1:B20,\"missing\",2,1)"
+    },
+    {
+      "Id": "xm-exact-17-2-1",
+      "Sheet": "Results",
+      "Address": "A468",
+      "Formula": "=XMATCH(\"~\",Mixed!A1:A20,2,1)"
+    },
+    {
+      "Id": "x-exact-17-2--1",
+      "Sheet": "Results",
+      "Address": "A469",
+      "Formula": "=XLOOKUP(\"~\",Mixed!A1:A20,Mixed!B1:B20,\"missing\",2,-1)"
+    },
+    {
+      "Id": "xm-exact-17-2--1",
+      "Sheet": "Results",
+      "Address": "A470",
+      "Formula": "=XMATCH(\"~\",Mixed!A1:A20,2,-1)"
+    },
+    {
+      "Id": "exact-v-18",
+      "Sheet": "Results",
+      "Address": "A471",
+      "Formula": "=VLOOKUP(\"~~\",Mixed!A1:B20,2,FALSE)"
+    },
+    {
+      "Id": "exact-h-18",
+      "Sheet": "Results",
+      "Address": "A472",
+      "Formula": "=HLOOKUP(\"~~\",MixedH!A1:T2,2,FALSE)"
+    },
+    {
+      "Id": "exact-m-18",
+      "Sheet": "Results",
+      "Address": "A473",
+      "Formula": "=MATCH(\"~~\",Mixed!A1:A20,0)"
+    },
+    {
+      "Id": "x-exact-18-0-1",
+      "Sheet": "Results",
+      "Address": "A474",
+      "Formula": "=XLOOKUP(\"~~\",Mixed!A1:A20,Mixed!B1:B20,\"missing\",0,1)"
+    },
+    {
+      "Id": "xm-exact-18-0-1",
+      "Sheet": "Results",
+      "Address": "A475",
+      "Formula": "=XMATCH(\"~~\",Mixed!A1:A20,0,1)"
+    },
+    {
+      "Id": "x-exact-18-0--1",
+      "Sheet": "Results",
+      "Address": "A476",
+      "Formula": "=XLOOKUP(\"~~\",Mixed!A1:A20,Mixed!B1:B20,\"missing\",0,-1)"
+    },
+    {
+      "Id": "xm-exact-18-0--1",
+      "Sheet": "Results",
+      "Address": "A477",
+      "Formula": "=XMATCH(\"~~\",Mixed!A1:A20,0,-1)"
+    },
+    {
+      "Id": "x-exact-18-2-1",
+      "Sheet": "Results",
+      "Address": "A478",
+      "Formula": "=XLOOKUP(\"~~\",Mixed!A1:A20,Mixed!B1:B20,\"missing\",2,1)"
+    },
+    {
+      "Id": "xm-exact-18-2-1",
+      "Sheet": "Results",
+      "Address": "A479",
+      "Formula": "=XMATCH(\"~~\",Mixed!A1:A20,2,1)"
+    },
+    {
+      "Id": "x-exact-18-2--1",
+      "Sheet": "Results",
+      "Address": "A480",
+      "Formula": "=XLOOKUP(\"~~\",Mixed!A1:A20,Mixed!B1:B20,\"missing\",2,-1)"
+    },
+    {
+      "Id": "xm-exact-18-2--1",
+      "Sheet": "Results",
+      "Address": "A481",
+      "Formula": "=XMATCH(\"~~\",Mixed!A1:A20,2,-1)"
+    },
+    {
+      "Id": "exact-v-19",
+      "Sheet": "Results",
+      "Address": "A482",
+      "Formula": "=VLOOKUP(\"?\",Mixed!A1:B20,2,FALSE)"
+    },
+    {
+      "Id": "exact-h-19",
+      "Sheet": "Results",
+      "Address": "A483",
+      "Formula": "=HLOOKUP(\"?\",MixedH!A1:T2,2,FALSE)"
+    },
+    {
+      "Id": "exact-m-19",
+      "Sheet": "Results",
+      "Address": "A484",
+      "Formula": "=MATCH(\"?\",Mixed!A1:A20,0)"
+    },
+    {
+      "Id": "x-exact-19-0-1",
+      "Sheet": "Results",
+      "Address": "A485",
+      "Formula": "=XLOOKUP(\"?\",Mixed!A1:A20,Mixed!B1:B20,\"missing\",0,1)"
+    },
+    {
+      "Id": "xm-exact-19-0-1",
+      "Sheet": "Results",
+      "Address": "A486",
+      "Formula": "=XMATCH(\"?\",Mixed!A1:A20,0,1)"
+    },
+    {
+      "Id": "x-exact-19-0--1",
+      "Sheet": "Results",
+      "Address": "A487",
+      "Formula": "=XLOOKUP(\"?\",Mixed!A1:A20,Mixed!B1:B20,\"missing\",0,-1)"
+    },
+    {
+      "Id": "xm-exact-19-0--1",
+      "Sheet": "Results",
+      "Address": "A488",
+      "Formula": "=XMATCH(\"?\",Mixed!A1:A20,0,-1)"
+    },
+    {
+      "Id": "x-exact-19-2-1",
+      "Sheet": "Results",
+      "Address": "A489",
+      "Formula": "=XLOOKUP(\"?\",Mixed!A1:A20,Mixed!B1:B20,\"missing\",2,1)"
+    },
+    {
+      "Id": "xm-exact-19-2-1",
+      "Sheet": "Results",
+      "Address": "A490",
+      "Formula": "=XMATCH(\"?\",Mixed!A1:A20,2,1)"
+    },
+    {
+      "Id": "x-exact-19-2--1",
+      "Sheet": "Results",
+      "Address": "A491",
+      "Formula": "=XLOOKUP(\"?\",Mixed!A1:A20,Mixed!B1:B20,\"missing\",2,-1)"
+    },
+    {
+      "Id": "xm-exact-19-2--1",
+      "Sheet": "Results",
+      "Address": "A492",
+      "Formula": "=XMATCH(\"?\",Mixed!A1:A20,2,-1)"
+    },
+    {
+      "Id": "exact-v-20",
+      "Sheet": "Results",
+      "Address": "A493",
+      "Formula": "=VLOOKUP(#N/A,Mixed!A1:B20,2,FALSE)"
+    },
+    {
+      "Id": "exact-h-20",
+      "Sheet": "Results",
+      "Address": "A494",
+      "Formula": "=HLOOKUP(#N/A,MixedH!A1:T2,2,FALSE)"
+    },
+    {
+      "Id": "exact-m-20",
+      "Sheet": "Results",
+      "Address": "A495",
+      "Formula": "=MATCH(#N/A,Mixed!A1:A20,0)"
+    },
+    {
+      "Id": "x-exact-20-0-1",
+      "Sheet": "Results",
+      "Address": "A496",
+      "Formula": "=XLOOKUP(#N/A,Mixed!A1:A20,Mixed!B1:B20,\"missing\",0,1)"
+    },
+    {
+      "Id": "xm-exact-20-0-1",
+      "Sheet": "Results",
+      "Address": "A497",
+      "Formula": "=XMATCH(#N/A,Mixed!A1:A20,0,1)"
+    },
+    {
+      "Id": "x-exact-20-0--1",
+      "Sheet": "Results",
+      "Address": "A498",
+      "Formula": "=XLOOKUP(#N/A,Mixed!A1:A20,Mixed!B1:B20,\"missing\",0,-1)"
+    },
+    {
+      "Id": "xm-exact-20-0--1",
+      "Sheet": "Results",
+      "Address": "A499",
+      "Formula": "=XMATCH(#N/A,Mixed!A1:A20,0,-1)"
+    },
+    {
+      "Id": "x-exact-20-2-1",
+      "Sheet": "Results",
+      "Address": "A500",
+      "Formula": "=XLOOKUP(#N/A,Mixed!A1:A20,Mixed!B1:B20,\"missing\",2,1)"
+    },
+    {
+      "Id": "xm-exact-20-2-1",
+      "Sheet": "Results",
+      "Address": "A501",
+      "Formula": "=XMATCH(#N/A,Mixed!A1:A20,2,1)"
+    },
+    {
+      "Id": "x-exact-20-2--1",
+      "Sheet": "Results",
+      "Address": "A502",
+      "Formula": "=XLOOKUP(#N/A,Mixed!A1:A20,Mixed!B1:B20,\"missing\",2,-1)"
+    },
+    {
+      "Id": "xm-exact-20-2--1",
+      "Sheet": "Results",
+      "Address": "A503",
+      "Formula": "=XMATCH(#N/A,Mixed!A1:A20,2,-1)"
+    },
+    {
+      "Id": "exact-v-21",
+      "Sheet": "Results",
+      "Address": "A504",
+      "Formula": "=VLOOKUP(1/0,Mixed!A1:B20,2,FALSE)"
+    },
+    {
+      "Id": "exact-h-21",
+      "Sheet": "Results",
+      "Address": "A505",
+      "Formula": "=HLOOKUP(1/0,MixedH!A1:T2,2,FALSE)"
+    },
+    {
+      "Id": "exact-m-21",
+      "Sheet": "Results",
+      "Address": "A506",
+      "Formula": "=MATCH(1/0,Mixed!A1:A20,0)"
+    },
+    {
+      "Id": "x-exact-21-0-1",
+      "Sheet": "Results",
+      "Address": "A507",
+      "Formula": "=XLOOKUP(1/0,Mixed!A1:A20,Mixed!B1:B20,\"missing\",0,1)"
+    },
+    {
+      "Id": "xm-exact-21-0-1",
+      "Sheet": "Results",
+      "Address": "A508",
+      "Formula": "=XMATCH(1/0,Mixed!A1:A20,0,1)"
+    },
+    {
+      "Id": "x-exact-21-0--1",
+      "Sheet": "Results",
+      "Address": "A509",
+      "Formula": "=XLOOKUP(1/0,Mixed!A1:A20,Mixed!B1:B20,\"missing\",0,-1)"
+    },
+    {
+      "Id": "xm-exact-21-0--1",
+      "Sheet": "Results",
+      "Address": "A510",
+      "Formula": "=XMATCH(1/0,Mixed!A1:A20,0,-1)"
+    },
+    {
+      "Id": "x-exact-21-2-1",
+      "Sheet": "Results",
+      "Address": "A511",
+      "Formula": "=XLOOKUP(1/0,Mixed!A1:A20,Mixed!B1:B20,\"missing\",2,1)"
+    },
+    {
+      "Id": "xm-exact-21-2-1",
+      "Sheet": "Results",
+      "Address": "A512",
+      "Formula": "=XMATCH(1/0,Mixed!A1:A20,2,1)"
+    },
+    {
+      "Id": "x-exact-21-2--1",
+      "Sheet": "Results",
+      "Address": "A513",
+      "Formula": "=XLOOKUP(1/0,Mixed!A1:A20,Mixed!B1:B20,\"missing\",2,-1)"
+    },
+    {
+      "Id": "xm-exact-21-2--1",
+      "Sheet": "Results",
+      "Address": "A514",
+      "Formula": "=XMATCH(1/0,Mixed!A1:A20,2,-1)"
+    },
+    {
+      "Id": "exact-v-22",
+      "Sheet": "Results",
+      "Address": "A515",
+      "Formula": "=VLOOKUP(\"nomatch\",Mixed!A1:B20,2,FALSE)"
+    },
+    {
+      "Id": "exact-h-22",
+      "Sheet": "Results",
+      "Address": "A516",
+      "Formula": "=HLOOKUP(\"nomatch\",MixedH!A1:T2,2,FALSE)"
+    },
+    {
+      "Id": "exact-m-22",
+      "Sheet": "Results",
+      "Address": "A517",
+      "Formula": "=MATCH(\"nomatch\",Mixed!A1:A20,0)"
+    },
+    {
+      "Id": "x-exact-22-0-1",
+      "Sheet": "Results",
+      "Address": "A518",
+      "Formula": "=XLOOKUP(\"nomatch\",Mixed!A1:A20,Mixed!B1:B20,\"missing\",0,1)"
+    },
+    {
+      "Id": "xm-exact-22-0-1",
+      "Sheet": "Results",
+      "Address": "A519",
+      "Formula": "=XMATCH(\"nomatch\",Mixed!A1:A20,0,1)"
+    },
+    {
+      "Id": "x-exact-22-0--1",
+      "Sheet": "Results",
+      "Address": "A520",
+      "Formula": "=XLOOKUP(\"nomatch\",Mixed!A1:A20,Mixed!B1:B20,\"missing\",0,-1)"
+    },
+    {
+      "Id": "xm-exact-22-0--1",
+      "Sheet": "Results",
+      "Address": "A521",
+      "Formula": "=XMATCH(\"nomatch\",Mixed!A1:A20,0,-1)"
+    },
+    {
+      "Id": "x-exact-22-2-1",
+      "Sheet": "Results",
+      "Address": "A522",
+      "Formula": "=XLOOKUP(\"nomatch\",Mixed!A1:A20,Mixed!B1:B20,\"missing\",2,1)"
+    },
+    {
+      "Id": "xm-exact-22-2-1",
+      "Sheet": "Results",
+      "Address": "A523",
+      "Formula": "=XMATCH(\"nomatch\",Mixed!A1:A20,2,1)"
+    },
+    {
+      "Id": "x-exact-22-2--1",
+      "Sheet": "Results",
+      "Address": "A524",
+      "Formula": "=XLOOKUP(\"nomatch\",Mixed!A1:A20,Mixed!B1:B20,\"missing\",2,-1)"
+    },
+    {
+      "Id": "xm-exact-22-2--1",
+      "Sheet": "Results",
+      "Address": "A525",
+      "Formula": "=XMATCH(\"nomatch\",Mixed!A1:A20,2,-1)"
+    },
+    {
+      "Id": "edge-0",
+      "Sheet": "Results",
+      "Address": "A526",
+      "Formula": "=VLOOKUP(2,Data!A1:B7,0,FALSE)"
+    },
+    {
+      "Id": "edge-1",
+      "Sheet": "Results",
+      "Address": "A527",
+      "Formula": "=VLOOKUP(2,Data!A1:B7,-1,FALSE)"
+    },
+    {
+      "Id": "edge-2",
+      "Sheet": "Results",
+      "Address": "A528",
+      "Formula": "=VLOOKUP(2,Data!A1:B7,3,FALSE)"
+    },
+    {
+      "Id": "edge-3",
+      "Sheet": "Results",
+      "Address": "A529",
+      "Formula": "=VLOOKUP(2,Data!A1:B7,2.9,FALSE)"
+    },
+    {
+      "Id": "edge-4",
+      "Sheet": "Results",
+      "Address": "A530",
+      "Formula": "=HLOOKUP(2,Horizontal!A1:G2,0,FALSE)"
+    },
+    {
+      "Id": "edge-5",
+      "Sheet": "Results",
+      "Address": "A531",
+      "Formula": "=HLOOKUP(2,Horizontal!A1:G2,3,FALSE)"
+    },
+    {
+      "Id": "edge-6",
+      "Sheet": "Results",
+      "Address": "A532",
+      "Formula": "=MATCH(2,Data!A1:A7,2)"
+    },
+    {
+      "Id": "edge-7",
+      "Sheet": "Results",
+      "Address": "A533",
+      "Formula": "=MATCH(2,Desc!A1:A7,-2)"
+    },
+    {
+      "Id": "edge-8",
+      "Sheet": "Results",
+      "Address": "A534",
+      "Formula": "=MATCH(2,Data!A1:A7,0.5)"
+    },
+    {
+      "Id": "edge-9",
+      "Sheet": "Results",
+      "Address": "A535",
+      "Formula": "=MATCH(2,Desc!A1:A7,-0.5)"
+    },
+    {
+      "Id": "edge-10",
+      "Sheet": "Results",
+      "Address": "A536",
+      "Formula": "=MATCH(2,Data!A1:B7,0)"
+    },
+    {
+      "Id": "edge-11",
+      "Sheet": "Results",
+      "Address": "A537",
+      "Formula": "=XLOOKUP(2,Data!A1:A7,Data!B1:B7,1/0)"
+    },
+    {
+      "Id": "edge-12",
+      "Sheet": "Results",
+      "Address": "A538",
+      "Formula": "=XLOOKUP(9,Data!A1:A7,Data!B1:B7,1/0)"
+    },
+    {
+      "Id": "edge-13",
+      "Sheet": "Results",
+      "Address": "A539",
+      "Formula": "=XLOOKUP(2,Data!A1:A7,Data!B1:B6,\"missing\")"
+    },
+    {
+      "Id": "edge-14",
+      "Sheet": "Results",
+      "Address": "A540",
+      "Formula": "=XMATCH(2,Data!A1:B7)"
+    },
+    {
+      "Id": "edge-15",
+      "Sheet": "Results",
+      "Address": "A541",
+      "Formula": "=XLOOKUP(2,Data!A1:A7,Horizontal!A2:G2,\"missing\")"
+    },
+    {
+      "Id": "edge-16",
+      "Sheet": "Results",
+      "Address": "A542",
+      "Formula": "=XLOOKUP(2,Horizontal!A1:G1,Horizontal!A2:G2)"
+    },
+    {
+      "Id": "edge-17",
+      "Sheet": "Results",
+      "Address": "A543",
+      "Formula": "=XLOOKUP(3,Data!A1:A7,Data!B1:B7,,-1,-1)"
+    },
+    {
+      "Id": "edge-18",
+      "Sheet": "Results",
+      "Address": "A544",
+      "Formula": "=XLOOKUP(9,Data!A1:A7,Data!B1:B7,,0)"
+    },
+    {
+      "Id": "edge-19",
+      "Sheet": "Results",
+      "Address": "A545",
+      "Formula": "=XMATCH(2,Data!A1:A7,,-1)"
+    },
+    {
+      "Id": "edge-20",
+      "Sheet": "Results",
+      "Address": "A546",
+      "Formula": "=XLOOKUP(,Mixed!A1:A20,Mixed!B1:B20)"
+    },
+    {
+      "Id": "edge-21",
+      "Sheet": "Results",
+      "Address": "A547",
+      "Formula": "=XLOOKUP(2,Data!A1:A7,Data!B1:B7,\"missing\",4)"
+    },
+    {
+      "Id": "edge-22",
+      "Sheet": "Results",
+      "Address": "A548",
+      "Formula": "=XMATCH(2,Data!A1:A7,4)"
+    },
+    {
+      "Id": "edge-23",
+      "Sheet": "Results",
+      "Address": "A549",
+      "Formula": "=XMATCH(2,Data!A1:A7,0,0)"
+    },
+    {
+      "Id": "edge-24",
+      "Sheet": "Results",
+      "Address": "A550",
+      "Formula": "=XLOOKUP(2,Data!A1:A7,Data!B1:B7,\"missing\",0,0)"
+    },
+    {
+      "Id": "edge-25",
+      "Sheet": "Results",
+      "Address": "A551",
+      "Formula": "=MATCH(0,Mixed!A:A,0)"
+    },
+    {
+      "Id": "edge-26",
+      "Sheet": "Results",
+      "Address": "A552",
+      "Formula": "=XMATCH(0,Mixed!A:A)"
+    },
+    {
+      "Id": "edge-27",
+      "Sheet": "Results",
+      "Address": "A553",
+      "Formula": "=XMATCH(\"\",Data!A:A)"
+    },
+    {
+      "Id": "edge-28",
+      "Sheet": "Results",
+      "Address": "A554",
+      "Formula": "=XLOOKUP(\"\",Data!A:A,Data!B:B)"
+    },
+    {
+      "Id": "edge-29",
+      "Sheet": "Results",
+      "Address": "A555",
+      "Formula": "=MATCH(\"\",Data!A:A,0)"
+    },
+    {
+      "Id": "edge-30",
+      "Sheet": "Results",
+      "Address": "A556",
+      "Formula": "=VLOOKUP(\"\",Data!A:B,2,FALSE)"
+    },
+    {
+      "Id": "edge-31",
+      "Sheet": "Results",
+      "Address": "A557",
+      "Formula": "=XMATCH(\"\",Data!A:A,0,-1)"
+    },
+    {
+      "Id": "edge-32",
+      "Sheet": "Results",
+      "Address": "A558",
+      "Formula": "=INDEX(Data!B1:B7,XMATCH(2,Data!A1:A7))",
+      "Legacy": true
+    },
+    {
+      "Id": "edge-33",
+      "Sheet": "Results",
+      "Address": "A559",
+      "Formula": "=IFERROR(XLOOKUP(8,Mixed!A1:A20,Mixed!B1:B20),99)"
+    },
+    {
+      "Id": "edge-34",
+      "Sheet": "Results",
+      "Address": "A560",
+      "Formula": "=VLOOKUP(1,Data!A3:B3,2,FALSE)"
+    },
+    {
+      "Id": "edge-35",
+      "Sheet": "Results",
+      "Address": "A561",
+      "Formula": "=MATCH(1,Data!A3,0)"
+    },
+    {
+      "Id": "edge-36",
+      "Sheet": "Results",
+      "Address": "A562",
+      "Formula": "=XMATCH(1,Data!A3)"
+    },
+    {
+      "Id": "edge-37",
+      "Sheet": "Results",
+      "Address": "A563",
+      "Formula": "=XLOOKUP(1,Data!A3,Data!B3)"
+    },
+    {
+      "Id": "whole-blank-forward",
+      "Sheet": "Results",
+      "Address": "A564",
+      "Formula": "=XMATCH(Mixed!D1,Data!A:A)"
+    },
+    {
+      "Id": "whole-blank-reverse",
+      "Sheet": "Results",
+      "Address": "A565",
+      "Formula": "=XMATCH(Mixed!D1,Data!A:A,0,-1)"
+    },
+    {
+      "Id": "whole-lookup-blank",
+      "Sheet": "Results",
+      "Address": "A566",
+      "Formula": "=XLOOKUP(Mixed!D1,Data!A:A,Data!B:B)"
+    },
+    {
+      "Id": "blank-near--1-0",
+      "Sheet": "Results",
+      "Address": "A567",
+      "Formula": "=XLOOKUP(Mixed!D1,Mixed!A1:A20,Mixed!B1:B20,\"missing\",-1)"
+    },
+    {
+      "Id": "blank-near--1-1",
+      "Sheet": "Results",
+      "Address": "A568",
+      "Formula": "=XLOOKUP(0.5,Mixed!A1:A20,Mixed!B1:B20,\"missing\",-1)"
+    },
+    {
+      "Id": "blank-near--1-2",
+      "Sheet": "Results",
+      "Address": "A569",
+      "Formula": "=XLOOKUP(-0.5,Mixed!A1:A20,Mixed!B1:B20,\"missing\",-1)"
+    },
+    {
+      "Id": "blank-near--1-3",
+      "Sheet": "Results",
+      "Address": "A570",
+      "Formula": "=XLOOKUP(\"\",Mixed!A1:A20,Mixed!B1:B20,\"missing\",-1)"
+    },
+    {
+      "Id": "blank-near-1-0",
+      "Sheet": "Results",
+      "Address": "A571",
+      "Formula": "=XLOOKUP(Mixed!D1,Mixed!A1:A20,Mixed!B1:B20,\"missing\",1)"
+    },
+    {
+      "Id": "blank-near-1-1",
+      "Sheet": "Results",
+      "Address": "A572",
+      "Formula": "=XLOOKUP(0.5,Mixed!A1:A20,Mixed!B1:B20,\"missing\",1)"
+    },
+    {
+      "Id": "blank-near-1-2",
+      "Sheet": "Results",
+      "Address": "A573",
+      "Formula": "=XLOOKUP(-0.5,Mixed!A1:A20,Mixed!B1:B20,\"missing\",1)"
+    },
+    {
+      "Id": "blank-near-1-3",
+      "Sheet": "Results",
+      "Address": "A574",
+      "Formula": "=XLOOKUP(\"\",Mixed!A1:A20,Mixed!B1:B20,\"missing\",1)"
+    },
+    {
+      "Id": "mode-0",
+      "Sheet": "Results",
+      "Address": "A575",
+      "Formula": "=XLOOKUP(3,Data!A1:A7,Data!B1:B7,\"missing\",0.5)"
+    },
+    {
+      "Id": "mode-1",
+      "Sheet": "Results",
+      "Address": "A576",
+      "Formula": "=XLOOKUP(3,Data!A1:A7,Data!B1:B7,\"missing\",1.5)"
+    },
+    {
+      "Id": "mode-2",
+      "Sheet": "Results",
+      "Address": "A577",
+      "Formula": "=XLOOKUP(3,Data!A1:A7,Data!B1:B7,\"missing\",-0.5)"
+    },
+    {
+      "Id": "mode-3",
+      "Sheet": "Results",
+      "Address": "A578",
+      "Formula": "=XLOOKUP(3,Data!A1:A7,Data!B1:B7,\"missing\",-1.5)"
+    },
+    {
+      "Id": "mode-4",
+      "Sheet": "Results",
+      "Address": "A579",
+      "Formula": "=XLOOKUP(3,Data!A1:A7,Data!B1:B7,\"missing\",TRUE)"
+    },
+    {
+      "Id": "mode-5",
+      "Sheet": "Results",
+      "Address": "A580",
+      "Formula": "=XLOOKUP(3,Data!A1:A7,Data!B1:B7,\"missing\",FALSE)"
+    },
+    {
+      "Id": "mode-6",
+      "Sheet": "Results",
+      "Address": "A581",
+      "Formula": "=XLOOKUP(3,Data!A1:A7,Data!B1:B7,\"missing\",\"1\")"
+    },
+    {
+      "Id": "search-0",
+      "Sheet": "Results",
+      "Address": "A582",
+      "Formula": "=XMATCH(2,Data!A1:A7,0,1.5)"
+    },
+    {
+      "Id": "search-2",
+      "Sheet": "Results",
+      "Address": "A583",
+      "Formula": "=XMATCH(2,Data!A1:A7,0,TRUE)"
+    },
+    {
+      "Id": "search-3",
+      "Sheet": "Results",
+      "Address": "A584",
+      "Formula": "=XMATCH(2,Data!A1:A7,0,FALSE)"
+    },
+    {
+      "Id": "search-4",
+      "Sheet": "Results",
+      "Address": "A585",
+      "Formula": "=XMATCH(2,Data!A1:A7,0,\"-1\")"
+    },
+    {
+      "Id": "escape-other",
+      "Sheet": "Results",
+      "Address": "A586",
+      "Formula": "=MATCH(\"~a\",Mixed!A1:A20,0)"
+    },
+    {
+      "Id": "late-0",
+      "Sheet": "Results",
+      "Formula": "=VLOOKUP(2,Data!A1:B7,#N/A,FALSE)",
+      "Address": "A587"
+    },
+    {
+      "Id": "late-1",
+      "Sheet": "Results",
+      "Formula": "=VLOOKUP(2,Data!A1:B7,2,#REF!)",
+      "Address": "A588"
+    },
+    {
+      "Id": "late-2",
+      "Sheet": "Results",
+      "Formula": "=XMATCH(2,Data!A1:A7,#N/A)",
+      "Address": "A589"
+    },
+    {
+      "Id": "late-3",
+      "Sheet": "Results",
+      "Formula": "=XLOOKUP(2,Data!A1:A7,Data!B1:B7,\"missing\",0,#REF!)",
+      "Address": "A590"
+    },
+    {
+      "Id": "late-4",
+      "Sheet": "Results",
+      "Formula": "=XLOOKUP(Mixed!D1,Data!A1:A7,Data!B1:B7,\"missing\",-1)",
+      "Address": "A591"
+    },
+    {
+      "Id": "late-5",
+      "Sheet": "Results",
+      "Formula": "=XLOOKUP(Mixed!D1,Data!A1:A7,Data!B1:B7,\"missing\",1)",
+      "Address": "A592"
+    },
+    {
+      "Id": "bounds-0",
+      "Sheet": "Results",
+      "Address": "A593",
+      "Formula": "=XLOOKUP(99,Data!A1:A7,Data!B1:B7,Mixed!D1)"
+    },
+    {
+      "Id": "bounds-1",
+      "Sheet": "Results",
+      "Address": "A594",
+      "Formula": "=XLOOKUP(99,Data!A1:A7,Data!B1:B7,\"#N/A\")"
+    },
+    {
+      "Id": "bounds-2",
+      "Sheet": "Results",
+      "Address": "A595",
+      "Formula": "=VLOOKUP(2,Data!A1:B7,2,\"FALSE\")"
+    },
+    {
+      "Id": "bounds-3",
+      "Sheet": "Results",
+      "Address": "A596",
+      "Formula": "=VLOOKUP(3,Data!A1:B7,2,\"TRUE\")"
+    },
+    {
+      "Id": "bounds-4",
+      "Sheet": "Results",
+      "Address": "A597",
+      "Formula": "=VLOOKUP(2,Data!A1:B7,2,\"0\")"
+    },
+    {
+      "Id": "bounds-5",
+      "Sheet": "Results",
+      "Address": "A598",
+      "Formula": "=XLOOKUP(2,Data!A1:A7,Data!B1:B7,\"missing\",\"\")"
+    },
+    {
+      "Id": "bounds-6",
+      "Sheet": "Results",
+      "Address": "A599",
+      "Formula": "=XMATCH(2,Data!A1:A7,0,-0.5)"
+    },
+    {
+      "Id": "bounds-7",
+      "Sheet": "Results",
+      "Address": "A600",
+      "Formula": "=VLOOKUP(Data!D1,Mixed!A1:B21,2,FALSE)"
+    },
+    {
+      "Id": "bounds-8",
+      "Sheet": "Results",
+      "Address": "A601",
+      "Formula": "=MATCH(Data!D1,Mixed!A1:A21,0)"
+    },
+    {
+      "Id": "bounds-9",
+      "Sheet": "Results",
+      "Address": "A602",
+      "Formula": "=XLOOKUP(Data!D1,Mixed!A1:A21,Mixed!B1:B21)"
+    },
+    {
+      "Id": "bounds-10",
+      "Sheet": "Results",
+      "Address": "A603",
+      "Formula": "=XMATCH(Data!D1,Mixed!A1:A21)"
+    },
+    {
+      "Id": "bounds-11",
+      "Sheet": "Results",
+      "Address": "A604",
+      "Formula": "=XLOOKUP(Data!D1&\"*\",Mixed!A1:A21,Mixed!B1:B21,\"missing\",2)"
+    }
+  ],
+  "GuardedCases": [
+    {
+      "Id": "search-1",
+      "Sheet": "Results",
+      "Address": "A1001",
+      "Formula": "=XMATCH(2,Data!A1:A7,0,-1.5)"
+    },
+    {
+      "Id": "binary-forward",
+      "Sheet": "Results",
+      "Formula": "=XMATCH(2,Data!A1:A7,0,2)",
+      "Address": "A1005"
+    },
+    {
+      "Id": "binary-reverse",
+      "Sheet": "Results",
+      "Formula": "=XMATCH(2,Desc!A1:A7,0,-2)",
+      "Address": "A1009"
+    },
+    {
+      "Id": "array-return",
+      "Sheet": "Results",
+      "Formula": "=XLOOKUP(2,Data!A1:A7,Data!B1:C7)",
+      "Address": "A1013"
+    },
+    {
+      "Id": "computed-search",
+      "Sheet": "Results",
+      "Formula": "=XMATCH(2,Data!A1:A7,0,Data!C1)",
+      "Address": "A1017"
+    },
+    {
+      "Id": "regex",
+      "Sheet": "Results",
+      "Formula": "=XMATCH(\"a.*\",Mixed!A1:A20,3)",
+      "Address": "A1021"
+    }
+  ]
+}

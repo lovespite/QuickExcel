@@ -40,7 +40,7 @@ public sealed record CellContent
         if (formulaText.Length < 2 || formulaText[0] != '=' || formulaText.AsSpan(1).IsWhiteSpace())
             throw new ArgumentException("A formula must start with '=' and contain an expression.", nameof(formulaText));
         // Parsing and binding are calculation concerns. Preserve even unsupported/malformed expressions.
-        return new(CellContentKind.Formula, default, formulaText, styleId);
+        return new(CellContentKind.Formula, default, QuickExcel.Formulas.ExcelFormulaNames.Decode(formulaText), styleId);
     }
 
     public override string ToString() => Kind == CellContentKind.Literal

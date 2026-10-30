@@ -78,7 +78,7 @@ public sealed class WorkbookCalculator(IScriptRuntimeFactory runtimeFactory) : I
         {
             foreach (var descriptor in runtime.FunctionDescriptors)
             {
-                if (StandardFunctions.Signatures.ContainsKey(descriptor.Name) || !functions.TryAdd(descriptor.Name, descriptor))
+                if (StandardFunctions.Signatures.ContainsKey(ExcelFormulaNames.CanonicalName(descriptor.Name)) || !functions.TryAdd(descriptor.Name, descriptor))
                     throw new InvalidOperationException($"脚本函数 {descriptor.Name} 与内置函数或其他注册冲突。");
                 descriptor.Validate();
             }
