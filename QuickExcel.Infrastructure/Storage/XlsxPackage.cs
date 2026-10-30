@@ -63,7 +63,6 @@ internal sealed class XlsxPackage
                 if (!external && !Parts.ContainsKey(target)) throw new InvalidDataException($"关系目标不存在：{target}");
                 var relationship = new PartRelationship(Attr(item, "Id"), Attr(item, "Type"), target, external);
                 if (!mapping.TryAdd(relationship.Id, relationship)) throw new InvalidDataException("关系 ID 重复。");
-                if (external) Loss($"{name}: 外部关系 {relationship.Id}，未连接外部目标", "relationship/" + relationship.Type.Split('/')[^1], name, range: relationship.Id);
             }
             if (!_relationships.TryAdd(source, mapping)) throw new InvalidDataException("关系来源重复。");
         }
@@ -89,6 +88,13 @@ internal sealed class XlsxPackage
     public IReadOnlyDictionary<string, PartRelationship> Relationships(string source) =>
         _relationships.GetValueOrDefault(source) ?? new Dictionary<string, PartRelationship>();
     public string Related(string source, string id, string type) => RelatedUri(source, id, Rel.NamespaceName + "/" + type);
+    public string ExternalHyperlink(string source, string id)
+    {
+        if (!Relationships(source).TryGetValue(id, out var relation) || !relation.External || relation.Type != Rel.NamespaceName + "/hyperlink")
+            throw new InvalidDataException("超链接关系无效。");
+        _used.Add(RelationshipPart(source)); _usedRelationships.Add((source, id));
+        return relation.Target; // Opaque address only; never access the target.
+    }
     private string RelatedUri(string source, string id, string type)
     {
         _used.Add(RelationshipPart(source));
@@ -115,8 +121,8 @@ internal sealed class XlsxPackage
     {
         foreach (var (source, relations) in _relationships)
         foreach (var relation in relations.Values)
-            if (!_usedRelationships.Contains((source, relation.Id)) && !relation.External)
-                Loss($"{RelationshipPart(source)}: 未建模关系 {relation.Id}", "relationship/" + relation.Type.Split('/')[^1], RelationshipPart(source), range: relation.Id);
+            if (!_usedRelationships.Contains((source, relation.Id)))
+                Loss($"{RelationshipPart(source)}: 未建模{(relation.External ? "外部" : "")}关系 {relation.Id}" + (relation.External ? "，未连接外部目标" : ""), "relationship/" + relation.Type.Split('/')[^1], RelationshipPart(source), range: relation.Id);
         foreach (var name in Parts.Keys.Where(n => !_used.Contains(n))) Loss($"未建模部件：{name}", "part/" + _types.GetValueOrDefault(name), name);
     }
     public void RegisterSheet(string path, string name) => _sheetNames[path] = name;

@@ -1,4 +1,5 @@
 using QuickExcel.Domain;
+using QuickExcel.Core;
 using QuickExcel.Formulas;
 
 namespace QuickExcel.Storage;
@@ -35,10 +36,25 @@ public sealed partial class TypedWorkbookStorage
         var staleCount = 0;
         var formulaLocations = 0;
         var truncated = false;
+        var richCount = 0; var richWarnings = 0;
         foreach (var sheet in snapshot.Sheets)
         foreach (var (position, cell) in sheet.Cells.OrderBy(p => p.Key.Row).ThenBy(p => p.Key.Column))
         {
             cancellationToken.ThrowIfCancellationRequested();
+            if (cell.Content.RichText is { } rich)
+            {
+                richCount++;
+                var style = snapshot.Styles[cell.Content.StyleId];
+                if (richWarnings < 1024 && (style.ShrinkToFit || rich.Runs.Any(r => r.Font?.Vertical is "superscript" or "subscript" || r.Font?.Underline is "singleAccounting" or "doubleAccounting" ||
+                        r.Font is { } font && (font.Name is null && font.Scheme is null || font.Size is null) &&
+                        (style.FontName != snapshot.Styles[0].FontName || style.FontSize != snapshot.Styles[0].FontSize)) ||
+                    CellDisplayFormatter.Format(cell.Value, style, snapshot.DateSystem) != rich.Text))
+                {
+                    richWarnings++;
+                    diagnostics.Add(new("text.display-partial", CompatibilityKind.PreservedOnly, "富文本显示限制",
+                        "分段数据保存保留；上下标/会计下划线、缺少字体属性的分段回退、混合字号缩小填充或改变文字的数字格式显示尚未完全对齐。", SheetName: sheet.Name, Range: TypedWorkbookXml.Reference(position)));
+                }
+            }
             if (cell.Content.Kind != CellContentKind.Formula) continue;
             formulaCount++;
             if (cell.Calculation?.Value is not null) cachedCount++;
@@ -75,6 +91,12 @@ public sealed partial class TypedWorkbookStorage
         }
         if (truncated) diagnostics.Add(new("report.formulas-truncated", CompatibilityKind.CannotCalculate, "报告容量",
             "已达到 1024 个公式问题位置；后续公式未逐项检查，未列出不代表可计算。"));
+        if (richCount > 0) diagnostics.Add(new("text.rich-preserved", CompatibilityKind.PreservedOnly, "富文本",
+            $"{richCount} 格保留分段字体和颜色；普通编辑需先显式转换为纯文本，转换可撤销。完整分段编辑尚未提供。"));
+        if (richWarnings == 1024) diagnostics.Add(new("report.rich-display-truncated", CompatibilityKind.PreservedOnly, "报告容量", "富文本显示差异仅列出前 1024 格；未列出不代表完全对齐。"));
+        var links = snapshot.Sheets.Sum(s => s.Annotations.Links.Count); var notes = snapshot.Sheets.Sum(s => s.Annotations.Notes.Count);
+        if (links + notes > 0) diagnostics.Add(new("text.attachments-preserved", CompatibilityKind.PreservedOnly, "超链接和传统批注",
+            $"{links} 个链接、{notes} 条传统批注可查看并保存；链接不自动访问。暂拒绝结构变换/排序，批注编辑和线程评论不在此支持范围内。"));
         if (formulaCount > 0) diagnostics.Add(new("formula.cache-summary", snapshot.FileState?.FormulaReadOnly == true ? CompatibilityKind.PreservedOnly : CompatibilityKind.Editable, "公式源码与缓存",
             $"共 {formulaCount} 个公式，{cachedCount} 个有缓存，{staleCount} 个缺少当前有效结果。能力检查不执行计算，也不证明缓存数值正确或引用这些公式的其他单元格可以正确重算。"));
         return new(unchanged, diagnostics);

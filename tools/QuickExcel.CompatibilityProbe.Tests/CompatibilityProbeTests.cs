@@ -21,6 +21,7 @@ public sealed partial class CompatibilityProbeTests
     [InlineData("unknown-function")]
     [InlineData("array-formula")]
     [InlineData("rich-links-notes")]
+    [InlineData("phonetic-rich-text")]
     [InlineData("row-column-styles")]
     public void IndependentlyAuthoredInputsPassSdkAndRelationshipValidation(string id)
     {
@@ -150,7 +151,7 @@ public sealed partial class CompatibilityProbeTests
     {
         var directory = NewEvidenceDirectory();
         Directory.CreateDirectory(directory);
-        var style = new StyleDefinition { FontName = "Calibri", FontSize = 12, Bold = true, Italic = true, FontColor = "FF123456" };
+        var style = new StyleDefinition { FontName = "Calibri", FontSize = 12, Bold = true, Italic = true, Strike = true, Underline = "double", FontColor = "FF123456" };
         var model = new WorkbookSnapshot(Guid.NewGuid(), 0, ExcelDateSystem.Windows1900,
             [new WorksheetSnapshot(SheetId.New(), "字体", [new(new(0, 0), new(CellContent.FromLiteral(CellValue.FromText("测试"))))])], styles: [style]);
         var storage = new TypedWorkbookStorage();

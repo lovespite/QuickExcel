@@ -68,7 +68,7 @@ internal static class TypedStyles
             var font = fonts[Int((string?)xf.Attribute("fontId") ?? "0", fonts.Length - 1)];
             var fill = fills[Int((string?)xf.Attribute("fillId") ?? "0", fills.Length - 1)];
             var border = borders[Int((string?)xf.Attribute("borderId") ?? "0", borders.Length - 1)];
-            package.Shape(font, "name sz color b i family charset scheme", "", path);
+            package.Shape(font, "name sz color b i u strike family charset scheme", "", path);
             foreach (var item in font.Elements().Where(e => e.Name != Main + "color")) package.Shape(item, "", "val", path);
             package.Shape(fill, "patternFill", "", path);
             package.Shape(border, "left right top bottom diagonal", "", path);
@@ -105,6 +105,7 @@ internal static class TypedStyles
                 FontSize = OptionalDouble(font.Element(Main + "sz")?.Attribute("val")),
                 FontColor = colors.Read(font.Element(Main + "color"), package, path),
                 Bold = Flag(font.Element(Main + "b")), Italic = Flag(font.Element(Main + "i")),
+                Underline = font.Element(Main + "u") is null ? null : (string?)font.Element(Main + "u")?.Attribute("val") ?? "single", Strike = Flag(font.Element(Main + "strike")),
                 FillColor = (string?)pattern?.Attribute("patternType") == "solid" ? colors.Read(pattern.Element(Main + "fgColor"), package, path) : null,
                 Horizontal = Named((string?)alignment?.Attribute("horizontal"), Horizontal, 0, package, path),
                 Vertical = Named((string?)alignment?.Attribute("vertical"), Vertical, 2, package, path),
@@ -138,7 +139,8 @@ internal static class TypedStyles
             XElement? Rgb(string tag, string? value) => value is null ? null : new XElement(Main + tag, new XAttribute("rgb", value));
             // CT_Font uses an ordered sequence; our reader accepts any order, but schema validation requires this order.
             fonts.Add(new XElement(Main + "font", style.Bold ? new XElement(Main + "b") : null,
-                style.Italic ? new XElement(Main + "i") : null, Val("sz", style.FontSize), Rgb("color", style.FontColor), Val("name", style.FontName), Val("scheme", style.FontScheme)));
+                style.Italic ? new XElement(Main + "i") : null, style.Strike ? new XElement(Main + "strike") : null,
+                Val("u", style.Underline), Val("sz", style.FontSize), Rgb("color", style.FontColor), Val("name", style.FontName), Val("scheme", style.FontScheme)));
             fills.Add(new XElement(Main + "fill", new XElement(Main + "patternFill", new XAttribute("patternType", style.FillColor is null ? "none" : "solid"), Rgb("fgColor", style.FillColor))));
             XElement Side(string name, int kind, string? color) => new(Main + name, new XAttribute("style", Borders[kind]), Rgb("color", color));
             borders.Add(new XElement(Main + "border", Side("left", style.LeftBorder, style.LeftBorderColor), Side("right", style.RightBorder, style.RightBorderColor),

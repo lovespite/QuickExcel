@@ -8,9 +8,19 @@ namespace QuickExcel.CompatibilityProbe.Tests;
 
 public sealed partial class CompatibilityProbeTests
 {
+    [Fact]
+    public void RichTextAndAttachmentsUseNormalStyleSaveWhileUnsafeEditsAreRejected()
+    {
+        var report = ProbeRunner.Run(Fixture("rich-links-notes"), NewEvidenceDirectory());
+        var saved = Assert.Single(report.Paths, p => p.Mode == "style");
+        Assert.Equal("saved-modeled-subset", saved.Status); Assert.Empty(saved.CompatibilityIssues); Assert.Empty(saved.Output!.Issues);
+        Assert.Contains(saved.Diagnostics, d => d.Code == "text.rich-preserved");
+        Assert.Contains(saved.Diagnostics, d => d.Code == "text.attachments-preserved");
+        Assert.All(report.Paths.Where(p => p.Mode is not ("style" or "unchanged")), p => Assert.Equal("edit-rejected", p.Status));
+    }
     [Theory]
     [InlineData("protected-print-template", "worksheet/sheetProtection", "数据")]
-    [InlineData("rich-links-notes", "text/richText", "数据")]
+    [InlineData("phonetic-rich-text", "text/phonetic", "数据")]
     public void ImportedFeatureLocationsChangeToLossOnEditAndUndoRestoresPreservation(string fixture, string feature, string? sheetName)
     {
         var folder = NewEvidenceDirectory(); Directory.CreateDirectory(folder);
@@ -20,13 +30,13 @@ public sealed partial class CompatibilityProbeTests
         var sourceReport = TypedWorkbookStorage.InspectCompatibility(snapshot);
         Assert.True(sourceReport.OriginalPackageUnchanged);
         Assert.Contains(sourceReport.Diagnostics, d => d.Feature == feature && d.SheetName == sheetName && d.Kind == CompatibilityKind.PreservedOnly && d.Part is not null);
-        if (fixture == "rich-links-notes")
+        if (fixture == "phonetic-rich-text")
         {
             Assert.Contains(sourceReport.Diagnostics, d => d.Feature == feature && d.Range == "A2");
-            Assert.Single(sourceReport.Diagnostics, d => d.Feature == "relationship/hyperlink");
+            Assert.DoesNotContain(sourceReport.Diagnostics, d => d.Feature == "relationship/hyperlink");
         }
         using var session = new DocumentSession(snapshot);
-        session.Execute(new SetCellsCommand([new(new(snapshot.Sheets[0].Id, 1, 0), CellContent.FromLiteral(CellValue.FromNumber(99)))]));
+        session.Execute(new SetCellsCommand([new(new(snapshot.Sheets[0].Id, 0, 5), CellContent.FromLiteral(CellValue.FromNumber(99)))]));
         Assert.Contains(TypedWorkbookStorage.InspectCompatibility(session.Snapshot).Diagnostics, d => d.Feature == feature && d.Kind == CompatibilityKind.PotentialLoss);
         var rejectedPath = Path.Combine(folder, "blocked.xlsq");
         Assert.Throws<WorkbookCompatibilityException>(() => storage.Save(rejectedPath, session.Snapshot));
@@ -66,7 +76,7 @@ public sealed partial class CompatibilityProbeTests
         FixtureCatalog.Edit(parts, "xl/worksheets/sheet1.xml", root => root.Element(Main + "sheetData")!.ReplaceNodes(
             Enumerable.Range(1, 1030).Select(row => new XElement(Main + "row", new XAttribute("r", row),
                 new XElement(Main + "c", new XAttribute("r", "A" + row), new XAttribute("t", "inlineStr"),
-                    new XElement(Main + "is", new XElement(Main + "r", new XElement(Main + "t", "rich"))))))));
+                    new XElement(Main + "is", new XElement(Main + "t", "plain"), new XElement(Main + "rPh", new XAttribute("sb", 0), new XAttribute("eb", 1), new XElement(Main + "t", "unsupported phonetic"))))))));
         var directory = NewEvidenceDirectory(); Directory.CreateDirectory(directory);
         var path = Path.Combine(directory, "source.xlsx"); File.WriteAllBytes(path, Zip(parts));
         var snapshot = new TypedWorkbookStorage().Open(path);

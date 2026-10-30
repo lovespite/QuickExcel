@@ -83,6 +83,11 @@ internal sealed partial class FastGridSurface : IGridSurface
             var cell = Control.HitTestModel(e.GetPosition(Control));
             if (cell.IsCell && e.ChangedButton == MouseButton.Left && BeginEdit()) e.Handled = true;
         };
+        Control.MouseMove += (_, e) =>
+        {
+            if (_snapshot is null || e.LeftButton == MouseButtonState.Pressed) return;
+            UpdateCellInformation(e.GetPosition(Control));
+        };
         Editor.TextChanged += (_, _) =>
         {
             if (_loading) return;
@@ -94,6 +99,26 @@ internal sealed partial class FastGridSurface : IGridSurface
             Element.Dispatcher.BeginInvoke(DispatcherPriority.Input, new Action(() => IsComposing = false))));
         Element.PreviewKeyDown += HandleKey;
         Control.Model = _model;
+    }
+
+    internal void UpdateCellInformation(Point point)
+    {
+        var hit = Control.HitTestModel(point);
+        var text = hit.IsCell ? CellInformation(hit.Row!.Value, hit.Column!.Value) : null;
+        if ((Control.ToolTip as TextBlock)?.Text == text) return;
+        Control.ToolTip = text is null ? null : new TextBlock { Text = text, TextWrapping = TextWrapping.Wrap, MaxWidth = 480 };
+    }
+    internal string? CellInformation(int row, int column)
+    {
+        var position = MergeOwner(row, column); var notes = new List<string>();
+        if (Sheet.GetCell(position.Row, position.Column)?.Content.RichText is not null)
+            notes.Add("富文本：右键可明确转换为普通文本后编辑；转换可撤销。");
+        if (Sheet.Annotations.Links.TryGetValue(position, out var link))
+            notes.Add("链接地址（仅查看，不自动访问）：\n" + link.Target + (link.Location is null ? "" : "#" + link.Location) +
+                (link.Tooltip is null ? "" : "\n" + link.Tooltip));
+        if (Sheet.Annotations.Notes.TryGetValue(position, out var note)) notes.Add("批注 · " + note.Author + "\n" + note.Text.Text);
+        if (notes.Count == 0) return null;
+        var text = string.Join("\n\n", notes); return text.Length <= 4096 ? text : text[..4096] + "\n（内容较长，已截断展示；完整内容保存在文件中）";
     }
 
     private void QueueSelectionPresentation()
@@ -375,7 +400,7 @@ internal sealed partial class FastGridSurface : IGridSurface
             // Artwork owns the opaque styled cell, including text. Rasterizing
             // the same text underneath it doubles formatting/glyph work and
             // creates bitmaps that cannot be seen.
-            if (FastGridArtwork.PaintsStyle(style)) return cell;
+            if (FastGridArtwork.PaintsStyle(style) || sheet.GetCell(row, column)?.Content.RichText is not null || sheet.Annotations.Notes.ContainsKey(new(row, column))) return cell;
             var block = cell.AddTextBlock(GetCellText(row, column)); block.IsBold = style.Bold; block.IsItalic = style.Italic; block.FontColor = Color(style.FontColor);
             return cell;
         }

@@ -181,6 +181,8 @@ internal static class StructureEdits
 {
     internal static void RequireTransformableFunctions(WorkbookSnapshot snapshot)
     {
+        if (snapshot.Sheets.Any(s => !s.Annotations.IsEmpty))
+            throw new NotSupportedException("含超链接/批注的工作簿尚不能安全变换链接目标或批注绘图；结构操作和排序未应用。值、样式和尺寸仍可编辑。");
         if (snapshot.FileState is null) return;
         foreach (var sheet in snapshot.Sheets)
         foreach (var cell in sheet.Cells.Values.Where(c => c.Content.Kind == CellContentKind.Formula))

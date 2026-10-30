@@ -43,6 +43,8 @@ public sealed record StyleDefinition
     public string? FontColor { get; init; }
     public bool Bold { get; init; }
     public bool Italic { get; init; }
+    public string? Underline { get; init; }
+    public bool Strike { get; init; }
     public string? FillColor { get; init; }
     public int Horizontal { get; init; }
     public int Vertical { get; init; } = 2;
@@ -118,7 +120,7 @@ public sealed class WorksheetSnapshot
         IEnumerable<KeyValuePair<int, ColumnMetadata>>? columns = null,
         IEnumerable<string>? mergedCells = null, IEnumerable<SheetImage>? images = null,
         bool showGridLines = true, double? defaultRowHeight = null, string? tabColor = null,
-        WorksheetView? view = null, SheetVisibility visibility = SheetVisibility.Visible, WorksheetPrinting? printing = null)
+        WorksheetView? view = null, SheetVisibility visibility = SheetVisibility.Visible, WorksheetPrinting? printing = null, WorksheetAnnotations? annotations = null)
     {
         if (id.Value == Guid.Empty) throw new ArgumentException("A sheet requires a nonempty stable identity.", nameof(id));
         WorkbookLimits.ValidateSheetName(name);
@@ -161,6 +163,12 @@ public sealed class WorksheetSnapshot
         if (!Enum.IsDefined(visibility)) throw new ArgumentException("工作表可见性无效。");
         Visibility = visibility;
         Printing = printing ?? new(); Printing.Validate();
+        Annotations = annotations ?? new();
+        foreach (var position in Annotations.Links.Keys.Concat(Annotations.Notes.Keys))
+        {
+            UsedRowCount = Math.Max(UsedRowCount, position.Row + 1);
+            UsedColumnCount = Math.Max(UsedColumnCount, position.Column + 1);
+        }
     }
 
     public SheetId Id { get; }
@@ -176,6 +184,7 @@ public sealed class WorksheetSnapshot
     public WorksheetView View { get; }
     public SheetVisibility Visibility { get; }
     public WorksheetPrinting Printing { get; }
+    public WorksheetAnnotations Annotations { get; }
     /// <summary>The last stored cell's zero-based row plus one; row metadata does not allocate cells.</summary>
     public int UsedRowCount { get; }
     public int UsedColumnCount { get; }
@@ -201,17 +210,17 @@ public sealed class WorksheetSnapshot
     public WorksheetSnapshot WithCells(ImmutableDictionary<CellPosition, CellSnapshot> cells)
     {
         ArgumentNullException.ThrowIfNull(cells);
-        return new(Id, Name, cells, Rows, Columns, MergedCells, Images, ShowGridLines, DefaultRowHeight, TabColor, View, Visibility, Printing);
+        return new(Id, Name, cells, Rows, Columns, MergedCells, Images, ShowGridLines, DefaultRowHeight, TabColor, View, Visibility, Printing, Annotations);
     }
 
     public WorksheetSnapshot WithName(string name) =>
-        new(Id, name, Cells, Rows, Columns, MergedCells, Images, ShowGridLines, DefaultRowHeight, TabColor, View, Visibility, Printing);
+        new(Id, name, Cells, Rows, Columns, MergedCells, Images, ShowGridLines, DefaultRowHeight, TabColor, View, Visibility, Printing, Annotations);
     public WorksheetSnapshot WithView(WorksheetView view) =>
-        new(Id, Name, Cells, Rows, Columns, MergedCells, Images, ShowGridLines, DefaultRowHeight, TabColor, view, Visibility, Printing);
+        new(Id, Name, Cells, Rows, Columns, MergedCells, Images, ShowGridLines, DefaultRowHeight, TabColor, view, Visibility, Printing, Annotations);
     public WorksheetSnapshot WithVisibility(SheetVisibility visibility) =>
-        new(Id, Name, Cells, Rows, Columns, MergedCells, Images, ShowGridLines, DefaultRowHeight, TabColor, View, visibility, Printing);
+        new(Id, Name, Cells, Rows, Columns, MergedCells, Images, ShowGridLines, DefaultRowHeight, TabColor, View, visibility, Printing, Annotations);
     public WorksheetSnapshot WithPrinting(WorksheetPrinting printing) =>
-        new(Id, Name, Cells, Rows, Columns, MergedCells, Images, ShowGridLines, DefaultRowHeight, TabColor, View, Visibility, printing);
+        new(Id, Name, Cells, Rows, Columns, MergedCells, Images, ShowGridLines, DefaultRowHeight, TabColor, View, Visibility, printing, Annotations);
 }
 
 /// <summary>A shareable committed document state, independent of IO libraries and mutable sessions.</summary>
@@ -249,6 +258,7 @@ public sealed class WorkbookSnapshot
             if (style.Horizontal is < 0 or > 4 || style.Vertical is < 0 or > 3 || style.NamedStyleId is < 0 or > 4095 ||
                 style.Indent is < 0 or > 250 || style.TextRotation is < 0 or > 180 && style.TextRotation != 255 ||
                 style.FontScheme is not (null or "major" or "minor") ||
+                style.Underline is not (null or "none" or "single" or "double" or "singleAccounting" or "doubleAccounting") ||
                 style.LeftBorder is < 0 or > 7 || style.RightBorder is < 0 or > 7 ||
                 style.TopBorder is < 0 or > 7 || style.BottomBorder is < 0 or > 7)
                 throw new ArgumentException("The style contains an unsupported alignment or border.", nameof(styles));

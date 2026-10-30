@@ -24,7 +24,7 @@ internal sealed partial class FastGridSurface
         var maximum = 0d;
         var defaultStyle = new StyleDefinition();
         var dpi = VisualTreeHelper.GetDpi(Artwork);
-        var cache = new Dictionary<(string Text, int Style, double Width), double>();
+        var cache = new Dictionary<(string Text, int Style, double Width, RichCellText? Rich), double>();
         foreach (var (position, _) in cells)
         {
             var other = Other(position);
@@ -36,10 +36,11 @@ internal sealed partial class FastGridSurface
             var style = _snapshot.Styles[styleId];
             var width = isRow ? sheet.Columns.GetValueOrDefault(position.Column)?.Width is { } units
                 ? Math.Clamp(units * 7 + 5, 1, 10000) : position.Column == 0 ? 160 : 112 : 0;
-            var key = (value, styleId, width);
+            var rich = sheet.GetCell(position.Row, position.Column)?.Content.RichText;
+            var key = (value, styleId, width, rich);
             if (!cache.TryGetValue(key, out var size))
             {
-                if (style == defaultStyle)
+                if (style == defaultStyle && rich is null)
                 {
                     // Default cells use the bitmap glyph renderer, whose rounded
                     // advances differ from FormattedText for an entire string.
@@ -49,7 +50,7 @@ internal sealed partial class FastGridSurface
                 }
                 else
                 {
-                    var text = FastGridArtwork.CreateText(value, style, dpi.PixelsPerDip);
+                    var text = FastGridArtwork.CreateText(value, style, dpi.PixelsPerDip, rich);
                     if (isRow && style.TextRotation == 0)
                     {
                         text.MaxTextWidth = Math.Max(1, Math.Round(width * DpiDetector.DpiXKoef) / DpiDetector.DpiXKoef - 4);

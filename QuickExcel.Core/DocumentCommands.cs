@@ -15,13 +15,15 @@ public abstract class DocumentCommand
 
 public sealed class SetCellsCommand : DocumentCommand
 {
-    public SetCellsCommand(IEnumerable<CellEdit> edits)
+    public SetCellsCommand(IEnumerable<CellEdit> edits, bool allowRichTextLoss = false)
     {
         ArgumentNullException.ThrowIfNull(edits);
         Edits = edits.Take(WorkbookLimits.MaxCells + 1).ToImmutableArray();
         if (Edits.Length > WorkbookLimits.MaxCells) throw new ArgumentException("编辑数量超过工作簿容量。", nameof(edits));
+        _allowRichTextLoss = allowRichTextLoss;
     }
     public ImmutableArray<CellEdit> Edits { get; }
+    private readonly bool _allowRichTextLoss;
 
     internal override CommandDraft Prepare(WorkbookSnapshot snapshot)
     {
@@ -41,6 +43,11 @@ public sealed class SetCellsCommand : DocumentCommand
                 : edit.Content.LiteralValue.Kind == CellValueKind.Text ? edit.Content.LiteralValue.TextValue : "";
             if (text.Length > WorkbookLimits.MaxCellTextLength) throw new ArgumentException("单元格最多支持 32767 个字符，整批编辑尚未应用。");
             var before = sheet.GetCell(edit.Address.Row, edit.Address.Column);
+            if (!_allowRichTextLoss && before?.Content.RichText is not null && edit.Content.RichText is null)
+            {
+                if (edit.Content.Kind == CellContentKind.Literal && edit.Content.LiteralValue == before.Value && edit.Content.StyleId == before.Content.StyleId) continue;
+                throw new InvalidOperationException("目标包含富文本。请先明确转换为普通文本，再编辑或粘贴；整批操作未应用。");
+            }
             if (before?.Content == edit.Content) continue;
             if (edit.Content.Kind != CellContentKind.Literal || edit.Content.LiteralValue.Kind != CellValueKind.Blank)
                 foreach (var merge in sheet.MergedCells.Select(CellRectangle.Parse))
@@ -80,7 +87,7 @@ public sealed class ClearCellsCommand : DocumentCommand
             // Clearing an absent cell must not create a General override of row/column formatting.
             if (cell is not null) edits.Add(new(address, CellContent.FromLiteral(CellValue.Blank, cell.Content.StyleId)));
         }
-        return new SetCellsCommand(edits).Prepare(snapshot);
+        return new SetCellsCommand(edits, allowRichTextLoss: true).Prepare(snapshot);
     }
 }
 

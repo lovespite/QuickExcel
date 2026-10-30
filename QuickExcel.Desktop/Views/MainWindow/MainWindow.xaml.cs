@@ -56,12 +56,14 @@ public partial class MainWindow : Window
         _grid = new FastGridSurface(CommitGridValue) { HandlesKeyboard = false };
         SheetGrid.Children.Add(_grid.Element);
         _grid.BeforeNavigate = () => !_busy && CanCommitComposition() && CommitFormulaBar();
-        _grid.BeforeBeginEdit = () => !_busy && _document.Snapshot.FileState?.FormulaReadOnly != true && CanCommitComposition() && CommitFormulaBar();
+        _grid.BeforeBeginEdit = () => !_busy && _document.Snapshot.FileState?.FormulaReadOnly != true &&
+            _document.Snapshot.Sheets[_sheetIndex].GetCell(_grid.Current.Row, _grid.Current.Column)?.Content.RichText is null && CanCommitComposition() && CommitFormulaBar();
         _grid.LatestSnapshot = () => _document.Snapshot;
         _grid.SelectionChanged += Grid_CurrentCellChanged;
         _grid.EditingChanged += () => { if (_grid.IsEditing) _editState.BeginGrid(); else _editState.EndGrid(); };
         InstallInputHandlers();
         InstallWorkspaceHandlers();
+        InstallCellTextHandlers();
         InstallDocument(WorkbookDocument.CreateBlank(_services), null, "未命名.xlsq", disposePrevious: false);
         _hasWorkbook = false;
         ShowStartPage();

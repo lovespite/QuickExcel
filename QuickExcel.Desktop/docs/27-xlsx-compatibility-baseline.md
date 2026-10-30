@@ -4,7 +4,7 @@
 
 ## 1. 当前 R/D/C/E/W 矩阵
 
-S = 支持该行限定子集；P = 部分支持；O = 仅原包保留；N = 不支持；拒绝 = 读取时拒绝；— = 不适用。此矩阵随验收更新，后文保留首轮历史证据。XC-0101–0106 的最新专项及真实 Excel 结果见 [30](30-excel-number-formats.md) 至 [35](35-xlsx-preserved-formulas.md)；W 已包含 XC-0103 接入的独立 XLSX 保存，值快照/可移植公式导出仍是不同操作。
+S = 支持该行限定子集；P = 部分支持；O = 仅原包保留；N = 不支持；拒绝 = 读取时拒绝；— = 不适用。此矩阵随验收更新，后文保留首轮历史证据。XC-0101–0107 的最新专项及真实 Excel 结果见 [30](30-excel-number-formats.md) 至 [36](36-xlsx-rich-text-links-and-notes.md)；W 已包含 XC-0103 接入的独立 XLSX 保存，值快照/可移植公式导出仍是不同操作。
 
 | 特性与限定范围 | R | D | C | E | W | 证据/限制与下一项 |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -24,7 +24,7 @@ S = 支持该行限定子集；P = 部分支持；O = 仅原包保留；N = 不�
 | 文档属性白名单 | S | N | — | N | S | XC-0103 支持 core/app/custom 白名单；其他分组/结构仍报告，见 [32](32-xlsx-save-and-metadata.md) |
 | 单窗口普通视图、冻结/缩放/活动表格、hidden/veryHidden | S | P | — | P | S | XC-0104 已持久化，视图命令可撤销、导航不 dirty；显示容量及拆分/多窗口限制见 [33](33-xlsx-workbook-views.md) |
 | 页面/打印区域/重复标题/页眉页脚/分页 | S | N | — | N | S | XC-0105 的 R/W 子集；有分页时删除/移动行列拒绝，未提供实际打印或页面编辑，见 [34](34-xlsx-page-and-print-metadata.md) |
-| 富文本 run、超链接、传统批注 | P | P | — | P | O | `rich-links-notes`；富文本仅有扁平文字，不按 run 编辑；超链接/批注未提供完整界面，XC-0107 |
+| 富文本 run、超链接、传统批注 | S | P | — | P | S | XC-0107 常见 run 字体/颜色、惰性链接说明及传统批注角标/悬停；显式降级与整格字体可撤销，结构/线程评论限制见 [36](36-xlsx-rich-text-links-and-notes.md) |
 | Table、验证、条件格式、图表、透视表 | O | N | N | N | O | [09](09-m2-files-and-types.md) 的未建模内容保护；本轮未扩充这些夹具，仍需 E3/E4/E5 |
 | 普通复制/TSV 粘贴、筛选/排序/冻结 | — | P | — | P | P | 冻结已在 XC-0104 持久化；内部富剪贴板与筛选持久化仍属 XC-0201/0301 |
 | 未知部件与关系 | O | N | — | N | O | 不变保留原 XLSX 字节；变更时可能阻止普通保存，不复制未知失效关系 |
@@ -46,7 +46,8 @@ S = 支持该行限定子集；P = 部分支持；O = 仅原包保留；N = 不�
 | `protected-print-template` | 同上并增加工作表保护；页面配置已支持，未实现的保护仍须报告并阻止有损普通保存 | XC-0404 |
 | `unknown-function` | `_xlfn.XLOOKUP` 原始公式与旧缓存 7；本轮不执行重算 | XC-0106 |
 | `array-formula` | `t=array` 与结果区域 B2:B3；XC-0106 后只读打开、缓存显示、原包保留，修改拒绝 | XC-0106 |
-| `rich-links-notes` | 红色粗体 run、外部超链接、传统批注；不访问外部地址 | XC-0107 |
+| `rich-links-notes` | 红色粗体 run、外部超链接、传统批注；常见子集普通格式保存通过，不访问外部地址 | XC-0107 |
+| `phonetic-rich-text` | 已支持富文本上的未建模拼音，验证定位/容量及编辑后的保存保护 | XC-0107 |
 
 样本期望只是人工构造的诊断基准，不是 Excel 计算期望。每份报告明确 `Origin=synthetic-inline-spreadsheetml`、`ExcelVerification=pending-real-excel`；ExcelVersion/Build/Language/CalculationMode 为 null。未来补 Excel 生成且获准使用的脱敏样本时必须记录实际版本、语言、日期系统、计算模式、重开/修复提示及结果，不能用 SDK 的 Office2019 schema 目标充当实际 Excel 版本。
 

@@ -100,6 +100,10 @@ public static class FixtureCatalog
             <comments xmlns="{Main}"><authors><author>Fixture</author></authors><commentList><comment ref="A2" authorId="0"><text><t>传统批注</t></text></comment></commentList></comments>
             """);
         yield return Fixture("rich-links-notes", "富文本、外部超链接、传统批注", ["XC-0107"], rich);
+        var phonetic = rich.ToDictionary(p => p.Key, p => p.Value);
+        Edit(phonetic, "xl/worksheets/sheet1.xml", root => root.Descendants(Main + "is").First().Add(
+            new XElement(Main + "rPh", new XAttribute("sb", 0), new XAttribute("eb", 2), new XElement(Main + "t", "hongse"))));
+        yield return Fixture("phonetic-rich-text", "富文本已支持，拼音分段仍需报告与保存保护", ["XC-0107"], phonetic);
 
         var rowStyles = Base("""
             <row r="1" ht="24" customHeight="1"><c r="A1"><v>61</v></c><c r="B1" s="0"><v>61</v></c></row>

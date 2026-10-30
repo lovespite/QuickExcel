@@ -82,6 +82,7 @@ public partial class MainWindow
             await RunXlsxSaveSmokeAsync(folder, Check);
             await RunWorkbookViewSmokeAsync(folder, Check);
             await RunPreservedFormulaSmokeAsync(folder, Check);
+            await RunCellTextSmokeAsync(folder, Check);
 
             if (source is not null)
             {

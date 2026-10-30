@@ -27,7 +27,7 @@ internal sealed class FastGridArtwork(FastGridSurface surface) : FrameworkElemen
         // Geometry/DPI are part of each key; scrolling only translates the drawing.
         _cellDrawings.Clear();
         _sheet = surface.Sheet;
-        _hasStyles = surface.Snapshot.Styles.Any(style => style != DefaultStyle);
+        _hasStyles = surface.Snapshot.Styles.Any(style => style != DefaultStyle) || _sheet.Cells.Values.Any(c => c.Content.RichText is not null) || !_sheet.Annotations.IsEmpty;
         _merges = _sheet.MergedCells.Select(CellRectangle.Parse).ToArray();
         foreach (var image in _images.Keys.Where(i => !_sheet.Images.Contains(i)).ToArray()) _images.Remove(image);
         foreach (var image in _sheet.Images.Where(i => !_images.ContainsKey(i)))
@@ -74,7 +74,15 @@ internal sealed class FastGridArtwork(FastGridSurface surface) : FrameworkElemen
                     content = new DrawingGroup();
                     using (var context = content.Open())
                         PaintCell(context, new Rect(0, 0, rect.Width, rect.Height),
-                            display.Color is null ? style : style with { FontColor = display.Color }, display.Text, _sheet.ShowGridLines, display);
+                            display.Color is null ? style : style with { FontColor = display.Color }, display.Text, _sheet.ShowGridLines, display,
+                            _sheet.GetCell(range.Top, range.Left)?.Content.RichText);
+                    if (_sheet.Annotations.Notes.ContainsKey(new(range.Top, range.Left)))
+                    {
+                        using var context = content.Append();
+                        var marker = new StreamGeometry(); using (var geometry = marker.Open())
+                        { geometry.BeginFigure(new(rect.Width - 7, 1), true, true); geometry.LineTo(new(rect.Width - 1, 1), true, false); geometry.LineTo(new(rect.Width - 1, 7), true, false); }
+                        context.DrawGeometry(Brushes.Red, null, marker);
+                    }
                     content.Freeze();
                     // Keep immutable vector content. RenderTargetBitmap.Render
                     // here synchronously renders each newly exposed cell on the
@@ -92,7 +100,7 @@ internal sealed class FastGridArtwork(FastGridSurface surface) : FrameworkElemen
         foreach (var column in columns)
         {
             var style = surface.Snapshot.Styles[_sheet.GetStyleId(row, column)];
-            if (style == DefaultStyle) continue;
+            if (style == DefaultStyle && _sheet.GetCell(row, column)?.Content.RichText is null && !_sheet.Annotations.Notes.ContainsKey(new(row, column))) continue;
             PaintCachedCell(new(row, column, row, column), style);
         }
         foreach (var merge in _merges)
@@ -113,12 +121,12 @@ internal sealed class FastGridArtwork(FastGridSurface surface) : FrameworkElemen
     }
     internal static bool PaintsStyle(StyleDefinition style) => style != DefaultStyle;
 
-    private void PaintCell(DrawingContext drawing, Rect rect, StyleDefinition style, string value, bool gridLines, CellDisplay? display = null)
+    private void PaintCell(DrawingContext drawing, Rect rect, StyleDefinition style, string value, bool gridLines, CellDisplay? display = null, RichCellText? rich = null)
     {
         drawing.DrawRectangle(Brush(style.FillColor, Brushes.White), null, rect);
         drawing.PushClip(new RectangleGeometry(rect));
         var pixelsPerDip = VisualTreeHelper.GetDpi(this).PixelsPerDip;
-        var text = CreateText(value, style, pixelsPerDip);
+        var text = CreateText(value, style, pixelsPerDip, rich);
         if (display is { FillOffset: >= 0, FillCharacter: { } fill })
         {
             var unit = CreateText(fill.ToString(), style, pixelsPerDip).WidthIncludingTrailingWhitespace;
@@ -129,7 +137,7 @@ internal sealed class FastGridArtwork(FastGridSurface surface) : FrameworkElemen
         // font/layout settings are used to measure automatic row heights.
         var indent = IndentWidth(style, pixelsPerDip);
         var available = Math.Max(1, rect.Width - 4 - indent);
-        FitText(text, style, available);
+        if (rich is null) FitText(text, style, available);
         text.MaxTextWidth = style.TextRotation == 0 ? available : Math.Max(available, text.WidthIncludingTrailingWhitespace);
         text.MaxLineCount = style.WrapText ? int.MaxValue : 1;
         text.Trimming = style.ShrinkToFit && !style.WrapText ? TextTrimming.None : TextTrimming.CharacterEllipsis;
@@ -158,11 +166,40 @@ internal sealed class FastGridArtwork(FastGridSurface surface) : FrameworkElemen
         Border(style.BottomBorder, style.BottomBorderColor, rect.BottomLeft, rect.BottomRight);
         drawing.Pop();
     }
-    internal static FormattedText CreateText(string value, StyleDefinition style, double pixelsPerDip) =>
-        new(value, CultureInfo.CurrentCulture, FlowDirection.LeftToRight,
+    internal static FormattedText CreateText(string value, StyleDefinition style, double pixelsPerDip, RichCellText? rich = null)
+    {
+        var text = new FormattedText(value, CultureInfo.CurrentCulture, FlowDirection.LeftToRight,
             new Typeface(Font(style.FontName, style.EastAsianFontName), style.Italic ? FontStyles.Italic : FontStyles.Normal,
                 style.Bold ? FontWeights.Bold : FontWeights.Normal, FontStretches.Normal),
             (style.FontSize ?? 11) * 96 / 72, Brush(style.FontColor, Brushes.Black), pixelsPerDip);
+        text.SetTextDecorations(Decorations(style.Underline, style.Strike));
+        if (rich is null || rich.Text != value) return text;
+        var offset = 0;
+        foreach (var run in rich.Runs)
+        {
+            var length = run.Text.Length;
+            if (length > 0 && run.Font is { } font)
+            {
+                if (font.ResolvedName is not null || font.EastAsianName is not null) text.SetFontFamily(Font(font.ResolvedName ?? style.FontName, font.EastAsianName ?? style.EastAsianFontName), offset, length);
+                if (font.Size is { } size) text.SetFontSize(size * 96 / 72, offset, length);
+                if (font.Color is { } color) text.SetForegroundBrush(Brush(color, Brushes.Black), offset, length);
+                else if (font.IndexedColor == 81) text.SetForegroundBrush(SystemColors.InfoTextBrush, offset, length);
+                if (font.Bold is { } bold) text.SetFontWeight(bold ? FontWeights.Bold : FontWeights.Normal, offset, length);
+                if (font.Italic is { } italic) text.SetFontStyle(italic ? FontStyles.Italic : FontStyles.Normal, offset, length);
+                text.SetTextDecorations(Decorations(font.Underline ?? style.Underline, font.Strike ?? style.Strike), offset, length);
+            }
+            offset += length;
+        }
+        return text;
+    }
+    private static TextDecorationCollection Decorations(string? underline, bool strike)
+    {
+        var result = new TextDecorationCollection();
+        if (underline is not (null or "none")) result.Add(TextDecorations.Underline[0]);
+        if (underline is "double" or "doubleAccounting") result.Add(new TextDecoration(TextDecorationLocation.Underline, null, 2, TextDecorationUnit.Pixel, TextDecorationUnit.FontRecommended));
+        if (strike) result.Add(TextDecorations.Strikethrough[0]);
+        return result;
+    }
 
     internal static double IndentWidth(StyleDefinition style, double pixelsPerDip) => style.Indent == 0 ? 0 :
         CreateText(" ", style, pixelsPerDip).WidthIncludingTrailingWhitespace * 3 * style.Indent;

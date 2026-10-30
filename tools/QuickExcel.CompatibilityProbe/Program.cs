@@ -10,6 +10,7 @@ try
     if (args is ["views", var viewSource, var viewDirectory]) return ViewProbe.Run(viewSource, viewDirectory);
     if (args is ["printing", var printSource, var printDirectory]) return PrintingProbe.Run(printSource, printDirectory);
     if (args is ["formulas", var formulaSource, var formulaDirectory]) return FormulaProbe.Run(formulaSource, formulaDirectory);
+    if (args is ["cell-text", var textSource, var textDirectory]) return CellTextProbe.Run(textSource, textDirectory);
     if (args is ["baseline", var directory])
     {
         directory = Path.GetFullPath(directory);

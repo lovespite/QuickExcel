@@ -159,7 +159,29 @@ public sealed class SetCellStyleCommand : DocumentCommand
                 id = styles.Count; styles.Add(style); styleIds.Add(style, id);
             }
             var content = sheet.GetCell(address.Row, address.Column)?.Content ?? CellContent.FromLiteral(CellValue.Blank);
-            edits.Add(new(address, content.Kind == CellContentKind.Formula ? CellContent.FromFormula(content.FormulaText, id) : CellContent.FromLiteral(content.LiteralValue, id)));
+            if (content.RichText is { } rich && (_patch.Reset || _patch.Bold.HasValue || _patch.Italic.HasValue || _patch.FontName is not null || _patch.FontSize.HasValue || _patch.FontColor is not null))
+            {
+                // Whole-cell font commands explicitly override every run, like Excel; other patches leave runs intact.
+                var runs = rich.Runs.Select(run =>
+                {
+                    if (_patch.Reset) return run with { Font = null };
+                    var inherited = snapshot.Styles[content.StyleId];
+                    var font = run.Font ?? new TextRunFont(inherited.FontName, inherited.FontSize, inherited.Bold, inherited.Italic, inherited.FontColor,
+                        Scheme: inherited.FontScheme, EastAsianName: inherited.EastAsianFontName, ResolvedName: inherited.FontName,
+                        Underline: inherited.Underline, Strike: inherited.Strike);
+                    return run with { Font = font with
+                    {
+                        Bold = _patch.Bold ?? font.Bold, Italic = _patch.Italic ?? font.Italic, Size = _patch.FontSize ?? font.Size,
+                        Name = _patch.FontName ?? font.Name, ResolvedName = _patch.FontName ?? font.ResolvedName,
+                        EastAsianName = _patch.FontName is null ? font.EastAsianName : null, Scheme = _patch.FontName is null ? font.Scheme : null,
+                        Color = _patch.FontColor ?? font.Color, RawRgb = _patch.FontColor ?? font.RawRgb,
+                        ThemeColor = _patch.FontColor is null ? font.ThemeColor : null, IndexedColor = _patch.FontColor is null ? font.IndexedColor : null,
+                        AutoColor = _patch.FontColor is null ? font.AutoColor : null, Tint = _patch.FontColor is null ? font.Tint : null
+                    } };
+                });
+                content = CellContent.FromRichText(new(runs), id);
+            }
+            edits.Add(new(address, content.WithStyle(id)));
         }
         var styled = new WorkbookSnapshot(snapshot.DocumentId, snapshot.Revision, snapshot.DateSystem, snapshot.Sheets,
             snapshot.ScriptSource, styles, snapshot.ScriptModules, snapshot.FileState, snapshot.DefinedNames, snapshot.ActiveSheetId, snapshot.Window);
@@ -182,7 +204,7 @@ public sealed class SetAxisMetadataCommand(SheetId sheetId, SheetAxis axis, int 
             else { var old = columns.GetValueOrDefault(i) ?? new(); columns[i] = old with { Width = size ?? old.Width, Hidden = hidden ?? old.Hidden }; }
         if (rows.SequenceEqual(sheet.Rows) && columns.SequenceEqual(sheet.Columns)) return new(snapshot, [], false);
         var updated = new WorksheetSnapshot(sheet.Id, sheet.Name, sheet.Cells, rows, columns, sheet.MergedCells, sheet.Images,
-            sheet.ShowGridLines, sheet.DefaultRowHeight, sheet.TabColor, sheet.View, sheet.Visibility, sheet.Printing);
+            sheet.ShowGridLines, sheet.DefaultRowHeight, sheet.TabColor, sheet.View, sheet.Visibility, sheet.Printing, sheet.Annotations);
         return new(snapshot.WithSheets(snapshot.Sheets.Select(s => s.Id == sheetId ? updated : s)), [], true,
             CalculationUnchanged: size.HasValue && hidden is null);
     }

@@ -28,7 +28,8 @@ public partial class MainWindow
         {
             var snapshot = _document.Snapshot;
             var readOnly = snapshot.FileState?.FormulaReadOnly == true;
-            FormulaBar.IsReadOnly = ScriptEditor.IsReadOnly = readOnly;
+            ScriptEditor.IsReadOnly = readOnly;
+            FormulaBar.IsReadOnly = readOnly || snapshot.Sheets[_sheetIndex].GetCell(_selectedRow, _selectedColumn)?.Content.RichText is not null;
             RibbonPasteButton.IsEnabled = !readOnly;
             foreach (var group in HomeRibbonContent.Children.OfType<GroupBox>().Where(g => g.Header as string is "字体" or "对齐方式" or "数字" or "单元格"))
                 group.IsEnabled = !readOnly;

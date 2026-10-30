@@ -35,7 +35,8 @@ internal static class TypedWorkbookXml
         }
         var dateSystem = Bool((string?)root.Element(Main + "workbookPr")?.Attribute("date1904")) ? ExcelDateSystem.Mac1904 : ExcelDateSystem.Windows1900;
         var styles = TypedStyles.Read(package, workbookPart);
-        var strings = new List<string>();
+        var textReader = new XlsxCellText(package, workbookPart);
+        var strings = new List<XlsxTextValue>();
         if (package.RelatedByType(workbookPart, "sharedStrings") is { } stringsPart)
         {
             package.RequireType(stringsPart, "application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml");
@@ -44,7 +45,7 @@ internal static class TypedWorkbookXml
             foreach (var item in sst.Elements(Main + "si"))
             {
                 if (strings.Count >= WorkbookLimits.MaxCells) throw new InvalidDataException("共享字符串过多。");
-                strings.Add(Text(item, package, stringsPart));
+                strings.Add(textReader.Read(item, stringsPart));
             }
         }
         var sheets = new List<WorksheetSnapshot>();
@@ -71,7 +72,7 @@ internal static class TypedWorkbookXml
             var visibility = XlsxViews.Visibility(definition);
             var sheet = package.XmlPart(path).Root!;
             if (sheet.Name != Main + "worksheet") throw new InvalidDataException("无效工作表部件。");
-            package.Shape(sheet, "dimension sheetPr sheetViews sheetFormatPr cols sheetData mergeCells printOptions pageMargins pageSetup headerFooter rowBreaks colBreaks drawing", "", path);
+            package.Shape(sheet, "dimension sheetPr sheetViews sheetFormatPr cols sheetData mergeCells hyperlinks printOptions pageMargins pageSetup headerFooter rowBreaks colBreaks drawing legacyDrawing", "", path);
             var sharedFormulas = new SharedFormulaExpander(sheet);
             var cells = new Dictionary<CellPosition, CellSnapshot>();
             var cachedCells = new HashSet<CellPosition>();
@@ -112,7 +113,7 @@ internal static class TypedWorkbookXml
                     package.Shape(element, "f v is extLst", "r s t", path);
                     var style = element.Attribute("s") is not null ? Style(element, "s", styles.Count)
                         : rowMetadata.ApplyStyle ? rowMetadata.StyleId : columns.GetValueOrDefault(position.Column)?.StyleId ?? 0;
-                    var value = Value(element, strings, package, path);
+                    var value = Value(element, strings, package, path, textReader, out var richText);
                     if (element.Element(Main + "v") is not null) cachedCells.Add(position);
                     CellSnapshot cell;
                     if (element.Element(Main + "f") is { } formula)
@@ -160,7 +161,7 @@ internal static class TypedWorkbookXml
                         cell = new(CellContent.FromFormula("=" + expression.TrimStart('='), style),
                             new CellCalculation(element.Element(Main + "v") is null ? null : value, CalculationState.Stale, 0, 0, 0));
                     }
-                    else cell = new(CellContent.FromLiteral(value, style));
+                    else cell = new(richText is null ? CellContent.FromLiteral(value, style) : CellContent.FromRichText(richText, style));
                     if (!cells.TryAdd(position, cell)) throw new InvalidDataException("单元格地址重复。");
                 }
             }
@@ -191,7 +192,7 @@ internal static class TypedWorkbookXml
             var images = TypedImages.Read(package, path, sheet);
             sheets.Add(new WorksheetSnapshot(SheetId.New(), Decode(Attr(definition, "name")), cells, rows, columns, merges, images,
                 view?.Attribute("showGridLines") is null || Bool((string?)view.Attribute("showGridLines")), OptionalDouble(format?.Attribute("defaultRowHeight")) / 0.75, (string?)tabColor?.Attribute("rgb"),
-                viewState, visibility, XlsxPrinting.Read(package, path, sheet)));
+                viewState, visibility, XlsxPrinting.Read(package, path, sheet), XlsxAnnotations.Read(package, path, sheet, textReader)));
             bindings.Add(new(sheetId, path));
         }
         if (sheets.Count == 0) throw new InvalidDataException("工作簿没有工作表。");
@@ -269,20 +270,11 @@ internal static class TypedWorkbookXml
     }
 
     private static int Style(XElement element, string name, int count) => Int((string?)element.Attribute(name) ?? "0", count - 1);
-    private static string Text(XElement element, XlsxPackage package, string path)
-    {
-        foreach (var textElement in element.Descendants(Main + "t"))
-            if (textElement.HasElements || textElement.Attributes().Any(a => a.Name != XNamespace.Xml + "space" && !a.IsNamespaceDeclaration))
-                package.Loss($"{path}: 文本附加属性未建模", "text/attributes", path, element);
-        if (element.Elements().Any(e => e.Name != Main + "t")) package.Loss($"{path}: 富文本格式未建模", "text/richText", path, element);
-        var text = Decode(string.Concat(element.Elements().SelectMany(e => e.Name == Main + "t" ? new[] { e } : e.Elements(Main + "t")).Select(t => t.Value)));
-        WorkbookLimits.ValidateText(text);
-        return text;
-    }
-    private static CellValue Value(XElement element, List<string> strings, XlsxPackage package, string path)
+    private static CellValue Value(XElement element, List<XlsxTextValue> strings, XlsxPackage package, string path, XlsxCellText textReader, out RichCellText? richText)
     {
         foreach (var name in new[] { "f", "v", "is", "extLst" })
             if (element.Elements(Main + name).Count() > 1) throw new InvalidDataException("单元格内容存在重复定义。");
+        richText = null;
         var type = (string?)element.Attribute("t");
         if (type == "inlineStr" && (element.Element(Main + "v") is not null || element.Element(Main + "f") is not null) ||
             type != "inlineStr" && element.Element(Main + "is") is not null) throw new InvalidDataException("单元格类型与内容冲突。");
@@ -292,9 +284,9 @@ internal static class TypedWorkbookXml
         {
             case "inlineStr":
                 if (element.Element(Main + "is") is not { } inline) throw new InvalidDataException("内联文本内容缺失。");
-                result = CellValue.FromText(Text(inline, package, path)); break;
+                var parsed = textReader.Read(inline, path); richText = parsed.Rich; result = CellValue.FromText(parsed.Text); break;
             case "str": result = value is null ? CellValue.Blank : CellValue.FromText(Decode(value.Value)); break;
-            case "s": result = CellValue.FromText(strings[Int(value?.Value ?? "", strings.Count - 1)]); break;
+            case "s": var shared = strings[Int(value?.Value ?? "", strings.Count - 1)]; richText = shared.Rich; result = CellValue.FromText(shared.Text); break;
             case "b": result = value is null ? CellValue.Blank : CellValue.FromBoolean(Bool(value.Value)); break;
             case "e":
                 if (value is null || !CellInput.TryFromErrorText(value.Value, out result)) throw new InvalidDataException("错误单元格代码无效。");
@@ -331,9 +323,14 @@ internal static class TypedWorkbookXml
             {
                 if (cell.Content.Kind == CellContentKind.Formula) allocation += cell.Content.FormulaText.Length * 4L;
                 if (cell.Value.Kind == CellValueKind.Text) allocation += cell.Value.TextValue.Length * 8L;
+                if (cell.Content.RichText is { } rich) allocation += RichAllocation(rich);
             }
+            foreach (var link in sheet.Annotations.Links.Values)
+                allocation += 512L + 8L * (link.Target?.Length ?? 0) + 8L * (link.Location?.Length ?? 0) + 8L * (link.Display?.Length ?? 0) + 8L * (link.Tooltip?.Length ?? 0);
+            foreach (var note in sheet.Annotations.Notes.Values) allocation += 512L + note.Author.Length * 8L + note.Text.Text.Length * 8L + RichAllocation(note.Text);
             imageBytes += sheet.Images.Sum(image => (long)image.Data.Length);
             imageBytes += sheet.Printing.PrinterSettings.Length;
+            imageBytes += sheet.Annotations.NoteDrawing.Length;
         }
         if (allocation > FileReadBudget.MaxExpandedBytes || imageBytes > FileReadBudget.MaxFileBytes)
             throw new InvalidDataException("写出 XML/图片预算超限，请缩小工作簿。");
@@ -402,9 +399,11 @@ internal static class TypedWorkbookXml
                 foreach (var merge in sheet.MergedCells) ValidateRange(merge);
                 root.Add(new XElement(Main + "mergeCells", new XAttribute("count", sheet.MergedCells.Length), sheet.MergedCells.Select(m => new XElement(Main + "mergeCell", new XAttribute("ref", m)))));
             }
+            XlsxAnnotations.WriteLinks(sheet.Annotations, root);
             XlsxPrinting.WriteSheet(sheet.Printing, root);
             TypedImages.Write(sheet, i + 1, parts, root, types);
             XlsxPrinting.WritePrinter(sheet.Printing, i + 1, parts, types);
+            XlsxAnnotations.Write(sheet.Annotations, i + 1, parts, root, types);
             parts[path] = XmlBytes(new XDocument(root));
         }
         workbook.Add(sheets);
@@ -427,6 +426,9 @@ internal static class TypedWorkbookXml
         return Zip(parts);
     }
 
+    private static long RichAllocation(RichCellText rich) => rich.Runs.Sum(run => 512L +
+        ((run.Font?.Name?.Length ?? 0) + (run.Font?.EastAsianName?.Length ?? 0)) * 8L);
+
     private static XElement WriteCell(CellPosition position, CellSnapshot cell, bool valuesOnly)
     {
         var result = new XElement(Main + "c", new XAttribute("r", Reference(position)), new XAttribute("s", cell.Content.StyleId));
@@ -439,7 +441,7 @@ internal static class TypedWorkbookXml
             case CellValueKind.Blank: if (formula) result.Add(new XElement(Main + "v")); break;
             case CellValueKind.Text:
                 result.SetAttributeValue("t", formula ? "str" : "inlineStr");
-                result.Add(formula ? new XElement(Main + "v", Encode(value.TextValue)) : new XElement(Main + "is", new XElement(Main + "t", new XAttribute(XNamespace.Xml + "space", "preserve"), Encode(value.TextValue)))); break;
+                result.Add(formula ? new XElement(Main + "v", Encode(value.TextValue)) : cell.Content.RichText is { } rich ? XlsxCellText.Write(Main + "is", rich) : new XElement(Main + "is", XlsxCellText.Text(value.TextValue))); break;
             case CellValueKind.Number: result.Add(new XElement(Main + "v", value.NumberValue.ToString("R", CultureInfo.InvariantCulture))); break;
             case CellValueKind.Boolean: result.SetAttributeValue("t", "b"); result.Add(new XElement(Main + "v", value.BooleanValue ? "1" : "0")); break;
             case CellValueKind.Error:

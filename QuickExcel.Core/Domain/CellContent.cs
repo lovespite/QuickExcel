@@ -8,18 +8,20 @@ public sealed record CellContent
     private readonly CellValue _literal;
     private readonly string? _formula;
 
-    private CellContent(CellContentKind kind, CellValue literal, string? formula, int styleId)
+    private CellContent(CellContentKind kind, CellValue literal, string? formula, int styleId, RichCellText? richText = null)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(styleId);
         Kind = kind;
         _literal = literal;
         _formula = formula;
         StyleId = styleId;
+        RichText = richText;
     }
 
     public CellContentKind Kind { get; }
     /// <summary>Zero denotes the default style; the workbook will own the style table.</summary>
     public int StyleId { get; }
+    public RichCellText? RichText { get; }
     public CellValue LiteralValue => Kind == CellContentKind.Literal ? _literal
         : throw new InvalidOperationException("Formula content has no literal value.");
     public string FormulaText => Kind == CellContentKind.Formula ? _formula!
@@ -27,6 +29,10 @@ public sealed record CellContent
 
     public static CellContent FromLiteral(CellValue value, int styleId = 0) =>
         new(CellContentKind.Literal, value, null, styleId);
+
+    public static CellContent FromRichText(RichCellText text, int styleId = 0) =>
+        new(CellContentKind.Literal, CellValue.FromText(text.Text), null, styleId, text);
+    public CellContent WithStyle(int styleId) => new(Kind, _literal, _formula, styleId, RichText);
 
     public static CellContent FromFormula(string formulaText, int styleId = 0)
     {
