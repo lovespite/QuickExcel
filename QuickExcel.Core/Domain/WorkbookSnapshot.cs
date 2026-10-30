@@ -228,11 +228,13 @@ public sealed class WorkbookSnapshot
 {
     public WorkbookSnapshot(Guid documentId, long revision, ExcelDateSystem dateSystem,
         IEnumerable<WorksheetSnapshot> sheets, string scriptSource = "", IEnumerable<StyleDefinition>? styles = null, ScriptModuleSet? scriptModules = null, WorkbookFileState? fileState = null, IEnumerable<QuickExcel.Formulas.DefinedName>? definedNames = null,
-        SheetId? activeSheetId = null, WorkbookWindow? window = null)
+        SheetId? activeSheetId = null, WorkbookWindow? window = null, int textCompatibilityVersion = 1)
     {
         if (documentId == Guid.Empty) throw new ArgumentException("A document requires a nonempty identity.", nameof(documentId));
         ArgumentOutOfRangeException.ThrowIfNegative(revision);
         if (!Enum.IsDefined(dateSystem)) throw new ArgumentOutOfRangeException(nameof(dateSystem));
+        if (textCompatibilityVersion < 1) throw new ArgumentOutOfRangeException(nameof(textCompatibilityVersion));
+        TextCompatibilityVersion = textCompatibilityVersion;
         ArgumentNullException.ThrowIfNull(sheets);
         ArgumentNullException.ThrowIfNull(scriptSource);
         Sheets = sheets.ToImmutableArray();
@@ -312,6 +314,7 @@ public sealed class WorkbookSnapshot
     public Guid DocumentId { get; }
     public long Revision { get; }
     public ExcelDateSystem DateSystem { get; }
+    public int TextCompatibilityVersion { get; }
     public ImmutableArray<WorksheetSnapshot> Sheets { get; }
     public ImmutableArray<StyleDefinition> Styles { get; }
     public string ScriptSource { get; }
@@ -325,24 +328,24 @@ public sealed class WorkbookSnapshot
         ?? throw new KeyNotFoundException($"Sheet {id} does not exist.");
 
     public WorkbookSnapshot WithDefinedNames(IEnumerable<QuickExcel.Formulas.DefinedName> names) =>
-        new(DocumentId, Revision, DateSystem, Sheets, ScriptSource, Styles, ScriptModules, FileState, names, ActiveSheetId, Window);
+        new(DocumentId, Revision, DateSystem, Sheets, ScriptSource, Styles, ScriptModules, FileState, names, ActiveSheetId, Window, TextCompatibilityVersion);
 
     public WorkbookSnapshot WithSheets(IEnumerable<WorksheetSnapshot> sheets)
     {
         var next = sheets.ToImmutableArray();
         return new(DocumentId, Revision, DateSystem, next, ScriptSource, Styles, ScriptModules, FileState, DefinedNames,
-            next.Any(s => s.Id == ActiveSheetId && s.Visibility == SheetVisibility.Visible) ? ActiveSheetId : null, Window);
+            next.Any(s => s.Id == ActiveSheetId && s.Visibility == SheetVisibility.Visible) ? ActiveSheetId : null, Window, TextCompatibilityVersion);
     }
 
     public WorkbookSnapshot WithRevision(long revision) =>
-        new(DocumentId, revision, DateSystem, Sheets, ScriptSource, Styles, ScriptModules, FileState, DefinedNames, ActiveSheetId, Window);
+        new(DocumentId, revision, DateSystem, Sheets, ScriptSource, Styles, ScriptModules, FileState, DefinedNames, ActiveSheetId, Window, TextCompatibilityVersion);
 
     public WorkbookSnapshot WithScriptModules(ScriptModuleSet modules) =>
-        new(DocumentId, Revision, DateSystem, Sheets, modules.PrimarySource, Styles, modules, FileState, DefinedNames, ActiveSheetId, Window);
+        new(DocumentId, Revision, DateSystem, Sheets, modules.PrimarySource, Styles, modules, FileState, DefinedNames, ActiveSheetId, Window, TextCompatibilityVersion);
 
     public WorkbookSnapshot WithScriptSource(string scriptSource) =>
-        new(DocumentId, Revision, DateSystem, Sheets, scriptSource, Styles, ScriptModules.WithPrimarySource(scriptSource), FileState, DefinedNames, ActiveSheetId, Window);
+        new(DocumentId, Revision, DateSystem, Sheets, scriptSource, Styles, ScriptModules.WithPrimarySource(scriptSource), FileState, DefinedNames, ActiveSheetId, Window, TextCompatibilityVersion);
 
     public WorkbookSnapshot WithActiveSheet(SheetId id) =>
-        new(DocumentId, Revision, DateSystem, Sheets, ScriptSource, Styles, ScriptModules, FileState, DefinedNames, id, Window);
+        new(DocumentId, Revision, DateSystem, Sheets, ScriptSource, Styles, ScriptModules, FileState, DefinedNames, id, Window, TextCompatibilityVersion);
 }

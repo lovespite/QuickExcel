@@ -261,7 +261,7 @@ public static partial class CellDisplayFormatter
         var year = zeroDay ? 1900 : date.Year;
         var month = zeroDay ? 1 : date.Month;
         var dateDay = fictitious ? 29 : zeroDay ? 0 : date.Day;
-        var dayOfWeek = fictitious ? DayOfWeek.Wednesday : zeroDay ? DayOfWeek.Saturday : date.DayOfWeek;
+        var dayOfWeek = system == ExcelDateSystem.Windows1900 && day <= 60 ? (DayOfWeek)(((int)day + 6) % 7) : date.DayOfWeek;
         var names = (section.Culture ?? culture).DateTimeFormat;
         var twelveHour = tokens.Any(t => t.Kind == 'a');
         var builder = new StringBuilder();

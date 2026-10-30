@@ -6,15 +6,15 @@ namespace QuickExcel.Formulas;
 public static class ExcelFormulaNames
 {
     private const string Prefix = "_xlfn.";
-    private static bool Extension(string name) => name.Equals("XLOOKUP", StringComparison.OrdinalIgnoreCase) || name.Equals("XMATCH", StringComparison.OrdinalIgnoreCase);
+    private static readonly string[] Extensions = ["XLOOKUP", "XMATCH", "IFNA", "CONCAT", "TEXTJOIN"];
+    private static bool Extension(string name) => Extensions.Contains(name, StringComparer.OrdinalIgnoreCase);
     public static string CanonicalName(string name) => name.StartsWith(Prefix, StringComparison.OrdinalIgnoreCase) && Extension(name[Prefix.Length..])
         ? name[Prefix.Length..].ToUpperInvariant() : name.ToUpperInvariant();
     public static string Decode(string formula) => Rewrite(formula, false);
     public static string Encode(string formula) => Rewrite(formula, true);
     private static string Rewrite(string formula, bool encode)
     {
-        if (!encode && !formula.Contains(Prefix, StringComparison.OrdinalIgnoreCase) || encode &&
-            !formula.Contains("XLOOKUP", StringComparison.OrdinalIgnoreCase) && !formula.Contains("XMATCH", StringComparison.OrdinalIgnoreCase)) return formula;
+        if (!encode && !formula.Contains(Prefix, StringComparison.OrdinalIgnoreCase) || encode && !Extensions.Any(n => formula.Contains(n, StringComparison.OrdinalIgnoreCase))) return formula;
         var output = new StringBuilder(formula.Length + 16); var index = 0;
         while (index < formula.Length)
         {

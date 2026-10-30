@@ -49,6 +49,7 @@ public sealed class WorkbookCalculator(IScriptRuntimeFactory runtimeFactory) : I
             && prior.Request.Stamp.ScriptGeneration == request.Stamp.ScriptGeneration
             && prior.Request.Snapshot.DocumentId == request.Snapshot.DocumentId
             && prior.Request.Snapshot.DateSystem == request.Snapshot.DateSystem
+            && prior.Request.Snapshot.TextCompatibilityVersion == request.Snapshot.TextCompatibilityVersion
             && prior.Request.Snapshot.ScriptSource == request.Snapshot.ScriptSource
             && prior.Request.Snapshot.DefinedNames.SequenceEqual(request.Snapshot.DefinedNames)
             && prior.Request.Snapshot.Sheets.Select(s => (s.Id, s.Name)).SequenceEqual(request.Snapshot.Sheets.Select(s => (s.Id, s.Name)));

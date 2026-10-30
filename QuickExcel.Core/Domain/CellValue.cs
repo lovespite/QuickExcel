@@ -5,7 +5,7 @@ namespace QuickExcel.Domain;
 public enum CellValueKind { Blank, Text, Number, Boolean, Error }
 
 /// <summary>Semantic error identity; diagnostics and display spelling belong to other layers.</summary>
-public enum CellErrorCode { Null, DivisionByZero, Value, Reference, Name, Number, NotAvailable, Cycle, Script }
+public enum CellErrorCode { Null, DivisionByZero, Value, Reference, Name, Number, NotAvailable, Cycle, Script, Calculation }
 
 /// <summary>An immutable scalar. The default value is Blank; no string parsing or coercion occurs here.</summary>
 public readonly record struct CellValue

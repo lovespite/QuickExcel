@@ -80,7 +80,7 @@ E1 是当前首个产品交付目标。E2 中不依赖未完成模型的低成�
 - [x] **XC-0205 条件统计公式**（P1｜I5/F5｜M）：SUMIF/SUMIFS、COUNTIF/COUNTIFS、AVERAGEIF/AVERAGEIFS、COUNTBLANK 及统一类型/通配符匹配完成，空白与空文本、错误、尺寸和投影依赖单独处理。1,706 条真实 Excel 公式、13,648 项往返、126 项相关回归及 49 项 WPF 通过；标量条件、语言与数组保护范围见 [44](44-conditional-functions.md)。
 - [x] **XC-0206 查找公式补齐**（P1｜I5/F4｜L）：VLOOKUP/MATCH 边界与 HLOOKUP/XLOOKUP/XMATCH 标量模式完成，包含通配符、正反向、未找到/重复键/错误和 XLSX 别名。604 条真实 Excel 公式、4,832 项往返、193 项相关测试及 59 项 WPF 通过；未实现模式保护和完整范围见 [45](45-lookup-functions.md)。
 - [x] **XC-0207 日期和数学公式**（P1｜I4/F4｜M）：DATE/YEAR/MONTH/DAY、TIME/HOUR/MINUTE/SECOND、EDATE/EOMONTH、WEEKDAY、ROUNDUP/ROUNDDOWN/INT/MOD 及 WORKDAY/NETWORKDAYS 完成；两套日期系统各 1,512 条真实 Excel 公式、24,192 项往返、134 项相关测试及 81 项 WPF 通过，虚构闰日/文本转换/范围与压力实验限制见 [46](46-date-and-math-functions.md)。
-- [ ] **XC-0208 文本和类型判断公式**（P1｜I4/F4｜M）：TEXT/VALUE、SUBSTITUTE/REPLACE、FIND/SEARCH、TEXTJOIN/CONCAT、ISBLANK/ISNUMBER/ISTEXT/ISERROR/IFNA；TEXT 复用 XC-0101 格式规则，VALUE 的文化和日期解析须明确，不改现有单元格输入的类型契约。
+- [x] **XC-0208 文本和类型判断公式**（P1｜I4/F4｜M）：13 个函数完成声明范围，TEXT 复用格式渲染，VALUE 使用明确文化/日期语法；Unicode 兼容版本和 #CALC! 富值读写持久化。两套日期系统合计 4,658 条真实 Excel 公式、37,264 项往返、最终 34 项专项及 99 项 WPF 通过，范围及证据见 [47](47-text-and-type-functions.md)。
 - [ ] **XC-0209 计算与导出语义对齐**（P0｜I5/F5｜L）：整理所有已支持函数的参数个数、强制转换、错误传播、懒分支、整行/整列和名称边界；完善跨表/名称的可移植公式导出及重算标记。先定义无脚本的受支持公式保留范围，JS 及其传递依赖继续按显式冻结规则处理。
 - [ ] **XC-0210 状态栏与格式效率**（P1｜I4/F5｜S–M）：选区求和/平均/计数、增减小数位、格式刷/清除格式、常用数字格式入口；有界遍历大选区，错误/隐藏记录的统计口径可解释。
 

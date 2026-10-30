@@ -15,7 +15,7 @@ public static class ScalarFunctionsProbe
     private static CellValue Value(JsonElement item) => item.GetProperty("Kind").GetString() switch
     {
         "Number" => CellValue.FromNumber(item.GetProperty("Value").GetDouble()), "Text" => CellValue.FromText(item.GetProperty("Value").GetString()!),
-        "Boolean" => CellValue.FromBoolean(item.GetProperty("Value").GetBoolean()), "Error" => ((ValueNode)FormulaSyntax.Parse("=" + item.GetProperty("Value").GetString())).Value, _ => CellValue.Blank
+        "Boolean" => CellValue.FromBoolean(item.GetProperty("Value").GetBoolean()), "Error" => CellInput.FromErrorText(item.GetProperty("Value").GetString()!), _ => CellValue.Blank
     };
     private static bool Equal(CellValue a, CellValue b) => a.Kind == b.Kind && (a.Kind == CellValueKind.Number
         ? Math.Abs(a.NumberValue - b.NumberValue) <= 1e-12 * Math.Max(1, Math.Abs(b.NumberValue)) : a == b);

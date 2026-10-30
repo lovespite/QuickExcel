@@ -97,6 +97,7 @@ internal sealed partial class TypedEvaluator(WorkbookSnapshot snapshot, IReadOnl
         if (ConditionalRanges.IsFunction(function.Name)) return Conditional(function);
         if (LookupModes.IsFunction(function.Name)) return LookupValue(function);
         if (DateMathFunctions.IsFunction(function.Name)) return DateMath(function);
+        if (TextFunctions.IsFunction(function.Name)) return TextFunction(function);
         var args = function.Arguments.Select(Evaluate).ToArray();
         if (function.Name is "SUM" or "AVERAGE" or "MIN" or "MAX" or "COUNT" or "COUNTA" or "PRODUCT") return Aggregate(function, args);
         foreach (var arg in args) if (arg is CellValue { Kind: CellValueKind.Error } error) return error;
@@ -129,7 +130,7 @@ internal sealed partial class TypedEvaluator(WorkbookSnapshot snapshot, IReadOnl
                     return CellValue.FromNumber(!double.IsFinite(n * factor) ? n : Math.Round(n * factor, MidpointRounding.AwayFromZero) / factor);
                 return CellValue.FromNumber(!double.IsFinite(factor) ? 0 : Math.Round(n / factor, MidpointRounding.AwayFromZero) * factor);
             case "CONCATENATE": return CellValue.FromText(string.Concat(values.Select(Text)));
-            case "LEN": return CellValue.FromNumber(S(0).Length);
+            case "LEN": return CellValue.FromNumber(TextOffsets(S(0)).Length - 1);
             case "UPPER": return CellValue.FromText(S(0).ToUpperInvariant());
             case "LOWER": return CellValue.FromText(S(0).ToLowerInvariant());
             case "TRIM": return CellValue.FromText(string.Join(" ", S(0).Split(' ', StringSplitOptions.RemoveEmptyEntries)));
@@ -137,12 +138,14 @@ internal sealed partial class TypedEvaluator(WorkbookSnapshot snapshot, IReadOnl
             case "RIGHT":
                 var count = args.Length == 1 ? 1 : Integer(1);
                 if (count < 0) return Error(CellErrorCode.Value);
-                var text = S(0); count = Math.Min(count, text.Length);
-                return CellValue.FromText(function.Name == "LEFT" ? text[..count] : text[(text.Length - count)..]);
+                var text = S(0); var textOffsets = TextOffsets(text, alwaysUnicode: true); count = Math.Min(count, textOffsets.Length - 1);
+                return CellValue.FromText(function.Name == "LEFT" ? text[..textOffsets[count]] : text[textOffsets[textOffsets.Length - count - 1]..]);
             case "MID":
                 var start = Integer(1); var length = Integer(2); var source = S(0);
                 if (start < 1 || length < 0) return Error(CellErrorCode.Value);
-                return CellValue.FromText(start > source.Length ? "" : source.Substring(start - 1, Math.Min(length, source.Length - start + 1)));
+                var sourceOffsets = TextOffsets(source);
+                if (start >= sourceOffsets.Length) return CellValue.FromText("");
+                return CellValue.FromText(source[sourceOffsets[start - 1]..sourceOffsets[(int)Math.Min((long)start - 1 + length, sourceOffsets.Length - 1)]]);
             case "TODAY": return Serial(_now.Date);
             case "NOW": return Serial(_now);
             default: return Error(CellErrorCode.Name);

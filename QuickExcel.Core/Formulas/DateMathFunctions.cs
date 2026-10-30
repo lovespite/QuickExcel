@@ -19,7 +19,7 @@ public static class DateMathFunctions
                 throw new FormatException("日期和数学公式目前仅支持标量参数；多格数组模式尚未实现。");
         }
     }
-    private static bool ArrayResult(FormulaNode expression) => expression switch
+    internal static bool ArrayResult(FormulaNode expression) => expression switch
     {
         ReferenceNode reference => ConditionalRanges.Shape(reference) != (1, 1),
         UnaryNode unary => ArrayResult(unary.Operand),

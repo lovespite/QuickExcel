@@ -193,9 +193,14 @@ internal static class TypedStyles
     {
         var escaped = System.Text.RegularExpressions.Regex.Replace(value, "_x[0-9A-Fa-f]{4}_", match => "_x005F_" + match.Value[1..]);
         var result = new System.Text.StringBuilder();
-        foreach (var ch in escaped)
-            if (ch < 32 && ch is not ('\n' or '\t') || ch is '\uFFFE' or '\uFFFF') result.Append($"_x{(int)ch:X4}_");
+        for (var i = 0; i < escaped.Length; i++)
+        {
+            var ch = escaped[i];
+            if (char.IsHighSurrogate(ch) && i + 1 < escaped.Length && char.IsLowSurrogate(escaped[i + 1]))
+                result.Append(ch).Append(escaped[++i]);
+            else if (char.IsSurrogate(ch) || ch < 32 && ch is not ('\n' or '\t') || ch is '\uFFFE' or '\uFFFF') result.Append($"_x{(int)ch:X4}_");
             else result.Append(ch);
+        }
         return result.ToString();
     }
 }

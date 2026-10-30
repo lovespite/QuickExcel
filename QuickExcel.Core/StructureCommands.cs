@@ -338,7 +338,7 @@ internal static class StructureEdits
         var names = snapshot.DefinedNames.Select(n => n with { Formula = Formula(n.Formula, n.Scope ?? snapshot.Sheets[0].Id) });
         // Rename and names must validate together.
         return new(snapshot.DocumentId, snapshot.Revision, snapshot.DateSystem, sheets, snapshot.ScriptSource,
-            snapshot.Styles, snapshot.ScriptModules, snapshot.FileState, names, snapshot.ActiveSheetId, snapshot.Window);
+            snapshot.Styles, snapshot.ScriptModules, snapshot.FileState, names, snapshot.ActiveSheetId, snapshot.Window, snapshot.TextCompatibilityVersion);
     }
 
     internal static CommandDraft Draft(WorkbookSnapshot before, WorkbookSnapshot after)

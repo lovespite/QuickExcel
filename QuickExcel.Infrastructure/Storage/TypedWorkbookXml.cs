@@ -29,7 +29,8 @@ internal static class TypedWorkbookXml
         package.RequireType(workbookPart, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml");
         var root = package.XmlPart(workbookPart).Root!;
         if (root.Name != Main + "workbook") throw new InvalidDataException("无效工作簿。");
-        package.Shape(root, "workbookPr bookViews sheets definedNames calcPr", "", workbookPart);
+        var textCompatibility = XlsxTextCompatibility.Read(package, root, workbookPart);
+        package.Shape(XlsxTextCompatibility.Shape(root), "workbookPr bookViews sheets definedNames calcPr", "", workbookPart);
         if (root.Element(Main + "workbookPr") is { } pr) package.Shape(pr, "", "date1904", workbookPart);
         if (root.Element(Main + "calcPr") is { } calc)
         {
@@ -42,6 +43,7 @@ internal static class TypedWorkbookXml
         var dateSystem = Bool((string?)root.Element(Main + "workbookPr")?.Attribute("date1904")) ? ExcelDateSystem.Mac1904 : ExcelDateSystem.Windows1900;
         var styles = TypedStyles.Read(package, workbookPart);
         var textReader = new XlsxCellText(package, workbookPart);
+        var richErrors = XlsxRichErrors.Read(package, workbookPart);
         var strings = new List<XlsxTextValue>();
         var stylesPart = package.RelatedByType(workbookPart, "styles");
         var stringsPart = package.RelatedByType(workbookPart, "sharedStrings");
@@ -126,10 +128,11 @@ internal static class TypedWorkbookXml
                     var position = element.Attribute("r") is { } address ? Position(address.Value) : new CellPosition(rowIndex, nextColumn);
                     if (position.Row != rowIndex || position.Column >= WorkbookLimits.MaxColumns) throw new InvalidDataException("单元格地址与所在行不一致。");
                     nextColumn = position.Column + 1;
-                    package.Shape(element, "f v is extLst", "r s t", path);
+                    package.Shape(element, "f v is extLst", "r s t vm", path);
                     var style = element.Attribute("s") is not null ? Style(element, "s", styles.Count)
                         : rowMetadata.ApplyStyle ? rowMetadata.StyleId : columns.GetValueOrDefault(position.Column)?.StyleId ?? 0;
                     var value = Value(element, strings, package, path, textReader, out var richText);
+                    value = XlsxRichErrors.Apply(element, value, richErrors, package, path);
                     if (package.HasSharedLocations)
                     {
                         var cellReference = Reference(position);
@@ -267,7 +270,7 @@ internal static class TypedWorkbookXml
             }
         }
         package.SetReadContext(workbookPart, null, "workbook/model");
-        var snapshot = new WorkbookSnapshot(Guid.NewGuid(), 0, dateSystem, sheets, styles: styles, definedNames: names, activeSheetId: window.Active, window: window.Window);
+        var snapshot = new WorkbookSnapshot(Guid.NewGuid(), 0, dateSystem, sheets, styles: styles, definedNames: names, activeSheetId: window.Active, window: window.Window, textCompatibilityVersion: textCompatibility);
         var preservedLocations = preservedFormulas.Select(f => (f.Part, f.Cell)).ToHashSet();
         // Names can hide unsupported syntax or circular/oversized binding behind an otherwise simple formula.
         foreach (var sheet in sheets)
@@ -316,7 +319,8 @@ internal static class TypedWorkbookXml
             case "s": var shared = strings[Int(value?.Value ?? "", strings.Count - 1)]; richText = shared.Rich; result = CellValue.FromText(shared.Text); break;
             case "b": result = value is null ? CellValue.Blank : CellValue.FromBoolean(Bool(value.Value)); break;
             case "e":
-                if (value is null || !CellInput.TryFromErrorText(value.Value, out result)) throw new InvalidDataException("错误单元格代码无效。");
+                if (value is null || !CellInput.TryFromErrorText(value.Value, out result) || result.ErrorCode == CellErrorCode.Calculation)
+                    throw new InvalidDataException("错误单元格代码无效；#CALC! 必须使用富值元数据和 #VALUE! 回退值。");
                 break;
             case null or "n":
                 if (value is null || value.Value.Length == 0) result = CellValue.Blank;
@@ -374,6 +378,7 @@ internal static class TypedWorkbookXml
         Override("xl/workbook.xml", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml");
         Override("xl/styles.xml", "application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml");
         rels.Add(Relationship("styles", "styles", "styles.xml"));
+        XlsxRichErrors.Write(snapshot, parts, rels, types);
         var rootRels = new XElement(PackageRel + "Relationships", Relationship("workbook", "officeDocument", "xl/workbook.xml"));
         XlsxMetadata.Write(snapshot, parts, rootRels, types, cancellationToken);
         parts["_rels/.rels"] = XmlBytes(new XDocument(rootRels));
@@ -451,6 +456,7 @@ internal static class TypedWorkbookXml
             workbook.Add(names);
         }
         workbook.Add(new XElement(Main + "calcPr", new XAttribute("fullCalcOnLoad", 1)));
+        workbook.Add(XlsxTextCompatibility.Write(snapshot));
         parts["xl/workbook.xml"] = XmlBytes(new XDocument(workbook));
         parts["xl/_rels/workbook.xml.rels"] = XmlBytes(new XDocument(rels));
         parts["[Content_Types].xml"] = XmlBytes(new XDocument(types));
@@ -478,7 +484,9 @@ internal static class TypedWorkbookXml
             case CellValueKind.Error:
                 result.SetAttributeValue("t", "e");
                 var hostError = value.ErrorCode is CellErrorCode.Script or CellErrorCode.Cycle;
-                result.Add(new XElement(Main + "v", hostError ? "#VALUE!" : CellInput.DisplayText(value)));
+                var richError = value.ErrorCode == CellErrorCode.Calculation;
+                result.Add(new XElement(Main + "v", hostError || richError ? "#VALUE!" : CellInput.DisplayText(value)));
+                if (richError) result.SetAttributeValue("vm", "1");
                 if (hostError && !valuesOnly) result.Add(new XElement(Main + "extLst", new XElement(Main + "ext", new XAttribute("uri", ErrorExtension), new XElement(Quick + "error", new XAttribute("code", value.ErrorCode)))));
                 break;
         }

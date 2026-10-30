@@ -9,10 +9,12 @@ public static class FormulaBinding
 {
     public static FormulaNode Bind(FormulaNode expression, WorkbookSnapshot snapshot, SheetId currentSheet)
     {
+        if (snapshot.TextCompatibilityVersion > 2) throw new FormatException("未知文本计算兼容版本；不能确认公式语义。");
         var bound = Bind(expression, snapshot, currentSheet, new HashSet<(SheetId?, string)>(), new BindingBudget(), 0, false);
         ConditionalRanges.ValidateModes(bound);
         LookupModes.Validate(bound);
         DateMathFunctions.Validate(bound);
+        TextFunctions.Validate(bound, snapshot);
         return bound;
     }
 
@@ -84,6 +86,9 @@ public static class StandardFunctions
             ["EDATE"] = (2, 2), ["EOMONTH"] = (2, 2), ["WEEKDAY"] = (1, 2),
             ["WORKDAY"] = (2, 3), ["NETWORKDAYS"] = (2, 3),
             ["ROUNDUP"] = (2, 2), ["ROUNDDOWN"] = (2, 2), ["INT"] = (1, 1), ["MOD"] = (2, 2),
+            ["TEXT"] = (2, 2), ["VALUE"] = (1, 1), ["SUBSTITUTE"] = (3, 4), ["REPLACE"] = (4, 4),
+            ["FIND"] = (2, 3), ["SEARCH"] = (2, 3), ["TEXTJOIN"] = (3, 254), ["CONCAT"] = (1, 253),
+            ["ISBLANK"] = (1, 1), ["ISNUMBER"] = (1, 1), ["ISTEXT"] = (1, 1), ["ISERROR"] = (1, 1), ["IFNA"] = (2, 2),
             ["TODAY"] = (0, 0), ["NOW"] = (0, 0)
         };
 }

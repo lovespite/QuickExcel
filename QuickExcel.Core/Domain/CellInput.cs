@@ -58,6 +58,7 @@ public static class CellInput
             CellErrorCode.NotAvailable => "#N/A",
             CellErrorCode.Cycle => "#CYCLE!",
             CellErrorCode.Script => "#SCRIPT!",
+            CellErrorCode.Calculation => "#CALC!",
             _ => throw new InvalidOperationException("Unknown cell error code.")
         },
         _ => throw new InvalidOperationException("Unknown cell value kind.")
@@ -81,6 +82,7 @@ public static class CellInput
             "#N/A" => CellErrorCode.NotAvailable,
             "#CYCLE!" => CellErrorCode.Cycle,
             "#SCRIPT!" => CellErrorCode.Script,
+            "#CALC!" => CellErrorCode.Calculation,
             _ => null
         };
         value = code.HasValue ? CellValue.FromError(code.Value) : CellValue.Blank;

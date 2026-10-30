@@ -14,7 +14,7 @@ internal static class ScalarFormulaFixture
     public static CellValue Value(JsonElement item) => item.GetProperty("Kind").GetString() switch
     {
         "Number" => CellValue.FromNumber(item.GetProperty("Value").GetDouble()), "Text" => CellValue.FromText(item.GetProperty("Value").GetString()!),
-        "Boolean" => CellValue.FromBoolean(item.GetProperty("Value").GetBoolean()), "Error" => ((ValueNode)FormulaSyntax.Parse("=" + item.GetProperty("Value").GetString())).Value, _ => CellValue.Blank
+        "Boolean" => CellValue.FromBoolean(item.GetProperty("Value").GetBoolean()), "Error" => CellInput.FromErrorText(item.GetProperty("Value").GetString()!), _ => CellValue.Blank
     };
     public static CellPosition Position(string address) { var r = (ReferenceNode)FormulaSyntax.Parse("=" + address); return new(r.Row, r.Column); }
     public static WorkbookSnapshot Book(JsonElement spec)
@@ -23,7 +23,8 @@ internal static class ScalarFormulaFixture
         foreach (var input in spec.GetProperty("Inputs").EnumerateArray()) sheets[input.GetProperty("Sheet").GetString()!][Position(input.GetProperty("Address").GetString()!)] = new(Content(input));
         foreach (var item in spec.GetProperty("Cases").EnumerateArray()) sheets[item.GetProperty("Sheet").GetString()!][Position(item.GetProperty("Address").GetString()!)] = F(item.GetProperty("Formula").GetString()!);
         return new(Guid.NewGuid(), 0, spec.GetProperty("Date1904").GetBoolean() ? ExcelDateSystem.Mac1904 : ExcelDateSystem.Windows1900,
-            sheets.Select(p => new WorksheetSnapshot(SheetId.New(), p.Key, p.Value)));
+            sheets.Select(p => new WorksheetSnapshot(SheetId.New(), p.Key, p.Value)),
+            textCompatibilityVersion: spec.TryGetProperty("TextCompatibilityVersion", out var version) ? version.GetInt32() : 1);
     }
     public static void Edit(DocumentSession session, JsonElement spec) => session.Execute(new SetCellsCommand(spec.GetProperty("Edits").EnumerateArray().Select(e =>
     {

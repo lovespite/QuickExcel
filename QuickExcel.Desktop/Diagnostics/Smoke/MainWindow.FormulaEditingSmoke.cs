@@ -43,7 +43,7 @@ public partial class MainWindow
             Check(_formulaHelp.IsOpen && _completion?.Names.Contains("AVERAGE") == true, "Actual completion popup offers registered functions");
             await KeyAsync(Key.Tab);
             Check(_grid.Editor.Text == "=AVERAGE(" && _grid.IsEditing && _document.Snapshot.Revision == revision, "Tab accepts completion without navigating or committing");
-            _grid.Editor.Text = "=su(A1)"; _grid.Editor.CaretIndex = 3; await KeyAsync(Key.Tab);
+            _grid.Editor.Text = "=sum(A1)"; _grid.Editor.CaretIndex = 4; await KeyAsync(Key.Tab);
             Check(_grid.Editor.Text == "=SUM(A1)" && _grid.Editor.CaretIndex == 5, "Completion reuses an existing parenthesis and places the caret inside its arguments");
             _grid.Editor.Text = "=IF(A1>0,SUM(A1,"; _grid.Editor.CaretIndex = _grid.Editor.Text.Length; await Idle();
             Check(_formulaHint.Text.Contains("SUM(") && _formulaHint.Text.Contains("第 2"), "Actual popup displays the innermost function and argument index");
@@ -148,6 +148,29 @@ public partial class MainWindow
             Check(dates.Select((c, i) => dateReopened.Sheets[0].GetCell(i, 8)!.Value.NumberValue == c.Value &&
                 dateReopened.Sheets[0].GetCell(i, 8)!.Content.FormulaText == c.Formula).All(x => x), "All seventeen date/math functions retain formulas and caches in ordinary XLSX save/reopen");
             GridSurface.Select(new(0, 8)); await Idle(); CaptureGridEvidence(Path.Combine(folder, "date-math-entry.png"));
+            GridSurface.Select(new(0, 10)); FormulaBar.Focus(); FormulaBar.Text = "=TEXT"; FormulaBar.CaretIndex = 5; await Idle();
+            Check(_completion?.Names.Contains("TEXT") == true && _completion.Names.Contains("TEXTJOIN"), "Text functions appear in actual completion");
+            FormulaBar.Text = "=TEXTJOIN(\"|\",TRUE,"; FormulaBar.CaretIndex = FormulaBar.Text.Length; await Idle();
+            Check(_formulaHint.Text.Contains("text1") && _formulaHint.Text.Contains("第 3"), "Text join hint identifies its first text argument");
+            var texts = new (string Formula, CellValue Value)[] {
+                ("=TEXT(1234.5,\"#,##0.00\")", CellValue.FromText("1,234.50")), ("=VALUE(\"12%\")", CellValue.FromNumber(.12)),
+                ("=SUBSTITUTE(\"aaaAa\",\"aa\",\"Z\",2)", CellValue.FromText("aZAa")), ("=REPLACE(\"abcdef\",2,3,\"X\")", CellValue.FromText("aXef")),
+                ("=FIND(\"b\",\"Abc\")", CellValue.FromNumber(2)), ("=SEARCH(\"B?\",\"abc\")", CellValue.FromNumber(2)),
+                ("=TEXTJOIN(\"|\",TRUE,A1:A3)", CellValue.FromText("1|2|3")), ("=CONCAT(A1:A3)", CellValue.FromText("123")),
+                ("=ISBLANK(Z99)", CellValue.FromBoolean(true)), ("=ISNUMBER(\"12\")", CellValue.FromBoolean(false)),
+                ("=ISTEXT(\"\")", CellValue.FromBoolean(true)), ("=ISERROR(1/0)", CellValue.FromBoolean(true)),
+                ("=IFNA(#N/A,\"missing\")", CellValue.FromText("missing")) };
+            for (var i = 0; i < texts.Length; i++)
+            {
+                GridSurface.Select(new(i, 10)); FormulaBar.Focus(); FormulaBar.Text = texts[i].Formula; await ApplyFormulaBarAsync();
+                Check(_document.Snapshot.Sheets[0].GetCell(i, 10)!.Value == texts[i].Value, "Formula-bar commit calculates " + texts[i].Formula);
+            }
+            await UndoAsync(false); Check(_document.Snapshot.Sheets[0].GetCell(12, 10) is null, "Text function entry is one undo transaction");
+            await UndoAsync(true); Check(_document.Snapshot.Sheets[0].GetCell(12, 10)!.Value == texts[12].Value, "Text function redo recalculates its result");
+            var textPath = Path.Combine(folder, "text-type-entry.xlsx"); storage.Save(textPath, _document.Snapshot); var textReopened = storage.Open(textPath);
+            Check(texts.Select((c, i) => textReopened.Sheets[0].GetCell(i, 10)!.Value == c.Value && textReopened.Sheets[0].GetCell(i, 10)!.Content.FormulaText == c.Formula).All(x => x),
+                "All thirteen text/type functions retain formulas and caches in ordinary XLSX save/reopen");
+            GridSurface.Select(new(0, 10)); await Idle(); CaptureGridEvidence(Path.Combine(folder, "text-type-entry.png"));
             File.WriteAllLines(Path.Combine(folder, "formula-entry-result.txt"), new[] { $"PASS: {checks.Count} checks" }.Concat(checks));
         }
         finally { _suppressAutoCalculation = false; EndReferenceGesture(); CloseFormulaHelp(); }

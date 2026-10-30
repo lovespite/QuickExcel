@@ -18,6 +18,7 @@ public sealed class WorkbookCompatibilityException(IEnumerable<string> issues) :
 public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage
 {
     private static readonly string[] Features = ["typed-workbook", "stable-sheet-ids", "script-modules"];
+    private static bool HasExtendedErrors(WorkbookSnapshot snapshot) => snapshot.Sheets.Any(s => s.Cells.Values.Any(c => c.Value is { Kind: CellValueKind.Error, ErrorCode: CellErrorCode.Calculation }));
     public WorkbookSnapshot Open(string path) => Open(path, CancellationToken.None);
     public WorkbookSnapshot Open(string path, CancellationToken cancellationToken)
     {
@@ -40,6 +41,8 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage
         var version = 0;
         var modules = ScriptModuleSet.Single("");
         var declaredViews = false;
+        var declaredTextVersion = false;
+        var declaredExtendedErrors = false;
         JsonDocument? manifest = null, state = null;
         try
         {
@@ -67,7 +70,9 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage
                         throw new InvalidDataException("XLSQ 格式、读取器版本或脚本 API 不受支持。");
                     var features = Array(root, "requiredFeatures").Select(e => e.GetString() ?? throw new InvalidDataException("能力名称必须为字符串。")).ToArray();
                     declaredViews = features.Contains("workbook-views");
-                    if (features.Distinct().Count() != features.Length || Features.Except(features).Any() || features.Except(Features.Concat(["script-actions", "script-signatures", "workbook-views", "worksheet-printing", "preserved-formulas", "cell-text-annotations"])).Any() ||
+                    declaredTextVersion = features.Contains("text-compatibility-v2");
+                    declaredExtendedErrors = features.Contains("extended-cell-errors");
+                    if (features.Distinct().Count() != features.Length || Features.Except(features).Any() || features.Except(Features.Concat(["script-actions", "script-signatures", "workbook-views", "worksheet-printing", "preserved-formulas", "cell-text-annotations", "text-compatibility-v2", "extended-cell-errors"])).Any() ||
                         features.Contains("script-actions") && scriptApiVersion != 2)
                         throw new InvalidDataException("XLSQ 缺少必要能力或包含未知必需能力。");
                     var referenced = new HashSet<string>(StringComparer.Ordinal) { "manifest.json" };
@@ -122,6 +127,10 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage
             }
             var read = TypedWorkbookXml.Read(workbookBytes, budget);
             var model = read.Snapshot;
+            if (version == 2 && (model.TextCompatibilityVersion >= 2) != declaredTextVersion)
+                throw new InvalidDataException("文本计算兼容版本与必需能力不一致。");
+            if (version == 2 && HasExtendedErrors(model) != declaredExtendedErrors)
+                throw new InvalidDataException("扩展错误值与必需能力声明不一致。");
             var sheets = model.Sheets.ToArray();
             var documentId = Guid.NewGuid();
             long revision = 0;
@@ -185,14 +194,14 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage
             }
             var names = model.DefinedNames.Select(n => n.Scope is { } scope
                 ? n with { Scope = sheets[model.Sheets.IndexOf(model.GetSheet(scope))].Id } : n).ToArray();
-            var snapshot = new WorkbookSnapshot(documentId, revision, model.DateSystem, sheets, modules.PrimarySource, model.Styles, modules, definedNames: names, activeSheetId: activeSheet, window: model.Window);
+            var snapshot = new WorkbookSnapshot(documentId, revision, model.DateSystem, sheets, modules.PrimarySource, model.Styles, modules, definedNames: names, activeSheetId: activeSheet, window: model.Window, textCompatibilityVersion: model.TextCompatibilityVersion);
             var originalModel = legacyViewApplied ? new WorkbookSnapshot(documentId, revision, model.DateSystem, sourceSheets, modules.PrimarySource,
-                model.Styles, modules, definedNames: names, activeSheetId: sourceActiveSheet, window: model.Window) : snapshot;
+                model.Styles, modules, definedNames: names, activeSheetId: sourceActiveSheet, window: model.Window, textCompatibilityVersion: model.TextCompatibilityVersion) : snapshot;
             var issues = read.Issues.ToList();
             // An original package can be retained byte-for-byte even for unsupported workbook features.
             var fileState = new WorkbookFileState(sourcePath, version, workbookBytes, originalModel, read.Bindings, issues,
                 version == 2 ? manifest!.RootElement.GetRawText() : null, state?.RootElement.GetRawText(), read.Diagnostics, read.PreservedFormulas);
-            return new(documentId, revision, model.DateSystem, sheets, modules.PrimarySource, model.Styles, modules, fileState, names, activeSheet, model.Window);
+            return new(documentId, revision, model.DateSystem, sheets, modules.PrimarySource, model.Styles, modules, fileState, names, activeSheet, model.Window, model.TextCompatibilityVersion);
         }
         catch (Exception exception) when (exception is JsonException or System.Xml.XmlException or FormatException or OverflowException or ArgumentException or InvalidOperationException && exception is not WorkbookCompatibilityException)
         { throw new InvalidDataException("工作簿结构或字段无效：" + exception.Message, exception); }
@@ -258,6 +267,8 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage
             .Concat(snapshot.FileState?.FormulaReadOnly == true ? ["preserved-formulas"] : [])
             .Concat(snapshot.Sheets.Any(s => !s.Printing.IsEmpty) ? ["worksheet-printing"] : [])
             .Concat(HasWorkbookViews(snapshot) ? ["workbook-views"] : [])
+            .Concat(snapshot.TextCompatibilityVersion >= 2 ? ["text-compatibility-v2"] : [])
+            .Concat(HasExtendedErrors(snapshot) ? ["extended-cell-errors"] : [])
             .Concat(snapshot.ScriptModules.HasActions ? ["script-actions"] : [])
             .Concat(snapshot.ScriptModules.Signature is not null ? ["script-signatures"] : []));
         JsonNode Reference(string name) => JsonSerializer.SerializeToNode(new { path = name, sha256 = Hash(parts[name]) })!;
@@ -334,7 +345,7 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage
             (name.Scope is { } scope ? book.GetSheet(scope).Name : "") + "\0" + name.Name + "\0" + name.Formula;
         if (!left.DefinedNames.Select(n => NameKey(left, n)).Order().SequenceEqual(right.DefinedNames.Select(n => NameKey(right, n)).Order())) return false;
         if (left.GetSheet(left.ActiveSheetId).Name != right.GetSheet(right.ActiveSheetId).Name || left.Window != right.Window) return false;
-        if (left.DateSystem != right.DateSystem || !left.Styles.SequenceEqual(right.Styles) || left.Sheets.Length != right.Sheets.Length) return false;
+        if (left.TextCompatibilityVersion != right.TextCompatibilityVersion || left.DateSystem != right.DateSystem || !left.Styles.SequenceEqual(right.Styles) || left.Sheets.Length != right.Sheets.Length) return false;
         for (var i = 0; i < left.Sheets.Length; i++)
         {
             var a = left.Sheets[i]; var b = right.Sheets[i];

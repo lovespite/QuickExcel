@@ -52,6 +52,21 @@ try{
         while($book.Worksheets.Count -gt 1){$extra=$book.Worksheets.Item($book.Worksheets.Count);$extra.Delete();Release-Com $extra}
         $first=$book.Worksheets.Item(1);$first.Name=$spec.Sheets[0];Release-Com $first
         foreach($name in $spec.Sheets|Select-Object -Skip 1){$last=$book.Worksheets.Item($book.Worksheets.Count);try{$sheet=$book.Worksheets.Add([Type]::Missing,$last)}finally{Release-Com $last};try{$sheet.Name=$name}finally{Release-Com $sheet}}
+        if($spec.TextCompatibilityVersion){
+            if($spec.TextCompatibilityVersion -notin @(1,2)){throw 'Only Excel text compatibility versions 1/2 are acceptance inputs.'}
+            $bootstrap=Join-Path $target 'bootstrap.xlsx';$book.SaveAs($bootstrap,51);$book.Close($false);Release-Com $book;$book=$null
+            $zip=[IO.Compression.ZipFile]::Open($bootstrap,[IO.Compression.ZipArchiveMode]::Update)
+            try{
+                $entry=$zip.GetEntry('xl/workbook.xml');$stream=$entry.Open();try{$xml=[Xml.Linq.XDocument]::Load($stream)}finally{$stream.Dispose()}
+                $main=[Xml.Linq.XNamespace]'http://schemas.openxmlformats.org/spreadsheetml/2006/main';$compat=[Xml.Linq.XNamespace]'http://schemas.microsoft.com/office/spreadsheetml/2024/workbookCompatibilityVersion'
+                $list=$xml.Root.Element($main+'extLst');if($null -eq $list){$list=[Xml.Linq.XElement]::new($main+'extLst');$xml.Root.Add($list)}
+                $extension=@($list.Elements($main+'ext')|Where-Object{$_.Attribute('uri').Value -eq '{D14903EA-33C4-47F7-8F05-3474C54BE107}'})
+                if($extension.Count -eq 0){$ext=[Xml.Linq.XElement]::new($main+'ext');$ext.SetAttributeValue('uri','{D14903EA-33C4-47F7-8F05-3474C54BE107}');$list.Add($ext)}else{$ext=$extension[0];$ext.RemoveNodes()}
+                $setting=[Xml.Linq.XElement]::new($compat+'version');$setting.SetAttributeValue('setVersion',[int]$spec.TextCompatibilityVersion);$setting.SetAttributeValue('warnBelowVersion',[int]$spec.TextCompatibilityVersion);$ext.Add($setting)
+                $entry.Delete();$stream=$zip.CreateEntry('xl/workbook.xml').Open();try{$xml.Save($stream)}finally{$stream.Dispose()}
+            }finally{$zip.Dispose()}
+            $book=$excel.Workbooks.Open($bootstrap,0,$false)
+        }
         foreach($item in $spec.Inputs){Put $book $item}
         foreach($case in $spec.Cases){Put $book @{Sheet=$case.Sheet;Address=$case.Address;Kind=$(if($case.Legacy){'FormulaLegacy'}else{'Formula'});Value=$case.Formula}}
     }
