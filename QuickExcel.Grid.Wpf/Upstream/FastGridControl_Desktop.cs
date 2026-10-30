@@ -111,6 +111,20 @@ namespace FastWpfGrid
         public int FrozenRowCount => _rowSizes.FrozenCount;
         public int FrozenColumnCount => _columnSizes.FrozenCount;
 
+        public void RestoreModelScroll(int row, int column)
+        {
+            var real = ModelToReal(new FastGridCellAddress(row, column));
+            if (!real.IsCell) return;
+            ScrollContent(Math.Max(0, real.Row.Value - _rowSizes.FrozenCount), Math.Max(0, real.Column.Value - _columnSizes.FrozenCount));
+        }
+        public FastGridCellAddress? GetScrollingModelCell()
+        {
+            if (_rowSizes.ScrollCount == 0 || _columnSizes.ScrollCount == 0) return null;
+            return new FastGridCellAddress(
+                _rowSizes.RealToModel(Math.Min(_rowSizes.RealCount - 1, FirstVisibleRowScrollIndex + _rowSizes.FrozenCount)),
+                _columnSizes.RealToModel(Math.Min(_columnSizes.RealCount - 1, FirstVisibleColumnScrollIndex + _columnSizes.FrozenCount)));
+        }
+
         /// <summary>Full object geometry and visible clip for each frozen/scrolling pane, in DIP.</summary>
         public IReadOnlyList<(Rect Bounds, Rect Clip)> GetModelRangeFragments(GridCellRange range)
         {

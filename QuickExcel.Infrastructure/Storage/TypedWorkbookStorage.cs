@@ -30,6 +30,7 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage
         byte[] workbookBytes = bytes;
         var version = 0;
         var modules = ScriptModuleSet.Single("");
+        var declaredViews = false;
         JsonDocument? manifest = null, state = null;
         try
         {
@@ -56,7 +57,8 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage
                     if (String(root, "format") != "QuickExcel" || Integer(root, "minReaderVersion", 2) != 2 || scriptApiVersion is not (1 or 2))
                         throw new InvalidDataException("XLSQ 格式、读取器版本或脚本 API 不受支持。");
                     var features = Array(root, "requiredFeatures").Select(e => e.GetString() ?? throw new InvalidDataException("能力名称必须为字符串。")).ToArray();
-                    if (features.Distinct().Count() != features.Length || Features.Except(features).Any() || features.Except(Features.Concat(["script-actions", "script-signatures"])).Any() ||
+                    declaredViews = features.Contains("workbook-views");
+                    if (features.Distinct().Count() != features.Length || Features.Except(features).Any() || features.Except(Features.Concat(["script-actions", "script-signatures", "workbook-views"])).Any() ||
                         features.Contains("script-actions") && scriptApiVersion != 2)
                         throw new InvalidDataException("XLSQ 缺少必要能力或包含未知必需能力。");
                     var referenced = new HashSet<string>(StringComparer.Ordinal) { "manifest.json" };
@@ -131,9 +133,13 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage
                     var index = read.Bindings.ToList().FindIndex(b => b.Part == part && b.WorkbookSheetId == number);
                     if (index < 0 || !seenIds.Add(id) || !seenParts.Add(part)) throw new InvalidDataException("稳定表身份与 XLSX 关系绑定不一致。");
                     var sheet = sheets[index];
-                    sheets[index] = new(new SheetId(id), sheet.Name, sheet.Cells, sheet.Rows, sheet.Columns, sheet.MergedCells, sheet.Images, sheet.ShowGridLines, sheet.DefaultRowHeight, sheet.TabColor);
+                    sheets[index] = new(new SheetId(id), sheet.Name, sheet.Cells, sheet.Rows, sheet.Columns, sheet.MergedCells, sheet.Images, sheet.ShowGridLines, sheet.DefaultRowHeight, sheet.TabColor, sheet.View, sheet.Visibility);
                 }
             }
+            var activeSheet = sheets[model.Sheets.IndexOf(model.GetSheet(model.ActiveSheetId))].Id;
+            var sourceActiveSheet = activeSheet;
+            var sourceSheets = sheets.ToArray();
+            var legacyViewApplied = false;
             if (state is not null && state.RootElement.TryGetProperty("view", out var view))
             {
                 if (view.ValueKind != JsonValueKind.Object) throw new InvalidDataException("视图状态必须为对象。");
@@ -147,15 +153,37 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage
                 }
                 if (view.TryGetProperty("zoom", out var zoom) && (zoom.ValueKind != JsonValueKind.Number || !zoom.TryGetDouble(out var number) || !double.IsFinite(number) || number <= 0))
                     throw new InvalidDataException("缩放值无效。");
+                if (!read.HasWorkbookView && !declaredViews)
+                {
+                    legacyViewApplied = true;
+                    // Earlier v2 documents used this optional state. Its zoom is a ratio, not a percentage.
+                    if (view.TryGetProperty("activeSheetId", out _)) activeSheet = new(Identity(String(view, "activeSheetId")));
+                    var index = System.Array.FindIndex(sheets, s => s.Id == activeSheet);
+                    var legacyView = sheets[index].View;
+                    if (view.TryGetProperty("selection", out _))
+                    {
+                        var range = CellRectangle.Parse(String(view, "selection"));
+                        legacyView = legacyView with { TopLeft = new(new(range.Top, range.Left), range) };
+                    }
+                    if (view.TryGetProperty("zoom", out var ratio))
+                    {
+                        var percent = ratio.GetDouble() * 100;
+                        if (percent != Math.Truncate(percent) || percent is < 10 or > 400) throw new InvalidDataException("旧视图缩放超出支持范围。");
+                        legacyView = legacyView with { Zoom = (int)percent };
+                    }
+                    sheets[index] = sheets[index].WithView(legacyView);
+                }
             }
             var names = model.DefinedNames.Select(n => n.Scope is { } scope
                 ? n with { Scope = sheets[model.Sheets.IndexOf(model.GetSheet(scope))].Id } : n).ToArray();
-            var snapshot = new WorkbookSnapshot(documentId, revision, model.DateSystem, sheets, modules.PrimarySource, model.Styles, modules, definedNames: names);
+            var snapshot = new WorkbookSnapshot(documentId, revision, model.DateSystem, sheets, modules.PrimarySource, model.Styles, modules, definedNames: names, activeSheetId: activeSheet, window: model.Window);
+            var originalModel = legacyViewApplied ? new WorkbookSnapshot(documentId, revision, model.DateSystem, sourceSheets, modules.PrimarySource,
+                model.Styles, modules, definedNames: names, activeSheetId: sourceActiveSheet, window: model.Window) : snapshot;
             var issues = read.Issues.ToList();
             // An original package can be retained byte-for-byte even for unsupported workbook features.
-            var fileState = new WorkbookFileState(sourcePath, version, workbookBytes, snapshot, read.Bindings, issues,
+            var fileState = new WorkbookFileState(sourcePath, version, workbookBytes, originalModel, read.Bindings, issues,
                 version == 2 ? manifest!.RootElement.GetRawText() : null, state?.RootElement.GetRawText(), read.Diagnostics);
-            return new(documentId, revision, model.DateSystem, sheets, modules.PrimarySource, model.Styles, modules, fileState, names);
+            return new(documentId, revision, model.DateSystem, sheets, modules.PrimarySource, model.Styles, modules, fileState, names, activeSheet, model.Window);
         }
         catch (Exception exception) when (exception is JsonException or System.Xml.XmlException or FormatException or OverflowException or ArgumentException or InvalidOperationException && exception is not WorkbookCompatibilityException)
         { throw new InvalidDataException("工作簿结构或字段无效：" + exception.Message, exception); }
@@ -203,12 +231,20 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage
         document["calculation"] = Merge(document["calculation"], JsonSerializer.SerializeToNode(new { state = CacheState(snapshot), contentRevision = snapshot.Revision,
             scriptRevision = snapshot.ScriptModules.Revision, bindingRevision = snapshot.ScriptModules.BindingRevision,
             engineVersion = "QuickExcel-M3", scriptSetSha256 = ScriptHash(snapshot.ScriptModules) })!);
-        if (document["view"] is JsonObject view && view["activeSheetId"] is { } active && !snapshot.Sheets.Any(s => s.Id.ToString() == active.GetValue<string>()))
-        { view["activeSheetId"] = snapshot.Sheets[0].Id.ToString(); view["selection"] = "A1"; }
+        var activeView = snapshot.GetSheet(snapshot.ActiveSheetId).View;
+        if (HasWorkbookViews(snapshot))
+            document["view"] = Merge(document["view"], JsonSerializer.SerializeToNode(new { activeSheetId = snapshot.ActiveSheetId.ToString(),
+                selection = TypedWorkbookXml.Reference(activeView.ActiveCell), zoom = activeView.Zoom / 100d })!);
+        else if (document["view"] is JsonObject optionalView)
+        {
+            optionalView.Remove("activeSheetId"); optionalView.Remove("selection"); optionalView.Remove("zoom");
+            if (optionalView.Count == 0) document.Remove("view");
+        }
         parts["state/document.json"] = JsonSerializer.SerializeToUtf8Bytes(document);
         var manifest = Object(snapshot.FileState?.ManifestJson);
         manifest["format"] = "QuickExcel"; manifest["formatVersion"] = 2; manifest["minReaderVersion"] = 2; manifest["scriptApiVersion"] = snapshot.ScriptModules.ScriptApiVersion;
         manifest["requiredFeatures"] = JsonSerializer.SerializeToNode(Features
+            .Concat(HasWorkbookViews(snapshot) ? ["workbook-views"] : [])
             .Concat(snapshot.ScriptModules.HasActions ? ["script-actions"] : [])
             .Concat(snapshot.ScriptModules.Signature is not null ? ["script-signatures"] : []));
         JsonNode Reference(string name) => JsonSerializer.SerializeToNode(new { path = name, sha256 = Hash(parts[name]) })!;
@@ -279,11 +315,12 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage
         string NameKey(WorkbookSnapshot book, QuickExcel.Formulas.DefinedName name) =>
             (name.Scope is { } scope ? book.GetSheet(scope).Name : "") + "\0" + name.Name + "\0" + name.Formula;
         if (!left.DefinedNames.Select(n => NameKey(left, n)).Order().SequenceEqual(right.DefinedNames.Select(n => NameKey(right, n)).Order())) return false;
+        if (left.GetSheet(left.ActiveSheetId).Name != right.GetSheet(right.ActiveSheetId).Name || left.Window != right.Window) return false;
         if (left.DateSystem != right.DateSystem || !left.Styles.SequenceEqual(right.Styles) || left.Sheets.Length != right.Sheets.Length) return false;
         for (var i = 0; i < left.Sheets.Length; i++)
         {
             var a = left.Sheets[i]; var b = right.Sheets[i];
-            if (a.Name != b.Name || a.ShowGridLines != b.ShowGridLines || !SameHeight(a.DefaultRowHeight, b.DefaultRowHeight) || a.TabColor != b.TabColor ||
+            if (a.Name != b.Name || a.View != b.View || a.Visibility != b.Visibility || a.ShowGridLines != b.ShowGridLines || !SameHeight(a.DefaultRowHeight, b.DefaultRowHeight) || a.TabColor != b.TabColor ||
                 !a.MergedCells.SequenceEqual(b.MergedCells) || a.Cells.Count != b.Cells.Count || a.Rows.Count != b.Rows.Count || a.Columns.Count != b.Columns.Count || a.Images.Length != b.Images.Length) return false;
             if (a.Rows.Any(p => !b.Rows.TryGetValue(p.Key, out var value) || value.Hidden != p.Value.Hidden || value.StyleId != p.Value.StyleId || value.ApplyStyle != p.Value.ApplyStyle ||
                     !SameHeight(value.Height, p.Value.Height)) || a.Columns.Any(p => !b.Columns.TryGetValue(p.Key, out var value) || value != p.Value)) return false;

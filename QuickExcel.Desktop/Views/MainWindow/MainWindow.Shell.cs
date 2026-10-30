@@ -77,7 +77,7 @@ public partial class MainWindow
         var panel = new FrameworkElementFactory(typeof(StackPanel));
         panel.SetValue(StackPanel.OrientationProperty, vertical ? Orientation.Vertical : Orientation.Horizontal);
         SheetPicker.ItemsPanel = new ItemsPanelTemplate(panel);
-        SheetPageContent.LayoutTransform = new ScaleTransform(preferences.Zoom / 100d, preferences.Zoom / 100d);
+        ApplyWorksheetZoom();
         if (SheetPicker.SelectedItem is { } selected) SheetPicker.ScrollIntoView(selected);
     }
 
@@ -95,15 +95,17 @@ public partial class MainWindow
         panel.Children.Add(new TextBlock { Text = "工作表标签位置", Margin = new(0, 0, 0, 8) });
         var placement = new ComboBox { ItemsSource = new[] { "底部", "左侧", "右侧" }, SelectedIndex = (int)_settings.Value.Sheets };
         AutomationProperties.SetName(placement, "工作表标签位置"); panel.Children.Add(placement);
-        panel.Children.Add(new TextBlock { Text = "网格缩放", Margin = new(0, 20, 0, 8) });
-        var zoom = new ComboBox { ItemsSource = new[] { 75, 100, 125, 150, 175 }, SelectedItem = _settings.Value.Zoom };
+        panel.Children.Add(new TextBlock { Text = "当前工作表缩放（随工作簿保存，可撤销）", Margin = new(0, 20, 0, 8) });
+        var currentZoom = _document.Snapshot.Sheets[_sheetIndex].View.Zoom;
+        var zoom = new ComboBox { ItemsSource = new[] { 10, 25, 50, 75, 100, 125, 150, 175, 200, 300, 400, currentZoom }.Distinct().Order().ToArray(), SelectedItem = currentZoom };
         AutomationProperties.SetName(zoom, "网格缩放百分比"); panel.Children.Add(zoom);
         var save = new Button { Content = "应用", IsDefault = true, Margin = new(0, 24, 0, 0), HorizontalAlignment = HorizontalAlignment.Right };
         panel.Children.Add(save);
         var dialog = ToolDialog("设置", panel);
         save.Click += (_, _) =>
         {
-            var value = new DesktopPreferences((SheetNavigationPlacement)placement.SelectedIndex, (int)(zoom.SelectedItem ?? 100));
+            var value = new DesktopPreferences((SheetNavigationPlacement)placement.SelectedIndex, _settings.Value.Zoom);
+            SetWorksheetZoom((int)(zoom.SelectedItem ?? 100));
             _settings.Save(value); ApplyPreferences(value); dialog.Close();
             if (_settings.Error is { } error) ReportEditFailure(new IOException("设置未保存：" + error));
         };
@@ -130,9 +132,10 @@ public partial class MainWindow
     {
         if (row < 0 || row >= QuickExcel.Domain.WorkbookLimits.MaxRows || column < 0 || column >= 256)
             throw new ArgumentException("当前界面支持 A–IV 列及 1–100000 行。");
-        ShowWorkbookPage();
-        SheetPicker.SelectedIndex = sheet;
         var target = _document.Snapshot.Sheets[sheet];
+        if (target.Visibility != QuickExcel.Domain.SheetVisibility.Visible) throw new InvalidOperationException("目标工作表被隐藏，请先使用工作表显示操作。");
+        ShowWorkbookPage();
+        SheetPicker.SelectedIndex = Array.IndexOf(_visibleSheetIds, target.Id);
         if (target.Rows.GetValueOrDefault(row)?.Hidden == true || target.Columns.GetValueOrDefault(column)?.Hidden == true || CurrentView.IsFilteredOut(_document.Snapshot, sheet, row))
             throw new InvalidOperationException($"{target.Name}!{ColumnName(column)}{row + 1} 被隐藏，请先显示该行列或清除筛选。");
         _rowCount = Math.Max(_rowCount, row + 1); _columnCount = Math.Max(_columnCount, column + 1);
@@ -167,6 +170,8 @@ public partial class MainWindow
         foreach (var sheet in snapshot.Sheets)
         {
             if (sheet.UsedColumnCount > 256) lines.Add($"{sheet.Name}：IV 列之后的数据会保存，当前网格不显示。");
+            if (sheet.View.ActiveCell.Column >= 256 || sheet.View.FrozenRows > 10 || sheet.View.FrozenColumns >= 256)
+                lines.Add($"{sheet.Name}：原活动格/冻结设置会保存，但超出当前网格的 10 冻结行或 A–IV 显示范围；显示采用受限视图。");
         }
         var text = new TextBox { Text = string.Join("\n\n", lines), IsReadOnly = true, TextWrapping = TextWrapping.Wrap,
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Margin = new(20), BorderThickness = new(0) };

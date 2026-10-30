@@ -7,6 +7,22 @@ namespace QuickExcel.Core.Test;
 public sealed class M5ProductTests
 {
     [Fact]
+    public void WorkbookSearchAndReplacementExcludeHiddenWorksheets()
+    {
+        var visible = Sheet("Visible", (0, 0, T("hit")));
+        var hidden = Sheet("Hidden", (0, 0, T("hit"))).WithVisibility(SheetVisibility.Hidden);
+        var veryHidden = Sheet("VeryHidden", (0, 0, T("hit"))).WithVisibility(SheetVisibility.VeryHidden);
+        using var session = new DocumentSession(Book(visible, hidden, veryHidden));
+        var options = new SearchOptions("hit", SearchScope.Workbook, IncludeHidden: true);
+        var hits = WorkbookSearch.Find(session.Snapshot, 0, options);
+        Assert.Single(hits);
+        session.Execute(WorkbookSearch.Replace(hits, options, "changed"));
+        Assert.Equal(CellValue.FromText("changed"), session.Snapshot.GetSheet(visible.Id).GetCell(0, 0)!.Value);
+        Assert.Equal(CellValue.FromText("hit"), session.Snapshot.GetSheet(hidden.Id).GetCell(0, 0)!.Value);
+        Assert.Equal(CellValue.FromText("hit"), session.Snapshot.GetSheet(veryHidden.Id).GetCell(0, 0)!.Value);
+    }
+
+    [Fact]
     public void ReplaceAcrossSheetsIsOneTransactionAndPreservesTextIdentity()
     {
         var first = Sheet("First", (0, 0, T("apple")), (0, 1, T("apple")));

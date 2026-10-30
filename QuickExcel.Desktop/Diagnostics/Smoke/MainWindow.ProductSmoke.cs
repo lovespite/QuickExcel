@@ -110,10 +110,13 @@ public partial class MainWindow
             CaptureGridEvidence(Path.Combine(folder, "QuickExcel-scripts.png"));
             WorkbookPage_Click(this, new());
             InstallProductFixture(); await Idle();
-            GridSurface.Select(new(0, 0));
+            // Sample artwork away from selection tint; restoring A1 expands its merged-cell selection.
+            GridSurface.Select(new(1, 1));
             Check(_grid.Artwork.IsLoaded && _document.Snapshot.Sheets[0].Images.Length == 1, "Artwork renderer is attached to actual WPF grid");
             await Idle();
-            Check(ProductCellPixel(SheetGrid, 0, 1) == Color.FromRgb(230, 241, 235), "Merged background paints across the second cell");
+            CaptureGridEvidence(Path.Combine(folder, "product-merge-check.png"));
+            var mergedPixel = ProductCellPixel(SheetGrid, 0, 1);
+            Check(mergedPixel == Color.FromRgb(230, 241, 235), $"Merged background paints across the second cell ({mergedPixel})");
             Check(ProductCellPixel(SheetGrid, 2, 6) == Color.FromRgb(22, 99, 75), "Embedded image pixels are visible above the grid");
             CaptureGridEvidence(Path.Combine(folder, "QuickExcel-workbook.png"));
             ApplyPreferences(new(SheetNavigationPlacement.Left)); await Idle();
@@ -122,16 +125,17 @@ public partial class MainWindow
             ApplyPreferences(new(SheetNavigationPlacement.Right)); await Idle();
             Check(ProductCellPixel(SheetGrid, 0, 1) == Color.FromRgb(230, 241, 235) && ProductCellPixel(SheetGrid, 2, 6) == Color.FromRgb(22, 99, 75), "Merge and image remain visible with right worksheet navigation");
             CaptureGridEvidence(Path.Combine(folder, "QuickExcel-sheets-right.png"));
-            ApplyPreferences(new(SheetNavigationPlacement.Bottom, 150)); await Idle();
+            ApplyPreferences(new(SheetNavigationPlacement.Bottom)); SetWorksheetZoom(150); await Idle();
             Check(((ScaleTransform)SheetPageContent.LayoutTransform).ScaleX == 1.5, "Grid zoom uses layout-aware WPF scaling");
             CaptureGridEvidence(Path.Combine(folder, "QuickExcel-zoom.png"));
-            ApplyPreferences(new());
+            SetWorksheetZoom(100); ApplyPreferences(new());
             var sheetId = _document.Snapshot.Sheets[0].Id;
             Check(ExecuteWorkbookCommand(new ShiftAxisCommand(sheetId, SheetAxis.Row, 0, 1)), "Insert row transforms artwork through desktop command path");
             Check(_document.Snapshot.Sheets[0].MergedCells[0] == "A2:D2" && _document.Snapshot.Sheets[0].Images[0].RowIndex == 3, "Merge and image follow inserted row");
             await UndoAsync(false);
             Check(_document.Snapshot.Sheets[0].MergedCells[0] == "A1:D1" && _document.Snapshot.Sheets[0].Images[0].RowIndex == 2, "Undo restores merge and image anchors");
             GridSurface.Select(new(4, 2)); Freeze_Click(new MenuItem(), new()); await Idle();
+            GridSurface.Select(new(1, 1)); await Idle();
             CaptureGridEvidence(Path.Combine(folder, "QuickExcel-artwork-frozen.png"));
             Check(_grid.Control.FrozenRowCount > 0 && _grid.Artwork.IsLoaded, "Frozen rows have their own artwork projection");
             Check(ProductCellPixel(SheetGrid, 0, 1) == Color.FromRgb(230, 241, 235), "Frozen merge is painted in the frozen viewport");

@@ -70,10 +70,10 @@ public partial class MainWindow
         Check(CurrentView.Filters.Count == 0 && _document.Snapshot.Sheets[0].Rows[5].Hidden, "Clear all filters preserves manual hidden metadata");
         var path = Path.Combine(folder, "sorted.xlsq"); _document.Save(path);
         using (var reopened = WorkbookDocument.Open(path, _services)) Check(reopened.GetCellInput(0, 4, 4) == "third", "Sorted records survive file save and reopen");
-        CurrentView.FrozenRows = 3; CurrentView.FrozenColumns = 2; RefreshSheet(); await Idle();
+        SetSmokeFreeze(3, 2); RefreshSheet(); await Idle();
         Check(_grid.HeaderButtons.Count > 0, "Header buttons exist in frozen reference rows");
         CaptureGridEvidence(Path.Combine(folder, "data-operations.png"));
-        CurrentView.FrozenRows = CurrentView.FrozenColumns = 0;
+        SetSmokeFreeze(0, 0);
 
         var surface = new FastGridSurface((p, text) => { try { _editor.SetCell(0, p.Row, p.Column, text); return true; } catch { return false; } }) { View = CurrentView };
         var window = new Window { Owner = this, Width = 1040, Height = 640, Content = surface.Element, Title = "FastWpfGrid validation", ShowInTaskbar = false };

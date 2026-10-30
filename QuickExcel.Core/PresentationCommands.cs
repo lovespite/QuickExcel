@@ -161,7 +161,7 @@ public sealed class SetCellStyleCommand : DocumentCommand
             edits.Add(new(address, content.Kind == CellContentKind.Formula ? CellContent.FromFormula(content.FormulaText, id) : CellContent.FromLiteral(content.LiteralValue, id)));
         }
         var styled = new WorkbookSnapshot(snapshot.DocumentId, snapshot.Revision, snapshot.DateSystem, snapshot.Sheets,
-            snapshot.ScriptSource, styles, snapshot.ScriptModules, snapshot.FileState, snapshot.DefinedNames);
+            snapshot.ScriptSource, styles, snapshot.ScriptModules, snapshot.FileState, snapshot.DefinedNames, snapshot.ActiveSheetId, snapshot.Window);
         var draft = new SetCellsCommand(edits).Prepare(styled);
         return draft.Changes.IsEmpty ? new(snapshot, [], false) : draft with { CalculationUnchanged = true };
     }
@@ -181,7 +181,7 @@ public sealed class SetAxisMetadataCommand(SheetId sheetId, SheetAxis axis, int 
             else { var old = columns.GetValueOrDefault(i) ?? new(); columns[i] = old with { Width = size ?? old.Width, Hidden = hidden ?? old.Hidden }; }
         if (rows.SequenceEqual(sheet.Rows) && columns.SequenceEqual(sheet.Columns)) return new(snapshot, [], false);
         var updated = new WorksheetSnapshot(sheet.Id, sheet.Name, sheet.Cells, rows, columns, sheet.MergedCells, sheet.Images,
-            sheet.ShowGridLines, sheet.DefaultRowHeight, sheet.TabColor);
+            sheet.ShowGridLines, sheet.DefaultRowHeight, sheet.TabColor, sheet.View, sheet.Visibility);
         return new(snapshot.WithSheets(snapshot.Sheets.Select(s => s.Id == sheetId ? updated : s)), [], true,
             CalculationUnchanged: size.HasValue && hidden is null);
     }

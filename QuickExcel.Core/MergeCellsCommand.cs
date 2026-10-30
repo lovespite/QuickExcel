@@ -23,7 +23,7 @@ public sealed class MergeCellsCommand(SheetId sheetId, CellRectangle range, bool
         }
         if (merges.Select(m => m.ToString()).SequenceEqual(sheet.MergedCells)) return new(snapshot, [], false);
         var next = new WorksheetSnapshot(sheet.Id, sheet.Name, sheet.Cells, sheet.Rows, sheet.Columns, merges.Select(m => m.ToString()),
-            sheet.Images, sheet.ShowGridLines, sheet.DefaultRowHeight, sheet.TabColor);
+            sheet.Images, sheet.ShowGridLines, sheet.DefaultRowHeight, sheet.TabColor, sheet.View, sheet.Visibility);
         return new(snapshot.WithSheets(snapshot.Sheets.Select(s => s.Id == sheetId ? next : s)), [], true);
     }
 }

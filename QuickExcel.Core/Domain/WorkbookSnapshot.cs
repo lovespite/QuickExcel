@@ -117,7 +117,8 @@ public sealed class WorksheetSnapshot
         IEnumerable<KeyValuePair<int, RowMetadata>>? rows = null,
         IEnumerable<KeyValuePair<int, ColumnMetadata>>? columns = null,
         IEnumerable<string>? mergedCells = null, IEnumerable<SheetImage>? images = null,
-        bool showGridLines = true, double? defaultRowHeight = null, string? tabColor = null)
+        bool showGridLines = true, double? defaultRowHeight = null, string? tabColor = null,
+        WorksheetView? view = null, SheetVisibility visibility = SheetVisibility.Visible)
     {
         if (id.Value == Guid.Empty) throw new ArgumentException("A sheet requires a nonempty stable identity.", nameof(id));
         WorkbookLimits.ValidateSheetName(name);
@@ -156,6 +157,9 @@ public sealed class WorksheetSnapshot
         ShowGridLines = showGridLines;
         DefaultRowHeight = defaultRowHeight;
         TabColor = tabColor;
+        View = view ?? new(); View.Validate();
+        if (!Enum.IsDefined(visibility)) throw new ArgumentException("工作表可见性无效。");
+        Visibility = visibility;
     }
 
     public SheetId Id { get; }
@@ -168,6 +172,8 @@ public sealed class WorksheetSnapshot
     public bool ShowGridLines { get; }
     public double? DefaultRowHeight { get; }
     public string? TabColor { get; }
+    public WorksheetView View { get; }
+    public SheetVisibility Visibility { get; }
     /// <summary>The last stored cell's zero-based row plus one; row metadata does not allocate cells.</summary>
     public int UsedRowCount { get; }
     public int UsedColumnCount { get; }
@@ -193,18 +199,23 @@ public sealed class WorksheetSnapshot
     public WorksheetSnapshot WithCells(ImmutableDictionary<CellPosition, CellSnapshot> cells)
     {
         ArgumentNullException.ThrowIfNull(cells);
-        return new(Id, Name, cells, Rows, Columns, MergedCells, Images, ShowGridLines, DefaultRowHeight, TabColor);
+        return new(Id, Name, cells, Rows, Columns, MergedCells, Images, ShowGridLines, DefaultRowHeight, TabColor, View, Visibility);
     }
 
     public WorksheetSnapshot WithName(string name) =>
-        new(Id, name, Cells, Rows, Columns, MergedCells, Images, ShowGridLines, DefaultRowHeight, TabColor);
+        new(Id, name, Cells, Rows, Columns, MergedCells, Images, ShowGridLines, DefaultRowHeight, TabColor, View, Visibility);
+    public WorksheetSnapshot WithView(WorksheetView view) =>
+        new(Id, Name, Cells, Rows, Columns, MergedCells, Images, ShowGridLines, DefaultRowHeight, TabColor, view, Visibility);
+    public WorksheetSnapshot WithVisibility(SheetVisibility visibility) =>
+        new(Id, Name, Cells, Rows, Columns, MergedCells, Images, ShowGridLines, DefaultRowHeight, TabColor, View, visibility);
 }
 
 /// <summary>A shareable committed document state, independent of IO libraries and mutable sessions.</summary>
 public sealed class WorkbookSnapshot
 {
     public WorkbookSnapshot(Guid documentId, long revision, ExcelDateSystem dateSystem,
-        IEnumerable<WorksheetSnapshot> sheets, string scriptSource = "", IEnumerable<StyleDefinition>? styles = null, ScriptModuleSet? scriptModules = null, WorkbookFileState? fileState = null, IEnumerable<QuickExcel.Formulas.DefinedName>? definedNames = null)
+        IEnumerable<WorksheetSnapshot> sheets, string scriptSource = "", IEnumerable<StyleDefinition>? styles = null, ScriptModuleSet? scriptModules = null, WorkbookFileState? fileState = null, IEnumerable<QuickExcel.Formulas.DefinedName>? definedNames = null,
+        SheetId? activeSheetId = null, WorkbookWindow? window = null)
     {
         if (documentId == Guid.Empty) throw new ArgumentException("A document requires a nonempty identity.", nameof(documentId));
         ArgumentOutOfRangeException.ThrowIfNegative(revision);
@@ -219,6 +230,10 @@ public sealed class WorkbookSnapshot
             throw new ArgumentException("Sheet identities must be unique.", nameof(sheets));
         if (Sheets.Select(sheet => sheet.Name).Distinct(StringComparer.OrdinalIgnoreCase).Count() != Sheets.Length)
             throw new ArgumentException("Sheet names must be unique ignoring case.", nameof(sheets));
+        if (!Sheets.Any(s => s.Visibility == SheetVisibility.Visible)) throw new ArgumentException("至少保留一张可见工作表。");
+        ActiveSheetId = activeSheetId ?? Sheets.First(s => s.Visibility == SheetVisibility.Visible).Id;
+        if (!Sheets.Any(s => s.Id == ActiveSheetId && s.Visibility == SheetVisibility.Visible)) throw new ArgumentException("活动工作表必须存在且可见。");
+        Window = window ?? new();
         if (Sheets.Sum(sheet => (long)sheet.Cells.Count) > WorkbookLimits.MaxCells)
             throw new ArgumentException("The workbook exceeds the cell limit.", nameof(sheets));
         Styles = styles?.ToImmutableArray() ?? [new StyleDefinition()];
@@ -276,23 +291,32 @@ public sealed class WorkbookSnapshot
     public string ScriptSource { get; }
     public ScriptModuleSet ScriptModules { get; }
     public WorkbookFileState? FileState { get; }
+    public SheetId ActiveSheetId { get; }
+    public WorkbookWindow Window { get; }
     public ImmutableArray<QuickExcel.Formulas.DefinedName> DefinedNames { get; }
 
     public WorksheetSnapshot GetSheet(SheetId id) => Sheets.FirstOrDefault(sheet => sheet.Id == id)
         ?? throw new KeyNotFoundException($"Sheet {id} does not exist.");
 
     public WorkbookSnapshot WithDefinedNames(IEnumerable<QuickExcel.Formulas.DefinedName> names) =>
-        new(DocumentId, Revision, DateSystem, Sheets, ScriptSource, Styles, ScriptModules, FileState, names);
+        new(DocumentId, Revision, DateSystem, Sheets, ScriptSource, Styles, ScriptModules, FileState, names, ActiveSheetId, Window);
 
-    public WorkbookSnapshot WithSheets(IEnumerable<WorksheetSnapshot> sheets) =>
-        new(DocumentId, Revision, DateSystem, sheets, ScriptSource, Styles, ScriptModules, FileState, DefinedNames);
+    public WorkbookSnapshot WithSheets(IEnumerable<WorksheetSnapshot> sheets)
+    {
+        var next = sheets.ToImmutableArray();
+        return new(DocumentId, Revision, DateSystem, next, ScriptSource, Styles, ScriptModules, FileState, DefinedNames,
+            next.Any(s => s.Id == ActiveSheetId && s.Visibility == SheetVisibility.Visible) ? ActiveSheetId : null, Window);
+    }
 
     public WorkbookSnapshot WithRevision(long revision) =>
-        new(DocumentId, revision, DateSystem, Sheets, ScriptSource, Styles, ScriptModules, FileState, DefinedNames);
+        new(DocumentId, revision, DateSystem, Sheets, ScriptSource, Styles, ScriptModules, FileState, DefinedNames, ActiveSheetId, Window);
 
     public WorkbookSnapshot WithScriptModules(ScriptModuleSet modules) =>
-        new(DocumentId, Revision, DateSystem, Sheets, modules.PrimarySource, Styles, modules, FileState, DefinedNames);
+        new(DocumentId, Revision, DateSystem, Sheets, modules.PrimarySource, Styles, modules, FileState, DefinedNames, ActiveSheetId, Window);
 
     public WorkbookSnapshot WithScriptSource(string scriptSource) =>
-        new(DocumentId, Revision, DateSystem, Sheets, scriptSource, Styles, ScriptModules.WithPrimarySource(scriptSource), FileState, DefinedNames);
+        new(DocumentId, Revision, DateSystem, Sheets, scriptSource, Styles, ScriptModules.WithPrimarySource(scriptSource), FileState, DefinedNames, ActiveSheetId, Window);
+
+    public WorkbookSnapshot WithActiveSheet(SheetId id) =>
+        new(DocumentId, Revision, DateSystem, Sheets, ScriptSource, Styles, ScriptModules, FileState, DefinedNames, id, Window);
 }

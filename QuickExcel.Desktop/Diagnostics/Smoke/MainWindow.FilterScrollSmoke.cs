@@ -43,7 +43,7 @@ public partial class MainWindow
             await Idle();
         }
         EstablishDataRegion(new(0, 0, 240, 0));
-        CurrentView.FrozenRows = 1; RefreshSheet(); await Idle();
+        SetSmokeFreeze(1, 0); RefreshSheet(); await Idle();
         var revision = _document.Snapshot.Revision;
         var originalMaximum = bar.Maximum;
         Scroll(180); await Idle();

@@ -101,10 +101,10 @@ public partial class MainWindow
         }
         GridSurface.Select(new(0, 5)); await Idle();
         CheckOutline("Before scrolling"); CaptureGridEvidence(Path.Combine(folder, "merged-selection.png"));
-        CurrentView.FrozenRows = 2; CurrentView.FrozenColumns = 6; RefreshSheet();
+        SetSmokeFreeze(2, 6); RefreshSheet();
         GridSurface.Select(new(3, 6)); await Idle(); WholeMerge("Frozen panes"); CheckOutline("Frozen panes");
         grid.ScrollModelIntoView(new(12, 10)); await Idle(); CheckOutline("Scrolled frozen panes");
-        CurrentView.FrozenRows = CurrentView.FrozenColumns = 0; RefreshSheet();
+        SetSmokeFreeze(0, 0); RefreshSheet();
         ExecuteWorkbookCommand(new SetAxisMetadataCommand(id, SheetAxis.Row, 2, 1, hidden: true));
         GridSurface.Select(new(3, 6)); await Idle(); CheckOutline("Hidden interior row");
         Check(grid.SelectedCellCount == 18, "Hidden row does not enter visible merged selection enumeration");

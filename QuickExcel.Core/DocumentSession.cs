@@ -51,6 +51,28 @@ public sealed class DocumentSession : IDisposable
 
     public CommandResult Execute(DocumentCommand command, long? expectedRevision = null) => ExecuteCore(command, expectedRevision);
 
+    /// <summary>Navigation is captured by the next save without input revisions, undo entries or recalculation.
+    /// Freeze/zoom/visibility changes must use commands instead.</summary>
+    public void UpdateNavigation(SheetId sheetId, CellPosition cell, CellPosition? viewport = null)
+    {
+        lock (_gate)
+        {
+            ThrowIfClosed(); WorkbookLimits.ValidatePosition(cell.Row, cell.Column);
+            var sheet = _snapshot.GetSheet(sheetId);
+            if (sheet.Visibility != SheetVisibility.Visible) throw new InvalidOperationException("不能激活隐藏工作表。");
+            var view = sheet.View.ActiveCell == cell ? sheet.View : sheet.View.WithActiveCell(cell);
+            if (viewport is { } first)
+            {
+                WorkbookLimits.ValidatePosition(first.Row, first.Column);
+                view = view.HasFreeze ? view with { PaneTopLeftCell = new(Math.Max(first.Row, view.FrozenRows), Math.Max(first.Column, view.FrozenColumns)) }
+                    : view with { TopLeftCell = first };
+            }
+            if (view != sheet.View)
+                _snapshot = _snapshot.WithSheets(_snapshot.Sheets.Select(s => s.Id == sheetId ? s.WithView(view) : s));
+            if (_snapshot.ActiveSheetId != sheetId) _snapshot = _snapshot.WithActiveSheet(sheetId);
+        }
+    }
+
     private CommandResult ExecuteCore(DocumentCommand command, long? expectedRevision, ScriptActionRequest? action = null, CancellationToken cancellationToken = default, ImmutableArray<string> diagnostics = default)
     {
         ArgumentNullException.ThrowIfNull(command);

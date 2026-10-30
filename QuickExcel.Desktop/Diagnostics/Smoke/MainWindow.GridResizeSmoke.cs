@@ -166,7 +166,7 @@ public partial class MainWindow
                 _document.Snapshot.Revision == revision && Math.Abs(restored.Width - 160) < 1 && Math.Abs(restored.Height - 31) < 1,
                 "Escape/capture loss restores dimensions and releases the cursor without history");
         }
-        CurrentView.FrozenRows = CurrentView.FrozenColumns = 1; RefreshSheet(); await Idle();
+        SetSmokeFreeze(1, 1); RefreshSheet(); await Idle();
         foreach (var name in new[] { "hscroll", "vscroll" })
         {
             var bar = (ScrollBar)grid.FindName(name);
@@ -181,7 +181,7 @@ public partial class MainWindow
             check(scrolling > 1 && FindGridResize(HeaderEdge(axis, scrolling)) == (axis, scrolling) &&
                 FindGridResize(HeaderEdge(axis, 0)) == (axis, 0), "Frozen and scrolled header edges resolve to their own model indexes");
         }
-        CurrentView.FrozenRows = CurrentView.FrozenColumns = 0; RefreshSheet(); GridSurface.Select(new(0, 0)); await Idle();
+        SetSmokeFreeze(0, 0); RefreshSheet(); GridSurface.Select(new(0, 0)); await Idle();
         var id = _document.Snapshot.Sheets[0].Id;
         ExecuteWorkbookCommand(new SetAxisMetadataCommand(id, SheetAxis.Row, 0, 6, 1)); await Idle();
         check(FindGridResize(HeaderEdge(SheetAxis.Row, 3)) == (SheetAxis.Row, 3), "Overlapping resize hit areas choose the closest thin row boundary");

@@ -120,7 +120,7 @@ public partial class MainWindow
             Check(await SaveToPathAsync(copy, false, new(null)) && !_document.IsDirty, "Save to another path resolves conflict without overwriting source");
             File.WriteAllBytes(path, saved);
             await OpenPathAsync(copy);
-            Check(_document.GetCellInput(0, 5, 0) == "local draft" && !_document.ScriptsEnabled && CurrentView.FrozenRows == 0, "Reopen restores data and styles with scripts disabled and fresh view");
+            Check(_document.GetCellInput(0, 5, 0) == "local draft" && !_document.ScriptsEnabled && CurrentView.FrozenRows == 1, "Reopen restores data, styles and persisted freeze with scripts disabled");
             Check(_document.Snapshot.Styles[_document.Snapshot.Sheets[0].GetStyleId(0, 0)].Bold, "Styled workbook survives actual desktop save and reopen");
             Check(_document.GetCellValue(0, 6, 0) == "2025-12-09", "Custom date format survives UI save and reopen");
             var identity = _document.Session.SessionId;

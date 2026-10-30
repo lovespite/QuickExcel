@@ -8,6 +8,9 @@ public sealed record WorkbookSavePart(string Part, string Action, string Reason)
 
 public sealed partial class TypedWorkbookStorage
 {
+    private static bool HasWorkbookViews(WorkbookSnapshot snapshot) => snapshot.ActiveSheetId != snapshot.Sheets[0].Id || snapshot.Window != new WorkbookWindow() ||
+        snapshot.Sheets.Any(s => s.Visibility != SheetVisibility.Visible || s.View != new WorksheetView());
+
     // Only the canonical empty v1 module is representable by a script-free XLSX.
     // Comments, disabled scripts, custom bindings and signatures are still user content.
     public static bool RequiresScriptContainer(WorkbookSnapshot snapshot)

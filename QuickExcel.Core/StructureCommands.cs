@@ -53,6 +53,33 @@ public sealed class ShiftAxisCommand(SheetId sheetId, SheetAxis axis, int index,
             return left > right ? null : (Position(left)!.Value, Position(right)!.Value);
         }
         var transformed = StructureEdits.Axis(snapshot, target, axis, Position, Interval);
+        var view = target.View;
+        var boundary = axis == SheetAxis.Row ? view.FrozenRows : view.FrozenColumns;
+        if (index < boundary)
+        {
+            var nextBoundary = delete ? boundary - Math.Min(count, boundary - index) : checked(boundary + count);
+            var nextView = axis == SheetAxis.Row ? view with { FrozenRows = nextBoundary, PaneTopLeftCell = view.PaneTopLeftCell with { Row = nextBoundary } }
+                : view with { FrozenColumns = nextBoundary, PaneTopLeftCell = view.PaneTopLeftCell with { Column = nextBoundary } };
+            if (!nextView.HasFreeze)
+                nextView = nextView with { FrozenSplit = false, PaneTopLeftCell = default, ActivePane = SheetPane.TopLeft,
+                    TopLeft = view.Selection, TopRight = null, BottomLeft = null, BottomRight = null };
+            else if (nextBoundary == 0)
+            {
+                // Removing one frozen axis collapses its panes. Keep the active selection in its surviving pane.
+                var activeSelection = view.Selection;
+                nextView = nextView.WithActiveCell(view.ActiveCell);
+                nextView = axis == SheetAxis.Row ? nextView with { BottomLeft = null, BottomRight = null }
+                    : nextView with { TopRight = null, BottomRight = null };
+                if (activeSelection is not null)
+                    nextView = nextView.ActivePane switch
+                    {
+                        SheetPane.TopRight => nextView with { TopRight = activeSelection },
+                        SheetPane.BottomLeft => nextView with { BottomLeft = activeSelection },
+                        _ => nextView with { TopLeft = activeSelection }
+                    };
+            }
+            transformed = transformed.WithSheets(transformed.Sheets.Select(s => s.Id == sheetId ? s.WithView(nextView) : s));
+        }
         return StructureEdits.Draft(snapshot, transformed);
     }
 }
@@ -217,7 +244,7 @@ internal static class StructureEdits
             }
             return new(sheet.Id, sheet.Name, relocated, axis == SheetAxis.Row ? Metadata(sheet.Rows) : sheet.Rows,
                 axis == SheetAxis.Column ? Metadata(sheet.Columns) : sheet.Columns, merges.Select(m => m.ToString()), images,
-                sheet.ShowGridLines, sheet.DefaultRowHeight, sheet.TabColor);
+                sheet.ShowGridLines, sheet.DefaultRowHeight, sheet.TabColor, sheet.View, sheet.Visibility);
         });
     }
 
@@ -253,7 +280,7 @@ internal static class StructureEdits
         var names = snapshot.DefinedNames.Select(n => n with { Formula = Formula(n.Formula, n.Scope ?? snapshot.Sheets[0].Id) });
         // Rename and names must validate together.
         return new(snapshot.DocumentId, snapshot.Revision, snapshot.DateSystem, sheets, snapshot.ScriptSource,
-            snapshot.Styles, snapshot.ScriptModules, snapshot.FileState, names);
+            snapshot.Styles, snapshot.ScriptModules, snapshot.FileState, names, snapshot.ActiveSheetId, snapshot.Window);
     }
 
     internal static CommandDraft Draft(WorkbookSnapshot before, WorkbookSnapshot after)

@@ -8,7 +8,7 @@ using static QuickExcel.Storage.XlsxPackage;
 namespace QuickExcel.Storage;
 
 internal sealed record TypedWorkbookRead(WorkbookSnapshot Snapshot, IReadOnlyList<WorkbookPartBinding> Bindings,
-    IReadOnlyList<string> Issues, IReadOnlyList<CompatibilityDiagnostic> Diagnostics);
+    IReadOnlyList<string> Issues, IReadOnlyList<CompatibilityDiagnostic> Diagnostics, bool HasWorkbookView);
 
 internal static class TypedWorkbookXml
 {
@@ -23,7 +23,7 @@ internal static class TypedWorkbookXml
         package.RequireType(workbookPart, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml");
         var root = package.XmlPart(workbookPart).Root!;
         if (root.Name != Main + "workbook") throw new InvalidDataException("无效工作簿。");
-        package.Shape(root, "workbookPr sheets definedNames calcPr", "", workbookPart);
+        package.Shape(root, "workbookPr bookViews sheets definedNames calcPr", "", workbookPart);
         if (root.Element(Main + "workbookPr") is { } pr) package.Shape(pr, "", "date1904", workbookPart);
         if (root.Element(Main + "calcPr") is { } calc)
         {
@@ -52,6 +52,7 @@ internal static class TypedWorkbookXml
         var sheetIds = new HashSet<string>();
         var sheetPaths = new HashSet<string>();
         long cellCount = 0;
+        var selectedTabs = 0;
         foreach (var definition in root.Element(Main + "sheets")?.Elements(Main + "sheet") ?? [])
         {
             budget.Check();
@@ -65,7 +66,7 @@ internal static class TypedWorkbookXml
             if (!sheetPaths.Add(path)) throw new InvalidDataException("多张工作表指向同一部件。");
             package.RequireType(path, SheetType);
             package.RegisterSheet(path, Decode(Attr(definition, "name")));
-            if ((string?)definition.Attribute("state") is not (null or "visible")) package.Loss($"{path}: 工作表可见性未建模", "sheet/@state", path);
+            var visibility = XlsxViews.Visibility(definition);
             var sheet = package.XmlPart(path).Root!;
             if (sheet.Name != Main + "worksheet") throw new InvalidDataException("无效工作表部件。");
             package.Shape(sheet, "dimension sheetPr sheetViews sheetFormatPr cols sheetData mergeCells drawing", "", path);
@@ -128,9 +129,9 @@ internal static class TypedWorkbookXml
                     if (!cells.TryAdd(position, cell)) throw new InvalidDataException("单元格地址重复。");
                 }
             }
-            if (sheet.Element(Main + "sheetViews")?.Elements().Count() > 1) package.Loss($"{path}: 多视图状态未建模", "sheetViews", path);
             var view = sheet.Element(Main + "sheetViews")?.Element(Main + "sheetView");
-            if (view is not null) package.Shape(view, "", "workbookViewId showGridLines", path);
+            var viewState = XlsxViews.ReadSheet(package, path, sheet);
+            if (Bool((string?)view?.Attribute("tabSelected"))) selectedTabs++;
             var format = sheet.Element(Main + "sheetFormatPr");
             if (format is not null) package.Shape(format, "", "defaultRowHeight", path);
             var properties = sheet.Element(Main + "sheetPr");
@@ -141,10 +142,13 @@ internal static class TypedWorkbookXml
             foreach (var merge in merges) ValidateRange(merge);
             var images = TypedImages.Read(package, path, sheet);
             sheets.Add(new WorksheetSnapshot(SheetId.New(), Decode(Attr(definition, "name")), cells, rows, columns, merges, images,
-                view?.Attribute("showGridLines") is null || Bool((string?)view.Attribute("showGridLines")), OptionalDouble(format?.Attribute("defaultRowHeight")) / 0.75, (string?)tabColor?.Attribute("rgb")));
+                view?.Attribute("showGridLines") is null || Bool((string?)view.Attribute("showGridLines")), OptionalDouble(format?.Attribute("defaultRowHeight")) / 0.75, (string?)tabColor?.Attribute("rgb"),
+                viewState, visibility));
             bindings.Add(new(sheetId, path));
         }
         if (sheets.Count == 0) throw new InvalidDataException("工作簿没有工作表。");
+        if (selectedTabs > 1) package.Loss(workbookPart + ": 成组选择工作表尚不支持编辑。", "sheetViews/grouped-tabs", workbookPart);
+        var window = XlsxViews.ReadWorkbook(package, workbookPart, root, sheets);
         var names = new List<QuickExcel.Formulas.DefinedName>();
         foreach (var element in root.Element(Main + "definedNames")?.Elements() ?? [])
         {
@@ -165,8 +169,8 @@ internal static class TypedWorkbookXml
         }
         XlsxMetadata.Inspect(package, sheets.Select(s => s.Name).ToArray());
         package.FinishInventory();
-        return new(new WorkbookSnapshot(Guid.NewGuid(), 0, dateSystem, sheets, styles: styles, definedNames: names), bindings,
-            package.Issues.ToArray(), package.Diagnostics);
+        return new(new WorkbookSnapshot(Guid.NewGuid(), 0, dateSystem, sheets, styles: styles, definedNames: names, activeSheetId: window.Active, window: window.Window), bindings,
+            package.Issues.ToArray(), package.Diagnostics, root.Element(Main + "bookViews") is not null);
     }
 
     private static int Style(XElement element, string name, int count) => Int((string?)element.Attribute(name) ?? "0", count - 1);
@@ -239,6 +243,7 @@ internal static class TypedWorkbookXml
         var parts = new Dictionary<string, byte[]>();
         var workbook = new XElement(Main + "workbook", new XAttribute(XNamespace.Xmlns + "r", Rel),
             new XElement(Main + "workbookPr", new XAttribute("date1904", snapshot.DateSystem == ExcelDateSystem.Mac1904 ? 1 : 0)));
+        workbook.Add(XlsxViews.WriteWorkbook(snapshot));
         var sheets = new XElement(Main + "sheets");
         var rels = new XElement(PackageRel + "Relationships");
         var types = new XElement(ContentTypes + "Types",
@@ -264,12 +269,13 @@ internal static class TypedWorkbookXml
             cancellationToken.ThrowIfCancellationRequested();
             var sheet = snapshot.Sheets[i];
             var path = $"xl/worksheets/sheet{i + 1}.xml";
-            sheets.Add(new XElement(Main + "sheet", new XAttribute("name", Encode(sheet.Name)), new XAttribute("sheetId", i + 1), new XAttribute(Rel + "id", $"sheet{i + 1}")));
+            sheets.Add(new XElement(Main + "sheet", new XAttribute("name", Encode(sheet.Name)), new XAttribute("sheetId", i + 1), new XAttribute(Rel + "id", $"sheet{i + 1}"),
+                sheet.Visibility == SheetVisibility.Visible ? null : new XAttribute("state", sheet.Visibility == SheetVisibility.Hidden ? "hidden" : "veryHidden")));
             rels.Add(Relationship($"sheet{i + 1}", "worksheet", $"worksheets/sheet{i + 1}.xml"));
             Override(path, SheetType);
             var root = new XElement(Main + "worksheet", new XAttribute(XNamespace.Xmlns + "r", Rel));
             if (sheet.TabColor is not null) root.Add(new XElement(Main + "sheetPr", new XElement(Main + "tabColor", new XAttribute("rgb", sheet.TabColor))));
-            root.Add(new XElement(Main + "sheetViews", new XElement(Main + "sheetView", new XAttribute("workbookViewId", 0), new XAttribute("showGridLines", sheet.ShowGridLines ? 1 : 0))));
+            root.Add(XlsxViews.WriteSheet(sheet, sheet.Id == snapshot.ActiveSheetId));
             if (sheet.DefaultRowHeight is { } height) root.Add(new XElement(Main + "sheetFormatPr", new XAttribute("defaultRowHeight", height * 0.75)));
             if (sheet.Columns.Count > 0)
                 root.Add(new XElement(Main + "cols", sheet.Columns.OrderBy(p => p.Key).Select(p => new XElement(Main + "col",

@@ -79,7 +79,7 @@ public partial class MainWindow
                 "Auto-fit measures formatted numbers, dates and formula results instead of raw inputs");
         }
         await RecalculateAsync(); await Idle();
-        CurrentView.FrozenRows = CurrentView.FrozenColumns = 1;
+        SetSmokeFreeze(1, 1);
         ApplyFilter(new(0, 0, 80, 0), 0, "absent"); await Idle();
         await Fit(SheetAxis.Column, 0);
         check(Width(0) < 160 && CurrentView.FilterRange is not null && _grid.Control.FrozenRowCount == 1 && _grid.Control.FrozenColumnCount == 1,

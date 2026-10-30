@@ -142,7 +142,8 @@ public partial class MainWindow : Window
         _fileVersion = fileVersion;
         _sheetViews.Clear();
         _displayName = displayName;
-        _sheetIndex = _selectedRow = _selectedColumn = 0;
+        _sheetIndex = document.Snapshot.Sheets.IndexOf(document.Snapshot.GetSheet(document.Snapshot.ActiveSheetId));
+        _selectedRow = _selectedColumn = 0;
         _rowCount = 100;
         _columnCount = 12;
         _editState.Reset();
@@ -150,13 +151,12 @@ public partial class MainWindow : Window
         _refreshing = true;
         LoadScriptModules();
         ActionPicker.ItemsSource = null;
-        SheetPicker.ItemsSource = document.Snapshot.Sheets.Select(sheet => sheet.Name).ToList();
-        SheetPicker.SelectedIndex = 0;
+        PopulateVisibleSheets();
         _refreshing = false;
         RefreshSheet(true);
         _hasWorkbook = true;
         ShowWorkbookPage();
-        if (IsLoaded) GridSurface.Select(new(0, 0));
+        if (IsLoaded) RestoreWorksheetNavigation();
         UpdateChrome();
         ScriptState.Text = "● 脚本未启用";
         LogText.Text = "脚本未启用。";
@@ -174,19 +174,22 @@ public partial class MainWindow : Window
             LogText.Text += $"\n包内模块：{document.Snapshot.ScriptModules.Modules.Count} 个；编辑器显示首入口 {document.Snapshot.ScriptModules.EntryModules[0]}。应用时执行全部声明入口。";
         if (document.Snapshot.Sheets.Any(sheet => sheet.UsedColumnCount > 256))
             StatusText.Text = "部分列未显示，可在文件菜单查看兼容性报告。";
+        if (document.Snapshot.Sheets.Any(sheet => sheet.View.ActiveCell.Column >= 256 || sheet.View.FrozenRows > 10 || sheet.View.FrozenColumns >= 256))
+            StatusText.Text = "部分视图超出网格显示范围；原设置仍会保存，详情见兼容性报告。";
     }
 
     private void RefreshSheet(bool rebuild = false)
     {
         var sheet = _document.Snapshot.Sheets[_sheetIndex];
+        ApplyWorksheetZoom();
         _grid.View = CurrentView;
         if (rebuild)
         {
             var ranges = sheet.MergedCells.Select(CellRectangle.Parse).ToArray();
             var lastRow = Math.Max(sheet.UsedRowCount, Math.Max(sheet.Images.Select(i => i.RowIndex + i.RowSpan).DefaultIfEmpty().Max(), ranges.Select(m => m.Bottom + 1).DefaultIfEmpty().Max()));
             var lastColumn = Math.Max(sheet.UsedColumnCount, Math.Max(sheet.Images.Select(i => i.ColumnIndex + i.ColumnSpan).DefaultIfEmpty().Max(), ranges.Select(m => m.Right + 1).DefaultIfEmpty().Max()));
-            _rowCount = Math.Clamp(Math.Max(_rowCount, lastRow + 20), 100, WorkbookLimits.MaxRows);
-            _columnCount = Math.Clamp(Math.Max(_columnCount, lastColumn + 2), 12, 256);
+            _rowCount = Math.Clamp(Math.Max(_rowCount, Math.Max(lastRow + 20, Math.Max(sheet.View.ActiveCell.Row, sheet.View.PaneTopLeftCell.Row) + 20)), 100, WorkbookLimits.MaxRows);
+            _columnCount = Math.Clamp(Math.Max(_columnCount, Math.Max(lastColumn + 2, Math.Max(sheet.View.ActiveCell.Column, sheet.View.PaneTopLeftCell.Column) + 2)), 12, 256);
             _refreshing = true;
             try { GridSurface.Bind(_document.Snapshot, _sheetIndex, _rowCount, _columnCount); }
             finally { _refreshing = false; }
@@ -357,9 +360,10 @@ public partial class MainWindow : Window
 
     private void Grid_CurrentCellChanged()
     {
-        if (_refreshing || _busy) return;
+        if (_refreshing || _busy || _restoringWorkbookView) return;
         _selectedRow = _grid.Current.Row;
         _selectedColumn = _grid.Current.Column;
+        _document.Session.UpdateNavigation(_document.Snapshot.Sheets[_sheetIndex].Id, new(_selectedRow, _selectedColumn));
         var merge = _document.Snapshot.Sheets[_sheetIndex].MergedCells.Select(CellRectangle.Parse)
             .Where(range => range.Contains(_selectedRow, _selectedColumn)).Cast<CellRectangle?>().FirstOrDefault();
         if (merge is { } merged && (merged.Top != _selectedRow || merged.Left != _selectedColumn) && _grid.Control.SelectedCellCount <= 1)
@@ -381,7 +385,8 @@ public partial class MainWindow : Window
         if (!result.Changed) return;
         if (result.CalculationUnchanged)
         {
-            RefreshSheet();
+            EnsureVisibleSheet();
+            SynchronizeSheets();
             UpdateChrome();
             if (_calculationPending) await RecalculateAsync();
             return;
@@ -392,7 +397,6 @@ public partial class MainWindow : Window
         if (CurrentView.Region is null)
         {
             CurrentView.FilterRange = null;
-            CurrentView.FrozenRows = CurrentView.FrozenColumns = 0;
         }
         SynchronizeSheets();
         _calculationPending = true;
@@ -401,11 +405,12 @@ public partial class MainWindow : Window
 
     private void SynchronizeSheets()
     {
+        EnsureVisibleSheet();
         _refreshing = true;
-        SheetPicker.ItemsSource = _document.Snapshot.Sheets.Select(sheet => sheet.Name).ToList();
-        SheetPicker.SelectedIndex = _sheetIndex;
+        PopulateVisibleSheets();
         _refreshing = false;
         RefreshSheet(true);
+        RestoreWorksheetNavigation();
         UpdateChrome();
     }
 
@@ -415,16 +420,18 @@ public partial class MainWindow : Window
         if (!CommitEdit())
         {
             _refreshing = true;
-            SheetPicker.SelectedIndex = _sheetIndex;
+            SheetPicker.SelectedIndex = Array.IndexOf(_visibleSheetIds, _document.Snapshot.Sheets[_sheetIndex].Id);
             _refreshing = false;
             return;
         }
-        _sheetIndex = SheetPicker.SelectedIndex;
+        _sheetIndex = _document.Snapshot.Sheets.IndexOf(_document.Snapshot.GetSheet(_visibleSheetIds[SheetPicker.SelectedIndex]));
+        var sheet = _document.Snapshot.Sheets[_sheetIndex];
+        _document.Session.UpdateNavigation(sheet.Id, sheet.View.ActiveCell);
         _selectedColumn = _selectedRow = 0;
         _columnCount = 12;
         _rowCount = 100;
         RefreshSheet(true);
-        GridSurface.Select(new(0, 0));
+        RestoreWorksheetNavigation();
         QueueRecalculation();
     }
 
@@ -699,7 +706,7 @@ public partial class MainWindow : Window
         {
             case Key.PageDown: case Key.PageUp:
                 e.Handled = true;
-                if (CommitEditors()) { ShowWorkbookPage(); SheetPicker.SelectedIndex = Math.Clamp(_sheetIndex + (e.Key == Key.PageDown ? 1 : -1), 0, SheetPicker.Items.Count - 1); }
+                if (CommitEditors()) { ShowWorkbookPage(); SheetPicker.SelectedIndex = Math.Clamp(SheetPicker.SelectedIndex + (e.Key == Key.PageDown ? 1 : -1), 0, SheetPicker.Items.Count - 1); }
                 break;
             case Key.F: case Key.H: e.Handled = true; Find_Click(sender, e); break;
             case Key.G: e.Handled = true; GoTo_Click(sender, e); break;

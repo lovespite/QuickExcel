@@ -28,6 +28,7 @@ internal static class WorkbookSearch
         {
             if (options.Scope != SearchScope.Workbook && index != activeSheet) continue;
             var sheet = snapshot.Sheets[index];
+            if (sheet.Visibility != SheetVisibility.Visible) continue;
             foreach (var (position, cell) in sheet.Cells.OrderBy(p => p.Key.Row).ThenBy(p => p.Key.Column))
             {
                 var address = new CellAddress(sheet.Id, position.Row, position.Column);

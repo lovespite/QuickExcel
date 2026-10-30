@@ -479,13 +479,15 @@
                           local:Ribbon.Icon="TableFreezeColumnAndRow"
                           Style="{StaticResource RibbonLargeButton}"
                           Click="Freeze_Click"
-                          ToolTip="冻结当前格上方行和左侧列；上方最多 10 行，仅本次工作区"/>
+                          ToolTip="冻结当前格上方行和左侧列；上方最多 10 行，随工作簿保存"/>
                   <Button Content="取消冻结"
                           local:Ribbon.Icon="TableFreezeColumnAndRowDismiss"
                           Style="{StaticResource RibbonLargeButton}"
                           Click="Freeze_Click"
                           Tag="clear"
                           ToolTip="取消冻结"/>
+                  <Button Content="隐藏工作表" local:Ribbon.Icon="EyeOff" Style="{StaticResource RibbonButton}" Click="HideSheet_Click" ToolTip="隐藏当前工作表，至少保留一张可见表"/>
+                  <Button Content="取消隐藏…" local:Ribbon.Icon="Eye" Style="{StaticResource RibbonButton}" Click="UnhideSheet_Click" ToolTip="显示普通隐藏工作表；非常隐藏表不在此列表"/>
                 </StackPanel>
               </GroupBox>
               <GroupBox Header="显示范围"

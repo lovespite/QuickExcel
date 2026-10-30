@@ -83,10 +83,10 @@ public partial class MainWindow
             .CreateDelegate<Action<bool>>(grid);
         remove(grid.CurrentCell); changed(true); await Idle();
         CheckOutlines("Ctrl-deselected current cell retains a focus outline", new GridCellRange(1, 1, 1, 1));
-        CurrentView.FrozenRows = CurrentView.FrozenColumns = 1; RefreshSheet();
+        SetSmokeFreeze(1, 1); RefreshSheet();
         GridSurface.SelectRange(new(0, 0, 1, 1), new(1, 1)); await Idle();
         CheckOutlines("Frozen panes do not duplicate the current-cell outline", rectangle);
-        CurrentView.FrozenRows = CurrentView.FrozenColumns = 0; RefreshSheet();
+        SetSmokeFreeze(0, 0); RefreshSheet();
         File.WriteAllLines(Path.Combine(folder, "selection-outline-cases.txt"), cases);
     }
 }

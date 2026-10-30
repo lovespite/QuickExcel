@@ -34,7 +34,7 @@ public partial class MainWindow
     {
         InstallGridResizeHandlers();
         _grid.HeaderRequested += OpenHeaderFilter;
-        _grid.Control.ViewportChanged += (_, _) => _filterPopup?.Close();
+        _grid.Control.ViewportChanged += (_, _) => { _filterPopup?.Close(); RememberWorksheetViewport(); };
         Deactivated += (_, _) => _filterPopup?.Close();
     }
     private void RefreshWorkspaceView()
@@ -44,7 +44,7 @@ public partial class MainWindow
         ViewStatus.Text = (view.FilterRange is null ? "" : view.Region is null ? $"筛选 {ColumnName(view.FilterColumn)} · {view.FilterText}  " :
             view.FilterError is not null ? $"筛选待更新：{view.FilterError}（暂显示全部行）  " : $"筛选区域 · {view.Filters.Count} 列条件  ") +
             (view.FrozenRows + view.FrozenColumns == 0 ? "" : $"冻结 {view.FrozenRows} 行 / {view.FrozenColumns} 列");
-        ViewStatus.ToolTip = "筛选首行为表头；视图设置仅本次工作区有效。";
+        ViewStatus.ToolTip = "筛选首行为表头；冻结随工作簿保存，筛选当前仍为会话设置。";
         ViewStatus.Visibility = view.FilterRange is not null || view.FrozenRows + view.FrozenColumns > 0 ? Visibility.Visible : Visibility.Collapsed;
     }
     private SheetViewState CurrentView
@@ -53,6 +53,9 @@ public partial class MainWindow
         {
             var id = _document.Snapshot.Sheets[_sheetIndex].Id;
             if (!_sheetViews.TryGetValue(id, out var view)) _sheetViews[id] = view = new();
+            var stored = _document.Snapshot.GetSheet(id).View;
+            view.FrozenRows = stored.FrozenRows <= 10 ? stored.FrozenRows : 0;
+            view.FrozenColumns = stored.FrozenColumns < 256 ? stored.FrozenColumns : 0;
             return view;
         }
     }
@@ -96,7 +99,11 @@ public partial class MainWindow
             if (!result.Changed) return true;
             if (result.CalculationUnchanged)
             {
-                if (command is SetAxisMetadataCommand)
+                if (command is SetSheetVisibilityCommand)
+                {
+                    EnsureVisibleSheet(); SynchronizeSheets();
+                }
+                else if (command is SetAxisMetadataCommand)
                 {
                     _grid.RefreshDimensions(_document.Snapshot);
                 }
@@ -106,7 +113,7 @@ public partial class MainWindow
                 return true;
             }
             _sheetIndex = Math.Min(_sheetIndex, _document.Snapshot.Sheets.Length - 1);
-            if (clearView) { CurrentView.FilterRange = null; CurrentView.FrozenRows = CurrentView.FrozenColumns = 0; }
+            if (clearView) CurrentView.FilterRange = null;
             SynchronizeSheets();
             var position = target ?? new CellPosition(_selectedRow, _selectedColumn);
             GridSurface.Select(new(Math.Clamp(position.Row, 0, _rowCount - 1), Math.Clamp(position.Column, 0, _columnCount - 1)));
@@ -225,12 +232,14 @@ public partial class MainWindow
 
     private void Freeze_Click(object sender, RoutedEventArgs e)
     {
-        if (!CommitEditors()) return;
+        if (_busy || !CommitEditors()) return;
         var clear = ((FrameworkElement)sender).Tag?.ToString() == "clear";
         if (!clear && _selectedRow > 10) { ReportEditFailure(new ArgumentException("冻结上方行最多 10 行，请选择第 11 行以内的单元格。")); return; }
-        CurrentView.FrozenRows = clear ? 0 : _selectedRow;
-        CurrentView.FrozenColumns = clear ? 0 : _selectedColumn;
-        RefreshSheet();
+        var sheet = _document.Snapshot.Sheets[_sheetIndex];
+        var next = sheet.View with { FrozenRows = clear ? 0 : _selectedRow, FrozenColumns = clear ? 0 : _selectedColumn,
+            FrozenSplit = false, PaneTopLeftCell = clear ? default : new(_selectedRow, _selectedColumn),
+            ActivePane = SheetPane.TopLeft, TopLeft = null, TopRight = null, BottomLeft = null, BottomRight = null };
+        if (!ExecuteWorkbookCommand(new SetSheetViewCommand(sheet.Id, next.WithActiveCell(new(_selectedRow, _selectedColumn))))) return;
         StatusText.Text = clear ? "已取消冻结。" : "已冻结左侧列和上方行；点击冻结行可定位到原单元格编辑。";
     }
 
