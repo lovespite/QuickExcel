@@ -56,6 +56,28 @@ public partial class MainWindow
             _document.Undo(); RefreshSheet(); await Idle();
             Check(Math.Abs(_grid.Control.GetModelCellBounds(0, 0)!.Value.Width - rect.Width) < 1, "Wide column resize remains undoable");
 
+            _editor.SetCell(0, 3, 1, "=_xlfn.XLOOKUP(1,A1:A2,B1:B2)"); RefreshSheet();
+            var inspectedSnapshot = _document.Snapshot;
+            _smokeCompatibilityDriver = dialog =>
+            {
+                try
+                {
+                    var report = (System.Windows.Controls.TextBox)dialog.Content;
+                    Check(report.IsReadOnly && report.Text.Contains("【内置不可计算／待验证】") && report.Text.Contains("Rendering · B4"),
+                        "Actual compatibility dialog groups unsupported formulas with their current cell location");
+                    Check(report.Text.Contains("【可编辑（已支持子集）】") && report.Text.Contains("当前无缓存结果"),
+                        "Actual compatibility dialog separates editable content from unavailable calculation results");
+                    File.WriteAllText(Path.Combine(folder, "compatibility-dialog.txt"), report.Text);
+                }
+                finally { dialog.Close(); }
+            };
+            await ShowCompatibilityAsync(); _smokeCompatibilityDriver = null;
+            Check(ReferenceEquals(inspectedSnapshot, _document.Snapshot) && !_document.ScriptsEnabled,
+                "Compatibility inspection leaves the snapshot and script authorization unchanged");
+            _document.Undo(); RefreshSheet(); await Idle();
+
+            await RunRowStyleInheritanceSmokeAsync(folder, Check);
+
             if (source is not null)
             {
                 var original = File.ReadAllBytes(source);
@@ -94,7 +116,7 @@ public partial class MainWindow
             }
             File.WriteAllText(Path.Combine(folder, "xlsx-rendering-smoke-result.txt"), "PASS: " + cases.Count + " checks\n" + string.Join("\n", cases));
         }
-        finally { _suppressAutoCalculation = false; }
+        finally { _suppressAutoCalculation = false; _smokeCompatibilityDriver = null; }
 
         RenderTargetBitmap CaptureArtwork()
         {

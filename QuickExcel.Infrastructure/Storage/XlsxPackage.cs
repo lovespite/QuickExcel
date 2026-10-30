@@ -1,4 +1,5 @@
 using System.Xml.Linq;
+using QuickExcel.Domain;
 using static QuickExcel.Storage.PackageIO;
 
 namespace QuickExcel.Storage;
@@ -12,6 +13,7 @@ internal sealed class XlsxPackage
     private readonly HashSet<(string Source, string Id)> _usedRelationships = [];
     private readonly HashSet<string> _used = new(StringComparer.Ordinal) { "[Content_Types].xml" };
     private readonly Dictionary<string, string> _types = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, string> _sheetNames = new(StringComparer.Ordinal);
     public Dictionary<string, byte[]> Parts { get; }
     public FileReadBudget Budget { get; }
     public CompatibilityIssueCollection Issues { get; } = new();
@@ -61,7 +63,7 @@ internal sealed class XlsxPackage
                 if (!external && !Parts.ContainsKey(target)) throw new InvalidDataException($"关系目标不存在：{target}");
                 var relationship = new PartRelationship(Attr(item, "Id"), Attr(item, "Type"), target, external);
                 if (!mapping.TryAdd(relationship.Id, relationship)) throw new InvalidDataException("关系 ID 重复。");
-                if (external) Issues.Add($"{name}: 外部关系 {relationship.Id}，未连接外部目标");
+                if (external) Loss($"{name}: 外部关系 {relationship.Id}，未连接外部目标", "relationship/" + relationship.Type.Split('/')[^1], name, range: relationship.Id);
             }
             if (!_relationships.TryAdd(source, mapping)) throw new InvalidDataException("关系来源重复。");
         }
@@ -93,6 +95,7 @@ internal sealed class XlsxPackage
             throw new InvalidDataException($"{source}: 缺少有效的 {type} 关系 {id}。");
         _usedRelationships.Add((source, id));
         _used.Add(relation.Target);
+        if (_sheetNames.TryGetValue(source, out var sheetName)) _sheetNames.TryAdd(relation.Target, sheetName);
         return relation.Target;
     }
     public string? RelatedByType(string source, string type, bool required = false)
@@ -110,8 +113,23 @@ internal sealed class XlsxPackage
     {
         foreach (var (source, relations) in _relationships)
         foreach (var relation in relations.Values)
-            if (!_usedRelationships.Contains((source, relation.Id))) Issues.Add($"{RelationshipPart(source)}: 未建模关系 {relation.Id}");
-        foreach (var name in Parts.Keys.Where(n => !_used.Contains(n))) Issues.Add($"未建模部件：{name}");
+            if (!_usedRelationships.Contains((source, relation.Id)) && !relation.External)
+                Loss($"{RelationshipPart(source)}: 未建模关系 {relation.Id}", "relationship/" + relation.Type.Split('/')[^1], RelationshipPart(source), range: relation.Id);
+        foreach (var name in Parts.Keys.Where(n => !_used.Contains(n))) Loss($"未建模部件：{name}", "part/" + _types.GetValueOrDefault(name), name);
+    }
+    public void RegisterSheet(string path, string name) => _sheetNames[path] = name;
+    public IReadOnlyList<CompatibilityDiagnostic> Diagnostics => Issues.Diagnostics.Select(d => d with {
+        SheetName = d.SheetName ?? (d.Part is { } part ? _sheetNames.GetValueOrDefault(
+            part.EndsWith(".rels", StringComparison.Ordinal) ? SourceForRelationships(part) : part) : null)
+    }).ToArray();
+
+    public void Loss(string message, string feature, string part, XElement? element = null, string? range = null, string? sheetName = null)
+    {
+        var cell = element?.AncestorsAndSelf(Main + "c").FirstOrDefault();
+        range ??= (string?)cell?.Attribute("r") ?? (string?)element?.Attribute("ref");
+        if (range is null && element?.Name == Main + "row") range = "row:" + (string?)element.Attribute("r");
+        if (range is null && element?.Name == Main + "col") range = "columns:" + (string?)element.Attribute("min") + ":" + (string?)element.Attribute("max");
+        Issues.Add(new CompatibilityDiagnostic("xlsx.unmodeled", CompatibilityKind.PreservedOnly, feature, message, part, sheetName, range));
     }
     public void Shape(XElement element, string children, string attributes, string part)
     {
@@ -119,10 +137,10 @@ internal sealed class XlsxPackage
         var attributeSet = attributes.Split(' ', StringSplitOptions.RemoveEmptyEntries).ToHashSet();
         foreach (var child in element.Elements())
             if (child.Name.Namespace != element.Name.Namespace || !childSet.Contains(child.Name.LocalName))
-                Issues.Add($"{part}: 未建模元素 {child.Name}");
+                Loss($"{part}: 未建模元素 {child.Name}", element.Name.LocalName + "/" + child.Name.LocalName, part, child);
         foreach (var attribute in element.Attributes().Where(a => !a.IsNamespaceDeclaration))
             if (attribute.Name.NamespaceName.Length != 0 || !attributeSet.Contains(attribute.Name.LocalName))
-                Issues.Add($"{part}: 未建模属性 {element.Name.LocalName}/@{attribute.Name}");
+                Loss($"{part}: 未建模属性 {element.Name.LocalName}/@{attribute.Name}", element.Name.LocalName + "/@" + attribute.Name.LocalName, part, element);
     }
     internal static string Attr(XElement element, XName name) =>
         (string?)element.Attribute(name) is { Length: > 0 } text ? text : throw new InvalidDataException($"缺少属性 {name}。");
@@ -139,6 +157,20 @@ internal sealed class XlsxPackage
 internal sealed class CompatibilityIssueCollection : System.Collections.ObjectModel.Collection<string>
 {
     private readonly HashSet<string> _unique = new(StringComparer.Ordinal);
+    private readonly HashSet<CompatibilityDiagnostic> _locations = [];
+    private readonly List<CompatibilityDiagnostic> _diagnostics = [];
+    public IReadOnlyList<CompatibilityDiagnostic> Diagnostics => _diagnostics;
+    public void Add(CompatibilityDiagnostic diagnostic)
+    {
+        Add(diagnostic.Message); // Keep the existing loss guards and unique-message budget.
+        if (_diagnostics.Count < 1024)
+        {
+            if (_locations.Add(diagnostic)) _diagnostics.Add(diagnostic);
+        }
+        else if (_diagnostics.Count == 1024)
+            _diagnostics.Add(new("report.locations-truncated", CompatibilityKind.PreservedOnly, "报告容量",
+                "仅列出前 1024 个兼容位置；其余定位已省略，保存保护仍覆盖全部未支持内容。"));
+    }
     protected override void InsertItem(int index, string item)
     {
         if (!_unique.Add(item)) return;

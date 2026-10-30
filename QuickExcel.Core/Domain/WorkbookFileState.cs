@@ -71,7 +71,7 @@ public sealed class WorkbookFileState
 {
     public WorkbookFileState(string sourcePath, int sourceFormatVersion, IEnumerable<byte> originalWorkbook,
         WorkbookSnapshot originalModel, IEnumerable<WorkbookPartBinding> sheetParts, IEnumerable<string> compatibilityIssues,
-        string? manifestJson = null, string? stateJson = null)
+        string? manifestJson = null, string? stateJson = null, IEnumerable<CompatibilityDiagnostic>? compatibilityDiagnostics = null)
     {
         SourcePath = Path.GetFullPath(sourcePath);
         SourceFormatVersion = sourceFormatVersion;
@@ -79,6 +79,8 @@ public sealed class WorkbookFileState
         OriginalModel = originalModel;
         SheetParts = sheetParts.ToImmutableArray();
         CompatibilityIssues = compatibilityIssues.Distinct().ToImmutableArray();
+        CompatibilityDiagnostics = (compatibilityDiagnostics ?? CompatibilityIssues.Select(message => new CompatibilityDiagnostic(
+            "xlsx.unmodeled", CompatibilityKind.PreservedOnly, "未建模内容", message))).Distinct().ToImmutableArray();
         ManifestJson = manifestJson;
         StateJson = stateJson;
     }
@@ -88,6 +90,7 @@ public sealed class WorkbookFileState
     public WorkbookSnapshot OriginalModel { get; }
     public ImmutableArray<WorkbookPartBinding> SheetParts { get; }
     public ImmutableArray<string> CompatibilityIssues { get; }
+    public ImmutableArray<CompatibilityDiagnostic> CompatibilityDiagnostics { get; }
     public string? ManifestJson { get; }
     public string? StateJson { get; }
     public bool RequiresMigration => SourceFormatVersion == 1;

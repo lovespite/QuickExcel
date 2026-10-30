@@ -6,7 +6,7 @@
 
 | 阶段 / 工作 | 当前状态 | 已交付范围与剩余事项 |
 | --- | --- | --- |
-| XLSX / Excel 对齐重点工程 | 计划已建立，实施待开始 | E0–E5 共六阶段，按重要性/常用程度/复杂度排序；先做兼容基线与常见 XLSX 保真，详细勾选清单见 [26](26-excel-compatibility-roadmap.md) |
+| XLSX / Excel 对齐重点工程 | E0 基线/报告及 E1 行列样式首切片已实现，整体进行中 | 已有矩阵、10 个合成夹具、独立校验和分级诊断；修复行格式应用标志与空白格继承/清除。最新 260 项既有相关测试、5 项新测试、34 项工具测试及 26/92 项 WPF 专项通过。真实 Excel 对照待补；证据见 [27](27-xlsx-compatibility-baseline.md)/[28](28-xlsx-compatibility-diagnostics.md)/[29](29-xlsx-row-style-inheritance.md)，清单见 [26](26-excel-compatibility-roadmap.md) |
 | M1 领域 / 会话 / 命令 | 完成 | 类型化稀疏模型、修订与代次门禁、统一事务及撤销；历史证据见 [08](08-baseline-and-progress.md) |
 | M2 文件 / 类型 | 受支持子集完成 | XLSQ v2、v1 迁移、类型保真、兼容报告与保存保护；支持范围见 [09](09-m2-files-and-types.md)，后续 XLSX 显示与颜色修正见 [25](25-xlsx-rendering.md) |
 | M3 计算 | 受支持子集完成 | 跨表、结构引用、标准公式增量计算、缓存状态和两种导出；JS 继续保守完整重算，见 [10](10-m3-calculation.md) |
@@ -18,7 +18,7 @@
 
 当前默认渲染为 `RenderMode.Default`；`--software-rendering` 仅作诊断选项。横向停顿已从待办移除，M5/M6 的其他验收范围不随该缺陷关闭而扩大。关闭记录及既有验证见 [主网格迁移](24-main-grid-migration.md)。
 
-源码与发布包分别跟踪：Release 构建输出在 `artifacts/build/bin/QuickExcel.Desktop/release/`，已有 `artifacts/QuickExcel` 不会随源码构建自动更新；当前 `Start-QuickExcel.cmd` 从源码运行，未指定配置时为 Debug。发布目录身份与验收以其 `BUILD-METADATA.json` 为准，本次仅同步文档，不生成新包。后续工作顺序见第 10 节。
+源码与发布包分别跟踪：Release 构建输出在 `artifacts/build/bin/QuickExcel.Desktop/release/`，已有 `artifacts/QuickExcel` 不会随源码构建自动更新；当前 `Start-QuickExcel.cmd` 从源码运行，未指定配置时为 Debug。发布目录身份与验收以其 `BUILD-METADATA.json` 为准。近期新增 E0 开发工具、字体写回修复、分级兼容报告及行列样式继承修复，未生成新包。后续工作顺序见第 10 节。
 
 ## 阶段更新记录（历史）
 

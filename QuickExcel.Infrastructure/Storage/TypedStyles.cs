@@ -24,9 +24,9 @@ internal static class TypedStyles
         // Named/inherited styles need a separate editing model. Keep them in the compatibility report.
         if (root.Element(Main + "cellStyleXfs") is { } inherited && (inherited.Elements().Count() > 1 ||
             inherited.Elements().Any(x => x.Attributes().Any(a => a.Name.LocalName is not ("numFmtId" or "fontId" or "fillId" or "borderId") || a.Value != "0"))))
-            package.Issues.Add($"{path}: 命名/继承样式未建模");
+            package.Loss($"{path}: 命名/继承样式未建模", "styles/cellStyleXfs", path);
         if (root.Element(Main + "cellStyles") is { } named && named.Elements().Any(x => (string?)x.Attribute("builtinId") != "0"))
-            package.Issues.Add($"{path}: 自定义命名样式未建模");
+            package.Loss($"{path}: 自定义命名样式未建模", "styles/cellStyles", path);
         var formats = new Dictionary<int, string>();
         foreach (var item in root.Element(Main + "numFmts")?.Elements(Main + "numFmt") ?? [])
         {
@@ -42,7 +42,7 @@ internal static class TypedStyles
             if (result.Count >= 4096) throw new InvalidDataException("样式数量超过 4096。");
             package.Shape(xf, "alignment", "numFmtId fontId fillId borderId xfId applyFont applyFill applyBorder applyAlignment applyNumberFormat", path);
             if ((string?)xf.Attribute("xfId") is not (null or "0") || xf.Attributes().Any(a => a.Name.LocalName.StartsWith("apply", StringComparison.Ordinal) && a.Value is "0" or "false"))
-                package.Issues.Add($"{path}: 继承样式或显式禁用的样式分量未建模");
+                package.Loss($"{path}: 继承样式或显式禁用的样式分量未建模", "styles/inheritance", path, range: "cellXfs[" + result.Count + "]");
             var font = fonts[Int((string?)xf.Attribute("fontId") ?? "0", fonts.Length - 1)];
             var fill = fills[Int((string?)xf.Attribute("fillId") ?? "0", fills.Length - 1)];
             var border = borders[Int((string?)xf.Attribute("borderId") ?? "0", borders.Length - 1)];
@@ -52,15 +52,15 @@ internal static class TypedStyles
             package.Shape(border, "left right top bottom diagonal", "", path);
             foreach (var side in border.Elements()) package.Shape(side, "color", "style", path);
             if (border.Element(Main + "diagonal") is { } diagonal && (diagonal.HasAttributes || diagonal.HasElements))
-                package.Issues.Add($"{path}: 对角边框未建模");
+                package.Loss($"{path}: 对角边框未建模", "styles/diagonalBorder", path, range: "cellXfs[" + result.Count + "]");
             var pattern = fill.Element(Main + "patternFill");
             if (pattern is not null)
             {
                 package.Shape(pattern, "fgColor bgColor", "patternType", path);
                 if ((string?)pattern.Attribute("patternType") is not (null or "none" or "gray125" or "solid"))
-                    package.Issues.Add($"{path}: 非实色填充未建模");
+                    package.Loss($"{path}: 非实色填充未建模", "styles/patternFill", path, range: "cellXfs[" + result.Count + "]");
                 if (pattern.Element(Main + "bgColor") is { } bg && (string?)bg.Attribute("indexed") != "64")
-                    package.Issues.Add($"{path}: 填充背景色未建模");
+                    package.Loss($"{path}: 填充背景色未建模", "styles/backgroundColor", path, range: "cellXfs[" + result.Count + "]");
             }
             var alignment = xf.Element(Main + "alignment");
             if (alignment is not null) package.Shape(alignment, "", "horizontal vertical wrapText", path);
@@ -105,8 +105,9 @@ internal static class TypedStyles
             if (style.NumberFormatCode is not null) formats.Add(new XElement(Main + "numFmt", new XAttribute("numFmtId", numFmtId), new XAttribute("formatCode", Encode(style.NumberFormatCode))));
             XElement? Val(string tag, object? value) => value is null ? null : new XElement(Main + tag, new XAttribute("val", value));
             XElement? Rgb(string tag, string? value) => value is null ? null : new XElement(Main + tag, new XAttribute("rgb", value));
-            fonts.Add(new XElement(Main + "font", Val("name", style.FontName), Val("sz", style.FontSize), Rgb("color", style.FontColor),
-                style.Bold ? new XElement(Main + "b") : null, style.Italic ? new XElement(Main + "i") : null));
+            // CT_Font uses an ordered sequence; our reader accepts any order, but schema validation requires this order.
+            fonts.Add(new XElement(Main + "font", style.Bold ? new XElement(Main + "b") : null,
+                style.Italic ? new XElement(Main + "i") : null, Val("sz", style.FontSize), Rgb("color", style.FontColor), Val("name", style.FontName)));
             fills.Add(new XElement(Main + "fill", new XElement(Main + "patternFill", new XAttribute("patternType", style.FillColor is null ? "none" : "solid"), Rgb("fgColor", style.FillColor))));
             XElement Side(string name, int kind, string? color) => new(Main + name, new XAttribute("style", Borders[kind]), Rgb("color", color));
             borders.Add(new XElement(Main + "border", Side("left", style.LeftBorder, style.LeftBorderColor), Side("right", style.RightBorder, style.RightBorderColor),
@@ -142,7 +143,7 @@ internal static class TypedStyles
         if (value is null) return fallback;
         var index = Array.IndexOf(supported, value);
         if (index >= 0) return index;
-        package.Issues.Add($"{path}: 未建模样式 {value}");
+        package.Loss($"{path}: 未建模样式 {value}", "styles/value", path);
         return fallback;
     }
     public static string Decode(string value) => System.Text.RegularExpressions.Regex.Replace(value, "_x([0-9A-Fa-f]{4})_",

@@ -154,23 +154,26 @@ public partial class MainWindow
         StatusText.Text = "已打开恢复副本，请另存。";
     }
 
-    private void Compatibility_Click(object sender, RoutedEventArgs e)
+    private Action<Window>? _smokeCompatibilityDriver;
+    private async void Compatibility_Click(object sender, RoutedEventArgs e) => await ShowCompatibilityAsync();
+    private async Task ShowCompatibilityAsync()
     {
         if (_busy || !CommitEditors()) return;
         var snapshot = _document.Snapshot;
-        var lines = new List<string>();
-        if (snapshot.FileState?.CompatibilityIssues.Length > 0)
-            lines.Add("文件已打开，以下为显示与保存保真限制，并非文件损坏。原始内容已保留；修改后保存或导出受支持副本可能移除这些内容，届时会再次确认。");
+        QuickExcel.Domain.WorkbookCompatibilityReport? report = null;
+        if (!await WorkAsync("检查兼容性…", token => report = QuickExcel.Storage.TypedWorkbookStorage.InspectCompatibility(snapshot, token), cancellable: true)) return;
+        var lines = new List<string> { CompatibilityReportText.Format(report!) };
         if (snapshot.FileState?.RequiresMigration == true) lines.Add("XLSQ v1 → v2：首次保存为新副本，原文件保留。");
-        lines.AddRange(snapshot.FileState?.CompatibilityIssues ?? []);
         foreach (var sheet in snapshot.Sheets)
         {
             if (sheet.UsedColumnCount > 256) lines.Add($"{sheet.Name}：IV 列之后的数据会保存，当前网格不显示。");
         }
-        if (lines.Count == 0) lines.Add("未检测到兼容性问题。");
         var text = new TextBox { Text = string.Join("\n\n", lines), IsReadOnly = true, TextWrapping = TextWrapping.Wrap,
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Margin = new(20), BorderThickness = new(0) };
-        AutomationProperties.SetName(text, "兼容性报告"); ToolDialog("兼容性报告", text, 620, 420).ShowDialog();
+        AutomationProperties.SetName(text, "兼容性报告");
+        var dialog = ToolDialog("兼容性报告", text, 620, 420);
+        if (_smokeCompatibilityDriver is not null) dialog.Loaded += (_, _) => _smokeCompatibilityDriver?.Invoke(dialog);
+        dialog.ShowDialog();
     }
 
     private void ExportOptions_Click(object sender, RoutedEventArgs e)

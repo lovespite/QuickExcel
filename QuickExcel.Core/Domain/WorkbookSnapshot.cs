@@ -55,7 +55,20 @@ public sealed record StyleDefinition
 }
 
 /// <summary>Height is in device-independent pixels (1/96 inch); XLSX stores points (1/72 inch).</summary>
-public sealed record RowMetadata(double? Height = null, bool Hidden = false, int StyleId = 0);
+public sealed record RowMetadata
+{
+    public RowMetadata(double? Height = null, bool Hidden = false, int StyleId = 0, bool? ApplyStyle = null)
+    {
+        this.Height = Height; this.Hidden = Hidden; this.StyleId = StyleId;
+        this.ApplyStyle = ApplyStyle ?? StyleId != 0;
+    }
+    public double? Height { get; init; }
+    public bool Hidden { get; init; }
+    public int StyleId { get; init; }
+    /// <summary>Independent of the index: an active style 0 overrides column formatting.</summary>
+    public bool ApplyStyle { get; init; }
+    public void Deconstruct(out double? height, out bool hidden, out int styleId) => (height, hidden, styleId) = (Height, Hidden, StyleId);
+}
 public sealed record ColumnMetadata(double? Width = null, bool Hidden = false, int StyleId = 0);
 
 public sealed class SheetImage
@@ -163,7 +176,12 @@ public sealed class WorksheetSnapshot
     public int GetStyleId(int row, int column)
     {
         if (GetCell(row, column) is { } cell) return cell.Content.StyleId;
-        if (Rows.TryGetValue(row, out var metadata) && metadata.StyleId != 0) return metadata.StyleId;
+        return GetInheritedStyleId(row, column);
+    }
+    public int GetInheritedStyleId(int row, int column)
+    {
+        WorkbookLimits.ValidatePosition(row, column);
+        if (Rows.TryGetValue(row, out var metadata) && metadata.ApplyStyle) return metadata.StyleId;
         return Columns.GetValueOrDefault(column)?.StyleId ?? 0;
     }
     public WorksheetSnapshot WithCells(ImmutableDictionary<CellPosition, CellSnapshot> cells)

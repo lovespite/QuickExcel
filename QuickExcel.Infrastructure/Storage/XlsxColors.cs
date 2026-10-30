@@ -55,7 +55,7 @@ internal sealed class XlsxColors
             if (rgb is not null) _theme[i] = "FF" + Rgb(rgb, 6);
         }
         // Only cell colors are flattened. Theme fonts/effects and theme-editing semantics still need preservation.
-        package.Issues.Add($"{path}: 主题颜色已解析；主题字体、效果及主题关联未建模");
+        package.Loss($"{path}: 主题颜色已解析；主题字体、效果及主题关联未建模", "theme", path);
     }
 
     public string? Read(XElement? element, XlsxPackage package, string path)
@@ -71,7 +71,7 @@ internal sealed class XlsxColors
         else if (element.Attribute("theme") is { } theme)
         {
             color = _theme[Int(theme.Value, 11)];
-            if (color is null) package.Issues.Add($"{path}: 主题颜色 {theme.Value} 缺少可解析的定义");
+            if (color is null) package.Loss($"{path}: 主题颜色 {theme.Value} 缺少可解析的定义", "theme/color", path, element);
         }
         else if (element.Attribute("indexed") is { } indexed)
         {

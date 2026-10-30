@@ -154,7 +154,7 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage
             var issues = read.Issues.ToList();
             // An original package can be retained byte-for-byte even for unsupported workbook features.
             var fileState = new WorkbookFileState(sourcePath, version, workbookBytes, snapshot, read.Bindings, issues,
-                version == 2 ? manifest!.RootElement.GetRawText() : null, state?.RootElement.GetRawText());
+                version == 2 ? manifest!.RootElement.GetRawText() : null, state?.RootElement.GetRawText(), read.Diagnostics);
             return new(documentId, revision, model.DateSystem, sheets, modules.PrimarySource, model.Styles, modules, fileState, names);
         }
         catch (Exception exception) when (exception is JsonException or System.Xml.XmlException or FormatException or OverflowException or ArgumentException or InvalidOperationException && exception is not WorkbookCompatibilityException)
@@ -282,7 +282,7 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage
             var a = left.Sheets[i]; var b = right.Sheets[i];
             if (a.Name != b.Name || a.ShowGridLines != b.ShowGridLines || !SameHeight(a.DefaultRowHeight, b.DefaultRowHeight) || a.TabColor != b.TabColor ||
                 !a.MergedCells.SequenceEqual(b.MergedCells) || a.Cells.Count != b.Cells.Count || a.Rows.Count != b.Rows.Count || a.Columns.Count != b.Columns.Count || a.Images.Length != b.Images.Length) return false;
-            if (a.Rows.Any(p => !b.Rows.TryGetValue(p.Key, out var value) || value.Hidden != p.Value.Hidden || value.StyleId != p.Value.StyleId ||
+            if (a.Rows.Any(p => !b.Rows.TryGetValue(p.Key, out var value) || value.Hidden != p.Value.Hidden || value.StyleId != p.Value.StyleId || value.ApplyStyle != p.Value.ApplyStyle ||
                     !SameHeight(value.Height, p.Value.Height)) || a.Columns.Any(p => !b.Columns.TryGetValue(p.Key, out var value) || value != p.Value)) return false;
             foreach (var (position, cell) in a.Cells)
                 if (!b.Cells.TryGetValue(position, out var value) || cell.Content != value.Content ||

@@ -46,8 +46,7 @@ public sealed class SetCellsCommand : DocumentCommand
                 foreach (var merge in sheet.MergedCells.Select(CellRectangle.Parse))
                     if (merge.Contains(edit.Address.Row, edit.Address.Column) && (edit.Address.Row != merge.Top || edit.Address.Column != merge.Left))
                         throw new InvalidOperationException("不能写入合并区域的非主单元格，请先取消合并；整批操作未应用。");
-            var inheritedStyle = sheet.Rows.GetValueOrDefault(edit.Address.Row)?.StyleId is > 0
-                ? sheet.Rows[edit.Address.Row].StyleId : sheet.Columns.GetValueOrDefault(edit.Address.Column)?.StyleId ?? 0;
+            var inheritedStyle = sheet.GetInheritedStyleId(edit.Address.Row, edit.Address.Column);
             var after = edit.Content.Kind == CellContentKind.Literal && edit.Content.LiteralValue.Kind == CellValueKind.Blank && edit.Content.StyleId == 0 && inheritedStyle == 0
                 ? null : new CellSnapshot(edit.Content,
                     before?.Content.Kind == CellContentKind.Formula && edit.Content.Kind == CellContentKind.Formula &&
@@ -69,8 +68,20 @@ public sealed class ClearCellsCommand : DocumentCommand
 {
     public ClearCellsCommand(IEnumerable<CellAddress> addresses) => Addresses = addresses.Take(WorkbookLimits.MaxCells + 1).ToImmutableArray();
     public ImmutableArray<CellAddress> Addresses { get; }
-    internal override CommandDraft Prepare(WorkbookSnapshot snapshot) => new SetCellsCommand(Addresses.Select(address =>
-        new CellEdit(address, CellContent.FromLiteral(CellValue.Blank, snapshot.GetSheet(address.SheetId).GetCell(address.Row, address.Column)?.Content.StyleId ?? 0)))).Prepare(snapshot);
+    internal override CommandDraft Prepare(WorkbookSnapshot snapshot)
+    {
+        if (Addresses.Length > WorkbookLimits.MaxCells) throw new ArgumentException("编辑数量超过工作簿容量。");
+        var seen = new HashSet<CellAddress>();
+        var edits = new List<CellEdit>();
+        foreach (var address in Addresses)
+        {
+            if (!seen.Add(address)) throw new ArgumentException("同一事务不能多次指定同一单元格。");
+            var cell = snapshot.GetSheet(address.SheetId).GetCell(address.Row, address.Column);
+            // Clearing an absent cell must not create a General override of row/column formatting.
+            if (cell is not null) edits.Add(new(address, CellContent.FromLiteral(CellValue.Blank, cell.Content.StyleId)));
+        }
+        return new SetCellsCommand(edits).Prepare(snapshot);
+    }
 }
 
 public sealed class AddSheetCommand : DocumentCommand

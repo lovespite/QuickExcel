@@ -7,7 +7,8 @@ using static QuickExcel.Storage.XlsxPackage;
 
 namespace QuickExcel.Storage;
 
-internal sealed record TypedWorkbookRead(WorkbookSnapshot Snapshot, IReadOnlyList<WorkbookPartBinding> Bindings, IReadOnlyList<string> Issues);
+internal sealed record TypedWorkbookRead(WorkbookSnapshot Snapshot, IReadOnlyList<WorkbookPartBinding> Bindings,
+    IReadOnlyList<string> Issues, IReadOnlyList<CompatibilityDiagnostic> Diagnostics);
 
 internal static class TypedWorkbookXml
 {
@@ -48,13 +49,15 @@ internal static class TypedWorkbookXml
             budget.Check();
             if (sheets.Count >= WorkbookLimits.MaxSheets) throw new InvalidDataException("工作表数量超过限制。");
             foreach (var attribute in definition.Attributes().Where(a => !a.IsNamespaceDeclaration && a.Name != Rel + "id" && a.Name.LocalName is not ("name" or "sheetId" or "state")))
-                package.Issues.Add($"{workbookPart}: 工作表属性 {attribute.Name} 未建模");
+                package.Loss($"{workbookPart}: 工作表属性 {attribute.Name} 未建模", "sheet/@" + attribute.Name.LocalName, workbookPart,
+                    sheetName: Decode(Attr(definition, "name")));
             var sheetId = Attr(definition, "sheetId");
             if (Int(sheetId, int.MaxValue) == 0 || !sheetIds.Add(Int(sheetId, int.MaxValue).ToString(CultureInfo.InvariantCulture))) throw new InvalidDataException("工作表编号无效或重复。");
             var path = package.Related(workbookPart, Attr(definition, Rel + "id"), "worksheet");
             if (!sheetPaths.Add(path)) throw new InvalidDataException("多张工作表指向同一部件。");
             package.RequireType(path, SheetType);
-            if ((string?)definition.Attribute("state") is not (null or "visible")) package.Issues.Add($"{path}: 工作表可见性未建模");
+            package.RegisterSheet(path, Decode(Attr(definition, "name")));
+            if ((string?)definition.Attribute("state") is not (null or "visible")) package.Loss($"{path}: 工作表可见性未建模", "sheet/@state", path);
             var sheet = package.XmlPart(path).Root!;
             if (sheet.Name != Main + "worksheet") throw new InvalidDataException("无效工作表部件。");
             package.Shape(sheet, "dimension sheetPr sheetViews sheetFormatPr cols sheetData mergeCells drawing", "", path);
@@ -82,7 +85,8 @@ internal static class TypedWorkbookXml
                 var rowIndex = Int(Attr(row, "r"), WorkbookLimits.MaxRows) - 1;
                 if (rowIndex < 0 || !seenRows.Add(rowIndex)) throw new InvalidDataException("工作表行重复或无效。");
                 package.Shape(row, "c", "r ht hidden s customHeight customFormat spans", path);
-                var rowMetadata = new RowMetadata(OptionalDouble(row.Attribute("ht")) / 0.75, Bool((string?)row.Attribute("hidden")), Style(row, "s", styles.Count));
+                var rowMetadata = new RowMetadata(OptionalDouble(row.Attribute("ht")) / 0.75, Bool((string?)row.Attribute("hidden")),
+                    Style(row, "s", styles.Count), Bool((string?)row.Attribute("customFormat")));
                 if (rowMetadata != new RowMetadata() || row.Attribute("s") is not null || row.Attribute("customFormat") is not null) rows.Add(rowIndex, rowMetadata);
                 var nextColumn = 0;
                 foreach (var element in row.Elements(Main + "c"))
@@ -94,14 +98,20 @@ internal static class TypedWorkbookXml
                     nextColumn = position.Column + 1;
                     package.Shape(element, "f v is extLst", "r s t", path);
                     var style = element.Attribute("s") is not null ? Style(element, "s", styles.Count)
-                        : row.Attribute("s") is not null && (row.Attribute("customFormat") is null || Bool((string?)row.Attribute("customFormat")))
-                            ? rowMetadata.StyleId : columns.GetValueOrDefault(position.Column)?.StyleId ?? 0;
+                        : rowMetadata.ApplyStyle ? rowMetadata.StyleId : columns.GetValueOrDefault(position.Column)?.StyleId ?? 0;
                     var value = Value(element, strings, package, path);
                     CellSnapshot cell;
                     if (element.Element(Main + "f") is { } formula)
                     {
                         package.Shape(formula, "", "t si ref", path);
-                        var expression = sharedFormulas.Expand(formula, position);
+                        string expression;
+                        try { expression = sharedFormulas.Expand(formula, position); }
+                        catch (NotSupportedException ex)
+                        {
+                            throw new WorkbookFeatureRejectedException(new("xlsx.formula-rejected", CompatibilityKind.Rejected,
+                                "formula/" + ((string?)formula.Attribute("t") ?? "normal"), ex.Message, path,
+                                Decode(Attr(definition, "name")), (string?)formula.Attribute("ref") ?? Reference(position)), ex);
+                        }
                         if (expression.Length == 0) throw new InvalidDataException("公式内容缺失。");
                         cell = new(CellContent.FromFormula("=" + expression.TrimStart('='), style),
                             new CellCalculation(element.Element(Main + "v") is null ? null : value, CalculationState.Stale, 0, 0, 0));
@@ -110,7 +120,7 @@ internal static class TypedWorkbookXml
                     if (!cells.TryAdd(position, cell)) throw new InvalidDataException("单元格地址重复。");
                 }
             }
-            if (sheet.Element(Main + "sheetViews")?.Elements().Count() > 1) package.Issues.Add($"{path}: 多视图状态未建模");
+            if (sheet.Element(Main + "sheetViews")?.Elements().Count() > 1) package.Loss($"{path}: 多视图状态未建模", "sheetViews", path);
             var view = sheet.Element(Main + "sheetViews")?.Element(Main + "sheetView");
             if (view is not null) package.Shape(view, "", "workbookViewId showGridLines", path);
             var format = sheet.Element(Main + "sheetFormatPr");
@@ -142,10 +152,12 @@ internal static class TypedWorkbookXml
                 names.Add(definition);
             }
             catch (Exception e) when (e is ArgumentException or FormatException or OverflowException)
-            { package.Issues.Add($"{workbookPart}: 名称 {name} 未支持：{e.Message}"); }
+            { package.Loss($"{workbookPart}: 名称 {name} 未支持：{e.Message}", "definedName/" + name, workbookPart,
+                range: element.Value, sheetName: scopeIndex < 0 ? null : sheets[scopeIndex].Name); }
         }
         package.FinishInventory();
-        return new(new WorkbookSnapshot(Guid.NewGuid(), 0, dateSystem, sheets, styles: styles, definedNames: names), bindings, package.Issues.Distinct().ToArray());
+        return new(new WorkbookSnapshot(Guid.NewGuid(), 0, dateSystem, sheets, styles: styles, definedNames: names), bindings,
+            package.Issues.ToArray(), package.Diagnostics);
     }
 
     private static int Style(XElement element, string name, int count) => Int((string?)element.Attribute(name) ?? "0", count - 1);
@@ -153,8 +165,8 @@ internal static class TypedWorkbookXml
     {
         foreach (var textElement in element.Descendants(Main + "t"))
             if (textElement.HasElements || textElement.Attributes().Any(a => a.Name != XNamespace.Xml + "space" && !a.IsNamespaceDeclaration))
-                package.Issues.Add($"{path}: 文本附加属性未建模");
-        if (element.Elements().Any(e => e.Name != Main + "t")) package.Issues.Add($"{path}: 富文本格式未建模");
+                package.Loss($"{path}: 文本附加属性未建模", "text/attributes", path, element);
+        if (element.Elements().Any(e => e.Name != Main + "t")) package.Loss($"{path}: 富文本格式未建模", "text/richText", path, element);
         var text = Decode(string.Concat(element.Elements().SelectMany(e => e.Name == Main + "t" ? new[] { e } : e.Elements(Main + "t")).Select(t => t.Value)));
         WorkbookLimits.ValidateText(text);
         return text;
@@ -194,7 +206,7 @@ internal static class TypedWorkbookXml
                     throw new InvalidDataException("宿主错误扩展无效。");
                 result = CellValue.FromError(code);
             }
-            else package.Issues.Add($"{path}: 单元格扩展未建模");
+            else package.Loss($"{path}: 单元格扩展未建模", "cell/extLst", path, element);
         }
         return result;
     }
@@ -254,7 +266,8 @@ internal static class TypedWorkbookXml
                 if (sheet.Rows.TryGetValue(rowIndex, out var metadata))
                 {
                     if (metadata.Height.HasValue) row.Add(new XAttribute("ht", metadata.Height.Value * 0.75), new XAttribute("customHeight", 1));
-                    row.Add(new XAttribute("hidden", metadata.Hidden ? 1 : 0), new XAttribute("s", metadata.StyleId), new XAttribute("customFormat", 1));
+                    row.Add(new XAttribute("hidden", metadata.Hidden ? 1 : 0), new XAttribute("s", metadata.StyleId),
+                        new XAttribute("customFormat", metadata.ApplyStyle ? 1 : 0));
                 }
                 if (grouped.TryGetValue(rowIndex, out var rowCells))
                     foreach (var (position, cell) in rowCells) row.Add(WriteCell(position, cell, valuesOnly));

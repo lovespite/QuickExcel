@@ -24,9 +24,9 @@ internal static class TypedImages
             foreach (var anchor in root.Elements())
             {
                 if (anchor.Name != Drawing + "twoCellAnchor" || anchor.Element(Drawing + "pic") is not { } pic)
-                { package.Issues.Add($"{path}: 未建模绘图或锚点"); continue; }
+                { package.Loss($"{path}: 未建模绘图或锚点", "drawing/anchor", path); continue; }
                 package.Shape(anchor, "from to pic clientData", "editAs", path);
-                if ((string?)anchor.Attribute("editAs") is not (null or "twoCell")) package.Issues.Add($"{path}: 非随单元格缩放的图片锚点");
+                if ((string?)anchor.Attribute("editAs") is not (null or "twoCell")) package.Loss($"{path}: 非随单元格缩放的图片锚点", "drawing/editAs", path);
                 int Marker(string name, string coordinate, int maximum)
                 {
                     var value = anchor.Element(Drawing + name)?.Element(Drawing + coordinate)?.Value ?? throw new InvalidDataException("图片锚点缺失。");
@@ -38,14 +38,14 @@ internal static class TypedImages
                 var right = Marker("to", "col", WorkbookLimits.MaxColumns);
                 foreach (var name in new[] { "from", "to" })
                     if (Marker(name, "rowOff", int.MaxValue) != 0 || Marker(name, "colOff", int.MaxValue) != 0)
-                        package.Issues.Add($"{path}: 图片像素偏移未建模");
+                        package.Loss($"{path}: 图片像素偏移未建模", "drawing/offset", path);
                 var blip = pic.Element(Drawing + "blipFill")?.Element(Art + "blip") ?? throw new InvalidDataException("图片引用缺失。");
                 var imagePath = package.Related(path, Attr(blip, Rel + "embed"), "image");
                 var extension = imagePath[(imagePath.LastIndexOf('.') + 1)..].ToLowerInvariant();
                 package.RequireType(imagePath, Mime(extension));
                 if (pic.Element(Drawing + "blipFill")?.Element(Art + "srcRect") is not null ||
                     pic.Element(Drawing + "spPr")?.Element(Art + "xfrm")?.HasAttributes == true)
-                    package.Issues.Add($"{path}: 图片裁剪或旋转未建模");
+                    package.Loss($"{path}: 图片裁剪或旋转未建模", "drawing/transform", path);
                 var imageBytes = package.BinaryPart(imagePath);
                 package.Budget.Parse(imageBytes.Length + 256);
                 images.Add(new SheetImage(imageBytes, extension, row, column, bottom - row, right - column));

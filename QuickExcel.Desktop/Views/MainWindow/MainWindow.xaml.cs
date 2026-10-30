@@ -166,6 +166,8 @@ public partial class MainWindow : Window
         if (document.Snapshot.FileState is { CompatibilityIssues.Length: > 0 } fileState)
             LogText.Text += $"\n文件已打开。有 {fileState.CompatibilityIssues.Length} 项格式或附加信息尚未完整支持，部分显示可能与 Excel 不同。" +
                 "\n原始内容已保留；修改后保存或导出前会提示可能丢失的内容。详情见文件菜单中的兼容性报告。";
+        if (document.Snapshot.Sheets.Any(s => s.Cells.Values.Any(c => c.Content.Kind == CellContentKind.Formula)))
+            LogText.Text += "\n文件中的公式缓存不等于已重算结果；内置不可计算的函数和语法可在兼容性报告中按单元格查看。";
         if (!document.Snapshot.ScriptModules.CanExecute)
             LogText.Text += "\n多模块源码已保留；执行需要显式声明脚本 API v2。";
         else if (document.Snapshot.ScriptModules.ScriptApiVersion == 2)

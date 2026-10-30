@@ -6,6 +6,12 @@
 
 阅读时先看实施计划的当前状态和下一轮切片，再查专题契约与证据。日期早于当前状态的“下一步”“默认网格”“尚未交付”属于当时记录，不覆盖新状态。源码版本仍为 `0.6.0-preview.3`；旧发布目录不会随构建自动更新，身份以包内 `BUILD-METADATA.json` 为准。
 
+E0 已开始实施：[兼容基线与首轮证据](27-xlsx-compatibility-baseline.md) 包含 R/D/C/E/W 矩阵、9 个合成样本、往返比较工具与字体写回修复。真实 Excel 对照待补，E0/E1 未整体关闭。
+
+XC-0003 首切片已接入：[兼容诊断分级](28-xlsx-compatibility-diagnostics.md) 记录五类诊断、来源/当前单元格定位、缓存说明及保存保护回归。
+
+E1 已开始：[行列样式优先级](29-xlsx-row-style-inheritance.md) 修复显式行样式 0、禁用行格式写回和空白格清除；当前合成样本增至 10 个，完整命名样式/主题字体仍待完成。
+
 新增 [XLSX 渲染修复](25-xlsx-rendering.md)：行高单位、字体行框裁剪、主题色、宽列与滚动定位，以及兼容性报告和附件复现证据。
 
 新增 [主网格迁移记录](24-main-grid-migration.md)：主界面已切换到 `QuickExcel.Grid.Wpf`，旧 DataGrid 与试验窗口已移除。编辑、尺寸、冻结、筛选、样式和图片迁移有专项证据；真实 IME、跨屏 DPI、辅助功能及完整性能门禁仍待验收。[23 号记录](23-fast-grid-implementation.md) 保留试验阶段和历史性能对照。
@@ -25,6 +31,9 @@
 | 文档 | 解决的问题 |
 | --- | --- |
 | [XLSX / Excel 对齐专项](26-excel-compatibility-roadmap.md) | 当前重点工程的阶段、优先级、支持维度及完成清单 |
+| [XLSX 兼容基线](27-xlsx-compatibility-baseline.md) | 当前特性矩阵、样本台账、独立比较工具、首轮缺陷与证据 |
+| [XLSX 兼容诊断](28-xlsx-compatibility-diagnostics.md) | 分级报告、未知函数与旧缓存、拒绝定位及保存保护证据 |
+| [XLSX 行列样式](29-xlsx-row-style-inheritance.md) | 行格式应用标志、单格/行/列优先级、清除内容和读改存证据 |
 | [实施计划](05-implementation-plan.md) | 当前 M1–M6 状态、已关闭缺陷、后续顺序与退出条件；进度统一入口 |
 | [主网格迁移](24-main-grid-migration.md) | 当前主界面接线、旧控件移除、功能回归、性能样本及剩余验收边界 |
 | [FastWpfGrid 实施记录](23-fast-grid-implementation.md) | 使用入口、筛选/排序支持矩阵、专项测试、性能证据和候选迁移缺口 |
