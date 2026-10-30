@@ -4,6 +4,7 @@ using QuickExcel.CompatibilityProbe;
 
 try
 {
+    if (args is ["business-baseline", var businessReference, var businessDirectory]) return BusinessBaselineProbe.Run(businessReference, businessDirectory);
     if (args is ["number-formats", var reference, var numberDirectory]) return NumberFormatProbe.Run(reference, numberDirectory);
     if (args is ["styles", var styleSource, var styleDirectory]) return StyleProbe.Run(styleSource, styleDirectory);
     if (args is ["metadata", var metadataSource, var metadataDirectory]) return MetadataProbe.Run(metadataSource, metadataDirectory);

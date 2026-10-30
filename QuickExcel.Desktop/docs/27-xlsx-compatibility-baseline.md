@@ -1,6 +1,6 @@
 # XLSX 兼容基线与首轮证据
 
-更新：2026-10-30。对应 [26 号计划](26-excel-compatibility-roadmap.md) 的 XC-0001/0002 首切片，状态为**部分实现**。本轮建立可运行台账与比较工具，并修复独立校验发现的字体序列化顺序问题；未关闭 E0/E1，也未完成真实 Excel 往返验收。提交状态：工作区修改，基于 `600d50804fdb1d92573b0d52b677d0392d491be2`，未创建提交或发布包。
+更新：2026-10-30。**XC-0001 已完成**：六份真实 Excel 业务样本、5384 属性断言和 E1 七项对照索引见 [37](37-excel-business-baseline.md)。XC-0002/0003 尚有收尾。本文第 3–5 节保留初次切片的工具和历史证据，当时的“待真实 Excel”不覆盖后续 30–37 号记录；未发布新包。
 
 ## 1. 当前 R/D/C/E/W 矩阵
 
@@ -18,7 +18,7 @@ S = 支持该行限定子集；P = 部分支持；O = 仅原包保留；N = 不�
 | 行列尺寸/隐藏/样式优先级 | P | P | — | P | P | 行列单格优先级与 customFormat 已有 [29 号专项证据](29-xlsx-row-style-inheritance.md)，新增 `row-column-styles` 第 10 个夹具；完整继承/outline 未验收，XC-0102/0307 |
 | 合并和基础浮动图片 | P | P | — | P | P | 既有 `TypedStorageTests`；复杂锚点/结构变化限制保持，XC-0402 |
 | 普通/共享公式、跨表 A1、定义名称 | P | P | P | P | P | `cross-sheet`、`M3StorageTests`；支持函数与参数见 [10](10-m3-calculation.md)，缓存不等于重算 |
-| 未知函数、`_xlfn` 前缀 | P | P | N | P | P | `unknown-function` 可读取源码/旧缓存并保存；后续 [28](28-xlsx-compatibility-diagnostics.md) 已接入内置不可计算分级，受限编辑仍属 XC-0106 |
+| 未知函数、`_xlfn` 前缀 | S | P | N | P | S | XC-0106：原公式/旧缓存保留，函数和依赖为 Blocked，独立公式可重算；结构变换拒绝，值/样式受限编辑可保存，见 [35](35-xlsx-preserved-formulas.md) |
 | 数组公式 | S | P | N | N | O | XC-0106：整簿只读显示来源缓存，原 XLSX 包复制或 XLSQ 包装；不计算/编辑，见 [35](35-xlsx-preserved-formulas.md) |
 | 结构化引用/动态数组语义 | S | P | N | N | O | XC-0106：真实 Excel 结构化引用/SEQUENCE 样本只读保留通过；计算/编辑仍待 XC-0303/0501 |
 | 文档属性白名单 | S | N | — | N | S | XC-0103 支持 core/app/custom 白名单；其他分组/结构仍报告，见 [32](32-xlsx-save-and-metadata.md) |
@@ -48,6 +48,7 @@ S = 支持该行限定子集；P = 部分支持；O = 仅原包保留；N = 不�
 | `array-formula` | `t=array` 与结果区域 B2:B3；XC-0106 后只读打开、缓存显示、原包保留，修改拒绝 | XC-0106 |
 | `rich-links-notes` | 红色粗体 run、外部超链接、传统批注；常见子集普通格式保存通过，不访问外部地址 | XC-0107 |
 | `phonetic-rich-text` | 已支持富文本上的未建模拼音，验证定位/容量及编辑后的保存保护 | XC-0107 |
+| `row-column-styles` | 行/列/单格样式、显式行样式 0 与禁用行格式，验证继承和写回 | XC-0102 |
 
 样本期望只是人工构造的诊断基准，不是 Excel 计算期望。每份报告明确 `Origin=synthetic-inline-spreadsheetml`、`ExcelVerification=pending-real-excel`；ExcelVersion/Build/Language/CalculationMode 为 null。未来补 Excel 生成且获准使用的脱敏样本时必须记录实际版本、语言、日期系统、计算模式、重开/修复提示及结果，不能用 SDK 的 Office2019 schema 目标充当实际 Excel 版本。
 
