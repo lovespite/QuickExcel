@@ -26,7 +26,8 @@ S = 支持该行限定子集；P = 部分支持；O = 仅原包保留；N = 不�
 | 单窗口普通视图、冻结/缩放/活动表格、hidden/veryHidden | S | P | — | P | S | XC-0104 已持久化，视图命令可撤销、导航不 dirty；显示容量及拆分/多窗口限制见 [33](33-xlsx-workbook-views.md) |
 | 页面/打印区域/重复标题/页眉页脚/分页 | S | N | — | N | S | XC-0105 的 R/W 子集；有分页时删除/移动行列拒绝，未提供实际打印或页面编辑，见 [34](34-xlsx-page-and-print-metadata.md) |
 | 富文本 run、超链接、传统批注 | S | P | — | P | S | XC-0107 常见 run 字体/颜色、惰性链接说明及传统批注角标/悬停；显式降级与整格字体可撤销，结构/线程评论限制见 [36](36-xlsx-rich-text-links-and-notes.md) |
-| 验证、条件格式、图表、透视表 | O | N | N | N | O | [09](09-m2-files-and-types.md) 的未建模内容保护；本轮未扩充这些夹具，仍需 E3/E4/E5 |
+| 数据验证 | P | P | P | P | P | XC-0304 列表/范围/数值/日期/长度/基础公式、输入提示及整批校验；1,370 个真实 Excel 案例通过，范围见 [53](53-data-validation.md) |
+| 条件格式、图表、透视表 | O | N | N | N | O | [09](09-m2-files-and-types.md) 的未建模内容保护；仍需 E3/E4/E5 |
 | 普通复制/TSV 粘贴、内部剪贴板/冻结 | — | P | — | P | P | 冻结 XC-0104、内部富剪贴板 XC-0201 已完成声明子集 |
 | AutoFilter / sortState | P | P | — | P | P | XC-0301 多列列表/比较、排序设置和手动隐藏区分已持久化；37 个真实 Excel 案例及范围/来源限制见 [50](50-filter-and-sort-persistence.md) |
 | Excel Table 基础 | P | P | — | P | P | XC-0302 名称/范围/列/表头/汇总/60 内置样式及独立筛选读显写、受限创建/底边调整；60,336 项往返和 Excel 复验见 [51](51-excel-table-basics.md)；结构化公式见 [52](52-structured-references-and-table-editing.md) |

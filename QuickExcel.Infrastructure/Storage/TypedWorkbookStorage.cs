@@ -72,7 +72,7 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage
                     declaredViews = features.Contains("workbook-views");
                     declaredTextVersion = features.Contains("text-compatibility-v2");
                     declaredExtendedErrors = features.Contains("extended-cell-errors");
-                    if (features.Distinct().Count() != features.Length || Features.Except(features).Any() || features.Except(Features.Concat(["script-actions", "script-signatures", "workbook-views", "worksheet-printing", "preserved-formulas", "cell-text-annotations", "worksheet-data", "worksheet-tables", "text-compatibility-v2", "extended-cell-errors"])).Any() ||
+                    if (features.Distinct().Count() != features.Length || Features.Except(features).Any() || features.Except(Features.Concat(["script-actions", "script-signatures", "workbook-views", "worksheet-printing", "preserved-formulas", "cell-text-annotations", "worksheet-data", "worksheet-tables", "worksheet-validation", "text-compatibility-v2", "extended-cell-errors"])).Any() ||
                         features.Contains("script-actions") && scriptApiVersion != 2)
                         throw new InvalidDataException("XLSQ 缺少必要能力或包含未知必需能力。");
                     var referenced = new HashSet<string>(StringComparer.Ordinal) { "manifest.json" };
@@ -265,6 +265,7 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage
         manifest["requiredFeatures"] = JsonSerializer.SerializeToNode(Features
             .Concat(snapshot.Sheets.Any(s => !s.Data.IsEmpty) ? ["worksheet-data"] : [])
             .Concat(snapshot.Sheets.Any(s => !s.Data.Tables.IsEmpty) ? ["worksheet-tables"] : [])
+            .Concat(snapshot.Sheets.Any(s => !s.Data.Validations.IsEmpty) ? ["worksheet-validation"] : [])
             .Concat(snapshot.Sheets.Any(s => !s.Annotations.IsEmpty || s.Cells.Values.Any(c => c.Content.RichText is not null)) ? ["cell-text-annotations"] : [])
             .Concat(snapshot.FileState?.FormulaReadOnly == true ? ["preserved-formulas"] : [])
             .Concat(snapshot.Sheets.Any(s => !s.Printing.IsEmpty) ? ["worksheet-printing"] : [])

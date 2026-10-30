@@ -58,6 +58,6 @@ internal static class DataStructure
             tables.Add(new(table.Id, table.Name, range, columns, table.HeaderRow, table.TotalsRow, table.TotalsRowShown, table.Style, tableFilter, empty ? null : states.Sort,
                 empty || table.InsertRow && range.Bottom - range.Top == table.Range.Bottom - table.Range.Top));
         }
-        return new(filter, sort) { Tables = tables.ToImmutableArray() };
+        return new(filter, sort) { Tables = tables.ToImmutableArray(), Validations = data.Validations };
     }
 }

@@ -25,13 +25,15 @@ public sealed class DocumentSession : IDisposable
     private readonly Queue<DocumentChange> _notifications = new();
     private bool _publishing;
 
-    public DocumentSession(WorkbookSnapshot snapshot, long historyBudgetBytes = 32 * 1024 * 1024)
+    private readonly IWorkbookValidation? _validation;
+    public DocumentSession(WorkbookSnapshot snapshot, long historyBudgetBytes = 32 * 1024 * 1024, IWorkbookValidation? validation = null)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(historyBudgetBytes);
         _snapshot = snapshot;
         _savedRevision = snapshot.FileState?.RequiresMigration == true ? -1 : snapshot.Revision;
         HistoryBudgetBytes = historyBudgetBytes;
+        _validation = validation;
     }
 
     public Guid SessionId { get; } = Guid.NewGuid();
@@ -49,7 +51,8 @@ public sealed class DocumentSession : IDisposable
     public bool IsClosed { get { lock (_gate) return _closed; } }
     public ImmutableArray<string> Diagnostics { get { lock (_gate) return _diagnostics; } }
 
-    public CommandResult Execute(DocumentCommand command, long? expectedRevision = null) => ExecuteCore(command, expectedRevision);
+    public CommandResult Execute(DocumentCommand command, long? expectedRevision = null, bool acceptValidationWarnings = false) =>
+        ExecuteCore(command, expectedRevision, acceptValidationWarnings: acceptValidationWarnings);
 
     /// <summary>Navigation is captured by the next save without input revisions, undo entries or recalculation.
     /// Freeze/zoom/visibility changes must use commands instead.</summary>
@@ -73,7 +76,7 @@ public sealed class DocumentSession : IDisposable
         }
     }
 
-    private CommandResult ExecuteCore(DocumentCommand command, long? expectedRevision, ScriptActionRequest? action = null, CancellationToken cancellationToken = default, ImmutableArray<string> diagnostics = default)
+    private CommandResult ExecuteCore(DocumentCommand command, long? expectedRevision, ScriptActionRequest? action = null, CancellationToken cancellationToken = default, ImmutableArray<string> diagnostics = default, bool acceptValidationWarnings = false)
     {
         ArgumentNullException.ThrowIfNull(command);
         DocumentChange? change = null;
@@ -93,6 +96,17 @@ public sealed class DocumentSession : IDisposable
             if (before.FileState?.FormulaReadOnly == true) throw new InvalidOperationException(WorkbookFileState.FormulaReadOnlyMessage);
             var draft = command.Prepare(before); // No session state is changed until every check succeeds.
             TableSafety.ValidateEdit(before, draft.Snapshot);
+            var inputChanges = draft.Changes.Where(c => c.Before?.Content.WithStyle(0) != c.After?.Content.WithStyle(0)).Select(c => c.Address).ToArray();
+            if (inputChanges.Length > 0 && before.FileState?.CompatibilityDiagnostics.Any(d => d.Feature.Contains("dataValidation", StringComparison.OrdinalIgnoreCase)) == true)
+                throw new NotSupportedException("工作簿含尚未支持的数据验证，不能确认输入限制；本次修改未应用。原规则随原文件保留。");
+            var constrained = inputChanges.Where(a => draft.Snapshot.Sheets.FirstOrDefault(s => s.Id == a.SheetId)?.Data.Validations.Any(v => v.ShowError && v.Contains(new(a.Row, a.Column))) == true).ToArray();
+            if (constrained.Length > 0)
+            {
+                if (_validation is null) throw new NotSupportedException("此会话未配置数据验证计算器，修改未应用。");
+                var failures = _validation.Check(draft.Snapshot, constrained);
+                if (failures.Count > 0 && (!acceptValidationWarnings || failures.Any(f => f.Alert == ValidationAlert.Stop)))
+                    throw new DataValidationException(failures);
+            }
             cancellationToken.ThrowIfCancellationRequested();
             if (ReferenceEquals(draft.Snapshot, before))
             {
@@ -479,7 +493,7 @@ public sealed class DocumentSession : IDisposable
             + (StructureChanged ? 512L * Math.Abs(After.Sheets.Length - Before.Sheets.Length) : 0);
         private static long ChangedDataMetadata(WorkbookSnapshot from, WorkbookSnapshot to) => from.Sheets
             .Where(s => !ReferenceEquals(s.Data, to.Sheets.FirstOrDefault(other => other.Id == s.Id)?.Data))
-            .Sum(s => 128L + (s.Data.Filter?.Columns.Values.Sum(c => 256L + (c.Values?.Sum(v => 32L + v.Length * 2L) ?? 0) +
+            .Sum(s => 128L + s.Data.Validations.Sum(v => v.EstimatedBytes) + (s.Data.Filter?.Columns.Values.Sum(c => 256L + (c.Values?.Sum(v => 32L + v.Length * 2L) ?? 0) +
                 ((c.First?.Operand.Length ?? 0) + (c.Second?.Operand.Length ?? 0)) * 2L) ?? 0) +
                 (s.Data.Sort?.Keys.Sum(k => 128L + k.CustomOrder.Sum(v => 32L + v.Length * 2L)) ?? 0) +
                 s.Data.Tables.Sum(t => 1024L + t.Style.Elements.Length * 512L + t.Columns.Sum(c => 512L + 2L * (c.Name.Length + (c.CalculatedFormula?.Length ?? 0) + (c.TotalsFormula?.Length ?? 0) + (c.TotalsLabel?.Length ?? 0))) +

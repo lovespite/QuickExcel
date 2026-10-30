@@ -34,7 +34,7 @@ public sealed class WorkbookDocument : IDisposable
         ArgumentNullException.ThrowIfNull(services.Storage);
         ArgumentNullException.ThrowIfNull(services.Calculator);
         _services = services;
-        Session = new(snapshot, historyBudgetBytes);
+        Session = new(snapshot, historyBudgetBytes, services.Calculator as IWorkbookValidation);
     }
 
     public DocumentSession Session { get; }
@@ -157,7 +157,7 @@ public sealed class WorkbookDocument : IDisposable
         var snapshot = Snapshot;
         var sheet = snapshot.Sheets[sheetIndex];
         var edits = values.Select(value => new CellEdit(new(sheet.Id, value.Row, value.Column),
-            CellInput.Parse(value.Value, sheet.GetStyleId(value.Row, value.Column))));
+            CellInput.ParseForCell(value.Value, snapshot, sheet, value.Row, value.Column)));
         return Session.Execute(new SetCellsCommand(edits), snapshot.Revision);
     }
 

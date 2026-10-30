@@ -5,6 +5,20 @@ namespace QuickExcel.Domain;
 /// <summary>Explicit user-input parsing, separate from display and storage value interpretation.</summary>
 public static class CellInput
 {
+    /// <summary>ISO date entry is enabled only by an explicit date-validation rule. Typed clipboard/storage values stay typed.</summary>
+    public static CellContent ParseForCell(string text, WorkbookSnapshot snapshot, WorksheetSnapshot sheet, int row, int column)
+    {
+        var style = sheet.GetStyleId(row, column);
+        if (sheet.Data.Validations.Any(v => v.Kind == ValidationKind.Date && v.Contains(new(row, column))))
+        {
+            if (text == "1900-02-29" && snapshot.DateSystem == ExcelDateSystem.Windows1900)
+                return CellContent.FromLiteral(CellValue.FromNumber(60), style);
+            if (DateTime.TryParseExact(text, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var date))
+                return CellContent.FromLiteral(CellValue.FromNumber(ExcelSerialDate.FromDateTime(date, snapshot.DateSystem).Serial), style);
+        }
+        return Parse(text, style);
+    }
+
     public static CellContent Parse(string text, int styleId = 0)
     {
         ArgumentNullException.ThrowIfNull(text);

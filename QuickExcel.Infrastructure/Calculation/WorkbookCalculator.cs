@@ -6,8 +6,11 @@ using QuickExcel.Formulas;
 namespace QuickExcel.Calculation;
 
 /// <summary>Workbook-scoped typed calculation with conservative script rounds and immutable result reuse.</summary>
-public sealed class WorkbookCalculator(IScriptRuntimeFactory runtimeFactory) : IWorkbookCalculator
+public sealed class WorkbookCalculator(IScriptRuntimeFactory runtimeFactory) : IWorkbookCalculator, IWorkbookValidation
 {
+    public IReadOnlyList<ValidationFailure> Check(WorkbookSnapshot snapshot, IReadOnlyList<CellAddress> addresses) => new WorkbookValidation().Check(snapshot, addresses);
+    public IReadOnlyList<CellValue> ListValues(WorkbookSnapshot snapshot, SheetId sheet, CellPosition position, WorksheetValidation rule) =>
+        new WorkbookValidation().ListValues(snapshot, sheet, position, rule);
     public static readonly TimeSpan TimeLimit = TimeSpan.FromSeconds(5);
     private readonly IScriptRuntimeFactory _factory = runtimeFactory ?? throw new ArgumentNullException(nameof(runtimeFactory));
     private readonly object _gate = new();

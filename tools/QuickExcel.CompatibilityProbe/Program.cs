@@ -4,6 +4,8 @@ using QuickExcel.CompatibilityProbe;
 
 try
 {
+    if (args is ["data-validation", var validationOracle, var validationDirectory]) return DataValidationProbe.Run(validationOracle, validationDirectory);
+    if (args is ["verify-data-validation", var validationExpected, var validationActual, var validationVerdict]) return DataValidationProbe.Verify(validationExpected, validationActual, validationVerdict);
     if (args is ["structured-tables", var structuredOracle, var structuredDirectory]) return StructuredTablesProbe.Run(structuredOracle, structuredDirectory);
     if (args is ["table-basics", var tableOracle, var tableDirectory]) return TableBasicsProbe.Run(tableOracle, tableDirectory);
     if (args is ["table-edits", var tableSource, var tableEdits, var tableEditDirectory]) return TableBasicsProbe.Run(tableSource, tableEditDirectory, tableEdits);

@@ -82,7 +82,7 @@ public partial class MainWindow : Window
             _scriptTrust = new(Path.Combine(folder, "trusted-script-certificates.json"));
             args = [];
         }
-        if (args.Length > 0 && args[0] is "--smoke-test" or "--interaction-smoke" or "--workspace-smoke" or "--product-smoke" or "--ribbon-smoke" or "--signature-smoke" or "--grid-benchmark" or "--resize-benchmark" or "--data-operations-smoke" or "--horizontal-scroll-benchmark" or "--fast-grid-benchmark" or "--fast-grid-drag-benchmark" or "--grid-integration-smoke" or "--xlsx-rendering-smoke" or "--fill-smoke" or "--formula-entry-smoke" or "--sheet-management-smoke" or "--format-efficiency-smoke" or "--table-basics-smoke" or "--structured-tables-smoke")
+        if (args.Length > 0 && args[0] is "--smoke-test" or "--interaction-smoke" or "--workspace-smoke" or "--product-smoke" or "--ribbon-smoke" or "--signature-smoke" or "--grid-benchmark" or "--resize-benchmark" or "--data-operations-smoke" or "--horizontal-scroll-benchmark" or "--fast-grid-benchmark" or "--fast-grid-drag-benchmark" or "--grid-integration-smoke" or "--xlsx-rendering-smoke" or "--fill-smoke" or "--formula-entry-smoke" or "--sheet-management-smoke" or "--format-efficiency-smoke" or "--table-basics-smoke" or "--structured-tables-smoke" or "--data-validation-smoke")
         {
             _smokeMode = true;
             _recentFiles = new(Path.Combine(args.Length > 1 ? args[1] : AppContext.BaseDirectory, "recent-files.json"));
@@ -92,7 +92,8 @@ public partial class MainWindow : Window
             try
             {
                 var folder = args.Length > 1 ? args[1] : Path.Combine(AppContext.BaseDirectory, "smoke");
-                if (args[0] == "--structured-tables-smoke") await RunStructuredTablesSmokeAsync(folder, args.ElementAtOrDefault(2));
+                if (args[0] == "--data-validation-smoke") await RunDataValidationSmokeAsync(folder, args.ElementAtOrDefault(2));
+                else if (args[0] == "--structured-tables-smoke") await RunStructuredTablesSmokeAsync(folder, args.ElementAtOrDefault(2));
                 else if (args[0] == "--table-basics-smoke") await RunTableBasicsSmokeAsync(folder, args.ElementAtOrDefault(2));
                 else if (args[0] == "--format-efficiency-smoke") await RunFormatEfficiencySmokeAsync(folder);
                 else if (args[0] == "--sheet-management-smoke") await RunSheetManagementSmokeAsync(folder);
@@ -147,7 +148,7 @@ public partial class MainWindow : Window
         _verifiedScriptModules = null;
         _signatureVerification = null;
         _viewModel = new DocumentViewModel(document);
-        _editor = new EditorController(document);
+        _editor = new EditorController(document, ConfirmValidation);
         DataContext = _viewModel;
         _filePath = path;
         _versionPath = _filePath is null ? null : Path.GetFullPath(_filePath);
@@ -246,6 +247,7 @@ public partial class MainWindow : Window
         _updatingFormula = true;
         CellEditorText.InitializeText(FormulaBar, _document.GetCellInput(_sheetIndex, _selectedRow, _selectedColumn));
         _updatingFormula = false;
+        UpdateValidationHint();
     }
 
     private void FormulaBar_TextChanged(object sender, TextChangedEventArgs e)

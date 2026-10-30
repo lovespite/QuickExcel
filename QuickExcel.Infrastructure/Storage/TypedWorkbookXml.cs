@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Collections.Immutable;
 using System.Xml.Linq;
 using QuickExcel.Domain;
 using static QuickExcel.Storage.PackageIO;
@@ -85,7 +86,7 @@ internal static class TypedWorkbookXml
             var visibility = XlsxViews.Visibility(definition);
             var sheet = package.XmlPart(path).Root!;
             if (sheet.Name != Main + "worksheet") throw new InvalidDataException("无效工作表部件。");
-            package.Shape(XlsxFiltering.Shape(sheet), "autoFilter sortState tableParts dimension sheetPr sheetViews sheetFormatPr cols sheetData mergeCells hyperlinks printOptions pageMargins pageSetup headerFooter rowBreaks colBreaks drawing legacyDrawing", "", path);
+            package.Shape(XlsxFiltering.Shape(sheet), "autoFilter sortState tableParts dataValidations dimension sheetPr sheetViews sheetFormatPr cols sheetData mergeCells hyperlinks printOptions pageMargins pageSetup headerFooter rowBreaks colBreaks drawing legacyDrawing", "", path);
             var sharedFormulas = new SharedFormulaExpander(sheet);
             var cells = new Dictionary<CellPosition, CellSnapshot>();
             var cachedCells = new HashSet<CellPosition>();
@@ -219,7 +220,8 @@ internal static class TypedWorkbookXml
             foreach (var merge in merges) ValidateRange(merge);
             var images = TypedImages.Read(package, path, sheet);
             var dataState = XlsxFiltering.Read(package, workbookPart, path, sheet) with
-            { Tables = XlsxTables.Read(package, workbookPart, path, sheet, preservedFormulas, Decode(Attr(definition, "name"))) };
+            { Tables = XlsxTables.Read(package, workbookPart, path, sheet, preservedFormulas, Decode(Attr(definition, "name"))),
+                Validations = XlsxValidation.Read(package, path, sheet) };
             var modeledSheet = new WorksheetSnapshot(SheetId.New(), Decode(Attr(definition, "name")), cells, rows, columns, merges, images,
                 view?.Attribute("showGridLines") is null || Bool((string?)view.Attribute("showGridLines")), OptionalDouble(format?.Attribute("defaultRowHeight")) / 0.75, (string?)tabColor?.Attribute("rgb"),
                 viewState, visibility, XlsxPrinting.Read(package, path, sheet), XlsxAnnotations.Read(package, path, sheet, textReader), dataState);
@@ -320,6 +322,21 @@ internal static class TypedWorkbookXml
             }
         }
         XlsxMetadata.Inspect(package, sheets.Select(s => s.Name).ToArray());
+        var validatedSheets = snapshot.Sheets.Select((s, i) =>
+        {
+            var accepted = s.Data.Validations.Where(v =>
+            {
+                try { v.ValidateBinding(snapshot, s.Id); return true; }
+                catch (Exception ex) when (ex is FormatException or NotSupportedException or OverflowException)
+                {
+                    package.Loss("验证公式不能安全执行，保留原规则并限制编辑：" + ex.Message, "worksheet/dataValidation",
+                        bindings[i].Part, range: string.Join(" ", v.Ranges), sheetName: s.Name);
+                    return false;
+                }
+            }).ToImmutableArray();
+            return accepted.Length == s.Data.Validations.Length ? s : s.WithData(s.Data with { Validations = accepted });
+        }).ToArray();
+        snapshot = snapshot.WithSheets(validatedSheets);
         package.FinishInventory();
         return new(snapshot, bindings,
             package.Issues.ToArray(), package.Diagnostics, root.Element(Main + "bookViews") is not null, preservedFormulas);
@@ -380,6 +397,7 @@ internal static class TypedWorkbookXml
                 allocation += (filter.Range.Bottom - filter.Range.Top + 1L) * 256L + filter.Columns.Values.Sum(c =>
                     (c.Values?.Sum(v => (long)v.Length) ?? 0) * 8L + ((c.First?.Operand.Length ?? 0) + (c.Second?.Operand.Length ?? 0)) * 8L + 512L);
             allocation += sheet.Data.Tables.Sum(t => 2048L + t.Style.Elements.Length * 512L + t.Columns.Sum(c => 512L + 8L * (c.Name.Length + (c.CalculatedFormula?.Length ?? 0) + (c.TotalsFormula?.Length ?? 0) + (c.TotalsLabel?.Length ?? 0))));
+            allocation += sheet.Data.Validations.Sum(v => v.EstimatedBytes * 4);
             foreach (var sort in sheet.Data.Tables.Select(t => t.Sort).Append(sheet.Data.Sort).OfType<WorksheetSortState>())
                 allocation += sort.Keys.Sum(k => 1024L + k.CustomOrder.Sum(v => (long)v.Length) * 8L);
             foreach (var cell in sheet.Cells.Values)
@@ -470,6 +488,7 @@ internal static class TypedWorkbookXml
                 foreach (var merge in sheet.MergedCells) ValidateRange(merge);
                 root.Add(new XElement(Main + "mergeCells", new XAttribute("count", sheet.MergedCells.Length), sheet.MergedCells.Select(m => new XElement(Main + "mergeCell", new XAttribute("ref", m)))));
             }
+            root.Add(XlsxValidation.Write(sheet));
             XlsxAnnotations.WriteLinks(sheet.Annotations, root);
             XlsxPrinting.WriteSheet(sheet.Printing, root);
             TypedImages.Write(sheet, i + 1, parts, root, types);

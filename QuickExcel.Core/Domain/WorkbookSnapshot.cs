@@ -165,6 +165,7 @@ public sealed class WorksheetSnapshot
         Printing = printing ?? new(); Printing.Validate();
         Annotations = annotations ?? new();
         Data = data ?? new();
+        QuickExcel.Core.ValidationSafety.Validate(Data);
         foreach (var position in Annotations.Links.Keys.Concat(Annotations.Notes.Keys))
         {
             UsedRowCount = Math.Max(UsedRowCount, position.Row + 1);

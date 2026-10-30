@@ -444,6 +444,12 @@
           </TabItem>
           <TabItem Header="数据">
             <StackPanel Orientation="Horizontal">
+              <GroupBox Header="数据验证" Style="{StaticResource RibbonGroup}">
+                <StackPanel>
+                  <Button Content="数据验证…" local:Ribbon.Icon="TableSettings" Style="{StaticResource RibbonButton}" Click="Validation_Click" ToolTip="设置列表、数值、日期、长度或公式规则"/>
+                  <Button Content="清除验证…" local:Ribbon.Icon="TableSettings" Style="{StaticResource RibbonButton}" Click="RemoveValidation_Click"/>
+                </StackPanel>
+              </GroupBox>
               <GroupBox Header="Excel 表" Style="{StaticResource RibbonGroup}">
                 <StackPanel Orientation="Horizontal">
                 <StackPanel>
@@ -700,6 +706,13 @@
                       Margin="4,0,0,0"
                       AutomationProperties.Name="应用单元格内容"/>
             </Grid>
+            <StackPanel x:Name="ValidationPanel" Orientation="Horizontal" Margin="10,0,10,4" Visibility="Collapsed">
+              <ComboBox x:Name="ValidationChoices" MinWidth="140" MaxWidth="280" MaxDropDownHeight="240" IsEditable="True" IsReadOnly="True"
+                        ToolTip="选择允许的列表值" AutomationProperties.Name="数据验证列表"
+                        DropDownOpened="ValidationChoices_Opened" SelectionChanged="ValidationChoices_Changed"/>
+              <TextBlock x:Name="ValidationHint" Margin="8,3,0,0" MaxWidth="700" TextTrimming="CharacterEllipsis"
+                         Foreground="{StaticResource Muted}" AutomationProperties.Name="录入提示"/>
+            </StackPanel>
             <TextBlock x:Name="ViewStatus"
                        Margin="10,0,10,4"
                        Foreground="{StaticResource Muted}"

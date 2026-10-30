@@ -251,6 +251,8 @@ internal static class StructureEdits
     internal static WorkbookSnapshot Axis(WorkbookSnapshot snapshot, WorksheetSnapshot target, SheetAxis axis,
         Func<int, int?> position, Func<int, int, (int Start, int End)?> interval)
     {
+        if (snapshot.Sheets.Any(s => !s.Data.Validations.IsEmpty))
+            throw new NotSupportedException("含数据验证的工作簿暂不支持行列插删/搬移，避免改变规则的相对引用；操作未应用。");
         var limit = axis == SheetAxis.Row ? WorkbookLimits.MaxRows : WorkbookLimits.MaxColumns;
         FormulaNode Transform(FormulaNode node, SheetId context, CellPosition? currentCell)
         {
@@ -353,7 +355,8 @@ internal static class StructureEdits
                 var formula = Formula(cell.Content.FormulaText, sheet.Id, p);
                 if (formula != cell.Content.FormulaText) cells[p] = new(CellContent.FromFormula(formula, cell.Content.StyleId));
             }
-            var data = sheet.Data with { Tables = sheet.Data.Tables.Select(t => t.WithColumns(t.Columns.Select((c, i) => c with
+            var data = sheet.Data with { Validations = sheet.Data.Validations.Select(v => v.MapFormulas(f => Formula(f, sheet.Id, v.Anchor))).ToImmutableArray(),
+                Tables = sheet.Data.Tables.Select(t => t.WithColumns(t.Columns.Select((c, i) => c with
             {
                 CalculatedFormula = c.CalculatedFormula is { } calculated ? Formula(calculated, sheet.Id, new(t.Range.Top + (t.HeaderRow ? 1 : 0), t.Range.Left + i)) : null,
                 TotalsFormula = c.TotalsFormula is { } total ? Formula(total, sheet.Id, new(t.Range.Bottom, t.Range.Left + i)) : null
