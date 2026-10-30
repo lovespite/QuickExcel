@@ -119,6 +119,8 @@ public sealed record CellStylePatch(bool? Bold = null, bool? Italic = null, stri
             FontColor = Color(FontColor) ?? style.FontColor, FillColor = Color(FillColor) ?? style.FillColor,
             FontSize = FontSize ?? style.FontSize, Horizontal = Horizontal ?? style.Horizontal,
             FontName = FontName ?? style.FontName, Vertical = Vertical ?? style.Vertical,
+            FontScheme = FontName is null ? style.FontScheme : null,
+            EastAsianFontName = FontName is null ? style.EastAsianFontName : null,
             WrapText = WrapText ?? style.WrapText,
             NumberFormatId = NumberFormatId ?? style.NumberFormatId,
             NumberFormatCode = NumberFormatId.HasValue ? NumberFormatCode : style.NumberFormatCode,

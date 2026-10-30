@@ -66,11 +66,14 @@ public sealed partial class TypedStorageTests
         Assert.Equal(expected, style.FillColor);
         Assert.Equal(expected, style.BottomBorderColor);
         Assert.DoesNotContain(snapshot.FileState!.CompatibilityIssues, issue => issue.Contains("/@theme") || issue.Contains("/@tint") || issue.Contains("/@indexed"));
-        Assert.Contains(snapshot.FileState.CompatibilityIssues, issue => issue.Contains("主题字体"));
+        Assert.DoesNotContain(snapshot.FileState.CompatibilityIssues, issue => issue.Contains("主题字体"));
         _storage.Save(PathFor("theme-preserved.xlsq"), snapshot);
         Assert.Equal(File.ReadAllBytes(path), ReadZip(File.ReadAllBytes(PathFor("theme-preserved.xlsq")))["workbook.xlsx"]);
         _storage.Export(PathFor("color-copy.xlsx"), snapshot, false, true);
         Assert.Equal(style, _storage.Open(PathFor("color-copy.xlsx")).Styles[0]);
+        var sourceParts = ReadZip(File.ReadAllBytes(path));
+        var savedParts = ReadZip(File.ReadAllBytes(PathFor("color-copy.xlsx")));
+        Assert.Equal(sourceParts["xl/theme/theme1.xml"], savedParts["xl/theme/theme1.xml"]);
     }
 
     [Theory]
@@ -132,5 +135,32 @@ public sealed partial class TypedStorageTests
                 """);
         }
         File.WriteAllBytes(path, Zip(parts)); return path;
+    }
+
+    [Theory]
+    [InlineData("major", "Cambria", "宋体")]
+    [InlineData("minor", "Calibri", "等线")]
+    public void ThemeFontsResolveAndSurviveStyleEditingWhileExplicitFontDisconnectsScheme(string scheme, string latin, string eastAsian)
+    {
+        var path = ColorFixture("theme=1"); var parts = ReadZip(File.ReadAllBytes(path));
+        var styles = XDocument.Parse(Encoding.UTF8.GetString(parts["xl/styles.xml"]));
+        styles.Descendants(Ns + "font").First().Add(new XElement(Ns + "scheme", new XAttribute("val", scheme)));
+        parts["xl/styles.xml"] = Encoding.UTF8.GetBytes(styles.ToString());
+        XNamespace a = "http://schemas.openxmlformats.org/drawingml/2006/main";
+        var theme = XDocument.Parse(Encoding.UTF8.GetString(parts["xl/theme/theme1.xml"]));
+        theme.Root!.Element(a + "themeElements")!.Add(new XElement(a + "fontScheme", new XAttribute("name", "Test"),
+            new XElement(a + "majorFont", new XElement(a + "latin", new XAttribute("typeface", "Cambria")), new XElement(a + "ea", new XAttribute("typeface", "宋体"))),
+            new XElement(a + "minorFont", new XElement(a + "latin", new XAttribute("typeface", "Calibri")), new XElement(a + "ea", new XAttribute("typeface", "")),
+                new XElement(a + "font", new XAttribute("script", "Hans"), new XAttribute("typeface", "等线")))));
+        parts["xl/theme/theme1.xml"] = Encoding.UTF8.GetBytes(theme.ToString()); File.WriteAllBytes(path, Zip(parts));
+        var book = _storage.Open(path);
+        Assert.Equal(latin, book.Styles[0].FontName); Assert.Equal(eastAsian, book.Styles[0].EastAsianFontName);
+        using var session = new DocumentSession(book);
+        session.Execute(new SetCellStyleCommand([new(book.Sheets[0].Id, 0, 0)], new(Bold: true)));
+        var output = PathFor("theme-edited.xlsq"); _storage.Save(output, session.Snapshot);
+        Assert.Equal(session.Snapshot.Styles.ToArray(), _storage.Open(output).Styles.ToArray());
+        session.Execute(new SetCellStyleCommand([new(book.Sheets[0].Id, 0, 0)], new(FontName: "Arial")));
+        var explicitStyle = session.Snapshot.Styles[^1]; Assert.Null(explicitStyle.FontScheme); Assert.Null(explicitStyle.EastAsianFontName);
+        _storage.Save(output, session.Snapshot); Assert.Equal(explicitStyle, _storage.Open(output).Styles[^1]);
     }
 }

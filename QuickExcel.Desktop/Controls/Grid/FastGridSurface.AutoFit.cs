@@ -50,13 +50,16 @@ internal sealed partial class FastGridSurface
                 else
                 {
                     var text = FastGridArtwork.CreateText(value, style, dpi.PixelsPerDip);
-                    if (isRow)
+                    if (isRow && style.TextRotation == 0)
                     {
                         text.MaxTextWidth = Math.Max(1, Math.Round(width * DpiDetector.DpiXKoef) / DpiDetector.DpiXKoef - 4);
                         text.MaxLineCount = style.WrapText ? int.MaxValue : 1;
                         text.Trimming = System.Windows.TextTrimming.CharacterEllipsis;
                     }
-                    size = isRow ? text.Height + 3 : text.WidthIncludingTrailingWhitespace + 6;
+                    var bounds = new System.Windows.Rect(0, 0, text.WidthIncludingTrailingWhitespace, text.Height);
+                    if (style.TextRotation is > 0 and <= 180)
+                        bounds = new RotateTransform(style.TextRotation <= 90 ? -style.TextRotation : style.TextRotation - 90).TransformBounds(bounds);
+                    size = isRow ? bounds.Height + 3 : bounds.Width + FastGridArtwork.IndentWidth(style, dpi.PixelsPerDip) + 6;
                 }
                 if (cache.Count < 4096) cache[key] = size;
             }

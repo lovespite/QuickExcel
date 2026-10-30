@@ -127,12 +127,28 @@ internal sealed class FastGridArtwork(FastGridSurface surface) : FrameworkElemen
         }
         // Keep the natural line box and let the cell clip trim glyphs. The same
         // font/layout settings are used to measure automatic row heights.
-        text.MaxTextWidth = Math.Max(1, rect.Width - 4);
+        var indent = IndentWidth(style, pixelsPerDip);
+        var available = Math.Max(1, rect.Width - 4 - indent);
+        FitText(text, style, available);
+        text.MaxTextWidth = style.TextRotation == 0 ? available : Math.Max(available, text.WidthIncludingTrailingWhitespace);
         text.MaxLineCount = style.WrapText ? int.MaxValue : 1;
-        text.Trimming = TextTrimming.CharacterEllipsis;
+        text.Trimming = style.ShrinkToFit && !style.WrapText ? TextTrimming.None : TextTrimming.CharacterEllipsis;
         text.TextAlignment = style.Horizontal switch { 2 => TextAlignment.Center, 3 => TextAlignment.Right, _ => TextAlignment.Left };
-        var y = style.Vertical switch { 0 => 1, 1 => (rect.Height - text.Height) / 2, _ => rect.Height - text.Height - 1 };
-        drawing.DrawText(text, new(rect.Left + 2, rect.Top + y));
+        if (style.TextRotation is > 0 and <= 180)
+        {
+            text.TextAlignment = TextAlignment.Left;
+            var rotate = new RotateTransform(style.TextRotation <= 90 ? -style.TextRotation : style.TextRotation - 90);
+            var bounds = rotate.TransformBounds(new Rect(0, 0, text.WidthIncludingTrailingWhitespace, text.Height));
+            var x = style.Horizontal switch { 2 => (available - bounds.Width) / 2, 3 => available - bounds.Width, _ => 0 };
+            var y = style.Vertical switch { 0 => 1, 1 => (rect.Height - bounds.Height) / 2, _ => rect.Height - bounds.Height - 1 };
+            drawing.PushTransform(new TranslateTransform(rect.Left + 2 + indent + x - bounds.Left, rect.Top + y - bounds.Top));
+            drawing.PushTransform(rotate); drawing.DrawText(text, new(0, 0)); drawing.Pop(); drawing.Pop();
+        }
+        else
+        {
+            var y = style.Vertical switch { 0 => 1, 1 => (rect.Height - text.Height) / 2, _ => rect.Height - text.Height - 1 };
+            drawing.DrawText(text, new(rect.Left + 2 + (style.Horizontal == 3 ? 0 : indent), rect.Top + y));
+        }
         if (gridLines) drawing.DrawRectangle(null, new Pen(Brushes.Gainsboro, 1), rect);
         void Border(int width, string? color, Point start, Point end)
         { if (width > 0) drawing.DrawLine(new Pen(Brush(color, Brushes.Gray), 1), start, end); }
@@ -144,13 +160,28 @@ internal sealed class FastGridArtwork(FastGridSurface surface) : FrameworkElemen
     }
     internal static FormattedText CreateText(string value, StyleDefinition style, double pixelsPerDip) =>
         new(value, CultureInfo.CurrentCulture, FlowDirection.LeftToRight,
-            new Typeface(Font(style.FontName), style.Italic ? FontStyles.Italic : FontStyles.Normal,
+            new Typeface(Font(style.FontName, style.EastAsianFontName), style.Italic ? FontStyles.Italic : FontStyles.Normal,
                 style.Bold ? FontWeights.Bold : FontWeights.Normal, FontStretches.Normal),
             (style.FontSize ?? 11) * 96 / 72, Brush(style.FontColor, Brushes.Black), pixelsPerDip);
 
-    internal static FontFamily Font(string? name)
+    internal static double IndentWidth(StyleDefinition style, double pixelsPerDip) => style.Indent == 0 ? 0 :
+        CreateText(" ", style, pixelsPerDip).WidthIncludingTrailingWhitespace * 3 * style.Indent;
+
+    internal static void FitText(FormattedText text, StyleDefinition style, double available)
     {
-        try { return new(string.IsNullOrWhiteSpace(name) ? "Microsoft YaHei UI" : name); }
+        if (!style.ShrinkToFit || style.WrapText) return;
+        var size = (style.FontSize ?? 11) * 96 / 72;
+        // Hinting is not exactly proportional to size. Re-measure after each bounded reduction.
+        for (var i = 0; i < 16 && size > 1 && text.WidthIncludingTrailingWhitespace > available; i++)
+        {
+            size = Math.Max(1, size * Math.Min(.97, Math.Max(1, available - 2) / text.WidthIncludingTrailingWhitespace));
+            text.SetFontSize(size);
+        }
+    }
+
+    internal static FontFamily Font(string? name, string? fallback = null)
+    {
+        try { return new(string.IsNullOrWhiteSpace(name) ? "Microsoft YaHei UI" : string.IsNullOrEmpty(fallback) ? name : name + ", " + fallback); }
         catch (ArgumentException) { return new("Microsoft YaHei UI"); }
     }
     internal static Brush Brush(string? color, Brush fallback)

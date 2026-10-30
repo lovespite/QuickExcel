@@ -21,6 +21,7 @@ internal sealed class XlsxColors
         "003366 339966 003300 333300 993300 993366 333399 333333").Split(' ');
     private readonly string?[] _theme = new string?[12];
     private readonly string[] _indexed;
+    private XElement? _fontScheme;
 
     public XlsxColors(XlsxPackage package, string workbookPart, XElement styles, string stylesPath)
     {
@@ -54,8 +55,20 @@ internal sealed class XlsxColors
                 (string?)slot?.Element(drawing + "sysClr")?.Attribute("lastClr");
             if (rgb is not null) _theme[i] = "FF" + Rgb(rgb, 6);
         }
-        // Only cell colors are flattened. Theme fonts/effects and theme-editing semantics still need preservation.
-        package.Loss($"{path}: 主题颜色已解析；主题字体、效果及主题关联未建模", "theme", path);
+        _fontScheme = root.Element(drawing + "themeElements")?.Element(drawing + "fontScheme");
+        if (!XlsxStylePreservation.CanPreserveTheme(package, path, root))
+            package.Loss($"{path}: 主题含未支持的依赖或扩展，主题字体/关联无法安全重写", "theme", path);
+    }
+
+    public (string? Latin, string? EastAsian) Font(string? scheme, string? fallback)
+    {
+        if (scheme is null || _fontScheme is null) return (fallback, null);
+        var ns = XlsxStylePreservation.Drawing;
+        var family = _fontScheme.Element(ns + (scheme + "Font"));
+        string? Name(XElement? element) => (string?)element?.Attribute("typeface") is { Length: > 0 } name ? name : null;
+        var latin = Name(family?.Element(ns + "latin")) ?? fallback;
+        var eastAsian = Name(family?.Element(ns + "ea")) ?? Name(family?.Elements(ns + "font").FirstOrDefault(e => (string?)e.Attribute("script") == "Hans"));
+        return (latin, eastAsian);
     }
 
     public string? Read(XElement? element, XlsxPackage package, string path)

@@ -35,6 +35,7 @@ E1 已开始：[行列样式优先级](29-xlsx-row-style-inheritance.md) 修复�
 | [XLSX 兼容诊断](28-xlsx-compatibility-diagnostics.md) | 分级报告、未知函数与旧缓存、拒绝定位及保存保护证据 |
 | [XLSX 行列样式](29-xlsx-row-style-inheritance.md) | 行格式应用标志、单格/行/列优先级、清除内容和读改存证据 |
 | [Excel 数字格式](30-excel-number-formats.md) | 小数、货币/会计、分段/颜色、科学计数及真实 Excel 对照 |
+| [命名样式与主题](31-xlsx-named-styles-and-theme.md) | XF/命名关联、主题保留、字体回退、旋转/缩进/缩小填充 |
 | [实施计划](05-implementation-plan.md) | 当前 M1–M6 状态、已关闭缺陷、后续顺序与退出条件；进度统一入口 |
 | [主网格迁移](24-main-grid-migration.md) | 当前主界面接线、旧控件移除、功能回归、性能样本及剩余验收边界 |
 | [FastWpfGrid 实施记录](23-fast-grid-implementation.md) | 使用入口、筛选/排序支持矩阵、专项测试、性能证据和候选迁移缺口 |

@@ -240,7 +240,14 @@ internal static class TypedWorkbookXml
         Override("xl/styles.xml", "application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml");
         rels.Add(Relationship("styles", "styles", "styles.xml"));
         parts["_rels/.rels"] = XmlBytes(new XDocument(new XElement(PackageRel + "Relationships", Relationship("workbook", "officeDocument", "xl/workbook.xml"))));
-        parts["xl/styles.xml"] = XmlBytes(TypedStyles.Write(snapshot.Styles));
+        var stylePackage = XlsxStylePreservation.Write(snapshot, cancellationToken);
+        parts["xl/styles.xml"] = XmlBytes(stylePackage.Styles);
+        if (stylePackage.Theme is { } theme)
+        {
+            parts["xl/theme/theme1.xml"] = theme;
+            Override("xl/theme/theme1.xml", "application/vnd.openxmlformats-officedocument.theme+xml");
+            rels.Add(Relationship("theme", "theme", "theme/theme1.xml"));
+        }
         for (var i = 0; i < snapshot.Sheets.Length; i++)
         {
             cancellationToken.ThrowIfCancellationRequested();

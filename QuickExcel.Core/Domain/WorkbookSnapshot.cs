@@ -36,6 +36,9 @@ public sealed record StyleDefinition
     public int NumberFormatId { get; init; }
     public string? NumberFormatCode { get; init; }
     public string? FontName { get; init; }
+    public string? EastAsianFontName { get; init; }
+    public string? FontScheme { get; init; }
+    public int NamedStyleId { get; init; }
     public double? FontSize { get; init; }
     public string? FontColor { get; init; }
     public bool Bold { get; init; }
@@ -44,6 +47,9 @@ public sealed record StyleDefinition
     public int Horizontal { get; init; }
     public int Vertical { get; init; } = 2;
     public bool WrapText { get; init; }
+    public int TextRotation { get; init; }
+    public int Indent { get; init; }
+    public bool ShrinkToFit { get; init; }
     public int LeftBorder { get; init; }
     public int RightBorder { get; init; }
     public int TopBorder { get; init; }
@@ -221,7 +227,9 @@ public sealed class WorkbookSnapshot
         foreach (var style in Styles)
         {
             WorkbookLimits.ValidateDimension(style.FontSize, nameof(styles));
-            if (style.Horizontal is < 0 or > 4 || style.Vertical is < 0 or > 3 ||
+            if (style.Horizontal is < 0 or > 4 || style.Vertical is < 0 or > 3 || style.NamedStyleId is < 0 or > 4095 ||
+                style.Indent is < 0 or > 250 || style.TextRotation is < 0 or > 180 && style.TextRotation != 255 ||
+                style.FontScheme is not (null or "major" or "minor") ||
                 style.LeftBorder is < 0 or > 7 || style.RightBorder is < 0 or > 7 ||
                 style.TopBorder is < 0 or > 7 || style.BottomBorder is < 0 or > 7)
                 throw new ArgumentException("The style contains an unsupported alignment or border.", nameof(styles));

@@ -252,7 +252,7 @@ internal sealed partial class FastGridSurface : IGridSurface
     {
         Editor.Opacity = 1;
         var style = _snapshot.Styles[Sheet.GetStyleId(_current.Row, _current.Column)];
-        Editor.FontFamily = FastGridArtwork.Font(style.FontName); Editor.FontSize = (style.FontSize ?? 11) * 96 / 72;
+        Editor.FontFamily = FastGridArtwork.Font(style.FontName, style.EastAsianFontName); Editor.FontSize = (style.FontSize ?? 11) * 96 / 72;
         Editor.FontWeight = style.Bold ? FontWeights.SemiBold : FontWeights.Normal;
         Editor.FontStyle = style.Italic ? FontStyles.Italic : FontStyles.Normal;
         Editor.TextWrapping = style.WrapText ? TextWrapping.Wrap : TextWrapping.NoWrap;

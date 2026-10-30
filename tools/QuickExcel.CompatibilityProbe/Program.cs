@@ -5,6 +5,7 @@ using QuickExcel.CompatibilityProbe;
 try
 {
     if (args is ["number-formats", var reference, var numberDirectory]) return NumberFormatProbe.Run(reference, numberDirectory);
+    if (args is ["styles", var styleSource, var styleDirectory]) return StyleProbe.Run(styleSource, styleDirectory);
     if (args is ["baseline", var directory])
     {
         directory = Path.GetFullPath(directory);

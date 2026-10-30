@@ -92,7 +92,7 @@ public sealed partial class CompatibilityProbeTests
     public void EveryEditPathKeepsOriginalAndLabelsLossyCopiesAndPendingExcel()
     {
         var directory = NewEvidenceDirectory();
-        var report = ProbeRunner.Run(Fixture("quotation"), directory);
+        var report = ProbeRunner.Run(Fixture("print-template"), directory);
         Assert.True(report.SourceUnchanged);
         Assert.Equal("pending-real-excel", report.ExcelVerification);
         Assert.Null(report.ExcelBuild);
@@ -107,7 +107,7 @@ public sealed partial class CompatibilityProbeTests
         Assert.NotNull(value.Error);
         Assert.Contains("diagnostic-lossy-copy", value.OutputFile!);
         Assert.Contains(value.Differences, d => d.Category == "cells" && d.Location.EndsWith("A2/value") && d.After!.Contains("99"));
-        Assert.Throws<IOException>(() => ProbeRunner.Run(Fixture("quotation"), directory));
+        Assert.Throws<IOException>(() => ProbeRunner.Run(Fixture("print-template"), directory));
     }
 
     [Fact]
