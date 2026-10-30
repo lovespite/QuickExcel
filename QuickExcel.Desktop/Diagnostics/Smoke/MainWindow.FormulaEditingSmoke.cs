@@ -93,6 +93,25 @@ public partial class MainWindow
             Check(_document.Snapshot.Revision == revision, "Navigation does not create document history");
             var path = Path.Combine(folder, "entry.xlsx"); var storage = new TypedWorkbookStorage(); storage.Save(path, _document.Snapshot);
             Check(storage.Open(path).Sheets[0].GetCell(0, 2)!.Value.NumberValue == 6, "Assisted formulas survive normal XLSX save and reopen");
+            GridSurface.Select(new(0, 4)); FormulaBar.Focus(); FormulaBar.Text = "=SUMI"; FormulaBar.CaretIndex = 5; await Idle();
+            Check(_completion?.Names.Contains("SUMIF") == true && _completion.Names.Contains("SUMIFS"), "Conditional functions appear in actual formula completion");
+            FormulaBar.Text = "=SUMIF(A1:A3,"; FormulaBar.CaretIndex = FormulaBar.Text.Length; await Idle();
+            Check(_formulaHint.Text.Contains("criteria") && _formulaHint.Text.Contains("第 2"), "Conditional formula hint names the criterion argument");
+            var conditional = new (string Formula, double Value)[] {
+                ("=SUMIF(A1:A3,\">1\")", 5), ("=SUMIFS(A1:A3,A1:A3,\">1\")", 5), ("=COUNTIF(A1:A5,\"\")", 1),
+                ("=COUNTIFS(A1:A3,\">1\",A1:A3,\"<3\")", 1), ("=AVERAGEIF(A1:A3,\">1\")", 2.5),
+                ("=AVERAGEIFS(A1:A3,A1:A3,\"<3\")", 1.5), ("=COUNTBLANK(A1:A5)", 1) };
+            for (var i = 0; i < conditional.Length; i++)
+            {
+                GridSurface.Select(new(i, 4)); FormulaBar.Focus(); FormulaBar.Text = conditional[i].Formula; await ApplyFormulaBarAsync();
+                Check(_document.Snapshot.Sheets[0].GetCell(i, 4)!.Value.NumberValue == conditional[i].Value, "Formula-bar commit calculates " + conditional[i].Formula);
+            }
+            await UndoAsync(false); Check(_document.Snapshot.Sheets[0].GetCell(6, 4) is null, "Conditional formula entry is one undo transaction");
+            await UndoAsync(true); Check(_document.Snapshot.Sheets[0].GetCell(6, 4)!.Value.NumberValue == 1, "Redo recalculates the conditional formula");
+            var conditionalPath = Path.Combine(folder, "conditional-entry.xlsx"); storage.Save(conditionalPath, _document.Snapshot); var conditionalReopened = storage.Open(conditionalPath);
+            Check(conditional.Select((c, i) => conditionalReopened.Sheets[0].GetCell(i, 4)!.Value.NumberValue == c.Value &&
+                conditionalReopened.Sheets[0].GetCell(i, 4)!.Content.FormulaText == c.Formula).All(x => x), "All seven conditional functions retain formulas and caches in normal XLSX save/reopen");
+            await Idle(); CaptureGridEvidence(Path.Combine(folder, "conditional-entry.png"));
             File.WriteAllLines(Path.Combine(folder, "formula-entry-result.txt"), new[] { $"PASS: {checks.Count} checks" }.Concat(checks));
         }
         finally { _suppressAutoCalculation = false; EndReferenceGesture(); CloseFormulaHelp(); }

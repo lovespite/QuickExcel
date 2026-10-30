@@ -8,7 +8,11 @@ public sealed record DefinedName(string Name, string Formula, SheetId? Scope = n
 public static class FormulaBinding
 {
     public static FormulaNode Bind(FormulaNode expression, WorkbookSnapshot snapshot, SheetId currentSheet)
-        => Bind(expression, snapshot, currentSheet, new HashSet<(SheetId?, string)>(), new BindingBudget(), 0, false);
+    {
+        var bound = Bind(expression, snapshot, currentSheet, new HashSet<(SheetId?, string)>(), new BindingBudget(), 0, false);
+        ConditionalRanges.ValidateModes(bound);
+        return bound;
+    }
 
     /// <summary>Unqualified names in a name definition bind globally; cell expressions prefer their local scope.</summary>
     internal static DefinedName? ResolveName(WorkbookSnapshot snapshot, SheetId context, NameNode name, bool inDefinition = false)
@@ -65,6 +69,8 @@ public static class StandardFunctions
         {
             ["SUM"] = (1, 255), ["AVERAGE"] = (1, 255), ["MIN"] = (1, 255), ["MAX"] = (1, 255),
             ["COUNT"] = (1, 255), ["COUNTA"] = (1, 255), ["PRODUCT"] = (1, 255),
+            ["SUMIF"] = (2, 3), ["SUMIFS"] = (3, 255), ["COUNTIF"] = (2, 2), ["COUNTIFS"] = (2, 254),
+            ["AVERAGEIF"] = (2, 3), ["AVERAGEIFS"] = (3, 255), ["COUNTBLANK"] = (1, 1),
             ["ROUND"] = (2, 2), ["ABS"] = (1, 1), ["IF"] = (2, 3), ["IFERROR"] = (2, 2),
             ["AND"] = (1, 255), ["OR"] = (1, 255), ["NOT"] = (1, 1), ["CONCATENATE"] = (1, 255),
             ["LEFT"] = (1, 2), ["RIGHT"] = (1, 2), ["MID"] = (3, 3), ["LEN"] = (1, 1),

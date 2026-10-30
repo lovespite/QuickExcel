@@ -11,7 +11,7 @@ internal sealed class FormulaValueException(CellErrorCode code, string message) 
 }
 
 /// <summary>Conversions are explicit. Reference/range aggregates ignore text and booleans, including numeric-looking text.</summary>
-internal sealed class TypedEvaluator(WorkbookSnapshot snapshot, IReadOnlyDictionary<CellAddress, CellCalculation> results,
+internal sealed partial class TypedEvaluator(WorkbookSnapshot snapshot, IReadOnlyDictionary<CellAddress, CellCalculation> results,
     IScriptRuntime? runtime, IReadOnlyDictionary<string, ScriptFunctionDescriptor> scripts, Action check)
 {
     public SheetId CurrentSheet { get; set; }
@@ -94,6 +94,7 @@ internal sealed class TypedEvaluator(WorkbookSnapshot snapshot, IReadOnlyDiction
             catch (Exception e) when (e is FormulaValueException or FormatException or OverflowException or ArgumentException)
             { return Scalar(function.Arguments[1]); }
         }
+        if (ConditionalRanges.IsFunction(function.Name)) return Conditional(function);
         var args = function.Arguments.Select(Evaluate).ToArray();
         if (function.Name is "SUM" or "AVERAGE" or "MIN" or "MAX" or "COUNT" or "COUNTA" or "PRODUCT") return Aggregate(function, args);
         foreach (var arg in args) if (arg is CellValue { Kind: CellValueKind.Error } error) return error;

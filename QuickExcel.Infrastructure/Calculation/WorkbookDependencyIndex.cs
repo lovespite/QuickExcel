@@ -54,7 +54,7 @@ public sealed class WorkbookDependencyIndex
                         case FunctionNode f: foreach (var a in f.Arguments) depthCheck.Push((a, item.Depth + 1)); break;
                     }
                 }
-                foreach (var part in FormulaSyntax.Walk(node.Expression))
+                foreach (var part in FormulaSyntax.Walk(ConditionalRanges.ForDependencies(node.Expression)))
                 {
                     check();
                     if (part is FunctionNode function)

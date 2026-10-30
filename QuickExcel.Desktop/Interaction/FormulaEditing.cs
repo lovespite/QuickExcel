@@ -81,6 +81,13 @@ internal static class FormulaEditing
             "LEN" or "TRIM" or "UPPER" or "LOWER" => "text", "NOT" => "logical",
             "AND" or "OR" => "logical1, [logical2], …", "CONCATENATE" => "text1, [text2], …",
             "SUM" or "AVERAGE" or "MIN" or "MAX" or "COUNT" or "COUNTA" or "PRODUCT" => "number1, [number2], …",
+            "SUMIF" => "range, criteria, [sum_range]",
+            "AVERAGEIF" => "range, criteria, [average_range]",
+            "COUNTIF" => "range, criteria",
+            "COUNTIFS" => "criteria_range1, criteria1, [criteria_range2, criteria2], …",
+            "SUMIFS" => "sum_range, criteria_range1, criteria1, …",
+            "AVERAGEIFS" => "average_range, criteria_range1, criteria1, …",
+            "COUNTBLANK" => "range",
             _ => StandardFunctions.Signatures.TryGetValue(name, out var count) ? $"参数 {count.Min}–{count.Max}" : ""
         };
         return name + "(" + parameters + ")";

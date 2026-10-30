@@ -77,7 +77,7 @@ E1 是当前首个产品交付目标。E2 中不依赖未完成模型的低成�
 - [x] **XC-0202 填充与序列**（P1｜I4/F5｜M）：Ctrl+D/R、填充柄复制公式、数字/日期序列、清除内容与格式分离；冻结、隐藏、筛选、合并区域有明确映射或拒绝，不暗中写入未选区域。17 条真实 Excel 往返、4 例单行/列命令对照、71 项相关测试、138 项 WPF 及最新 23 项填充专项通过；范围与限制见 [41](41-fill-and-series.md)。
 - [x] **XC-0203 常用录入和公式编辑**（P1｜I4/F5｜M）：自动求和、函数补全/参数提示、点选引用、F4 切换引用形式、Ctrl+方向/Home/End 与选择扩展；保持原地址草稿、IME 门禁和可撤销提交。52 项相关规则、37 项专项/92 项既有 WPF 通过；Excel 13 例导航、四种引用模式及公式重算/保存重开对照通过；同表点选等声明范围见 [42](42-formula-entry-and-navigation.md)。
 - [x] **XC-0204 工作表与名称管理**（P1｜I4/F4｜L）：工作表复制/重排及名称管理入口完成，公式、样式、图片和名称作用域一次事务并保存重开；90 项相关测试、15/151 项 WPF、七条真实 Excel 对照 7554 项模型检查通过。修复定义内裸名称绑定及 XML 名称分组顺序；限定局部名称删除等保护范围见 [43](43-sheet-and-name-management.md)。
-- [ ] **XC-0205 条件统计公式**（P1｜I5/F5｜M）：SUMIF/SUMIFS、COUNTIF/COUNTIFS、AVERAGEIF/AVERAGEIFS、COUNTBLANK；统一条件解析、比较/通配符/转义、空白与空文本、错误和尺寸规则，不能用字符串转换掩盖类型差异。
+- [x] **XC-0205 条件统计公式**（P1｜I5/F5｜M）：SUMIF/SUMIFS、COUNTIF/COUNTIFS、AVERAGEIF/AVERAGEIFS、COUNTBLANK 及统一类型/通配符匹配完成，空白与空文本、错误、尺寸和投影依赖单独处理。1,706 条真实 Excel 公式、13,648 项往返、126 项相关回归及 49 项 WPF 通过；标量条件、语言与数组保护范围见 [44](44-conditional-functions.md)。
 - [ ] **XC-0206 查找公式补齐**（P1｜I5/F4｜L）：完善现有 VLOOKUP/MATCH 的通配符和边界，增加 HLOOKUP、XLOOKUP、XMATCH 的明确支持模式；首期标量返回，数组返回等依赖 E5，未实现参数模式明确拒绝。精确、近似、未找到、重复键与错误逐项对照。
 - [ ] **XC-0207 日期和数学公式**（P1｜I4/F4｜M）：DATE/YEAR/MONTH/DAY、TIME/HOUR/MINUTE/SECOND、EDATE/EOMONTH、WEEKDAY；ROUNDUP/ROUNDDOWN/INT/MOD。覆盖 1900/1904、虚构闰日、负数和小数边界；WORKDAY/NETWORKDAYS 作为同组后续子切片。
 - [ ] **XC-0208 文本和类型判断公式**（P1｜I4/F4｜M）：TEXT/VALUE、SUBSTITUTE/REPLACE、FIND/SEARCH、TEXTJOIN/CONCAT、ISBLANK/ISNUMBER/ISTEXT/ISERROR/IFNA；TEXT 复用 XC-0101 格式规则，VALUE 的文化和日期解析须明确，不改现有单元格输入的类型契约。
