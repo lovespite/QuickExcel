@@ -84,24 +84,34 @@
                           Click="RibbonPaste_Click"
                           x:Name="RibbonPasteButton"
                           Foreground="#B17A22"
-                          ToolTip="粘贴值 · Ctrl+V"/>
+                          ToolTip="内部复制保留值、公式和格式；外部文本按值粘贴 · Ctrl+V"/>
                   <StackPanel>
                     <Button Content="复制"
                             local:Ribbon.Icon="Copy"
                             Style="{StaticResource RibbonButton}"
                             Click="RibbonCopy_Click"
-                            ToolTip="复制显示结果 · Ctrl+C"/>
-                    <Button Content="粘贴公式"
+                            ToolTip="复制值、公式和格式 · Ctrl+C"/>
+                    <Button Content="剪切"
+                            x:Name="RibbonCutButton"
                             local:Ribbon.Icon="ClipboardCode"
                             Style="{StaticResource RibbonButton}"
-                            Click="RibbonPaste_Click"
-                            Tag="formulas"
-                            ToolTip="按输入解析粘贴（包括公式）· Ctrl+Shift+V"/>
-                    <Button Content="清空内容"
-                            local:Ribbon.Icon="Eraser"
+                            Click="RibbonCut_Click"
+                            ToolTip="粘贴后移动，Esc 取消 · Ctrl+X"/>
+                    <Button Content="选择性粘贴 ▾"
+                            local:Ribbon.Icon="ClipboardPaste"
                             Style="{StaticResource RibbonButton}"
-                            Click="RibbonClear_Click"
-                            ToolTip="清空选区内容 · Delete"/>
+                            Click="RibbonMenu_Click">
+                      <Button.ContextMenu>
+                        <ContextMenu>
+                          <MenuItem Header="只贴值" Tag="values" Click="RibbonPaste_Click"/>
+                          <MenuItem Header="粘贴公式和常量 · Ctrl+Shift+V" Tag="formulas" Click="RibbonPaste_Click"/>
+                          <MenuItem Header="只贴格式" Tag="formats" Click="RibbonPaste_Click"/>
+                          <MenuItem Header="转置粘贴（全部）" Tag="transpose" Click="RibbonPaste_Click"/>
+                          <Separator/>
+                          <MenuItem Header="清空内容 · Delete" Click="RibbonClear_Click"/>
+                        </ContextMenu>
+                      </Button.ContextMenu>
+                    </Button>
                   </StackPanel>
                 </StackPanel>
               </GroupBox>

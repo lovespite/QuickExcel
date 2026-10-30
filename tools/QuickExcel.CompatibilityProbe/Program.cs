@@ -4,6 +4,8 @@ using QuickExcel.CompatibilityProbe;
 
 try
 {
+    if (args is ["clipboard", var clipboardOracle, var clipboardDirectory]) return ClipboardProbe.Run(clipboardOracle, clipboardDirectory);
+    if (args is ["verify-clipboard", var clipboardExpected, var clipboardActual, var clipboardModel, var clipboardVerdict]) return ClipboardProbe.Verify(clipboardExpected, clipboardActual, clipboardModel, clipboardVerdict);
     if (args is ["business-baseline", var businessReference, var businessDirectory]) return BusinessBaselineProbe.Run(businessReference, businessDirectory);
     if (args is ["edit-matrix", var matrixSources, var matrixOracle, var matrixDirectory]) return EditMatrixProbe.Run(matrixSources, matrixOracle, matrixDirectory);
     if (args is ["verify-edit-matrix", var expectedEdits, var observedEdits, var modelEdits, var editVerdict]) return EditMatrixVerification.Run(expectedEdits, observedEdits, modelEdits, editVerdict);

@@ -119,7 +119,7 @@ public partial class MainWindow
         var navigation = e.Key is Key.Enter or Key.Tab or Key.Left or Key.Right or Key.Up or Key.Down or Key.Home or Key.End;
         var handled = editing
             ? !ctrl && e.Key is Key.Enter or Key.Tab or Key.Escape
-            : navigation || e.Key is Key.F2 or Key.Delete || ctrl && e.Key is Key.C or Key.V or Key.A;
+            : navigation || e.Key is Key.F2 or Key.Delete or Key.Escape || ctrl && e.Key is Key.C or Key.X or Key.V or Key.A;
         if (handled)
         {
             e.Handled = true;
@@ -134,16 +134,18 @@ public partial class MainWindow
         var ctrl = modifiers.HasFlag(ModifierKeys.Control);
         if (key == Key.Escape)
         {
+            _workbookClipboard = null;
             GridSurface.Cancel();
             _editState.EndGrid();
             UpdateFormulaBar();
-            StatusText.Text = "已取消单元格编辑。";
+            StatusText.Text = "已取消单元格编辑及内部复制/剪切。";
             return;
         }
         if (ctrl && key == Key.C) { CopySelection(); return; }
+        if (ctrl && key == Key.X) { CopySelection(cut: true); return; }
         if (ctrl && key == Key.V)
         {
-            if (Clipboard.ContainsText()) await PasteSelectionAsync(Clipboard.GetText(), modifiers.HasFlag(ModifierKeys.Shift));
+            await PasteClipboardAsync(modifiers.HasFlag(ModifierKeys.Shift) ? "formulas" : "all");
             return;
         }
         if (ctrl && key == Key.A)
@@ -212,7 +214,7 @@ public partial class MainWindow
         if (_calculationPending) await RecalculateAsync();
     }
 
-    private void CopySelection()
+    private void CopySelection(bool cut = false)
     {
         if (!CommitEditors()) return;
         CurrentView.RequireCurrentFilter(_document.Snapshot);
@@ -220,8 +222,14 @@ public partial class MainWindow
             _document.Snapshot.Sheets[_sheetIndex].Rows.GetValueOrDefault(row)?.Hidden == true;
         var range = GridRange.Rectangle(GridSurface.Selection, Excluded);
         var text = GridClipboard.Write(range, (r, c) => _document.GetCellValue(_sheetIndex, r, c), Excluded);
-        Clipboard.SetText(text);
-        StatusText.Text = $"已复制 {range.Rows} 行 × {range.Columns} 列显示结果。";
+        if (Enumerable.Range(range.Top, range.Rows).Any(Excluded) || range.Count > QuickExcel.Core.WorkbookClipboard.MaxCells)
+        {
+            if (cut) throw new InvalidOperationException("剪切需要不含隐藏行且不超过 20,000 格的连续矩形。");
+            _workbookClipboard = null; Clipboard.SetText(text);
+            StatusText.Text = "已仅复制可见行的显示文本；内部复制需要不含隐藏行且不超过 20,000 格的矩形。";
+            return;
+        }
+        CaptureWorkbookClipboard(range, text, cut);
     }
 
     private async Task PasteSelectionAsync(string text, bool allowFormulas)
