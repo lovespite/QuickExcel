@@ -69,10 +69,12 @@ internal sealed class FastGridArtwork(FastGridSurface surface) : FrameworkElemen
                 used.Add(key);
                 if (!_cellDrawings.TryGetValue(key, out var content))
                 {
+                    var display = CellDisplayFormatter.FormatDisplay(_sheet.GetCell(range.Top, range.Left)?.Value ?? CellValue.Blank,
+                        style, surface.Snapshot.DateSystem);
                     content = new DrawingGroup();
                     using (var context = content.Open())
-                        PaintCell(context, new Rect(0, 0, rect.Width, rect.Height), style,
-                            surface.DisplayText(range.Top, range.Left), _sheet.ShowGridLines);
+                        PaintCell(context, new Rect(0, 0, rect.Width, rect.Height),
+                            display.Color is null ? style : style with { FontColor = display.Color }, display.Text, _sheet.ShowGridLines, display);
                     content.Freeze();
                     // Keep immutable vector content. RenderTargetBitmap.Render
                     // here synchronously renders each newly exposed cell on the
@@ -111,11 +113,18 @@ internal sealed class FastGridArtwork(FastGridSurface surface) : FrameworkElemen
     }
     internal static bool PaintsStyle(StyleDefinition style) => style != DefaultStyle;
 
-    private void PaintCell(DrawingContext drawing, Rect rect, StyleDefinition style, string value, bool gridLines)
+    private void PaintCell(DrawingContext drawing, Rect rect, StyleDefinition style, string value, bool gridLines, CellDisplay? display = null)
     {
         drawing.DrawRectangle(Brush(style.FillColor, Brushes.White), null, rect);
         drawing.PushClip(new RectangleGeometry(rect));
-        var text = CreateText(value, style, VisualTreeHelper.GetDpi(this).PixelsPerDip);
+        var pixelsPerDip = VisualTreeHelper.GetDpi(this).PixelsPerDip;
+        var text = CreateText(value, style, pixelsPerDip);
+        if (display is { FillOffset: >= 0, FillCharacter: { } fill })
+        {
+            var unit = CreateText(fill.ToString(), style, pixelsPerDip).WidthIncludingTrailingWhitespace;
+            var count = unit > 0 ? Math.Clamp((int)Math.Floor((rect.Width - 4 - text.WidthIncludingTrailingWhitespace) / unit), 0, 4096) : 0;
+            text = CreateText(value.Insert(display.FillOffset, new string(fill, count)), style, pixelsPerDip);
+        }
         // Keep the natural line box and let the cell clip trim glyphs. The same
         // font/layout settings are used to measure automatic row heights.
         text.MaxTextWidth = Math.Max(1, rect.Width - 4);

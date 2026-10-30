@@ -182,11 +182,11 @@ public partial class MainWindow
         InstallDocument(document, null, "销售台账.xlsq");
     }
 
-    private Color ProductCellPixel(FrameworkElement grid, int row, int column)
+    private Color ProductCellPixel(FrameworkElement grid, int row, int column, bool artworkOnly = false)
     {
         UpdateLayout();
         var cell = _grid.Control.GetModelCellBounds(row, column) ?? throw new Exception("Cell is not visible.");
-        var root = (FrameworkElement)Content;
+        var root = artworkOnly ? _grid.Artwork : (FrameworkElement)Content;
         var point = _grid.Control.TranslatePoint(new Point(cell.Left + cell.Width / 2, cell.Top + cell.Height / 2), root);
         var dpi = VisualTreeHelper.GetDpi(root);
         var bitmap = new RenderTargetBitmap((int)(root.ActualWidth * dpi.DpiScaleX), (int)(root.ActualHeight * dpi.DpiScaleY),

@@ -6,7 +6,7 @@ using QuickExcel.Domain;
 namespace QuickExcel.Core;
 
 /// <summary>Presentation only: Excel date/time formats never change numeric inputs or calculation caches.</summary>
-public static class CellDisplayFormatter
+public static partial class CellDisplayFormatter
 {
     private static readonly ConditionalWeakTable<StyleDefinition, ParsedFormat> Formats = new();
     private static readonly CultureInfo Invariant = CultureInfo.InvariantCulture;
@@ -18,22 +18,55 @@ public static class CellDisplayFormatter
     }
 
     public static string Format(CellValue value, StyleDefinition style, ExcelDateSystem dateSystem, CultureInfo? culture = null)
+        => FormatDisplay(value, style, dateSystem, culture).Text;
+
+    public static CellDisplay FormatDisplay(CellValue value, StyleDefinition style, ExcelDateSystem dateSystem, CultureInfo? culture = null)
     {
-        if (value.Kind != CellValueKind.Number) return CellInput.DisplayText(value);
-        var numeric = style.NumberFormatCode ?? style.NumberFormatId switch
-        { 1 => "0", 2 => "0.00", 3 => "#,##0", 4 => "#,##0.00", 9 => "0%", 10 => "0.00%", _ => null };
-        if (numeric is "0" or "0.00" or "#,##0" or "#,##0.00" or "0%" or "0.00%")
-            return value.NumberValue.ToString(numeric, culture ?? CultureInfo.CurrentCulture);
+        var fallback = new CellDisplay(CellInput.DisplayText(value));
         var format = Formats.GetValue(style, s => Parse(s.NumberFormatCode ?? BuiltIn(s.NumberFormatId)));
+        if (value.Kind == CellValueKind.Text)
+        {
+            var textSection = format.Sections.Length == 4 ? format.Sections[3] : format.Sections.Length == 1 && format.Sections[0].Tokens.Any(t => t.Kind == '@') ? format.Sections[0] : null;
+            if (textSection is not { Supported: true } || textSection.Tokens.Any(t => t.Kind is not ('l' or '@' or '*'))) return fallback;
+            var text = new StringBuilder(); var offset = -1;
+            foreach (var token in textSection.Tokens)
+                if (token.Kind == '*') offset = text.Length;
+                else text.Append(token.Kind == '@' ? value.TextValue : token.Text);
+            return DisplayResult(text.ToString(), textSection, offset);
+        }
+        if (value.Kind != CellValueKind.Number) return fallback;
         var section = format.Select(value.NumberValue);
-        if (section is null || !section.Supported || !format.HasDate) return CellInput.DisplayText(value);
-        if (!section.HasDate) return string.Concat(section.Tokens.Select(t => t.Text));
-        return Render(value.NumberValue, dateSystem, section, culture ?? CultureInfo.CurrentCulture);
+        if (section is null) return format.Sections.Length == 0 ? fallback : new("########");
+        if (!section.Supported) return fallback;
+        if (section.HasDate)
+        {
+            var dateText = Render(value.NumberValue, dateSystem, section, culture ?? CultureInfo.CurrentCulture, out var dateFill);
+            return DisplayResult(dateText, section, dateFill);
+        }
+        var hasConditions = format.Sections.Take(3).Any(s => s.ConditionOperator is not null);
+        var absolute = value.NumberValue < 0 && (hasConditions
+            ? section.ConditionOperator is not null || Array.IndexOf(format.Sections, section) == 1
+            : format.Sections.Length > 1);
+        return RenderNumber(absolute ? Math.Abs(value.NumberValue) : value.NumberValue, section, culture ?? CultureInfo.CurrentCulture, out var fillOffset) is { } result
+            ? DisplayResult(result, section, fillOffset) : fallback;
     }
+
+    private static CellDisplay DisplayResult(string text, Section section, int offset = -1) => new(text, section.Color, offset, section.FillCharacter);
 
     // Locale-dependent IDs use the application's simplified-Chinese convention.
     private static string? BuiltIn(int id) => id switch
     {
+        1 => "0", 2 => "0.00", 3 => "#,##0", 4 => "#,##0.00",
+        5 => "\"$\"#,##0;(\"$\"#,##0)", 6 => "\"$\"#,##0;[Red](\"$\"#,##0)",
+        7 => "\"$\"#,##0.00;(\"$\"#,##0.00)", 8 => "\"$\"#,##0.00;[Red](\"$\"#,##0.00)",
+        9 => "0%", 10 => "0.00%", 11 => "0.00E+00",
+        37 => "#,##0 ;(#,##0)", 38 => "#,##0 ;[Red](#,##0)",
+        39 => "#,##0.00;(#,##0.00)", 40 => "#,##0.00;[Red](#,##0.00)",
+        41 => "_(* #,##0_);_(* (#,##0);_(* \"-\"_);_(@_)",
+        42 => "_(\"$\"* #,##0_);_(\"$\"* (#,##0);_(\"$\"* \"-\"_);_(@_)",
+        43 => "_(* #,##0.00_);_(* (#,##0.00);_(* \"-\"??_);_(@_)",
+        44 => "_(\"$\"* #,##0.00_);_(\"$\"* (#,##0.00);_(\"$\"* \"-\"??_);_(@_)",
+        48 => "##0.0E+0", 49 => "@",
         14 => "mm-dd-yy", 15 => "d-mmm-yy", 16 => "d-mmm", 17 => "mmm-yy",
         18 => "h:mm AM/PM", 19 => "h:mm:ss AM/PM", 20 => "h:mm", 21 => "h:mm:ss", 22 => "m/d/yy h:mm",
         27 or 36 or 50 or 52 or 57 => "yyyy\"年\"m\"月\"",
@@ -53,7 +86,9 @@ public static class CellDisplayFormatter
     {
         public List<Token> Tokens { get; } = [];
         public bool Supported { get; set; } = true;
-        public bool HasDate => Tokens.Any(t => t.Kind is not ('l' or 'f'));
+        public bool HasDate => Tokens.Any(t => t.Kind is 'y' or 'm' or 'd' or 'h' or 's' or 'n' or 'H' or 'M' or 'S' or 'a');
+        public string? Color { get; set; }
+        public char? FillCharacter { get; set; }
         public string? ConditionOperator { get; set; }
         public double ConditionValue { get; set; }
         public CultureInfo? Culture { get; set; }
@@ -118,6 +153,8 @@ public static class CellDisplayFormatter
                 if (i + 1 >= code.Length) { section.Supported = false; break; }
                 if (c == '\\') Literal(code[(i + 1)..(i + 2)]);
                 else if (c == '_') Literal(" ");
+                else if (section.FillCharacter is null) { section.FillCharacter = code[i + 1]; tokens.Add(new('*', "")); }
+                else section.Supported = false;
                 i += 2; continue;
             }
             if (c == '[')
@@ -128,9 +165,12 @@ public static class CellDisplayFormatter
                 var lower = bracket.ToLowerInvariant();
                 if (lower is "h" or "hh" or "m" or "mm" or "s" or "ss")
                     tokens.Add(new(char.ToUpperInvariant(lower[0]), lower));
-                else if (lower.StartsWith("$-"))
+                else if (lower.StartsWith('$'))
                 {
-                    if (!int.TryParse(lower.AsSpan(2), NumberStyles.HexNumber, Invariant, out var lcid) || lcid > 0xffff)
+                    var separator = bracket.LastIndexOf('-');
+                    if (separator < 0) { Literal(bracket[1..]); i = end + 1; continue; }
+                    Literal(bracket[1..separator]);
+                    if (!int.TryParse(lower.AsSpan(separator + 1), NumberStyles.HexNumber, Invariant, out var lcid) || lcid > 0xffff)
                         section.Supported = false;
                     else if (lcid != 0)
                     {
@@ -147,9 +187,8 @@ public static class CellDisplayFormatter
                         section.Supported = false;
                     else { section.ConditionOperator = op; section.ConditionValue = limit; }
                 }
-                else if (lower is not ("black" or "blue" or "cyan" or "green" or "magenta" or "red" or "white" or "yellow") &&
-                    !(lower.StartsWith("color") && int.TryParse(lower.AsSpan(5), out var color) && color is >= 1 and <= 56))
-                    section.Supported = false;
+                else if (FormatColor(lower) is { } color) section.Color = color;
+                else section.Supported = false;
                 i = end + 1; continue;
             }
             var marker = new[] { "AM/PM", "A/P", "上午/下午" }.FirstOrDefault(m => code.AsSpan(i).StartsWith(m, StringComparison.OrdinalIgnoreCase));
@@ -172,11 +211,26 @@ public static class CellDisplayFormatter
                 if (end - i - 1 > 7) section.Supported = false;
                 tokens.Add(new('f', code[(i + 1)..end])); i = end; continue;
             }
+            if (code.AsSpan(i).StartsWith("General", StringComparison.OrdinalIgnoreCase))
+            { tokens.Add(new('g', "General")); i += 7; continue; }
+            if (c is '0' or '#' or '?' or '.' or ',' or '%' or '@')
+            { tokens.Add(new(c, code[i..(i + 1)])); i++; continue; }
+            if (c == 'e' && i + 2 < code.Length && code[i + 1] is '+' or '-' && code[i + 2] == '0')
+            {
+                var end = i + 2;
+                while (end < code.Length && code[end] == '0') end++;
+                tokens.Add(new('e', code[i..end])); i = end; continue;
+            }
             // Reject numeric placeholders, unsupported calendar codes and general/scientific formats.
-            if (char.IsAsciiLetterOrDigit(c) || c is '#' or '?' or '@' or '%' or '[' or ']')
+            if (char.IsAsciiLetterOrDigit(c) || c is '[' or ']')
                 section.Supported = false;
             Literal(code[i..(i + 1)]); i++;
         }
+        if (section.HasDate && tokens.Any(t => t.Kind is '0' or '#' or '?' or '%' or 'g' or 'e' or '@')) section.Supported = false;
+        // A dot/comma in a date is punctuation, not a numeric placeholder.
+        if (section.HasDate)
+            for (var i = 0; i < tokens.Count; i++)
+                if (tokens[i].Kind is '.' or ',') tokens[i] = tokens[i] with { Kind = 'l' };
         for (var i = 0; i < tokens.Count; i++)
         {
             if (tokens[i].Kind != 'm' || tokens[i].Length > 2) continue;
@@ -187,8 +241,9 @@ public static class CellDisplayFormatter
         return section;
     }
 
-    private static string Render(double serial, ExcelDateSystem system, Section section, CultureInfo culture)
+    private static string Render(double serial, ExcelDateSystem system, Section section, CultureInfo culture, out int fillOffset)
     {
+        fillOffset = -1;
         // Invalid Excel dates remain visible as overflow rather than being mistaken for ordinary numbers.
         if (serial < 0 || serial > 3652059) return "########";
         var tokens = section.Tokens;
@@ -213,6 +268,7 @@ public static class CellDisplayFormatter
         string Number(long n, int length) => n.ToString(length > 1 ? new string('0', length) : "0", Invariant);
         foreach (var token in tokens)
         {
+            if (token.Kind == '*') { fillOffset = builder.Length; continue; }
             var length = token.Length;
             builder.Append(token.Kind switch
             {
@@ -235,3 +291,5 @@ public static class CellDisplayFormatter
         return builder.ToString();
     }
 }
+
+public sealed record CellDisplay(string Text, string? Color = null, int FillOffset = -1, char? FillCharacter = null);

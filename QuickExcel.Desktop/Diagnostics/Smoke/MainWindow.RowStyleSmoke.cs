@@ -32,11 +32,15 @@ public partial class MainWindow
         GridSurface.Select(new(8, 5)); await Idle();
         void CheckPixels(string stage)
         {
-            check(ProductCellPixel(SheetGrid, 0, 1) == Color.FromRgb(242, 242, 242), stage + ": active row style 0 overrides column fill on an absent cell");
-            check(ProductCellPixel(SheetGrid, 1, 1) == Color.FromRgb(230, 241, 235), stage + ": disabled row style yields to column fill");
-            check(ProductCellPixel(SheetGrid, 2, 1) == Color.FromRgb(230, 241, 235), stage + ": height-only row keeps column fill");
-            check(ProductCellPixel(SheetGrid, 3, 1) == Color.FromRgb(221, 235, 255), stage + ": enabled nonzero row style overrides column fill");
-            check(ProductCellPixel(SheetGrid, 0, 0) == Color.FromRgb(221, 235, 255), stage + ": explicit cell style overrides row and column styles");
+            // Style verification excludes the independent selection/physical mouse hover overlay.
+            Color StylePixel(int row, int column) => ProductCellPixel(SheetGrid, row, column, artworkOnly: true);
+            CaptureGridEvidence(Path.Combine(folder, "row-style-" + (stage.StartsWith("Imported") ? "import" : "reopen") + ".png"));
+            check(StylePixel(0, 1) == Color.FromRgb(242, 242, 242), stage + ": active row style 0 overrides column fill on an absent cell");
+            check(StylePixel(1, 1) == Color.FromRgb(230, 241, 235), stage + ": disabled row style yields to column fill");
+            var heightOnlyColor = StylePixel(2, 1);
+            check(heightOnlyColor == Color.FromRgb(230, 241, 235), stage + ": height-only row keeps column fill (" + heightOnlyColor + ")");
+            check(StylePixel(3, 1) == Color.FromRgb(221, 235, 255), stage + ": enabled nonzero row style overrides column fill");
+            check(StylePixel(0, 0) == Color.FromRgb(221, 235, 255), stage + ": explicit cell style overrides row and column styles");
         }
         CheckPixels("Imported XLSX");
         var beforeClear = _document.Snapshot;

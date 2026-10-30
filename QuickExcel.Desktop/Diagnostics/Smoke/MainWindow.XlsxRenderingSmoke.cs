@@ -77,6 +77,7 @@ public partial class MainWindow
             _document.Undo(); RefreshSheet(); await Idle();
 
             await RunRowStyleInheritanceSmokeAsync(folder, Check);
+            await RunNumberFormatSmokeAsync(folder, Check);
 
             if (source is not null)
             {
