@@ -4,7 +4,7 @@
 
 ## 1. 当前 R/D/C/E/W 矩阵
 
-S = 支持该行限定子集；P = 部分支持；O = 仅原包保留；N = 不支持；拒绝 = 读取时拒绝；— = 不适用。此矩阵随验收更新，后文保留首轮历史证据。XC-0101–0105 的最新专项及真实 Excel 结果见 [30](30-excel-number-formats.md) 至 [34](34-xlsx-page-and-print-metadata.md)；W 已包含 XC-0103 接入的独立 XLSX 保存，值快照/可移植公式导出仍是不同操作。
+S = 支持该行限定子集；P = 部分支持；O = 仅原包保留；N = 不支持；拒绝 = 读取时拒绝；— = 不适用。此矩阵随验收更新，后文保留首轮历史证据。XC-0101–0106 的最新专项及真实 Excel 结果见 [30](30-excel-number-formats.md) 至 [35](35-xlsx-preserved-formulas.md)；W 已包含 XC-0103 接入的独立 XLSX 保存，值快照/可移植公式导出仍是不同操作。
 
 | 特性与限定范围 | R | D | C | E | W | 证据/限制与下一项 |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -19,8 +19,8 @@ S = 支持该行限定子集；P = 部分支持；O = 仅原包保留；N = 不�
 | 合并和基础浮动图片 | P | P | — | P | P | 既有 `TypedStorageTests`；复杂锚点/结构变化限制保持，XC-0402 |
 | 普通/共享公式、跨表 A1、定义名称 | P | P | P | P | P | `cross-sheet`、`M3StorageTests`；支持函数与参数见 [10](10-m3-calculation.md)，缓存不等于重算 |
 | 未知函数、`_xlfn` 前缀 | P | P | N | P | P | `unknown-function` 可读取源码/旧缓存并保存；后续 [28](28-xlsx-compatibility-diagnostics.md) 已接入内置不可计算分级，受限编辑仍属 XC-0106 |
-| 数组公式 | 拒绝 | — | N | N | — | `array-formula`；不能据此认为所有未知普通函数也被拒绝 |
-| 结构化引用/动态数组语义 | P | P | N | P | P | 语法不能安全变换时仍拒绝；本轮未覆盖结构化引用样本，XC-0106/0303/0501 |
+| 数组公式 | S | P | N | N | O | XC-0106：整簿只读显示来源缓存，原 XLSX 包复制或 XLSQ 包装；不计算/编辑，见 [35](35-xlsx-preserved-formulas.md) |
+| 结构化引用/动态数组语义 | S | P | N | N | O | XC-0106：真实 Excel 结构化引用/SEQUENCE 样本只读保留通过；计算/编辑仍待 XC-0303/0501 |
 | 文档属性白名单 | S | N | — | N | S | XC-0103 支持 core/app/custom 白名单；其他分组/结构仍报告，见 [32](32-xlsx-save-and-metadata.md) |
 | 单窗口普通视图、冻结/缩放/活动表格、hidden/veryHidden | S | P | — | P | S | XC-0104 已持久化，视图命令可撤销、导航不 dirty；显示容量及拆分/多窗口限制见 [33](33-xlsx-workbook-views.md) |
 | 页面/打印区域/重复标题/页眉页脚/分页 | S | N | — | N | S | XC-0105 的 R/W 子集；有分页时删除/移动行列拒绝，未提供实际打印或页面编辑，见 [34](34-xlsx-page-and-print-metadata.md) |
@@ -45,7 +45,7 @@ S = 支持该行限定子集；P = 部分支持；O = 仅原包保留；N = 不�
 | `print-template` | core 属性、冻结/125% 缩放/活动 B2、veryHidden、打印定义/页边距/方向/页眉页脚 | XC-0103/0104/0105 |
 | `protected-print-template` | 同上并增加工作表保护；页面配置已支持，未实现的保护仍须报告并阻止有损普通保存 | XC-0404 |
 | `unknown-function` | `_xlfn.XLOOKUP` 原始公式与旧缓存 7；本轮不执行重算 | XC-0106 |
-| `array-formula` | `t=array` 与结果区域 B2:B3；当前读取明确拒绝 | XC-0106 |
+| `array-formula` | `t=array` 与结果区域 B2:B3；XC-0106 后只读打开、缓存显示、原包保留，修改拒绝 | XC-0106 |
 | `rich-links-notes` | 红色粗体 run、外部超链接、传统批注；不访问外部地址 | XC-0107 |
 
 样本期望只是人工构造的诊断基准，不是 Excel 计算期望。每份报告明确 `Origin=synthetic-inline-spreadsheetml`、`ExcelVerification=pending-real-excel`；ExcelVersion/Build/Language/CalculationMode 为 null。未来补 Excel 生成且获准使用的脱敏样本时必须记录实际版本、语言、日期系统、计算模式、重开/修复提示及结果，不能用 SDK 的 Office2019 schema 目标充当实际 Excel 版本。

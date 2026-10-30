@@ -8,7 +8,7 @@ using static QuickExcel.Storage.XlsxPackage;
 namespace QuickExcel.Storage;
 
 internal sealed record TypedWorkbookRead(WorkbookSnapshot Snapshot, IReadOnlyList<WorkbookPartBinding> Bindings,
-    IReadOnlyList<string> Issues, IReadOnlyList<CompatibilityDiagnostic> Diagnostics, bool HasWorkbookView);
+    IReadOnlyList<string> Issues, IReadOnlyList<CompatibilityDiagnostic> Diagnostics, bool HasWorkbookView, IReadOnlyList<PreservedFormula> PreservedFormulas);
 
 internal static class TypedWorkbookXml
 {
@@ -53,6 +53,8 @@ internal static class TypedWorkbookXml
         var sheetPaths = new HashSet<string>();
         long cellCount = 0;
         var selectedTabs = 0;
+        var preservedFormulas = new List<PreservedFormula>();
+        long inspectedArrayCells = 0;
         foreach (var definition in root.Element(Main + "sheets")?.Elements(Main + "sheet") ?? [])
         {
             budget.Check();
@@ -72,6 +74,8 @@ internal static class TypedWorkbookXml
             package.Shape(sheet, "dimension sheetPr sheetViews sheetFormatPr cols sheetData mergeCells printOptions pageMargins pageSetup headerFooter rowBreaks colBreaks drawing", "", path);
             var sharedFormulas = new SharedFormulaExpander(sheet);
             var cells = new Dictionary<CellPosition, CellSnapshot>();
+            var cachedCells = new HashSet<CellPosition>();
+            var firstPreserved = preservedFormulas.Count;
             var rows = new Dictionary<int, RowMetadata>();
             var columns = new Dictionary<int, ColumnMetadata>();
             var seenRows = new HashSet<int>();
@@ -109,19 +113,50 @@ internal static class TypedWorkbookXml
                     var style = element.Attribute("s") is not null ? Style(element, "s", styles.Count)
                         : rowMetadata.ApplyStyle ? rowMetadata.StyleId : columns.GetValueOrDefault(position.Column)?.StyleId ?? 0;
                     var value = Value(element, strings, package, path);
+                    if (element.Element(Main + "v") is not null) cachedCells.Add(position);
                     CellSnapshot cell;
                     if (element.Element(Main + "f") is { } formula)
                     {
                         package.Shape(formula, "", "t si ref", path);
                         string expression;
-                        try { expression = sharedFormulas.Expand(formula, position); }
+                        var preserved = false;
+                        try
+                        {
+                            if ((string?)formula.Attribute("t") == "array")
+                            {
+                                var range = Attr(formula, "ref"); ValidateRange(range);
+                                if (!CellRectangle.Parse(range).Contains(position.Row, position.Column)) throw new InvalidDataException("数组公式主格不在结果区域内。");
+                                expression = formula.Value;
+                                preservedFormulas.Add(new(element.Attribute("cm") is null ? PreservedFormulaKind.Array : PreservedFormulaKind.DynamicArray,
+                                    path, Decode(Attr(definition, "name")), Reference(position), range, expression));
+                                preserved = true;
+                            }
+                            else expression = sharedFormulas.Expand(formula, position);
+                        }
                         catch (NotSupportedException ex)
                         {
+                            if ((string?)formula.Attribute("t") == "shared")
+                            {
+                                expression = sharedFormulas.Source(formula, position);
+                                preservedFormulas.Add(new(PreservedFormulaKind.Shared, path, Decode(Attr(definition, "name")), Reference(position), (string?)formula.Attribute("ref"), expression));
+                                preserved = true;
+                            }
+                            else
                             throw new WorkbookFeatureRejectedException(new("xlsx.formula-rejected", CompatibilityKind.Rejected,
                                 "formula/" + ((string?)formula.Attribute("t") ?? "normal"), ex.Message, path,
                                 Decode(Attr(definition, "name")), (string?)formula.Attribute("ref") ?? Reference(position)), ex);
                         }
                         if (expression.Length == 0) throw new InvalidDataException("公式内容缺失。");
+                        if (!preserved)
+                        {
+                            try { _ = QuickExcel.Formulas.FormulaSyntax.Parse("=" + expression.TrimStart('=')); }
+                            catch (Exception ex) when (ex is FormatException or OverflowException)
+                            {
+                                var external = System.Text.RegularExpressions.Regex.IsMatch(expression, @"(?:'[^']*\[[^\]]+\][^']*'|\[[^\]]+\][^!]+)!");
+                                var kind = external ? PreservedFormulaKind.ExternalReference : expression.Contains('[') ? PreservedFormulaKind.StructuredReference : PreservedFormulaKind.UnsupportedSyntax;
+                                preservedFormulas.Add(new(kind, path, Decode(Attr(definition, "name")), Reference(position), null, expression));
+                            }
+                        }
                         cell = new(CellContent.FromFormula("=" + expression.TrimStart('='), style),
                             new CellCalculation(element.Element(Main + "v") is null ? null : value, CalculationState.Stale, 0, 0, 0));
                     }
@@ -130,6 +165,19 @@ internal static class TypedWorkbookXml
                 }
             }
             var view = sheet.Element(Main + "sheetViews")?.Element(Main + "sheetView");
+            for (var p = firstPreserved; p < preservedFormulas.Count; p++)
+            {
+                var info = preservedFormulas[p];
+                if (info.Kind is not (PreservedFormulaKind.Array or PreservedFormulaKind.DynamicArray) || info.Range is null) continue;
+                var range = CellRectangle.Parse(info.Range); var complete = true;
+                for (var row = range.Top; row <= range.Bottom && complete; row++)
+                for (var column = range.Left; column <= range.Right; column++)
+                {
+                    if ((inspectedArrayCells & 1023) == 0) budget.Check();
+                    if (++inspectedArrayCells > WorkbookLimits.MaxCells || !cachedCells.Contains(new(row, column))) { complete = false; break; }
+                }
+                preservedFormulas[p] = info with { HasCompleteCache = complete };
+            }
             var viewState = XlsxViews.ReadSheet(package, path, sheet);
             if (Bool((string?)view?.Attribute("tabSelected"))) selectedTabs++;
             var format = sheet.Element(Main + "sheetFormatPr");
@@ -151,9 +199,12 @@ internal static class TypedWorkbookXml
         var window = XlsxViews.ReadWorkbook(package, workbookPart, root, sheets);
         var names = new List<QuickExcel.Formulas.DefinedName>();
         var printNames = new HashSet<(int, string)>();
+        var rejectedNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var inspectedNames = 0;
         foreach (var element in root.Element(Main + "definedNames")?.Elements() ?? [])
         {
-            if (names.Count >= 4096) throw new InvalidDataException("名称数量超过 4096。");
+            budget.Check();
+            if (++inspectedNames > 4096) throw new InvalidDataException("名称数量超过 4096。");
             package.Shape(element, "", "name localSheetId", workbookPart);
             var name = Attr(element, "name");
             var scopeIndex = element.Attribute("localSheetId") is { } local ? Int(local.Value, sheets.Count - 1) : -1;
@@ -179,13 +230,42 @@ internal static class TypedWorkbookXml
                 names.Add(definition);
             }
             catch (Exception e) when (e is ArgumentException or FormatException or OverflowException)
-            { package.Loss($"{workbookPart}: 名称 {name} 未支持：{e.Message}", "definedName/" + name, workbookPart,
-                range: element.Value, sheetName: scopeIndex < 0 ? null : sheets[scopeIndex].Name); }
+            {
+                package.Loss($"{workbookPart}: 名称 {name} 未支持：{e.Message}", "definedName/" + name, workbookPart,
+                    range: element.Value, sheetName: scopeIndex < 0 ? null : sheets[scopeIndex].Name);
+                rejectedNames.Add(name);
+                if (!name.StartsWith("_xlnm.", StringComparison.OrdinalIgnoreCase))
+                    preservedFormulas.Add(new(PreservedFormulaKind.DefinedName, workbookPart,
+                        scopeIndex < 0 ? "(工作簿)" : sheets[scopeIndex].Name, name, null, element.Value));
+            }
+        }
+        var snapshot = new WorkbookSnapshot(Guid.NewGuid(), 0, dateSystem, sheets, styles: styles, definedNames: names, activeSheetId: window.Active, window: window.Window);
+        var preservedLocations = preservedFormulas.Select(f => (f.Part, f.Cell)).ToHashSet();
+        // Names can hide unsupported syntax or circular/oversized binding behind an otherwise simple formula.
+        foreach (var sheet in sheets)
+        foreach (var (position, cell) in sheet.Cells)
+        {
+            budget.Check();
+            if (cell.Content.Kind != CellContentKind.Formula) continue;
+            var part = bindings[sheets.IndexOf(sheet)].Part;
+            var address = Reference(position);
+            if (preservedLocations.Contains((part, address))) continue;
+            try
+            {
+                var parsed = QuickExcel.Formulas.FormulaSyntax.Parse(cell.Content.FormulaText);
+                if (QuickExcel.Formulas.FormulaSyntax.Walk(parsed).OfType<QuickExcel.Formulas.NameNode>().Any(n => rejectedNames.Contains(n.Name)))
+                    throw new FormatException("公式引用了未建模的名称。");
+                _ = QuickExcel.Formulas.FormulaBinding.Bind(parsed, snapshot, sheet.Id);
+            }
+            catch (Exception e) when (e is FormatException or OverflowException)
+            {
+                preservedFormulas.Add(new(PreservedFormulaKind.UnsupportedSyntax, part, sheet.Name, address, null, cell.Content.FormulaText));
+            }
         }
         XlsxMetadata.Inspect(package, sheets.Select(s => s.Name).ToArray());
         package.FinishInventory();
-        return new(new WorkbookSnapshot(Guid.NewGuid(), 0, dateSystem, sheets, styles: styles, definedNames: names, activeSheetId: window.Active, window: window.Window), bindings,
-            package.Issues.ToArray(), package.Diagnostics, root.Element(Main + "bookViews") is not null);
+        return new(snapshot, bindings,
+            package.Issues.ToArray(), package.Diagnostics, root.Element(Main + "bookViews") is not null, preservedFormulas);
     }
 
     private static int Style(XElement element, string name, int count) => Int((string?)element.Attribute(name) ?? "0", count - 1);
@@ -241,6 +321,7 @@ internal static class TypedWorkbookXml
 
     public static byte[] Write(WorkbookSnapshot snapshot, bool valuesOnly, CancellationToken cancellationToken)
     {
+        if (!valuesOnly && snapshot.FileState?.FormulaReadOnly == true) throw new InvalidOperationException(WorkbookFileState.FormulaReadOnlyMessage);
         long allocation = snapshot.Styles.Length * 2048L, imageBytes = 0;
         foreach (var sheet in snapshot.Sheets)
         {

@@ -14,12 +14,22 @@ public sealed partial class TypedWorkbookStorage
     /// <summary>Read-only inspection of the current snapshot. Does not calculate, load scripts or change save policy.</summary>
     public static WorkbookCompatibilityReport InspectCompatibility(WorkbookSnapshot snapshot, CancellationToken cancellationToken = default)
     {
-        var unchanged = snapshot.FileState is { } state && ContentEquals(snapshot, state.OriginalModel);
+        var inspected = PrepareReadOnlyFormulaSave(snapshot, false);
+        var unchanged = inspected.FileState is { } state && ContentEquals(inspected, state.OriginalModel);
         var diagnostics = (snapshot.FileState?.CompatibilityDiagnostics ?? []).Select(d => d with {
             Kind = unchanged ? d.Kind : CompatibilityKind.PotentialLoss
         }).ToList();
-        diagnostics.Add(new("workbook.modeled-subset", CompatibilityKind.Editable, "已建模内容",
-            "单元格类型、普通公式源码和基础格式可在已支持子集内编辑；文件保存限制见各项诊断。这不代表全部 Excel 功能已支持。"));
+        if (snapshot.FileState is { FormulaReadOnly: true } source)
+        {
+            diagnostics.Add(new("workbook.formula-read-only", CompatibilityKind.PreservedOnly, "只读公式工作簿", WorkbookFileState.FormulaReadOnlyMessage));
+            foreach (var formula in source.PreservedFormulas.Take(1024))
+                diagnostics.Add(new("formula.preserved-read-only", CompatibilityKind.PreservedOnly, "formula/" + formula.Kind,
+                    "公式及结果范围依赖原包，仅作只读投影；源码、公式属性、相关部件和来源缓存整包保留。共享从属格显示主表达式，数组结果区域中的值也属于来源缓存。",
+                    formula.Part, formula.SheetName, formula.Range ?? formula.Cell));
+            if (source.PreservedFormulas.Length > 1024) diagnostics.Add(new("report.preserved-truncated", CompatibilityKind.PreservedOnly, "报告容量", "只展示前 1024 个只读公式位置；整簿只读限制仍覆盖全部公式。"));
+        }
+        else diagnostics.Add(new("workbook.modeled-subset", CompatibilityKind.Editable, "已建模内容",
+            "单元格类型、普通公式源码和基础格式可在已支持子集内编辑；不支持的函数及依赖保留旧缓存，未知引用语义阻止结构变换。这不代表全部 Excel 功能已支持。"));
         var formulaCount = 0;
         var cachedCount = 0;
         var staleCount = 0;
@@ -44,8 +54,11 @@ public sealed partial class TypedWorkbookStorage
                 var unknown = FormulaSyntax.Walk(expression).OfType<FunctionNode>().Select(f => f.Name)
                     .Where(name => !StandardFunctions.Signatures.ContainsKey(name)).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
                 if (unknown.Length > 0)
+                {
+                    if (unknown.Any(n => n.StartsWith("_xlfn.", StringComparison.OrdinalIgnoreCase) || n.StartsWith("_xlws.", StringComparison.OrdinalIgnoreCase))) feature = "formula/version-prefix";
                     message = "内置计算器不支持函数：" + string.Join("、", unknown) +
                         "。公式源码仍保留；若为自定义脚本函数，须在显式启用后核对注册结果，本报告不执行或验证脚本。";
+                }
             }
             catch (Exception ex) when (ex is FormatException or OverflowException)
             {
@@ -62,7 +75,7 @@ public sealed partial class TypedWorkbookStorage
         }
         if (truncated) diagnostics.Add(new("report.formulas-truncated", CompatibilityKind.CannotCalculate, "报告容量",
             "已达到 1024 个公式问题位置；后续公式未逐项检查，未列出不代表可计算。"));
-        if (formulaCount > 0) diagnostics.Add(new("formula.cache-summary", CompatibilityKind.Editable, "公式源码与缓存",
+        if (formulaCount > 0) diagnostics.Add(new("formula.cache-summary", snapshot.FileState?.FormulaReadOnly == true ? CompatibilityKind.PreservedOnly : CompatibilityKind.Editable, "公式源码与缓存",
             $"共 {formulaCount} 个公式，{cachedCount} 个有缓存，{staleCount} 个缺少当前有效结果。能力检查不执行计算，也不证明缓存数值正确或引用这些公式的其他单元格可以正确重算。"));
         return new(unchanged, diagnostics);
     }

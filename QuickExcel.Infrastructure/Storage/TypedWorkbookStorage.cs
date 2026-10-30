@@ -58,7 +58,7 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage
                         throw new InvalidDataException("XLSQ 格式、读取器版本或脚本 API 不受支持。");
                     var features = Array(root, "requiredFeatures").Select(e => e.GetString() ?? throw new InvalidDataException("能力名称必须为字符串。")).ToArray();
                     declaredViews = features.Contains("workbook-views");
-                    if (features.Distinct().Count() != features.Length || Features.Except(features).Any() || features.Except(Features.Concat(["script-actions", "script-signatures", "workbook-views", "worksheet-printing"])).Any() ||
+                    if (features.Distinct().Count() != features.Length || Features.Except(features).Any() || features.Except(Features.Concat(["script-actions", "script-signatures", "workbook-views", "worksheet-printing", "preserved-formulas"])).Any() ||
                         features.Contains("script-actions") && scriptApiVersion != 2)
                         throw new InvalidDataException("XLSQ 缺少必要能力或包含未知必需能力。");
                     var referenced = new HashSet<string>(StringComparer.Ordinal) { "manifest.json" };
@@ -153,7 +153,7 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage
                 }
                 if (view.TryGetProperty("zoom", out var zoom) && (zoom.ValueKind != JsonValueKind.Number || !zoom.TryGetDouble(out var number) || !double.IsFinite(number) || number <= 0))
                     throw new InvalidDataException("缩放值无效。");
-                if (!read.HasWorkbookView && !declaredViews)
+                if (!read.HasWorkbookView && !declaredViews && read.PreservedFormulas.Count == 0)
                 {
                     legacyViewApplied = true;
                     // Earlier v2 documents used this optional state. Its zoom is a ratio, not a percentage.
@@ -182,7 +182,7 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage
             var issues = read.Issues.ToList();
             // An original package can be retained byte-for-byte even for unsupported workbook features.
             var fileState = new WorkbookFileState(sourcePath, version, workbookBytes, originalModel, read.Bindings, issues,
-                version == 2 ? manifest!.RootElement.GetRawText() : null, state?.RootElement.GetRawText(), read.Diagnostics);
+                version == 2 ? manifest!.RootElement.GetRawText() : null, state?.RootElement.GetRawText(), read.Diagnostics, read.PreservedFormulas);
             return new(documentId, revision, model.DateSystem, sheets, modules.PrimarySource, model.Styles, modules, fileState, names, activeSheet, model.Window);
         }
         catch (Exception exception) when (exception is JsonException or System.Xml.XmlException or FormatException or OverflowException or ArgumentException or InvalidOperationException && exception is not WorkbookCompatibilityException)
@@ -201,6 +201,7 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage
         RequireExtension(path, ".xlsq", ".xlsx");
         ArgumentNullException.ThrowIfNull(snapshot);
         cancellationToken.ThrowIfCancellationRequested();
+        snapshot = PrepareReadOnlyFormulaSave(snapshot, discardUnsupported);
         if (expected is not null) FileVersions.Require(path, expected);
         GuardOriginal(path, snapshot, discardUnsupported);
         if (Path.GetExtension(path).Equals(".xlsx", StringComparison.OrdinalIgnoreCase))
@@ -244,6 +245,7 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage
         var manifest = Object(snapshot.FileState?.ManifestJson);
         manifest["format"] = "QuickExcel"; manifest["formatVersion"] = 2; manifest["minReaderVersion"] = 2; manifest["scriptApiVersion"] = snapshot.ScriptModules.ScriptApiVersion;
         manifest["requiredFeatures"] = JsonSerializer.SerializeToNode(Features
+            .Concat(snapshot.FileState?.FormulaReadOnly == true ? ["preserved-formulas"] : [])
             .Concat(snapshot.Sheets.Any(s => !s.Printing.IsEmpty) ? ["worksheet-printing"] : [])
             .Concat(HasWorkbookViews(snapshot) ? ["workbook-views"] : [])
             .Concat(snapshot.ScriptModules.HasActions ? ["script-actions"] : [])
@@ -277,6 +279,8 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage
     public void Export(string path, WorkbookSnapshot snapshot) => Export(path, snapshot, false, false);
     public void Export(string path, WorkbookSnapshot snapshot, bool allowStaleCaches, bool discardUnsupported)
     {
+        if (snapshot.FileState?.PreservedFormulas.Any(f => !f.HasCompleteCache) == true)
+            throw new InvalidOperationException("数组结果区域缺少可确认的完整缓存，不能导出值快照；请在 Excel 中重算后再打开。");
         RequireExtension(path, ".xlsx");
         GuardOriginal(path, snapshot, discardUnsupported);
         var formulas = snapshot.Sheets.SelectMany(s => s.Cells.Values).Where(c => c.Content.Kind == CellContentKind.Formula).ToArray();
@@ -298,8 +302,11 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage
         }, CancellationToken.None);
     }
 
-    public static IReadOnlyList<string> SaveIssues(WorkbookSnapshot snapshot) => snapshot.FileState is { } state && !ContentEquals(snapshot, state.OriginalModel)
-        ? state.CompatibilityIssues : [];
+    public static IReadOnlyList<string> SaveIssues(WorkbookSnapshot snapshot)
+    {
+        snapshot = PrepareReadOnlyFormulaSave(snapshot, false);
+        return snapshot.FileState is { } state && !ContentEquals(snapshot, state.OriginalModel) ? state.CompatibilityIssues : [];
+    }
     private static void GuardOriginal(string path, WorkbookSnapshot snapshot, bool discardUnsupported)
     {
         if (snapshot.FileState is not { } state) return;

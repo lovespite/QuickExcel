@@ -56,7 +56,7 @@ public partial class MainWindow : Window
         _grid = new FastGridSurface(CommitGridValue) { HandlesKeyboard = false };
         SheetGrid.Children.Add(_grid.Element);
         _grid.BeforeNavigate = () => !_busy && CanCommitComposition() && CommitFormulaBar();
-        _grid.BeforeBeginEdit = () => !_busy && CanCommitComposition() && CommitFormulaBar();
+        _grid.BeforeBeginEdit = () => !_busy && _document.Snapshot.FileState?.FormulaReadOnly != true && CanCommitComposition() && CommitFormulaBar();
         _grid.LatestSnapshot = () => _document.Snapshot;
         _grid.SelectionChanged += Grid_CurrentCellChanged;
         _grid.EditingChanged += () => { if (_grid.IsEditing) _editState.BeginGrid(); else _editState.EndGrid(); };
@@ -176,6 +176,8 @@ public partial class MainWindow : Window
             StatusText.Text = "部分列未显示，可在文件菜单查看兼容性报告。";
         if (document.Snapshot.Sheets.Any(sheet => sheet.View.ActiveCell.Column >= 256 || sheet.View.FrozenRows > 10 || sheet.View.FrozenColumns >= 256))
             StatusText.Text = "部分视图超出网格显示范围；原设置仍会保存，详情见兼容性报告。";
+        if (document.Snapshot.FileState?.FormulaReadOnly == true)
+        { StatusText.Text = "只读公式工作簿 · 显示来源缓存，未重算"; LogText.Text += "\n" + WorkbookFileState.FormulaReadOnlyMessage; }
     }
 
     private void RefreshSheet(bool rebuild = false)
@@ -209,8 +211,9 @@ public partial class MainWindow : Window
     {
         RefreshSignatureState();
         _viewModel.Refresh();
-        FileTitle.Text = _displayName + (_viewModel.IsDirty ? "  •" : "");
-        Title = $"{(_viewModel.IsDirty ? "* " : "")}{_displayName} — QuickExcel";
+        var readOnlyLabel = _document.Snapshot.FileState?.FormulaReadOnly == true ? "  [只读 · 来源缓存]" : "";
+        FileTitle.Text = _displayName + readOnlyLabel + (_viewModel.IsDirty ? "  •" : "");
+        Title = $"{(_viewModel.IsDirty ? "* " : "")}{_displayName}{readOnlyLabel} — QuickExcel";
         FileTitle.ToolTip = (_filePath ?? _displayName) + (_viewModel.DiscardedHistoryCount > 0 ? $" · 已释放 {_viewModel.DiscardedHistoryCount} 条较早撤销记录" : "");
         UndoButton.IsEnabled = _viewModel.CanUndo && !_busy;
         RedoButton.IsEnabled = _viewModel.CanRedo && !_busy;
@@ -321,6 +324,7 @@ public partial class MainWindow : Window
         ok &= committed;
         if (!ok) _calculationPending = true;
         ShowDiagnostics();
+        if (ok && _document.Snapshot.FileState?.FormulaReadOnly == true) StatusText.Text = "只读公式未重算，已保留来源缓存。";
         return ok;
     }
 
@@ -590,7 +594,7 @@ public partial class MainWindow : Window
         {
             InstallDocument(next!, Path.GetFullPath(path), Path.GetFileName(path), fileVersion: version);
             RememberFile(Path.GetFullPath(path));
-            if (allowAutomaticScripts && _document.Snapshot.ScriptModules.Signature is not null) await RunScriptsAsync(automatic: true);
+            if (allowAutomaticScripts && _document.Snapshot.FileState?.FormulaReadOnly != true && _document.Snapshot.ScriptModules.Signature is not null) await RunScriptsAsync(automatic: true);
         }
     }
 

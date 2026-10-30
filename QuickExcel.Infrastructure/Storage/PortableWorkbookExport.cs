@@ -11,6 +11,11 @@ public sealed partial class TypedWorkbookStorage : IPortableWorkbookStorage
 {
     public PortableExportReport InspectPortableExport(WorkbookSnapshot snapshot)
     {
+        if (snapshot.FileState?.FormulaReadOnly == true)
+        {
+            var formulas = snapshot.Sheets.SelectMany(s => s.Cells.Values).Where(c => c.Content.Kind == CellContentKind.Formula).ToArray();
+            return new(0, formulas.Length, formulas.Count(c => c.Calculation?.Value is null), formulas.Count(c => c.Calculation?.Value is not null));
+        }
         var index = new WorkbookDependencyIndex(snapshot);
         var frozen = index.NonPortableCells.Select(a => snapshot.GetSheet(a.SheetId).GetCell(a.Row, a.Column)!).ToArray();
         return new(index.Nodes.Count - frozen.Length, frozen.Length,
@@ -21,6 +26,7 @@ public sealed partial class TypedWorkbookStorage : IPortableWorkbookStorage
 
     public void ExportPortable(string path, WorkbookSnapshot snapshot, bool allowStaleCaches = false, bool discardUnsupported = false)
     {
+        if (snapshot.FileState?.FormulaReadOnly == true) throw new InvalidOperationException("只读公式工作簿的依赖范围未知；请使用明确的已有缓存值快照导出。");
         RequireExtension(path, ".xlsx");
         GuardOriginal(path, snapshot, discardUnsupported);
         if (!discardUnsupported && snapshot.FileState?.CompatibilityIssues.Length > 0)

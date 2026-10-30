@@ -40,22 +40,22 @@ public sealed partial class CompatibilityProbeTests
     }
 
     [Fact]
-    public void ProbeReportsUnknownFunctionsAndLocatedArrayRejectionSeparately()
+    public void ProbeReportsUnknownFunctionsAndReadOnlyArrayPreservationSeparately()
     {
         var report = ProbeRunner.Run(Fixture("unknown-function"), NewEvidenceDirectory());
         var unchanged = Assert.Single(report.Paths, p => p.Mode == "unchanged");
         Assert.Contains(unchanged.Diagnostics, d => d.Code == "formula.unsupported-function" && d.SheetName == "数据" && d.Range == "A2");
         Assert.Empty(unchanged.CompatibilityIssues); // Computability does not itself imply format loss.
         Assert.DoesNotContain(Assert.Single(report.Paths, p => p.Mode == "value").Diagnostics, d => d.Kind == CompatibilityKind.CannotCalculate);
-        var rejected = ProbeRunner.Run(Fixture("array-formula"), NewEvidenceDirectory());
-        Assert.All(rejected.Paths, p => {
-            Assert.Equal("open-rejected", p.Status);
-            var diagnostic = Assert.Single(p.Diagnostics);
-            Assert.Equal(CompatibilityKind.Rejected, diagnostic.Kind);
+        var readOnly = ProbeRunner.Run(Fixture("array-formula"), NewEvidenceDirectory());
+        Assert.All(readOnly.Paths, p => {
+            var diagnostic = Assert.Single(p.Diagnostics, d => d.Code == "formula.preserved-read-only");
+            Assert.Equal(CompatibilityKind.PreservedOnly, diagnostic.Kind);
             Assert.Equal("数据", diagnostic.SheetName);
             Assert.Equal("B2:B3", diagnostic.Range);
-            Assert.Equal("formula/array", diagnostic.Feature);
-            Assert.Null(p.Output);
+            Assert.Equal("formula/Array", diagnostic.Feature);
+            if (p.Mode == "unchanged") { Assert.Equal("preserved-original", p.Status); Assert.Equal(readOnly.Source.Sha256, p.Output!.Sha256); }
+            else { Assert.Equal("edit-rejected", p.Status); Assert.Null(p.Output); }
         });
     }
 

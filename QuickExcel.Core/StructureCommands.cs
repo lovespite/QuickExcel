@@ -179,6 +179,21 @@ public sealed class MoveCellsCommand(SheetId sourceSheet, CellPosition first, Ce
 
 internal static class StructureEdits
 {
+    internal static void RequireTransformableFunctions(WorkbookSnapshot snapshot)
+    {
+        if (snapshot.FileState is null) return;
+        foreach (var sheet in snapshot.Sheets)
+        foreach (var cell in sheet.Cells.Values.Where(c => c.Content.Kind == CellContentKind.Formula))
+        {
+            try
+            {
+                var expression = FormulaBinding.Bind(FormulaSyntax.Parse(cell.Content.FormulaText), snapshot, sheet.Id);
+                var unknown = FormulaSyntax.Walk(expression).OfType<FunctionNode>().FirstOrDefault(f => !StandardFunctions.Signatures.ContainsKey(f.Name));
+                if (unknown is not null) throw new NotSupportedException($"导入公式 {unknown.Name} 的引用语义尚未确认，结构变换/排序未应用；值和样式仍可在受支持范围内编辑。");
+            }
+            catch (FormatException e) { throw new NotSupportedException("导入公式不能安全变换，结构操作未应用。", e); }
+        }
+    }
     internal static void RequireSimpleStructure(WorksheetSnapshot sheet)
     {
         if (!sheet.Images.IsEmpty || !sheet.MergedCells.IsEmpty)
@@ -258,6 +273,7 @@ internal static class StructureEdits
     internal static WorkbookSnapshot Transform(WorkbookSnapshot snapshot, Func<FormulaNode, SheetId, FormulaNode> transform,
         Func<WorksheetSnapshot, ImmutableDictionary<CellPosition, CellSnapshot>, WorksheetSnapshot>? finish = null)
     {
+        RequireTransformableFunctions(snapshot);
         string Formula(string text, SheetId context)
         {
             try

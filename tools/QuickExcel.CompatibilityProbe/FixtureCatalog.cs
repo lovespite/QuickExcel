@@ -83,7 +83,7 @@ public static class FixtureCatalog
         yield return Fixture("unknown-function", "未知函数与版本前缀：源码和旧缓存不等于可计算", ["XC-0106"], Base("""
             <row r="2"><c r="A2"><f>_xlfn.XLOOKUP(1,B2:B3,C2:C3)</f><v>7</v></c><c r="B2"><v>1</v></c><c r="C2"><v>7</v></c></row>
             """));
-        yield return Fixture("array-formula", "数组公式：只记录当前读取/拒绝边界", ["XC-0106"], Base("""
+        yield return Fixture("array-formula", "数组公式：只读查看来源缓存、整包保留，拒绝编辑和公式删减副本", ["XC-0106"], Base("""
             <row r="2"><c r="B2"><f t="array" ref="B2:B3">ROW(A1:A2)</f><v>1</v></c></row>
             <row r="3"><c r="B3"><v>2</v></c></row>
             """));

@@ -97,6 +97,7 @@ public sealed class DocumentSession : IDisposable
                 if (action is not null) { AdvanceCalculationGeneration(); _diagnostics = diagnostics; }
                 return new(false, before.Revision);
             }
+            if (before.FileState?.FormulaReadOnly == true) throw new InvalidOperationException(WorkbookFileState.FormulaReadOnlyMessage);
             var sourceChanged = command is UpdateScriptSourceCommand or UpdateScriptModulesCommand or UpdateScriptSignatureCommand;
             var revised = draft.Snapshot.WithRevision(checked(before.Revision + 1));
             var after = draft.CalculationUnchanged ? CarryCalculationRevision(revised, before.Revision) : Invalidate(revised);
@@ -225,6 +226,7 @@ public sealed class DocumentSession : IDisposable
         lock (_gate)
         {
             ThrowIfClosed();
+            if (enabled && _snapshot.FileState?.FormulaReadOnly == true) throw new InvalidOperationException(WorkbookFileState.FormulaReadOnlyMessage);
             if (enabled && !_snapshot.ScriptModules.CanExecute) throw new NotSupportedException("多模块执行需要显式声明脚本 API v2。");
             // Reapply also invalidates an in-flight compile of the same source.
             _scriptsEnabled = enabled;
@@ -271,6 +273,8 @@ public sealed class DocumentSession : IDisposable
                     throw new InvalidOperationException("计算单元格的修订或代次不匹配。");
                 if (calculation.Value is { Kind: CellValueKind.Text } text && text.TextValue.Length > WorkbookLimits.MaxCellTextLength)
                     throw new InvalidOperationException("计算结果超过单元格文本容量。");
+                if (_snapshot.FileState?.FormulaReadOnly == true && (calculation.State != CalculationState.Blocked || calculation.Value != before.Calculation?.Value))
+                    throw new InvalidOperationException("只读公式工作簿只能保留原缓存并标记受阻，不能发布新结果。");
                 if (!builders.TryGetValue(sheet.Id, out var builder)) builders[sheet.Id] = builder = sheet.Cells.ToBuilder();
                 var after = new CellSnapshot(before.Content, calculation);
                 builder[new(address.Row, address.Column)] = after;

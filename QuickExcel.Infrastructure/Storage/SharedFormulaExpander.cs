@@ -41,6 +41,14 @@ internal sealed class SharedFormulaExpander
         return Translate(master.Formula, position.Row - master.Position.Row, position.Column - master.Position.Column);
     }
 
+    public string Source(XElement formula, QuickExcel.Domain.CellPosition position)
+    {
+        if (!_masters.TryGetValue(Int(XlsxPackage.Attr(formula, "si"), int.MaxValue), out var master) ||
+            position.Row < master.Start.Row || position.Column < master.Start.Column || position.Row > master.End.Row || position.Column > master.End.Column)
+            throw new InvalidDataException("共享公式缺少主公式或从属地址越界。");
+        return master.Formula;
+    }
+
     private static string Translate(string formula, int rowOffset, int columnOffset)
     {
         var output = new StringBuilder();

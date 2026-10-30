@@ -81,6 +81,7 @@ public partial class MainWindow
             await RunExtendedStyleSmokeAsync(folder, Check);
             await RunXlsxSaveSmokeAsync(folder, Check);
             await RunWorkbookViewSmokeAsync(folder, Check);
+            await RunPreservedFormulaSmokeAsync(folder, Check);
 
             if (source is not null)
             {

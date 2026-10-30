@@ -25,6 +25,20 @@ public sealed class WorkbookCalculator(IScriptRuntimeFactory runtimeFactory) : I
             if (timer.Elapsed > TimeLimit) throw new TimeoutException("重算达到 5 秒限制，本轮结果未提交。");
         }
         Check();
+        if (request.Snapshot.FileState?.FormulaReadOnly == true)
+        {
+            var stamp = request.Stamp;
+            var retained = new Dictionary<CellAddress, CellCalculation>();
+            foreach (var sheet in request.Snapshot.Sheets)
+            foreach (var (position, cell) in sheet.Cells)
+            {
+                Check();
+                if (cell.Content.Kind != CellContentKind.Formula) continue;
+                retained.Add(new(sheet.Id, position.Row, position.Column), new(cell.Calculation?.Value, CalculationState.Blocked,
+                    stamp.InputRevision, stamp.CalculationGeneration, stamp.ScriptGeneration, ["只读公式及其受影响依赖范围未知；保留来源缓存，未重算。"]));
+            }
+            return new(stamp, retained, [WorkbookFileState.FormulaReadOnlyMessage]);
+        }
         if (request.ScriptsEnabled && !request.Snapshot.ScriptModules.CanExecute)
             throw new NotSupportedException("多模块执行需要显式声明脚本 API v2。");
         var index = new WorkbookDependencyIndex(request.Snapshot, Check);
@@ -70,10 +84,15 @@ public sealed class WorkbookCalculator(IScriptRuntimeFactory runtimeFactory) : I
             }
         }
         var evaluator = new TypedEvaluator(request.Snapshot, cells, runtime, functions, Check);
+        var unavailable = index.Nodes.Where(p => FormulaSyntax.Walk(p.Value.Expression).OfType<FunctionNode>().Any(f =>
+            !StandardFunctions.Signatures.ContainsKey(f.Name) && (!functions.ContainsKey(f.Name) || f.Name.StartsWith("_xlfn.", StringComparison.OrdinalIgnoreCase) || f.Name.StartsWith("_xlws.", StringComparison.OrdinalIgnoreCase))))
+            .Select(p => p.Key);
+        var blockedByUnavailable = index.Closure(unavailable, Check);
         var pending = index.Nodes.ToDictionary(p => p.Key, p => p.Value.Dependencies.Count(d => !index.CycleMembers.Contains(d)));
         var ready = new PriorityQueue<CellAddress, int>();
         foreach (var address in index.CycleMembers)
-            Store(address, CellValue.FromError(CellErrorCode.Cycle), CalculationState.Error, ["循环引用：此单元格属于循环强连通分量。"]);
+            if (blockedByUnavailable.Contains(address)) Store(address, index.Nodes[address].Cell.Calculation?.Value, CalculationState.Blocked, ["包含不可用函数，不能据部分依赖图确认计算语义；保留旧缓存。"]);
+            else Store(address, CellValue.FromError(CellErrorCode.Cycle), CalculationState.Error, ["循环引用：此单元格属于循环强连通分量。"]);
         foreach (var (address, node) in index.Nodes)
             if (pending[address] == 0 && !index.CycleMembers.Contains(address)) ready.Enqueue(address, node.Order);
         IScriptInvocationBatch? batch = null;
@@ -131,9 +150,9 @@ public sealed class WorkbookCalculator(IScriptRuntimeFactory runtimeFactory) : I
                 evaluated++;
                 var notes = new List<string>();
                 var dependencies = node.Dependencies.Select(d => cells[d]).ToArray();
-                var blocked = !request.ScriptsEnabled && node.Script || dependencies.Any(d => d.State == CalculationState.Blocked);
+                var blocked = blockedByUnavailable.Contains(address) || !request.ScriptsEnabled && node.Script || dependencies.Any(d => d.State == CalculationState.Blocked);
                 CellValue? value;
-                if (dependencies.Any(d => d.Value is { Kind: CellValueKind.Error, ErrorCode: CellErrorCode.Cycle }))
+                if (!blocked && dependencies.Any(d => d.State == CalculationState.Error && d.Value is { Kind: CellValueKind.Error, ErrorCode: CellErrorCode.Cycle }))
                 {
                     value = CellValue.FromError(CellErrorCode.Cycle);
                     notes.Add("依赖循环引用：此单元格不属于循环分量，其上游包含循环。");
@@ -142,7 +161,7 @@ public sealed class WorkbookCalculator(IScriptRuntimeFactory runtimeFactory) : I
                 else if (blocked)
                 {
                     value = node.Cell.Calculation?.Value;
-                    notes.Add("脚本未启用或上游结果受阻；保留旧缓存，不能视为本轮新结果。");
+                    notes.Add("函数不可用、脚本未启用或上游结果受阻；保留旧缓存，不能视为本轮新结果。");
                 }
                 else
                 {

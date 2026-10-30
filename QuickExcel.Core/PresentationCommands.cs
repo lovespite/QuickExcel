@@ -15,6 +15,7 @@ public sealed class SortRangeCommand : DocumentCommand
 
     internal override CommandDraft Prepare(WorkbookSnapshot snapshot)
     {
+        StructureEdits.RequireTransformableFunctions(snapshot);
         var (sheetId, first, last) = (_descriptor.SheetId, _descriptor.First, _descriptor.Last);
         WorkbookLimits.ValidatePosition(first.Row, first.Column);
         WorkbookLimits.ValidatePosition(last.Row, last.Column);
