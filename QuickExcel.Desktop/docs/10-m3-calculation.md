@@ -23,7 +23,7 @@
 
 ## 公式支持矩阵
 
-2026-10-30 增补：XC-0205 已实现七个条件统计函数及实际 Excel 对照，参数模式、类型规则和数组条件保护见 [44](44-conditional-functions.md)；XC-0206 查找函数边界、现代标量模式与 XLSX 别名见 [45](45-lookup-functions.md)。下表保留原 M3 基础子集。
+2026-10-30 增补：XC-0205 已实现七个条件统计函数及实际 Excel 对照，参数模式、类型规则和数组条件保护见 [44](44-conditional-functions.md)；XC-0206 查找函数边界、现代标量模式与 XLSX 别名见 [45](45-lookup-functions.md)。XC-0207 的日期/数学及 WORKDAY/NETWORKDAYS 见 [46](46-date-and-math-functions.md)。下表保留原 M3 基础子集。
 
 | 范围 | 支持与限制 |
 | --- | --- |

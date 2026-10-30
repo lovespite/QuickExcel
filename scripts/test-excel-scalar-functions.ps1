@@ -28,7 +28,7 @@ function Capture($book,$caseList=$spec.Cases){
         $sheet=$book.Worksheets.Item($case.Sheet);$cell=$sheet.Range($case.Address)
         try{
             $value=$cell.Value2;$kind='Number';$text=[string]$cell.Text
-            if($null -eq $value){$kind='Blank'}elseif($value -is [string]){$kind='Text'}elseif($value -is [bool]){$kind='Boolean'}elseif($text -match '^#'){$kind='Error';$value=$text}
+            if($null -eq $value){$kind='Blank'}elseif($value -is [string]){$kind='Text'}elseif($value -is [bool]){$kind='Boolean'}elseif($text -match '^#(NULL!|DIV/0!|VALUE!|REF!|NAME\?|NUM!|N/A|SPILL!|CALC!|GETTING_DATA|CONNECT!|BLOCKED!|FIELD!|UNKNOWN!)$'){$kind='Error';$value=$text}
             $records.Add([ordered]@{Id=$case.Id;Sheet=$case.Sheet;Address=$case.Address;Formula=[string]$cell.Formula;Formula2=[string]$cell.Formula2;Kind=$kind;Value=$value})
         }finally{Release-Com $cell;Release-Com $sheet}
     }
@@ -37,6 +37,11 @@ function Capture($book,$caseList=$spec.Cases){
 $excel=$null;$book=$null
 try{
     $excel=New-Object -ComObject Excel.Application;$excel.Visible=$false;$excel.DisplayAlerts=$false;$excel.AskToUpdateLinks=$false;$excel.AutomationSecurity=3
+    if(-not ('ScalarExcelOwner' -as [type])){Add-Type -TypeDefinition 'using System; using System.Runtime.InteropServices; public static class ScalarExcelOwner { [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr window, out uint process); }'}
+    [uint32]$ownedExcelProcess=0;[void][ScalarExcelOwner]::GetWindowThreadProcessId([intptr]$excel.Hwnd,[ref]$ownedExcelProcess)
+    $ownedProcess=Get-Process -Id $ownedExcelProcess
+    [ordered]@{ProcessId=$ownedExcelProcess;Started=$ownedProcess.StartTime;SpecSha256=(Get-FileHash -LiteralPath $specFile -Algorithm SHA256).Hash;Owner='test-excel-scalar-functions.ps1'}|
+        ConvertTo-Json|Set-Content -LiteralPath (Join-Path $target 'excel-owner.json') -Encoding utf8
     if($WorkbookPath){
         if(-not $OraclePath){throw 'Verification requires OraclePath.'}
         $source=[IO.Path]::GetFullPath($WorkbookPath,$repo);$sourceHash=(Get-FileHash -LiteralPath $source -Algorithm SHA256).Hash

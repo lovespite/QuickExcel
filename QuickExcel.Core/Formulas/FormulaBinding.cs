@@ -12,6 +12,7 @@ public static class FormulaBinding
         var bound = Bind(expression, snapshot, currentSheet, new HashSet<(SheetId?, string)>(), new BindingBudget(), 0, false);
         ConditionalRanges.ValidateModes(bound);
         LookupModes.Validate(bound);
+        DateMathFunctions.Validate(bound);
         return bound;
     }
 
@@ -78,6 +79,11 @@ public static class StandardFunctions
             ["TRIM"] = (1, 1), ["UPPER"] = (1, 1), ["LOWER"] = (1, 1),
             ["VLOOKUP"] = (3, 4), ["MATCH"] = (2, 3), ["INDEX"] = (2, 3),
             ["HLOOKUP"] = (3, 4), ["XLOOKUP"] = (3, 6), ["XMATCH"] = (2, 4),
+            ["DATE"] = (3, 3), ["YEAR"] = (1, 1), ["MONTH"] = (1, 1), ["DAY"] = (1, 1),
+            ["TIME"] = (3, 3), ["HOUR"] = (1, 1), ["MINUTE"] = (1, 1), ["SECOND"] = (1, 1),
+            ["EDATE"] = (2, 2), ["EOMONTH"] = (2, 2), ["WEEKDAY"] = (1, 2),
+            ["WORKDAY"] = (2, 3), ["NETWORKDAYS"] = (2, 3),
+            ["ROUNDUP"] = (2, 2), ["ROUNDDOWN"] = (2, 2), ["INT"] = (1, 1), ["MOD"] = (2, 2),
             ["TODAY"] = (0, 0), ["NOW"] = (0, 0)
         };
 }

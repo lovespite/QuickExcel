@@ -96,6 +96,7 @@ internal sealed partial class TypedEvaluator(WorkbookSnapshot snapshot, IReadOnl
         }
         if (ConditionalRanges.IsFunction(function.Name)) return Conditional(function);
         if (LookupModes.IsFunction(function.Name)) return LookupValue(function);
+        if (DateMathFunctions.IsFunction(function.Name)) return DateMath(function);
         var args = function.Arguments.Select(Evaluate).ToArray();
         if (function.Name is "SUM" or "AVERAGE" or "MIN" or "MAX" or "COUNT" or "COUNTA" or "PRODUCT") return Aggregate(function, args);
         foreach (var arg in args) if (arg is CellValue { Kind: CellValueKind.Error } error) return error;

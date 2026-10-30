@@ -1,6 +1,6 @@
 # QuickExcel 架构与实施文档
 
-XC-0001/0002 完成：[真实 Excel 业务基线](37-excel-business-baseline.md) 覆盖五类六文件，5384 属性通过；[独立编辑矩阵](38-excel-edit-matrix.md) 的 48 路径及 Excel 重开对照通过，原始差异、诊断副本和预期公式表示均明确登记。[XC-0003 诊断收尾](39-xlsx-diagnostic-closure.md) 完成，E0/E1 按声明范围关闭，[XC-0201 内部剪贴板](40-internal-clipboard.md)、[XC-0202 填充与序列](41-fill-and-series.md) 已完成声明范围，[XC-0203 录入和公式编辑](42-formula-entry-and-navigation.md) 完成声明范围，[XC-0204 工作表与名称管理](43-sheet-and-name-management.md) 已完成声明范围，[XC-0205 条件统计公式](44-conditional-functions.md) 已完成声明范围，[XC-0206 查找公式](45-lookup-functions.md) 已完成声明范围，接续 XC-0207。
+XC-0001/0002 完成：[真实 Excel 业务基线](37-excel-business-baseline.md) 覆盖五类六文件，5384 属性通过；[独立编辑矩阵](38-excel-edit-matrix.md) 的 48 路径及 Excel 重开对照通过，原始差异、诊断副本和预期公式表示均明确登记。[XC-0003 诊断收尾](39-xlsx-diagnostic-closure.md) 完成，E0/E1 按声明范围关闭，[XC-0201 内部剪贴板](40-internal-clipboard.md)、[XC-0202 填充与序列](41-fill-and-series.md) 已完成声明范围，[XC-0203 录入和公式编辑](42-formula-entry-and-navigation.md) 完成声明范围，[XC-0204 工作表与名称管理](43-sheet-and-name-management.md) 已完成声明范围，[XC-0205 条件统计公式](44-conditional-functions.md) 已完成声明范围，[XC-0206 查找公式](45-lookup-functions.md) 已完成声明范围，[XC-0207 日期/数学及工作日](46-date-and-math-functions.md) 已完成声明范围，接续 XC-0208。
 
 XC-0107 已完成常见富文本、超链接和传统批注的读显写；右键显式转换富文本后可普通编辑，支持撤销。真实 Excel 对照及限制见 [内容记录](36-xlsx-rich-text-links-and-notes.md)。E0 证据现已补齐，下一步进入 E2。
 

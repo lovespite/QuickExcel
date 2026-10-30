@@ -91,6 +91,11 @@ internal static class FormulaEditing
             "HLOOKUP" => "lookup_value, table_array, row_index, [range_lookup]",
             "XLOOKUP" => "lookup_value, lookup_array, return_array, [if_not_found], [match_mode], [search_mode: 1/-1]（模式须为常量）",
             "XMATCH" => "lookup_value, lookup_array, [match_mode], [search_mode: 1/-1]（模式须为常量）",
+            "DATE" => "year, month, day", "TIME" => "hour, minute, second",
+            "YEAR" or "MONTH" or "DAY" or "HOUR" or "MINUTE" or "SECOND" => "serial_number",
+            "EDATE" or "EOMONTH" => "start_date, months", "WEEKDAY" => "serial_number, [return_type]",
+            "WORKDAY" => "start_date, days, [holidays]", "NETWORKDAYS" => "start_date, end_date, [holidays]",
+            "ROUNDUP" or "ROUNDDOWN" => "number, num_digits", "INT" => "number", "MOD" => "number, divisor",
             _ => StandardFunctions.Signatures.TryGetValue(name, out var count) ? $"参数 {count.Min}–{count.Max}" : ""
         };
         return name + "(" + parameters + ")";

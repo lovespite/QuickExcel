@@ -129,6 +129,25 @@ public partial class MainWindow
             Check(lookups.Select((c, i) => lookupReopened.Sheets[0].GetCell(i, 6)!.Value.NumberValue == c.Value &&
                 lookupReopened.Sheets[0].GetCell(i, 6)!.Content.FormulaText == c.Formula).All(x => x), "Legacy and modern lookups retain formulas and caches in normal XLSX save/reopen");
             await Idle(); CaptureGridEvidence(Path.Combine(folder, "lookup-entry.png"));
+            GridSurface.Select(new(0, 8)); FormulaBar.Focus(); FormulaBar.Text = "=WORK"; FormulaBar.CaretIndex = 5; await Idle();
+            Check(_completion?.Names.Contains("WORKDAY") == true, "Workday function appears in actual completion");
+            FormulaBar.Text = "=WORKDAY(45351,10,"; FormulaBar.CaretIndex = FormulaBar.Text.Length; await Idle();
+            Check(_formulaHint.Text.Contains("holidays") && _formulaHint.Text.Contains("第 3"), "Workday hint identifies the holiday argument");
+            var dates = new (string Formula, double Value)[] { ("=DATE(1900,2,29)", 60), ("=YEAR(60)", 1900), ("=MONTH(60)", 2), ("=DAY(60)", 29),
+                ("=TIME(12,0,0)", .5), ("=HOUR(0.5)", 12), ("=MINUTE(TIME(12,34,56))", 34), ("=SECOND(TIME(12,34,56))", 56),
+                ("=EDATE(60,0)", 59), ("=EOMONTH(60,0)", 59), ("=WEEKDAY(60,2)", 3), ("=ROUNDUP(-1.234,2)", -1.24),
+                ("=ROUNDDOWN(-1.234,2)", -1.23), ("=INT(-1.2)", -2), ("=MOD(-3,2)", 1), ("=WORKDAY(45351,10)", 45365), ("=NETWORKDAYS(45351,45365)", 11) };
+            for (var i = 0; i < dates.Length; i++)
+            {
+                GridSurface.Select(new(i, 8)); FormulaBar.Focus(); FormulaBar.Text = dates[i].Formula; await ApplyFormulaBarAsync();
+                Check(_document.Snapshot.Sheets[0].GetCell(i, 8)!.Value.NumberValue == dates[i].Value, "Formula-bar commit calculates " + dates[i].Formula);
+            }
+            await UndoAsync(false); Check(_document.Snapshot.Sheets[0].GetCell(16, 8) is null, "Date/math entry is one undo transaction");
+            await UndoAsync(true); Check(_document.Snapshot.Sheets[0].GetCell(16, 8)!.Value.NumberValue == 11, "Date/math redo recalculates its result");
+            var datePath = Path.Combine(folder, "date-math-entry.xlsx"); storage.Save(datePath, _document.Snapshot); var dateReopened = storage.Open(datePath);
+            Check(dates.Select((c, i) => dateReopened.Sheets[0].GetCell(i, 8)!.Value.NumberValue == c.Value &&
+                dateReopened.Sheets[0].GetCell(i, 8)!.Content.FormulaText == c.Formula).All(x => x), "All seventeen date/math functions retain formulas and caches in ordinary XLSX save/reopen");
+            GridSurface.Select(new(0, 8)); await Idle(); CaptureGridEvidence(Path.Combine(folder, "date-math-entry.png"));
             File.WriteAllLines(Path.Combine(folder, "formula-entry-result.txt"), new[] { $"PASS: {checks.Count} checks" }.Concat(checks));
         }
         finally { _suppressAutoCalculation = false; EndReferenceGesture(); CloseFormulaHelp(); }
