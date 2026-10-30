@@ -1,0 +1,2529 @@
+{
+  "Provenance": {
+    "Version": "16.0",
+    "Language": 2052,
+    "Build": 20527.0,
+    "ProcessId": 3368,
+    "Started": "2026-10-31T03:51:16.6515951+08:00"
+  },
+  "SourceSha256": "88C19EAFC819B57BB261106D3FCDBC6BE0C40C22DDEA3E73A57D86FE4CC688C6",
+  "OutputSha256": "C23E00088CD4C47A3C443F1AF98E336C74CBC5E862F9A866964138F89F9DA4F4",
+  "Date1904": true,
+  "Stable": true,
+  "Parts": {
+    "[Content_Types].xml": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\"><Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/><Default Extension=\"xml\" ContentType=\"application/xml\"/><Override PartName=\"/xl/workbook.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml\"/><Override PartName=\"/xl/worksheets/sheet1.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml\"/><Override PartName=\"/xl/worksheets/sheet2.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml\"/><Override PartName=\"/xl/worksheets/sheet3.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml\"/><Override PartName=\"/xl/worksheets/sheet4.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml\"/><Override PartName=\"/xl/worksheets/sheet5.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml\"/><Override PartName=\"/xl/worksheets/sheet6.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml\"/><Override PartName=\"/xl/worksheets/sheet7.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml\"/><Override PartName=\"/xl/worksheets/sheet8.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml\"/><Override PartName=\"/xl/worksheets/sheet9.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml\"/><Override PartName=\"/xl/theme/theme1.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.theme+xml\"/><Override PartName=\"/xl/styles.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml\"/><Override PartName=\"/xl/sharedStrings.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml\"/><Override PartName=\"/xl/calcChain.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.calcChain+xml\"/><Override PartName=\"/docProps/core.xml\" ContentType=\"application/vnd.openxmlformats-package.core-properties+xml\"/><Override PartName=\"/docProps/app.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.extended-properties+xml\"/></Types>",
+    "_rels/.rels": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId3\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties\" Target=\"docProps/app.xml\"/><Relationship Id=\"rId2\" Type=\"http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties\" Target=\"docProps/core.xml\"/><Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument\" Target=\"xl/workbook.xml\"/></Relationships>",
+    "xl/workbook.xml": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<workbook xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" mc:Ignorable=\"x15 xr xr6 xr10 xr2\" xmlns:x15=\"http://schemas.microsoft.com/office/spreadsheetml/2010/11/main\" xmlns:xr=\"http://schemas.microsoft.com/office/spreadsheetml/2014/revision\" xmlns:xr6=\"http://schemas.microsoft.com/office/spreadsheetml/2016/revision6\" xmlns:xr10=\"http://schemas.microsoft.com/office/spreadsheetml/2016/revision10\" xmlns:xr2=\"http://schemas.microsoft.com/office/spreadsheetml/2015/revision2\"><fileVersion appName=\"xl\" lastEdited=\"7\" lowestEdited=\"7\" rupBuild=\"30527\"/><workbookPr date1904=\"1\" defaultThemeVersion=\"202300\"/><mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\"><mc:Choice Requires=\"x15\"><x15ac:absPath url=\"D:\\Projects\\QuickExcel\\artifacts\\compatibility\\xc0306-excel-1904-01\\\" xmlns:x15ac=\"http://schemas.microsoft.com/office/spreadsheetml/2010/11/ac\"/></mc:Choice></mc:AlternateContent><xr:revisionPtr revIDLastSave=\"0\" documentId=\"8_{16D616D2-375E-4895-B9FA-2B734A1C40D7}\" xr6:coauthVersionLast=\"47\" xr6:coauthVersionMax=\"47\" xr10:uidLastSave=\"{00000000-0000-0000-0000-000000000000}\"/><bookViews><workbookView xWindow=\"-108\" yWindow=\"-108\" windowWidth=\"30936\" windowHeight=\"18696\" activeTab=\"8\" xr2:uid=\"{D549D8E3-3FBB-4AE3-84E5-3EC026C1B466}\"/></bookViews><sheets><sheet name=\"Duplicates\" sheetId=\"1\" r:id=\"rId1\"/><sheet name=\"MultipleKeys\" sheetId=\"2\" r:id=\"rId2\"/><sheet name=\"FormulaKeys\" sheetId=\"3\" r:id=\"rId3\"/><sheet name=\"DelimitedText\" sheetId=\"4\" r:id=\"rId4\"/><sheet name=\"Collapsed\" sheetId=\"5\" r:id=\"rId5\"/><sheet name=\"NumbersAndDates\" sheetId=\"6\" r:id=\"rId6\"/><sheet name=\"NumericChoice\" sheetId=\"7\" r:id=\"rId7\"/><sheet name=\"DateDMY\" sheetId=\"8\" r:id=\"rId8\"/><sheet name=\"FixedText\" sheetId=\"9\" r:id=\"rId9\"/></sheets><calcPr calcId=\"191029\"/><extLst><ext uri=\"{140A7094-0E35-4892-8432-C4D2E57EDEB5}\" xmlns:x15=\"http://schemas.microsoft.com/office/spreadsheetml/2010/11/main\"><x15:workbookPr chartTrackingRefBase=\"1\"/></ext><ext uri=\"{B58B0392-4F1F-4190-BB64-5DF3571DCE5F}\" xmlns:xcalcf=\"http://schemas.microsoft.com/office/spreadsheetml/2018/calcfeatures\"><xcalcf:calcFeatures><xcalcf:feature name=\"microsoft.com:RD\"/><xcalcf:feature name=\"microsoft.com:Single\"/><xcalcf:feature name=\"microsoft.com:FV\"/><xcalcf:feature name=\"microsoft.com:CNMTM\"/><xcalcf:feature name=\"microsoft.com:LET_WF\"/><xcalcf:feature name=\"microsoft.com:LAMBDA_WF\"/><xcalcf:feature name=\"microsoft.com:ARRAYTEXT_WF\"/></xcalcf:calcFeatures></ext><ext uri=\"{D14903EA-33C4-47F7-8F05-3474C54BE107}\" xmlns:xlwcv=\"http://schemas.microsoft.com/office/spreadsheetml/2024/workbookCompatibilityVersion\"><xlwcv:version setVersion=\"2\"/></ext></extLst></workbook>",
+    "xl/_rels/workbook.xml.rels": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId8\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet\" Target=\"worksheets/sheet8.xml\"/><Relationship Id=\"rId13\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/calcChain\" Target=\"calcChain.xml\"/><Relationship Id=\"rId3\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet\" Target=\"worksheets/sheet3.xml\"/><Relationship Id=\"rId7\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet\" Target=\"worksheets/sheet7.xml\"/><Relationship Id=\"rId12\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings\" Target=\"sharedStrings.xml\"/><Relationship Id=\"rId2\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet\" Target=\"worksheets/sheet2.xml\"/><Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet\" Target=\"worksheets/sheet1.xml\"/><Relationship Id=\"rId6\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet\" Target=\"worksheets/sheet6.xml\"/><Relationship Id=\"rId11\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles\" Target=\"styles.xml\"/><Relationship Id=\"rId5\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet\" Target=\"worksheets/sheet5.xml\"/><Relationship Id=\"rId10\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme\" Target=\"theme/theme1.xml\"/><Relationship Id=\"rId4\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet\" Target=\"worksheets/sheet4.xml\"/><Relationship Id=\"rId9\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet\" Target=\"worksheets/sheet9.xml\"/></Relationships>",
+    "xl/worksheets/sheet1.xml": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" mc:Ignorable=\"x14ac xr xr2 xr3\" xmlns:x14ac=\"http://schemas.microsoft.com/office/spreadsheetml/2009/9/ac\" xmlns:xr=\"http://schemas.microsoft.com/office/spreadsheetml/2014/revision\" xmlns:xr2=\"http://schemas.microsoft.com/office/spreadsheetml/2015/revision2\" xmlns:xr3=\"http://schemas.microsoft.com/office/spreadsheetml/2016/revision3\" xr:uid=\"{E4FE274E-C914-4CF1-8A81-9C39B47DD9E2}\"><dimension ref=\"A1:F28\"/><sheetViews><sheetView workbookViewId=\"0\"/></sheetViews><sheetFormatPr defaultColWidth=\"24.77734375\" defaultRowHeight=\"13.8\" x14ac:dyDescent=\"0.25\"/><sheetData><row r=\"1\" spans=\"1:6\" x14ac:dyDescent=\"0.25\"><c r=\"A1\" s=\"1\" t=\"s\"><v>0</v></c><c r=\"B1\" s=\"1\" t=\"s\"><v>1</v></c><c r=\"C1\" s=\"1\" t=\"s\"><v>2</v></c><c r=\"D1\" s=\"1\" t=\"s\"><v>3</v></c><c r=\"F1\"><f>A4</f><v>1</v></c></row><row r=\"2\" spans=\"1:6\" x14ac:dyDescent=\"0.25\"><c r=\"A2\" s=\"1\" t=\"s\"><v>4</v></c><c r=\"B2\" s=\"1\" t=\"s\"><v>5</v></c><c r=\"C2\" s=\"1\" t=\"str\"><f>A2</f><v>red</v></c><c r=\"D2\" s=\"1\" t=\"s\"><v>6</v></c><c r=\"F2\" s=\"2\"><f>A8</f><v>1</v></c></row><row r=\"3\" spans=\"1:6\" x14ac:dyDescent=\"0.25\"><c r=\"A3\" s=\"1\" t=\"s\"><v>7</v></c><c r=\"B3\" s=\"1\" t=\"s\"><v>8</v></c><c r=\"C3\" s=\"1\" t=\"str\"><f>A3</f><v>RED</v></c><c r=\"D3\" s=\"1\" t=\"s\"><v>9</v></c><c r=\"F3\" s=\"1\" t=\"str\"><f>A25</f><v>3e0</v></c></row><row r=\"4\" spans=\"1:6\" x14ac:dyDescent=\"0.25\"><c r=\"A4\"><v>1</v></c><c r=\"B4\" s=\"1\" t=\"s\"><v>10</v></c><c r=\"C4\"><f>A4</f><v>1</v></c><c r=\"D4\" s=\"1\" t=\"s\"><v>11</v></c><c r=\"F4\" s=\"1\"><f>SUM(A2:A25)</f><v>9.01</v></c></row><row r=\"5\" spans=\"1:6\" x14ac:dyDescent=\"0.25\"><c r=\"A5\" s=\"1\" t=\"s\"><v>12</v></c><c r=\"B5\" s=\"1\" t=\"s\"><v>13</v></c><c r=\"C5\" s=\"1\" t=\"str\"><f>A5</f><v>1</v></c><c r=\"D5\" s=\"1\" t=\"s\"><v>14</v></c></row><row r=\"6\" spans=\"1:6\" x14ac:dyDescent=\"0.25\"><c r=\"A6\" s=\"1\" t=\"s\"><v>15</v></c><c r=\"B6\" s=\"1\" t=\"s\"><v>16</v></c><c r=\"C6\" s=\"1\" t=\"str\"><f>A6</f><v>001</v></c><c r=\"D6\" s=\"1\" t=\"s\"><v>17</v></c></row><row r=\"7\" spans=\"1:6\" x14ac:dyDescent=\"0.25\"><c r=\"A7\" s=\"1\" t=\"s\"><v>18</v></c><c r=\"B7\" s=\"1\" t=\"s\"><v>19</v></c><c r=\"C7\" s=\"1\" t=\"str\"><f>A7</f><v>01</v></c><c r=\"D7\" s=\"1\" t=\"s\"><v>20</v></c></row><row r=\"8\" spans=\"1:6\" x14ac:dyDescent=\"0.25\"><c r=\"A8\" s=\"2\"><v>1</v></c><c r=\"B8\" s=\"1\" t=\"s\"><v>21</v></c><c r=\"C8\"><f>A8</f><v>1</v></c><c r=\"D8\" s=\"1\" t=\"s\"><v>22</v></c></row><row r=\"9\" spans=\"1:6\" x14ac:dyDescent=\"0.25\"><c r=\"A9\" s=\"3\"><v>1</v></c><c r=\"B9\" s=\"1\" t=\"s\"><v>23</v></c><c r=\"C9\"><f>A9</f><v>1</v></c><c r=\"D9\" s=\"1\" t=\"s\"><v>24</v></c></row><row r=\"10\" spans=\"1:6\" x14ac:dyDescent=\"0.25\"><c r=\"B10\" s=\"1\" t=\"s\"><v>25</v></c><c r=\"C10\"><f>A10</f><v>0</v></c><c r=\"D10\" s=\"1\" t=\"s\"><v>26</v></c></row><row r=\"11\" spans=\"1:6\" x14ac:dyDescent=\"0.25\"><c r=\"A11\" s=\"1\" t=\"s\"><v>27</v></c><c r=\"B11\" s=\"1\" t=\"s\"><v>28</v></c><c r=\"C11\" s=\"1\" t=\"str\"><f>A11</f><v/></c><c r=\"D11\" s=\"1\" t=\"s\"><v>29</v></c></row><row r=\"12\" spans=\"1:6\" x14ac:dyDescent=\"0.25\"><c r=\"A12\" t=\"b\"><v>1</v></c><c r=\"B12\" s=\"1\" t=\"s\"><v>30</v></c><c r=\"C12\" t=\"b\"><f>A12</f><v>1</v></c><c r=\"D12\" s=\"1\" t=\"s\"><v>31</v></c></row><row r=\"13\" spans=\"1:6\" x14ac:dyDescent=\"0.25\"><c r=\"A13\" s=\"1\" t=\"s\"><v>32</v></c><c r=\"B13\" s=\"1\" t=\"s\"><v>33</v></c><c r=\"C13\" s=\"1\" t=\"str\"><f>A13</f><v>TRUE</v></c><c r=\"D13\" s=\"1\" t=\"s\"><v>34</v></c></row><row r=\"14\" spans=\"1:6\" x14ac:dyDescent=\"0.25\"><c r=\"A14\" s=\"1\" t=\"s\"><v>35</v></c><c r=\"B14\" s=\"1\" t=\"s\"><v>36</v></c><c r=\"C14\" s=\"1\" t=\"str\"><f>A14</f><v>*</v></c><c r=\"D14\" s=\"1\" t=\"s\"><v>37</v></c></row><row r=\"15\" spans=\"1:6\" x14ac:dyDescent=\"0.25\"><c r=\"A15\" s=\"1\" t=\"s\"><v>35</v></c><c r=\"B15\" s=\"1\" t=\"s\"><v>38</v></c><c r=\"C15\" s=\"1\" t=\"str\"><f>A15</f><v>*</v></c><c r=\"D15\" s=\"1\" t=\"s\"><v>39</v></c></row><row r=\"16\" spans=\"1:6\" x14ac:dyDescent=\"0.25\"><c r=\"A16\" s=\"1\" t=\"s\"><v>40</v></c><c r=\"B16\" s=\"1\" t=\"s\"><v>41</v></c><c r=\"C16\" s=\"1\" t=\"str\"><f>A16</f><v>?</v></c><c r=\"D16\" s=\"1\" t=\"s\"><v>42</v></c></row><row r=\"17\" spans=\"1:4\" x14ac:dyDescent=\"0.25\"><c r=\"A17\" s=\"1\" t=\"s\"><v>40</v></c><c r=\"B17\" s=\"1\" t=\"s\"><v>43</v></c><c r=\"C17\" s=\"1\" t=\"str\"><f>A17</f><v>?</v></c><c r=\"D17\" s=\"1\" t=\"s\"><v>44</v></c></row><row r=\"18\" spans=\"1:4\" x14ac:dyDescent=\"0.25\"><c r=\"A18\"><v>0</v></c><c r=\"B18\" s=\"1\" t=\"s\"><v>45</v></c><c r=\"C18\"><f>A18</f><v>0</v></c><c r=\"D18\" s=\"1\" t=\"s\"><v>46</v></c></row><row r=\"19\" spans=\"1:4\" x14ac:dyDescent=\"0.25\"><c r=\"A19\" s=\"1\" t=\"s\"><v>47</v></c><c r=\"B19\" s=\"1\" t=\"s\"><v>48</v></c><c r=\"C19\" s=\"1\" t=\"str\"><f>A19</f><v>0</v></c><c r=\"D19\" s=\"1\" t=\"s\"><v>49</v></c></row><row r=\"20\" spans=\"1:4\" x14ac:dyDescent=\"0.25\"><c r=\"A20\"><v>0.01</v></c><c r=\"B20\" s=\"1\" t=\"s\"><v>50</v></c><c r=\"C20\"><f>A20</f><v>0.01</v></c><c r=\"D20\" s=\"1\" t=\"s\"><v>51</v></c></row><row r=\"21\" spans=\"1:4\" x14ac:dyDescent=\"0.25\"><c r=\"A21\" s=\"1\" t=\"s\"><v>52</v></c><c r=\"B21\" s=\"1\" t=\"s\"><v>53</v></c><c r=\"C21\" s=\"1\" t=\"str\"><f>A21</f><v>1%</v></c><c r=\"D21\" s=\"1\" t=\"s\"><v>54</v></c></row><row r=\"22\" spans=\"1:4\" x14ac:dyDescent=\"0.25\"><c r=\"A22\"><v>3</v></c><c r=\"B22\" s=\"1\" t=\"s\"><v>55</v></c><c r=\"C22\"><f>A22</f><v>3</v></c><c r=\"D22\" s=\"1\" t=\"s\"><v>56</v></c></row><row r=\"23\" spans=\"1:4\" x14ac:dyDescent=\"0.25\"><c r=\"A23\" s=\"1\" t=\"s\"><v>57</v></c><c r=\"B23\" s=\"1\" t=\"s\"><v>58</v></c><c r=\"C23\" s=\"1\" t=\"str\"><f>A23</f><v>3.0</v></c><c r=\"D23\" s=\"1\" t=\"s\"><v>59</v></c></row><row r=\"24\" spans=\"1:4\" x14ac:dyDescent=\"0.25\"><c r=\"A24\"><v>3</v></c><c r=\"B24\" s=\"1\" t=\"s\"><v>60</v></c><c r=\"C24\"><f>A24</f><v>3</v></c><c r=\"D24\" s=\"1\" t=\"s\"><v>61</v></c></row><row r=\"25\" spans=\"1:4\" x14ac:dyDescent=\"0.25\"><c r=\"A25\" s=\"1\" t=\"s\"><v>62</v></c><c r=\"B25\" s=\"1\" t=\"s\"><v>63</v></c><c r=\"C25\" s=\"1\" t=\"str\"><f>A25</f><v>3e0</v></c><c r=\"D25\" s=\"1\" t=\"s\"><v>64</v></c></row><row r=\"26\" spans=\"1:4\" x14ac:dyDescent=\"0.25\"><c r=\"A26\" t=\"e\"><f>1/0</f><v>#DIV/0!</v></c><c r=\"B26\" s=\"1\" t=\"s\"><v>65</v></c></row><row r=\"27\" spans=\"1:4\" x14ac:dyDescent=\"0.25\"><c r=\"A27\" t=\"e\"><f>1/0</f><v>#DIV/0!</v></c><c r=\"B27\" s=\"1\" t=\"s\"><v>66</v></c></row><row r=\"28\" spans=\"1:4\" x14ac:dyDescent=\"0.25\"><c r=\"A28\" s=\"1\" t=\"s\"><v>67</v></c><c r=\"B28\" s=\"1\" t=\"s\"><v>68</v></c></row></sheetData><phoneticPr fontId=\"1\" type=\"noConversion\"/><pageMargins left=\"0.7\" right=\"0.7\" top=\"0.75\" bottom=\"0.75\" header=\"0.3\" footer=\"0.3\"/></worksheet>",
+    "xl/worksheets/sheet2.xml": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" mc:Ignorable=\"x14ac xr xr2 xr3\" xmlns:x14ac=\"http://schemas.microsoft.com/office/spreadsheetml/2009/9/ac\" xmlns:xr=\"http://schemas.microsoft.com/office/spreadsheetml/2014/revision\" xmlns:xr2=\"http://schemas.microsoft.com/office/spreadsheetml/2015/revision2\" xmlns:xr3=\"http://schemas.microsoft.com/office/spreadsheetml/2016/revision3\" xr:uid=\"{F6D6C523-DD24-45C6-8443-365743B3DB78}\"><dimension ref=\"A1:C10\"/><sheetViews><sheetView workbookViewId=\"0\"/></sheetViews><sheetFormatPr defaultColWidth=\"24.77734375\" defaultRowHeight=\"13.8\" x14ac:dyDescent=\"0.25\"/><sheetData><row r=\"1\" spans=\"1:3\" x14ac:dyDescent=\"0.25\"><c r=\"A1\" s=\"1\" t=\"s\"><v>69</v></c><c r=\"B1\" s=\"1\" t=\"s\"><v>70</v></c><c r=\"C1\" s=\"1\" t=\"s\"><v>71</v></c></row><row r=\"2\" spans=\"1:3\" x14ac:dyDescent=\"0.25\"><c r=\"A2\" s=\"1\" t=\"s\"><v>72</v></c><c r=\"B2\"><v>1</v></c><c r=\"C2\"><v>1</v></c></row><row r=\"3\" spans=\"1:3\" x14ac:dyDescent=\"0.25\"><c r=\"A3\" s=\"1\" t=\"s\"><v>73</v></c><c r=\"B3\"><v>1</v></c><c r=\"C3\"><v>2</v></c></row><row r=\"4\" spans=\"1:3\" x14ac:dyDescent=\"0.25\"><c r=\"A4\" s=\"1\" t=\"s\"><v>72</v></c><c r=\"B4\"><v>2</v></c><c r=\"C4\"><v>3</v></c></row><row r=\"5\" spans=\"1:3\" x14ac:dyDescent=\"0.25\"><c r=\"A5\" s=\"1\" t=\"s\"><v>74</v></c><c r=\"B5\"><v>2</v></c><c r=\"C5\"><v>4</v></c></row><row r=\"6\" spans=\"1:3\" x14ac:dyDescent=\"0.25\"><c r=\"A6\" s=\"1\" t=\"s\"><v>75</v></c><c r=\"B6\" s=\"1\" t=\"s\"><v>76</v></c><c r=\"C6\"><v>5</v></c></row><row r=\"7\" spans=\"1:3\" x14ac:dyDescent=\"0.25\"><c r=\"A7\" s=\"1\" t=\"s\"><v>74</v></c><c r=\"B7\" s=\"1\" t=\"s\"><v>77</v></c><c r=\"C7\"><v>6</v></c></row><row r=\"8\" spans=\"1:3\" x14ac:dyDescent=\"0.25\"><c r=\"A8\" s=\"1\" t=\"s\"><v>78</v></c><c r=\"C8\"><v>7</v></c></row><row r=\"9\" spans=\"1:3\" x14ac:dyDescent=\"0.25\"><c r=\"A9\" s=\"1\" t=\"s\"><v>78</v></c><c r=\"B9\" s=\"1\" t=\"s\"><v>27</v></c><c r=\"C9\"><v>8</v></c></row><row r=\"10\" spans=\"1:3\" x14ac:dyDescent=\"0.25\"><c r=\"A10\" s=\"1\" t=\"s\"><v>78</v></c><c r=\"C10\"><v>9</v></c></row></sheetData><phoneticPr fontId=\"1\" type=\"noConversion\"/><pageMargins left=\"0.7\" right=\"0.7\" top=\"0.75\" bottom=\"0.75\" header=\"0.3\" footer=\"0.3\"/></worksheet>",
+    "xl/worksheets/sheet3.xml": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" mc:Ignorable=\"x14ac xr xr2 xr3\" xmlns:x14ac=\"http://schemas.microsoft.com/office/spreadsheetml/2009/9/ac\" xmlns:xr=\"http://schemas.microsoft.com/office/spreadsheetml/2014/revision\" xmlns:xr2=\"http://schemas.microsoft.com/office/spreadsheetml/2015/revision2\" xmlns:xr3=\"http://schemas.microsoft.com/office/spreadsheetml/2016/revision3\" xr:uid=\"{C807EF21-B4AC-4C5D-83B3-8BB017F645E0}\"><dimension ref=\"A1:E6\"/><sheetViews><sheetView workbookViewId=\"0\"/></sheetViews><sheetFormatPr defaultColWidth=\"24.77734375\" defaultRowHeight=\"13.8\" x14ac:dyDescent=\"0.25\"/><sheetData><row r=\"1\" spans=\"1:5\" x14ac:dyDescent=\"0.25\"><c r=\"A1\"><f>1+0</f><v>1</v></c><c r=\"B1\"><f>A1*10</f><v>10</v></c><c r=\"C1\"><v>1</v></c><c r=\"E1\"><f>A4</f><v>2</v></c></row><row r=\"2\" spans=\"1:5\" x14ac:dyDescent=\"0.25\"><c r=\"A2\"><f>1+0</f><v>1</v></c><c r=\"B2\"><f>A2*10</f><v>10</v></c><c r=\"C2\"><v>2</v></c><c r=\"E2\"><f>B6</f><v>20</v></c></row><row r=\"3\" spans=\"1:5\" x14ac:dyDescent=\"0.25\"><c r=\"A3\"><f>1+0</f><v>1</v></c><c r=\"B3\"><f>A3*10</f><v>10</v></c><c r=\"C3\"><v>3</v></c></row><row r=\"4\" spans=\"1:5\" x14ac:dyDescent=\"0.25\"><c r=\"A4\"><f>2+0</f><v>2</v></c><c r=\"B4\"><f>A4*10</f><v>20</v></c><c r=\"C4\"><v>4</v></c></row><row r=\"5\" spans=\"1:5\" x14ac:dyDescent=\"0.25\"><c r=\"A5\"><f>2+0</f><v>2</v></c><c r=\"B5\"><f>A5*10</f><v>20</v></c><c r=\"C5\"><v>5</v></c></row><row r=\"6\" spans=\"1:5\" x14ac:dyDescent=\"0.25\"><c r=\"A6\"><f>2+0</f><v>2</v></c><c r=\"B6\"><f>A6*10</f><v>20</v></c><c r=\"C6\"><v>6</v></c></row></sheetData><phoneticPr fontId=\"1\" type=\"noConversion\"/><pageMargins left=\"0.7\" right=\"0.7\" top=\"0.75\" bottom=\"0.75\" header=\"0.3\" footer=\"0.3\"/></worksheet>",
+    "xl/worksheets/sheet4.xml": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" mc:Ignorable=\"x14ac xr xr2 xr3\" xmlns:x14ac=\"http://schemas.microsoft.com/office/spreadsheetml/2009/9/ac\" xmlns:xr=\"http://schemas.microsoft.com/office/spreadsheetml/2014/revision\" xmlns:xr2=\"http://schemas.microsoft.com/office/spreadsheetml/2015/revision2\" xmlns:xr3=\"http://schemas.microsoft.com/office/spreadsheetml/2016/revision3\" xr:uid=\"{DF2E0B09-2767-4A80-9851-394456C74534}\"><dimension ref=\"A1:A12\"/><sheetViews><sheetView workbookViewId=\"0\"/></sheetViews><sheetFormatPr defaultColWidth=\"24.77734375\" defaultRowHeight=\"13.8\" x14ac:dyDescent=\"0.25\"/><sheetData><row r=\"1\" spans=\"1:1\" x14ac:dyDescent=\"0.25\"><c r=\"A1\" s=\"1\" t=\"s\"><v>79</v></c></row><row r=\"2\" spans=\"1:1\" x14ac:dyDescent=\"0.25\"><c r=\"A2\" s=\"1\" t=\"s\"><v>80</v></c></row><row r=\"3\" spans=\"1:1\" x14ac:dyDescent=\"0.25\"><c r=\"A3\" s=\"1\" t=\"s\"><v>81</v></c></row><row r=\"4\" spans=\"1:1\" x14ac:dyDescent=\"0.25\"><c r=\"A4\" s=\"1\" t=\"s\"><v>82</v></c></row><row r=\"5\" spans=\"1:1\" x14ac:dyDescent=\"0.25\"><c r=\"A5\" s=\"1\" t=\"s\"><v>83</v></c></row><row r=\"6\" spans=\"1:1\" x14ac:dyDescent=\"0.25\"><c r=\"A6\" s=\"1\" t=\"s\"><v>84</v></c></row><row r=\"7\" spans=\"1:1\" x14ac:dyDescent=\"0.25\"><c r=\"A7\" s=\"4\" t=\"s\"><v>85</v></c></row><row r=\"8\" spans=\"1:1\" x14ac:dyDescent=\"0.25\"><c r=\"A8\" s=\"1\" t=\"s\"><v>86</v></c></row><row r=\"9\" spans=\"1:1\" x14ac:dyDescent=\"0.25\"><c r=\"A9\" s=\"1\" t=\"s\"><v>27</v></c></row><row r=\"11\" spans=\"1:1\" x14ac:dyDescent=\"0.25\"><c r=\"A11\" s=\"1\" t=\"s\"><v>87</v></c></row><row r=\"12\" spans=\"1:1\" x14ac:dyDescent=\"0.25\"><c r=\"A12\" s=\"1\" t=\"s\"><v>88</v></c></row></sheetData><phoneticPr fontId=\"1\" type=\"noConversion\"/><pageMargins left=\"0.7\" right=\"0.7\" top=\"0.75\" bottom=\"0.75\" header=\"0.3\" footer=\"0.3\"/></worksheet>",
+    "xl/worksheets/sheet5.xml": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" mc:Ignorable=\"x14ac xr xr2 xr3\" xmlns:x14ac=\"http://schemas.microsoft.com/office/spreadsheetml/2009/9/ac\" xmlns:xr=\"http://schemas.microsoft.com/office/spreadsheetml/2014/revision\" xmlns:xr2=\"http://schemas.microsoft.com/office/spreadsheetml/2015/revision2\" xmlns:xr3=\"http://schemas.microsoft.com/office/spreadsheetml/2016/revision3\" xr:uid=\"{DEAE7150-1BFD-45BB-B467-18BCD8884B13}\"><dimension ref=\"A1:A6\"/><sheetViews><sheetView workbookViewId=\"0\"/></sheetViews><sheetFormatPr defaultColWidth=\"24.77734375\" defaultRowHeight=\"13.8\" x14ac:dyDescent=\"0.25\"/><sheetData><row r=\"1\" spans=\"1:1\" x14ac:dyDescent=\"0.25\"><c r=\"A1\" s=\"1\" t=\"s\"><v>79</v></c></row><row r=\"2\" spans=\"1:1\" x14ac:dyDescent=\"0.25\"><c r=\"A2\" s=\"1\" t=\"s\"><v>89</v></c></row><row r=\"3\" spans=\"1:1\" x14ac:dyDescent=\"0.25\"><c r=\"A3\" s=\"1\" t=\"s\"><v>90</v></c></row><row r=\"4\" spans=\"1:1\" x14ac:dyDescent=\"0.25\"><c r=\"A4\" s=\"1\" t=\"s\"><v>82</v></c></row><row r=\"5\" spans=\"1:1\" x14ac:dyDescent=\"0.25\"><c r=\"A5\" s=\"1\" t=\"s\"><v>91</v></c></row><row r=\"6\" spans=\"1:1\" x14ac:dyDescent=\"0.25\"><c r=\"A6\" s=\"1\" t=\"s\"><v>92</v></c></row></sheetData><phoneticPr fontId=\"1\" type=\"noConversion\"/><pageMargins left=\"0.7\" right=\"0.7\" top=\"0.75\" bottom=\"0.75\" header=\"0.3\" footer=\"0.3\"/></worksheet>",
+    "xl/worksheets/sheet6.xml": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" mc:Ignorable=\"x14ac xr xr2 xr3\" xmlns:x14ac=\"http://schemas.microsoft.com/office/spreadsheetml/2009/9/ac\" xmlns:xr=\"http://schemas.microsoft.com/office/spreadsheetml/2014/revision\" xmlns:xr2=\"http://schemas.microsoft.com/office/spreadsheetml/2015/revision2\" xmlns:xr3=\"http://schemas.microsoft.com/office/spreadsheetml/2016/revision3\" xr:uid=\"{F3A3BF44-B7FA-49A5-B238-80FAF7781E52}\"><dimension ref=\"A1:A6\"/><sheetViews><sheetView workbookViewId=\"0\"/></sheetViews><sheetFormatPr defaultColWidth=\"24.77734375\" defaultRowHeight=\"13.8\" x14ac:dyDescent=\"0.25\"/><sheetData><row r=\"1\" spans=\"1:1\" x14ac:dyDescent=\"0.25\"><c r=\"A1\" s=\"1\" t=\"s\"><v>79</v></c></row><row r=\"2\" spans=\"1:1\" x14ac:dyDescent=\"0.25\"><c r=\"A2\" s=\"1\" t=\"s\"><v>93</v></c></row><row r=\"3\" spans=\"1:1\" x14ac:dyDescent=\"0.25\"><c r=\"A3\" s=\"1\" t=\"s\"><v>94</v></c></row><row r=\"4\" spans=\"1:1\" x14ac:dyDescent=\"0.25\"><c r=\"A4\" s=\"1\" t=\"s\"><v>95</v></c></row><row r=\"5\" spans=\"1:1\" x14ac:dyDescent=\"0.25\"><c r=\"A5\" s=\"1\" t=\"s\"><v>96</v></c></row><row r=\"6\" spans=\"1:1\" x14ac:dyDescent=\"0.25\"><c r=\"A6\" s=\"1\" t=\"s\"><v>97</v></c></row></sheetData><phoneticPr fontId=\"1\" type=\"noConversion\"/><pageMargins left=\"0.7\" right=\"0.7\" top=\"0.75\" bottom=\"0.75\" header=\"0.3\" footer=\"0.3\"/></worksheet>",
+    "xl/worksheets/sheet7.xml": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" mc:Ignorable=\"x14ac xr xr2 xr3\" xmlns:x14ac=\"http://schemas.microsoft.com/office/spreadsheetml/2009/9/ac\" xmlns:xr=\"http://schemas.microsoft.com/office/spreadsheetml/2014/revision\" xmlns:xr2=\"http://schemas.microsoft.com/office/spreadsheetml/2015/revision2\" xmlns:xr3=\"http://schemas.microsoft.com/office/spreadsheetml/2016/revision3\" xr:uid=\"{749274EA-DF4F-4A52-802A-A135CE5A87F3}\"><dimension ref=\"A1:A15\"/><sheetViews><sheetView workbookViewId=\"0\"/></sheetViews><sheetFormatPr defaultColWidth=\"24.77734375\" defaultRowHeight=\"13.8\" x14ac:dyDescent=\"0.25\"/><sheetData><row r=\"1\" spans=\"1:1\" x14ac:dyDescent=\"0.25\"><c r=\"A1\" s=\"1\" t=\"s\"><v>79</v></c></row><row r=\"2\" spans=\"1:1\" x14ac:dyDescent=\"0.25\"><c r=\"A2\" s=\"1\" t=\"s\"><v>15</v></c></row><row r=\"3\" spans=\"1:1\" x14ac:dyDescent=\"0.25\"><c r=\"A3\" s=\"1\" t=\"s\"><v>98</v></c></row><row r=\"4\" spans=\"1:1\" x14ac:dyDescent=\"0.25\"><c r=\"A4\" s=\"1\" t=\"s\"><v>99</v></c></row><row r=\"5\" spans=\"1:1\" x14ac:dyDescent=\"0.25\"><c r=\"A5\" s=\"1\" t=\"s\"><v>100</v></c></row><row r=\"6\" spans=\"1:1\" x14ac:dyDescent=\"0.25\"><c r=\"A6\" s=\"1\" t=\"s\"><v>101</v></c></row><row r=\"7\" spans=\"1:1\" x14ac:dyDescent=\"0.25\"><c r=\"A7\" s=\"1\" t=\"s\"><v>102</v></c></row><row r=\"8\" spans=\"1:1\" x14ac:dyDescent=\"0.25\"><c r=\"A8\" s=\"1\" t=\"s\"><v>103</v></c></row><row r=\"9\" spans=\"1:1\" x14ac:dyDescent=\"0.25\"><c r=\"A9\" s=\"1\" t=\"s\"><v>104</v></c></row><row r=\"10\" spans=\"1:1\" x14ac:dyDescent=\"0.25\"><c r=\"A10\" s=\"1\" t=\"s\"><v>105</v></c></row><row r=\"11\" spans=\"1:1\" x14ac:dyDescent=\"0.25\"><c r=\"A11\" s=\"1\" t=\"s\"><v>106</v></c></row><row r=\"12\" spans=\"1:1\" x14ac:dyDescent=\"0.25\"><c r=\"A12\" s=\"1\" t=\"s\"><v>107</v></c></row><row r=\"13\" spans=\"1:1\" x14ac:dyDescent=\"0.25\"><c r=\"A13\" s=\"1\" t=\"s\"><v>108</v></c></row><row r=\"14\" spans=\"1:1\" x14ac:dyDescent=\"0.25\"><c r=\"A14\" s=\"1\" t=\"s\"><v>32</v></c></row><row r=\"15\" spans=\"1:1\" x14ac:dyDescent=\"0.25\"><c r=\"A15\" s=\"1\" t=\"s\"><v>109</v></c></row></sheetData><phoneticPr fontId=\"1\" type=\"noConversion\"/><pageMargins left=\"0.7\" right=\"0.7\" top=\"0.75\" bottom=\"0.75\" header=\"0.3\" footer=\"0.3\"/></worksheet>",
+    "xl/worksheets/sheet8.xml": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" mc:Ignorable=\"x14ac xr xr2 xr3\" xmlns:x14ac=\"http://schemas.microsoft.com/office/spreadsheetml/2009/9/ac\" xmlns:xr=\"http://schemas.microsoft.com/office/spreadsheetml/2014/revision\" xmlns:xr2=\"http://schemas.microsoft.com/office/spreadsheetml/2015/revision2\" xmlns:xr3=\"http://schemas.microsoft.com/office/spreadsheetml/2016/revision3\" xr:uid=\"{14428468-3868-43C5-BFC8-3F3AA70D51D7}\"><dimension ref=\"A1:A5\"/><sheetViews><sheetView workbookViewId=\"0\"/></sheetViews><sheetFormatPr defaultColWidth=\"24.77734375\" defaultRowHeight=\"13.8\" x14ac:dyDescent=\"0.25\"/><sheetData><row r=\"1\" spans=\"1:1\" x14ac:dyDescent=\"0.25\"><c r=\"A1\" s=\"1\" t=\"s\"><v>79</v></c></row><row r=\"2\" spans=\"1:1\" x14ac:dyDescent=\"0.25\"><c r=\"A2\" s=\"1\" t=\"s\"><v>110</v></c></row><row r=\"3\" spans=\"1:1\" x14ac:dyDescent=\"0.25\"><c r=\"A3\" s=\"1\" t=\"s\"><v>111</v></c></row><row r=\"4\" spans=\"1:1\" x14ac:dyDescent=\"0.25\"><c r=\"A4\" s=\"1\" t=\"s\"><v>112</v></c></row><row r=\"5\" spans=\"1:1\" x14ac:dyDescent=\"0.25\"><c r=\"A5\" s=\"1\" t=\"s\"><v>113</v></c></row></sheetData><phoneticPr fontId=\"1\" type=\"noConversion\"/><pageMargins left=\"0.7\" right=\"0.7\" top=\"0.75\" bottom=\"0.75\" header=\"0.3\" footer=\"0.3\"/></worksheet>",
+    "xl/worksheets/sheet9.xml": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" mc:Ignorable=\"x14ac xr xr2 xr3\" xmlns:x14ac=\"http://schemas.microsoft.com/office/spreadsheetml/2009/9/ac\" xmlns:xr=\"http://schemas.microsoft.com/office/spreadsheetml/2014/revision\" xmlns:xr2=\"http://schemas.microsoft.com/office/spreadsheetml/2015/revision2\" xmlns:xr3=\"http://schemas.microsoft.com/office/spreadsheetml/2016/revision3\" xr:uid=\"{059ABBED-10DF-4DDB-80DD-3250AC413B49}\"><dimension ref=\"A1:A7\"/><sheetViews><sheetView tabSelected=\"1\" workbookViewId=\"0\"/></sheetViews><sheetFormatPr defaultColWidth=\"24.77734375\" defaultRowHeight=\"13.8\" x14ac:dyDescent=\"0.25\"/><sheetData><row r=\"1\" spans=\"1:1\" x14ac:dyDescent=\"0.25\"><c r=\"A1\" s=\"1\" t=\"s\"><v>79</v></c></row><row r=\"2\" spans=\"1:1\" x14ac:dyDescent=\"0.25\"><c r=\"A2\" s=\"1\" t=\"s\"><v>114</v></c></row><row r=\"3\" spans=\"1:1\" x14ac:dyDescent=\"0.25\"><c r=\"A3\" s=\"1\" t=\"s\"><v>115</v></c></row><row r=\"4\" spans=\"1:1\" x14ac:dyDescent=\"0.25\"><c r=\"A4\" s=\"1\" t=\"s\"><v>116</v></c></row><row r=\"5\" spans=\"1:1\" x14ac:dyDescent=\"0.25\"><c r=\"A5\" s=\"1\" t=\"s\"><v>117</v></c></row><row r=\"6\" spans=\"1:1\" x14ac:dyDescent=\"0.25\"><c r=\"A6\" s=\"1\" t=\"s\"><v>118</v></c></row><row r=\"7\" spans=\"1:1\" x14ac:dyDescent=\"0.25\"><c r=\"A7\" s=\"1\" t=\"s\"><v>119</v></c></row></sheetData><phoneticPr fontId=\"1\" type=\"noConversion\"/><pageMargins left=\"0.7\" right=\"0.7\" top=\"0.75\" bottom=\"0.75\" header=\"0.3\" footer=\"0.3\"/></worksheet>",
+    "xl/theme/theme1.xml": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<a:theme xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" name=\"Office 主题​​\"><a:themeElements><a:clrScheme name=\"Office\"><a:dk1><a:sysClr val=\"windowText\" lastClr=\"000000\"/></a:dk1><a:lt1><a:sysClr val=\"window\" lastClr=\"FFFFFF\"/></a:lt1><a:dk2><a:srgbClr val=\"0E2841\"/></a:dk2><a:lt2><a:srgbClr val=\"E8E8E8\"/></a:lt2><a:accent1><a:srgbClr val=\"156082\"/></a:accent1><a:accent2><a:srgbClr val=\"E97132\"/></a:accent2><a:accent3><a:srgbClr val=\"196B24\"/></a:accent3><a:accent4><a:srgbClr val=\"0F9ED5\"/></a:accent4><a:accent5><a:srgbClr val=\"A02B93\"/></a:accent5><a:accent6><a:srgbClr val=\"4EA72E\"/></a:accent6><a:hlink><a:srgbClr val=\"467886\"/></a:hlink><a:folHlink><a:srgbClr val=\"96607D\"/></a:folHlink></a:clrScheme><a:fontScheme name=\"Office\"><a:majorFont><a:latin typeface=\"Aptos Display\" panose=\"02110004020202020204\"/><a:ea typeface=\"\"/><a:cs typeface=\"\"/><a:font script=\"Jpan\" typeface=\"游ゴシック Light\"/><a:font script=\"Hang\" typeface=\"맑은 고딕\"/><a:font script=\"Hans\" typeface=\"等线 Light\"/><a:font script=\"Hant\" typeface=\"新細明體\"/><a:font script=\"Arab\" typeface=\"Times New Roman\"/><a:font script=\"Hebr\" typeface=\"Times New Roman\"/><a:font script=\"Thai\" typeface=\"Tahoma\"/><a:font script=\"Ethi\" typeface=\"Nyala\"/><a:font script=\"Beng\" typeface=\"Vrinda\"/><a:font script=\"Gujr\" typeface=\"Shruti\"/><a:font script=\"Khmr\" typeface=\"MoolBoran\"/><a:font script=\"Knda\" typeface=\"Tunga\"/><a:font script=\"Guru\" typeface=\"Raavi\"/><a:font script=\"Cans\" typeface=\"Euphemia\"/><a:font script=\"Cher\" typeface=\"Plantagenet Cherokee\"/><a:font script=\"Yiii\" typeface=\"Microsoft Yi Baiti\"/><a:font script=\"Tibt\" typeface=\"Microsoft Himalaya\"/><a:font script=\"Thaa\" typeface=\"MV Boli\"/><a:font script=\"Deva\" typeface=\"Mangal\"/><a:font script=\"Telu\" typeface=\"Gautami\"/><a:font script=\"Taml\" typeface=\"Latha\"/><a:font script=\"Syrc\" typeface=\"Estrangelo Edessa\"/><a:font script=\"Orya\" typeface=\"Kalinga\"/><a:font script=\"Mlym\" typeface=\"Kartika\"/><a:font script=\"Laoo\" typeface=\"DokChampa\"/><a:font script=\"Sinh\" typeface=\"Iskoola Pota\"/><a:font script=\"Mong\" typeface=\"Mongolian Baiti\"/><a:font script=\"Viet\" typeface=\"Times New Roman\"/><a:font script=\"Uigh\" typeface=\"Microsoft Uighur\"/><a:font script=\"Geor\" typeface=\"Sylfaen\"/><a:font script=\"Armn\" typeface=\"Arial\"/><a:font script=\"Bugi\" typeface=\"Leelawadee UI\"/><a:font script=\"Bopo\" typeface=\"Microsoft JhengHei\"/><a:font script=\"Java\" typeface=\"Javanese Text\"/><a:font script=\"Lisu\" typeface=\"Segoe UI\"/><a:font script=\"Mymr\" typeface=\"Myanmar Text\"/><a:font script=\"Nkoo\" typeface=\"Ebrima\"/><a:font script=\"Olck\" typeface=\"Nirmala UI\"/><a:font script=\"Osma\" typeface=\"Ebrima\"/><a:font script=\"Phag\" typeface=\"Phagspa\"/><a:font script=\"Syrn\" typeface=\"Estrangelo Edessa\"/><a:font script=\"Syrj\" typeface=\"Estrangelo Edessa\"/><a:font script=\"Syre\" typeface=\"Estrangelo Edessa\"/><a:font script=\"Sora\" typeface=\"Nirmala UI\"/><a:font script=\"Tale\" typeface=\"Microsoft Tai Le\"/><a:font script=\"Talu\" typeface=\"Microsoft New Tai Lue\"/><a:font script=\"Tfng\" typeface=\"Ebrima\"/></a:majorFont><a:minorFont><a:latin typeface=\"Aptos Narrow\" panose=\"02110004020202020204\"/><a:ea typeface=\"\"/><a:cs typeface=\"\"/><a:font script=\"Jpan\" typeface=\"游ゴシック\"/><a:font script=\"Hang\" typeface=\"맑은 고딕\"/><a:font script=\"Hans\" typeface=\"等线\"/><a:font script=\"Hant\" typeface=\"新細明體\"/><a:font script=\"Arab\" typeface=\"Arial\"/><a:font script=\"Hebr\" typeface=\"Arial\"/><a:font script=\"Thai\" typeface=\"Tahoma\"/><a:font script=\"Ethi\" typeface=\"Nyala\"/><a:font script=\"Beng\" typeface=\"Vrinda\"/><a:font script=\"Gujr\" typeface=\"Shruti\"/><a:font script=\"Khmr\" typeface=\"DaunPenh\"/><a:font script=\"Knda\" typeface=\"Tunga\"/><a:font script=\"Guru\" typeface=\"Raavi\"/><a:font script=\"Cans\" typeface=\"Euphemia\"/><a:font script=\"Cher\" typeface=\"Plantagenet Cherokee\"/><a:font script=\"Yiii\" typeface=\"Microsoft Yi Baiti\"/><a:font script=\"Tibt\" typeface=\"Microsoft Himalaya\"/><a:font script=\"Thaa\" typeface=\"MV Boli\"/><a:font script=\"Deva\" typeface=\"Mangal\"/><a:font script=\"Telu\" typeface=\"Gautami\"/><a:font script=\"Taml\" typeface=\"Latha\"/><a:font script=\"Syrc\" typeface=\"Estrangelo Edessa\"/><a:font script=\"Orya\" typeface=\"Kalinga\"/><a:font script=\"Mlym\" typeface=\"Kartika\"/><a:font script=\"Laoo\" typeface=\"DokChampa\"/><a:font script=\"Sinh\" typeface=\"Iskoola Pota\"/><a:font script=\"Mong\" typeface=\"Mongolian Baiti\"/><a:font script=\"Viet\" typeface=\"Arial\"/><a:font script=\"Uigh\" typeface=\"Microsoft Uighur\"/><a:font script=\"Geor\" typeface=\"Sylfaen\"/><a:font script=\"Armn\" typeface=\"Arial\"/><a:font script=\"Bugi\" typeface=\"Leelawadee UI\"/><a:font script=\"Bopo\" typeface=\"Microsoft JhengHei\"/><a:font script=\"Java\" typeface=\"Javanese Text\"/><a:font script=\"Lisu\" typeface=\"Segoe UI\"/><a:font script=\"Mymr\" typeface=\"Myanmar Text\"/><a:font script=\"Nkoo\" typeface=\"Ebrima\"/><a:font script=\"Olck\" typeface=\"Nirmala UI\"/><a:font script=\"Osma\" typeface=\"Ebrima\"/><a:font script=\"Phag\" typeface=\"Phagspa\"/><a:font script=\"Syrn\" typeface=\"Estrangelo Edessa\"/><a:font script=\"Syrj\" typeface=\"Estrangelo Edessa\"/><a:font script=\"Syre\" typeface=\"Estrangelo Edessa\"/><a:font script=\"Sora\" typeface=\"Nirmala UI\"/><a:font script=\"Tale\" typeface=\"Microsoft Tai Le\"/><a:font script=\"Talu\" typeface=\"Microsoft New Tai Lue\"/><a:font script=\"Tfng\" typeface=\"Ebrima\"/></a:minorFont></a:fontScheme><a:fmtScheme name=\"Office\"><a:fillStyleLst><a:solidFill><a:schemeClr val=\"phClr\"/></a:solidFill><a:gradFill rotWithShape=\"1\"><a:gsLst><a:gs pos=\"0\"><a:schemeClr val=\"phClr\"><a:lumMod val=\"110000\"/><a:satMod val=\"105000\"/><a:tint val=\"67000\"/></a:schemeClr></a:gs><a:gs pos=\"50000\"><a:schemeClr val=\"phClr\"><a:lumMod val=\"105000\"/><a:satMod val=\"103000\"/><a:tint val=\"73000\"/></a:schemeClr></a:gs><a:gs pos=\"100000\"><a:schemeClr val=\"phClr\"><a:lumMod val=\"105000\"/><a:satMod val=\"109000\"/><a:tint val=\"81000\"/></a:schemeClr></a:gs></a:gsLst><a:lin ang=\"5400000\" scaled=\"0\"/></a:gradFill><a:gradFill rotWithShape=\"1\"><a:gsLst><a:gs pos=\"0\"><a:schemeClr val=\"phClr\"><a:satMod val=\"103000\"/><a:lumMod val=\"102000\"/><a:tint val=\"94000\"/></a:schemeClr></a:gs><a:gs pos=\"50000\"><a:schemeClr val=\"phClr\"><a:satMod val=\"110000\"/><a:lumMod val=\"100000\"/><a:shade val=\"100000\"/></a:schemeClr></a:gs><a:gs pos=\"100000\"><a:schemeClr val=\"phClr\"><a:lumMod val=\"99000\"/><a:satMod val=\"120000\"/><a:shade val=\"78000\"/></a:schemeClr></a:gs></a:gsLst><a:lin ang=\"5400000\" scaled=\"0\"/></a:gradFill></a:fillStyleLst><a:lnStyleLst><a:ln w=\"12700\" cap=\"flat\" cmpd=\"sng\" algn=\"ctr\"><a:solidFill><a:schemeClr val=\"phClr\"/></a:solidFill><a:prstDash val=\"solid\"/><a:miter lim=\"800000\"/></a:ln><a:ln w=\"19050\" cap=\"flat\" cmpd=\"sng\" algn=\"ctr\"><a:solidFill><a:schemeClr val=\"phClr\"/></a:solidFill><a:prstDash val=\"solid\"/><a:miter lim=\"800000\"/></a:ln><a:ln w=\"25400\" cap=\"flat\" cmpd=\"sng\" algn=\"ctr\"><a:solidFill><a:schemeClr val=\"phClr\"/></a:solidFill><a:prstDash val=\"solid\"/><a:miter lim=\"800000\"/></a:ln></a:lnStyleLst><a:effectStyleLst><a:effectStyle><a:effectLst/></a:effectStyle><a:effectStyle><a:effectLst/></a:effectStyle><a:effectStyle><a:effectLst><a:outerShdw blurRad=\"57150\" dist=\"19050\" dir=\"5400000\" algn=\"ctr\" rotWithShape=\"0\"><a:srgbClr val=\"000000\"><a:alpha val=\"63000\"/></a:srgbClr></a:outerShdw></a:effectLst></a:effectStyle></a:effectStyleLst><a:bgFillStyleLst><a:solidFill><a:schemeClr val=\"phClr\"/></a:solidFill><a:solidFill><a:schemeClr val=\"phClr\"><a:tint val=\"95000\"/><a:satMod val=\"170000\"/></a:schemeClr></a:solidFill><a:gradFill rotWithShape=\"1\"><a:gsLst><a:gs pos=\"0\"><a:schemeClr val=\"phClr\"><a:tint val=\"93000\"/><a:satMod val=\"150000\"/><a:shade val=\"98000\"/><a:lumMod val=\"102000\"/></a:schemeClr></a:gs><a:gs pos=\"50000\"><a:schemeClr val=\"phClr\"><a:tint val=\"98000\"/><a:satMod val=\"130000\"/><a:shade val=\"90000\"/><a:lumMod val=\"103000\"/></a:schemeClr></a:gs><a:gs pos=\"100000\"><a:schemeClr val=\"phClr\"><a:shade val=\"63000\"/><a:satMod val=\"120000\"/></a:schemeClr></a:gs></a:gsLst><a:lin ang=\"5400000\" scaled=\"0\"/></a:gradFill></a:bgFillStyleLst></a:fmtScheme></a:themeElements><a:objectDefaults><a:lnDef><a:spPr/><a:bodyPr/><a:lstStyle/><a:style><a:lnRef idx=\"2\"><a:schemeClr val=\"accent1\"/></a:lnRef><a:fillRef idx=\"0\"><a:schemeClr val=\"accent1\"/></a:fillRef><a:effectRef idx=\"1\"><a:schemeClr val=\"accent1\"/></a:effectRef><a:fontRef idx=\"minor\"><a:schemeClr val=\"tx1\"/></a:fontRef></a:style></a:lnDef></a:objectDefaults><a:extraClrSchemeLst/><a:extLst><a:ext uri=\"{05A4C25C-085E-4340-85A3-A5531E510DB2}\"><thm15:themeFamily xmlns:thm15=\"http://schemas.microsoft.com/office/thememl/2012/main\" name=\"Office Theme\" id=\"{2E142A2C-CD16-42D6-873A-C26D2A0506FA}\" vid=\"{1BDDFF52-6CD6-40A5-AB3C-68EB2F1E4D0A}\"/></a:ext></a:extLst></a:theme>",
+    "xl/styles.xml": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<styleSheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" mc:Ignorable=\"x14ac x16r2 xr\" xmlns:x14ac=\"http://schemas.microsoft.com/office/spreadsheetml/2009/9/ac\" xmlns:x16r2=\"http://schemas.microsoft.com/office/spreadsheetml/2015/02/main\" xmlns:xr=\"http://schemas.microsoft.com/office/spreadsheetml/2014/revision\"><numFmts count=\"1\"><numFmt numFmtId=\"176\" formatCode=\"000\"/></numFmts><fonts count=\"2\" x14ac:knownFonts=\"1\"><font><sz val=\"11\"/><color theme=\"1\"/><name val=\"等线\"/><family val=\"2\"/><charset val=\"134\"/><scheme val=\"minor\"/></font><font><sz val=\"9\"/><name val=\"等线\"/><family val=\"2\"/><charset val=\"134\"/><scheme val=\"minor\"/></font></fonts><fills count=\"2\"><fill><patternFill patternType=\"none\"/></fill><fill><patternFill patternType=\"gray125\"/></fill></fills><borders count=\"1\"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count=\"1\"><xf numFmtId=\"0\" fontId=\"0\" fillId=\"0\" borderId=\"0\"><alignment vertical=\"center\"/></xf></cellStyleXfs><cellXfs count=\"5\"><xf numFmtId=\"0\" fontId=\"0\" fillId=\"0\" borderId=\"0\" xfId=\"0\"><alignment vertical=\"center\"/></xf><xf numFmtId=\"49\" fontId=\"0\" fillId=\"0\" borderId=\"0\" xfId=\"0\" applyNumberFormat=\"1\"><alignment vertical=\"center\"/></xf><xf numFmtId=\"176\" fontId=\"0\" fillId=\"0\" borderId=\"0\" xfId=\"0\" applyNumberFormat=\"1\"><alignment vertical=\"center\"/></xf><xf numFmtId=\"2\" fontId=\"0\" fillId=\"0\" borderId=\"0\" xfId=\"0\" applyNumberFormat=\"1\"><alignment vertical=\"center\"/></xf><xf numFmtId=\"49\" fontId=\"0\" fillId=\"0\" borderId=\"0\" xfId=\"0\" quotePrefix=\"1\" applyNumberFormat=\"1\"><alignment vertical=\"center\"/></xf></cellXfs><cellStyles count=\"1\"><cellStyle name=\"常规\" xfId=\"0\" builtinId=\"0\"/></cellStyles><dxfs count=\"0\"/><tableStyles count=\"0\" defaultTableStyle=\"TableStyleMedium2\" defaultPivotStyle=\"PivotStyleLight16\"/><extLst><ext uri=\"{EB79DEF2-80B8-43e5-95BD-54CBDDF9020C}\" xmlns:x14=\"http://schemas.microsoft.com/office/spreadsheetml/2009/9/main\"><x14:slicerStyles defaultSlicerStyle=\"SlicerStyleLight1\"/></ext><ext uri=\"{9260A510-F301-46a8-8635-F512D64BE5F5}\" xmlns:x15=\"http://schemas.microsoft.com/office/spreadsheetml/2010/11/main\"><x15:timelineStyles defaultTimelineStyle=\"TimeSlicerStyleLight1\"/></ext></extLst></styleSheet>",
+    "xl/sharedStrings.xml": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<sst xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" count=\"136\" uniqueCount=\"120\"><si><t>column1</t></si><si><t>column2</t></si><si><t>column3</t></si><si><t>column4</t></si><si><t>red</t></si><si><t>record2</t></si><si><t>outside2</t></si><si><t>RED</t></si><si><t>record3</t></si><si><t>outside3</t></si><si><t>record4</t></si><si><t>outside4</t></si><si><t>1</t></si><si><t>record5</t></si><si><t>outside5</t></si><si><t>001</t></si><si><t>record6</t></si><si><t>outside6</t></si><si><t>01</t></si><si><t>record7</t></si><si><t>outside7</t></si><si><t>record8</t></si><si><t>outside8</t></si><si><t>record9</t></si><si><t>outside9</t></si><si><t>record10</t></si><si><t>outside10</t></si><si><t/></si><si><t>record11</t></si><si><t>outside11</t></si><si><t>record12</t></si><si><t>outside12</t></si><si><t>TRUE</t></si><si><t>record13</t></si><si><t>outside13</t></si><si><t>*</t></si><si><t>record14</t></si><si><t>outside14</t></si><si><t>record15</t></si><si><t>outside15</t></si><si><t>?</t></si><si><t>record16</t></si><si><t>outside16</t></si><si><t>record17</t></si><si><t>outside17</t></si><si><t>record18</t></si><si><t>outside18</t></si><si><t>0</t></si><si><t>record19</t></si><si><t>outside19</t></si><si><t>record20</t></si><si><t>outside20</t></si><si><t>1%</t></si><si><t>record21</t></si><si><t>outside21</t></si><si><t>record22</t></si><si><t>outside22</t></si><si><t>3.0</t></si><si><t>record23</t></si><si><t>outside23</t></si><si><t>record24</t></si><si><t>outside24</t></si><si><t>3e0</t></si><si><t>record25</t></si><si><t>outside25</t></si><si><t>error-number</t></si><si><t>error-duplicate</t></si><si><t>#DIV/0!</t></si><si><t>error-text</t></si><si><t>Name</t></si><si><t>Group</t></si><si><t>Record</t></si><si><t>a</t></si><si><t>A</t></si><si><t>b</t></si><si><t>B</t></si><si><t>2</t></si><si><t>02</t></si><si><t>c</t></si><si><t>Source</t></si><si><t>001,2.50,2026-10-31</t></si><si><t>\"A,B\",007,\"2026-10-01\"</t></si><si><t>a,,c</t></si><si><t>,b,</t></si><si><t>\"say \"\"Hi\"\"\",02,x</t></si><si><t>001,003,b</t></si><si><t>a,b</t></si><si><t>=1+1,004,z</t></si><si><t>中,😀,0</t></si><si><t>a,,,b,</t></si><si><t xml:space=\"preserve\"> a , b </t></si><si><t>\"a,b\",c</t></si><si><t>a,\"b\"\"c\",d</t></si><si><t>001;1,234.50;2026-10-31</t></si><si><t>002;-12.5;2026-01-02</t></si><si><t>010;12-;1904-02-28</t></si><si><t>020;50%;2026-02-28</t></si><si><t>030;1e3;2026-12-31</t></si><si><t>123</t></si><si><t>1,234.50</t></si><si><t>-12.5</t></si><si><t>12-</t></si><si><t>1e3</t></si><si><t>0.5</t></si><si><t>50%</t></si><si><t>123456789012345</t></si><si><t>1234567890123456</t></si><si><t>2026-10-31</t></si><si><t>03/04/2026</t></si><si><t>1/2</t></si><si><t>31/10/2026</t></si><si><t>02/01/2026</t></si><si><t>29/02/1904</t></si><si><t>01/03/1904</t></si><si><t>001ABCD2026-10-31</t></si><si><t>002EFGH2026-01-02</t></si><si><t>abcdef</t></si><si><t>ab</t></si><si><t>中甲乙中文汉字尾</t></si><si><t>a😀bcdefg</t></si></sst>",
+    "xl/calcChain.xml": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<calcChain xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\"><c r=\"A6\" i=\"3\" l=\"1\"/><c r=\"B6\" i=\"3\" s=\"1\"/><c r=\"E2\" i=\"3\" s=\"1\"/><c r=\"A5\" i=\"3\"/><c r=\"B5\" i=\"3\" s=\"1\"/><c r=\"A4\" i=\"3\"/><c r=\"A3\" i=\"3\"/><c r=\"B3\" i=\"3\" s=\"1\"/><c r=\"A2\" i=\"3\"/><c r=\"B2\" i=\"3\" s=\"1\"/><c r=\"A1\" i=\"3\"/><c r=\"B1\" i=\"3\" s=\"1\"/><c r=\"A27\" i=\"1\"/><c r=\"A26\" i=\"1\"/><c r=\"F4\" i=\"1\"/><c r=\"F3\" i=\"1\"/><c r=\"F2\" i=\"1\"/><c r=\"F1\" i=\"1\"/><c r=\"C25\" i=\"1\"/><c r=\"C24\" i=\"1\"/><c r=\"C23\" i=\"1\"/><c r=\"C22\" i=\"1\"/><c r=\"C21\" i=\"1\"/><c r=\"C20\" i=\"1\"/><c r=\"C19\" i=\"1\"/><c r=\"C18\" i=\"1\"/><c r=\"C17\" i=\"1\"/><c r=\"C16\" i=\"1\"/><c r=\"C15\" i=\"1\"/><c r=\"C14\" i=\"1\"/><c r=\"C13\" i=\"1\"/><c r=\"C12\" i=\"1\"/><c r=\"C11\" i=\"1\"/><c r=\"C10\" i=\"1\"/><c r=\"C9\" i=\"1\"/><c r=\"C8\" i=\"1\"/><c r=\"C7\" i=\"1\"/><c r=\"C6\" i=\"1\"/><c r=\"C5\" i=\"1\"/><c r=\"C4\" i=\"1\"/><c r=\"C3\" i=\"1\"/><c r=\"C2\" i=\"1\"/><c r=\"B4\" i=\"3\" l=\"1\"/><c r=\"E1\" i=\"3\"/></calcChain>",
+    "docProps/core.xml": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<cp:coreProperties xmlns:cp=\"http://schemas.openxmlformats.org/package/2006/metadata/core-properties\" xmlns:dc=\"http://purl.org/dc/elements/1.1/\" xmlns:dcterms=\"http://purl.org/dc/terms/\" xmlns:dcmitype=\"http://purl.org/dc/dcmitype/\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"><dc:creator>Carlos Rain</dc:creator><cp:lastModifiedBy>Carlos Rain</cp:lastModifiedBy><dcterms:created xsi:type=\"dcterms:W3CDTF\">2026-10-30T19:51:17Z</dcterms:created><dcterms:modified xsi:type=\"dcterms:W3CDTF\">2026-10-30T19:51:23Z</dcterms:modified></cp:coreProperties>",
+    "docProps/app.xml": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<Properties xmlns=\"http://schemas.openxmlformats.org/officeDocument/2006/extended-properties\" xmlns:vt=\"http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes\"><Application>Microsoft Excel</Application><DocSecurity>0</DocSecurity><ScaleCrop>false</ScaleCrop><HeadingPairs><vt:vector size=\"2\" baseType=\"variant\"><vt:variant><vt:lpstr>工作表</vt:lpstr></vt:variant><vt:variant><vt:i4>9</vt:i4></vt:variant></vt:vector></HeadingPairs><TitlesOfParts><vt:vector size=\"9\" baseType=\"lpstr\"><vt:lpstr>Duplicates</vt:lpstr><vt:lpstr>MultipleKeys</vt:lpstr><vt:lpstr>FormulaKeys</vt:lpstr><vt:lpstr>DelimitedText</vt:lpstr><vt:lpstr>Collapsed</vt:lpstr><vt:lpstr>NumbersAndDates</vt:lpstr><vt:lpstr>NumericChoice</vt:lpstr><vt:lpstr>DateDMY</vt:lpstr><vt:lpstr>FixedText</vt:lpstr></vt:vector></TitlesOfParts><Company></Company><LinksUpToDate>false</LinksUpToDate><SharedDoc>false</SharedDoc><HyperlinksChanged>false</HyperlinksChanged><AppVersion>16.0300</AppVersion></Properties>"
+  },
+  "Cases": [
+    {
+      "Header": true,
+      "Range": "A1:C28",
+      "Keys": [
+        1
+      ],
+      "Sheet": "Duplicates",
+      "Operation": "Duplicates"
+    },
+    {
+      "Header": true,
+      "Range": "A1:C10",
+      "Keys": [
+        1,
+        2
+      ],
+      "Sheet": "MultipleKeys",
+      "Operation": "Duplicates"
+    },
+    {
+      "Header": false,
+      "Range": "A1:C6",
+      "Keys": [
+        1
+      ],
+      "Sheet": "FormulaKeys",
+      "Operation": "Duplicates"
+    },
+    {
+      "Sheet": "DelimitedText",
+      "Fixed": null,
+      "Range": "A2:A12",
+      "Operation": "Delimited",
+      "Formats": [
+        2,
+        2,
+        2
+      ],
+      "Delimiter": ",",
+      "ExplicitLongIntegerDisplay": false,
+      "Collapse": false,
+      "Destination": "C2"
+    },
+    {
+      "Sheet": "Collapsed",
+      "Fixed": null,
+      "Range": "A2:A6",
+      "Operation": "Delimited",
+      "Formats": [
+        2,
+        2,
+        2
+      ],
+      "Delimiter": ",",
+      "ExplicitLongIntegerDisplay": false,
+      "Collapse": true,
+      "Destination": "C2"
+    },
+    {
+      "Sheet": "NumbersAndDates",
+      "Fixed": null,
+      "Range": "A2:A6",
+      "Operation": "Delimited",
+      "Formats": [
+        2,
+        1,
+        5
+      ],
+      "Delimiter": ";",
+      "ExplicitLongIntegerDisplay": false,
+      "Collapse": false,
+      "Destination": "C2"
+    },
+    {
+      "Sheet": "NumericChoice",
+      "Fixed": null,
+      "Range": "A2:A15",
+      "Operation": "Delimited",
+      "Formats": [
+        1
+      ],
+      "Delimiter": ";",
+      "ExplicitLongIntegerDisplay": true,
+      "Collapse": false,
+      "Destination": "C2"
+    },
+    {
+      "Sheet": "DateDMY",
+      "Fixed": null,
+      "Range": "A2:A5",
+      "Operation": "Delimited",
+      "Formats": [
+        4
+      ],
+      "Delimiter": ";",
+      "ExplicitLongIntegerDisplay": false,
+      "Collapse": false,
+      "Destination": "C2"
+    },
+    {
+      "Sheet": "FixedText",
+      "Fixed": [
+        0,
+        3,
+        7
+      ],
+      "Range": "A2:A7",
+      "Operation": "Fixed",
+      "Formats": [
+        2,
+        2,
+        2
+      ],
+      "Delimiter": null,
+      "ExplicitLongIntegerDisplay": false,
+      "Collapse": false,
+      "Destination": "C2"
+    }
+  ],
+  "After": [
+    {
+      "Sheet": "Duplicates",
+      "Cells": [
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "A1",
+          "Value": "column1",
+          "Formula": null,
+          "Text": "column1"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "B1",
+          "Value": "column2",
+          "Formula": null,
+          "Text": "column2"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "C1",
+          "Value": "column3",
+          "Formula": null,
+          "Text": "column3"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "D1",
+          "Value": "column4",
+          "Formula": null,
+          "Text": "column4"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "G/通用格式",
+          "Address": "F1",
+          "Value": "1",
+          "Formula": "=A4",
+          "Text": "1"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "A2",
+          "Value": "red",
+          "Formula": null,
+          "Text": "red"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "B2",
+          "Value": "record2",
+          "Formula": null,
+          "Text": "record2"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "C2",
+          "Value": "red",
+          "Formula": "=A2",
+          "Text": "red"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "D2",
+          "Value": "outside2",
+          "Formula": null,
+          "Text": "outside2"
+        },
+        {
+          "Kind": "Number",
+          "NumberFormat": "000",
+          "Address": "F2",
+          "Value": 1.0,
+          "Formula": "=A8",
+          "Text": "001"
+        },
+        {
+          "Kind": "Number",
+          "NumberFormat": "G/通用格式",
+          "Address": "A3",
+          "Value": 1.0,
+          "Formula": null,
+          "Text": "1"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "B3",
+          "Value": "record4",
+          "Formula": null,
+          "Text": "record4"
+        },
+        {
+          "Kind": "Number",
+          "NumberFormat": "G/通用格式",
+          "Address": "C3",
+          "Value": 1.0,
+          "Formula": "=A3",
+          "Text": "1"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "D3",
+          "Value": "outside3",
+          "Formula": null,
+          "Text": "outside3"
+        },
+        {
+          "Kind": "Number",
+          "NumberFormat": "@",
+          "Address": "F3",
+          "Value": 0.0,
+          "Formula": "=A25",
+          "Text": "0"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "A4",
+          "Value": "1",
+          "Formula": null,
+          "Text": "1"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "B4",
+          "Value": "record5",
+          "Formula": null,
+          "Text": "record5"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "C4",
+          "Value": "1",
+          "Formula": "=A4",
+          "Text": "1"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "D4",
+          "Value": "outside4",
+          "Formula": null,
+          "Text": "outside4"
+        },
+        {
+          "Kind": "Error",
+          "NumberFormat": "@",
+          "Address": "F4",
+          "Value": "#DIV/0!",
+          "Formula": "=SUM(A2:A25)",
+          "Text": "#DIV/0!"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "A5",
+          "Value": "001",
+          "Formula": null,
+          "Text": "001"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "B5",
+          "Value": "record6",
+          "Formula": null,
+          "Text": "record6"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "C5",
+          "Value": "001",
+          "Formula": "=A5",
+          "Text": "001"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "D5",
+          "Value": "outside5",
+          "Formula": null,
+          "Text": "outside5"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "A6",
+          "Value": "01",
+          "Formula": null,
+          "Text": "01"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "B6",
+          "Value": "record7",
+          "Formula": null,
+          "Text": "record7"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "C6",
+          "Value": "01",
+          "Formula": "=A6",
+          "Text": "01"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "D6",
+          "Value": "outside6",
+          "Formula": null,
+          "Text": "outside6"
+        },
+        {
+          "Kind": "Number",
+          "NumberFormat": "000",
+          "Address": "A7",
+          "Value": 1.0,
+          "Formula": null,
+          "Text": "001"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "B7",
+          "Value": "record8",
+          "Formula": null,
+          "Text": "record8"
+        },
+        {
+          "Kind": "Number",
+          "NumberFormat": "G/通用格式",
+          "Address": "C7",
+          "Value": 1.0,
+          "Formula": "=A7",
+          "Text": "1"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "D7",
+          "Value": "outside7",
+          "Formula": null,
+          "Text": "outside7"
+        },
+        {
+          "Kind": "Number",
+          "NumberFormat": "0.00",
+          "Address": "A8",
+          "Value": 1.0,
+          "Formula": null,
+          "Text": "1.00"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "B8",
+          "Value": "record9",
+          "Formula": null,
+          "Text": "record9"
+        },
+        {
+          "Kind": "Number",
+          "NumberFormat": "G/通用格式",
+          "Address": "C8",
+          "Value": 1.0,
+          "Formula": "=A8",
+          "Text": "1"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "D8",
+          "Value": "outside8",
+          "Formula": null,
+          "Text": "outside8"
+        },
+        {
+          "Kind": "Blank",
+          "NumberFormat": "G/通用格式",
+          "Address": "A9",
+          "Value": null,
+          "Formula": null,
+          "Text": ""
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "B9",
+          "Value": "record10",
+          "Formula": null,
+          "Text": "record10"
+        },
+        {
+          "Kind": "Number",
+          "NumberFormat": "G/通用格式",
+          "Address": "C9",
+          "Value": 0.0,
+          "Formula": "=A9",
+          "Text": "0"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "D9",
+          "Value": "outside9",
+          "Formula": null,
+          "Text": "outside9"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "A10",
+          "Value": "",
+          "Formula": null,
+          "Text": ""
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "B10",
+          "Value": "record11",
+          "Formula": null,
+          "Text": "record11"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "C10",
+          "Value": "",
+          "Formula": "=A10",
+          "Text": ""
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "D10",
+          "Value": "outside10",
+          "Formula": null,
+          "Text": "outside10"
+        },
+        {
+          "Kind": "Boolean",
+          "NumberFormat": "G/通用格式",
+          "Address": "A11",
+          "Value": true,
+          "Formula": null,
+          "Text": "TRUE"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "B11",
+          "Value": "record12",
+          "Formula": null,
+          "Text": "record12"
+        },
+        {
+          "Kind": "Boolean",
+          "NumberFormat": "G/通用格式",
+          "Address": "C11",
+          "Value": true,
+          "Formula": "=A11",
+          "Text": "TRUE"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "D11",
+          "Value": "outside11",
+          "Formula": null,
+          "Text": "outside11"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "A12",
+          "Value": "*",
+          "Formula": null,
+          "Text": "*"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "B12",
+          "Value": "record14",
+          "Formula": null,
+          "Text": "record14"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "C12",
+          "Value": "*",
+          "Formula": "=A12",
+          "Text": "*"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "D12",
+          "Value": "outside12",
+          "Formula": null,
+          "Text": "outside12"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "A13",
+          "Value": "?",
+          "Formula": null,
+          "Text": "?"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "B13",
+          "Value": "record16",
+          "Formula": null,
+          "Text": "record16"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "C13",
+          "Value": "?",
+          "Formula": "=A13",
+          "Text": "?"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "D13",
+          "Value": "outside13",
+          "Formula": null,
+          "Text": "outside13"
+        },
+        {
+          "Kind": "Number",
+          "NumberFormat": "G/通用格式",
+          "Address": "A14",
+          "Value": 0.0,
+          "Formula": null,
+          "Text": "0"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "B14",
+          "Value": "record18",
+          "Formula": null,
+          "Text": "record18"
+        },
+        {
+          "Kind": "Number",
+          "NumberFormat": "G/通用格式",
+          "Address": "C14",
+          "Value": 0.0,
+          "Formula": "=A14",
+          "Text": "0"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "D14",
+          "Value": "outside14",
+          "Formula": null,
+          "Text": "outside14"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "A15",
+          "Value": "0",
+          "Formula": null,
+          "Text": "0"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "B15",
+          "Value": "record19",
+          "Formula": null,
+          "Text": "record19"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "C15",
+          "Value": "0",
+          "Formula": "=A15",
+          "Text": "0"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "D15",
+          "Value": "outside15",
+          "Formula": null,
+          "Text": "outside15"
+        },
+        {
+          "Kind": "Number",
+          "NumberFormat": "G/通用格式",
+          "Address": "A16",
+          "Value": 0.01,
+          "Formula": null,
+          "Text": "0.01"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "B16",
+          "Value": "record20",
+          "Formula": null,
+          "Text": "record20"
+        },
+        {
+          "Kind": "Number",
+          "NumberFormat": "G/通用格式",
+          "Address": "C16",
+          "Value": 0.01,
+          "Formula": "=A16",
+          "Text": "0.01"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "D16",
+          "Value": "outside16",
+          "Formula": null,
+          "Text": "outside16"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "A17",
+          "Value": "1%",
+          "Formula": null,
+          "Text": "1%"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "B17",
+          "Value": "record21",
+          "Formula": null,
+          "Text": "record21"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "C17",
+          "Value": "1%",
+          "Formula": "=A17",
+          "Text": "1%"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "D17",
+          "Value": "outside17",
+          "Formula": null,
+          "Text": "outside17"
+        },
+        {
+          "Kind": "Number",
+          "NumberFormat": "G/通用格式",
+          "Address": "A18",
+          "Value": 3.0,
+          "Formula": null,
+          "Text": "3"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "B18",
+          "Value": "record22",
+          "Formula": null,
+          "Text": "record22"
+        },
+        {
+          "Kind": "Number",
+          "NumberFormat": "G/通用格式",
+          "Address": "C18",
+          "Value": 3.0,
+          "Formula": "=A18",
+          "Text": "3"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "D18",
+          "Value": "outside18",
+          "Formula": null,
+          "Text": "outside18"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "A19",
+          "Value": "3.0",
+          "Formula": null,
+          "Text": "3.0"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "B19",
+          "Value": "record23",
+          "Formula": null,
+          "Text": "record23"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "C19",
+          "Value": "3.0",
+          "Formula": "=A19",
+          "Text": "3.0"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "D19",
+          "Value": "outside19",
+          "Formula": null,
+          "Text": "outside19"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "A20",
+          "Value": "3e0",
+          "Formula": null,
+          "Text": "3e0"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "B20",
+          "Value": "record25",
+          "Formula": null,
+          "Text": "record25"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "C20",
+          "Value": "3e0",
+          "Formula": "=A20",
+          "Text": "3e0"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "D20",
+          "Value": "outside20",
+          "Formula": null,
+          "Text": "outside20"
+        },
+        {
+          "Kind": "Error",
+          "NumberFormat": "G/通用格式",
+          "Address": "A21",
+          "Value": "#DIV/0!",
+          "Formula": "=1/0",
+          "Text": "#DIV/0!"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "B21",
+          "Value": "error-number",
+          "Formula": null,
+          "Text": "error-number"
+        },
+        {
+          "Kind": "Blank",
+          "NumberFormat": "G/通用格式",
+          "Address": "C21",
+          "Value": null,
+          "Formula": null,
+          "Text": ""
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "D21",
+          "Value": "outside21",
+          "Formula": null,
+          "Text": "outside21"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "A22",
+          "Value": "#DIV/0!",
+          "Formula": null,
+          "Text": "#DIV/0!"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "B22",
+          "Value": "error-text",
+          "Formula": null,
+          "Text": "error-text"
+        },
+        {
+          "Kind": "Blank",
+          "NumberFormat": "G/通用格式",
+          "Address": "C22",
+          "Value": null,
+          "Formula": null,
+          "Text": ""
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "D22",
+          "Value": "outside22",
+          "Formula": null,
+          "Text": "outside22"
+        },
+        {
+          "Kind": "Blank",
+          "NumberFormat": "G/通用格式",
+          "Address": "A23",
+          "Value": null,
+          "Formula": null,
+          "Text": ""
+        },
+        {
+          "Kind": "Blank",
+          "NumberFormat": "G/通用格式",
+          "Address": "B23",
+          "Value": null,
+          "Formula": null,
+          "Text": ""
+        },
+        {
+          "Kind": "Blank",
+          "NumberFormat": "G/通用格式",
+          "Address": "C23",
+          "Value": null,
+          "Formula": null,
+          "Text": ""
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "D23",
+          "Value": "outside23",
+          "Formula": null,
+          "Text": "outside23"
+        },
+        {
+          "Kind": "Blank",
+          "NumberFormat": "G/通用格式",
+          "Address": "A24",
+          "Value": null,
+          "Formula": null,
+          "Text": ""
+        },
+        {
+          "Kind": "Blank",
+          "NumberFormat": "G/通用格式",
+          "Address": "B24",
+          "Value": null,
+          "Formula": null,
+          "Text": ""
+        },
+        {
+          "Kind": "Blank",
+          "NumberFormat": "G/通用格式",
+          "Address": "C24",
+          "Value": null,
+          "Formula": null,
+          "Text": ""
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "D24",
+          "Value": "outside24",
+          "Formula": null,
+          "Text": "outside24"
+        },
+        {
+          "Kind": "Blank",
+          "NumberFormat": "G/通用格式",
+          "Address": "A25",
+          "Value": null,
+          "Formula": null,
+          "Text": ""
+        },
+        {
+          "Kind": "Blank",
+          "NumberFormat": "G/通用格式",
+          "Address": "B25",
+          "Value": null,
+          "Formula": null,
+          "Text": ""
+        },
+        {
+          "Kind": "Blank",
+          "NumberFormat": "G/通用格式",
+          "Address": "C25",
+          "Value": null,
+          "Formula": null,
+          "Text": ""
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "D25",
+          "Value": "outside25",
+          "Formula": null,
+          "Text": "outside25"
+        },
+        {
+          "Kind": "Blank",
+          "NumberFormat": "G/通用格式",
+          "Address": "A26",
+          "Value": null,
+          "Formula": null,
+          "Text": ""
+        },
+        {
+          "Kind": "Blank",
+          "NumberFormat": "G/通用格式",
+          "Address": "B26",
+          "Value": null,
+          "Formula": null,
+          "Text": ""
+        },
+        {
+          "Kind": "Blank",
+          "NumberFormat": "G/通用格式",
+          "Address": "A27",
+          "Value": null,
+          "Formula": null,
+          "Text": ""
+        },
+        {
+          "Kind": "Blank",
+          "NumberFormat": "G/通用格式",
+          "Address": "B27",
+          "Value": null,
+          "Formula": null,
+          "Text": ""
+        },
+        {
+          "Kind": "Blank",
+          "NumberFormat": "G/通用格式",
+          "Address": "A28",
+          "Value": null,
+          "Formula": null,
+          "Text": ""
+        },
+        {
+          "Kind": "Blank",
+          "NumberFormat": "G/通用格式",
+          "Address": "B28",
+          "Value": null,
+          "Formula": null,
+          "Text": ""
+        }
+      ]
+    },
+    {
+      "Sheet": "MultipleKeys",
+      "Cells": [
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "A1",
+          "Value": "Name",
+          "Formula": null,
+          "Text": "Name"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "B1",
+          "Value": "Group",
+          "Formula": null,
+          "Text": "Group"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "C1",
+          "Value": "Record",
+          "Formula": null,
+          "Text": "Record"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "A2",
+          "Value": "a",
+          "Formula": null,
+          "Text": "a"
+        },
+        {
+          "Kind": "Number",
+          "NumberFormat": "G/通用格式",
+          "Address": "B2",
+          "Value": 1.0,
+          "Formula": null,
+          "Text": "1"
+        },
+        {
+          "Kind": "Number",
+          "NumberFormat": "G/通用格式",
+          "Address": "C2",
+          "Value": 1.0,
+          "Formula": null,
+          "Text": "1"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "A3",
+          "Value": "a",
+          "Formula": null,
+          "Text": "a"
+        },
+        {
+          "Kind": "Number",
+          "NumberFormat": "G/通用格式",
+          "Address": "B3",
+          "Value": 2.0,
+          "Formula": null,
+          "Text": "2"
+        },
+        {
+          "Kind": "Number",
+          "NumberFormat": "G/通用格式",
+          "Address": "C3",
+          "Value": 3.0,
+          "Formula": null,
+          "Text": "3"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "A4",
+          "Value": "b",
+          "Formula": null,
+          "Text": "b"
+        },
+        {
+          "Kind": "Number",
+          "NumberFormat": "G/通用格式",
+          "Address": "B4",
+          "Value": 2.0,
+          "Formula": null,
+          "Text": "2"
+        },
+        {
+          "Kind": "Number",
+          "NumberFormat": "G/通用格式",
+          "Address": "C4",
+          "Value": 4.0,
+          "Formula": null,
+          "Text": "4"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "A5",
+          "Value": "B",
+          "Formula": null,
+          "Text": "B"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "B5",
+          "Value": "2",
+          "Formula": null,
+          "Text": "2"
+        },
+        {
+          "Kind": "Number",
+          "NumberFormat": "G/通用格式",
+          "Address": "C5",
+          "Value": 5.0,
+          "Formula": null,
+          "Text": "5"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "A6",
+          "Value": "b",
+          "Formula": null,
+          "Text": "b"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "B6",
+          "Value": "02",
+          "Formula": null,
+          "Text": "02"
+        },
+        {
+          "Kind": "Number",
+          "NumberFormat": "G/通用格式",
+          "Address": "C6",
+          "Value": 6.0,
+          "Formula": null,
+          "Text": "6"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "A7",
+          "Value": "c",
+          "Formula": null,
+          "Text": "c"
+        },
+        {
+          "Kind": "Blank",
+          "NumberFormat": "G/通用格式",
+          "Address": "B7",
+          "Value": null,
+          "Formula": null,
+          "Text": ""
+        },
+        {
+          "Kind": "Number",
+          "NumberFormat": "G/通用格式",
+          "Address": "C7",
+          "Value": 7.0,
+          "Formula": null,
+          "Text": "7"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "A8",
+          "Value": "c",
+          "Formula": null,
+          "Text": "c"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "B8",
+          "Value": "",
+          "Formula": null,
+          "Text": ""
+        },
+        {
+          "Kind": "Number",
+          "NumberFormat": "G/通用格式",
+          "Address": "C8",
+          "Value": 8.0,
+          "Formula": null,
+          "Text": "8"
+        },
+        {
+          "Kind": "Blank",
+          "NumberFormat": "G/通用格式",
+          "Address": "A9",
+          "Value": null,
+          "Formula": null,
+          "Text": ""
+        },
+        {
+          "Kind": "Blank",
+          "NumberFormat": "G/通用格式",
+          "Address": "B9",
+          "Value": null,
+          "Formula": null,
+          "Text": ""
+        },
+        {
+          "Kind": "Blank",
+          "NumberFormat": "G/通用格式",
+          "Address": "C9",
+          "Value": null,
+          "Formula": null,
+          "Text": ""
+        },
+        {
+          "Kind": "Blank",
+          "NumberFormat": "G/通用格式",
+          "Address": "A10",
+          "Value": null,
+          "Formula": null,
+          "Text": ""
+        },
+        {
+          "Kind": "Blank",
+          "NumberFormat": "G/通用格式",
+          "Address": "C10",
+          "Value": null,
+          "Formula": null,
+          "Text": ""
+        }
+      ]
+    },
+    {
+      "Sheet": "FormulaKeys",
+      "Cells": [
+        {
+          "Kind": "Number",
+          "NumberFormat": "G/通用格式",
+          "Address": "A1",
+          "Value": 1.0,
+          "Formula": "=1+0",
+          "Text": "1"
+        },
+        {
+          "Kind": "Number",
+          "NumberFormat": "G/通用格式",
+          "Address": "B1",
+          "Value": 10.0,
+          "Formula": "=A1*10",
+          "Text": "10"
+        },
+        {
+          "Kind": "Number",
+          "NumberFormat": "G/通用格式",
+          "Address": "C1",
+          "Value": 1.0,
+          "Formula": null,
+          "Text": "1"
+        },
+        {
+          "Kind": "Number",
+          "NumberFormat": "G/通用格式",
+          "Address": "E1",
+          "Value": 0.0,
+          "Formula": "=A4",
+          "Text": "0"
+        },
+        {
+          "Kind": "Number",
+          "NumberFormat": "G/通用格式",
+          "Address": "A2",
+          "Value": 2.0,
+          "Formula": "=2+0",
+          "Text": "2"
+        },
+        {
+          "Kind": "Number",
+          "NumberFormat": "G/通用格式",
+          "Address": "B2",
+          "Value": 20.0,
+          "Formula": "=A2*10",
+          "Text": "20"
+        },
+        {
+          "Kind": "Number",
+          "NumberFormat": "G/通用格式",
+          "Address": "C2",
+          "Value": 4.0,
+          "Formula": null,
+          "Text": "4"
+        },
+        {
+          "Kind": "Number",
+          "NumberFormat": "G/通用格式",
+          "Address": "E2",
+          "Value": 0.0,
+          "Formula": "=B6",
+          "Text": "0"
+        },
+        {
+          "Kind": "Blank",
+          "NumberFormat": "G/通用格式",
+          "Address": "A3",
+          "Value": null,
+          "Formula": null,
+          "Text": ""
+        },
+        {
+          "Kind": "Blank",
+          "NumberFormat": "G/通用格式",
+          "Address": "B3",
+          "Value": null,
+          "Formula": null,
+          "Text": ""
+        },
+        {
+          "Kind": "Blank",
+          "NumberFormat": "G/通用格式",
+          "Address": "C3",
+          "Value": null,
+          "Formula": null,
+          "Text": ""
+        },
+        {
+          "Kind": "Blank",
+          "NumberFormat": "G/通用格式",
+          "Address": "A4",
+          "Value": null,
+          "Formula": null,
+          "Text": ""
+        },
+        {
+          "Kind": "Blank",
+          "NumberFormat": "G/通用格式",
+          "Address": "B4",
+          "Value": null,
+          "Formula": null,
+          "Text": ""
+        },
+        {
+          "Kind": "Blank",
+          "NumberFormat": "G/通用格式",
+          "Address": "C4",
+          "Value": null,
+          "Formula": null,
+          "Text": ""
+        },
+        {
+          "Kind": "Blank",
+          "NumberFormat": "G/通用格式",
+          "Address": "A5",
+          "Value": null,
+          "Formula": null,
+          "Text": ""
+        },
+        {
+          "Kind": "Blank",
+          "NumberFormat": "G/通用格式",
+          "Address": "B5",
+          "Value": null,
+          "Formula": null,
+          "Text": ""
+        },
+        {
+          "Kind": "Blank",
+          "NumberFormat": "G/通用格式",
+          "Address": "C5",
+          "Value": null,
+          "Formula": null,
+          "Text": ""
+        },
+        {
+          "Kind": "Blank",
+          "NumberFormat": "G/通用格式",
+          "Address": "A6",
+          "Value": null,
+          "Formula": null,
+          "Text": ""
+        },
+        {
+          "Kind": "Blank",
+          "NumberFormat": "G/通用格式",
+          "Address": "B6",
+          "Value": null,
+          "Formula": null,
+          "Text": ""
+        },
+        {
+          "Kind": "Blank",
+          "NumberFormat": "G/通用格式",
+          "Address": "C6",
+          "Value": null,
+          "Formula": null,
+          "Text": ""
+        }
+      ]
+    },
+    {
+      "Sheet": "DelimitedText",
+      "Cells": [
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "A1",
+          "Value": "Source",
+          "Formula": null,
+          "Text": "Source"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "A2",
+          "Value": "001,2.50,2026-10-31",
+          "Formula": null,
+          "Text": "001,2.50,2026-10-31"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "C2",
+          "Value": "001",
+          "Formula": null,
+          "Text": "001"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "D2",
+          "Value": "2.50",
+          "Formula": null,
+          "Text": "2.50"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "E2",
+          "Value": "2026-10-31",
+          "Formula": null,
+          "Text": "2026-10-31"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "A3",
+          "Value": "\"A,B\",007,\"2026-10-01\"",
+          "Formula": null,
+          "Text": "\"A,B\",007,\"2026-10-01\""
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "C3",
+          "Value": "A,B",
+          "Formula": null,
+          "Text": "A,B"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "D3",
+          "Value": "007",
+          "Formula": null,
+          "Text": "007"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "E3",
+          "Value": "2026-10-01",
+          "Formula": null,
+          "Text": "2026-10-01"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "A4",
+          "Value": "a,,c",
+          "Formula": null,
+          "Text": "a,,c"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "C4",
+          "Value": "a",
+          "Formula": null,
+          "Text": "a"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "E4",
+          "Value": "c",
+          "Formula": null,
+          "Text": "c"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "A5",
+          "Value": ",b,",
+          "Formula": null,
+          "Text": ",b,"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "D5",
+          "Value": "b",
+          "Formula": null,
+          "Text": "b"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "A6",
+          "Value": "\"say \"\"Hi\"\"\",02,x",
+          "Formula": null,
+          "Text": "\"say \"\"Hi\"\"\",02,x"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "C6",
+          "Value": "say \"Hi\"",
+          "Formula": null,
+          "Text": "say \"Hi\""
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "D6",
+          "Value": "02",
+          "Formula": null,
+          "Text": "02"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "E6",
+          "Value": "x",
+          "Formula": null,
+          "Text": "x"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "A7",
+          "Value": "001,003,b",
+          "Formula": null,
+          "Text": "001,003,b"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "C7",
+          "Value": "001",
+          "Formula": null,
+          "Text": "001"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "D7",
+          "Value": "003",
+          "Formula": null,
+          "Text": "003"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "E7",
+          "Value": "b",
+          "Formula": null,
+          "Text": "b"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "A8",
+          "Value": "a,b",
+          "Formula": null,
+          "Text": "a,b"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "C8",
+          "Value": "a",
+          "Formula": null,
+          "Text": "a"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "D8",
+          "Value": "b",
+          "Formula": null,
+          "Text": "b"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "A9",
+          "Value": "",
+          "Formula": null,
+          "Text": ""
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "A11",
+          "Value": "=1+1,004,z",
+          "Formula": null,
+          "Text": "=1+1,004,z"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "C11",
+          "Value": "=1+1",
+          "Formula": null,
+          "Text": "=1+1"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "D11",
+          "Value": "004",
+          "Formula": null,
+          "Text": "004"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "E11",
+          "Value": "z",
+          "Formula": null,
+          "Text": "z"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "A12",
+          "Value": "中,😀,0",
+          "Formula": null,
+          "Text": "中,😀,0"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "C12",
+          "Value": "中",
+          "Formula": null,
+          "Text": "中"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "D12",
+          "Value": "😀",
+          "Formula": null,
+          "Text": "😀"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "E12",
+          "Value": "0",
+          "Formula": null,
+          "Text": "0"
+        }
+      ]
+    },
+    {
+      "Sheet": "Collapsed",
+      "Cells": [
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "A1",
+          "Value": "Source",
+          "Formula": null,
+          "Text": "Source"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "A2",
+          "Value": "a,,,b,",
+          "Formula": null,
+          "Text": "a,,,b,"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "C2",
+          "Value": "a",
+          "Formula": null,
+          "Text": "a"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "D2",
+          "Value": "b",
+          "Formula": null,
+          "Text": "b"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "A3",
+          "Value": " a , b ",
+          "Formula": null,
+          "Text": " a , b "
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "C3",
+          "Value": " a ",
+          "Formula": null,
+          "Text": " a "
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "D3",
+          "Value": " b ",
+          "Formula": null,
+          "Text": " b "
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "A4",
+          "Value": "a,,c",
+          "Formula": null,
+          "Text": "a,,c"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "C4",
+          "Value": "a",
+          "Formula": null,
+          "Text": "a"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "D4",
+          "Value": "c",
+          "Formula": null,
+          "Text": "c"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "A5",
+          "Value": "\"a,b\",c",
+          "Formula": null,
+          "Text": "\"a,b\",c"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "C5",
+          "Value": "a,b",
+          "Formula": null,
+          "Text": "a,b"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "D5",
+          "Value": "c",
+          "Formula": null,
+          "Text": "c"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "A6",
+          "Value": "a,\"b\"\"c\",d",
+          "Formula": null,
+          "Text": "a,\"b\"\"c\",d"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "C6",
+          "Value": "a",
+          "Formula": null,
+          "Text": "a"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "D6",
+          "Value": "b\"c",
+          "Formula": null,
+          "Text": "b\"c"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "E6",
+          "Value": "d",
+          "Formula": null,
+          "Text": "d"
+        }
+      ]
+    },
+    {
+      "Sheet": "NumbersAndDates",
+      "Cells": [
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "A1",
+          "Value": "Source",
+          "Formula": null,
+          "Text": "Source"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "A2",
+          "Value": "001;1,234.50;2026-10-31",
+          "Formula": null,
+          "Text": "001;1,234.50;2026-10-31"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "C2",
+          "Value": "001",
+          "Formula": null,
+          "Text": "001"
+        },
+        {
+          "Kind": "Number",
+          "NumberFormat": "#,##0.00",
+          "Address": "D2",
+          "Value": 1234.5,
+          "Formula": null,
+          "Text": "1,234.50"
+        },
+        {
+          "Kind": "Number",
+          "NumberFormat": "yyyy/m/d",
+          "Address": "E2",
+          "Value": 44864.0,
+          "Formula": null,
+          "Text": "2026/10/31"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "A3",
+          "Value": "002;-12.5;2026-01-02",
+          "Formula": null,
+          "Text": "002;-12.5;2026-01-02"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "C3",
+          "Value": "002",
+          "Formula": null,
+          "Text": "002"
+        },
+        {
+          "Kind": "Number",
+          "NumberFormat": "G/通用格式",
+          "Address": "D3",
+          "Value": -12.5,
+          "Formula": null,
+          "Text": "-12.5"
+        },
+        {
+          "Kind": "Number",
+          "NumberFormat": "yyyy/m/d",
+          "Address": "E3",
+          "Value": 44562.0,
+          "Formula": null,
+          "Text": "2026/1/2"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "A4",
+          "Value": "010;12-;1904-02-28",
+          "Formula": null,
+          "Text": "010;12-;1904-02-28"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "C4",
+          "Value": "010",
+          "Formula": null,
+          "Text": "010"
+        },
+        {
+          "Kind": "Number",
+          "NumberFormat": "G/通用格式",
+          "Address": "D4",
+          "Value": -12.0,
+          "Formula": null,
+          "Text": "-12"
+        },
+        {
+          "Kind": "Number",
+          "NumberFormat": "yyyy/m/d",
+          "Address": "E4",
+          "Value": 58.0,
+          "Formula": null,
+          "Text": "1904/2/28"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "A5",
+          "Value": "020;50%;2026-02-28",
+          "Formula": null,
+          "Text": "020;50%;2026-02-28"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "C5",
+          "Value": "020",
+          "Formula": null,
+          "Text": "020"
+        },
+        {
+          "Kind": "Number",
+          "NumberFormat": "0%",
+          "Address": "D5",
+          "Value": 0.5,
+          "Formula": null,
+          "Text": "50%"
+        },
+        {
+          "Kind": "Number",
+          "NumberFormat": "yyyy/m/d",
+          "Address": "E5",
+          "Value": 44619.0,
+          "Formula": null,
+          "Text": "2026/2/28"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "A6",
+          "Value": "030;1e3;2026-12-31",
+          "Formula": null,
+          "Text": "030;1e3;2026-12-31"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "C6",
+          "Value": "030",
+          "Formula": null,
+          "Text": "030"
+        },
+        {
+          "Kind": "Number",
+          "NumberFormat": "0.00E+00",
+          "Address": "D6",
+          "Value": 1000.0,
+          "Formula": null,
+          "Text": "1.00E+03"
+        },
+        {
+          "Kind": "Number",
+          "NumberFormat": "yyyy/m/d",
+          "Address": "E6",
+          "Value": 44925.0,
+          "Formula": null,
+          "Text": "2026/12/31"
+        }
+      ]
+    },
+    {
+      "Sheet": "NumericChoice",
+      "Cells": [
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "A1",
+          "Value": "Source",
+          "Formula": null,
+          "Text": "Source"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "A2",
+          "Value": "001",
+          "Formula": null,
+          "Text": "001"
+        },
+        {
+          "Kind": "Number",
+          "NumberFormat": "G/通用格式",
+          "Address": "C2",
+          "Value": 1.0,
+          "Formula": null,
+          "Text": "1"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "A3",
+          "Value": "123",
+          "Formula": null,
+          "Text": "123"
+        },
+        {
+          "Kind": "Number",
+          "NumberFormat": "G/通用格式",
+          "Address": "C3",
+          "Value": 123.0,
+          "Formula": null,
+          "Text": "123"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "A4",
+          "Value": "1,234.50",
+          "Formula": null,
+          "Text": "1,234.50"
+        },
+        {
+          "Kind": "Number",
+          "NumberFormat": "#,##0.00",
+          "Address": "C4",
+          "Value": 1234.5,
+          "Formula": null,
+          "Text": "1,234.50"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "A5",
+          "Value": "-12.5",
+          "Formula": null,
+          "Text": "-12.5"
+        },
+        {
+          "Kind": "Number",
+          "NumberFormat": "G/通用格式",
+          "Address": "C5",
+          "Value": -12.5,
+          "Formula": null,
+          "Text": "-12.5"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "A6",
+          "Value": "12-",
+          "Formula": null,
+          "Text": "12-"
+        },
+        {
+          "Kind": "Number",
+          "NumberFormat": "G/通用格式",
+          "Address": "C6",
+          "Value": -12.0,
+          "Formula": null,
+          "Text": "-12"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "A7",
+          "Value": "1e3",
+          "Formula": null,
+          "Text": "1e3"
+        },
+        {
+          "Kind": "Number",
+          "NumberFormat": "0.00E+00",
+          "Address": "C7",
+          "Value": 1000.0,
+          "Formula": null,
+          "Text": "1.00E+03"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "A8",
+          "Value": "0.5",
+          "Formula": null,
+          "Text": "0.5"
+        },
+        {
+          "Kind": "Number",
+          "NumberFormat": "G/通用格式",
+          "Address": "C8",
+          "Value": 0.5,
+          "Formula": null,
+          "Text": "0.5"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "A9",
+          "Value": "50%",
+          "Formula": null,
+          "Text": "50%"
+        },
+        {
+          "Kind": "Number",
+          "NumberFormat": "0%",
+          "Address": "C9",
+          "Value": 0.5,
+          "Formula": null,
+          "Text": "50%"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "A10",
+          "Value": "123456789012345",
+          "Formula": null,
+          "Text": "123456789012345"
+        },
+        {
+          "Kind": "Number",
+          "NumberFormat": "0",
+          "Address": "C10",
+          "Value": 123456789012345.0,
+          "Formula": null,
+          "Text": "123456789012345"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "A11",
+          "Value": "1234567890123456",
+          "Formula": null,
+          "Text": "1234567890123456"
+        },
+        {
+          "Kind": "Number",
+          "NumberFormat": "G/通用格式",
+          "Address": "C11",
+          "Value": 1234567890123450.0,
+          "Formula": null,
+          "Text": "1.23457E+15"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "A12",
+          "Value": "2026-10-31",
+          "Formula": null,
+          "Text": "2026-10-31"
+        },
+        {
+          "Kind": "Number",
+          "NumberFormat": "yyyy/m/d",
+          "Address": "C12",
+          "Value": 44864.0,
+          "Formula": null,
+          "Text": "2026/10/31"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "A13",
+          "Value": "03/04/2026",
+          "Formula": null,
+          "Text": "03/04/2026"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "G/通用格式",
+          "Address": "C13",
+          "Value": "03/04/2026",
+          "Formula": null,
+          "Text": "03/04/2026"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "A14",
+          "Value": "TRUE",
+          "Formula": null,
+          "Text": "TRUE"
+        },
+        {
+          "Kind": "Boolean",
+          "NumberFormat": "G/通用格式",
+          "Address": "C14",
+          "Value": true,
+          "Formula": null,
+          "Text": "TRUE"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "A15",
+          "Value": "1/2",
+          "Formula": null,
+          "Text": "1/2"
+        },
+        {
+          "Kind": "Number",
+          "NumberFormat": "m\"月\"d\"日\"",
+          "Address": "C15",
+          "Value": 44562.0,
+          "Formula": null,
+          "Text": "1月2日"
+        }
+      ]
+    },
+    {
+      "Sheet": "DateDMY",
+      "Cells": [
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "A1",
+          "Value": "Source",
+          "Formula": null,
+          "Text": "Source"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "A2",
+          "Value": "31/10/2026",
+          "Formula": null,
+          "Text": "31/10/2026"
+        },
+        {
+          "Kind": "Number",
+          "NumberFormat": "yyyy/m/d",
+          "Address": "C2",
+          "Value": 44864.0,
+          "Formula": null,
+          "Text": "2026/10/31"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "A3",
+          "Value": "02/01/2026",
+          "Formula": null,
+          "Text": "02/01/2026"
+        },
+        {
+          "Kind": "Number",
+          "NumberFormat": "yyyy/m/d",
+          "Address": "C3",
+          "Value": 44562.0,
+          "Formula": null,
+          "Text": "2026/1/2"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "A4",
+          "Value": "29/02/1904",
+          "Formula": null,
+          "Text": "29/02/1904"
+        },
+        {
+          "Kind": "Number",
+          "NumberFormat": "yyyy/m/d",
+          "Address": "C4",
+          "Value": 59.0,
+          "Formula": null,
+          "Text": "1904/2/29"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "A5",
+          "Value": "01/03/1904",
+          "Formula": null,
+          "Text": "01/03/1904"
+        },
+        {
+          "Kind": "Number",
+          "NumberFormat": "yyyy/m/d",
+          "Address": "C5",
+          "Value": 60.0,
+          "Formula": null,
+          "Text": "1904/3/1"
+        }
+      ]
+    },
+    {
+      "Sheet": "FixedText",
+      "Cells": [
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "A1",
+          "Value": "Source",
+          "Formula": null,
+          "Text": "Source"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "A2",
+          "Value": "001ABCD2026-10-31",
+          "Formula": null,
+          "Text": "001ABCD2026-10-31"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "C2",
+          "Value": "001",
+          "Formula": null,
+          "Text": "001"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "D2",
+          "Value": "ABCD",
+          "Formula": null,
+          "Text": "ABCD"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "E2",
+          "Value": "2026-10-31",
+          "Formula": null,
+          "Text": "2026-10-31"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "A3",
+          "Value": "002EFGH2026-01-02",
+          "Formula": null,
+          "Text": "002EFGH2026-01-02"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "C3",
+          "Value": "002",
+          "Formula": null,
+          "Text": "002"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "D3",
+          "Value": "EFGH",
+          "Formula": null,
+          "Text": "EFGH"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "E3",
+          "Value": "2026-01-02",
+          "Formula": null,
+          "Text": "2026-01-02"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "A4",
+          "Value": "abcdef",
+          "Formula": null,
+          "Text": "abcdef"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "C4",
+          "Value": "abc",
+          "Formula": null,
+          "Text": "abc"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "D4",
+          "Value": "def",
+          "Formula": null,
+          "Text": "def"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "A5",
+          "Value": "ab",
+          "Formula": null,
+          "Text": "ab"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "C5",
+          "Value": "ab",
+          "Formula": null,
+          "Text": "ab"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "A6",
+          "Value": "中甲乙中文汉字尾",
+          "Formula": null,
+          "Text": "中甲乙中文汉字尾"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "C6",
+          "Value": "中甲",
+          "Formula": null,
+          "Text": "中甲"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "D6",
+          "Value": "乙中",
+          "Formula": null,
+          "Text": "乙中"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "E6",
+          "Value": "文汉字尾",
+          "Formula": null,
+          "Text": "文汉字尾"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "A7",
+          "Value": "a😀bcdefg",
+          "Formula": null,
+          "Text": "a😀bcdefg"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "C7",
+          "Value": "a😀b",
+          "Formula": null,
+          "Text": "a😀b"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "D7",
+          "Value": "cdef",
+          "Formula": null,
+          "Text": "cdef"
+        },
+        {
+          "Kind": "Text",
+          "NumberFormat": "@",
+          "Address": "E7",
+          "Value": "g",
+          "Formula": null,
+          "Text": "g"
+        }
+      ]
+    }
+  ]
+}

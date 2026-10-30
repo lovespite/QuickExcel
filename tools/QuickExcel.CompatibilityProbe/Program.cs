@@ -4,6 +4,8 @@ using QuickExcel.CompatibilityProbe;
 
 try
 {
+    if (args is ["data-cleaning", var cleaningOracle, var cleaningDirectory]) return DataCleaningProbe.Run(cleaningOracle, cleaningDirectory);
+    if (args is ["verify-data-cleaning", var cleaningOutput, var cleaningVerdict]) return DataCleaningProbe.Verify(cleaningOutput, cleaningVerdict);
     if (args is ["conditional-formatting", var conditionalFormatOracle, var conditionalFormatDirectory]) return ConditionalFormattingProbe.Run(conditionalFormatOracle, conditionalFormatDirectory);
     if (args is ["verify-conditional-formatting", var cfExpected, var cfActual, var cfSource, var cfVerdict]) return ConditionalFormattingProbe.Verify(cfExpected, cfActual, cfSource, cfVerdict);
     if (args is ["verify-conditional-model", var cfOutput, var cfWorkbook, var cfModelVerdict]) return ConditionalFormattingProbe.VerifyModel(cfOutput, cfWorkbook, cfModelVerdict);

@@ -444,6 +444,13 @@
           </TabItem>
           <TabItem Header="数据">
             <StackPanel Orientation="Horizontal">
+              <GroupBox Header="数据清洗" Style="{StaticResource RibbonGroup}">
+                <StackPanel>
+                  <Button Content="删除重复项…" local:Ribbon.Icon="TableSettings" Style="{StaticResource RibbonButton}" Click="RemoveDuplicates_Click"/>
+                  <Button Content="分列…" local:Ribbon.Icon="TableSettings" Style="{StaticResource RibbonButton}" Click="SplitText_Click"/>
+                  <Button Content="文本转数字…" local:Ribbon.Icon="TableSettings" Style="{StaticResource RibbonButton}" Click="ConvertNumbers_Click"/>
+                </StackPanel>
+              </GroupBox>
               <GroupBox Header="验证与格式" Style="{StaticResource RibbonGroup}">
                 <StackPanel>
                   <Button Content="数据验证…" local:Ribbon.Icon="TableSettings" Style="{StaticResource RibbonButton}" Click="Validation_Click" ToolTip="设置列表、数值、日期、长度或公式规则"/>
