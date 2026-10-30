@@ -15,6 +15,7 @@ public partial class MainWindow
         _suppressAutoCalculation = true;
         try
         {
+            await RunFilterScrollSmokeAsync(folder);
             await RunSheetSwitchSmokeAsync(folder);
             await RunSelectionOutlineSmokeAsync(folder);
             await RunMergedSelectionSmokeAsync(folder);
@@ -47,7 +48,7 @@ public partial class MainWindow
             await RunDateDisplaySmokeAsync(folder);
             await RunCloseSmokeTestsAsync(folder);
             File.WriteAllText(Path.Combine(folder, "grid-integration-smoke-result.txt"),
-                "PASS: XLSX first-layout/scroll/sheet-switch rendering, merged selection geometry and navigation, main grid replacement, bidirectional editor ownership, rejected draft address, active-editor save, numeric/date fidelity and actual WPF close lifecycle.");
+                "PASS: filtered scroll ranges and bottom reachability, XLSX first-layout/scroll/sheet-switch rendering, merged selection geometry and navigation, main grid replacement, bidirectional editor ownership, rejected draft address, active-editor save, numeric/date fidelity and actual WPF close lifecycle.");
         }
         finally { _suppressAutoCalculation = false; _smokeDiscardDecision = null; }
     }

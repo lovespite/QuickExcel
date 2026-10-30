@@ -213,41 +213,26 @@ namespace FastWpfGrid
             }
         }
 
-        //private void AdjustVerticalScrollBarRange()
-        //{
-        //    //vscroll.Maximum = _rowSizes.GetTotalScrollSizeSum() - GridScrollAreaHeight + _rowSizes.DefaultSize;
-
-        //}
-
         private void AdjustScrollbars()
         {
             hscroll.Minimum = 0;
-            //hscroll.Maximum = _columnSizes.GetTotalScrollSizeSum() - GridScrollAreaWidth + _columnSizes.DefaultSize;
-
-            // hscroll.Maximum = _columnSizes.ScrollCount - 1;
-
-            hscroll.Maximum = Math.Min(
-                _columnSizes.ScrollCount - 1,
-                _columnSizes.ScrollCount - _columnSizes.GetVisibleScrollCountReversed(_columnSizes.ScrollCount - 1, GridScrollAreaWidth) + 1
-                );
-            hscroll.ViewportSize = VisibleColumnCount; //GridScrollAreaWidth;
+            hscroll.Maximum = _columnSizes.GetMaximumScrollIndex(GridScrollAreaWidth);
             hscroll.SmallChange = 1; // GridScrollAreaWidth / 10.0;
             hscroll.LargeChange = 3; // GridScrollAreaWidth / 2.0;
 
             vscroll.Minimum = 0;
-            //AdjustVerticalScrollBarRange();
-            //vscroll.Maximum = _rowSizes.GetTotalScrollSizeSum() - GridScrollAreaHeight + _rowSizes.DefaultSize;
-            if (FlexibleRows)
-            {
-                vscroll.Maximum = _rowSizes.ScrollCount - 1;
-            }
-            else
-            {
-                vscroll.Maximum = _rowSizes.ScrollCount - (GridScrollAreaHeight/(_rowSizes.DefaultSize + 1)) + 1;
-            }
-            vscroll.ViewportSize = VisibleRowCount; // GridScrollAreaHeight;
+            // Imported/custom row heights must participate after filtering, just as column widths do.
+            vscroll.Maximum = FlexibleRows ? Math.Max(0, _rowSizes.ScrollCount - 1) : _rowSizes.GetMaximumScrollIndex(GridScrollAreaHeight);
             vscroll.SmallChange = 1; // _rowSizes.DefaultSize;
             vscroll.LargeChange = 10; // GridScrollAreaHeight / 2.0;
+
+            // WPF coerces the thumb value when Maximum shrinks, but not our viewport indices.
+            // Clamp before measuring the viewport, otherwise filtering near the bottom reports zero visible rows.
+            ScrollContent(Math.Clamp(FirstVisibleRowScrollIndex, 0, (int)vscroll.Maximum),
+                Math.Clamp(FirstVisibleColumnScrollIndex, 0, (int)hscroll.Maximum));
+            hscroll.ViewportSize = VisibleColumnCount;
+            vscroll.ViewportSize = VisibleRowCount;
+            AdjustScrollBarPositions();
         }
 
         private void AdjustScrollBarPositions()

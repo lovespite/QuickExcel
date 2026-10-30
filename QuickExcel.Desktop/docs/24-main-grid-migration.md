@@ -13,6 +13,14 @@
 
 ## 验证
 
+### 筛选后滚动范围修复（2026-10-30）
+
+纵向滚动范围此前按默认行高估算，忽略导入或自定义的实际行高；筛选后剩余记录较少、实际高度仍超出视口时，滚动条可能被压到零，无法到达下方数据。现在行列共用可见尺寸索引计算滚动终点，排除隐藏与冻结项，并处理整页恰好容纳、空结果和超大单元格。范围缩小时先校正视口索引，再更新滑块位置和可见数量，避免沿用筛选前的越界位置。
+
+新增 `GridScrollRangeTests` 验证尺寸边界；`GridIntegration` 的筛选专项通过真实筛选处理函数及 WPF 滚动事件检查 11 项行为，包括较高行的底部可达性、滚轮、区域外空行、冻结表头、空结果、重新筛选和清除条件。旧实现复现失败证据在 `artifacts/validation/m5-grid/20261030-001501-5f2fc1f4/GridIntegration/smoke-error.txt`；修复后的结果和底部截图在 `20261030-001717-8a01efac/GridIntegration/`。
+
+Desktop Release 构建通过；`GridScrollRangeTests|OversizedGridCellTests|DataOperationsTests` 共 32 项通过；`GridIntegration` 通过；`DataOperations` 的 81 项断言通过，证据在 `20261030-001745-a43df4df/DataOperations/`。所有托管输出均在 `artifacts/build`，未运行完整回归或性能基准。构建仍有 NuGet 漏洞数据源不可达的 NU1900 警告。这些检查验证 WPF 处理路径，不代表物理鼠标输入验收。
+
 ### 选框重叠修复（2026-10-29）
 
 普通多格选区内的小框有两个来源：选区层重复绘制当前格边框，以及透明原生 TextBox 的 Windows 主题焦点边框。现在当前格已在选区内时只绘制选区外框；待输入的文本框保持键盘焦点，但整体透明，进入编辑时恢复显示。当前地址和公式栏保持原语义。

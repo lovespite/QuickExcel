@@ -268,6 +268,17 @@ namespace FastWpfGrid
             return count;
         }
 
+        /// <summary>Last item-aligned viewport that can reveal the end of the visible series.</summary>
+        public int GetMaximumScrollIndex(int viewportSize)
+        {
+            if (ScrollCount == 0) return 0;
+            int position = Math.Max(0, GetPositionByScrollIndex(ScrollCount) - Math.Max(0, viewportSize));
+            int index = GetScrollIndexOnPosition(position);
+            // Round up only for a partial leading item; an exact fit needs no extra row/column.
+            if (GetPositionByScrollIndex(index) < position) index++;
+            return Math.Clamp(index, 0, ScrollCount - 1);
+        }
+
         public int GetVisibleScrollCountReversed(int lastVisibleIndex, int viewportSize)
         {
             int res = 0;
