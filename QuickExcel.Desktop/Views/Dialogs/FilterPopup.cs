@@ -43,7 +43,7 @@ internal sealed class FilterPopup
     private readonly ComboBox _join = new() { ItemsSource = new[] { "并且 AND", "或者 OR" }, SelectedIndex = 0, MinWidth = 110 };
     private readonly TextBlock _error = new() { Foreground = Brushes.Firebrick, TextWrapping = TextWrapping.Wrap };
 
-    private static readonly string[] OperatorNames = ["文本等于", "文本包含", "文本开头", "文本结尾", "数字等于", "数字大于", "数字大于等于", "数字小于", "数字小于等于", "日期不早于", "日期不晚于"];
+    private static readonly string[] OperatorNames = ["文本等于", "文本包含", "文本开头", "文本结尾", "数字等于", "数字大于", "数字大于等于", "数字小于", "数字小于等于", "日期不早于", "日期不晚于", "Excel 等于", "Excel 不等于", "Excel 小于", "Excel 小于等于", "Excel 大于", "Excel 大于等于"];
     private static ComboBox OperatorPicker() => new() { ItemsSource = OperatorNames, SelectedIndex = 0, MinWidth = 125, Margin = new(0, 2, 0, 2) };
     private static StackPanel Line(params UIElement[] children)
     {
@@ -89,7 +89,7 @@ internal sealed class FilterPopup
         panel.Children.Add(Line(_firstOperator, _firstValue));
         panel.Children.Add(Line(_second, _join));
         panel.Children.Add(Line(_secondOperator, _secondValue));
-        panel.Children.Add(new TextBlock { Text = "日期 yyyy-MM-dd；数字小数点为 .。文本条件忽略大小写。", FontSize = 11, TextWrapping = TextWrapping.Wrap });
+        panel.Children.Add(new TextBlock { Text = "日期 yyyy-MM-dd；数字小数点为 .。按 Excel 显示值筛选；空白与空文本合并。Excel 条件支持 * ? ~ 通配符。", FontSize = 11, TextWrapping = TextWrapping.Wrap });
         panel.Children.Add(_error);
         panel.Children.Add(Line(ApplyButton, CancelButton));
         if (existing?.First is { } first)

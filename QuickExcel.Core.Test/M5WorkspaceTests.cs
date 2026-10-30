@@ -87,12 +87,15 @@ public sealed class M5WorkspaceTests : IDisposable
     }
 
     [Fact]
-    public void SortNoOpCreatesNoHistoryAndPreservesRowsOutsideRectangle()
+    public void SortRecordsItsStateOnceAndPreservesRowsOutsideRectangle()
     {
         var sheet = Sheet("D", (0, 0, N(1)), (1, 0, N(2)), (0, 1, T("outside")));
         using var session = new DocumentSession(Book(sheet));
+        var recorded = session.Execute(new SortRangeCommand(sheet.Id, new(0, 0), new(1, 0), 0));
+        Assert.True(recorded.Changed); Assert.True(recorded.CalculationUnchanged); Assert.True(session.CanUndo);
+        var revision = session.Snapshot.Revision;
         Assert.False(session.Execute(new SortRangeCommand(sheet.Id, new(0, 0), new(1, 0), 0)).Changed);
-        Assert.False(session.CanUndo);
+        Assert.Equal(revision, session.Snapshot.Revision);
         session.Execute(new SortRangeCommand(sheet.Id, new(0, 0), new(1, 0), 0, true));
         Assert.Equal("outside", session.Snapshot.Sheets[0].GetCell(0, 1)!.Value.TextValue);
     }

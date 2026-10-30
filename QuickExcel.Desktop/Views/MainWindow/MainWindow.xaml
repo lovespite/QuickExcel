@@ -460,6 +460,8 @@
                             Click="Sort_Click"
                             Tag="desc"
                             ToolTip="按当前列降序；选区不含表头"/>
+                    <Button Content="清除标记" local:Ribbon.Icon="TextSortAscending" Style="{StaticResource RibbonButton}"
+                            Click="ClearSortState_Click" ToolTip="清除上次排序设置和标记，保留当前记录顺序，可撤销"/>
                   </StackPanel>
                   <Button Content="多级排序"
                           local:Ribbon.Icon="TextSortAscending"

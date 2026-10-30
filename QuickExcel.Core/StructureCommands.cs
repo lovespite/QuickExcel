@@ -107,7 +107,7 @@ public sealed class ShiftAxisCommand(SheetId sheetId, SheetAxis axis, int index,
                     new(CellContent.FromLiteral(CellValue.Blank, item.Style));
         }
         var updated = new WorksheetSnapshot(target.Id, target.Name, cells, rows, columns, target.MergedCells, target.Images,
-            target.ShowGridLines, target.DefaultRowHeight, target.TabColor, target.View, target.Visibility, target.Printing, target.Annotations);
+            target.ShowGridLines, target.DefaultRowHeight, target.TabColor, target.View, target.Visibility, target.Printing, target.Annotations, target.Data);
         return transformed.WithSheets(transformed.Sheets.Select(s => s.Id == target.Id ? updated : s));
     }
 }
@@ -156,6 +156,8 @@ public sealed class MoveCellsCommand(SheetId sourceSheet, CellPosition first, Ce
         WorkbookLimits.ValidatePosition(last.Row + dr, last.Column + dc);
         if (sourceSheet == destinationSheet && dr == 0 && dc == 0) return new(snapshot, [], false);
         var source = snapshot.GetSheet(sourceSheet); var target = snapshot.GetSheet(destinationSheet);
+        if (!source.Data.IsEmpty || !target.Data.IsEmpty)
+            throw new NotSupportedException("含筛选或排序状态的工作表暂不支持移动单元格，请使用复制或清除数据区域状态；操作未应用。");
         if (source.Printing.HasReferences || target.Printing.HasReferences)
             throw new NotSupportedException("含打印区域或重复标题的工作表暂不支持移动单元格，请先使用复制；操作未应用。");
         StructureEdits.RequireSimpleStructure(source); StructureEdits.RequireSimpleStructure(target);
@@ -301,7 +303,8 @@ internal static class StructureEdits
             return new(sheet.Id, sheet.Name, relocated, axis == SheetAxis.Row ? Metadata(sheet.Rows) : sheet.Rows,
                 axis == SheetAxis.Column ? Metadata(sheet.Columns) : sheet.Columns, merges.Select(m => m.ToString()), images,
                 sheet.ShowGridLines, sheet.DefaultRowHeight, sheet.TabColor, sheet.View, sheet.Visibility,
-                PrintingStructure.Axis(sheet.Printing, axis, position, interval));
+                PrintingStructure.Axis(sheet.Printing, axis, position, interval), sheet.Annotations,
+                DataStructure.Axis(sheet.Data, axis, position, interval));
         });
     }
 

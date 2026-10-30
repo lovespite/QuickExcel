@@ -42,9 +42,9 @@ public partial class MainWindow
         var view = CurrentView;
         view.RefreshFilter(_document.Snapshot);
         ViewStatus.Text = (view.FilterRange is null ? "" : view.Region is null ? $"筛选 {ColumnName(view.FilterColumn)} · {view.FilterText}  " :
-            view.FilterError is not null ? $"筛选待更新：{view.FilterError}（暂显示全部行）  " : $"筛选区域 · {view.Filters.Count} 列条件  ") +
+            view.FilterError is not null ? $"筛选待更新：{view.FilterError}（暂显示全部行）  " : $"筛选区域 · {view.Filters.Count} 列条件{(view.FilterUsesSourceCaches ? " · 来源缓存" : "")}  ") +
             (view.FrozenRows + view.FrozenColumns == 0 ? "" : $"冻结 {view.FrozenRows} 行 / {view.FrozenColumns} 列");
-        ViewStatus.ToolTip = "筛选首行为表头；冻结随工作簿保存，筛选当前仍为会话设置。";
+        ViewStatus.ToolTip = "筛选首行为表头；筛选条件、排序和冻结随工作簿保存；手动隐藏与筛选隐藏分别管理。\n外部文件若未记录隐藏来源，筛选失败行的手动隐藏历史不能恢复；详情见兼容性报告。";
         ViewStatus.Visibility = view.FilterRange is not null || view.FrozenRows + view.FrozenColumns > 0 ? Visibility.Visible : Visibility.Collapsed;
     }
     private SheetViewState CurrentView
@@ -53,6 +53,7 @@ public partial class MainWindow
         {
             var id = _document.Snapshot.Sheets[_sheetIndex].Id;
             if (!_sheetViews.TryGetValue(id, out var view)) _sheetViews[id] = view = new();
+            view.Synchronize(_document.Snapshot, id);
             var stored = _document.Snapshot.GetSheet(id).View;
             view.FrozenRows = stored.FrozenRows <= 10 ? stored.FrozenRows : 0;
             view.FrozenColumns = stored.FrozenColumns < 256 ? stored.FrozenColumns : 0;
@@ -113,7 +114,7 @@ public partial class MainWindow
                 return true;
             }
             _sheetIndex = _document.Snapshot.Sheets.IndexOf(_document.Snapshot.GetSheet(_document.Snapshot.ActiveSheetId));
-            if (clearView) CurrentView.FilterRange = null;
+            if (clearView && _document.Snapshot.Sheets[_sheetIndex].Data.Filter is null) CurrentView.FilterRange = null;
             SynchronizeSheets();
             var position = target ?? new CellPosition(_selectedRow, _selectedColumn);
             GridSurface.Select(new(Math.Clamp(position.Row, 0, _rowCount - 1), Math.Clamp(position.Column, 0, _columnCount - 1)));
@@ -129,7 +130,8 @@ public partial class MainWindow
         if (_busy || !CommitEditors()) return;
         try
         {
-            if (CurrentView.FilterRange is not null) throw new InvalidOperationException("请先清除筛选，再进行结构操作。");
+            if (CurrentView.FilterRange is not null && _document.Snapshot.Sheets[_sheetIndex].Data.Filter is null)
+                throw new InvalidOperationException("请先清除临时筛选，再进行结构操作。");
             var operation = ((FrameworkElement)sender).Tag.ToString()!;
             var sheet = _document.Snapshot.Sheets[_sheetIndex];
             if (operation == "rename")
@@ -210,7 +212,9 @@ public partial class MainWindow
 
     private void ApplyFilter(GridRange range, int column, string text)
     {
-        CurrentView.FilterRange = range; CurrentView.FilterColumn = column; CurrentView.FilterText = text;
+        var id = _document.Snapshot.Sheets[_sheetIndex].Id;
+        var condition = new AutoFilterColumn(first: new(AutoFilterComparison.Equal, "*" + WorksheetFilterEngine.EscapeWildcard(text) + "*"));
+        if (!ExecuteWorkbookCommand(new SetAutoFilterCommand(id, new(new(range.Top, range.Left, range.Bottom, range.Right), [new(column, condition)])))) return;
         RefreshSheet();
         GridSurface.Select(new(range.Top, column));
         StatusText.Text = "筛选已应用，首行为表头；复制仅含筛选可见行，粘贴不允许跨隐藏行。";
@@ -228,7 +232,7 @@ public partial class MainWindow
         catch (Exception ex) { ReportEditFailure(ex); }
     }
     private void ClearFilter_Click(object sender, RoutedEventArgs e)
-    { if (!CommitEditors()) return; CurrentView.FilterRange = null; RefreshSheet(); GridSurface.Select(new(_selectedRow, _selectedColumn)); }
+    { if (_busy || !CommitEditors()) return; if (ExecuteWorkbookCommand(new SetAutoFilterCommand(_document.Snapshot.Sheets[_sheetIndex].Id, null))) { RefreshSheet(); GridSurface.Select(new(_selectedRow, _selectedColumn)); } }
 
     private void Freeze_Click(object sender, RoutedEventArgs e)
     {

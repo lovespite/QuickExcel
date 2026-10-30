@@ -10,13 +10,13 @@ internal sealed record DataRegion(Guid Id, SheetId SheetId, GridRange Range, boo
     public int FirstDataRow => Range.Top + (HasHeader ? 1 : 0);
     public void Validate()
     {
-        if (Range.Top < 0 || Range.Left < 0 || Range.Bottom >= WorkbookLimits.MaxRows || Range.Right >= 256 ||
-            Range.Top > Range.Bottom || Range.Left > Range.Right || FirstDataRow > Range.Bottom)
-            throw new ArgumentException("筛选区域须是 100,000 行 × 256 列范围内、包含数据的矩形。");
+        if (Range.Top < 0 || Range.Left < 0 || Range.Bottom >= WorkbookLimits.MaxRows || Range.Right >= WorkbookLimits.MaxColumns ||
+            Range.Top > Range.Bottom || Range.Left > Range.Right)
+            throw new ArgumentException("筛选区域须是 100,000 行 × 1024 列范围内、包含数据的矩形。");
     }
 }
 
-internal enum FilterOperator { TextEquals, TextContains, TextStartsWith, TextEndsWith, NumberEquals, Greater, GreaterOrEqual, Less, LessOrEqual, DateOnOrAfter, DateOnOrBefore }
+internal enum FilterOperator { TextEquals, TextContains, TextStartsWith, TextEndsWith, NumberEquals, Greater, GreaterOrEqual, Less, LessOrEqual, DateOnOrAfter, DateOnOrBefore, ExcelEquals, ExcelNotEquals, ExcelLess, ExcelLessOrEqual, ExcelGreater, ExcelGreaterOrEqual }
 
 internal sealed record FilterTerm(FilterOperator Operator, string Operand)
 {
@@ -33,6 +33,7 @@ internal sealed record FilterTerm(FilterOperator Operator, string Operand)
 
     public bool Matches(CellValue value, StyleDefinition style, ExcelDateSystem dateSystem)
     {
+        if (Operator >= FilterOperator.ExcelEquals) return WorksheetFilterEngine.Compile(new(first: new((AutoFilterComparison)(Operator - FilterOperator.ExcelEquals), Operand)))(value, style, dateSystem);
         if (Operator <= FilterOperator.TextEndsWith)
         {
             if (value.Kind != CellValueKind.Text) return false;
@@ -65,7 +66,7 @@ internal sealed record FilterTerm(FilterOperator Operator, string Operand)
 }
 
 /// <summary>Exact typed value membership OR two typed predicates. Search is a UI concern and never edits this set.</summary>
-internal sealed record ColumnFilter(ImmutableHashSet<CellValue>? Values = null, FilterTerm? First = null, FilterTerm? Second = null, bool UseOr = false)
+internal sealed record ColumnFilter(ImmutableHashSet<CellValue>? Values = null, FilterTerm? First = null, FilterTerm? Second = null, bool UseOr = false, AutoFilterColumn? Stored = null)
 {
     public void Validate()
     {
@@ -73,7 +74,7 @@ internal sealed record ColumnFilter(ImmutableHashSet<CellValue>? Values = null, 
             throw new ArgumentException("候选值筛选和条件筛选不能混用。");
         First?.Validate(); Second?.Validate();
     }
-    public bool Matches(CellValue value, StyleDefinition style, ExcelDateSystem system) => Values is not null ? Values.Contains(value)
+    public bool Matches(CellValue value, StyleDefinition style, ExcelDateSystem system) => Stored is not null ? WorksheetFilterEngine.Compile(Stored)(value, style, system) : Values is not null ? Values.Contains(value)
         : First is null || (Second is null ? First.Matches(value, style, system) : UseOr
             ? First.Matches(value, style, system) || Second.Matches(value, style, system)
             : First.Matches(value, style, system) && Second.Matches(value, style, system));

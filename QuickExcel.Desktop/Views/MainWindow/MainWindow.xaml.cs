@@ -201,6 +201,8 @@ public partial class MainWindow : Window
             var ranges = sheet.MergedCells.Select(CellRectangle.Parse).ToArray();
             var lastRow = Math.Max(sheet.UsedRowCount, Math.Max(sheet.Images.Select(i => i.RowIndex + i.RowSpan).DefaultIfEmpty().Max(), ranges.Select(m => m.Bottom + 1).DefaultIfEmpty().Max()));
             var lastColumn = Math.Max(sheet.UsedColumnCount, Math.Max(sheet.Images.Select(i => i.ColumnIndex + i.ColumnSpan).DefaultIfEmpty().Max(), ranges.Select(m => m.Right + 1).DefaultIfEmpty().Max()));
+            lastRow = Math.Max(lastRow, Math.Max(sheet.Data.Filter?.Range.Bottom + 1 ?? 0, sheet.Data.Sort?.Range.Bottom + 1 ?? 0));
+            lastColumn = Math.Max(lastColumn, Math.Max(sheet.Data.Filter?.Range.Right + 1 ?? 0, sheet.Data.Sort?.Range.Right + 1 ?? 0));
             _rowCount = Math.Clamp(Math.Max(_rowCount, Math.Max(lastRow + 20, Math.Max(sheet.View.ActiveCell.Row, sheet.View.PaneTopLeftCell.Row) + 20)), 100, WorkbookLimits.MaxRows);
             _columnCount = Math.Clamp(Math.Max(_columnCount, Math.Max(lastColumn + 2, Math.Max(sheet.View.ActiveCell.Column, sheet.View.PaneTopLeftCell.Column) + 2)), 12, 256);
             _refreshing = true;

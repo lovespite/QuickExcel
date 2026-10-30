@@ -71,7 +71,7 @@ public sealed class CopySheetCommand : DocumentCommand
         var cells = source.Cells.Select(p => new KeyValuePair<CellPosition, CellSnapshot>(p.Key,
             p.Value.Content.Kind == CellContentKind.Formula ? new(CellContent.FromFormula(Formula(p.Value.Content.FormulaText, false, Source), p.Value.Content.StyleId)) : p.Value)).ToImmutableDictionary();
         var copy = new WorksheetSnapshot(Id, Name, cells, source.Rows, source.Columns, source.MergedCells, source.Images,
-            source.ShowGridLines, source.DefaultRowHeight, source.TabColor, source.View, source.Visibility, source.Printing, source.Annotations);
+            source.ShowGridLines, source.DefaultRowHeight, source.TabColor, source.View, source.Visibility, source.Printing, source.Annotations, source.Data);
         var names = snapshot.DefinedNames.Concat(copiedNames.Select(n => new DefinedName(n.Name, Formula(n.Formula, true, n.Scope ?? Source), Id)));
         var after = new WorkbookSnapshot(snapshot.DocumentId, snapshot.Revision, snapshot.DateSystem, snapshot.Sheets.Insert(Destination, copy), snapshot.ScriptSource,
             snapshot.Styles, snapshot.ScriptModules, snapshot.FileState, names, copy.Visibility == SheetVisibility.Visible ? Id : snapshot.ActiveSheetId, snapshot.Window, snapshot.TextCompatibilityVersion);

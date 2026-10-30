@@ -85,7 +85,7 @@ internal static class TypedWorkbookXml
             var visibility = XlsxViews.Visibility(definition);
             var sheet = package.XmlPart(path).Root!;
             if (sheet.Name != Main + "worksheet") throw new InvalidDataException("无效工作表部件。");
-            package.Shape(sheet, "dimension sheetPr sheetViews sheetFormatPr cols sheetData mergeCells hyperlinks printOptions pageMargins pageSetup headerFooter rowBreaks colBreaks drawing legacyDrawing", "", path);
+            package.Shape(XlsxFiltering.Shape(sheet), "autoFilter sortState dimension sheetPr sheetViews sheetFormatPr cols sheetData mergeCells hyperlinks printOptions pageMargins pageSetup headerFooter rowBreaks colBreaks drawing legacyDrawing", "", path);
             var sharedFormulas = new SharedFormulaExpander(sheet);
             var cells = new Dictionary<CellPosition, CellSnapshot>();
             var cachedCells = new HashSet<CellPosition>();
@@ -211,15 +211,16 @@ internal static class TypedWorkbookXml
             var format = sheet.Element(Main + "sheetFormatPr");
             if (format is not null) package.Shape(format, "", "defaultRowHeight", path);
             var properties = sheet.Element(Main + "sheetPr");
-            if (properties is not null) package.Shape(properties, "tabColor pageSetUpPr", "", path);
+            if (properties is not null) package.Shape(properties, "tabColor pageSetUpPr", "filterMode", path);
             var tabColor = properties?.Element(Main + "tabColor");
             if (tabColor is not null) package.Shape(tabColor, "", "rgb", path);
             var merges = sheet.Element(Main + "mergeCells")?.Elements(Main + "mergeCell").Select(e => Attr(e, "ref")).ToArray() ?? [];
             foreach (var merge in merges) ValidateRange(merge);
             var images = TypedImages.Read(package, path, sheet);
-            sheets.Add(new WorksheetSnapshot(SheetId.New(), Decode(Attr(definition, "name")), cells, rows, columns, merges, images,
+            var modeledSheet = new WorksheetSnapshot(SheetId.New(), Decode(Attr(definition, "name")), cells, rows, columns, merges, images,
                 view?.Attribute("showGridLines") is null || Bool((string?)view.Attribute("showGridLines")), OptionalDouble(format?.Attribute("defaultRowHeight")) / 0.75, (string?)tabColor?.Attribute("rgb"),
-                viewState, visibility, XlsxPrinting.Read(package, path, sheet), XlsxAnnotations.Read(package, path, sheet, textReader)));
+                viewState, visibility, XlsxPrinting.Read(package, path, sheet), XlsxAnnotations.Read(package, path, sheet, textReader), XlsxFiltering.Read(package, workbookPart, path, sheet));
+            sheets.Add(XlsxFiltering.ReadHidden(package, path, sheet, modeledSheet, styles, dateSystem));
             bindings.Add(new(sheetId, path));
         }
         package.SetReadContext(workbookPart, null, "workbook/model");
@@ -235,9 +236,17 @@ internal static class TypedWorkbookXml
             package.SetReadContext(workbookPart, (string?)element.Attribute("name"), "definedName");
             budget.Check();
             if (++inspectedNames > 4096) throw new InvalidDataException("名称数量超过 4096。");
-            package.Shape(element, "", "name localSheetId", workbookPart);
+            package.Shape(element, "", (string?)element.Attribute("name") == "_xlnm._FilterDatabase" ? "name localSheetId hidden" : "name localSheetId", workbookPart);
             var name = Attr(element, "name");
             var scopeIndex = element.Attribute("localSheetId") is { } local ? Int(local.Value, sheets.Count - 1) : -1;
+            if (name == "_xlnm._FilterDatabase")
+            {
+                var expected = scopeIndex < 0 ? null : XlsxFiltering.WriteName(sheets[scopeIndex], scopeIndex);
+                if (!printNames.Add((scopeIndex, name))) throw new InvalidDataException("重复的筛选名称。");
+                if (expected is null || QuickExcel.Formulas.FormulaSyntax.Print(QuickExcel.Formulas.FormulaSyntax.Parse("=" + Decode(element.Value))) != expected.Value)
+                    package.Loss("筛选名称未能绑定到已建模筛选区域，保留原包。", "definedName/" + name, workbookPart, element);
+                continue;
+            }
             if (name is "_xlnm.Print_Area" or "_xlnm.Print_Titles")
             {
                 if (!printNames.Add((scopeIndex, name))) throw new InvalidDataException("重复的打印名称。");
@@ -350,6 +359,10 @@ internal static class TypedWorkbookXml
         {
             cancellationToken.ThrowIfCancellationRequested();
             allocation += sheet.Cells.Count * 640L + (sheet.Rows.Count + sheet.Columns.Count) * 256L;
+            if (sheet.Data.Filter is { } filter)
+                allocation += (filter.Range.Bottom - filter.Range.Top + 1L) * 256L + filter.Columns.Values.Sum(c =>
+                    (c.Values?.Sum(v => (long)v.Length) ?? 0) * 8L + ((c.First?.Operand.Length ?? 0) + (c.Second?.Operand.Length ?? 0)) * 8L + 512L);
+            if (sheet.Data.Sort is { } sort) allocation += sort.Keys.Sum(k => 1024L + k.CustomOrder.Sum(v => (long)v.Length) * 8L);
             foreach (var cell in sheet.Cells.Values)
             {
                 if (cell.Content.Kind == CellContentKind.Formula) allocation += cell.Content.FormulaText.Length * 4L;
@@ -400,8 +413,9 @@ internal static class TypedWorkbookXml
             rels.Add(Relationship($"sheet{i + 1}", "worksheet", $"worksheets/sheet{i + 1}.xml"));
             Override(path, SheetType);
             var root = new XElement(Main + "worksheet", new XAttribute(XNamespace.Xmlns + "r", Rel));
-            if (sheet.TabColor is not null || sheet.Printing.Properties is not null)
-                root.Add(new XElement(Main + "sheetPr", sheet.TabColor is not null ? new XElement(Main + "tabColor", new XAttribute("rgb", sheet.TabColor)) : null,
+            var filteredRows = QuickExcel.Core.WorksheetFilterEngine.Evaluate(snapshot, sheet.Id, allowSourceCaches: valuesOnly, cancellationToken: cancellationToken);
+            if (sheet.TabColor is not null || sheet.Printing.Properties is not null || sheet.Data.Filter is not null)
+                root.Add(new XElement(Main + "sheetPr", sheet.Data.Filter is not null ? new XAttribute("filterMode", sheet.Data.Filter.Columns.Count > 0 ? 1 : 0) : null, sheet.TabColor is not null ? new XElement(Main + "tabColor", new XAttribute("rgb", sheet.TabColor)) : null,
                     XlsxPrinting.WriteProperties(sheet.Printing)));
             root.Add(XlsxViews.WriteSheet(sheet, sheet.Id == snapshot.ActiveSheetId));
             if (sheet.DefaultRowHeight is { } height) root.Add(new XElement(Main + "sheetFormatPr", new XAttribute("defaultRowHeight", height * 0.75)));
@@ -411,7 +425,7 @@ internal static class TypedWorkbookXml
                     p.Value.Width.HasValue ? new XAttribute("customWidth", 1) : null, new XAttribute("hidden", p.Value.Hidden ? 1 : 0), new XAttribute("style", p.Value.StyleId)))));
             var data = new XElement(Main + "sheetData");
             var grouped = sheet.Cells.GroupBy(c => c.Key.Row).ToDictionary(g => g.Key, g => g.OrderBy(c => c.Key.Column));
-            foreach (var rowIndex in grouped.Keys.Union(sheet.Rows.Keys).Order())
+            foreach (var rowIndex in grouped.Keys.Union(sheet.Rows.Keys).Union(filteredRows).Order())
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 var row = new XElement(Main + "row", new XAttribute("r", rowIndex + 1));
@@ -421,11 +435,17 @@ internal static class TypedWorkbookXml
                     row.Add(new XAttribute("hidden", metadata.Hidden ? 1 : 0), new XAttribute("s", metadata.StyleId),
                         new XAttribute("customFormat", metadata.ApplyStyle ? 1 : 0));
                 }
+                if (filteredRows.Contains(rowIndex)) row.SetAttributeValue("hidden", 1);
                 if (grouped.TryGetValue(rowIndex, out var rowCells))
                     foreach (var (position, cell) in rowCells) row.Add(WriteCell(position, cell, valuesOnly));
                 data.Add(row);
             }
             root.Add(data);
+            var sortState = XlsxFiltering.WriteSort(sheet.Data.Sort, stylePackage.Styles.Root!);
+            var nestedSort = sheet.Data.Filter is { } autoFilter && sheet.Data.Sort is { } sort && sort.Range.Top > autoFilter.Range.Top &&
+                autoFilter.Range.Contains(sort.Range.Top, sort.Range.Left) && autoFilter.Range.Contains(sort.Range.Bottom, sort.Range.Right);
+            root.Add(XlsxFiltering.WriteFilter(sheet.Data.Filter, nestedSort ? sortState : null));
+            if (!nestedSort) root.Add(sortState);
             if (sheet.MergedCells.Length > 0)
             {
                 foreach (var merge in sheet.MergedCells) ValidateRange(merge);
@@ -436,10 +456,12 @@ internal static class TypedWorkbookXml
             TypedImages.Write(sheet, i + 1, parts, root, types);
             XlsxPrinting.WritePrinter(sheet.Printing, i + 1, parts, types);
             XlsxAnnotations.Write(sheet.Annotations, i + 1, parts, root, types);
+            root.Add(XlsxFiltering.WriteHidden(sheet, filteredRows));
             parts[path] = XmlBytes(new XDocument(root));
         }
+        parts["xl/styles.xml"] = XmlBytes(stylePackage.Styles);
         workbook.Add(sheets);
-        if (!snapshot.DefinedNames.IsEmpty || snapshot.Sheets.Any(s => s.Printing.HasReferences))
+        if (!snapshot.DefinedNames.IsEmpty || snapshot.Sheets.Any(s => s.Printing.HasReferences || s.Data.Filter is not null))
         {
             var names = new XElement(Main + "definedNames");
             foreach (var name in snapshot.DefinedNames)
@@ -448,7 +470,7 @@ internal static class TypedWorkbookXml
                 if (name.Scope is { } scope) element.SetAttributeValue("localSheetId", snapshot.Sheets.IndexOf(snapshot.GetSheet(scope)));
                 names.Add(element);
             }
-            for (var i = 0; i < snapshot.Sheets.Length; i++) names.Add(XlsxPrinting.WriteNames(snapshot.Sheets[i], i));
+            for (var i = 0; i < snapshot.Sheets.Length; i++) { names.Add(XlsxPrinting.WriteNames(snapshot.Sheets[i], i)); names.Add(XlsxFiltering.WriteName(snapshot.Sheets[i], i)); }
             // Excel resolves same-spelling local/global names incorrectly when appended copies split
             // their groups. Match its serialization: name groups, local scopes before the global name.
             names.ReplaceNodes(names.Elements().OrderBy(n => (string)n.Attribute("name")!, StringComparer.OrdinalIgnoreCase)

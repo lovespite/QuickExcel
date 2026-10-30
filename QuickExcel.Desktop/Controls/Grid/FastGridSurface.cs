@@ -345,7 +345,7 @@ internal sealed partial class FastGridSurface : IGridSurface
         var visible = new HashSet<int>();
         if (View.Region is { HasHeader: true } region)
             for (var c = region.Range.Left; c <= region.Range.Right; c++)
-                if (Control.GetModelCellBounds(region.Range.Top, c) is { } bounds && bounds.Width >= 20 && bounds.Height >= 20)
+                if (View.IsFilterButtonVisible(c) && Control.GetModelCellBounds(region.Range.Top, c) is { } bounds && bounds.Width >= 20 && bounds.Height >= 20)
                 {
                     var marker = View.HeaderMarker(c);
                     var width = marker.Length > 2 ? 34d : 23d;

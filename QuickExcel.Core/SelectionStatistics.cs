@@ -23,6 +23,11 @@ public static class SelectionStatistics
             if (range.Top > range.Bottom || range.Left > range.Right) throw new ArgumentException("选区端点无效。");
         }
         var sheet = snapshot.GetSheet(sheetId);
+        if (filteredRow is null && sheet.Data.Filter is not null)
+        {
+            var hidden = WorksheetFilterEngine.Evaluate(snapshot, sheetId, WorksheetFilterEngine.CanUseSourceCaches(snapshot), cancellationToken);
+            filteredRow = hidden.Contains;
+        }
         var count = 0; var numbers = 0; var errors = 0; var old = 0; var missing = 0; var visited = 0; var comparisons = 0;
         double sum = 0, compensation = 0, mean = 0;
         foreach (var (position, cell) in sheet.Cells)

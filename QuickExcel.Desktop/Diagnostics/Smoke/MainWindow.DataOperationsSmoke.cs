@@ -57,7 +57,7 @@ public partial class MainWindow
         await ApplyFilterPopupResultAsync(1, (await pending)!);
         await ApplyFilterPopupResultAsync(2, new(FilterPopupAction.Apply, new(First: new(FilterOperator.GreaterOrEqual, "15"), Second: new(FilterOperator.LessOrEqual, "25"))));
         Check(CurrentView.Filters.Count == 2 && CurrentView.IsFilteredOut(_document.Snapshot, 0, 3) && CurrentView.IsFilteredOut(_document.Snapshot, 0, 4) && !CurrentView.IsFilteredOut(_document.Snapshot, 0, 6), "Department AND amount interval filters combine");
-        Check(_document.Snapshot.Revision == revision, "Filter conditions do not create document history");
+        Check(_document.Snapshot.Revision == revision + 2 && _document.IsDirty, "Filter conditions persist as individual undoable document edits");
         await SortDataRegionAsync(region, [new(1), new(2, true)]);
         Check(_document.GetCellInput(0, 3, 4) == "first" && _document.GetCellInput(0, 4, 4) == "third" && _document.GetCellInput(0, 5, 4) == "fourth", "Two-level ordinal sort moves complete stable records including hidden rows");
         Check(_document.GetCellValue(0, 4, 5) == "40" && _document.GetCellInput(0, 8, 0) == "outside", "Sort shifts relative formulas and preserves outside cells");
@@ -65,6 +65,19 @@ public partial class MainWindow
         Check(CurrentView.HeaderMarker(1) == "●↑1" && CurrentView.HeaderMarker(2) == "●↓2", "Header markers retain filter status and ordered sort direction together");
         await UndoAsync(false); Check(CurrentView.Region == region && CurrentView.IsFilteredOut(_document.Snapshot, 0, 4), "Undo retains region and recomputes filters");
         await UndoAsync(true); Check(_document.GetCellInput(0, 4, 4) == "third" && !CurrentView.IsFilteredOut(_document.Snapshot, 0, 4), "Redo recomputes filters on restored records");
+        var filteredPath = Path.Combine(folder, "filtered.xlsx"); new QuickExcel.Storage.TypedWorkbookStorage().Save(filteredPath, _document.Snapshot);
+        using (var reopened = WorkbookDocument.Open(filteredPath, _services))
+        {
+            var view = new SheetViewState(); var savedSheet = reopened.Snapshot.Sheets[0]; view.Synchronize(reopened.Snapshot, savedSheet.Id);
+            Check(savedSheet.Data.ContentEquals(_document.Snapshot.Sheets[0].Data) && view.Filters.Count == 2 && view.SortKeys.Count == 2,
+                "Normal XLSX reopen restores both filter columns and ordered sort keys");
+            Check(view.IsFilteredOut(reopened.Snapshot, 0, 3) && !view.IsFilteredOut(reopened.Snapshot, 0, 4) && savedSheet.Rows[5].Hidden,
+                "Reopened filter projection retains manual hiding independently");
+        }
+        var insert = new ShiftAxisCommand(_document.Snapshot.Sheets[0].Id, SheetAxis.Row, 4, 1);
+        Check(ExecuteWorkbookCommand(insert, clearView: true) && CurrentView.Region?.Range.Bottom == 7, "Persisted filter region expands through the actual structure command path");
+        await RecalculateAsync(); await UndoAsync(false);
+        Check(CurrentView.Region?.Range == region.Range && CurrentView.SortKeys.Count == 2, "Undo restores filter and sort geometry after insertion");
         await ApplyFilterPopupResultAsync(1, new(FilterPopupAction.ClearColumn)); Check(CurrentView.Filters.Count == 1, "Clear column keeps the other column condition");
         await ApplyFilterPopupResultAsync(1, new(FilterPopupAction.ClearAll));
         Check(CurrentView.Filters.Count == 0 && _document.Snapshot.Sheets[0].Rows[5].Hidden, "Clear all filters preserves manual hidden metadata");
@@ -72,7 +85,11 @@ public partial class MainWindow
         using (var reopened = WorkbookDocument.Open(path, _services)) Check(reopened.GetCellInput(0, 4, 4) == "third", "Sorted records survive file save and reopen");
         SetSmokeFreeze(3, 2); RefreshSheet(); await Idle();
         Check(_grid.HeaderButtons.Count > 0, "Header buttons exist in frozen reference rows");
+        await _selectionStatisticsTask;
         CaptureGridEvidence(Path.Combine(folder, "data-operations.png"));
+        RibbonTabs.SelectedIndex = 2; await Idle();
+        CaptureGridEvidence(Path.Combine(folder, "data-ribbon.png"));
+        RibbonTabs.SelectedIndex = 0;
         SetSmokeFreeze(0, 0);
 
         var surface = new FastGridSurface((p, text) => { try { _editor.SetCell(0, p.Row, p.Column, text); return true; } catch { return false; } }) { View = CurrentView };

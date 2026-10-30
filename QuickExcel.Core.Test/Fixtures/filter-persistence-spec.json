@@ -1,0 +1,507 @@
+{
+  "Rows": [
+    {
+      "Kind": "Text",
+      "Value": "alpha"
+    },
+    {
+      "Kind": "Text",
+      "Value": "ALPHA"
+    },
+    {
+      "Kind": "Text",
+      "Value": "alphabet"
+    },
+    {
+      "Kind": "Text",
+      "Value": "beta"
+    },
+    {
+      "Kind": "Text",
+      "Value": "a*b"
+    },
+    {
+      "Kind": "Text",
+      "Value": "a?b"
+    },
+    {
+      "Kind": "Text",
+      "Value": "a~b"
+    },
+    {
+      "Kind": "Text",
+      "Value": "10"
+    },
+    {
+      "Kind": "Text",
+      "Value": "0010"
+    },
+    {
+      "Kind": "Text",
+      "Value": "TRUE"
+    },
+    {
+      "Kind": "Text",
+      "Value": "FALSE"
+    },
+    {
+      "Kind": "Text",
+      "Value": "#N/A"
+    },
+    {
+      "Kind": "Text",
+      "Value": ""
+    },
+    {
+      "Kind": "Number",
+      "Value": 10
+    },
+    {
+      "Kind": "Number",
+      "Value": 20
+    },
+    {
+      "Kind": "Number",
+      "Value": 30
+    },
+    {
+      "Kind": "Number",
+      "Value": 0
+    },
+    {
+      "Kind": "Number",
+      "Value": -1
+    },
+    {
+      "Kind": "Formula",
+      "Value": "=TRUE"
+    },
+    {
+      "Kind": "Formula",
+      "Value": "=FALSE"
+    },
+    {
+      "Kind": "Formula",
+      "Value": "=#N/A"
+    },
+    {
+      "Kind": "Formula",
+      "Value": "=#VALUE!"
+    },
+    {
+      "Kind": "Formula",
+      "Value": "=\"\""
+    },
+    {
+      "Kind": "Blank",
+      "Value": null
+    },
+    {
+      "Kind": "Number",
+      "Value": 0.1,
+      "Format": "0.0%"
+    },
+    {
+      "Kind": "Number",
+      "Value": 10,
+      "Format": "0.00"
+    },
+    {
+      "Kind": "Number",
+      "Value": 45000,
+      "Format": "yyyy-mm-dd"
+    }
+  ],
+  "Cases": [
+    {
+      "Id": "eq-alpha",
+      "Filters": [
+        {
+          "Field": 1,
+          "Criteria1": "=alpha"
+        }
+      ]
+    },
+    {
+      "Id": "ne-alpha",
+      "Filters": [
+        {
+          "Field": 1,
+          "Criteria1": "<>alpha"
+        }
+      ]
+    },
+    {
+      "Id": "contains-alp",
+      "Filters": [
+        {
+          "Field": 1,
+          "Criteria1": "=*alp*"
+        }
+      ]
+    },
+    {
+      "Id": "starts-alp",
+      "Filters": [
+        {
+          "Field": 1,
+          "Criteria1": "=alp*"
+        }
+      ]
+    },
+    {
+      "Id": "ends-a",
+      "Filters": [
+        {
+          "Field": 1,
+          "Criteria1": "=*a"
+        }
+      ]
+    },
+    {
+      "Id": "literal-star",
+      "Filters": [
+        {
+          "Field": 1,
+          "Criteria1": "=a~*b"
+        }
+      ]
+    },
+    {
+      "Id": "literal-question",
+      "Filters": [
+        {
+          "Field": 1,
+          "Criteria1": "=a~?b"
+        }
+      ]
+    },
+    {
+      "Id": "literal-tilde",
+      "Filters": [
+        {
+          "Field": 1,
+          "Criteria1": "=a~~b"
+        }
+      ]
+    },
+    {
+      "Id": "eq-10",
+      "Filters": [
+        {
+          "Field": 1,
+          "Criteria1": "=10"
+        }
+      ]
+    },
+    {
+      "Id": "ne-10",
+      "Filters": [
+        {
+          "Field": 1,
+          "Criteria1": "<>10"
+        }
+      ]
+    },
+    {
+      "Id": "gt-10",
+      "Filters": [
+        {
+          "Field": 1,
+          "Criteria1": ">10"
+        }
+      ]
+    },
+    {
+      "Id": "ge-10",
+      "Filters": [
+        {
+          "Field": 1,
+          "Criteria1": ">=10"
+        }
+      ]
+    },
+    {
+      "Id": "lt-10",
+      "Filters": [
+        {
+          "Field": 1,
+          "Criteria1": "<10"
+        }
+      ]
+    },
+    {
+      "Id": "le-10",
+      "Filters": [
+        {
+          "Field": 1,
+          "Criteria1": "<=10"
+        }
+      ]
+    },
+    {
+      "Id": "eq-true",
+      "Filters": [
+        {
+          "Field": 1,
+          "Criteria1": "=TRUE"
+        }
+      ]
+    },
+    {
+      "Id": "ne-true",
+      "Filters": [
+        {
+          "Field": 1,
+          "Criteria1": "<>TRUE"
+        }
+      ]
+    },
+    {
+      "Id": "blanks",
+      "Filters": [
+        {
+          "Field": 1,
+          "Criteria1": "="
+        }
+      ]
+    },
+    {
+      "Id": "nonblanks",
+      "Filters": [
+        {
+          "Field": 1,
+          "Criteria1": "<>"
+        }
+      ]
+    },
+    {
+      "Id": "error",
+      "Filters": [
+        {
+          "Field": 1,
+          "Criteria1": "=#N/A"
+        }
+      ]
+    },
+    {
+      "Id": "list-text",
+      "Filters": [
+        {
+          "Field": 1,
+          "Criteria1": [
+            "alpha",
+            "beta"
+          ],
+          "Operator": 7
+        }
+      ]
+    },
+    {
+      "Id": "list-number",
+      "Filters": [
+        {
+          "Field": 1,
+          "Criteria1": [
+            "10",
+            "20"
+          ],
+          "Operator": 7
+        }
+      ]
+    },
+    {
+      "Id": "list-formatted",
+      "Filters": [
+        {
+          "Field": 1,
+          "Criteria1": [
+            "10.0%",
+            "10.00"
+          ],
+          "Operator": 7
+        }
+      ]
+    },
+    {
+      "Id": "list-mixed",
+      "Filters": [
+        {
+          "Field": 1,
+          "Criteria1": [
+            "TRUE",
+            "#N/A"
+          ],
+          "Operator": 7
+        }
+      ]
+    },
+    {
+      "Id": "list-blank",
+      "Filters": [
+        {
+          "Field": 1,
+          "Criteria1": [
+            "=",
+            "alpha"
+          ],
+          "Operator": 7
+        }
+      ]
+    },
+    {
+      "Id": "and-range",
+      "Filters": [
+        {
+          "Field": 1,
+          "Criteria1": ">=10",
+          "Operator": 1,
+          "Criteria2": "<=30"
+        }
+      ]
+    },
+    {
+      "Id": "or-range",
+      "Filters": [
+        {
+          "Field": 1,
+          "Criteria1": "<0",
+          "Operator": 2,
+          "Criteria2": ">20"
+        }
+      ]
+    },
+    {
+      "Id": "multi",
+      "Filters": [
+        {
+          "Field": 1,
+          "Criteria1": "=*a*"
+        },
+        {
+          "Field": 2,
+          "Criteria1": ">=3",
+          "Operator": 1,
+          "Criteria2": "<=6"
+        }
+      ]
+    },
+    {
+      "Id": "date-range",
+      "Filters": [
+        {
+          "Field": 1,
+          "Criteria1": ">=44999",
+          "Operator": 1,
+          "Criteria2": "<45001"
+        }
+      ]
+    },
+    {
+      "Id": "manual",
+      "Filters": [
+        {
+          "Field": 2,
+          "Criteria1": ">=4"
+        }
+      ],
+      "ManualRows": [
+        3,
+        6
+      ]
+    },
+    {
+      "Id": "sort-multi",
+      "Filters": [],
+      "Sort": [
+        {
+          "Column": 2,
+          "Order": 2
+        },
+        {
+          "Column": 3,
+          "Order": 1
+        }
+      ]
+    },
+    {
+      "Id": "sort-custom",
+      "Filters": [],
+      "Sort": [
+        {
+          "Column": 1,
+          "Order": 1,
+          "CustomOrder": "beta,alphabet,alpha"
+        }
+      ]
+    },
+    {
+      "Id": "sort-fill",
+      "Filters": [],
+      "Sort": [
+        {
+          "Column": 1,
+          "Order": 1,
+          "Basis": 1,
+          "Color": 255
+        }
+      ]
+    },
+    {
+      "Id": "sort-font",
+      "Filters": [],
+      "Sort": [
+        {
+          "Column": 1,
+          "Order": 1,
+          "Basis": 2,
+          "Color": 16711680
+        }
+      ]
+    },
+    {
+      "Id": "custom-bool",
+      "Filters": [
+        {
+          "Field": 1,
+          "Criteria1": "=TRUE",
+          "Operator": 2,
+          "Criteria2": "=FALSE"
+        }
+      ]
+    },
+    {
+      "Id": "custom-error",
+      "Filters": [
+        {
+          "Field": 1,
+          "Criteria1": "=#N/A",
+          "Operator": 2,
+          "Criteria2": "=#VALUE!"
+        }
+      ]
+    },
+    {
+      "Id": "custom-number-text",
+      "Filters": [
+        {
+          "Field": 1,
+          "Criteria1": "=10",
+          "Operator": 2,
+          "Criteria2": "=alpha"
+        }
+      ]
+    },
+    {
+      "Id": "text-less",
+      "Filters": [
+        {
+          "Field": 1,
+          "Criteria1": "<beta",
+          "Operator": 1,
+          "Criteria2": ">=alpha"
+        }
+      ]
+    }
+  ]
+}

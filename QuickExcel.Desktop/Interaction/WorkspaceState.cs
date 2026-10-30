@@ -6,16 +6,31 @@ using QuickExcel.Domain;
 
 namespace QuickExcel.Desktop;
 
-/// <summary>Session-only sheet view state. Addresses are always model coordinates, never filtered indices.</summary>
+/// <summary>View projection of persisted data state; isolated legacy views remain available for grid diagnostics.</summary>
 internal sealed class SheetViewState
 {
     private GridRange? _legacyRange;
+    private WorksheetData? _persistedData;
+    private bool _persistedFilter;
+    public void Synchronize(WorkbookSnapshot snapshot, SheetId id)
+    {
+        var data = snapshot.GetSheet(id).Data;
+        if (ReferenceEquals(_persistedData, data)) return;
+        _persistedData = data; _persistedFilter = data.Filter is not null;
+        _legacyRange = null; _evaluatedSnapshot = null; FilterError = null; FilterUsesSourceCaches = false; _hidden = [];
+        Region = data.Filter is { } filter ? new(id.Value, id, new(filter.Range.Top, filter.Range.Left, filter.Range.Bottom, filter.Range.Right)) : null;
+        Filters = data.Filter?.Columns.ToImmutableDictionary(p => p.Key, p => PersistentFiltering.Restore(p.Value)) ?? ImmutableDictionary<int, ColumnFilter>.Empty;
+        SortKeys = data.Sort?.Keys.ToArray() ?? [];
+    }
+
     private WorkbookSnapshot? _evaluatedSnapshot;
     private ImmutableHashSet<int> _hidden = [];
     public DataRegion? Region { get; private set; }
     public ImmutableDictionary<int, ColumnFilter> Filters { get; private set; } = ImmutableDictionary<int, ColumnFilter>.Empty;
     public IReadOnlyList<SortKey> SortKeys { get; set; } = [];
     public string? FilterError { get; private set; }
+    public bool FilterUsesSourceCaches { get; private set; }
+    public bool IsFilterButtonVisible(int column) => Filters.GetValueOrDefault(column)?.Stored?.ShowButton != false;
     public string HeaderMarker(int column)
     {
         var index = -1;
@@ -34,7 +49,7 @@ internal sealed class SheetViewState
     public int FrozenColumns { get; set; }
     public void SetRegion(DataRegion region)
     {
-        region.Validate(); Region = region; _legacyRange = null; Filters = Filters.Clear(); SortKeys = [];
+        region.Validate(); _persistedFilter = false; Region = region; _legacyRange = null; Filters = Filters.Clear(); SortKeys = [];
         _evaluatedSnapshot = null; FilterError = null; _hidden = [];
     }
     public void Apply(WorkbookSnapshot snapshot, int column, ColumnFilter? filter)
@@ -49,8 +64,16 @@ internal sealed class SheetViewState
     public void RefreshFilter(WorkbookSnapshot snapshot)
     {
         if (Region is null || ReferenceEquals(_evaluatedSnapshot, snapshot)) return;
-        try { _hidden = DataFilterEngine.Evaluate(snapshot, Region, Filters); FilterError = null; }
-        catch (InvalidOperationException ex) { _hidden = []; FilterError = ex.Message; }
+        try
+        {
+            var allowSourceCaches = WorksheetFilterEngine.CanUseSourceCaches(snapshot);
+            _hidden = _persistedFilter ? WorksheetFilterEngine.Evaluate(snapshot, Region.SheetId, allowSourceCaches) : DataFilterEngine.Evaluate(snapshot, Region, Filters);
+            FilterUsesSourceCaches = _persistedFilter && allowSourceCaches && snapshot.GetSheet(Region.SheetId).Cells.Any(p =>
+                p.Key.Row > Region.Range.Top && p.Key.Row <= Region.Range.Bottom && Filters.ContainsKey(p.Key.Column) && p.Value.Content.Kind == CellContentKind.Formula &&
+                (p.Value.Calculation?.InputRevision != snapshot.Revision || p.Value.Calculation.State is not (CalculationState.Fresh or CalculationState.Error)));
+            FilterError = null;
+        }
+        catch (InvalidOperationException ex) { _hidden = []; FilterError = ex.Message; FilterUsesSourceCaches = false; }
         _evaluatedSnapshot = snapshot;
     }
     public bool IsFilteredOut(WorkbookSnapshot snapshot, int sheetIndex, int row)

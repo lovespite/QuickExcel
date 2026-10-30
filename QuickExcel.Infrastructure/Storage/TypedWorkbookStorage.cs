@@ -72,7 +72,7 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage
                     declaredViews = features.Contains("workbook-views");
                     declaredTextVersion = features.Contains("text-compatibility-v2");
                     declaredExtendedErrors = features.Contains("extended-cell-errors");
-                    if (features.Distinct().Count() != features.Length || Features.Except(features).Any() || features.Except(Features.Concat(["script-actions", "script-signatures", "workbook-views", "worksheet-printing", "preserved-formulas", "cell-text-annotations", "text-compatibility-v2", "extended-cell-errors"])).Any() ||
+                    if (features.Distinct().Count() != features.Length || Features.Except(features).Any() || features.Except(Features.Concat(["script-actions", "script-signatures", "workbook-views", "worksheet-printing", "preserved-formulas", "cell-text-annotations", "worksheet-data", "text-compatibility-v2", "extended-cell-errors"])).Any() ||
                         features.Contains("script-actions") && scriptApiVersion != 2)
                         throw new InvalidDataException("XLSQ 缺少必要能力或包含未知必需能力。");
                     var referenced = new HashSet<string>(StringComparer.Ordinal) { "manifest.json" };
@@ -151,7 +151,7 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage
                     var index = read.Bindings.ToList().FindIndex(b => b.Part == part && b.WorkbookSheetId == number);
                     if (index < 0 || !seenIds.Add(id) || !seenParts.Add(part)) throw new InvalidDataException("稳定表身份与 XLSX 关系绑定不一致。");
                     var sheet = sheets[index];
-                    sheets[index] = new(new SheetId(id), sheet.Name, sheet.Cells, sheet.Rows, sheet.Columns, sheet.MergedCells, sheet.Images, sheet.ShowGridLines, sheet.DefaultRowHeight, sheet.TabColor, sheet.View, sheet.Visibility, sheet.Printing, sheet.Annotations);
+                    sheets[index] = new(new SheetId(id), sheet.Name, sheet.Cells, sheet.Rows, sheet.Columns, sheet.MergedCells, sheet.Images, sheet.ShowGridLines, sheet.DefaultRowHeight, sheet.TabColor, sheet.View, sheet.Visibility, sheet.Printing, sheet.Annotations, sheet.Data);
                 }
             }
             var activeSheet = sheets[model.Sheets.IndexOf(model.GetSheet(model.ActiveSheetId))].Id;
@@ -263,6 +263,7 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage
         var manifest = Object(snapshot.FileState?.ManifestJson);
         manifest["format"] = "QuickExcel"; manifest["formatVersion"] = 2; manifest["minReaderVersion"] = 2; manifest["scriptApiVersion"] = snapshot.ScriptModules.ScriptApiVersion;
         manifest["requiredFeatures"] = JsonSerializer.SerializeToNode(Features
+            .Concat(snapshot.Sheets.Any(s => !s.Data.IsEmpty) ? ["worksheet-data"] : [])
             .Concat(snapshot.Sheets.Any(s => !s.Annotations.IsEmpty || s.Cells.Values.Any(c => c.Content.RichText is not null)) ? ["cell-text-annotations"] : [])
             .Concat(snapshot.FileState?.FormulaReadOnly == true ? ["preserved-formulas"] : [])
             .Concat(snapshot.Sheets.Any(s => !s.Printing.IsEmpty) ? ["worksheet-printing"] : [])
@@ -349,7 +350,7 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage
         for (var i = 0; i < left.Sheets.Length; i++)
         {
             var a = left.Sheets[i]; var b = right.Sheets[i];
-            if (a.Name != b.Name || a.View != b.View || a.Visibility != b.Visibility || !a.Printing.ContentEquals(b.Printing) || !a.Annotations.ContentEquals(b.Annotations) || a.ShowGridLines != b.ShowGridLines || !SameHeight(a.DefaultRowHeight, b.DefaultRowHeight) || a.TabColor != b.TabColor ||
+            if (a.Name != b.Name || a.View != b.View || a.Visibility != b.Visibility || !a.Printing.ContentEquals(b.Printing) || !a.Annotations.ContentEquals(b.Annotations) || !a.Data.ContentEquals(b.Data) || a.ShowGridLines != b.ShowGridLines || !SameHeight(a.DefaultRowHeight, b.DefaultRowHeight) || a.TabColor != b.TabColor ||
                 !a.MergedCells.SequenceEqual(b.MergedCells) || a.Cells.Count != b.Cells.Count || a.Rows.Count != b.Rows.Count || a.Columns.Count != b.Columns.Count || a.Images.Length != b.Images.Length) return false;
             if (a.Rows.Any(p => !b.Rows.TryGetValue(p.Key, out var value) || value.Hidden != p.Value.Hidden || value.StyleId != p.Value.StyleId || value.ApplyStyle != p.Value.ApplyStyle ||
                     !SameHeight(value.Height, p.Value.Height)) || a.Columns.Any(p => !b.Columns.TryGetValue(p.Key, out var value) || value != p.Value)) return false;

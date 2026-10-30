@@ -48,7 +48,10 @@ public sealed class SortRangeCommand : DocumentCommand
             }
             return a.Row.CompareTo(b.Row);
         })).Select(record => record.Row).ToArray();
-        if (order.Select((row, index) => row == dataFirst + index).All(v => v)) return new(snapshot, [], false);
+        var dataState = sheet.Data with { Sort = dataFirst <= last.Row ? new WorksheetSortState(new(dataFirst, first.Column, last.Row, last.Column), _descriptor.Keys) : null };
+        if (order.Select((row, index) => row == dataFirst + index).All(v => v))
+            return sheet.Data.ContentEquals(dataState) ? new(snapshot, [], false) :
+                new(snapshot.WithSheets(snapshot.Sheets.Select(s => s.Id == sheetId ? s.WithData(dataState) : s)), [], false) { CalculationUnchanged = true };
         var cells = sheet.Cells.ToBuilder();
         for (var index = 0; index < order.Length; index++)
         for (var column = first.Column; column <= last.Column; column++)
@@ -74,7 +77,7 @@ public sealed class SortRangeCommand : DocumentCommand
             }
             cells[position] = source;
         }
-        return StructureEdits.Draft(snapshot, snapshot.WithSheets(snapshot.Sheets.Select(s => s.Id == sheetId ? s.WithCells(cells.ToImmutable()) : s)));
+        return StructureEdits.Draft(snapshot, snapshot.WithSheets(snapshot.Sheets.Select(s => s.Id == sheetId ? s.WithCells(cells.ToImmutable()).WithData(dataState) : s)));
     }
 
     // Numbers, ordinal-ignore-case text, booleans, errors, blanks. Blanks stay last in both directions.
@@ -204,7 +207,7 @@ public sealed class SetAxisMetadataCommand(SheetId sheetId, SheetAxis axis, int 
             else { var old = columns.GetValueOrDefault(i) ?? new(); columns[i] = old with { Width = size ?? old.Width, Hidden = hidden ?? old.Hidden }; }
         if (rows.SequenceEqual(sheet.Rows) && columns.SequenceEqual(sheet.Columns)) return new(snapshot, [], false);
         var updated = new WorksheetSnapshot(sheet.Id, sheet.Name, sheet.Cells, rows, columns, sheet.MergedCells, sheet.Images,
-            sheet.ShowGridLines, sheet.DefaultRowHeight, sheet.TabColor, sheet.View, sheet.Visibility, sheet.Printing, sheet.Annotations);
+            sheet.ShowGridLines, sheet.DefaultRowHeight, sheet.TabColor, sheet.View, sheet.Visibility, sheet.Printing, sheet.Annotations, sheet.Data);
         return new(snapshot.WithSheets(snapshot.Sheets.Select(s => s.Id == sheetId ? updated : s)), [], true,
             CalculationUnchanged: size.HasValue && hidden is null);
     }

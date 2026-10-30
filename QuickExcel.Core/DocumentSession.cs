@@ -474,7 +474,13 @@ public sealed class DocumentSession : IDisposable
             + Before.DefinedNames.Sum(n => 128L + 2L * (n.Name.Length + n.Formula.Length))
             + After.DefinedNames.Sum(n => 128L + 2L * (n.Name.Length + n.Formula.Length))
             + RemovedSheetMetadata(Before, After) + RemovedSheetMetadata(After, Before)
+            + ChangedDataMetadata(Before, After) + ChangedDataMetadata(After, Before)
             + (StructureChanged ? 512L * Math.Abs(After.Sheets.Length - Before.Sheets.Length) : 0);
+        private static long ChangedDataMetadata(WorkbookSnapshot from, WorkbookSnapshot to) => from.Sheets
+            .Where(s => !ReferenceEquals(s.Data, to.Sheets.FirstOrDefault(other => other.Id == s.Id)?.Data))
+            .Sum(s => 128L + (s.Data.Filter?.Columns.Values.Sum(c => 256L + (c.Values?.Sum(v => 32L + v.Length * 2L) ?? 0) +
+                ((c.First?.Operand.Length ?? 0) + (c.Second?.Operand.Length ?? 0)) * 2L) ?? 0) +
+                (s.Data.Sort?.Keys.Sum(k => 128L + k.CustomOrder.Sum(v => 32L + v.Length * 2L)) ?? 0));
         private static long RemovedSheetMetadata(WorkbookSnapshot from, WorkbookSnapshot to) => from.Sheets
             .Where(s => !to.Sheets.Any(other => other.Id == s.Id))
             .Sum(s => 96L * (s.Rows.Count + s.Columns.Count) + s.Images.Sum(image => 128L + image.Data.Length)

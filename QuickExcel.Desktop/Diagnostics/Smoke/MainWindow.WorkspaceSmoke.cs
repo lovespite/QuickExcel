@@ -52,6 +52,10 @@ public partial class MainWindow
             Structure("deleteColumn"); await RecalculateAsync();
             Check(_document.GetCellValue(0, 1, 1) == "first", "Delete column menu moves contents back");
             GridSurface.Select(new(1, 1)); Structure("moveColumn", "4"); await RecalculateAsync();
+            Check(_document.GetCellValue(0, 1, 1) == "first" && _selectedColumn == 1, "A move splitting the persisted sort range is rejected atomically");
+            ClearSortState_Click(this, new());
+            Check(_document.Snapshot.Sheets[0].Data.Sort is null && _document.GetCellValue(0, 1, 1) == "first", "Clear sort markers retains the current records");
+            Structure("moveColumn", "4"); await RecalculateAsync();
             Check(_document.GetCellValue(0, 1, 3) == "first" && _selectedColumn == 3, "Move column dialog relocates selection");
             await UndoAsync(false);
             Structure("rename", "数据 工作表"); await RecalculateAsync();
@@ -73,7 +77,8 @@ public partial class MainWindow
             Check(_document.GetCellValue(0, 6, 0) == "2025-12-09" && _document.GetCellInput(0, 6, 0) == "46000", "Date menu uses normalized custom format and leaves raw serial unchanged");
             var revision = _document.Snapshot.Revision;
             ApplyFilter(new(0, 0, 3, 2), 1, "first"); await Idle();
-            Check(CurrentView.IsFilteredOut(_document.Snapshot, 0, 2) && _document.Snapshot.Revision == revision, "Filter hides rows without a document revision");
+            Check(CurrentView.IsFilteredOut(_document.Snapshot, 0, 2) && _document.Snapshot.Revision == revision + 1, "Filter hides rows as a persistent document revision");
+            revision = _document.Snapshot.Revision;
             Check(_grid.Control.GetModelCellBounds(2, 0) is null, "Filter reaches WPF row visibility");
             GridSurface.SelectRange(new(0, 0, 3, 2), new(0, 0)); CopySelection();
             Check(Clipboard.GetText().Contains("first") && !Clipboard.GetText().Contains("second"), "Filtered copy contains only visible rows");
@@ -82,14 +87,16 @@ public partial class MainWindow
             catch (InvalidOperationException) { }
             Check(_document.Snapshot.Revision == revision, "Paste spanning a filtered row is rejected atomically");
             Sort_Click(new MenuItem { Tag = "asc" }, new()); await _workspaceInput;
-            Check(_document.Snapshot.Revision == revision && StatusText.Text.Contains("清除筛选"), "Sort under filter is explicitly refused");
+            Check(_document.Snapshot.Revision > revision && CurrentView.Region is not null && _document.Snapshot.Sheets[0].Data.Sort is not null, "Sort under filter persists its state and reapplies the filter");
+            await UndoAsync(false);
             GridSurface.Select(new(1, 1)); FormulaBar.Text = "no longer matches"; await ApplyFormulaBarAsync();
             Check(_selectedRow == 0 && CellAddress.Text == "B1", "Editing a filter key moves focus to visible header when the row becomes hidden");
             await UndoAsync(false); ApplyFilter(new(0, 0, 3, 2), 1, "first");
             GridSurface.SelectRange(new(1, 1, 3, 1), new(1, 1));
             await HandleGridKeyAsync(Key.Delete, ModifierKeys.None, false);
             Check(_document.GetCellInput(0, 1, 1) == "" && _document.GetCellInput(0, 2, 1) == "second", "Filtered Delete clears visible cells only");
-            await UndoAsync(false); Check(CurrentView.FilterRange is null && _document.GetCellValue(0, 1, 1) == "first", "Undo restores cells and clears stale view range");
+            await UndoAsync(false); Check(CurrentView.FilterRange is not null && _document.GetCellValue(0, 1, 1) == "first", "Undo restores cells and reapplies the persistent filter");
+            ClearFilter_Click(this, new());
             GridSurface.Select(new(1, 1)); Freeze_Click(new MenuItem(), new()); await Idle();
             Check(_grid.Control.FrozenRowCount == 1 && _grid.Control.FrozenColumnCount == 1, "Freeze creates native frozen rows and columns");
             GridSurface.Select(new(80, 10)); await Idle();
