@@ -58,6 +58,8 @@ internal static class DataStructure
             tables.Add(new(table.Id, table.Name, range, columns, table.HeaderRow, table.TotalsRow, table.TotalsRowShown, table.Style, tableFilter, empty ? null : states.Sort,
                 empty || table.InsertRow && range.Bottom - range.Top == table.Range.Bottom - table.Range.Top));
         }
-        return new(filter, sort) { Tables = tables.ToImmutableArray(), Validations = data.Validations };
+        var conditional = data.ConditionalFormats.Select(r => (Rule: r, Ranges: r.Ranges.Select(Range).OfType<CellRectangle>().ToArray()))
+            .Where(p => p.Ranges.Length > 0).Select(p => p.Rule.WithRanges(p.Ranges)).ToImmutableArray();
+        return new(filter, sort) { Tables = tables.ToImmutableArray(), Validations = data.Validations, ConditionalFormats = conditional };
     }
 }

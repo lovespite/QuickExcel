@@ -444,10 +444,11 @@
           </TabItem>
           <TabItem Header="数据">
             <StackPanel Orientation="Horizontal">
-              <GroupBox Header="数据验证" Style="{StaticResource RibbonGroup}">
+              <GroupBox Header="验证与格式" Style="{StaticResource RibbonGroup}">
                 <StackPanel>
                   <Button Content="数据验证…" local:Ribbon.Icon="TableSettings" Style="{StaticResource RibbonButton}" Click="Validation_Click" ToolTip="设置列表、数值、日期、长度或公式规则"/>
                   <Button Content="清除验证…" local:Ribbon.Icon="TableSettings" Style="{StaticResource RibbonButton}" Click="RemoveValidation_Click"/>
+                  <Button Content="条件格式…" local:Ribbon.Icon="TableSettings" Style="{StaticResource RibbonButton}" Click="ConditionalFormatting_Click"/>
                 </StackPanel>
               </GroupBox>
               <GroupBox Header="Excel 表" Style="{StaticResource RibbonGroup}">

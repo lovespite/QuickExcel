@@ -28,6 +28,11 @@ public sealed class SortRangeCommand : DocumentCommand
         var sheet = snapshot.GetSheet(sheetId);
         StructureEdits.RequireSimpleStructure(sheet);
         var dataFirst = first.Row + (_descriptor.HasHeader ? 1 : 0);
+        if (sheet.Data.ConditionalFormats.Any(r => r.Ranges.Any(a =>
+                ValidationSafety.Overlaps(a, new(dataFirst, first.Column, last.Row, last.Column)) &&
+                (a.Top > dataFirst || a.Bottom < last.Row))) ||
+            !sheet.Data.ConditionalFormats.IsEmpty && _descriptor.Keys.Any(k => k.Basis != SortBasis.Value))
+            throw new NotSupportedException("条件格式仅支持规则覆盖全部待排序行的按值排序；部分行区域或条件颜色排序尚未支持。");
         var affectedTables = sheet.Data.Tables.Where(t => first.Row <= t.Range.Bottom && last.Row >= t.Range.Top && first.Column <= t.Range.Right && last.Column >= t.Range.Left).ToArray();
         var table = affectedTables.SingleOrDefault();
         if (table is not null && _descriptor.Keys.Any(k => k.Basis != SortBasis.Value)) throw new NotSupportedException("Table 的条纹/差异颜色排序暂不支持重应用；请选择按值排序。");

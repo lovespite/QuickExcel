@@ -128,6 +128,8 @@ public sealed class MoveAxisCommand(SheetId sheetId, SheetAxis axis, int start, 
         if (start == destination) return new(snapshot, [], false);
         var target = snapshot.GetSheet(sheetId);
         if (!target.Data.Tables.IsEmpty) throw new NotSupportedException("整行列搬移的表列重排尚未支持；表插入和删除可单独使用。");
+        if (snapshot.Sheets.Any(s => !s.Data.ConditionalFormats.IsEmpty))
+            throw new NotSupportedException("含条件格式的工作簿暂不支持行列搬移；插入、删除和复制工作表可单独使用。");
         if (!target.Printing.RowBreaks.IsEmpty || !target.Printing.ColumnBreaks.IsEmpty)
             throw new NotSupportedException("含分页信息的工作表暂不支持移动行列；操作未应用。");
         int? Position(int value)
@@ -319,7 +321,7 @@ internal static class StructureEdits
                 axis == SheetAxis.Column ? Metadata(sheet.Columns) : sheet.Columns, merges.Select(m => m.ToString()), images,
                 sheet.ShowGridLines, sheet.DefaultRowHeight, sheet.TabColor, sheet.View, sheet.Visibility,
                 PrintingStructure.Axis(sheet.Printing, axis, position, interval), sheet.Annotations,
-                TableStructure.NormalizeTemplates(target, DataStructure.Axis(sheet.Data, axis, position, interval), axis, position, Transform));
+                ConditionalStructure.Normalize(target, TableStructure.NormalizeTemplates(target, DataStructure.Axis(sheet.Data, axis, position, interval), axis, position, Transform), axis, position, Transform));
         });
     }
 
@@ -356,6 +358,7 @@ internal static class StructureEdits
                 if (formula != cell.Content.FormulaText) cells[p] = new(CellContent.FromFormula(formula, cell.Content.StyleId));
             }
             var data = sheet.Data with { Validations = sheet.Data.Validations.Select(v => v.MapFormulas(f => Formula(f, sheet.Id, v.Anchor))).ToImmutableArray(),
+                ConditionalFormats = sheet.Data.ConditionalFormats.Select(v => v.MapFormulas(f => Formula(f, sheet.Id, v.Anchor))).ToImmutableArray(),
                 Tables = sheet.Data.Tables.Select(t => t.WithColumns(t.Columns.Select((c, i) => c with
             {
                 CalculatedFormula = c.CalculatedFormula is { } calculated ? Formula(calculated, sheet.Id, new(t.Range.Top + (t.HeaderRow ? 1 : 0), t.Range.Left + i)) : null,

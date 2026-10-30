@@ -34,6 +34,7 @@ public partial class MainWindow
     {
         InstallGridResizeHandlers();
         _grid.HeaderRequested += OpenHeaderFilter;
+        _grid.FormattingWarning += message => { StatusText.Text = message; LogText.Text += "\n" + message; };
         _grid.Control.ViewportChanged += (_, _) => { _filterPopup?.Close(); RememberWorksheetViewport(); };
         Deactivated += (_, _) => _filterPopup?.Close();
     }

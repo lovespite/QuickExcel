@@ -19,6 +19,8 @@ public sealed class WorkbookClipboard
             return new CellSnapshot(cell.Content.WithStyle(sheet.GetStyleId(row, column)), cell.Calculation);
         })).ToImmutableArray();
         HasAnnotations = sheet.Annotations.Links.Keys.Concat(sheet.Annotations.Notes.Keys).Any(p => range.Contains(p.Row, p.Column));
+        HasConditionalFormats = sheet.Data.ConditionalFormats.Any(r => r.Ranges.Any(a => ValidationSafety.Overlaps(a, range))) ||
+            snapshot.FileState?.CompatibilityDiagnostics.Any(d => d.Feature.Contains("conditionalFormatting", StringComparison.OrdinalIgnoreCase)) == true;
         HasOldResults = Cells.Any(c => c.Content.Kind == CellContentKind.Formula && (c.Calculation?.Value is null ||
             c.Calculation.InputRevision != snapshot.Revision || c.Calculation.State is not (CalculationState.Fresh or CalculationState.Error)));
     }
@@ -31,6 +33,7 @@ public sealed class WorkbookClipboard
     public bool IsCut { get; }
     public bool HasOldResults { get; }
     public bool HasAnnotations { get; }
+    public bool HasConditionalFormats { get; }
     public ImmutableArray<CellSnapshot> Cells { get; }
 
     public static WorkbookClipboard Capture(WorkbookSnapshot snapshot, SheetId sheetId, CellRectangle range, bool cut = false)
@@ -82,6 +85,9 @@ public sealed class PasteCellsCommand(WorkbookClipboard clipboard, SheetId sheet
         WorkbookClipboard.ValidateRange(output);
         var sheet = snapshot.GetSheet(sheetId);
         WorkbookClipboard.RequirePlainGeometry(sheet, output); WorkbookClipboard.RequireVisibleDimensions(sheet, output);
+        if (mode is CellPasteMode.All or CellPasteMode.Formats && (clipboard.HasConditionalFormats ||
+            sheet.Data.ConditionalFormats.Any(r => r.Ranges.Any(a => ValidationSafety.Overlaps(a, output)))))
+            throw new NotSupportedException("完整/格式粘贴涉及条件格式，尚不能复制或拆分其作用范围；可明确选择只贴值或公式，规则可在条件格式管理器中编辑。");
         if (clipboard.IsCut)
         {
             if (mode != CellPasteMode.All || transpose) throw new NotSupportedException("剪切仅支持完整粘贴，不支持选择性粘贴或转置；源区域尚未修改。");

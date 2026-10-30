@@ -166,6 +166,10 @@ public sealed class WorksheetSnapshot
         Annotations = annotations ?? new();
         Data = data ?? new();
         QuickExcel.Core.ValidationSafety.Validate(Data);
+        if (Data.ConditionalFormats.IsDefault || Data.ConditionalFormats.Length > 1024 || Data.ConditionalFormats.Any(r => r is null) ||
+            Data.ConditionalFormats.Sum(r => r.Ranges.Length) > 4096 || Data.ConditionalFormats.Sum(r => r.EstimatedBytes) > 4 * 1024 * 1024 ||
+            Data.ConditionalFormats.Select(r => r.Priority).Distinct().Count() != Data.ConditionalFormats.Length)
+            throw new ArgumentException("条件格式优先级重复，或规则超过数量/文本容量限制。");
         foreach (var position in Annotations.Links.Keys.Concat(Annotations.Notes.Keys))
         {
             UsedRowCount = Math.Max(UsedRowCount, position.Row + 1);

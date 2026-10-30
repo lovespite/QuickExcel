@@ -1,6 +1,7 @@
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using QuickExcel.Core;
+using QuickExcel.Calculation;
 using QuickExcel.Domain;
 
 namespace QuickExcel.Desktop;
@@ -33,7 +34,7 @@ internal sealed partial class FastGridSurface
             var value = DisplayText(position.Row, position.Column);
             if (value.Length == 0) continue;
             var styleId = sheet.GetStyleId(position.Row, position.Column);
-            var style = TablePresentation.GetStyle(_snapshot, sheet, position.Row, position.Column);
+            var style = ConditionalPresentation.GetStyle(_snapshot, sheet, position.Row, position.Column);
             var width = isRow ? sheet.Columns.GetValueOrDefault(position.Column)?.Width is { } units
                 ? Math.Clamp(units * 7 + 5, 1, 10000) : position.Column == 0 ? 160 : 112 : 0;
             var rich = sheet.GetCell(position.Row, position.Column)?.Content.RichText;

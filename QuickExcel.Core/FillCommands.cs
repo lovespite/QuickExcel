@@ -17,6 +17,8 @@ public sealed class FillCellsCommand(SheetId sheetId, CellRectangle source, Cell
         if (extent == source) return new(snapshot, [], false);
         var sheet = snapshot.GetSheet(sheetId); var captured = WorkbookClipboard.Capture(snapshot, sheetId, source);
         WorkbookClipboard.RequirePlainGeometry(sheet, extent); WorkbookClipboard.RequireVisibleDimensions(sheet, extent);
+        if (captured.HasConditionalFormats || sheet.Data.ConditionalFormats.Any(r => r.Ranges.Any(a => ValidationSafety.Overlaps(a, extent))))
+            throw new NotSupportedException("填充涉及条件格式，尚不能复制或拆分规则；操作未应用。请使用只贴值/公式或单独设置规则。");
         if (sheet.Annotations.Links.Keys.Concat(sheet.Annotations.Notes.Keys).Any(p => extent.Contains(p.Row, p.Column)))
             throw new NotSupportedException("填充区域含超链接/批注，尚不能安全复制附件；整批操作未应用。");
         static int Mod(int value, int divisor) => (value % divisor + divisor) % divisor;
@@ -49,6 +51,8 @@ public sealed class FillSeriesCommand(SheetId sheetId, CellRectangle range, Cell
             throw new ArgumentException("日期序列步长须为 -100,000 至 100,000 的整数。");
         var sheet = snapshot.GetSheet(sheetId);
         WorkbookClipboard.RequirePlainGeometry(sheet, range); WorkbookClipboard.RequireVisibleDimensions(sheet, range);
+        if (sheet.Data.ConditionalFormats.Any(r => r.Ranges.Any(a => ValidationSafety.Overlaps(a, range))))
+            throw new NotSupportedException("序列填充涉及条件格式，尚不能复制或拆分规则；操作未应用。");
         var first = sheet.GetCell(range.Top, range.Left)?.Content;
         if (first?.Kind != CellContentKind.Literal || first.LiteralValue.Kind != CellValueKind.Number)
             throw new ArgumentException("序列首格必须是数字或日期序号的字面值；文本 ID、公式和空白不会被自动转换。");
@@ -115,6 +119,8 @@ public sealed class ClearCellFormatsCommand : DocumentCommand
         foreach (var address in _addresses.Distinct())
         {
             var sheet = snapshot.GetSheet(address.SheetId); var range = new CellRectangle(address.Row, address.Column, address.Row, address.Column);
+            if (sheet.Data.ConditionalFormats.Any(r => r.Contains(address.Row, address.Column)))
+                throw new NotSupportedException("清除格式涉及条件格式；请先在条件格式管理器中调整完整规则，操作未应用。");
             WorkbookClipboard.RequirePlainGeometry(sheet, range); WorkbookClipboard.RequireVisibleDimensions(sheet, range);
             var content = sheet.GetCell(address.Row, address.Column)?.Content ?? CellContent.FromLiteral(CellValue.Blank);
             // Excel ClearFormats resets the cell XF, retaining explicit rich-text run fonts.

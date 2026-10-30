@@ -5,6 +5,7 @@ using System.Windows.Media;
 using System.Windows.Threading;
 using FastWpfGrid;
 using QuickExcel.Core;
+using QuickExcel.Calculation;
 using QuickExcel.Domain;
 
 namespace QuickExcel.Desktop;
@@ -35,6 +36,16 @@ internal sealed partial class FastGridSurface : IGridSurface
     internal int RowCount => _model.Rows;
     internal int ColumnCount => _model.Columns;
     internal event Action? EditingChanged;
+    internal event Action<string>? FormattingWarning;
+    private WorkbookSnapshot? _reportedFormattingSnapshot;
+    internal void ReportFormattingDiagnostics()
+    {
+        if (ReferenceEquals(_reportedFormattingSnapshot, _snapshot)) return;
+        var errors = ConditionalPresentation.Diagnostics(_snapshot);
+        if (errors.Count == 0) return;
+        _reportedFormattingSnapshot = _snapshot; var snapshot = _snapshot; var message = "条件格式未能完整计算：" + errors[0];
+        Element.Dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(() => { if (ReferenceEquals(snapshot, _snapshot)) FormattingWarning?.Invoke(message); }));
+    }
     public bool IsComposing { get; private set; }
     public SheetViewState View { get; set; } = new();
     public CellPosition Current => _current;
@@ -120,6 +131,8 @@ internal sealed partial class FastGridSurface : IGridSurface
             notes.Add("链接地址（仅查看，不自动访问）：\n" + link.Target + (link.Location is null ? "" : "#" + link.Location) +
                 (link.Tooltip is null ? "" : "\n" + link.Tooltip));
         if (Sheet.Annotations.Notes.TryGetValue(position, out var note)) notes.Add("批注 · " + note.Author + "\n" + note.Text.Text);
+        _ = ConditionalPresentation.GetStyle(_snapshot, Sheet, position.Row, position.Column);
+        notes.AddRange(ConditionalPresentation.Diagnostics(_snapshot).Take(3).Select(s => "条件格式未能完整计算：" + s));
         if (notes.Count == 0) return null;
         var text = string.Join("\n\n", notes); return text.Length <= 4096 ? text : text[..4096] + "\n（内容较长，已截断展示；完整内容保存在文件中）";
     }
@@ -289,7 +302,7 @@ internal sealed partial class FastGridSurface : IGridSurface
     private void ShowEditorDraft()
     {
         Editor.Opacity = 1;
-        var style = TablePresentation.GetStyle(_snapshot, Sheet, _current.Row, _current.Column);
+        var style = ConditionalPresentation.GetStyle(_snapshot, Sheet, _current.Row, _current.Column);
         Editor.FontFamily = FastGridArtwork.Font(style.FontName, style.EastAsianFontName); Editor.FontSize = (style.FontSize ?? 11) * 96 / 72;
         Editor.FontWeight = style.Bold ? FontWeights.SemiBold : FontWeights.Normal;
         Editor.FontStyle = style.Italic ? FontStyles.Italic : FontStyles.Normal;
@@ -411,12 +424,12 @@ internal sealed partial class FastGridSurface : IGridSurface
             ReadCount++;
             if (Snapshot is null) return "";
             var sheet = Snapshot.Sheets[SheetIndex];
-            return CellDisplayFormatter.Format(sheet.GetCell(row, column)?.Value ?? CellValue.Blank, TablePresentation.GetStyle(Snapshot, sheet, row, column), Snapshot.DateSystem);
+            return CellDisplayFormatter.Format(sheet.GetCell(row, column)?.Value ?? CellValue.Blank, ConditionalPresentation.GetStyle(Snapshot, sheet, row, column), Snapshot.DateSystem);
         }
         public override IFastGridCell GetCell(IFastGridView view, int row, int column)
         {
             if (Snapshot is null) return new FastGridCellImpl();
-            var sheet = Snapshot.Sheets[SheetIndex]; var style = TablePresentation.GetStyle(Snapshot, sheet, row, column);
+            var sheet = Snapshot.Sheets[SheetIndex]; var style = ConditionalPresentation.GetStyle(Snapshot, sheet, row, column);
             var cell = new FastGridCellImpl { BackgroundColor = Color(style.FillColor) ?? Colors.White };
             // Artwork owns the opaque styled cell, including text. Rasterizing
             // the same text underneath it doubles formatting/glyph work and

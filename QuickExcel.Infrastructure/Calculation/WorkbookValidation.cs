@@ -96,11 +96,12 @@ public sealed class WorkbookValidation : IWorkbookValidation
         };
     }
 
-    private sealed class Evaluation(WorkbookSnapshot snapshot)
+    internal sealed class Evaluation(WorkbookSnapshot snapshot, bool useFreshCaches = false)
     {
         private readonly Dictionary<CellAddress, CellCalculation> _results = [];
         private readonly HashSet<CellAddress> _active = [];
         private int _work;
+        internal void ResetBudget() => _work = 0;
         private void Check() { if (++_work > 2_000_000) throw new NotSupportedException("验证计算超过 2,000,000 步，请缩小编辑范围。"); }
         private FormulaNode Bind(string formula, SheetId sheet, CellPosition anchor, CellPosition position, bool list = false)
         {
@@ -120,6 +121,8 @@ public sealed class WorkbookValidation : IWorkbookValidation
             if (_results.TryGetValue(address, out var previous)) return previous.Value ?? CellValue.Blank;
             var cell = snapshot.GetSheet(address.SheetId).GetCell(address.Row, address.Column);
             if (cell?.Content.Kind != CellContentKind.Formula) return cell?.Value ?? CellValue.Blank;
+            if (useFreshCaches && cell.Calculation is { State: CalculationState.Fresh or CalculationState.Error, Value: { } cached } calculation &&
+                calculation.InputRevision == snapshot.Revision) { _results[address] = calculation; return cached; }
             if (_active.Count >= 128 || !_active.Add(address)) throw new NotSupportedException("验证依赖存在循环或嵌套超过 128 层。");
             try
             {
@@ -147,6 +150,7 @@ public sealed class WorkbookValidation : IWorkbookValidation
             catch (FormulaValueException ex) { return CellValue.FromError(ex.Code); }
         }
         public CellValue Scalar(string formula, SheetId sheet, CellPosition anchor, CellPosition position) => Evaluate(Bind(formula, sheet, anchor, position), sheet);
+        public CellValue Expression(FormulaNode expression, SheetId sheet) => Evaluate(expression, sheet);
         public bool HasBlankReference(string formula, SheetId sheet, CellPosition anchor, CellPosition position) =>
             FormulaSyntax.Walk(Bind(formula, sheet, anchor, position)).OfType<ReferenceNode>().Any(r => !r.IsRange && !r.WholeColumns &&
                 Cell(new(snapshot.Sheets.Single(s => s.Name.Equals(r.Sheet, StringComparison.OrdinalIgnoreCase)).Id, r.Row, r.Column)).Kind == CellValueKind.Blank);

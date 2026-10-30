@@ -75,7 +75,7 @@ internal sealed class FormulaCriterion
             "#REF!" => CellErrorCode.Reference, "#NAME?" => CellErrorCode.Name, "#NUM!" => CellErrorCode.Number, "#N/A" => CellErrorCode.NotAvailable, _ => (CellErrorCode?)null };
         error = parsed.GetValueOrDefault(); return parsed is not null;
     }
-    private static bool TryNumber(string text, ExcelDateSystem system, out double number)
+    internal static bool TryNumber(string text, ExcelDateSystem system, out double number)
     {
         text = text.Trim(); var percent = text.EndsWith('%'); if (percent) text = text[..^1];
         var style = NumberStyles.Float;

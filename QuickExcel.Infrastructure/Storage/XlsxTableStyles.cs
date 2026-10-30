@@ -10,7 +10,7 @@ namespace QuickExcel.Storage;
 internal static class XlsxTableStyles
 {
     private static readonly Lazy<XElement> Builtins = new(() => XElement.Load(typeof(XlsxTableStyles).Assembly.GetManifestResourceStream("QuickExcel.Infrastructure.Storage.BuiltinTableStyles.xml")!));
-    private static readonly string[] Borders = ["none", "thin", "medium", "dashed", "dotted", "thick", "double", "hair"];
+    internal static readonly string[] Borders = ["none", "thin", "medium", "dashed", "dotted", "thick", "double", "hair"];
     private static readonly HashSet<string> Roles = ["wholeTable", "headerRow", "totalRow", "firstColumn", "lastColumn", "firstRowStripe", "secondRowStripe",
         "firstColumnStripe", "secondColumnStripe", "firstHeaderCell", "lastHeaderCell", "firstTotalCell", "lastTotalCell"];
     public static ImmutableArray<TableStyleElement> Resolve(XlsxPackage package, string workbook, string? name)
@@ -80,7 +80,8 @@ internal static class XlsxTableStyles
             number is null ? null : Int(Attr(number, "numFmtId"), 65535) is var id && id < 164 ? id : 0,
             number is null ? null : Decode(Attr(number, "formatCode")));
     }
-    internal static int WriteDxf(TableStyleElement style, XElement styles)
+    internal static int WriteDxf(TableStyleElement style, XElement styles) => InternDxf(CreateDxf(style, styles), styles);
+    internal static XElement CreateDxf(TableStyleElement style, XElement styles)
     {
         var dxf = new XElement(Main + "dxf");
         if (style.Bold.HasValue || style.FontColor is not null) dxf.Add(new XElement(Main + "font", style.Bold.HasValue ? new XElement(Main + "b", new XAttribute("val", style.Bold.Value ? 1 : 0)) : null,
@@ -102,6 +103,10 @@ internal static class XlsxTableStyles
         foreach (var (name, edge) in new[] { ("left", style.Left), ("right", style.Right), ("top", style.Top), ("bottom", style.Bottom), ("vertical", style.Vertical), ("horizontal", style.Horizontal) })
             if (edge is not null) border.Add(new XElement(Main + name, new XAttribute("style", Borders[edge.Style]), edge.Color is null ? null : new XElement(Main + "color", new XAttribute("rgb", edge.Color))));
         if (border.HasElements) dxf.Add(border);
+        return dxf;
+    }
+    internal static int InternDxf(XElement dxf, XElement styles)
+    {
         var dxfs = styles.Element(Main + "dxfs");
         if (dxfs is null)
         {

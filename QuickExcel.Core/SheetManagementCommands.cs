@@ -83,6 +83,7 @@ public sealed class CopySheetCommand : DocumentCommand
             p.Value.Content.Kind == CellContentKind.Formula ? new(CellContent.FromFormula(Formula(p.Value.Content.FormulaText, false, Source), p.Value.Content.StyleId)) : p.Value)).ToImmutableDictionary();
         var nextTableId = snapshot.Sheets.SelectMany(s => s.Data.Tables).Select(t => t.Id).DefaultIfEmpty().Max();
         var data = source.Data with { Validations = source.Data.Validations.Select(v => v.MapFormulas(f => Formula(f, false, Source))).ToImmutableArray(),
+            ConditionalFormats = source.Data.ConditionalFormats.Select(v => v.MapFormulas(f => Formula(f, false, Source))).ToImmutableArray(),
             Tables = source.Data.Tables.Select(t => new WorksheetTable(checked(++nextTableId), tableNames[t.Name], t.Range,
             t.Columns.Select(c => c with { CalculatedFormula = c.CalculatedFormula is { } f ? Formula(f, false, Source) : null,
                 TotalsFormula = c.TotalsFormula is { } total ? Formula(total, false, Source) : null }), t.HeaderRow, t.TotalsRow, t.TotalsRowShown, t.Style, t.Filter, t.Sort, t.InsertRow)).ToImmutableArray() };
@@ -122,6 +123,7 @@ public sealed class RenameDefinedNameCommand(string name, SheetId? scope, string
             var next = Formula(p.Value.Content.FormulaText, sheet.Id, false);
             return next == p.Value.Content.FormulaText ? p.Value : new(CellContent.FromFormula(next, p.Value.Content.StyleId));
         })).WithData(sheet.Data with { Validations = sheet.Data.Validations.Select(v => v.MapFormulas(f => Formula(f, sheet.Id, false))).ToImmutableArray(),
+            ConditionalFormats = sheet.Data.ConditionalFormats.Select(v => v.MapFormulas(f => Formula(f, sheet.Id, false))).ToImmutableArray(),
             Tables = sheet.Data.Tables.Select(t => t.WithColumns(t.Columns.Select(c => c with
         { CalculatedFormula = c.CalculatedFormula is { } calculated ? Formula(calculated, sheet.Id, false) : null,
             TotalsFormula = c.TotalsFormula is { } total ? Formula(total, sheet.Id, false) : null }))).ToImmutableArray() }));
@@ -144,6 +146,7 @@ public sealed class DeleteDefinedNameCommand(string name, SheetId? scope) : Docu
             var formulas = snapshot.Sheets.SelectMany(s => s.Cells.Values).Where(c => c.Content.Kind == CellContentKind.Formula).Select(c => c.Content.FormulaText)
                 .Concat(snapshot.DefinedNames.Where(n => n != definition).Select(n => n.Formula))
                 .Concat(snapshot.Sheets.SelectMany(s => s.Data.Validations).SelectMany(v => new[] { v.Formula1, v.Formula2 }).OfType<string>())
+                .Concat(snapshot.Sheets.SelectMany(s => s.Data.ConditionalFormats).SelectMany(v => new[] { v.Formula1, v.Formula2 }).OfType<string>())
                 .Concat(snapshot.Sheets.SelectMany(s => s.Data.Tables).SelectMany(t => t.Columns).SelectMany(c => new[] { c.CalculatedFormula, c.TotalsFormula }).OfType<string>());
             if (formulas.SelectMany(f => FormulaSyntax.Walk(FormulaSyntax.Parse(f))).OfType<NameNode>().Any(n => n.Name.Equals(name, StringComparison.OrdinalIgnoreCase) &&
                 string.Equals(n.Sheet, sheet.Name, StringComparison.OrdinalIgnoreCase)))

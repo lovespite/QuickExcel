@@ -4,6 +4,7 @@ using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using QuickExcel.Core;
+using QuickExcel.Calculation;
 using QuickExcel.Domain;
 
 namespace QuickExcel.Desktop;
@@ -27,7 +28,7 @@ internal sealed class FastGridArtwork(FastGridSurface surface) : FrameworkElemen
         // Geometry/DPI are part of each key; scrolling only translates the drawing.
         _cellDrawings.Clear();
         _sheet = surface.Sheet;
-        _hasStyles = surface.Snapshot.Styles.Any(style => style != DefaultStyle) || _sheet.Cells.Values.Any(c => c.Content.RichText is not null) || !_sheet.Annotations.IsEmpty || !_sheet.Data.Tables.IsEmpty;
+        _hasStyles = surface.Snapshot.Styles.Any(style => style != DefaultStyle) || _sheet.Cells.Values.Any(c => c.Content.RichText is not null) || !_sheet.Annotations.IsEmpty || !_sheet.Data.Tables.IsEmpty || !_sheet.Data.ConditionalFormats.IsEmpty;
         _merges = _sheet.MergedCells.Select(CellRectangle.Parse).ToArray();
         foreach (var image in _images.Keys.Where(i => !_sheet.Images.Contains(i)).ToArray()) _images.Remove(image);
         foreach (var image in _sheet.Images.Where(i => !_images.ContainsKey(i)))
@@ -99,12 +100,13 @@ internal sealed class FastGridArtwork(FastGridSurface surface) : FrameworkElemen
         foreach (var row in _hasStyles ? grid.GetVisibleModelRows() : [])
         foreach (var column in columns)
         {
-            var style = TablePresentation.GetStyle(surface.Snapshot, _sheet, row, column);
+            var style = ConditionalPresentation.GetStyle(surface.Snapshot, _sheet, row, column);
             if (style == DefaultStyle && _sheet.GetCell(row, column)?.Content.RichText is null && !_sheet.Annotations.Notes.ContainsKey(new(row, column))) continue;
             PaintCachedCell(new(row, column, row, column), style);
         }
         foreach (var merge in _merges)
-            PaintCachedCell(merge, surface.Snapshot.Styles[_sheet.GetStyleId(merge.Top, merge.Left)]);
+            PaintCachedCell(merge, ConditionalPresentation.GetStyle(surface.Snapshot, _sheet, merge.Top, merge.Left));
+        surface.ReportFormattingDiagnostics();
         // Keep only visible cells/merge fragments; traversing a sheet cannot grow
         // the cache with every visited address or retain a previous viewport's DPI.
         foreach (var key in _cellDrawings.Keys.Where(key => !used.Contains(key)).ToArray()) _cellDrawings.Remove(key);

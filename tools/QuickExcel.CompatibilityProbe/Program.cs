@@ -4,6 +4,9 @@ using QuickExcel.CompatibilityProbe;
 
 try
 {
+    if (args is ["conditional-formatting", var conditionalFormatOracle, var conditionalFormatDirectory]) return ConditionalFormattingProbe.Run(conditionalFormatOracle, conditionalFormatDirectory);
+    if (args is ["verify-conditional-formatting", var cfExpected, var cfActual, var cfSource, var cfVerdict]) return ConditionalFormattingProbe.Verify(cfExpected, cfActual, cfSource, cfVerdict);
+    if (args is ["verify-conditional-model", var cfOutput, var cfWorkbook, var cfModelVerdict]) return ConditionalFormattingProbe.VerifyModel(cfOutput, cfWorkbook, cfModelVerdict);
     if (args is ["data-validation", var validationOracle, var validationDirectory]) return DataValidationProbe.Run(validationOracle, validationDirectory);
     if (args is ["verify-data-validation", var validationExpected, var validationActual, var validationVerdict]) return DataValidationProbe.Verify(validationExpected, validationActual, validationVerdict);
     if (args is ["structured-tables", var structuredOracle, var structuredDirectory]) return StructuredTablesProbe.Run(structuredOracle, structuredDirectory);
