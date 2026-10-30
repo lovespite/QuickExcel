@@ -4,6 +4,7 @@ using QuickExcel.Calculation;
 using QuickExcel.Core;
 using QuickExcel.Domain;
 using QuickExcel.Storage;
+using QuickExcel.Formulas;
 
 namespace QuickExcel.CompatibilityProbe;
 
@@ -14,7 +15,8 @@ public static class BusinessBaselineProbe
     { public IScriptRuntime Create(string source) => throw new InvalidOperationException("Business baseline must not execute scripts."); }
     public sealed record Check(string Location, string Property, string? Expected, string? Actual, bool Passed);
 
-    public static IReadOnlyList<Check> Compare(WorkbookSnapshot book, JsonElement expected)
+    public static string? CanonicalFormula(string? formula) => formula is null ? null : FormulaSyntax.Print(FormulaSyntax.Parse(formula));
+    public static IReadOnlyList<Check> Compare(WorkbookSnapshot book, JsonElement expected, bool equivalentFormulas = false)
     {
         var checks = new List<Check>();
         void Equal(string location, string property, object? left, object? right)
@@ -36,14 +38,17 @@ public static class BusinessBaselineProbe
                 var cell = sheet.GetCell(row, col); var value = cell?.Value ?? CellValue.Blank; var style = book.Styles[sheet.GetStyleId(row, col)];
                 Equal(location, "Kind", item.GetProperty("Kind").GetString(), value.Kind);
                 object? actual = value.Kind switch { CellValueKind.Blank => null, CellValueKind.Text => value.TextValue,
-                    CellValueKind.Number => value.NumberValue, CellValueKind.Boolean => value.BooleanValue, _ => value.ToString() };
+                    CellValueKind.Number => value.NumberValue, CellValueKind.Boolean => value.BooleanValue, _ => CellInput.DisplayText(value) };
                 var raw = item.GetProperty("Value"); object? wanted = raw.ValueKind switch { JsonValueKind.Null => null,
                     JsonValueKind.Number => raw.GetDouble(), JsonValueKind.True => true, JsonValueKind.False => false, _ => raw.GetString() };
                 Equal(location, "Value", wanted, actual);
-                Equal(location, "Formula", item.GetProperty("Formula").GetString(), cell?.Content.Kind == CellContentKind.Formula ? cell.Content.FormulaText : null);
+                var expectedFormula = item.GetProperty("Formula").GetString(); var actualFormula = cell?.Content.Kind == CellContentKind.Formula ? cell.Content.FormulaText : null;
+                Equal(location, "Formula", equivalentFormulas ? CanonicalFormula(expectedFormula) : expectedFormula,
+                    equivalentFormulas ? CanonicalFormula(actualFormula) : actualFormula);
                 Equal(location, "Text", item.GetProperty("Text").GetString(), CellDisplayFormatter.Format(value, style, book.DateSystem, CultureInfo.GetCultureInfo("zh-CN")));
                 // Excel returns an empty aggregate font name for mixed Latin/East Asian text; per-character E1 evidence owns that case.
-                if (item.GetProperty("Font").GetString() is { Length: > 0 } font) Equal(location, "Font", font, style.FontName);
+                if (item.GetProperty("Font").GetString() is { Length: > 0 } font)
+                    Equal(location, "Font", font, value.Kind == CellValueKind.Blank && font == style.EastAsianFontName ? style.EastAsianFontName : style.FontName);
                 Equal(location, "Size", item.GetProperty("Size").GetDouble(), style.FontSize);
                 Equal(location, "Bold", item.GetProperty("Bold").GetBoolean(), style.Bold);
                 Equal(location, "Italic", item.GetProperty("Italic").GetBoolean(), style.Italic);

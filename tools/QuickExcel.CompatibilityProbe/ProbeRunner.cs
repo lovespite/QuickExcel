@@ -96,7 +96,7 @@ public static class ProbeRunner
         _ => throw new ArgumentException("Unknown probe mode.")
     };
 
-    private static void Apply(DocumentSession session, string mode)
+    internal static void Apply(DocumentSession session, string mode)
     {
         var sheet = session.Snapshot.Sheets[0];
         var address = new CellAddress(sheet.Id, 1, 0);

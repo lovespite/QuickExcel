@@ -55,6 +55,7 @@ public sealed class ShiftAxisCommand(SheetId sheetId, SheetAxis axis, int index,
             return left > right ? null : (Position(left)!.Value, Position(right)!.Value);
         }
         var transformed = StructureEdits.Axis(snapshot, target, axis, Position, Interval);
+        if (!delete) transformed = InheritInsertedFormatting(transformed, target, axis, index, count);
         var view = target.View;
         var boundary = axis == SheetAxis.Row ? view.FrozenRows : view.FrozenColumns;
         if (index < boundary)
@@ -83,6 +84,30 @@ public sealed class ShiftAxisCommand(SheetId sheetId, SheetAxis axis, int index,
             transformed = transformed.WithSheets(transformed.Sheets.Select(s => s.Id == sheetId ? s.WithView(nextView) : s));
         }
         return StructureEdits.Draft(snapshot, transformed);
+    }
+
+    private static WorkbookSnapshot InheritInsertedFormatting(WorkbookSnapshot transformed, WorksheetSnapshot source, SheetAxis axis, int index, int count)
+    {
+        // Excel copies formats from above/left, never content or hidden state. At the first axis there is no predecessor.
+        if (index == 0) return transformed;
+        var neighbor = index - 1;
+        var styles = source.Cells.Where(p => (axis == SheetAxis.Row ? p.Key.Row : p.Key.Column) == neighbor)
+            .Select(p => (Position: p.Key, Style: source.GetStyleId(p.Key.Row, p.Key.Column))).ToArray();
+        var target = transformed.GetSheet(source.Id); var cells = target.Cells.ToBuilder();
+        if ((long)styles.Length * count + transformed.Sheets.Sum(s => (long)s.Cells.Count) > WorkbookLimits.MaxCells)
+            throw new InvalidOperationException("插入行列的继承格式超过单元格容量，操作未应用。");
+        var rows = target.Rows.ToBuilder(); var columns = target.Columns.ToBuilder();
+        for (var n = index; n < index + count; n++)
+        {
+            if (axis == SheetAxis.Row && source.Rows.TryGetValue(neighbor, out var row)) rows[n] = row with { Hidden = false };
+            if (axis == SheetAxis.Column && source.Columns.TryGetValue(neighbor, out var column)) columns[n] = column with { Hidden = false };
+            foreach (var item in styles)
+                cells[axis == SheetAxis.Row ? item.Position with { Row = n } : item.Position with { Column = n }] =
+                    new(CellContent.FromLiteral(CellValue.Blank, item.Style));
+        }
+        var updated = new WorksheetSnapshot(target.Id, target.Name, cells, rows, columns, target.MergedCells, target.Images,
+            target.ShowGridLines, target.DefaultRowHeight, target.TabColor, target.View, target.Visibility, target.Printing, target.Annotations);
+        return transformed.WithSheets(transformed.Sheets.Select(s => s.Id == target.Id ? updated : s));
     }
 }
 

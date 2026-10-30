@@ -1,10 +1,12 @@
-param([Parameter(Mandatory)][string]$OutputDirectory, [string]$InputDirectory, [string]$ReferencePath)
+param([Parameter(Mandatory)][string]$OutputDirectory, [string]$InputDirectory, [string]$ReferencePath,
+    [switch]$EditMatrix, [string]$VerifyDirectory)
 $ErrorActionPreference='Stop'
 $repo=Split-Path $PSScriptRoot -Parent
 $target=[IO.Path]::GetFullPath($OutputDirectory,$repo)
 $root=[IO.Path]::GetFullPath((Join-Path $repo 'artifacts'))+[IO.Path]::DirectorySeparatorChar
 if(-not $target.StartsWith($root,[StringComparison]::OrdinalIgnoreCase) -or (Test-Path -LiteralPath $target)){throw 'Use a new artifacts directory.'}
 if([bool]$InputDirectory -ne [bool]$ReferencePath){throw 'InputDirectory and ReferencePath must be supplied together.'}
+if(($EditMatrix -and -not $InputDirectory) -or ($VerifyDirectory -and -not $EditMatrix)){throw 'EditMatrix requires source/reference; VerifyDirectory requires EditMatrix.'}
 [void](New-Item -ItemType Directory -Path $target)
 function Release-Com($object){if($null -ne $object){[void][Runtime.InteropServices.Marshal]::FinalReleaseComObject($object)}}
 # Separate call sites avoid PowerShell caching a numeric COM setter for text and vice versa.
@@ -16,19 +18,21 @@ function Set-Format($sheet,[string]$address,[string]$value){
     if([Globalization.CultureInfo]::CurrentCulture.TwoLetterISOLanguageName -eq 'zh'){$value=$value.Replace('[Red]','[红色]')}
     $cell=$sheet.Range($address);try{$cell.NumberFormat=$value}finally{Release-Com $cell}
 }
-function Capture-Book($book){
+function Capture-Book($book,[int]$maxRow=6,[int]$maxColumn=4){
     $sheets=@()
     for($i=1;$i -le $book.Worksheets.Count;$i++){
         $sheet=$book.Worksheets.Item($i);$cells=@();$setup=$sheet.PageSetup
         try{
             # Fixed small bounds include blank cells and catch extra values; these are test fixtures only.
-            for($row=1;$row -le 6;$row++){for($col=1;$col -le 4;$col++){
+            for($row=1;$row -le $maxRow;$row++){for($col=1;$col -le $maxColumn;$col++){
                 $cell=$sheet.Cells.Item($row,$col);$font=$cell.Font
                 try{
                     $value=$cell.Value2
                     $kind=if($null -eq $value){'Blank'}elseif($value -is [bool]){'Boolean'}elseif($value -is [string]){'Text'}else{'Number'}
+                    if($cell.HasFormula -and [string]$cell.Text -in @('#REF!','#VALUE!','#DIV/0!','#N/A','#NAME?','#NUM!','#NULL!')){$kind='Error';$value=[string]$cell.Text}
                     $cells += [ordered]@{Row=$row;Column=$col;Kind=$kind;Value=$value;Formula=$(if($cell.HasFormula){[string]$cell.Formula}else{$null});
-                        Text=[string]$cell.Text;NumberFormat=[string]$cell.NumberFormat;Font=[string]$font.Name;Size=[double]$font.Size;Bold=[bool]$font.Bold;Italic=[bool]$font.Italic;Color=[int]$font.Color}
+                        Text=[string]$cell.Text;NumberFormat=[string]$cell.NumberFormat;Font=[string]$font.Name;Size=[double]$font.Size;Bold=[bool]$font.Bold;Italic=[bool]$font.Italic;Color=[int]$font.Color;
+                        RowHeight=[double]$cell.RowHeight;ColumnWidth=[double]$cell.ColumnWidth}
                 }finally{Release-Com $font;Release-Com $cell}
             }}
             $printing=[ordered]@{}
@@ -79,11 +83,57 @@ function Initialize-Book($book,[string]$id){
         finally{Release-Com $headerFont;Release-Com $header;Release-Com $font;Release-Com $range;Release-Com $sheet}
     }
 }
-$excel=$null;$book=$null;$results=@();$failures=@()
+$excel=$null;$book=$null;$results=@();$failures=@();$rawDifferences=@()
 try{
     $excel=New-Object -ComObject Excel.Application
     $excel.Visible=$false;$excel.DisplayAlerts=$false;$excel.AskToUpdateLinks=$false;$excel.AutomationSecurity=3
     $reference=if($ReferencePath){Get-Content -LiteralPath ([IO.Path]::GetFullPath($ReferencePath,$repo)) -Raw|ConvertFrom-Json}else{$null}
+    if($EditMatrix){
+        foreach($id in @('roster','quotation','date-ledger-1900','date-ledger-1904','cross-sheet','print-template')){
+            $paths=@()
+            foreach($mode in @('unchanged','value','style','insert-row','delete-row','insert-column','delete-column','rename')){
+                $inputPath=if($VerifyDirectory){Join-Path ([IO.Path]::GetFullPath($VerifyDirectory,$repo)) "$id/$mode.xlsx"}else{Join-Path ([IO.Path]::GetFullPath($InputDirectory,$repo)) ($id+'.xlsx')}
+                if($VerifyDirectory -and -not (Test-Path -LiteralPath $inputPath)){$inputPath=Join-Path ([IO.Path]::GetFullPath($VerifyDirectory,$repo)) "$id/$mode.diagnostic-copy.xlsx"}
+                $sourceHash=(Get-FileHash -LiteralPath $inputPath).Hash
+                $book=$excel.Workbooks.Open($inputPath,0,$true)
+                if(-not $VerifyDirectory){
+                    $sheet=$book.Worksheets.Item(1)
+                    try{switch($mode){
+                        'value' {Set-Number $sheet 'A2' 99}
+                        'style' {$cell=$sheet.Range('A2');$font=$cell.Font;try{$font.Bold= -not [bool]$font.Bold}finally{Release-Com $font;Release-Com $cell}}
+                        'insert-row' {$range=$sheet.Rows.Item(2);try{[void]$range.Insert()}finally{Release-Com $range}}
+                        'delete-row' {$range=$sheet.Rows.Item(2);try{[void]$range.Delete()}finally{Release-Com $range}}
+                        'insert-column' {$range=$sheet.Columns.Item(2);try{[void]$range.Insert()}finally{Release-Com $range}}
+                        'delete-column' {$range=$sheet.Columns.Item(2);try{[void]$range.Delete()}finally{Release-Com $range}}
+                        'rename' {$sheet.Name='改名后'}
+                    }}finally{Release-Com $sheet}
+                }
+                $excel.CalculateFullRebuild();$calculation=[int]$excel.Calculation;$before=Capture-Book $book 7 5
+                $saved=Join-Path $target "$id-$mode.xlsx";$book.SaveAs($saved,51);$book.Close($false);Release-Com $book;$book=$null
+                $book=$excel.Workbooks.Open($saved,0,$true);$excel.CalculateFullRebuild();$after=Capture-Book $book 7 5
+                $same=($before|ConvertTo-Json -Depth 12 -Compress) -ceq ($after|ConvertTo-Json -Depth 12 -Compress)
+                $matches=if($VerifyDirectory){
+                    $expected=(($reference.Cases|Where-Object Id -eq $id).Paths|Where-Object Mode -eq $mode).AfterReopen
+                    ($expected|ConvertTo-Json -Depth 12 -Compress) -ceq ($after|ConvertTo-Json -Depth 12 -Compress)
+                }else{$null}
+                $unchanged=$sourceHash -eq (Get-FileHash -LiteralPath $inputPath).Hash
+                $paths += [ordered]@{Mode=$mode;File="$id-$mode.xlsx";Sha256=(Get-FileHash -LiteralPath $saved).Hash;SourceSha256=$sourceHash;
+                    SourceUnchanged=$unchanged;SameAfterReopen=$same;ReferenceMatches=$matches;Before=$before;AfterReopen=$after}
+                if(-not $same -or -not $unchanged){$failures+="$id/$mode"}
+                if($matches -eq $false){$rawDifferences+="$id/$mode"}
+                $book.Close($false);Release-Com $book;$book=$null
+                Write-Output "$id/$mode reopen=$same reference=$matches"
+            }
+            $results += [ordered]@{Id=$id;Paths=$paths}
+        }
+        [ordered]@{Origin=$(if($VerifyDirectory){'real-excel-output-verification'}else{'real-excel-edit-oracle'});
+            Version=[string]$excel.Version;Build=[string]$excel.Build;Language=$excel.LanguageSettings.LanguageID(2);Calculation=$calculation;
+            CorruptLoad='xlNormalLoad';ExternalLinksUpdated=$false;Cases=$results;Failures=$failures;RawComparisonDifferences=$rawDifferences;
+            SemanticVerification=$(if($VerifyDirectory){'pending-verify-edit-matrix'}else{'independent-excel-oracle'})}|
+            ConvertTo-Json -Depth 18|Set-Content -LiteralPath (Join-Path $target 'excel-edit-matrix.json') -Encoding utf8
+        if($failures.Count){throw "Excel edit matrix failed: $($failures -join ', ')"}
+        return
+    }
     foreach($id in @('roster','quotation','date-ledger-1900','date-ledger-1904','cross-sheet','print-template')){
         $inputPath=if($InputDirectory){Join-Path ([IO.Path]::GetFullPath($InputDirectory,$repo)) ($id+'.xlsx')}else{$null}
         $sourceHash=if($inputPath){(Get-FileHash -LiteralPath $inputPath).Hash}else{$null}

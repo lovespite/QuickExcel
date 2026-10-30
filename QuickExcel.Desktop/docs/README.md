@@ -1,6 +1,6 @@
 # QuickExcel 架构与实施文档
 
-XC-0001 样本台账完成：[真实 Excel 业务基线](37-excel-business-baseline.md) 覆盖五类六文件、1900/1904 日期系统及 E1 各项期望索引，5384 属性对照通过。继续 XC-0002/0003 收尾，再进入 E2。
+XC-0001/0002 完成：[真实 Excel 业务基线](37-excel-business-baseline.md) 覆盖五类六文件，5384 属性通过；[独立编辑矩阵](38-excel-edit-matrix.md) 的 48 路径及 Excel 重开对照通过，原始差异、诊断副本和预期公式表示均明确登记。继续 XC-0003 收尾，再进入 E2。
 
 XC-0107 已完成常见富文本、超链接和传统批注的读显写；右键显式转换富文本后可普通编辑，支持撤销。真实 Excel 对照及限制见 [内容记录](36-xlsx-rich-text-links-and-notes.md)。下一步补齐 E0 阶段证据并进入 E2。
 

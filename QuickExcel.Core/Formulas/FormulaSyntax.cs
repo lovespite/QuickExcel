@@ -201,6 +201,9 @@ public static class FormulaSyntax
             string? sheet = null;
             if (Current.Kind == "!") { Take(); sheet = token.Text; token = Take(); }
             else if (token.Kind == "quoted") throw new FormatException("带引号的表名必须后接 !。");
+            // Excel retains the sheet qualifier when a structural deletion removes the referenced address.
+            if (sheet is not null && token.Kind == "error" && token.Text.Equals("#REF!", StringComparison.OrdinalIgnoreCase))
+                return new ValueNode(CellValue.FromError(CellErrorCode.Reference));
             if (token.Kind != "word") throw new FormatException("工作表引用缺少地址。");
             if (Current.Kind == "(" && sheet is null)
             {

@@ -5,6 +5,8 @@ using QuickExcel.CompatibilityProbe;
 try
 {
     if (args is ["business-baseline", var businessReference, var businessDirectory]) return BusinessBaselineProbe.Run(businessReference, businessDirectory);
+    if (args is ["edit-matrix", var matrixSources, var matrixOracle, var matrixDirectory]) return EditMatrixProbe.Run(matrixSources, matrixOracle, matrixDirectory);
+    if (args is ["verify-edit-matrix", var expectedEdits, var observedEdits, var modelEdits, var editVerdict]) return EditMatrixVerification.Run(expectedEdits, observedEdits, modelEdits, editVerdict);
     if (args is ["number-formats", var reference, var numberDirectory]) return NumberFormatProbe.Run(reference, numberDirectory);
     if (args is ["styles", var styleSource, var styleDirectory]) return StyleProbe.Run(styleSource, styleDirectory);
     if (args is ["metadata", var metadataSource, var metadataDirectory]) return MetadataProbe.Run(metadataSource, metadataDirectory);
@@ -38,7 +40,7 @@ try
         Console.WriteLine($"{differences.Count} differences; {left.Issues.Count + right.Issues.Count} validation issues.");
         return differences.Count == 0 && left.Issues.Count == 0 && right.Issues.Count == 0 ? 0 : 2;
     }
-    Console.Error.WriteLine("Usage: baseline <new-output-directory> | compare <before.xlsx> <after.xlsx> <new-report.json>");
+    Console.Error.WriteLine("Usage: baseline <new-output-directory> | compare <before.xlsx> <after.xlsx> <new-report.json> | business-baseline <excel-reference.json> <new-directory> | edit-matrix <source-directory> <excel-oracle.json> <new-directory> | verify-edit-matrix <excel-oracle.json> <excel-observed.json> <model-report.json> <new-verdict.json>");
     return 1;
 }
 catch (Exception ex) when (ex is IOException or InvalidOperationException or ArgumentException or System.Xml.XmlException)
