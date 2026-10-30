@@ -1,0 +1,105 @@
+{
+  "Version": "16.0",
+  "Build": 20527.0,
+  "Language": 2052,
+  "Origin": "independent Excel Range.End/ConvertFormula and formula oracle",
+  "Navigation": [
+    {
+      "Direction": -4121,
+      "HiddenRow2": false,
+      "To": "A3",
+      "From": "A1"
+    },
+    {
+      "Direction": -4121,
+      "HiddenRow2": false,
+      "To": "A5",
+      "From": "A3"
+    },
+    {
+      "Direction": -4121,
+      "HiddenRow2": false,
+      "To": "A5",
+      "From": "A4"
+    },
+    {
+      "Direction": -4121,
+      "HiddenRow2": false,
+      "To": "A1048576",
+      "From": "A5"
+    },
+    {
+      "Direction": -4162,
+      "HiddenRow2": false,
+      "To": "A3",
+      "From": "A5"
+    },
+    {
+      "Direction": -4162,
+      "HiddenRow2": false,
+      "To": "A1",
+      "From": "A3"
+    },
+    {
+      "Direction": -4121,
+      "HiddenRow2": true,
+      "To": "A3",
+      "From": "A1"
+    },
+    {
+      "Direction": -4121,
+      "HiddenRow2": true,
+      "To": "A5",
+      "From": "A3"
+    },
+    {
+      "Direction": -4121,
+      "HiddenRow2": true,
+      "To": "A5",
+      "From": "A4"
+    },
+    {
+      "Direction": -4121,
+      "HiddenRow2": true,
+      "To": "A1048576",
+      "From": "A5"
+    },
+    {
+      "Direction": -4162,
+      "HiddenRow2": true,
+      "To": "A3",
+      "From": "A5"
+    },
+    {
+      "Direction": -4162,
+      "HiddenRow2": true,
+      "To": "A1",
+      "From": "A3"
+    },
+    {
+      "Direction": -4121,
+      "To": "A3",
+      "FormulaEmptyA3": true,
+      "From": "A1"
+    }
+  ],
+  "ReferenceModes": [
+    {
+      "Mode": 1,
+      "Formula": "=$A$1+$B$2"
+    },
+    {
+      "Mode": 2,
+      "Formula": "=A$1+B$2"
+    },
+    {
+      "Mode": 3,
+      "Formula": "=$A1+$B2"
+    },
+    {
+      "Mode": 4,
+      "Formula": "=A1+B2"
+    }
+  ],
+  "OracleSha256": "b9bfc57c46bc467155f55864543c45b216837c0fd78cfaee0109575de9018106"
+}

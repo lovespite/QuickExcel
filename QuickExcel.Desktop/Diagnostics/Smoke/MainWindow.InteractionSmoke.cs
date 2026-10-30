@@ -179,10 +179,10 @@ public partial class MainWindow
         UpdateFormulaBar();
         InstallDocument(WorkbookDocument.Open(_filePath!, _services), _filePath, "重开交互验收.xlsq", fileVersion: QuickExcel.Storage.FileVersions.Read(_filePath!));
         await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
-        Check(_selectedRow == 0 && _selectedColumn == 0 &&
-            GridSurface.Selection.SequenceEqual(new[] { new CellPosition(0, 0) }) &&
-            _grid.Current == new CellPosition(0, 0) && CellAddress.Text == "A1",
-            "Reopening the same sheet identity resets visual selection, current editor and formula address together");
+        Check(_selectedRow == 5 && _selectedColumn == 0 &&
+            GridSurface.Selection.SequenceEqual(new[] { new CellPosition(5, 0) }) &&
+            _grid.Current == new CellPosition(5, 0) && CellAddress.Text == "A6",
+            "Reopening restores the saved A6 view, synchronizing selection, current editor and formula address (XC-0104)");
 
         ApplyValues([(6, 0, "=1+2")]);
         await RecalculateAsync();

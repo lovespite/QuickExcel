@@ -654,12 +654,8 @@
                            Text="A1"
                            FontFamily="Consolas"/>
               </Button>
-              <TextBlock Grid.Column="1"
-                         Text="ƒx"
-                         VerticalAlignment="Center"
-                         HorizontalAlignment="Center"
-                         Foreground="#187553"
-                         FontSize="17"/>
+              <Button x:Name="AutoSumButton" Grid.Column="1" Content="Σ" Click="AutoSum_Click" Padding="2" Margin="2,0"
+                      ToolTip="自动求和 · Alt+=（先预览公式，再按 Enter 提交）" AutomationProperties.Name="自动求和"/>
               <TextBox Grid.Column="2"
                        x:Name="FormulaBar"
                        FontFamily="Consolas, Microsoft YaHei UI"

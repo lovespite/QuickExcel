@@ -65,6 +65,7 @@ public partial class MainWindow : Window
         InstallWorkspaceHandlers();
         InstallCellTextHandlers();
         InstallFillHandlers();
+        InstallFormulaEditing();
         InstallDocument(WorkbookDocument.CreateBlank(_services), null, "未命名.xlsq", disposePrevious: false);
         _hasWorkbook = false;
         ShowStartPage();
@@ -80,7 +81,7 @@ public partial class MainWindow : Window
             _scriptTrust = new(Path.Combine(folder, "trusted-script-certificates.json"));
             args = [];
         }
-        if (args.Length > 0 && args[0] is "--smoke-test" or "--interaction-smoke" or "--workspace-smoke" or "--product-smoke" or "--ribbon-smoke" or "--signature-smoke" or "--grid-benchmark" or "--resize-benchmark" or "--data-operations-smoke" or "--horizontal-scroll-benchmark" or "--fast-grid-benchmark" or "--fast-grid-drag-benchmark" or "--grid-integration-smoke" or "--xlsx-rendering-smoke" or "--fill-smoke")
+        if (args.Length > 0 && args[0] is "--smoke-test" or "--interaction-smoke" or "--workspace-smoke" or "--product-smoke" or "--ribbon-smoke" or "--signature-smoke" or "--grid-benchmark" or "--resize-benchmark" or "--data-operations-smoke" or "--horizontal-scroll-benchmark" or "--fast-grid-benchmark" or "--fast-grid-drag-benchmark" or "--grid-integration-smoke" or "--xlsx-rendering-smoke" or "--fill-smoke" or "--formula-entry-smoke")
         {
             _smokeMode = true;
             _recentFiles = new(Path.Combine(args.Length > 1 ? args[1] : AppContext.BaseDirectory, "recent-files.json"));
@@ -90,7 +91,8 @@ public partial class MainWindow : Window
             try
             {
                 var folder = args.Length > 1 ? args[1] : Path.Combine(AppContext.BaseDirectory, "smoke");
-                if (args[0] == "--fill-smoke") await RunFillSmokeOnlyAsync(folder);
+                if (args[0] == "--formula-entry-smoke") await RunFormulaEditingSmokeAsync(folder);
+                else if (args[0] == "--fill-smoke") await RunFillSmokeOnlyAsync(folder);
                 else if (args[0] == "--xlsx-rendering-smoke") await RunXlsxRenderingSmokeAsync(folder, args.ElementAtOrDefault(2));
                 else if (args[0] == "--fast-grid-drag-benchmark") await RunFastGridDragBenchmarkAsync(folder);
                 else if (args[0] == "--grid-integration-smoke") await RunGridIntegrationSmokeAsync(folder);
@@ -151,6 +153,7 @@ public partial class MainWindow : Window
         _rowCount = 100;
         _columnCount = 12;
         _editState.Reset();
+        EndReferenceGesture(); CloseFormulaHelp(); _endNavigation = false;
         _calculationPending = false;
         _refreshing = true;
         LoadScriptModules();
@@ -251,6 +254,7 @@ public partial class MainWindow : Window
             var result = _editor.SetCell(_formulaSheet, _formulaRow, _formulaColumn, FormulaBar.Text);
             _calculationPending |= result.Changed && !result.CalculationUnchanged;
             _editState.EndFormula();
+            CloseFormulaHelp();
             UpdateChrome();
             return true;
         }

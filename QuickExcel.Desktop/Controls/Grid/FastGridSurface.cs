@@ -229,6 +229,15 @@ internal sealed partial class FastGridSurface : IGridSurface
         if (!extend) _anchor = MergeOwner(row, column);
         SelectRange(GridRange.Between(_anchor, position), position);
     }
+    internal void EnsureNavigationSize(int rows, int columns)
+    {
+        if (rows <= _model.Rows && columns <= _model.Columns) return;
+        _model.Rows = Math.Max(rows, _model.Rows); _model.Columns = Math.Max(columns, _model.Columns);
+        _selecting = true;
+        try { UpdateProjection(); Control.NotifyRefresh(); ApplyDimensions(); UpdateMergedRanges(); }
+        finally { _selecting = false; }
+        // Keep the model anchor; Select immediately installs the requested extended range.
+    }
     public void SelectRange(GridRange range, CellPosition current)
     {
         if (!Commit() || BeforeNavigate?.Invoke() == false) return;

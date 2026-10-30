@@ -30,6 +30,7 @@ public partial class MainWindow
             var readOnly = snapshot.FileState?.FormulaReadOnly == true;
             ScriptEditor.IsReadOnly = readOnly;
             FormulaBar.IsReadOnly = readOnly || snapshot.Sheets[_sheetIndex].GetCell(_selectedRow, _selectedColumn)?.Content.RichText is not null;
+            AutoSumButton.IsEnabled = !_busy && !FormulaBar.IsReadOnly;
             RibbonPasteButton.IsEnabled = !readOnly;
             RibbonCutButton.IsEnabled = !readOnly;
             foreach (var group in HomeRibbonContent.Children.OfType<GroupBox>().Where(g => g.Header as string is "字体" or "对齐方式" or "数字" or "单元格"))

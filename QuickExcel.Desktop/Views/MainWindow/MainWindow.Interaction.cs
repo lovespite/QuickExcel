@@ -58,6 +58,7 @@ public partial class MainWindow
         {
             ActivateGridDraft(e.OriginalSource);
             _editState.StartComposition();
+            CloseFormulaHelp();
         }
     }
 
@@ -85,6 +86,7 @@ public partial class MainWindow
     private async void FormulaBar_KeyDown(object sender, KeyEventArgs e)
     {
         if (_editState.IsComposing || e.Key == Key.ImeProcessed) return;
+        if (HandleFormulaAssistKey(FormulaBar, e.Key, Keyboard.Modifiers)) { e.Handled = true; return; }
         if (e.Key == Key.Escape)
         {
             e.Handled = true;
@@ -105,9 +107,11 @@ public partial class MainWindow
         if (_busy || _editState.IsComposing || e.Key == Key.ImeProcessed) return;
         var modifiers = Keyboard.Modifiers;
         var editing = !_gridEditorArmed && (e.OriginalSource is TextBox || _editState.GridEditing);
+        if (editing && HandleFormulaAssistKey(_grid.Editor, e.Key, modifiers)) { e.Handled = true; return; }
         var ctrl = modifiers.HasFlag(ModifierKeys.Control);
         if (modifiers.HasFlag(ModifierKeys.Alt))
         {
+            if (e.Key == Key.OemPlus || e.SystemKey == Key.OemPlus) { e.Handled = true; BeginAutoSum(); return; }
             if ((e.Key == Key.Down || e.SystemKey == Key.Down) && CurrentView.Region is not null)
             {
                 e.Handled = true;
@@ -134,6 +138,7 @@ public partial class MainWindow
         var ctrl = modifiers.HasFlag(ModifierKeys.Control);
         if (key == Key.Escape)
         {
+            EndReferenceGesture(); CloseFormulaHelp(); _endNavigation = false;
             _grid.CancelFillGesture();
             _workbookClipboard = null;
             GridSurface.Cancel();
@@ -188,6 +193,10 @@ public partial class MainWindow
         var row = _selectedRow;
         var column = _selectedColumn;
         var currentRange = _grid.CurrentRange;
+        if (key == Key.End && !ctrl)
+        { _endNavigation = !_endNavigation; StatusText.Text = _endNavigation ? "结束模式：按方向键跳至数据边界。" : "已取消结束模式。"; return; }
+        var edge = (ctrl || _endNavigation) && key is Key.Left or Key.Right or Key.Up or Key.Down;
+        _endNavigation = false;
         var delta = shift && key is Key.Tab or Key.Enter ? -1 : 1;
         switch (key)
         {
@@ -197,12 +206,25 @@ public partial class MainWindow
                 if (column >= _columnCount) { column = 0; row++; }
                 if (column < 0) { column = _columnCount - 1; row--; }
                 break;
-            case Key.Left: column = ctrl ? 0 : currentRange.Left - 1; break;
-            case Key.Right: column = ctrl ? Math.Max(0, sheet.UsedColumnCount - 1) : currentRange.Right + 1; break;
-            case Key.Up: row = ctrl ? 0 : currentRange.Top - 1; break;
-            case Key.Down: row = ctrl ? Math.Max(0, sheet.UsedRowCount - 1) : currentRange.Bottom + 1; break;
+            case Key.Left: column = currentRange.Left - 1; break;
+            case Key.Right: column = currentRange.Right + 1; break;
+            case Key.Up: row = currentRange.Top - 1; break;
+            case Key.Down: row = currentRange.Bottom + 1; break;
             case Key.Home: column = 0; if (ctrl) row = 0; break;
             case Key.End: column = Math.Max(0, sheet.UsedColumnCount - 1); if (ctrl) row = Math.Max(0, sheet.UsedRowCount - 1); break;
+        }
+        if (edge)
+        {
+            var target = EntryNavigation.Edge(sheet, new(_selectedRow, _selectedColumn), key == Key.Up ? -1 : key == Key.Down ? 1 : 0,
+                key == Key.Left ? -1 : key == Key.Right ? 1 : 0, WorkbookLimits.MaxRows, 256,
+                r => CurrentView.IsFilteredOut(_document.Snapshot, _sheetIndex, r));
+            row = target.Row; column = target.Column;
+        }
+        if (row >= _rowCount || column >= _columnCount)
+        {
+            _rowCount = Math.Min(WorkbookLimits.MaxRows, Math.Max(_rowCount, row + 1));
+            _columnCount = Math.Min(256, Math.Max(_columnCount, column + 1));
+            _grid.EnsureNavigationSize(_rowCount, _columnCount);
         }
         row = Math.Clamp(row, 0, _rowCount - 1);
         column = Math.Clamp(column, 0, _columnCount - 1);
@@ -211,6 +233,7 @@ public partial class MainWindow
         while ((sheet.Rows.GetValueOrDefault(row)?.Hidden == true || CurrentView.IsFilteredOut(_document.Snapshot, _sheetIndex, row)) && row + rowDirection >= 0 && row + rowDirection < _rowCount) row += rowDirection;
         var columnDirection = column < _selectedColumn ? -1 : 1;
         while (sheet.Columns.TryGetValue(column, out var cm) && cm.Hidden && column + columnDirection >= 0 && column + columnDirection < _columnCount) column += columnDirection;
+        if (sheet.Rows.GetValueOrDefault(row)?.Hidden == true || CurrentView.IsFilteredOut(_document.Snapshot, _sheetIndex, row) || sheet.Columns.GetValueOrDefault(column)?.Hidden == true) return;
         GridSurface.Select(new(row, column), shift && key is not (Key.Tab or Key.Enter));
         UpdateFormulaBar();
         if (_calculationPending) await RecalculateAsync();

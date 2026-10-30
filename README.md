@@ -2,7 +2,7 @@
 
 2026-10-30 进度同步：M1–M3 受支持子集已交付，当前处于 **M5 桌面交互收敛**；M4 严格策略/部署与 M6 恢复/发布验收仍未完成。当前状态与后续顺序统一见 [实施计划](QuickExcel.Desktop/docs/05-implementation-plan.md)。
 
-**当前重点工程：XLSX 兼容性与 Excel 常用功能对齐。** 按用户要求优先补常见文件保真、日常编辑和公式，再推进 Table/验证/条件格式、报表与高级分析。分阶段清单见 [专项计划](QuickExcel.Desktop/docs/26-excel-compatibility-roadmap.md)；E0/E1 及 XC-0201/0202 已完成声明范围，接续录入与公式编辑。填充和序列的真实 Excel 对照见 [填充记录](QuickExcel.Desktop/docs/41-fill-and-series.md)。内部复制/剪切、选择性粘贴和真实 Excel 对照见 [剪贴板记录](QuickExcel.Desktop/docs/40-internal-clipboard.md)。
+**当前重点工程：XLSX 兼容性与 Excel 常用功能对齐。** 按用户要求优先补常见文件保真、日常编辑和公式，再推进 Table/验证/条件格式、报表与高级分析。分阶段清单见 [专项计划](QuickExcel.Desktop/docs/26-excel-compatibility-roadmap.md)；E0/E1 及 XC-0201/0202/0203 已完成声明范围，接续工作表与名称管理。[录入和公式辅助](QuickExcel.Desktop/docs/42-formula-entry-and-navigation.md) 已完成真实 Excel 对照。填充和序列的真实 Excel 对照见 [填充记录](QuickExcel.Desktop/docs/41-fill-and-series.md)。内部复制/剪切、选择性粘贴和真实 Excel 对照见 [剪贴板记录](QuickExcel.Desktop/docs/40-internal-clipboard.md)。
 
 主工作区已直接使用 `QuickExcel.Grid.Wpf`，旧 DataGrid 与试验窗口已移除；编辑、筛选排序、冻结、尺寸拖动/双击自动调整、图片与合并均已接入。**横向拖动导致整桌面停顿已于 2026-10-30 经用户确认解决并标记完成。** 默认 WPF 自动渲染，软件渲染仅作诊断。实现、既有专项证据与缺陷关闭记录见 [主网格迁移](QuickExcel.Desktop/docs/24-main-grid-migration.md)；真实 IME、跨屏 DPI 和完整辅助功能门禁仍待验收。
 
