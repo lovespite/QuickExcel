@@ -49,6 +49,7 @@ public partial class MainWindow
             UpdateFormulaBar();
         }
         finally { _restoringWorkbookView = false; }
+        if (!sheet.Data.Tables.IsEmpty) RefreshWorkspaceView();
         if (view.ActiveCell.Column >= 256 || view.FrozenRows > 10 || view.FrozenColumns >= 256)
             StatusText.Text = "视图超出当前网格显示范围；原视图仍保留，冻结显示上限为 10 行及可见列范围。";
     }

@@ -11,7 +11,7 @@ public partial class MainWindow
 
     private void ClearSortState_Click(object sender, RoutedEventArgs e)
     {
-        if (ExecuteWorkbookCommand(new ClearSortStateCommand(_document.Snapshot.Sheets[_sheetIndex].Id)))
+        if (ExecuteWorkbookCommand(new ClearSortStateCommand(_document.Snapshot.Sheets[_sheetIndex].Id, CurrentView.TableId)))
             StatusText.Text = "已清除排序标记和上次排序设置，当前记录顺序保持不变，可撤销。";
     }
 
@@ -31,7 +31,7 @@ public partial class MainWindow
             var region = CurrentView.Region ?? throw new InvalidOperationException("请先选择含表头的矩形并建立筛选区域。");
             if (column < region.Range.Left || column > region.Range.Right) throw new ArgumentException("当前列不在筛选区域内。");
             var snapshot = _document.Snapshot; var view = CurrentView; var filters = view.Filters;
-            var candidates = PersistentFiltering.Candidates(snapshot, snapshot.GetSheet(region.SheetId), column);
+            var candidates = PersistentFiltering.Candidates(snapshot, snapshot.GetSheet(region.SheetId), column, view.TableId);
             _filterPopup?.Close();
             _filterPopup = new(target, new Rect(target.RenderSize), $"{ColumnName(column)} · {CellInput.DisplayText(snapshot.GetSheet(region.SheetId).GetCell(region.Range.Top, column)?.Value ?? CellValue.Blank)}", candidates, filters.GetValueOrDefault(column));
             var result = await _filterPopup.ShowAsync(); _filterPopup = null;
@@ -53,11 +53,12 @@ public partial class MainWindow
                 await SortDataRegionAsync(region, [new(column, result.Action == FilterPopupAction.SortDescending)]); return;
             case FilterPopupAction.AdvancedSort: await AdvancedSortAsync(); return;
             default:
-                var snapshot = _document.Snapshot; var old = snapshot.GetSheet(region.SheetId).Data.Filter ?? throw new InvalidOperationException("筛选区域已失效。");
+                var snapshot = _document.Snapshot; var data = snapshot.GetSheet(region.SheetId).Data; var tableId = CurrentView.TableId;
+                var old = (tableId.HasValue ? data.Tables.Single(t => t.Id == tableId).Filter : data.Filter) ?? throw new InvalidOperationException("筛选区域已失效。");
                 var columns = result.Action == FilterPopupAction.ClearAll ? old.Columns.Clear() : result.Action == FilterPopupAction.ClearColumn ? old.Columns.Remove(column) :
                     old.Columns.SetItem(column, PersistentFiltering.Convert(result.Filter ?? throw new ArgumentException("筛选条件缺失。"), snapshot.DateSystem)
                         .WithButton(old.Columns.GetValueOrDefault(column)?.ShowButton ?? true));
-                if (!ExecuteWorkbookCommand(new SetAutoFilterCommand(region.SheetId, new(old.Range, columns)))) return;
+                if (!ExecuteWorkbookCommand(tableId is { } id ? new SetTableFilterCommand(region.SheetId, id, new(old.Range, columns)) : new SetAutoFilterCommand(region.SheetId, new(old.Range, columns)))) return;
                 break;
         }
         RefreshSheet(); GridSurface.Select(new(region.Range.Top, column));

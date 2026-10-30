@@ -24,7 +24,7 @@ internal sealed partial class FastGridSurface
         var maximum = 0d;
         var defaultStyle = new StyleDefinition();
         var dpi = VisualTreeHelper.GetDpi(Artwork);
-        var cache = new Dictionary<(string Text, int Style, double Width, RichCellText? Rich), double>();
+        var cache = new Dictionary<(string Text, StyleDefinition Style, double Width, RichCellText? Rich), double>();
         foreach (var (position, _) in cells)
         {
             var other = Other(position);
@@ -33,11 +33,11 @@ internal sealed partial class FastGridSurface
             var value = DisplayText(position.Row, position.Column);
             if (value.Length == 0) continue;
             var styleId = sheet.GetStyleId(position.Row, position.Column);
-            var style = _snapshot.Styles[styleId];
+            var style = TablePresentation.GetStyle(_snapshot, sheet, position.Row, position.Column);
             var width = isRow ? sheet.Columns.GetValueOrDefault(position.Column)?.Width is { } units
                 ? Math.Clamp(units * 7 + 5, 1, 10000) : position.Column == 0 ? 160 : 112 : 0;
             var rich = sheet.GetCell(position.Row, position.Column)?.Content.RichText;
-            var key = (value, styleId, width, rich);
+            var key = (value, style, width, rich);
             if (!cache.TryGetValue(key, out var size))
             {
                 if (style == defaultStyle && rich is null)

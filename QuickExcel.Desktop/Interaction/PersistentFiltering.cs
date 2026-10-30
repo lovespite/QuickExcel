@@ -36,10 +36,12 @@ internal static class PersistentFiltering
     public static ColumnFilter Restore(AutoFilterColumn column) => new(First: column.First is null ? null : new((FilterOperator)((int)FilterOperator.ExcelEquals + (int)column.First.Comparison), column.First.Operand),
         Second: column.Second is null ? null : new((FilterOperator)((int)FilterOperator.ExcelEquals + (int)column.Second.Comparison), column.Second.Operand), UseOr: !column.UseAnd, Stored: column);
 
-    public static IReadOnlyList<FilterCandidate> Candidates(WorkbookSnapshot snapshot, WorksheetSnapshot sheet, int column)
+    public static IReadOnlyList<FilterCandidate> Candidates(WorkbookSnapshot snapshot, WorksheetSnapshot sheet, int column, int? tableId = null)
     {
-        var filter = sheet.Data.Filter ?? throw new InvalidOperationException("筛选区域已失效。");
-        var other = sheet.WithData(sheet.Data with { Filter = new(filter.Range, filter.Columns.Remove(column)) });
+        var table = tableId is { } id ? sheet.Data.Tables.Single(t => t.Id == id) : null;
+        var filter = (table is null ? sheet.Data.Filter : table.Filter) ?? throw new InvalidOperationException("筛选区域已失效。");
+        var remaining = new WorksheetAutoFilter(filter.Range, filter.Columns.Remove(column));
+        var other = sheet.WithData(table is null ? sheet.Data with { Filter = remaining } : sheet.Data with { Tables = sheet.Data.Tables.Replace(table, table.WithFilter(remaining)) });
         var hidden = WorksheetFilterEngine.Evaluate(other, snapshot.Styles, snapshot.DateSystem, snapshot.Revision);
         var selected = filter.Columns.GetValueOrDefault(column); var match = selected is null ? null : WorksheetFilterEngine.Compile(selected);
         var values = new Dictionary<CellValue, (string Label, int Count, bool Selected)>(); long characters = 0;
@@ -56,7 +58,7 @@ internal static class PersistentFiltering
             if (cell?.Content.Kind == CellContentKind.Formula && (cell.Calculation?.Value is null || cell.Calculation.InputRevision != snapshot.Revision || cell.Calculation.State is not (CalculationState.Fresh or CalculationState.Error)))
                 throw new InvalidOperationException("候选列含待重算公式，请先重算。");
             if (hidden.Contains(row)) continue;
-            var value = cell?.Value ?? CellValue.Blank; var style = snapshot.Styles[sheet.GetStyleId(row, column)];
+            var value = cell?.Value ?? CellValue.Blank; var style = TablePresentation.NumberStyle(sheet, snapshot.Styles, row, column);
             var blank = value.Kind == CellValueKind.Blank || value.Kind == CellValueKind.Text && value.TextValue.Length == 0;
             var label = blank ? "(空白)" : WorksheetFilterEngine.ValueLabel(value, style, snapshot.DateSystem);
             Add(blank ? CellValue.Blank : CellValue.FromText(label), label, match?.Invoke(value, style, snapshot.DateSystem) ?? true, 1);

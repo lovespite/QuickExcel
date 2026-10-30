@@ -38,12 +38,13 @@ internal static class XlsxStylePreservation
     public static (XDocument Styles, byte[]? Theme) Write(WorkbookSnapshot snapshot, CancellationToken cancellationToken)
     {
         var generated = TypedStyles.Write(snapshot.Styles);
-        if (snapshot.FileState is not { } state) return (generated, null);
+        if (snapshot.FileState is not { } state) return (generated, snapshot.Sheets.Any(s => s.Data.Tables.Any(t => t.Style.Name is not null)) ? TableStyles.DefaultTheme : null);
         var source = new XlsxPackage(state.OriginalWorkbook.ToArray(), new(cancellationToken));
         var workbook = source.RelatedByType("", "officeDocument", true)!;
         var stylesPath = source.RelatedByType(workbook, "styles");
         var themePath = source.RelatedByType(workbook, "theme");
         var theme = themePath is not null && CanPreserveTheme(source, themePath, source.XmlPart(themePath).Root!) ? source.BinaryPart(themePath) : null;
+        if (themePath is null && snapshot.Sheets.Any(s => s.Data.Tables.Any(t => t.Style.Name is not null))) theme = TableStyles.DefaultTheme;
         if (stylesPath is null || !CanPreserveStyles(source, stylesPath, source.XmlPart(stylesPath).Root!))
         {
             if (snapshot.Styles.Any(s => s.NamedStyleId != 0)) throw new InvalidOperationException("无法安全保留命名样式关联；请保留原件。");

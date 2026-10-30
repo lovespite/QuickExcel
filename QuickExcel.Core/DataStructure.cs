@@ -7,6 +7,7 @@ internal static class DataStructure
     internal static WorksheetData Axis(WorksheetData data, SheetAxis axis, Func<int, int?> position,
         Func<int, int, (int Start, int End)?> interval)
     {
+        if (!data.Tables.IsEmpty) throw new NotSupportedException("含 Excel Table 的工作表暂不支持插删/移动整行列；请使用表范围调整，操作未应用。");
         CellRectangle? Range(CellRectangle range)
         {
             var mapped = interval(axis == SheetAxis.Row ? range.Top : range.Left, axis == SheetAxis.Row ? range.Bottom : range.Right);

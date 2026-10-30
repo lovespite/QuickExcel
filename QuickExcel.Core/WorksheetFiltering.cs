@@ -21,9 +21,13 @@ public static class WorksheetFilterEngine
     public static ImmutableHashSet<int> Evaluate(WorksheetSnapshot sheet, IReadOnlyList<StyleDefinition> styles, ExcelDateSystem system,
         long revision, bool allowSourceCaches = false, CancellationToken cancellationToken = default)
     {
-        if (sheet.Data.Filter is not { } filter || filter.Columns.Count == 0) return [];
-        var predicates = filter.Columns.Select(p => (Column: p.Key, Match: Compile(p.Value))).ToArray();
         var hidden = ImmutableHashSet.CreateBuilder<int>();
+        if (sheet.Data.AllFilters.Sum(f => (long)(f.Range.Bottom - f.Range.Top) * f.Columns.Count) > 2_000_000)
+            throw new InvalidOperationException("工作表筛选条件遍历超过 2,000,000 格。");
+        foreach (var filter in sheet.Data.AllFilters)
+        {
+        if (filter.Columns.Count == 0) continue;
+        var predicates = filter.Columns.Select(p => (Column: p.Key, Match: Compile(p.Value))).ToArray();
         for (var row = filter.Range.Top + 1; row <= filter.Range.Bottom; row++)
         {
             cancellationToken.ThrowIfCancellationRequested(); var matches = true;
@@ -33,9 +37,10 @@ public static class WorksheetFilterEngine
                 if (cell?.Content.Kind == CellContentKind.Formula && (cell.Calculation?.Value is null || !allowSourceCaches &&
                     (cell.Calculation.InputRevision != revision || cell.Calculation.State is not (CalculationState.Fresh or CalculationState.Error))))
                     throw new InvalidOperationException("筛选列包含待重算或缺少结果的公式，请重算后重新应用或保存。");
-                matches &= match(cell?.Value ?? CellValue.Blank, styles[sheet.GetStyleId(row, column)], system);
+                matches &= match(cell?.Value ?? CellValue.Blank, TablePresentation.NumberStyle(sheet, styles, row, column), system);
             }
             if (!matches) hidden.Add(row);
+        }
         }
         return hidden.ToImmutable();
     }
@@ -101,11 +106,17 @@ public sealed class SetAutoFilterCommand(SheetId sheetId, WorksheetAutoFilter? f
     }
 }
 
-public sealed class ClearSortStateCommand(SheetId sheetId) : DocumentCommand
+public sealed class ClearSortStateCommand(SheetId sheetId, int? tableId = null) : DocumentCommand
 {
     internal override CommandDraft Prepare(WorkbookSnapshot snapshot)
     {
         var sheet = snapshot.GetSheet(sheetId);
+        if (tableId is { } id)
+        {
+            var table = sheet.Data.Tables.Single(t => t.Id == id); if (table.Sort is null) return new(snapshot, [], false);
+            var updated = sheet.WithData(sheet.Data with { Tables = sheet.Data.Tables.Replace(table, table.WithSort(null)) });
+            return new(snapshot.WithSheets(snapshot.Sheets.Select(s => s.Id == sheetId ? updated : s)), [], false) { CalculationUnchanged = true };
+        }
         if (sheet.Data.Sort is null) return new(snapshot, [], false);
         var next = sheet.WithData(sheet.Data with { Sort = null });
         return new(snapshot.WithSheets(snapshot.Sheets.Select(s => s.Id == sheetId ? next : s)), [], false) { CalculationUnchanged = true };

@@ -19,7 +19,7 @@ internal sealed partial class FastGridSurface : IGridSurface
     internal FastGridArtwork Artwork { get; }
     private readonly SnapshotModel _model = new();
     private readonly Func<CellPosition, string, bool> _commit;
-    private readonly Dictionary<int, Button> _headers = [];
+    private readonly Dictionary<CellPosition, Button> _headers = [];
     private bool _loading, _editing, _selecting, _selectionPresentationQueued;
     private CellPosition _current, _anchor;
     private WorkbookSnapshot _snapshot = null!;
@@ -289,7 +289,7 @@ internal sealed partial class FastGridSurface : IGridSurface
     private void ShowEditorDraft()
     {
         Editor.Opacity = 1;
-        var style = _snapshot.Styles[Sheet.GetStyleId(_current.Row, _current.Column)];
+        var style = TablePresentation.GetStyle(_snapshot, Sheet, _current.Row, _current.Column);
         Editor.FontFamily = FastGridArtwork.Font(style.FontName, style.EastAsianFontName); Editor.FontSize = (style.FontSize ?? 11) * 96 / 72;
         Editor.FontWeight = style.Bold ? FontWeights.SemiBold : FontWeights.Normal;
         Editor.FontStyle = style.Italic ? FontStyles.Italic : FontStyles.Normal;
@@ -342,23 +342,24 @@ internal sealed partial class FastGridSurface : IGridSurface
             ClipToCell(Editor, rect, editorFragments[0].Clip);
         }
         else Editor.Visibility = Visibility.Hidden;
-        var visible = new HashSet<int>();
-        if (View.Region is { HasHeader: true } region)
+        var visible = new HashSet<CellPosition>();
+        foreach (var region in View.HeaderRegions())
             for (var c = region.Range.Left; c <= region.Range.Right; c++)
-                if (View.IsFilterButtonVisible(c) && Control.GetModelCellBounds(region.Range.Top, c) is { } bounds && bounds.Width >= 20 && bounds.Height >= 20)
+                if (region.Filter.Columns.GetValueOrDefault(c)?.ShowButton != false && Control.GetModelCellBounds(region.Range.Top, c) is { } bounds && bounds.Width >= 20 && bounds.Height >= 12)
                 {
-                    var marker = View.HeaderMarker(c);
+                    var marker = SheetViewState.HeaderMarker(c, region.Filter, region.Sort);
+                    var address = new CellPosition(region.Range.Top, c);
                     var width = marker.Length > 2 ? 34d : 23d;
                     if (bounds.Width < width) continue;
-                    visible.Add(c);
-                    if (!_headers.TryGetValue(c, out var button))
+                    visible.Add(address);
+                    if (!_headers.TryGetValue(address, out var button))
                     {
-                        var column = c; button = new Button { Width = 19, Height = 20, Padding = new(0), FontSize = 10 };
-                        button.Click += (_, _) => { if (Commit()) HeaderRequested?.Invoke(column, button); };
-                        _headers.Add(c, button); _overlay.Children.Add(button);
+                        var column = c; button = new Button { Width = 19, Height = 20, MinWidth = 0, MinHeight = 0, Padding = new(0), FontSize = 10 };
+                        button.Click += (_, _) => { if (Commit()) { Select(address); HeaderRequested?.Invoke(column, button); } };
+                        _headers.Add(address, button); _overlay.Children.Add(button);
                     }
-                    button.Width = width; button.Content = marker;
-                    button.ToolTip = $"{MainWindow.ColumnName(c)} 列筛选和排序" + (View.Filters.ContainsKey(c) ? "（已筛选）" : "");
+                    button.Width = width; button.Height = Math.Min(20, bounds.Height); button.FontSize = Math.Min(10, bounds.Height * 0.6); button.Content = marker;
+                    button.ToolTip = $"{MainWindow.ColumnName(c)} 列筛选和排序" + (region.Filter.Columns.ContainsKey(c) ? "（已筛选）" : "");
                     System.Windows.Automation.AutomationProperties.SetName(button, button.ToolTip.ToString());
                     Canvas.SetLeft(button, bounds.Right - width); Canvas.SetTop(button, bounds.Top);
                     ClipToCell(button, new(bounds.Right - width, bounds.Top, width, button.Height), VisibleClip(region.Range.Top, c) ?? Rect.Empty);
@@ -410,12 +411,12 @@ internal sealed partial class FastGridSurface : IGridSurface
             ReadCount++;
             if (Snapshot is null) return "";
             var sheet = Snapshot.Sheets[SheetIndex];
-            return CellDisplayFormatter.Format(sheet.GetCell(row, column)?.Value ?? CellValue.Blank, Snapshot.Styles[sheet.GetStyleId(row, column)], Snapshot.DateSystem);
+            return CellDisplayFormatter.Format(sheet.GetCell(row, column)?.Value ?? CellValue.Blank, TablePresentation.GetStyle(Snapshot, sheet, row, column), Snapshot.DateSystem);
         }
         public override IFastGridCell GetCell(IFastGridView view, int row, int column)
         {
             if (Snapshot is null) return new FastGridCellImpl();
-            var sheet = Snapshot.Sheets[SheetIndex]; var style = Snapshot.Styles[sheet.GetStyleId(row, column)];
+            var sheet = Snapshot.Sheets[SheetIndex]; var style = TablePresentation.GetStyle(Snapshot, sheet, row, column);
             var cell = new FastGridCellImpl { BackgroundColor = Color(style.FillColor) ?? Colors.White };
             // Artwork owns the opaque styled cell, including text. Rasterizing
             // the same text underneath it doubles formatting/glyph work and

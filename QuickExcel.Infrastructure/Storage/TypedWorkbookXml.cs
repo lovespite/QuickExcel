@@ -85,7 +85,7 @@ internal static class TypedWorkbookXml
             var visibility = XlsxViews.Visibility(definition);
             var sheet = package.XmlPart(path).Root!;
             if (sheet.Name != Main + "worksheet") throw new InvalidDataException("无效工作表部件。");
-            package.Shape(XlsxFiltering.Shape(sheet), "autoFilter sortState dimension sheetPr sheetViews sheetFormatPr cols sheetData mergeCells hyperlinks printOptions pageMargins pageSetup headerFooter rowBreaks colBreaks drawing legacyDrawing", "", path);
+            package.Shape(XlsxFiltering.Shape(sheet), "autoFilter sortState tableParts dimension sheetPr sheetViews sheetFormatPr cols sheetData mergeCells hyperlinks printOptions pageMargins pageSetup headerFooter rowBreaks colBreaks drawing legacyDrawing", "", path);
             var sharedFormulas = new SharedFormulaExpander(sheet);
             var cells = new Dictionary<CellPosition, CellSnapshot>();
             var cachedCells = new HashSet<CellPosition>();
@@ -217,9 +217,11 @@ internal static class TypedWorkbookXml
             var merges = sheet.Element(Main + "mergeCells")?.Elements(Main + "mergeCell").Select(e => Attr(e, "ref")).ToArray() ?? [];
             foreach (var merge in merges) ValidateRange(merge);
             var images = TypedImages.Read(package, path, sheet);
+            var dataState = XlsxFiltering.Read(package, workbookPart, path, sheet) with
+            { Tables = XlsxTables.Read(package, workbookPart, path, sheet, preservedFormulas, Decode(Attr(definition, "name"))) };
             var modeledSheet = new WorksheetSnapshot(SheetId.New(), Decode(Attr(definition, "name")), cells, rows, columns, merges, images,
                 view?.Attribute("showGridLines") is null || Bool((string?)view.Attribute("showGridLines")), OptionalDouble(format?.Attribute("defaultRowHeight")) / 0.75, (string?)tabColor?.Attribute("rgb"),
-                viewState, visibility, XlsxPrinting.Read(package, path, sheet), XlsxAnnotations.Read(package, path, sheet, textReader), XlsxFiltering.Read(package, workbookPart, path, sheet));
+                viewState, visibility, XlsxPrinting.Read(package, path, sheet), XlsxAnnotations.Read(package, path, sheet, textReader), dataState);
             sheets.Add(XlsxFiltering.ReadHidden(package, path, sheet, modeledSheet, styles, dateSystem));
             bindings.Add(new(sheetId, path));
         }
@@ -359,10 +361,12 @@ internal static class TypedWorkbookXml
         {
             cancellationToken.ThrowIfCancellationRequested();
             allocation += sheet.Cells.Count * 640L + (sheet.Rows.Count + sheet.Columns.Count) * 256L;
-            if (sheet.Data.Filter is { } filter)
+            foreach (var filter in sheet.Data.AllFilters)
                 allocation += (filter.Range.Bottom - filter.Range.Top + 1L) * 256L + filter.Columns.Values.Sum(c =>
                     (c.Values?.Sum(v => (long)v.Length) ?? 0) * 8L + ((c.First?.Operand.Length ?? 0) + (c.Second?.Operand.Length ?? 0)) * 8L + 512L);
-            if (sheet.Data.Sort is { } sort) allocation += sort.Keys.Sum(k => 1024L + k.CustomOrder.Sum(v => (long)v.Length) * 8L);
+            allocation += sheet.Data.Tables.Sum(t => 2048L + t.Style.Elements.Length * 512L + t.Columns.Sum(c => 512L + 8L * (c.Name.Length + (c.CalculatedFormula?.Length ?? 0) + (c.TotalsFormula?.Length ?? 0) + (c.TotalsLabel?.Length ?? 0))));
+            foreach (var sort in sheet.Data.Tables.Select(t => t.Sort).Append(sheet.Data.Sort).OfType<WorksheetSortState>())
+                allocation += sort.Keys.Sum(k => 1024L + k.CustomOrder.Sum(v => (long)v.Length) * 8L);
             foreach (var cell in sheet.Cells.Values)
             {
                 if (cell.Content.Kind == CellContentKind.Formula) allocation += cell.Content.FormulaText.Length * 4L;
@@ -414,8 +418,8 @@ internal static class TypedWorkbookXml
             Override(path, SheetType);
             var root = new XElement(Main + "worksheet", new XAttribute(XNamespace.Xmlns + "r", Rel));
             var filteredRows = QuickExcel.Core.WorksheetFilterEngine.Evaluate(snapshot, sheet.Id, allowSourceCaches: valuesOnly, cancellationToken: cancellationToken);
-            if (sheet.TabColor is not null || sheet.Printing.Properties is not null || sheet.Data.Filter is not null)
-                root.Add(new XElement(Main + "sheetPr", sheet.Data.Filter is not null ? new XAttribute("filterMode", sheet.Data.Filter.Columns.Count > 0 ? 1 : 0) : null, sheet.TabColor is not null ? new XElement(Main + "tabColor", new XAttribute("rgb", sheet.TabColor)) : null,
+            if (sheet.TabColor is not null || sheet.Printing.Properties is not null || sheet.Data.AllFilters.Any())
+                root.Add(new XElement(Main + "sheetPr", sheet.Data.AllFilters.Any() ? new XAttribute("filterMode", sheet.Data.AllFilters.Any(f => f.Columns.Count > 0) ? 1 : 0) : null, sheet.TabColor is not null ? new XElement(Main + "tabColor", new XAttribute("rgb", sheet.TabColor)) : null,
                     XlsxPrinting.WriteProperties(sheet.Printing)));
             root.Add(XlsxViews.WriteSheet(sheet, sheet.Id == snapshot.ActiveSheetId));
             if (sheet.DefaultRowHeight is { } height) root.Add(new XElement(Main + "sheetFormatPr", new XAttribute("defaultRowHeight", height * 0.75)));
@@ -456,6 +460,7 @@ internal static class TypedWorkbookXml
             TypedImages.Write(sheet, i + 1, parts, root, types);
             XlsxPrinting.WritePrinter(sheet.Printing, i + 1, parts, types);
             XlsxAnnotations.Write(sheet.Annotations, i + 1, parts, root, types);
+            XlsxTables.Write(sheet, i + 1, parts, root, types, stylePackage.Styles.Root!, valuesOnly);
             root.Add(XlsxFiltering.WriteHidden(sheet, filteredRows));
             parts[path] = XmlBytes(new XDocument(root));
         }

@@ -27,7 +27,7 @@ internal sealed class FastGridArtwork(FastGridSurface surface) : FrameworkElemen
         // Geometry/DPI are part of each key; scrolling only translates the drawing.
         _cellDrawings.Clear();
         _sheet = surface.Sheet;
-        _hasStyles = surface.Snapshot.Styles.Any(style => style != DefaultStyle) || _sheet.Cells.Values.Any(c => c.Content.RichText is not null) || !_sheet.Annotations.IsEmpty;
+        _hasStyles = surface.Snapshot.Styles.Any(style => style != DefaultStyle) || _sheet.Cells.Values.Any(c => c.Content.RichText is not null) || !_sheet.Annotations.IsEmpty || !_sheet.Data.Tables.IsEmpty;
         _merges = _sheet.MergedCells.Select(CellRectangle.Parse).ToArray();
         foreach (var image in _images.Keys.Where(i => !_sheet.Images.Contains(i)).ToArray()) _images.Remove(image);
         foreach (var image in _sheet.Images.Where(i => !_images.ContainsKey(i)))
@@ -99,7 +99,7 @@ internal sealed class FastGridArtwork(FastGridSurface surface) : FrameworkElemen
         foreach (var row in _hasStyles ? grid.GetVisibleModelRows() : [])
         foreach (var column in columns)
         {
-            var style = surface.Snapshot.Styles[_sheet.GetStyleId(row, column)];
+            var style = TablePresentation.GetStyle(surface.Snapshot, _sheet, row, column);
             if (style == DefaultStyle && _sheet.GetCell(row, column)?.Content.RichText is null && !_sheet.Annotations.Notes.ContainsKey(new(row, column))) continue;
             PaintCachedCell(new(row, column, row, column), style);
         }

@@ -444,6 +444,12 @@
           </TabItem>
           <TabItem Header="数据">
             <StackPanel Orientation="Horizontal">
+              <GroupBox Header="Excel 表" Style="{StaticResource RibbonGroup}">
+                <StackPanel>
+                  <Button Content="创建表…" local:Ribbon.Icon="TableAdd" Style="{StaticResource RibbonButton}" Click="CreateTable_Click" ToolTip="以选区首行为表头创建 Excel Table，保存名称、样式与筛选"/>
+                  <Button Content="调整表范围…" local:Ribbon.Icon="TableSettings" Style="{StaticResource RibbonButton}" Click="ResizeTable_Click" ToolTip="选择表内单元格，调整数据区末行；内容保留，可撤销"/>
+                </StackPanel>
+              </GroupBox>
               <GroupBox Header="排序和筛选"
                         Style="{StaticResource RibbonGroup}">
                 <StackPanel Orientation="Horizontal">

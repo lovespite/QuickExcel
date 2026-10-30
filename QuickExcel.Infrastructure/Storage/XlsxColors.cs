@@ -23,7 +23,7 @@ internal sealed class XlsxColors
     private readonly string[] _indexed;
     private XElement? _fontScheme;
 
-    public XlsxColors(XlsxPackage package, string workbookPart, XElement styles, string stylesPath)
+    public XlsxColors(XlsxPackage package, string workbookPart, XElement styles, string stylesPath, bool tableDefaults = false)
     {
         _indexed = DefaultIndexed.Select(rgb => "FF" + rgb).ToArray();
         if (styles.Element(Main + "colors") is { } colors)
@@ -42,7 +42,20 @@ internal sealed class XlsxColors
                 }
             }
         }
-        if (package.RelatedByType(workbookPart, "theme") is not { } path) return;
+        if (package.RelatedByType(workbookPart, "theme") is not { } path)
+        {
+            if (tableDefaults)
+            {
+                var defaults = XDocument.Parse(System.Text.Encoding.UTF8.GetString(TableStyles.DefaultTheme)).Root!;
+                var defaultDrawing = XlsxStylePreservation.Drawing;
+                for (var i = 0; i < ThemeSlots.Length; i++)
+                {
+                    var slot = defaults.Element(defaultDrawing + "themeElements")!.Element(defaultDrawing + "clrScheme")!.Element(defaultDrawing + ThemeSlots[i])!;
+                    _theme[i] = "FF" + ((string?)slot.Element(defaultDrawing + "srgbClr")?.Attribute("val") ?? (string)slot.Element(defaultDrawing + "sysClr")!.Attribute("lastClr")!);
+                }
+            }
+            return;
+        }
         package.RequireType(path, "application/vnd.openxmlformats-officedocument.theme+xml");
         XNamespace drawing = "http://schemas.openxmlformats.org/drawingml/2006/main";
         var root = package.XmlPart(path).Root;
@@ -71,7 +84,7 @@ internal sealed class XlsxColors
         return (latin, eastAsian);
     }
 
-    public string? Read(XElement? element, XlsxPackage package, string path)
+    public string? Read(XElement? element, XlsxPackage package, string path, bool tableTint = false)
     {
         if (element is null) return null;
         package.Shape(element, "", "rgb theme indexed auto tint", path);
@@ -92,7 +105,36 @@ internal sealed class XlsxColors
             color = index switch { 64 => "FF000000", 65 => "FFFFFFFF", _ => _indexed[index] };
         }
         else if (Bool((string?)element.Attribute("auto"))) color = "FF000000";
-        return color is null || tint == 0 ? color : Tint(color, tint);
+        return color is null || tint == 0 ? color : tableTint ? TableTint(color, tint) : Tint(color, tint);
+    }
+
+    // Excel table styles use the Win32 integer HLS (0..240) conversion. Keep this
+    // separate from the existing cell-color path, whose supported evidence differs.
+    private static string TableTint(string argb, double tint)
+    {
+        var r = int.Parse(argb.AsSpan(2, 2), NumberStyles.HexNumber); var g = int.Parse(argb.AsSpan(4, 2), NumberStyles.HexNumber); var b = int.Parse(argb.AsSpan(6, 2), NumberStyles.HexNumber);
+        var max = Math.Max(r, Math.Max(g, b)); var min = Math.Min(r, Math.Min(g, b)); var sum = max + min; var delta = max - min;
+        var l = (sum * 240 + 255) / 510; var h = 160; var s = 0;
+        if (delta != 0)
+        {
+            s = l <= 120 ? (delta * 240 + sum / 2) / sum : (delta * 240 + (510 - sum) / 2) / (510 - sum);
+            var rd = ((max - r) * 40 + delta / 2) / delta; var gd = ((max - g) * 40 + delta / 2) / delta; var bd = ((max - b) * 40 + delta / 2) / delta;
+            h = max == r ? bd - gd : max == g ? 80 + rd - bd : 160 + gd - rd; h = (h + 240) % 240;
+        }
+        if (delta == 0)
+        {
+            var gray = Math.Clamp((int)Math.Round(tint < 0 ? r * (1 + tint) : r * (1 - tint) + 255 * tint), 0, 255).ToString("X2");
+            return argb[..2] + gray + gray + gray;
+        }
+        l = Math.Clamp((int)(tint < 0 ? l * (1 + tint) : l * (1 - tint) + 240 * tint), 0, 240);
+        var m2 = l <= 120 ? (l * (240 + s) + 120) / 240 : l + s - (l * s + 120) / 240; var m1 = 2 * l - m2;
+        int Channel(int hue)
+        {
+            hue = (hue + 240) % 240;
+            var value = s == 0 ? l : hue < 40 ? m1 + ((m2 - m1) * hue + 20) / 40 : hue < 120 ? m2 : hue < 160 ? m1 + ((m2 - m1) * (160 - hue) + 20) / 40 : m1;
+            return Math.Clamp((value * 255 + 120) / 240, 0, 255);
+        }
+        return argb[..2] + Channel(h + 80).ToString("X2") + Channel(h).ToString("X2") + Channel(h - 80).ToString("X2");
     }
 
     private static string Rgb(string value, int length)

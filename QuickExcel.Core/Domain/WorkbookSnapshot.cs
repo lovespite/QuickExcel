@@ -313,6 +313,7 @@ public sealed class WorkbookSnapshot
                 r.IsRange && (!r.EndColumnAbsolute || !r.WholeColumns && !r.EndRowAbsolute)))
                 throw new ArgumentException("名称中的单元格/区域必须使用带表名的绝对引用。", nameof(definedNames));
         }
+        QuickExcel.Core.TableSafety.Validate(this);
     }
 
     public Guid DocumentId { get; }

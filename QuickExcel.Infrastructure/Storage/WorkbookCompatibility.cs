@@ -42,10 +42,15 @@ public sealed partial class TypedWorkbookStorage
         }
         else diagnostics.Add(new("workbook.modeled-subset", CompatibilityKind.Editable, "已建模内容",
             "单元格类型、普通公式源码和基础格式可在已支持子集内编辑；不支持的函数及依赖保留旧缓存，未知引用语义阻止结构变换。这不代表全部 Excel 功能已支持。"));
-        foreach (var sheet in snapshot.Sheets.Where(s => !s.Data.IsEmpty))
+        foreach (var sheet in snapshot.Sheets.Where(s => s.Data.Filter is not null || s.Data.Sort is not null))
             diagnostics.Add(new("worksheet.data-editable", CompatibilityKind.Editable, "筛选与排序",
                 "支持的筛选条件和最后一次排序状态可编辑、撤销及保存。手动隐藏与筛选隐藏分开处理；外部文件没有隐藏来源扩展时，未满足条件的隐藏行归于筛选，无法恢复该行是否还曾被手动隐藏。未支持条件仍按原包保护。",
                 SheetName: sheet.Name, Range: (sheet.Data.Filter?.Range ?? sheet.Data.Sort!.Range).ToString()));
+        foreach (var sheet in snapshot.Sheets)
+        foreach (var table in sheet.Data.Tables)
+            diagnostics.Add(new("worksheet.table-modeled", snapshot.FileState?.FormulaReadOnly == true ? CompatibilityKind.PreservedOnly : CompatibilityKind.Editable, "Excel Table",
+                $"表 {table.Name}：名称、范围、表头、汇总行、样式与筛选可显示和保存。普通数据格可编辑；表头/汇总定义及整行列结构暂受保护，计算列/结构化公式仍按只读规则保留。",
+                SheetName: sheet.Name, Range: table.Range.ToString()));
         var formulaCount = 0;
         var cachedCount = 0;
         var staleCount = 0;

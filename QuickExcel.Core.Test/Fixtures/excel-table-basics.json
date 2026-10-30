@@ -1,0 +1,4417 @@
+{
+  "Version": "16.0",
+  "Build": 20527.0,
+  "Language": 2052,
+  "ProcessId": 32508,
+  "Started": "2026-10-31T00:53:29.8284219+08:00",
+  "Before": [
+    {
+      "Sheet": "light",
+      "Name": "QE_light",
+      "Range": "B2:E7",
+      "Header": true,
+      "Totals": false,
+      "Filter": true,
+      "Style": "TableStyleLight1",
+      "First": false,
+      "Last": false,
+      "Rows": true,
+      "Columns": false,
+      "Headers": [
+        {
+          "TotalsFunction": 0,
+          "Name": "Group"
+        },
+        {
+          "TotalsFunction": 0,
+          "Name": "Amount"
+        },
+        {
+          "TotalsFunction": 0,
+          "Name": "Code"
+        },
+        {
+          "TotalsFunction": 0,
+          "Name": "Label"
+        }
+      ],
+      "Cells": [
+        {
+          "Formula": "Group",
+          "Hidden": false,
+          "Address": "B2",
+          "Text": "Group",
+          "Bold": true,
+          "Value": "Group",
+          "Font": "FF000000",
+          "Fill": "FFFFFFFF"
+        },
+        {
+          "Formula": "Amount",
+          "Hidden": false,
+          "Address": "C2",
+          "Text": "Amount",
+          "Bold": true,
+          "Value": "Amount",
+          "Font": "FF000000",
+          "Fill": "FFFFFFFF"
+        },
+        {
+          "Formula": "Code",
+          "Hidden": false,
+          "Address": "D2",
+          "Text": "Code",
+          "Bold": true,
+          "Value": "Code",
+          "Font": "FF000000",
+          "Fill": "FFFFFFFF"
+        },
+        {
+          "Formula": "Label",
+          "Hidden": false,
+          "Address": "E2",
+          "Text": "Label",
+          "Bold": true,
+          "Value": "Label",
+          "Font": "FF000000",
+          "Fill": "FFFFFFFF"
+        },
+        {
+          "Formula": "A",
+          "Hidden": false,
+          "Address": "B3",
+          "Text": "A",
+          "Bold": false,
+          "Value": "A",
+          "Font": "FF000000",
+          "Fill": "FFD9D9D9"
+        },
+        {
+          "Formula": "10",
+          "Hidden": false,
+          "Address": "C3",
+          "Text": "10",
+          "Bold": false,
+          "Value": 10.0,
+          "Font": "FF000000",
+          "Fill": "FFD9D9D9"
+        },
+        {
+          "Formula": "001",
+          "Hidden": false,
+          "Address": "D3",
+          "Text": "001",
+          "Bold": false,
+          "Value": "001",
+          "Font": "FF000000",
+          "Fill": "FFD9D9D9"
+        },
+        {
+          "Formula": "row1",
+          "Hidden": false,
+          "Address": "E3",
+          "Text": "row1",
+          "Bold": false,
+          "Value": "row1",
+          "Font": "FF000000",
+          "Fill": "FFD9D9D9"
+        },
+        {
+          "Formula": "B",
+          "Hidden": false,
+          "Address": "B4",
+          "Text": "B",
+          "Bold": false,
+          "Value": "B",
+          "Font": "FF000000",
+          "Fill": "FFFFFFFF"
+        },
+        {
+          "Formula": "20",
+          "Hidden": false,
+          "Address": "C4",
+          "Text": "20",
+          "Bold": false,
+          "Value": 20.0,
+          "Font": "FF000000",
+          "Fill": "FFFFFFFF"
+        },
+        {
+          "Formula": "002",
+          "Hidden": false,
+          "Address": "D4",
+          "Text": "002",
+          "Bold": false,
+          "Value": "002",
+          "Font": "FF000000",
+          "Fill": "FFFFFFFF"
+        },
+        {
+          "Formula": "row2",
+          "Hidden": false,
+          "Address": "E4",
+          "Text": "row2",
+          "Bold": false,
+          "Value": "row2",
+          "Font": "FF000000",
+          "Fill": "FFFFFFFF"
+        },
+        {
+          "Formula": "A",
+          "Hidden": false,
+          "Address": "B5",
+          "Text": "A",
+          "Bold": false,
+          "Value": "A",
+          "Font": "FF000000",
+          "Fill": "FFD9D9D9"
+        },
+        {
+          "Formula": "30",
+          "Hidden": false,
+          "Address": "C5",
+          "Text": "30",
+          "Bold": false,
+          "Value": 30.0,
+          "Font": "FF000000",
+          "Fill": "FFD9D9D9"
+        },
+        {
+          "Formula": "003",
+          "Hidden": false,
+          "Address": "D5",
+          "Text": "003",
+          "Bold": false,
+          "Value": "003",
+          "Font": "FF000000",
+          "Fill": "FFD9D9D9"
+        },
+        {
+          "Formula": "row3",
+          "Hidden": false,
+          "Address": "E5",
+          "Text": "row3",
+          "Bold": false,
+          "Value": "row3",
+          "Font": "FF000000",
+          "Fill": "FFD9D9D9"
+        },
+        {
+          "Formula": "B",
+          "Hidden": false,
+          "Address": "B6",
+          "Text": "B",
+          "Bold": false,
+          "Value": "B",
+          "Font": "FF000000",
+          "Fill": "FFFFFFFF"
+        },
+        {
+          "Formula": "40",
+          "Hidden": false,
+          "Address": "C6",
+          "Text": "40",
+          "Bold": false,
+          "Value": 40.0,
+          "Font": "FF000000",
+          "Fill": "FFFFFFFF"
+        },
+        {
+          "Formula": "004",
+          "Hidden": false,
+          "Address": "D6",
+          "Text": "004",
+          "Bold": false,
+          "Value": "004",
+          "Font": "FF000000",
+          "Fill": "FFFFFFFF"
+        },
+        {
+          "Formula": "row4",
+          "Hidden": false,
+          "Address": "E6",
+          "Text": "row4",
+          "Bold": false,
+          "Value": "row4",
+          "Font": "FF000000",
+          "Fill": "FFFFFFFF"
+        },
+        {
+          "Formula": "A",
+          "Hidden": false,
+          "Address": "B7",
+          "Text": "A",
+          "Bold": false,
+          "Value": "A",
+          "Font": "FF000000",
+          "Fill": "FFD9D9D9"
+        },
+        {
+          "Formula": "50",
+          "Hidden": false,
+          "Address": "C7",
+          "Text": "50",
+          "Bold": false,
+          "Value": 50.0,
+          "Font": "FF000000",
+          "Fill": "FFD9D9D9"
+        },
+        {
+          "Formula": "005",
+          "Hidden": false,
+          "Address": "D7",
+          "Text": "005",
+          "Bold": false,
+          "Value": "005",
+          "Font": "FF000000",
+          "Fill": "FFD9D9D9"
+        },
+        {
+          "Formula": "row5",
+          "Hidden": false,
+          "Address": "E7",
+          "Text": "row5",
+          "Bold": false,
+          "Value": "row5",
+          "Font": "FF000000",
+          "Fill": "FFD9D9D9"
+        }
+      ]
+    },
+    {
+      "Sheet": "medium",
+      "Name": "QE_medium",
+      "Range": "B2:E7",
+      "Header": true,
+      "Totals": false,
+      "Filter": true,
+      "Style": "TableStyleMedium2",
+      "First": false,
+      "Last": false,
+      "Rows": true,
+      "Columns": false,
+      "Headers": [
+        {
+          "TotalsFunction": 0,
+          "Name": "Group"
+        },
+        {
+          "TotalsFunction": 0,
+          "Name": "Amount"
+        },
+        {
+          "TotalsFunction": 0,
+          "Name": "Code"
+        },
+        {
+          "TotalsFunction": 0,
+          "Name": "Label"
+        }
+      ],
+      "Cells": [
+        {
+          "Formula": "Group",
+          "Hidden": false,
+          "Address": "B2",
+          "Text": "Group",
+          "Bold": true,
+          "Value": "Group",
+          "Font": "FFFFFFFF",
+          "Fill": "FF156082"
+        },
+        {
+          "Formula": "Amount",
+          "Hidden": false,
+          "Address": "C2",
+          "Text": "Amount",
+          "Bold": true,
+          "Value": "Amount",
+          "Font": "FFFFFFFF",
+          "Fill": "FF156082"
+        },
+        {
+          "Formula": "Code",
+          "Hidden": false,
+          "Address": "D2",
+          "Text": "Code",
+          "Bold": true,
+          "Value": "Code",
+          "Font": "FFFFFFFF",
+          "Fill": "FF156082"
+        },
+        {
+          "Formula": "Label",
+          "Hidden": false,
+          "Address": "E2",
+          "Text": "Label",
+          "Bold": true,
+          "Value": "Label",
+          "Font": "FFFFFFFF",
+          "Fill": "FF156082"
+        },
+        {
+          "Formula": "A",
+          "Hidden": false,
+          "Address": "B3",
+          "Text": "A",
+          "Bold": false,
+          "Value": "A",
+          "Font": "FF000000",
+          "Fill": "FFC0E6F5"
+        },
+        {
+          "Formula": "10",
+          "Hidden": false,
+          "Address": "C3",
+          "Text": "10",
+          "Bold": false,
+          "Value": 10.0,
+          "Font": "FF000000",
+          "Fill": "FFC0E6F5"
+        },
+        {
+          "Formula": "001",
+          "Hidden": false,
+          "Address": "D3",
+          "Text": "001",
+          "Bold": false,
+          "Value": "001",
+          "Font": "FF000000",
+          "Fill": "FFC0E6F5"
+        },
+        {
+          "Formula": "row1",
+          "Hidden": false,
+          "Address": "E3",
+          "Text": "row1",
+          "Bold": false,
+          "Value": "row1",
+          "Font": "FF000000",
+          "Fill": "FFC0E6F5"
+        },
+        {
+          "Formula": "B",
+          "Hidden": false,
+          "Address": "B4",
+          "Text": "B",
+          "Bold": false,
+          "Value": "B",
+          "Font": "FF000000",
+          "Fill": "FFFFFFFF"
+        },
+        {
+          "Formula": "20",
+          "Hidden": false,
+          "Address": "C4",
+          "Text": "20",
+          "Bold": false,
+          "Value": 20.0,
+          "Font": "FF000000",
+          "Fill": "FFFFFFFF"
+        },
+        {
+          "Formula": "002",
+          "Hidden": false,
+          "Address": "D4",
+          "Text": "002",
+          "Bold": false,
+          "Value": "002",
+          "Font": "FF000000",
+          "Fill": "FFFFFFFF"
+        },
+        {
+          "Formula": "row2",
+          "Hidden": false,
+          "Address": "E4",
+          "Text": "row2",
+          "Bold": false,
+          "Value": "row2",
+          "Font": "FF000000",
+          "Fill": "FFFFFFFF"
+        },
+        {
+          "Formula": "A",
+          "Hidden": false,
+          "Address": "B5",
+          "Text": "A",
+          "Bold": false,
+          "Value": "A",
+          "Font": "FF000000",
+          "Fill": "FFC0E6F5"
+        },
+        {
+          "Formula": "30",
+          "Hidden": false,
+          "Address": "C5",
+          "Text": "30",
+          "Bold": false,
+          "Value": 30.0,
+          "Font": "FF000000",
+          "Fill": "FFC0E6F5"
+        },
+        {
+          "Formula": "003",
+          "Hidden": false,
+          "Address": "D5",
+          "Text": "003",
+          "Bold": false,
+          "Value": "003",
+          "Font": "FF000000",
+          "Fill": "FFC0E6F5"
+        },
+        {
+          "Formula": "row3",
+          "Hidden": false,
+          "Address": "E5",
+          "Text": "row3",
+          "Bold": false,
+          "Value": "row3",
+          "Font": "FF000000",
+          "Fill": "FFC0E6F5"
+        },
+        {
+          "Formula": "B",
+          "Hidden": false,
+          "Address": "B6",
+          "Text": "B",
+          "Bold": false,
+          "Value": "B",
+          "Font": "FF000000",
+          "Fill": "FFFFFFFF"
+        },
+        {
+          "Formula": "40",
+          "Hidden": false,
+          "Address": "C6",
+          "Text": "40",
+          "Bold": false,
+          "Value": 40.0,
+          "Font": "FF000000",
+          "Fill": "FFFFFFFF"
+        },
+        {
+          "Formula": "004",
+          "Hidden": false,
+          "Address": "D6",
+          "Text": "004",
+          "Bold": false,
+          "Value": "004",
+          "Font": "FF000000",
+          "Fill": "FFFFFFFF"
+        },
+        {
+          "Formula": "row4",
+          "Hidden": false,
+          "Address": "E6",
+          "Text": "row4",
+          "Bold": false,
+          "Value": "row4",
+          "Font": "FF000000",
+          "Fill": "FFFFFFFF"
+        },
+        {
+          "Formula": "A",
+          "Hidden": false,
+          "Address": "B7",
+          "Text": "A",
+          "Bold": false,
+          "Value": "A",
+          "Font": "FF000000",
+          "Fill": "FFC0E6F5"
+        },
+        {
+          "Formula": "50",
+          "Hidden": false,
+          "Address": "C7",
+          "Text": "50",
+          "Bold": false,
+          "Value": 50.0,
+          "Font": "FF000000",
+          "Fill": "FFC0E6F5"
+        },
+        {
+          "Formula": "005",
+          "Hidden": false,
+          "Address": "D7",
+          "Text": "005",
+          "Bold": false,
+          "Value": "005",
+          "Font": "FF000000",
+          "Fill": "FFC0E6F5"
+        },
+        {
+          "Formula": "row5",
+          "Hidden": false,
+          "Address": "E7",
+          "Text": "row5",
+          "Bold": false,
+          "Value": "row5",
+          "Font": "FF000000",
+          "Fill": "FFC0E6F5"
+        }
+      ]
+    },
+    {
+      "Sheet": "dark",
+      "Name": "QE_dark",
+      "Range": "B2:E7",
+      "Header": true,
+      "Totals": false,
+      "Filter": true,
+      "Style": "TableStyleDark1",
+      "First": false,
+      "Last": false,
+      "Rows": true,
+      "Columns": false,
+      "Headers": [
+        {
+          "TotalsFunction": 0,
+          "Name": "Group"
+        },
+        {
+          "TotalsFunction": 0,
+          "Name": "Amount"
+        },
+        {
+          "TotalsFunction": 0,
+          "Name": "Code"
+        },
+        {
+          "TotalsFunction": 0,
+          "Name": "Label"
+        }
+      ],
+      "Cells": [
+        {
+          "Formula": "Group",
+          "Hidden": false,
+          "Address": "B2",
+          "Text": "Group",
+          "Bold": true,
+          "Value": "Group",
+          "Font": "FFFFFFFF",
+          "Fill": "FF000000"
+        },
+        {
+          "Formula": "Amount",
+          "Hidden": false,
+          "Address": "C2",
+          "Text": "Amount",
+          "Bold": true,
+          "Value": "Amount",
+          "Font": "FFFFFFFF",
+          "Fill": "FF000000"
+        },
+        {
+          "Formula": "Code",
+          "Hidden": false,
+          "Address": "D2",
+          "Text": "Code",
+          "Bold": true,
+          "Value": "Code",
+          "Font": "FFFFFFFF",
+          "Fill": "FF000000"
+        },
+        {
+          "Formula": "Label",
+          "Hidden": false,
+          "Address": "E2",
+          "Text": "Label",
+          "Bold": true,
+          "Value": "Label",
+          "Font": "FFFFFFFF",
+          "Fill": "FF000000"
+        },
+        {
+          "Formula": "A",
+          "Hidden": false,
+          "Address": "B3",
+          "Text": "A",
+          "Bold": false,
+          "Value": "A",
+          "Font": "FFFFFFFF",
+          "Fill": "FF404040"
+        },
+        {
+          "Formula": "10",
+          "Hidden": false,
+          "Address": "C3",
+          "Text": "10",
+          "Bold": false,
+          "Value": 10.0,
+          "Font": "FFFFFFFF",
+          "Fill": "FF404040"
+        },
+        {
+          "Formula": "001",
+          "Hidden": false,
+          "Address": "D3",
+          "Text": "001",
+          "Bold": false,
+          "Value": "001",
+          "Font": "FFFFFFFF",
+          "Fill": "FF404040"
+        },
+        {
+          "Formula": "row1",
+          "Hidden": false,
+          "Address": "E3",
+          "Text": "row1",
+          "Bold": false,
+          "Value": "row1",
+          "Font": "FFFFFFFF",
+          "Fill": "FF404040"
+        },
+        {
+          "Formula": "B",
+          "Hidden": false,
+          "Address": "B4",
+          "Text": "B",
+          "Bold": false,
+          "Value": "B",
+          "Font": "FFFFFFFF",
+          "Fill": "FF737373"
+        },
+        {
+          "Formula": "20",
+          "Hidden": false,
+          "Address": "C4",
+          "Text": "20",
+          "Bold": false,
+          "Value": 20.0,
+          "Font": "FFFFFFFF",
+          "Fill": "FF737373"
+        },
+        {
+          "Formula": "002",
+          "Hidden": false,
+          "Address": "D4",
+          "Text": "002",
+          "Bold": false,
+          "Value": "002",
+          "Font": "FFFFFFFF",
+          "Fill": "FF737373"
+        },
+        {
+          "Formula": "row2",
+          "Hidden": false,
+          "Address": "E4",
+          "Text": "row2",
+          "Bold": false,
+          "Value": "row2",
+          "Font": "FFFFFFFF",
+          "Fill": "FF737373"
+        },
+        {
+          "Formula": "A",
+          "Hidden": false,
+          "Address": "B5",
+          "Text": "A",
+          "Bold": false,
+          "Value": "A",
+          "Font": "FFFFFFFF",
+          "Fill": "FF404040"
+        },
+        {
+          "Formula": "30",
+          "Hidden": false,
+          "Address": "C5",
+          "Text": "30",
+          "Bold": false,
+          "Value": 30.0,
+          "Font": "FFFFFFFF",
+          "Fill": "FF404040"
+        },
+        {
+          "Formula": "003",
+          "Hidden": false,
+          "Address": "D5",
+          "Text": "003",
+          "Bold": false,
+          "Value": "003",
+          "Font": "FFFFFFFF",
+          "Fill": "FF404040"
+        },
+        {
+          "Formula": "row3",
+          "Hidden": false,
+          "Address": "E5",
+          "Text": "row3",
+          "Bold": false,
+          "Value": "row3",
+          "Font": "FFFFFFFF",
+          "Fill": "FF404040"
+        },
+        {
+          "Formula": "B",
+          "Hidden": false,
+          "Address": "B6",
+          "Text": "B",
+          "Bold": false,
+          "Value": "B",
+          "Font": "FFFFFFFF",
+          "Fill": "FF737373"
+        },
+        {
+          "Formula": "40",
+          "Hidden": false,
+          "Address": "C6",
+          "Text": "40",
+          "Bold": false,
+          "Value": 40.0,
+          "Font": "FFFFFFFF",
+          "Fill": "FF737373"
+        },
+        {
+          "Formula": "004",
+          "Hidden": false,
+          "Address": "D6",
+          "Text": "004",
+          "Bold": false,
+          "Value": "004",
+          "Font": "FFFFFFFF",
+          "Fill": "FF737373"
+        },
+        {
+          "Formula": "row4",
+          "Hidden": false,
+          "Address": "E6",
+          "Text": "row4",
+          "Bold": false,
+          "Value": "row4",
+          "Font": "FFFFFFFF",
+          "Fill": "FF737373"
+        },
+        {
+          "Formula": "A",
+          "Hidden": false,
+          "Address": "B7",
+          "Text": "A",
+          "Bold": false,
+          "Value": "A",
+          "Font": "FFFFFFFF",
+          "Fill": "FF404040"
+        },
+        {
+          "Formula": "50",
+          "Hidden": false,
+          "Address": "C7",
+          "Text": "50",
+          "Bold": false,
+          "Value": 50.0,
+          "Font": "FFFFFFFF",
+          "Fill": "FF404040"
+        },
+        {
+          "Formula": "005",
+          "Hidden": false,
+          "Address": "D7",
+          "Text": "005",
+          "Bold": false,
+          "Value": "005",
+          "Font": "FFFFFFFF",
+          "Fill": "FF404040"
+        },
+        {
+          "Formula": "row5",
+          "Hidden": false,
+          "Address": "E7",
+          "Text": "row5",
+          "Bold": false,
+          "Value": "row5",
+          "Font": "FFFFFFFF",
+          "Fill": "FF404040"
+        }
+      ]
+    },
+    {
+      "Sheet": "bands",
+      "Name": "QE_bands",
+      "Range": "B2:E7",
+      "Header": true,
+      "Totals": false,
+      "Filter": true,
+      "Style": "TableStyleMedium9",
+      "First": true,
+      "Last": true,
+      "Rows": true,
+      "Columns": true,
+      "Headers": [
+        {
+          "TotalsFunction": 0,
+          "Name": "Group"
+        },
+        {
+          "TotalsFunction": 0,
+          "Name": "Amount"
+        },
+        {
+          "TotalsFunction": 0,
+          "Name": "Code"
+        },
+        {
+          "TotalsFunction": 0,
+          "Name": "Label"
+        }
+      ],
+      "Cells": [
+        {
+          "Formula": "Group",
+          "Hidden": false,
+          "Address": "B2",
+          "Text": "Group",
+          "Bold": true,
+          "Value": "Group",
+          "Font": "FFFFFFFF",
+          "Fill": "FF156082"
+        },
+        {
+          "Formula": "Amount",
+          "Hidden": false,
+          "Address": "C2",
+          "Text": "Amount",
+          "Bold": true,
+          "Value": "Amount",
+          "Font": "FFFFFFFF",
+          "Fill": "FF156082"
+        },
+        {
+          "Formula": "Code",
+          "Hidden": false,
+          "Address": "D2",
+          "Text": "Code",
+          "Bold": true,
+          "Value": "Code",
+          "Font": "FFFFFFFF",
+          "Fill": "FF156082"
+        },
+        {
+          "Formula": "Label",
+          "Hidden": false,
+          "Address": "E2",
+          "Text": "Label",
+          "Bold": true,
+          "Value": "Label",
+          "Font": "FFFFFFFF",
+          "Fill": "FF156082"
+        },
+        {
+          "Formula": "A",
+          "Hidden": false,
+          "Address": "B3",
+          "Text": "A",
+          "Bold": true,
+          "Value": "A",
+          "Font": "FFFFFFFF",
+          "Fill": "FF156082"
+        },
+        {
+          "Formula": "10",
+          "Hidden": false,
+          "Address": "C3",
+          "Text": "10",
+          "Bold": false,
+          "Value": 10.0,
+          "Font": "FF000000",
+          "Fill": "FF83CCEB"
+        },
+        {
+          "Formula": "001",
+          "Hidden": false,
+          "Address": "D3",
+          "Text": "001",
+          "Bold": false,
+          "Value": "001",
+          "Font": "FF000000",
+          "Fill": "FF83CCEB"
+        },
+        {
+          "Formula": "row1",
+          "Hidden": false,
+          "Address": "E3",
+          "Text": "row1",
+          "Bold": true,
+          "Value": "row1",
+          "Font": "FFFFFFFF",
+          "Fill": "FF156082"
+        },
+        {
+          "Formula": "B",
+          "Hidden": false,
+          "Address": "B4",
+          "Text": "B",
+          "Bold": true,
+          "Value": "B",
+          "Font": "FFFFFFFF",
+          "Fill": "FF156082"
+        },
+        {
+          "Formula": "20",
+          "Hidden": false,
+          "Address": "C4",
+          "Text": "20",
+          "Bold": false,
+          "Value": 20.0,
+          "Font": "FF000000",
+          "Fill": "FFC0E6F5"
+        },
+        {
+          "Formula": "002",
+          "Hidden": false,
+          "Address": "D4",
+          "Text": "002",
+          "Bold": false,
+          "Value": "002",
+          "Font": "FF000000",
+          "Fill": "FF83CCEB"
+        },
+        {
+          "Formula": "row2",
+          "Hidden": false,
+          "Address": "E4",
+          "Text": "row2",
+          "Bold": true,
+          "Value": "row2",
+          "Font": "FFFFFFFF",
+          "Fill": "FF156082"
+        },
+        {
+          "Formula": "A",
+          "Hidden": false,
+          "Address": "B5",
+          "Text": "A",
+          "Bold": true,
+          "Value": "A",
+          "Font": "FFFFFFFF",
+          "Fill": "FF156082"
+        },
+        {
+          "Formula": "30",
+          "Hidden": false,
+          "Address": "C5",
+          "Text": "30",
+          "Bold": false,
+          "Value": 30.0,
+          "Font": "FF000000",
+          "Fill": "FF83CCEB"
+        },
+        {
+          "Formula": "003",
+          "Hidden": false,
+          "Address": "D5",
+          "Text": "003",
+          "Bold": false,
+          "Value": "003",
+          "Font": "FF000000",
+          "Fill": "FF83CCEB"
+        },
+        {
+          "Formula": "row3",
+          "Hidden": false,
+          "Address": "E5",
+          "Text": "row3",
+          "Bold": true,
+          "Value": "row3",
+          "Font": "FFFFFFFF",
+          "Fill": "FF156082"
+        },
+        {
+          "Formula": "B",
+          "Hidden": false,
+          "Address": "B6",
+          "Text": "B",
+          "Bold": true,
+          "Value": "B",
+          "Font": "FFFFFFFF",
+          "Fill": "FF156082"
+        },
+        {
+          "Formula": "40",
+          "Hidden": false,
+          "Address": "C6",
+          "Text": "40",
+          "Bold": false,
+          "Value": 40.0,
+          "Font": "FF000000",
+          "Fill": "FFC0E6F5"
+        },
+        {
+          "Formula": "004",
+          "Hidden": false,
+          "Address": "D6",
+          "Text": "004",
+          "Bold": false,
+          "Value": "004",
+          "Font": "FF000000",
+          "Fill": "FF83CCEB"
+        },
+        {
+          "Formula": "row4",
+          "Hidden": false,
+          "Address": "E6",
+          "Text": "row4",
+          "Bold": true,
+          "Value": "row4",
+          "Font": "FFFFFFFF",
+          "Fill": "FF156082"
+        },
+        {
+          "Formula": "A",
+          "Hidden": false,
+          "Address": "B7",
+          "Text": "A",
+          "Bold": true,
+          "Value": "A",
+          "Font": "FFFFFFFF",
+          "Fill": "FF156082"
+        },
+        {
+          "Formula": "50",
+          "Hidden": false,
+          "Address": "C7",
+          "Text": "50",
+          "Bold": false,
+          "Value": 50.0,
+          "Font": "FF000000",
+          "Fill": "FF83CCEB"
+        },
+        {
+          "Formula": "005",
+          "Hidden": false,
+          "Address": "D7",
+          "Text": "005",
+          "Bold": false,
+          "Value": "005",
+          "Font": "FF000000",
+          "Fill": "FF83CCEB"
+        },
+        {
+          "Formula": "row5",
+          "Hidden": false,
+          "Address": "E7",
+          "Text": "row5",
+          "Bold": true,
+          "Value": "row5",
+          "Font": "FFFFFFFF",
+          "Fill": "FF156082"
+        }
+      ]
+    },
+    {
+      "Sheet": "noheader",
+      "Name": "QE_noheader",
+      "Range": "B3:E7",
+      "Header": false,
+      "Totals": false,
+      "Filter": false,
+      "Style": "TableStyleLight1",
+      "First": false,
+      "Last": false,
+      "Rows": true,
+      "Columns": false,
+      "Headers": [
+        {
+          "TotalsFunction": 0,
+          "Name": "Group"
+        },
+        {
+          "TotalsFunction": 0,
+          "Name": "Amount"
+        },
+        {
+          "TotalsFunction": 0,
+          "Name": "Code"
+        },
+        {
+          "TotalsFunction": 0,
+          "Name": "Label"
+        }
+      ],
+      "Cells": [
+        {
+          "Formula": "A",
+          "Hidden": false,
+          "Address": "B3",
+          "Text": "A",
+          "Bold": false,
+          "Value": "A",
+          "Font": "FF000000",
+          "Fill": "FFD9D9D9"
+        },
+        {
+          "Formula": "10",
+          "Hidden": false,
+          "Address": "C3",
+          "Text": "10",
+          "Bold": false,
+          "Value": 10.0,
+          "Font": "FF000000",
+          "Fill": "FFD9D9D9"
+        },
+        {
+          "Formula": "001",
+          "Hidden": false,
+          "Address": "D3",
+          "Text": "001",
+          "Bold": false,
+          "Value": "001",
+          "Font": "FF000000",
+          "Fill": "FFD9D9D9"
+        },
+        {
+          "Formula": "row1",
+          "Hidden": false,
+          "Address": "E3",
+          "Text": "row1",
+          "Bold": false,
+          "Value": "row1",
+          "Font": "FF000000",
+          "Fill": "FFD9D9D9"
+        },
+        {
+          "Formula": "B",
+          "Hidden": false,
+          "Address": "B4",
+          "Text": "B",
+          "Bold": false,
+          "Value": "B",
+          "Font": "FF000000",
+          "Fill": "FFFFFFFF"
+        },
+        {
+          "Formula": "20",
+          "Hidden": false,
+          "Address": "C4",
+          "Text": "20",
+          "Bold": false,
+          "Value": 20.0,
+          "Font": "FF000000",
+          "Fill": "FFFFFFFF"
+        },
+        {
+          "Formula": "002",
+          "Hidden": false,
+          "Address": "D4",
+          "Text": "002",
+          "Bold": false,
+          "Value": "002",
+          "Font": "FF000000",
+          "Fill": "FFFFFFFF"
+        },
+        {
+          "Formula": "row2",
+          "Hidden": false,
+          "Address": "E4",
+          "Text": "row2",
+          "Bold": false,
+          "Value": "row2",
+          "Font": "FF000000",
+          "Fill": "FFFFFFFF"
+        },
+        {
+          "Formula": "A",
+          "Hidden": false,
+          "Address": "B5",
+          "Text": "A",
+          "Bold": false,
+          "Value": "A",
+          "Font": "FF000000",
+          "Fill": "FFD9D9D9"
+        },
+        {
+          "Formula": "30",
+          "Hidden": false,
+          "Address": "C5",
+          "Text": "30",
+          "Bold": false,
+          "Value": 30.0,
+          "Font": "FF000000",
+          "Fill": "FFD9D9D9"
+        },
+        {
+          "Formula": "003",
+          "Hidden": false,
+          "Address": "D5",
+          "Text": "003",
+          "Bold": false,
+          "Value": "003",
+          "Font": "FF000000",
+          "Fill": "FFD9D9D9"
+        },
+        {
+          "Formula": "row3",
+          "Hidden": false,
+          "Address": "E5",
+          "Text": "row3",
+          "Bold": false,
+          "Value": "row3",
+          "Font": "FF000000",
+          "Fill": "FFD9D9D9"
+        },
+        {
+          "Formula": "B",
+          "Hidden": false,
+          "Address": "B6",
+          "Text": "B",
+          "Bold": false,
+          "Value": "B",
+          "Font": "FF000000",
+          "Fill": "FFFFFFFF"
+        },
+        {
+          "Formula": "40",
+          "Hidden": false,
+          "Address": "C6",
+          "Text": "40",
+          "Bold": false,
+          "Value": 40.0,
+          "Font": "FF000000",
+          "Fill": "FFFFFFFF"
+        },
+        {
+          "Formula": "004",
+          "Hidden": false,
+          "Address": "D6",
+          "Text": "004",
+          "Bold": false,
+          "Value": "004",
+          "Font": "FF000000",
+          "Fill": "FFFFFFFF"
+        },
+        {
+          "Formula": "row4",
+          "Hidden": false,
+          "Address": "E6",
+          "Text": "row4",
+          "Bold": false,
+          "Value": "row4",
+          "Font": "FF000000",
+          "Fill": "FFFFFFFF"
+        },
+        {
+          "Formula": "A",
+          "Hidden": false,
+          "Address": "B7",
+          "Text": "A",
+          "Bold": false,
+          "Value": "A",
+          "Font": "FF000000",
+          "Fill": "FFD9D9D9"
+        },
+        {
+          "Formula": "50",
+          "Hidden": false,
+          "Address": "C7",
+          "Text": "50",
+          "Bold": false,
+          "Value": 50.0,
+          "Font": "FF000000",
+          "Fill": "FFD9D9D9"
+        },
+        {
+          "Formula": "005",
+          "Hidden": false,
+          "Address": "D7",
+          "Text": "005",
+          "Bold": false,
+          "Value": "005",
+          "Font": "FF000000",
+          "Fill": "FFD9D9D9"
+        },
+        {
+          "Formula": "row5",
+          "Hidden": false,
+          "Address": "E7",
+          "Text": "row5",
+          "Bold": false,
+          "Value": "row5",
+          "Font": "FF000000",
+          "Fill": "FFD9D9D9"
+        }
+      ]
+    },
+    {
+      "Sheet": "nofilter",
+      "Name": "QE_nofilter",
+      "Range": "B2:E7",
+      "Header": true,
+      "Totals": false,
+      "Filter": false,
+      "Style": "TableStyleMedium2",
+      "First": false,
+      "Last": false,
+      "Rows": true,
+      "Columns": false,
+      "Headers": [
+        {
+          "TotalsFunction": 0,
+          "Name": "Group"
+        },
+        {
+          "TotalsFunction": 0,
+          "Name": "Amount"
+        },
+        {
+          "TotalsFunction": 0,
+          "Name": "Code"
+        },
+        {
+          "TotalsFunction": 0,
+          "Name": "Label"
+        }
+      ],
+      "Cells": [
+        {
+          "Formula": "Group",
+          "Hidden": false,
+          "Address": "B2",
+          "Text": "Group",
+          "Bold": true,
+          "Value": "Group",
+          "Font": "FFFFFFFF",
+          "Fill": "FF156082"
+        },
+        {
+          "Formula": "Amount",
+          "Hidden": false,
+          "Address": "C2",
+          "Text": "Amount",
+          "Bold": true,
+          "Value": "Amount",
+          "Font": "FFFFFFFF",
+          "Fill": "FF156082"
+        },
+        {
+          "Formula": "Code",
+          "Hidden": false,
+          "Address": "D2",
+          "Text": "Code",
+          "Bold": true,
+          "Value": "Code",
+          "Font": "FFFFFFFF",
+          "Fill": "FF156082"
+        },
+        {
+          "Formula": "Label",
+          "Hidden": false,
+          "Address": "E2",
+          "Text": "Label",
+          "Bold": true,
+          "Value": "Label",
+          "Font": "FFFFFFFF",
+          "Fill": "FF156082"
+        },
+        {
+          "Formula": "A",
+          "Hidden": false,
+          "Address": "B3",
+          "Text": "A",
+          "Bold": false,
+          "Value": "A",
+          "Font": "FF000000",
+          "Fill": "FFC0E6F5"
+        },
+        {
+          "Formula": "10",
+          "Hidden": false,
+          "Address": "C3",
+          "Text": "10",
+          "Bold": false,
+          "Value": 10.0,
+          "Font": "FF000000",
+          "Fill": "FFC0E6F5"
+        },
+        {
+          "Formula": "001",
+          "Hidden": false,
+          "Address": "D3",
+          "Text": "001",
+          "Bold": false,
+          "Value": "001",
+          "Font": "FF000000",
+          "Fill": "FFC0E6F5"
+        },
+        {
+          "Formula": "row1",
+          "Hidden": false,
+          "Address": "E3",
+          "Text": "row1",
+          "Bold": false,
+          "Value": "row1",
+          "Font": "FF000000",
+          "Fill": "FFC0E6F5"
+        },
+        {
+          "Formula": "B",
+          "Hidden": false,
+          "Address": "B4",
+          "Text": "B",
+          "Bold": false,
+          "Value": "B",
+          "Font": "FF000000",
+          "Fill": "FFFFFFFF"
+        },
+        {
+          "Formula": "20",
+          "Hidden": false,
+          "Address": "C4",
+          "Text": "20",
+          "Bold": false,
+          "Value": 20.0,
+          "Font": "FF000000",
+          "Fill": "FFFFFFFF"
+        },
+        {
+          "Formula": "002",
+          "Hidden": false,
+          "Address": "D4",
+          "Text": "002",
+          "Bold": false,
+          "Value": "002",
+          "Font": "FF000000",
+          "Fill": "FFFFFFFF"
+        },
+        {
+          "Formula": "row2",
+          "Hidden": false,
+          "Address": "E4",
+          "Text": "row2",
+          "Bold": false,
+          "Value": "row2",
+          "Font": "FF000000",
+          "Fill": "FFFFFFFF"
+        },
+        {
+          "Formula": "A",
+          "Hidden": false,
+          "Address": "B5",
+          "Text": "A",
+          "Bold": false,
+          "Value": "A",
+          "Font": "FF000000",
+          "Fill": "FFC0E6F5"
+        },
+        {
+          "Formula": "30",
+          "Hidden": false,
+          "Address": "C5",
+          "Text": "30",
+          "Bold": false,
+          "Value": 30.0,
+          "Font": "FF000000",
+          "Fill": "FFC0E6F5"
+        },
+        {
+          "Formula": "003",
+          "Hidden": false,
+          "Address": "D5",
+          "Text": "003",
+          "Bold": false,
+          "Value": "003",
+          "Font": "FF000000",
+          "Fill": "FFC0E6F5"
+        },
+        {
+          "Formula": "row3",
+          "Hidden": false,
+          "Address": "E5",
+          "Text": "row3",
+          "Bold": false,
+          "Value": "row3",
+          "Font": "FF000000",
+          "Fill": "FFC0E6F5"
+        },
+        {
+          "Formula": "B",
+          "Hidden": false,
+          "Address": "B6",
+          "Text": "B",
+          "Bold": false,
+          "Value": "B",
+          "Font": "FF000000",
+          "Fill": "FFFFFFFF"
+        },
+        {
+          "Formula": "40",
+          "Hidden": false,
+          "Address": "C6",
+          "Text": "40",
+          "Bold": false,
+          "Value": 40.0,
+          "Font": "FF000000",
+          "Fill": "FFFFFFFF"
+        },
+        {
+          "Formula": "004",
+          "Hidden": false,
+          "Address": "D6",
+          "Text": "004",
+          "Bold": false,
+          "Value": "004",
+          "Font": "FF000000",
+          "Fill": "FFFFFFFF"
+        },
+        {
+          "Formula": "row4",
+          "Hidden": false,
+          "Address": "E6",
+          "Text": "row4",
+          "Bold": false,
+          "Value": "row4",
+          "Font": "FF000000",
+          "Fill": "FFFFFFFF"
+        },
+        {
+          "Formula": "A",
+          "Hidden": false,
+          "Address": "B7",
+          "Text": "A",
+          "Bold": false,
+          "Value": "A",
+          "Font": "FF000000",
+          "Fill": "FFC0E6F5"
+        },
+        {
+          "Formula": "50",
+          "Hidden": false,
+          "Address": "C7",
+          "Text": "50",
+          "Bold": false,
+          "Value": 50.0,
+          "Font": "FF000000",
+          "Fill": "FFC0E6F5"
+        },
+        {
+          "Formula": "005",
+          "Hidden": false,
+          "Address": "D7",
+          "Text": "005",
+          "Bold": false,
+          "Value": "005",
+          "Font": "FF000000",
+          "Fill": "FFC0E6F5"
+        },
+        {
+          "Formula": "row5",
+          "Hidden": false,
+          "Address": "E7",
+          "Text": "row5",
+          "Bold": false,
+          "Value": "row5",
+          "Font": "FF000000",
+          "Fill": "FFC0E6F5"
+        }
+      ]
+    },
+    {
+      "Sheet": "filtered",
+      "Name": "QE_filtered",
+      "Range": "B2:E7",
+      "Header": true,
+      "Totals": false,
+      "Filter": true,
+      "Style": "TableStyleDark1",
+      "First": false,
+      "Last": false,
+      "Rows": true,
+      "Columns": false,
+      "Headers": [
+        {
+          "TotalsFunction": 0,
+          "Name": "Group"
+        },
+        {
+          "TotalsFunction": 0,
+          "Name": "Amount"
+        },
+        {
+          "TotalsFunction": 0,
+          "Name": "Code"
+        },
+        {
+          "TotalsFunction": 0,
+          "Name": "Label"
+        }
+      ],
+      "Cells": [
+        {
+          "Formula": "Group",
+          "Hidden": false,
+          "Address": "B2",
+          "Text": "Group",
+          "Bold": true,
+          "Value": "Group",
+          "Font": "FFFFFFFF",
+          "Fill": "FF000000"
+        },
+        {
+          "Formula": "Amount",
+          "Hidden": false,
+          "Address": "C2",
+          "Text": "Amount",
+          "Bold": true,
+          "Value": "Amount",
+          "Font": "FFFFFFFF",
+          "Fill": "FF000000"
+        },
+        {
+          "Formula": "Code",
+          "Hidden": false,
+          "Address": "D2",
+          "Text": "Code",
+          "Bold": true,
+          "Value": "Code",
+          "Font": "FFFFFFFF",
+          "Fill": "FF000000"
+        },
+        {
+          "Formula": "Label",
+          "Hidden": false,
+          "Address": "E2",
+          "Text": "Label",
+          "Bold": true,
+          "Value": "Label",
+          "Font": "FFFFFFFF",
+          "Fill": "FF000000"
+        },
+        {
+          "Formula": "A",
+          "Hidden": false,
+          "Address": "B3",
+          "Text": "A",
+          "Bold": false,
+          "Value": "A",
+          "Font": "FFFFFFFF",
+          "Fill": "FF404040"
+        },
+        {
+          "Formula": "10",
+          "Hidden": false,
+          "Address": "C3",
+          "Text": "10",
+          "Bold": false,
+          "Value": 10.0,
+          "Font": "FFFFFFFF",
+          "Fill": "FF404040"
+        },
+        {
+          "Formula": "001",
+          "Hidden": false,
+          "Address": "D3",
+          "Text": "001",
+          "Bold": false,
+          "Value": "001",
+          "Font": "FFFFFFFF",
+          "Fill": "FF404040"
+        },
+        {
+          "Formula": "row1",
+          "Hidden": false,
+          "Address": "E3",
+          "Text": "row1",
+          "Bold": false,
+          "Value": "row1",
+          "Font": "FFFFFFFF",
+          "Fill": "FF404040"
+        },
+        {
+          "Formula": "B",
+          "Hidden": true,
+          "Address": "B4",
+          "Text": "B",
+          "Bold": false,
+          "Value": "B",
+          "Font": "FFFFFFFF",
+          "Fill": "FF737373"
+        },
+        {
+          "Formula": "20",
+          "Hidden": true,
+          "Address": "C4",
+          "Text": "20",
+          "Bold": false,
+          "Value": 20.0,
+          "Font": "FFFFFFFF",
+          "Fill": "FF737373"
+        },
+        {
+          "Formula": "002",
+          "Hidden": true,
+          "Address": "D4",
+          "Text": "002",
+          "Bold": false,
+          "Value": "002",
+          "Font": "FFFFFFFF",
+          "Fill": "FF737373"
+        },
+        {
+          "Formula": "row2",
+          "Hidden": true,
+          "Address": "E4",
+          "Text": "row2",
+          "Bold": false,
+          "Value": "row2",
+          "Font": "FFFFFFFF",
+          "Fill": "FF737373"
+        },
+        {
+          "Formula": "A",
+          "Hidden": false,
+          "Address": "B5",
+          "Text": "A",
+          "Bold": false,
+          "Value": "A",
+          "Font": "FFFFFFFF",
+          "Fill": "FF737373"
+        },
+        {
+          "Formula": "30",
+          "Hidden": false,
+          "Address": "C5",
+          "Text": "30",
+          "Bold": false,
+          "Value": 30.0,
+          "Font": "FFFFFFFF",
+          "Fill": "FF737373"
+        },
+        {
+          "Formula": "003",
+          "Hidden": false,
+          "Address": "D5",
+          "Text": "003",
+          "Bold": false,
+          "Value": "003",
+          "Font": "FFFFFFFF",
+          "Fill": "FF737373"
+        },
+        {
+          "Formula": "row3",
+          "Hidden": false,
+          "Address": "E5",
+          "Text": "row3",
+          "Bold": false,
+          "Value": "row3",
+          "Font": "FFFFFFFF",
+          "Fill": "FF737373"
+        },
+        {
+          "Formula": "B",
+          "Hidden": true,
+          "Address": "B6",
+          "Text": "B",
+          "Bold": false,
+          "Value": "B",
+          "Font": "FFFFFFFF",
+          "Fill": "FF737373"
+        },
+        {
+          "Formula": "40",
+          "Hidden": true,
+          "Address": "C6",
+          "Text": "40",
+          "Bold": false,
+          "Value": 40.0,
+          "Font": "FFFFFFFF",
+          "Fill": "FF737373"
+        },
+        {
+          "Formula": "004",
+          "Hidden": true,
+          "Address": "D6",
+          "Text": "004",
+          "Bold": false,
+          "Value": "004",
+          "Font": "FFFFFFFF",
+          "Fill": "FF737373"
+        },
+        {
+          "Formula": "row4",
+          "Hidden": true,
+          "Address": "E6",
+          "Text": "row4",
+          "Bold": false,
+          "Value": "row4",
+          "Font": "FFFFFFFF",
+          "Fill": "FF737373"
+        },
+        {
+          "Formula": "A",
+          "Hidden": false,
+          "Address": "B7",
+          "Text": "A",
+          "Bold": false,
+          "Value": "A",
+          "Font": "FFFFFFFF",
+          "Fill": "FF404040"
+        },
+        {
+          "Formula": "50",
+          "Hidden": false,
+          "Address": "C7",
+          "Text": "50",
+          "Bold": false,
+          "Value": 50.0,
+          "Font": "FFFFFFFF",
+          "Fill": "FF404040"
+        },
+        {
+          "Formula": "005",
+          "Hidden": false,
+          "Address": "D7",
+          "Text": "005",
+          "Bold": false,
+          "Value": "005",
+          "Font": "FFFFFFFF",
+          "Fill": "FF404040"
+        },
+        {
+          "Formula": "row5",
+          "Hidden": false,
+          "Address": "E7",
+          "Text": "row5",
+          "Bold": false,
+          "Value": "row5",
+          "Font": "FFFFFFFF",
+          "Fill": "FF404040"
+        }
+      ]
+    },
+    {
+      "Sheet": "totals",
+      "Name": "QE_totals",
+      "Range": "B2:E8",
+      "Header": true,
+      "Totals": true,
+      "Filter": true,
+      "Style": "TableStyleMedium9",
+      "First": false,
+      "Last": false,
+      "Rows": true,
+      "Columns": false,
+      "Headers": [
+        {
+          "TotalsFunction": 0,
+          "Name": "Group"
+        },
+        {
+          "TotalsFunction": 0,
+          "Name": "Amount"
+        },
+        {
+          "TotalsFunction": 0,
+          "Name": "Code"
+        },
+        {
+          "TotalsFunction": 0,
+          "Name": "Label"
+        }
+      ],
+      "Cells": [
+        {
+          "Formula": "Group",
+          "Hidden": false,
+          "Address": "B2",
+          "Text": "Group",
+          "Bold": true,
+          "Value": "Group",
+          "Font": "FFFFFFFF",
+          "Fill": "FF156082"
+        },
+        {
+          "Formula": "Amount",
+          "Hidden": false,
+          "Address": "C2",
+          "Text": "Amount",
+          "Bold": true,
+          "Value": "Amount",
+          "Font": "FFFFFFFF",
+          "Fill": "FF156082"
+        },
+        {
+          "Formula": "Code",
+          "Hidden": false,
+          "Address": "D2",
+          "Text": "Code",
+          "Bold": true,
+          "Value": "Code",
+          "Font": "FFFFFFFF",
+          "Fill": "FF156082"
+        },
+        {
+          "Formula": "Label",
+          "Hidden": false,
+          "Address": "E2",
+          "Text": "Label",
+          "Bold": true,
+          "Value": "Label",
+          "Font": "FFFFFFFF",
+          "Fill": "FF156082"
+        },
+        {
+          "Formula": "A",
+          "Hidden": false,
+          "Address": "B3",
+          "Text": "A",
+          "Bold": false,
+          "Value": "A",
+          "Font": "FF000000",
+          "Fill": "FF83CCEB"
+        },
+        {
+          "Formula": "10",
+          "Hidden": false,
+          "Address": "C3",
+          "Text": "10",
+          "Bold": false,
+          "Value": 10.0,
+          "Font": "FF000000",
+          "Fill": "FF83CCEB"
+        },
+        {
+          "Formula": "001",
+          "Hidden": false,
+          "Address": "D3",
+          "Text": "001",
+          "Bold": false,
+          "Value": "001",
+          "Font": "FF000000",
+          "Fill": "FF83CCEB"
+        },
+        {
+          "Formula": "row1",
+          "Hidden": false,
+          "Address": "E3",
+          "Text": "row1",
+          "Bold": false,
+          "Value": "row1",
+          "Font": "FF000000",
+          "Fill": "FF83CCEB"
+        },
+        {
+          "Formula": "B",
+          "Hidden": false,
+          "Address": "B4",
+          "Text": "B",
+          "Bold": false,
+          "Value": "B",
+          "Font": "FF000000",
+          "Fill": "FFC0E6F5"
+        },
+        {
+          "Formula": "20",
+          "Hidden": false,
+          "Address": "C4",
+          "Text": "20",
+          "Bold": false,
+          "Value": 20.0,
+          "Font": "FF000000",
+          "Fill": "FFC0E6F5"
+        },
+        {
+          "Formula": "002",
+          "Hidden": false,
+          "Address": "D4",
+          "Text": "002",
+          "Bold": false,
+          "Value": "002",
+          "Font": "FF000000",
+          "Fill": "FFC0E6F5"
+        },
+        {
+          "Formula": "row2",
+          "Hidden": false,
+          "Address": "E4",
+          "Text": "row2",
+          "Bold": false,
+          "Value": "row2",
+          "Font": "FF000000",
+          "Fill": "FFC0E6F5"
+        },
+        {
+          "Formula": "A",
+          "Hidden": false,
+          "Address": "B5",
+          "Text": "A",
+          "Bold": false,
+          "Value": "A",
+          "Font": "FF000000",
+          "Fill": "FF83CCEB"
+        },
+        {
+          "Formula": "30",
+          "Hidden": false,
+          "Address": "C5",
+          "Text": "30",
+          "Bold": false,
+          "Value": 30.0,
+          "Font": "FF000000",
+          "Fill": "FF83CCEB"
+        },
+        {
+          "Formula": "003",
+          "Hidden": false,
+          "Address": "D5",
+          "Text": "003",
+          "Bold": false,
+          "Value": "003",
+          "Font": "FF000000",
+          "Fill": "FF83CCEB"
+        },
+        {
+          "Formula": "row3",
+          "Hidden": false,
+          "Address": "E5",
+          "Text": "row3",
+          "Bold": false,
+          "Value": "row3",
+          "Font": "FF000000",
+          "Fill": "FF83CCEB"
+        },
+        {
+          "Formula": "B",
+          "Hidden": false,
+          "Address": "B6",
+          "Text": "B",
+          "Bold": false,
+          "Value": "B",
+          "Font": "FF000000",
+          "Fill": "FFC0E6F5"
+        },
+        {
+          "Formula": "40",
+          "Hidden": false,
+          "Address": "C6",
+          "Text": "40",
+          "Bold": false,
+          "Value": 40.0,
+          "Font": "FF000000",
+          "Fill": "FFC0E6F5"
+        },
+        {
+          "Formula": "004",
+          "Hidden": false,
+          "Address": "D6",
+          "Text": "004",
+          "Bold": false,
+          "Value": "004",
+          "Font": "FF000000",
+          "Fill": "FFC0E6F5"
+        },
+        {
+          "Formula": "row4",
+          "Hidden": false,
+          "Address": "E6",
+          "Text": "row4",
+          "Bold": false,
+          "Value": "row4",
+          "Font": "FF000000",
+          "Fill": "FFC0E6F5"
+        },
+        {
+          "Formula": "A",
+          "Hidden": false,
+          "Address": "B7",
+          "Text": "A",
+          "Bold": false,
+          "Value": "A",
+          "Font": "FF000000",
+          "Fill": "FF83CCEB"
+        },
+        {
+          "Formula": "50",
+          "Hidden": false,
+          "Address": "C7",
+          "Text": "50",
+          "Bold": false,
+          "Value": 50.0,
+          "Font": "FF000000",
+          "Fill": "FF83CCEB"
+        },
+        {
+          "Formula": "005",
+          "Hidden": false,
+          "Address": "D7",
+          "Text": "005",
+          "Bold": false,
+          "Value": "005",
+          "Font": "FF000000",
+          "Fill": "FF83CCEB"
+        },
+        {
+          "Formula": "row5",
+          "Hidden": false,
+          "Address": "E7",
+          "Text": "row5",
+          "Bold": false,
+          "Value": "row5",
+          "Font": "FF000000",
+          "Fill": "FF83CCEB"
+        },
+        {
+          "Formula": "Total",
+          "Hidden": false,
+          "Address": "B8",
+          "Text": "Total",
+          "Bold": true,
+          "Value": "Total",
+          "Font": "FFFFFFFF",
+          "Fill": "FF156082"
+        },
+        {
+          "Formula": "150",
+          "Hidden": false,
+          "Address": "C8",
+          "Text": "150",
+          "Bold": true,
+          "Value": "150",
+          "Font": "FFFFFFFF",
+          "Fill": "FF156082"
+        },
+        {
+          "Formula": "",
+          "Hidden": false,
+          "Address": "D8",
+          "Text": "",
+          "Bold": true,
+          "Value": null,
+          "Font": "FFFFFFFF",
+          "Fill": "FF156082"
+        },
+        {
+          "Formula": "",
+          "Hidden": false,
+          "Address": "E8",
+          "Text": "",
+          "Bold": true,
+          "Value": null,
+          "Font": "FFFFFFFF",
+          "Fill": "FF156082"
+        }
+      ]
+    }
+  ],
+  "After": [
+    {
+      "Sheet": "light",
+      "Name": "QE_light",
+      "Range": "B2:E7",
+      "Header": true,
+      "Totals": false,
+      "Filter": true,
+      "Style": "TableStyleLight1",
+      "First": false,
+      "Last": false,
+      "Rows": true,
+      "Columns": false,
+      "Headers": [
+        {
+          "TotalsFunction": 0,
+          "Name": "Group"
+        },
+        {
+          "TotalsFunction": 0,
+          "Name": "Amount"
+        },
+        {
+          "TotalsFunction": 0,
+          "Name": "Code"
+        },
+        {
+          "TotalsFunction": 0,
+          "Name": "Label"
+        }
+      ],
+      "Cells": [
+        {
+          "Formula": "Group",
+          "Hidden": false,
+          "Address": "B2",
+          "Text": "Group",
+          "Bold": true,
+          "Value": "Group",
+          "Font": "FF000000",
+          "Fill": "FFFFFFFF"
+        },
+        {
+          "Formula": "Amount",
+          "Hidden": false,
+          "Address": "C2",
+          "Text": "Amount",
+          "Bold": true,
+          "Value": "Amount",
+          "Font": "FF000000",
+          "Fill": "FFFFFFFF"
+        },
+        {
+          "Formula": "Code",
+          "Hidden": false,
+          "Address": "D2",
+          "Text": "Code",
+          "Bold": true,
+          "Value": "Code",
+          "Font": "FF000000",
+          "Fill": "FFFFFFFF"
+        },
+        {
+          "Formula": "Label",
+          "Hidden": false,
+          "Address": "E2",
+          "Text": "Label",
+          "Bold": true,
+          "Value": "Label",
+          "Font": "FF000000",
+          "Fill": "FFFFFFFF"
+        },
+        {
+          "Formula": "A",
+          "Hidden": false,
+          "Address": "B3",
+          "Text": "A",
+          "Bold": false,
+          "Value": "A",
+          "Font": "FF000000",
+          "Fill": "FFD9D9D9"
+        },
+        {
+          "Formula": "10",
+          "Hidden": false,
+          "Address": "C3",
+          "Text": "10",
+          "Bold": false,
+          "Value": 10.0,
+          "Font": "FF000000",
+          "Fill": "FFD9D9D9"
+        },
+        {
+          "Formula": "001",
+          "Hidden": false,
+          "Address": "D3",
+          "Text": "001",
+          "Bold": false,
+          "Value": "001",
+          "Font": "FF000000",
+          "Fill": "FFD9D9D9"
+        },
+        {
+          "Formula": "row1",
+          "Hidden": false,
+          "Address": "E3",
+          "Text": "row1",
+          "Bold": false,
+          "Value": "row1",
+          "Font": "FF000000",
+          "Fill": "FFD9D9D9"
+        },
+        {
+          "Formula": "B",
+          "Hidden": false,
+          "Address": "B4",
+          "Text": "B",
+          "Bold": false,
+          "Value": "B",
+          "Font": "FF000000",
+          "Fill": "FFFFFFFF"
+        },
+        {
+          "Formula": "20",
+          "Hidden": false,
+          "Address": "C4",
+          "Text": "20",
+          "Bold": false,
+          "Value": 20.0,
+          "Font": "FF000000",
+          "Fill": "FFFFFFFF"
+        },
+        {
+          "Formula": "002",
+          "Hidden": false,
+          "Address": "D4",
+          "Text": "002",
+          "Bold": false,
+          "Value": "002",
+          "Font": "FF000000",
+          "Fill": "FFFFFFFF"
+        },
+        {
+          "Formula": "row2",
+          "Hidden": false,
+          "Address": "E4",
+          "Text": "row2",
+          "Bold": false,
+          "Value": "row2",
+          "Font": "FF000000",
+          "Fill": "FFFFFFFF"
+        },
+        {
+          "Formula": "A",
+          "Hidden": false,
+          "Address": "B5",
+          "Text": "A",
+          "Bold": false,
+          "Value": "A",
+          "Font": "FF000000",
+          "Fill": "FFD9D9D9"
+        },
+        {
+          "Formula": "30",
+          "Hidden": false,
+          "Address": "C5",
+          "Text": "30",
+          "Bold": false,
+          "Value": 30.0,
+          "Font": "FF000000",
+          "Fill": "FFD9D9D9"
+        },
+        {
+          "Formula": "003",
+          "Hidden": false,
+          "Address": "D5",
+          "Text": "003",
+          "Bold": false,
+          "Value": "003",
+          "Font": "FF000000",
+          "Fill": "FFD9D9D9"
+        },
+        {
+          "Formula": "row3",
+          "Hidden": false,
+          "Address": "E5",
+          "Text": "row3",
+          "Bold": false,
+          "Value": "row3",
+          "Font": "FF000000",
+          "Fill": "FFD9D9D9"
+        },
+        {
+          "Formula": "B",
+          "Hidden": false,
+          "Address": "B6",
+          "Text": "B",
+          "Bold": false,
+          "Value": "B",
+          "Font": "FF000000",
+          "Fill": "FFFFFFFF"
+        },
+        {
+          "Formula": "40",
+          "Hidden": false,
+          "Address": "C6",
+          "Text": "40",
+          "Bold": false,
+          "Value": 40.0,
+          "Font": "FF000000",
+          "Fill": "FFFFFFFF"
+        },
+        {
+          "Formula": "004",
+          "Hidden": false,
+          "Address": "D6",
+          "Text": "004",
+          "Bold": false,
+          "Value": "004",
+          "Font": "FF000000",
+          "Fill": "FFFFFFFF"
+        },
+        {
+          "Formula": "row4",
+          "Hidden": false,
+          "Address": "E6",
+          "Text": "row4",
+          "Bold": false,
+          "Value": "row4",
+          "Font": "FF000000",
+          "Fill": "FFFFFFFF"
+        },
+        {
+          "Formula": "A",
+          "Hidden": false,
+          "Address": "B7",
+          "Text": "A",
+          "Bold": false,
+          "Value": "A",
+          "Font": "FF000000",
+          "Fill": "FFD9D9D9"
+        },
+        {
+          "Formula": "50",
+          "Hidden": false,
+          "Address": "C7",
+          "Text": "50",
+          "Bold": false,
+          "Value": 50.0,
+          "Font": "FF000000",
+          "Fill": "FFD9D9D9"
+        },
+        {
+          "Formula": "005",
+          "Hidden": false,
+          "Address": "D7",
+          "Text": "005",
+          "Bold": false,
+          "Value": "005",
+          "Font": "FF000000",
+          "Fill": "FFD9D9D9"
+        },
+        {
+          "Formula": "row5",
+          "Hidden": false,
+          "Address": "E7",
+          "Text": "row5",
+          "Bold": false,
+          "Value": "row5",
+          "Font": "FF000000",
+          "Fill": "FFD9D9D9"
+        }
+      ]
+    },
+    {
+      "Sheet": "medium",
+      "Name": "QE_medium",
+      "Range": "B2:E7",
+      "Header": true,
+      "Totals": false,
+      "Filter": true,
+      "Style": "TableStyleMedium2",
+      "First": false,
+      "Last": false,
+      "Rows": true,
+      "Columns": false,
+      "Headers": [
+        {
+          "TotalsFunction": 0,
+          "Name": "Group"
+        },
+        {
+          "TotalsFunction": 0,
+          "Name": "Amount"
+        },
+        {
+          "TotalsFunction": 0,
+          "Name": "Code"
+        },
+        {
+          "TotalsFunction": 0,
+          "Name": "Label"
+        }
+      ],
+      "Cells": [
+        {
+          "Formula": "Group",
+          "Hidden": false,
+          "Address": "B2",
+          "Text": "Group",
+          "Bold": true,
+          "Value": "Group",
+          "Font": "FFFFFFFF",
+          "Fill": "FF156082"
+        },
+        {
+          "Formula": "Amount",
+          "Hidden": false,
+          "Address": "C2",
+          "Text": "Amount",
+          "Bold": true,
+          "Value": "Amount",
+          "Font": "FFFFFFFF",
+          "Fill": "FF156082"
+        },
+        {
+          "Formula": "Code",
+          "Hidden": false,
+          "Address": "D2",
+          "Text": "Code",
+          "Bold": true,
+          "Value": "Code",
+          "Font": "FFFFFFFF",
+          "Fill": "FF156082"
+        },
+        {
+          "Formula": "Label",
+          "Hidden": false,
+          "Address": "E2",
+          "Text": "Label",
+          "Bold": true,
+          "Value": "Label",
+          "Font": "FFFFFFFF",
+          "Fill": "FF156082"
+        },
+        {
+          "Formula": "A",
+          "Hidden": false,
+          "Address": "B3",
+          "Text": "A",
+          "Bold": false,
+          "Value": "A",
+          "Font": "FF000000",
+          "Fill": "FFC0E6F5"
+        },
+        {
+          "Formula": "10",
+          "Hidden": false,
+          "Address": "C3",
+          "Text": "10",
+          "Bold": false,
+          "Value": 10.0,
+          "Font": "FF000000",
+          "Fill": "FFC0E6F5"
+        },
+        {
+          "Formula": "001",
+          "Hidden": false,
+          "Address": "D3",
+          "Text": "001",
+          "Bold": false,
+          "Value": "001",
+          "Font": "FF000000",
+          "Fill": "FFC0E6F5"
+        },
+        {
+          "Formula": "row1",
+          "Hidden": false,
+          "Address": "E3",
+          "Text": "row1",
+          "Bold": false,
+          "Value": "row1",
+          "Font": "FF000000",
+          "Fill": "FFC0E6F5"
+        },
+        {
+          "Formula": "B",
+          "Hidden": false,
+          "Address": "B4",
+          "Text": "B",
+          "Bold": false,
+          "Value": "B",
+          "Font": "FF000000",
+          "Fill": "FFFFFFFF"
+        },
+        {
+          "Formula": "20",
+          "Hidden": false,
+          "Address": "C4",
+          "Text": "20",
+          "Bold": false,
+          "Value": 20.0,
+          "Font": "FF000000",
+          "Fill": "FFFFFFFF"
+        },
+        {
+          "Formula": "002",
+          "Hidden": false,
+          "Address": "D4",
+          "Text": "002",
+          "Bold": false,
+          "Value": "002",
+          "Font": "FF000000",
+          "Fill": "FFFFFFFF"
+        },
+        {
+          "Formula": "row2",
+          "Hidden": false,
+          "Address": "E4",
+          "Text": "row2",
+          "Bold": false,
+          "Value": "row2",
+          "Font": "FF000000",
+          "Fill": "FFFFFFFF"
+        },
+        {
+          "Formula": "A",
+          "Hidden": false,
+          "Address": "B5",
+          "Text": "A",
+          "Bold": false,
+          "Value": "A",
+          "Font": "FF000000",
+          "Fill": "FFC0E6F5"
+        },
+        {
+          "Formula": "30",
+          "Hidden": false,
+          "Address": "C5",
+          "Text": "30",
+          "Bold": false,
+          "Value": 30.0,
+          "Font": "FF000000",
+          "Fill": "FFC0E6F5"
+        },
+        {
+          "Formula": "003",
+          "Hidden": false,
+          "Address": "D5",
+          "Text": "003",
+          "Bold": false,
+          "Value": "003",
+          "Font": "FF000000",
+          "Fill": "FFC0E6F5"
+        },
+        {
+          "Formula": "row3",
+          "Hidden": false,
+          "Address": "E5",
+          "Text": "row3",
+          "Bold": false,
+          "Value": "row3",
+          "Font": "FF000000",
+          "Fill": "FFC0E6F5"
+        },
+        {
+          "Formula": "B",
+          "Hidden": false,
+          "Address": "B6",
+          "Text": "B",
+          "Bold": false,
+          "Value": "B",
+          "Font": "FF000000",
+          "Fill": "FFFFFFFF"
+        },
+        {
+          "Formula": "40",
+          "Hidden": false,
+          "Address": "C6",
+          "Text": "40",
+          "Bold": false,
+          "Value": 40.0,
+          "Font": "FF000000",
+          "Fill": "FFFFFFFF"
+        },
+        {
+          "Formula": "004",
+          "Hidden": false,
+          "Address": "D6",
+          "Text": "004",
+          "Bold": false,
+          "Value": "004",
+          "Font": "FF000000",
+          "Fill": "FFFFFFFF"
+        },
+        {
+          "Formula": "row4",
+          "Hidden": false,
+          "Address": "E6",
+          "Text": "row4",
+          "Bold": false,
+          "Value": "row4",
+          "Font": "FF000000",
+          "Fill": "FFFFFFFF"
+        },
+        {
+          "Formula": "A",
+          "Hidden": false,
+          "Address": "B7",
+          "Text": "A",
+          "Bold": false,
+          "Value": "A",
+          "Font": "FF000000",
+          "Fill": "FFC0E6F5"
+        },
+        {
+          "Formula": "50",
+          "Hidden": false,
+          "Address": "C7",
+          "Text": "50",
+          "Bold": false,
+          "Value": 50.0,
+          "Font": "FF000000",
+          "Fill": "FFC0E6F5"
+        },
+        {
+          "Formula": "005",
+          "Hidden": false,
+          "Address": "D7",
+          "Text": "005",
+          "Bold": false,
+          "Value": "005",
+          "Font": "FF000000",
+          "Fill": "FFC0E6F5"
+        },
+        {
+          "Formula": "row5",
+          "Hidden": false,
+          "Address": "E7",
+          "Text": "row5",
+          "Bold": false,
+          "Value": "row5",
+          "Font": "FF000000",
+          "Fill": "FFC0E6F5"
+        }
+      ]
+    },
+    {
+      "Sheet": "dark",
+      "Name": "QE_dark",
+      "Range": "B2:E7",
+      "Header": true,
+      "Totals": false,
+      "Filter": true,
+      "Style": "TableStyleDark1",
+      "First": false,
+      "Last": false,
+      "Rows": true,
+      "Columns": false,
+      "Headers": [
+        {
+          "TotalsFunction": 0,
+          "Name": "Group"
+        },
+        {
+          "TotalsFunction": 0,
+          "Name": "Amount"
+        },
+        {
+          "TotalsFunction": 0,
+          "Name": "Code"
+        },
+        {
+          "TotalsFunction": 0,
+          "Name": "Label"
+        }
+      ],
+      "Cells": [
+        {
+          "Formula": "Group",
+          "Hidden": false,
+          "Address": "B2",
+          "Text": "Group",
+          "Bold": true,
+          "Value": "Group",
+          "Font": "FFFFFFFF",
+          "Fill": "FF000000"
+        },
+        {
+          "Formula": "Amount",
+          "Hidden": false,
+          "Address": "C2",
+          "Text": "Amount",
+          "Bold": true,
+          "Value": "Amount",
+          "Font": "FFFFFFFF",
+          "Fill": "FF000000"
+        },
+        {
+          "Formula": "Code",
+          "Hidden": false,
+          "Address": "D2",
+          "Text": "Code",
+          "Bold": true,
+          "Value": "Code",
+          "Font": "FFFFFFFF",
+          "Fill": "FF000000"
+        },
+        {
+          "Formula": "Label",
+          "Hidden": false,
+          "Address": "E2",
+          "Text": "Label",
+          "Bold": true,
+          "Value": "Label",
+          "Font": "FFFFFFFF",
+          "Fill": "FF000000"
+        },
+        {
+          "Formula": "A",
+          "Hidden": false,
+          "Address": "B3",
+          "Text": "A",
+          "Bold": false,
+          "Value": "A",
+          "Font": "FFFFFFFF",
+          "Fill": "FF404040"
+        },
+        {
+          "Formula": "10",
+          "Hidden": false,
+          "Address": "C3",
+          "Text": "10",
+          "Bold": false,
+          "Value": 10.0,
+          "Font": "FFFFFFFF",
+          "Fill": "FF404040"
+        },
+        {
+          "Formula": "001",
+          "Hidden": false,
+          "Address": "D3",
+          "Text": "001",
+          "Bold": false,
+          "Value": "001",
+          "Font": "FFFFFFFF",
+          "Fill": "FF404040"
+        },
+        {
+          "Formula": "row1",
+          "Hidden": false,
+          "Address": "E3",
+          "Text": "row1",
+          "Bold": false,
+          "Value": "row1",
+          "Font": "FFFFFFFF",
+          "Fill": "FF404040"
+        },
+        {
+          "Formula": "B",
+          "Hidden": false,
+          "Address": "B4",
+          "Text": "B",
+          "Bold": false,
+          "Value": "B",
+          "Font": "FFFFFFFF",
+          "Fill": "FF737373"
+        },
+        {
+          "Formula": "20",
+          "Hidden": false,
+          "Address": "C4",
+          "Text": "20",
+          "Bold": false,
+          "Value": 20.0,
+          "Font": "FFFFFFFF",
+          "Fill": "FF737373"
+        },
+        {
+          "Formula": "002",
+          "Hidden": false,
+          "Address": "D4",
+          "Text": "002",
+          "Bold": false,
+          "Value": "002",
+          "Font": "FFFFFFFF",
+          "Fill": "FF737373"
+        },
+        {
+          "Formula": "row2",
+          "Hidden": false,
+          "Address": "E4",
+          "Text": "row2",
+          "Bold": false,
+          "Value": "row2",
+          "Font": "FFFFFFFF",
+          "Fill": "FF737373"
+        },
+        {
+          "Formula": "A",
+          "Hidden": false,
+          "Address": "B5",
+          "Text": "A",
+          "Bold": false,
+          "Value": "A",
+          "Font": "FFFFFFFF",
+          "Fill": "FF404040"
+        },
+        {
+          "Formula": "30",
+          "Hidden": false,
+          "Address": "C5",
+          "Text": "30",
+          "Bold": false,
+          "Value": 30.0,
+          "Font": "FFFFFFFF",
+          "Fill": "FF404040"
+        },
+        {
+          "Formula": "003",
+          "Hidden": false,
+          "Address": "D5",
+          "Text": "003",
+          "Bold": false,
+          "Value": "003",
+          "Font": "FFFFFFFF",
+          "Fill": "FF404040"
+        },
+        {
+          "Formula": "row3",
+          "Hidden": false,
+          "Address": "E5",
+          "Text": "row3",
+          "Bold": false,
+          "Value": "row3",
+          "Font": "FFFFFFFF",
+          "Fill": "FF404040"
+        },
+        {
+          "Formula": "B",
+          "Hidden": false,
+          "Address": "B6",
+          "Text": "B",
+          "Bold": false,
+          "Value": "B",
+          "Font": "FFFFFFFF",
+          "Fill": "FF737373"
+        },
+        {
+          "Formula": "40",
+          "Hidden": false,
+          "Address": "C6",
+          "Text": "40",
+          "Bold": false,
+          "Value": 40.0,
+          "Font": "FFFFFFFF",
+          "Fill": "FF737373"
+        },
+        {
+          "Formula": "004",
+          "Hidden": false,
+          "Address": "D6",
+          "Text": "004",
+          "Bold": false,
+          "Value": "004",
+          "Font": "FFFFFFFF",
+          "Fill": "FF737373"
+        },
+        {
+          "Formula": "row4",
+          "Hidden": false,
+          "Address": "E6",
+          "Text": "row4",
+          "Bold": false,
+          "Value": "row4",
+          "Font": "FFFFFFFF",
+          "Fill": "FF737373"
+        },
+        {
+          "Formula": "A",
+          "Hidden": false,
+          "Address": "B7",
+          "Text": "A",
+          "Bold": false,
+          "Value": "A",
+          "Font": "FFFFFFFF",
+          "Fill": "FF404040"
+        },
+        {
+          "Formula": "50",
+          "Hidden": false,
+          "Address": "C7",
+          "Text": "50",
+          "Bold": false,
+          "Value": 50.0,
+          "Font": "FFFFFFFF",
+          "Fill": "FF404040"
+        },
+        {
+          "Formula": "005",
+          "Hidden": false,
+          "Address": "D7",
+          "Text": "005",
+          "Bold": false,
+          "Value": "005",
+          "Font": "FFFFFFFF",
+          "Fill": "FF404040"
+        },
+        {
+          "Formula": "row5",
+          "Hidden": false,
+          "Address": "E7",
+          "Text": "row5",
+          "Bold": false,
+          "Value": "row5",
+          "Font": "FFFFFFFF",
+          "Fill": "FF404040"
+        }
+      ]
+    },
+    {
+      "Sheet": "bands",
+      "Name": "QE_bands",
+      "Range": "B2:E7",
+      "Header": true,
+      "Totals": false,
+      "Filter": true,
+      "Style": "TableStyleMedium9",
+      "First": true,
+      "Last": true,
+      "Rows": true,
+      "Columns": true,
+      "Headers": [
+        {
+          "TotalsFunction": 0,
+          "Name": "Group"
+        },
+        {
+          "TotalsFunction": 0,
+          "Name": "Amount"
+        },
+        {
+          "TotalsFunction": 0,
+          "Name": "Code"
+        },
+        {
+          "TotalsFunction": 0,
+          "Name": "Label"
+        }
+      ],
+      "Cells": [
+        {
+          "Formula": "Group",
+          "Hidden": false,
+          "Address": "B2",
+          "Text": "Group",
+          "Bold": true,
+          "Value": "Group",
+          "Font": "FFFFFFFF",
+          "Fill": "FF156082"
+        },
+        {
+          "Formula": "Amount",
+          "Hidden": false,
+          "Address": "C2",
+          "Text": "Amount",
+          "Bold": true,
+          "Value": "Amount",
+          "Font": "FFFFFFFF",
+          "Fill": "FF156082"
+        },
+        {
+          "Formula": "Code",
+          "Hidden": false,
+          "Address": "D2",
+          "Text": "Code",
+          "Bold": true,
+          "Value": "Code",
+          "Font": "FFFFFFFF",
+          "Fill": "FF156082"
+        },
+        {
+          "Formula": "Label",
+          "Hidden": false,
+          "Address": "E2",
+          "Text": "Label",
+          "Bold": true,
+          "Value": "Label",
+          "Font": "FFFFFFFF",
+          "Fill": "FF156082"
+        },
+        {
+          "Formula": "A",
+          "Hidden": false,
+          "Address": "B3",
+          "Text": "A",
+          "Bold": true,
+          "Value": "A",
+          "Font": "FFFFFFFF",
+          "Fill": "FF156082"
+        },
+        {
+          "Formula": "10",
+          "Hidden": false,
+          "Address": "C3",
+          "Text": "10",
+          "Bold": false,
+          "Value": 10.0,
+          "Font": "FF000000",
+          "Fill": "FF83CCEB"
+        },
+        {
+          "Formula": "001",
+          "Hidden": false,
+          "Address": "D3",
+          "Text": "001",
+          "Bold": false,
+          "Value": "001",
+          "Font": "FF000000",
+          "Fill": "FF83CCEB"
+        },
+        {
+          "Formula": "row1",
+          "Hidden": false,
+          "Address": "E3",
+          "Text": "row1",
+          "Bold": true,
+          "Value": "row1",
+          "Font": "FFFFFFFF",
+          "Fill": "FF156082"
+        },
+        {
+          "Formula": "B",
+          "Hidden": false,
+          "Address": "B4",
+          "Text": "B",
+          "Bold": true,
+          "Value": "B",
+          "Font": "FFFFFFFF",
+          "Fill": "FF156082"
+        },
+        {
+          "Formula": "20",
+          "Hidden": false,
+          "Address": "C4",
+          "Text": "20",
+          "Bold": false,
+          "Value": 20.0,
+          "Font": "FF000000",
+          "Fill": "FFC0E6F5"
+        },
+        {
+          "Formula": "002",
+          "Hidden": false,
+          "Address": "D4",
+          "Text": "002",
+          "Bold": false,
+          "Value": "002",
+          "Font": "FF000000",
+          "Fill": "FF83CCEB"
+        },
+        {
+          "Formula": "row2",
+          "Hidden": false,
+          "Address": "E4",
+          "Text": "row2",
+          "Bold": true,
+          "Value": "row2",
+          "Font": "FFFFFFFF",
+          "Fill": "FF156082"
+        },
+        {
+          "Formula": "A",
+          "Hidden": false,
+          "Address": "B5",
+          "Text": "A",
+          "Bold": true,
+          "Value": "A",
+          "Font": "FFFFFFFF",
+          "Fill": "FF156082"
+        },
+        {
+          "Formula": "30",
+          "Hidden": false,
+          "Address": "C5",
+          "Text": "30",
+          "Bold": false,
+          "Value": 30.0,
+          "Font": "FF000000",
+          "Fill": "FF83CCEB"
+        },
+        {
+          "Formula": "003",
+          "Hidden": false,
+          "Address": "D5",
+          "Text": "003",
+          "Bold": false,
+          "Value": "003",
+          "Font": "FF000000",
+          "Fill": "FF83CCEB"
+        },
+        {
+          "Formula": "row3",
+          "Hidden": false,
+          "Address": "E5",
+          "Text": "row3",
+          "Bold": true,
+          "Value": "row3",
+          "Font": "FFFFFFFF",
+          "Fill": "FF156082"
+        },
+        {
+          "Formula": "B",
+          "Hidden": false,
+          "Address": "B6",
+          "Text": "B",
+          "Bold": true,
+          "Value": "B",
+          "Font": "FFFFFFFF",
+          "Fill": "FF156082"
+        },
+        {
+          "Formula": "40",
+          "Hidden": false,
+          "Address": "C6",
+          "Text": "40",
+          "Bold": false,
+          "Value": 40.0,
+          "Font": "FF000000",
+          "Fill": "FFC0E6F5"
+        },
+        {
+          "Formula": "004",
+          "Hidden": false,
+          "Address": "D6",
+          "Text": "004",
+          "Bold": false,
+          "Value": "004",
+          "Font": "FF000000",
+          "Fill": "FF83CCEB"
+        },
+        {
+          "Formula": "row4",
+          "Hidden": false,
+          "Address": "E6",
+          "Text": "row4",
+          "Bold": true,
+          "Value": "row4",
+          "Font": "FFFFFFFF",
+          "Fill": "FF156082"
+        },
+        {
+          "Formula": "A",
+          "Hidden": false,
+          "Address": "B7",
+          "Text": "A",
+          "Bold": true,
+          "Value": "A",
+          "Font": "FFFFFFFF",
+          "Fill": "FF156082"
+        },
+        {
+          "Formula": "50",
+          "Hidden": false,
+          "Address": "C7",
+          "Text": "50",
+          "Bold": false,
+          "Value": 50.0,
+          "Font": "FF000000",
+          "Fill": "FF83CCEB"
+        },
+        {
+          "Formula": "005",
+          "Hidden": false,
+          "Address": "D7",
+          "Text": "005",
+          "Bold": false,
+          "Value": "005",
+          "Font": "FF000000",
+          "Fill": "FF83CCEB"
+        },
+        {
+          "Formula": "row5",
+          "Hidden": false,
+          "Address": "E7",
+          "Text": "row5",
+          "Bold": true,
+          "Value": "row5",
+          "Font": "FFFFFFFF",
+          "Fill": "FF156082"
+        }
+      ]
+    },
+    {
+      "Sheet": "noheader",
+      "Name": "QE_noheader",
+      "Range": "B3:E7",
+      "Header": false,
+      "Totals": false,
+      "Filter": false,
+      "Style": "TableStyleLight1",
+      "First": false,
+      "Last": false,
+      "Rows": true,
+      "Columns": false,
+      "Headers": [
+        {
+          "TotalsFunction": 0,
+          "Name": "Group"
+        },
+        {
+          "TotalsFunction": 0,
+          "Name": "Amount"
+        },
+        {
+          "TotalsFunction": 0,
+          "Name": "Code"
+        },
+        {
+          "TotalsFunction": 0,
+          "Name": "Label"
+        }
+      ],
+      "Cells": [
+        {
+          "Formula": "A",
+          "Hidden": false,
+          "Address": "B3",
+          "Text": "A",
+          "Bold": false,
+          "Value": "A",
+          "Font": "FF000000",
+          "Fill": "FFD9D9D9"
+        },
+        {
+          "Formula": "10",
+          "Hidden": false,
+          "Address": "C3",
+          "Text": "10",
+          "Bold": false,
+          "Value": 10.0,
+          "Font": "FF000000",
+          "Fill": "FFD9D9D9"
+        },
+        {
+          "Formula": "001",
+          "Hidden": false,
+          "Address": "D3",
+          "Text": "001",
+          "Bold": false,
+          "Value": "001",
+          "Font": "FF000000",
+          "Fill": "FFD9D9D9"
+        },
+        {
+          "Formula": "row1",
+          "Hidden": false,
+          "Address": "E3",
+          "Text": "row1",
+          "Bold": false,
+          "Value": "row1",
+          "Font": "FF000000",
+          "Fill": "FFD9D9D9"
+        },
+        {
+          "Formula": "B",
+          "Hidden": false,
+          "Address": "B4",
+          "Text": "B",
+          "Bold": false,
+          "Value": "B",
+          "Font": "FF000000",
+          "Fill": "FFFFFFFF"
+        },
+        {
+          "Formula": "20",
+          "Hidden": false,
+          "Address": "C4",
+          "Text": "20",
+          "Bold": false,
+          "Value": 20.0,
+          "Font": "FF000000",
+          "Fill": "FFFFFFFF"
+        },
+        {
+          "Formula": "002",
+          "Hidden": false,
+          "Address": "D4",
+          "Text": "002",
+          "Bold": false,
+          "Value": "002",
+          "Font": "FF000000",
+          "Fill": "FFFFFFFF"
+        },
+        {
+          "Formula": "row2",
+          "Hidden": false,
+          "Address": "E4",
+          "Text": "row2",
+          "Bold": false,
+          "Value": "row2",
+          "Font": "FF000000",
+          "Fill": "FFFFFFFF"
+        },
+        {
+          "Formula": "A",
+          "Hidden": false,
+          "Address": "B5",
+          "Text": "A",
+          "Bold": false,
+          "Value": "A",
+          "Font": "FF000000",
+          "Fill": "FFD9D9D9"
+        },
+        {
+          "Formula": "30",
+          "Hidden": false,
+          "Address": "C5",
+          "Text": "30",
+          "Bold": false,
+          "Value": 30.0,
+          "Font": "FF000000",
+          "Fill": "FFD9D9D9"
+        },
+        {
+          "Formula": "003",
+          "Hidden": false,
+          "Address": "D5",
+          "Text": "003",
+          "Bold": false,
+          "Value": "003",
+          "Font": "FF000000",
+          "Fill": "FFD9D9D9"
+        },
+        {
+          "Formula": "row3",
+          "Hidden": false,
+          "Address": "E5",
+          "Text": "row3",
+          "Bold": false,
+          "Value": "row3",
+          "Font": "FF000000",
+          "Fill": "FFD9D9D9"
+        },
+        {
+          "Formula": "B",
+          "Hidden": false,
+          "Address": "B6",
+          "Text": "B",
+          "Bold": false,
+          "Value": "B",
+          "Font": "FF000000",
+          "Fill": "FFFFFFFF"
+        },
+        {
+          "Formula": "40",
+          "Hidden": false,
+          "Address": "C6",
+          "Text": "40",
+          "Bold": false,
+          "Value": 40.0,
+          "Font": "FF000000",
+          "Fill": "FFFFFFFF"
+        },
+        {
+          "Formula": "004",
+          "Hidden": false,
+          "Address": "D6",
+          "Text": "004",
+          "Bold": false,
+          "Value": "004",
+          "Font": "FF000000",
+          "Fill": "FFFFFFFF"
+        },
+        {
+          "Formula": "row4",
+          "Hidden": false,
+          "Address": "E6",
+          "Text": "row4",
+          "Bold": false,
+          "Value": "row4",
+          "Font": "FF000000",
+          "Fill": "FFFFFFFF"
+        },
+        {
+          "Formula": "A",
+          "Hidden": false,
+          "Address": "B7",
+          "Text": "A",
+          "Bold": false,
+          "Value": "A",
+          "Font": "FF000000",
+          "Fill": "FFD9D9D9"
+        },
+        {
+          "Formula": "50",
+          "Hidden": false,
+          "Address": "C7",
+          "Text": "50",
+          "Bold": false,
+          "Value": 50.0,
+          "Font": "FF000000",
+          "Fill": "FFD9D9D9"
+        },
+        {
+          "Formula": "005",
+          "Hidden": false,
+          "Address": "D7",
+          "Text": "005",
+          "Bold": false,
+          "Value": "005",
+          "Font": "FF000000",
+          "Fill": "FFD9D9D9"
+        },
+        {
+          "Formula": "row5",
+          "Hidden": false,
+          "Address": "E7",
+          "Text": "row5",
+          "Bold": false,
+          "Value": "row5",
+          "Font": "FF000000",
+          "Fill": "FFD9D9D9"
+        }
+      ]
+    },
+    {
+      "Sheet": "nofilter",
+      "Name": "QE_nofilter",
+      "Range": "B2:E7",
+      "Header": true,
+      "Totals": false,
+      "Filter": false,
+      "Style": "TableStyleMedium2",
+      "First": false,
+      "Last": false,
+      "Rows": true,
+      "Columns": false,
+      "Headers": [
+        {
+          "TotalsFunction": 0,
+          "Name": "Group"
+        },
+        {
+          "TotalsFunction": 0,
+          "Name": "Amount"
+        },
+        {
+          "TotalsFunction": 0,
+          "Name": "Code"
+        },
+        {
+          "TotalsFunction": 0,
+          "Name": "Label"
+        }
+      ],
+      "Cells": [
+        {
+          "Formula": "Group",
+          "Hidden": false,
+          "Address": "B2",
+          "Text": "Group",
+          "Bold": true,
+          "Value": "Group",
+          "Font": "FFFFFFFF",
+          "Fill": "FF156082"
+        },
+        {
+          "Formula": "Amount",
+          "Hidden": false,
+          "Address": "C2",
+          "Text": "Amount",
+          "Bold": true,
+          "Value": "Amount",
+          "Font": "FFFFFFFF",
+          "Fill": "FF156082"
+        },
+        {
+          "Formula": "Code",
+          "Hidden": false,
+          "Address": "D2",
+          "Text": "Code",
+          "Bold": true,
+          "Value": "Code",
+          "Font": "FFFFFFFF",
+          "Fill": "FF156082"
+        },
+        {
+          "Formula": "Label",
+          "Hidden": false,
+          "Address": "E2",
+          "Text": "Label",
+          "Bold": true,
+          "Value": "Label",
+          "Font": "FFFFFFFF",
+          "Fill": "FF156082"
+        },
+        {
+          "Formula": "A",
+          "Hidden": false,
+          "Address": "B3",
+          "Text": "A",
+          "Bold": false,
+          "Value": "A",
+          "Font": "FF000000",
+          "Fill": "FFC0E6F5"
+        },
+        {
+          "Formula": "10",
+          "Hidden": false,
+          "Address": "C3",
+          "Text": "10",
+          "Bold": false,
+          "Value": 10.0,
+          "Font": "FF000000",
+          "Fill": "FFC0E6F5"
+        },
+        {
+          "Formula": "001",
+          "Hidden": false,
+          "Address": "D3",
+          "Text": "001",
+          "Bold": false,
+          "Value": "001",
+          "Font": "FF000000",
+          "Fill": "FFC0E6F5"
+        },
+        {
+          "Formula": "row1",
+          "Hidden": false,
+          "Address": "E3",
+          "Text": "row1",
+          "Bold": false,
+          "Value": "row1",
+          "Font": "FF000000",
+          "Fill": "FFC0E6F5"
+        },
+        {
+          "Formula": "B",
+          "Hidden": false,
+          "Address": "B4",
+          "Text": "B",
+          "Bold": false,
+          "Value": "B",
+          "Font": "FF000000",
+          "Fill": "FFFFFFFF"
+        },
+        {
+          "Formula": "20",
+          "Hidden": false,
+          "Address": "C4",
+          "Text": "20",
+          "Bold": false,
+          "Value": 20.0,
+          "Font": "FF000000",
+          "Fill": "FFFFFFFF"
+        },
+        {
+          "Formula": "002",
+          "Hidden": false,
+          "Address": "D4",
+          "Text": "002",
+          "Bold": false,
+          "Value": "002",
+          "Font": "FF000000",
+          "Fill": "FFFFFFFF"
+        },
+        {
+          "Formula": "row2",
+          "Hidden": false,
+          "Address": "E4",
+          "Text": "row2",
+          "Bold": false,
+          "Value": "row2",
+          "Font": "FF000000",
+          "Fill": "FFFFFFFF"
+        },
+        {
+          "Formula": "A",
+          "Hidden": false,
+          "Address": "B5",
+          "Text": "A",
+          "Bold": false,
+          "Value": "A",
+          "Font": "FF000000",
+          "Fill": "FFC0E6F5"
+        },
+        {
+          "Formula": "30",
+          "Hidden": false,
+          "Address": "C5",
+          "Text": "30",
+          "Bold": false,
+          "Value": 30.0,
+          "Font": "FF000000",
+          "Fill": "FFC0E6F5"
+        },
+        {
+          "Formula": "003",
+          "Hidden": false,
+          "Address": "D5",
+          "Text": "003",
+          "Bold": false,
+          "Value": "003",
+          "Font": "FF000000",
+          "Fill": "FFC0E6F5"
+        },
+        {
+          "Formula": "row3",
+          "Hidden": false,
+          "Address": "E5",
+          "Text": "row3",
+          "Bold": false,
+          "Value": "row3",
+          "Font": "FF000000",
+          "Fill": "FFC0E6F5"
+        },
+        {
+          "Formula": "B",
+          "Hidden": false,
+          "Address": "B6",
+          "Text": "B",
+          "Bold": false,
+          "Value": "B",
+          "Font": "FF000000",
+          "Fill": "FFFFFFFF"
+        },
+        {
+          "Formula": "40",
+          "Hidden": false,
+          "Address": "C6",
+          "Text": "40",
+          "Bold": false,
+          "Value": 40.0,
+          "Font": "FF000000",
+          "Fill": "FFFFFFFF"
+        },
+        {
+          "Formula": "004",
+          "Hidden": false,
+          "Address": "D6",
+          "Text": "004",
+          "Bold": false,
+          "Value": "004",
+          "Font": "FF000000",
+          "Fill": "FFFFFFFF"
+        },
+        {
+          "Formula": "row4",
+          "Hidden": false,
+          "Address": "E6",
+          "Text": "row4",
+          "Bold": false,
+          "Value": "row4",
+          "Font": "FF000000",
+          "Fill": "FFFFFFFF"
+        },
+        {
+          "Formula": "A",
+          "Hidden": false,
+          "Address": "B7",
+          "Text": "A",
+          "Bold": false,
+          "Value": "A",
+          "Font": "FF000000",
+          "Fill": "FFC0E6F5"
+        },
+        {
+          "Formula": "50",
+          "Hidden": false,
+          "Address": "C7",
+          "Text": "50",
+          "Bold": false,
+          "Value": 50.0,
+          "Font": "FF000000",
+          "Fill": "FFC0E6F5"
+        },
+        {
+          "Formula": "005",
+          "Hidden": false,
+          "Address": "D7",
+          "Text": "005",
+          "Bold": false,
+          "Value": "005",
+          "Font": "FF000000",
+          "Fill": "FFC0E6F5"
+        },
+        {
+          "Formula": "row5",
+          "Hidden": false,
+          "Address": "E7",
+          "Text": "row5",
+          "Bold": false,
+          "Value": "row5",
+          "Font": "FF000000",
+          "Fill": "FFC0E6F5"
+        }
+      ]
+    },
+    {
+      "Sheet": "filtered",
+      "Name": "QE_filtered",
+      "Range": "B2:E7",
+      "Header": true,
+      "Totals": false,
+      "Filter": true,
+      "Style": "TableStyleDark1",
+      "First": false,
+      "Last": false,
+      "Rows": true,
+      "Columns": false,
+      "Headers": [
+        {
+          "TotalsFunction": 0,
+          "Name": "Group"
+        },
+        {
+          "TotalsFunction": 0,
+          "Name": "Amount"
+        },
+        {
+          "TotalsFunction": 0,
+          "Name": "Code"
+        },
+        {
+          "TotalsFunction": 0,
+          "Name": "Label"
+        }
+      ],
+      "Cells": [
+        {
+          "Formula": "Group",
+          "Hidden": false,
+          "Address": "B2",
+          "Text": "Group",
+          "Bold": true,
+          "Value": "Group",
+          "Font": "FFFFFFFF",
+          "Fill": "FF000000"
+        },
+        {
+          "Formula": "Amount",
+          "Hidden": false,
+          "Address": "C2",
+          "Text": "Amount",
+          "Bold": true,
+          "Value": "Amount",
+          "Font": "FFFFFFFF",
+          "Fill": "FF000000"
+        },
+        {
+          "Formula": "Code",
+          "Hidden": false,
+          "Address": "D2",
+          "Text": "Code",
+          "Bold": true,
+          "Value": "Code",
+          "Font": "FFFFFFFF",
+          "Fill": "FF000000"
+        },
+        {
+          "Formula": "Label",
+          "Hidden": false,
+          "Address": "E2",
+          "Text": "Label",
+          "Bold": true,
+          "Value": "Label",
+          "Font": "FFFFFFFF",
+          "Fill": "FF000000"
+        },
+        {
+          "Formula": "A",
+          "Hidden": false,
+          "Address": "B3",
+          "Text": "A",
+          "Bold": false,
+          "Value": "A",
+          "Font": "FFFFFFFF",
+          "Fill": "FF404040"
+        },
+        {
+          "Formula": "10",
+          "Hidden": false,
+          "Address": "C3",
+          "Text": "10",
+          "Bold": false,
+          "Value": 10.0,
+          "Font": "FFFFFFFF",
+          "Fill": "FF404040"
+        },
+        {
+          "Formula": "001",
+          "Hidden": false,
+          "Address": "D3",
+          "Text": "001",
+          "Bold": false,
+          "Value": "001",
+          "Font": "FFFFFFFF",
+          "Fill": "FF404040"
+        },
+        {
+          "Formula": "row1",
+          "Hidden": false,
+          "Address": "E3",
+          "Text": "row1",
+          "Bold": false,
+          "Value": "row1",
+          "Font": "FFFFFFFF",
+          "Fill": "FF404040"
+        },
+        {
+          "Formula": "B",
+          "Hidden": true,
+          "Address": "B4",
+          "Text": "B",
+          "Bold": false,
+          "Value": "B",
+          "Font": "FFFFFFFF",
+          "Fill": "FF737373"
+        },
+        {
+          "Formula": "20",
+          "Hidden": true,
+          "Address": "C4",
+          "Text": "20",
+          "Bold": false,
+          "Value": 20.0,
+          "Font": "FFFFFFFF",
+          "Fill": "FF737373"
+        },
+        {
+          "Formula": "002",
+          "Hidden": true,
+          "Address": "D4",
+          "Text": "002",
+          "Bold": false,
+          "Value": "002",
+          "Font": "FFFFFFFF",
+          "Fill": "FF737373"
+        },
+        {
+          "Formula": "row2",
+          "Hidden": true,
+          "Address": "E4",
+          "Text": "row2",
+          "Bold": false,
+          "Value": "row2",
+          "Font": "FFFFFFFF",
+          "Fill": "FF737373"
+        },
+        {
+          "Formula": "A",
+          "Hidden": false,
+          "Address": "B5",
+          "Text": "A",
+          "Bold": false,
+          "Value": "A",
+          "Font": "FFFFFFFF",
+          "Fill": "FF737373"
+        },
+        {
+          "Formula": "30",
+          "Hidden": false,
+          "Address": "C5",
+          "Text": "30",
+          "Bold": false,
+          "Value": 30.0,
+          "Font": "FFFFFFFF",
+          "Fill": "FF737373"
+        },
+        {
+          "Formula": "003",
+          "Hidden": false,
+          "Address": "D5",
+          "Text": "003",
+          "Bold": false,
+          "Value": "003",
+          "Font": "FFFFFFFF",
+          "Fill": "FF737373"
+        },
+        {
+          "Formula": "row3",
+          "Hidden": false,
+          "Address": "E5",
+          "Text": "row3",
+          "Bold": false,
+          "Value": "row3",
+          "Font": "FFFFFFFF",
+          "Fill": "FF737373"
+        },
+        {
+          "Formula": "B",
+          "Hidden": true,
+          "Address": "B6",
+          "Text": "B",
+          "Bold": false,
+          "Value": "B",
+          "Font": "FFFFFFFF",
+          "Fill": "FF737373"
+        },
+        {
+          "Formula": "40",
+          "Hidden": true,
+          "Address": "C6",
+          "Text": "40",
+          "Bold": false,
+          "Value": 40.0,
+          "Font": "FFFFFFFF",
+          "Fill": "FF737373"
+        },
+        {
+          "Formula": "004",
+          "Hidden": true,
+          "Address": "D6",
+          "Text": "004",
+          "Bold": false,
+          "Value": "004",
+          "Font": "FFFFFFFF",
+          "Fill": "FF737373"
+        },
+        {
+          "Formula": "row4",
+          "Hidden": true,
+          "Address": "E6",
+          "Text": "row4",
+          "Bold": false,
+          "Value": "row4",
+          "Font": "FFFFFFFF",
+          "Fill": "FF737373"
+        },
+        {
+          "Formula": "A",
+          "Hidden": false,
+          "Address": "B7",
+          "Text": "A",
+          "Bold": false,
+          "Value": "A",
+          "Font": "FFFFFFFF",
+          "Fill": "FF404040"
+        },
+        {
+          "Formula": "50",
+          "Hidden": false,
+          "Address": "C7",
+          "Text": "50",
+          "Bold": false,
+          "Value": 50.0,
+          "Font": "FFFFFFFF",
+          "Fill": "FF404040"
+        },
+        {
+          "Formula": "005",
+          "Hidden": false,
+          "Address": "D7",
+          "Text": "005",
+          "Bold": false,
+          "Value": "005",
+          "Font": "FFFFFFFF",
+          "Fill": "FF404040"
+        },
+        {
+          "Formula": "row5",
+          "Hidden": false,
+          "Address": "E7",
+          "Text": "row5",
+          "Bold": false,
+          "Value": "row5",
+          "Font": "FFFFFFFF",
+          "Fill": "FF404040"
+        }
+      ]
+    },
+    {
+      "Sheet": "totals",
+      "Name": "QE_totals",
+      "Range": "B2:E8",
+      "Header": true,
+      "Totals": true,
+      "Filter": true,
+      "Style": "TableStyleMedium9",
+      "First": false,
+      "Last": false,
+      "Rows": true,
+      "Columns": false,
+      "Headers": [
+        {
+          "TotalsFunction": 0,
+          "Name": "Group"
+        },
+        {
+          "TotalsFunction": 0,
+          "Name": "Amount"
+        },
+        {
+          "TotalsFunction": 0,
+          "Name": "Code"
+        },
+        {
+          "TotalsFunction": 0,
+          "Name": "Label"
+        }
+      ],
+      "Cells": [
+        {
+          "Formula": "Group",
+          "Hidden": false,
+          "Address": "B2",
+          "Text": "Group",
+          "Bold": true,
+          "Value": "Group",
+          "Font": "FFFFFFFF",
+          "Fill": "FF156082"
+        },
+        {
+          "Formula": "Amount",
+          "Hidden": false,
+          "Address": "C2",
+          "Text": "Amount",
+          "Bold": true,
+          "Value": "Amount",
+          "Font": "FFFFFFFF",
+          "Fill": "FF156082"
+        },
+        {
+          "Formula": "Code",
+          "Hidden": false,
+          "Address": "D2",
+          "Text": "Code",
+          "Bold": true,
+          "Value": "Code",
+          "Font": "FFFFFFFF",
+          "Fill": "FF156082"
+        },
+        {
+          "Formula": "Label",
+          "Hidden": false,
+          "Address": "E2",
+          "Text": "Label",
+          "Bold": true,
+          "Value": "Label",
+          "Font": "FFFFFFFF",
+          "Fill": "FF156082"
+        },
+        {
+          "Formula": "A",
+          "Hidden": false,
+          "Address": "B3",
+          "Text": "A",
+          "Bold": false,
+          "Value": "A",
+          "Font": "FF000000",
+          "Fill": "FF83CCEB"
+        },
+        {
+          "Formula": "10",
+          "Hidden": false,
+          "Address": "C3",
+          "Text": "10",
+          "Bold": false,
+          "Value": 10.0,
+          "Font": "FF000000",
+          "Fill": "FF83CCEB"
+        },
+        {
+          "Formula": "001",
+          "Hidden": false,
+          "Address": "D3",
+          "Text": "001",
+          "Bold": false,
+          "Value": "001",
+          "Font": "FF000000",
+          "Fill": "FF83CCEB"
+        },
+        {
+          "Formula": "row1",
+          "Hidden": false,
+          "Address": "E3",
+          "Text": "row1",
+          "Bold": false,
+          "Value": "row1",
+          "Font": "FF000000",
+          "Fill": "FF83CCEB"
+        },
+        {
+          "Formula": "B",
+          "Hidden": false,
+          "Address": "B4",
+          "Text": "B",
+          "Bold": false,
+          "Value": "B",
+          "Font": "FF000000",
+          "Fill": "FFC0E6F5"
+        },
+        {
+          "Formula": "20",
+          "Hidden": false,
+          "Address": "C4",
+          "Text": "20",
+          "Bold": false,
+          "Value": 20.0,
+          "Font": "FF000000",
+          "Fill": "FFC0E6F5"
+        },
+        {
+          "Formula": "002",
+          "Hidden": false,
+          "Address": "D4",
+          "Text": "002",
+          "Bold": false,
+          "Value": "002",
+          "Font": "FF000000",
+          "Fill": "FFC0E6F5"
+        },
+        {
+          "Formula": "row2",
+          "Hidden": false,
+          "Address": "E4",
+          "Text": "row2",
+          "Bold": false,
+          "Value": "row2",
+          "Font": "FF000000",
+          "Fill": "FFC0E6F5"
+        },
+        {
+          "Formula": "A",
+          "Hidden": false,
+          "Address": "B5",
+          "Text": "A",
+          "Bold": false,
+          "Value": "A",
+          "Font": "FF000000",
+          "Fill": "FF83CCEB"
+        },
+        {
+          "Formula": "30",
+          "Hidden": false,
+          "Address": "C5",
+          "Text": "30",
+          "Bold": false,
+          "Value": 30.0,
+          "Font": "FF000000",
+          "Fill": "FF83CCEB"
+        },
+        {
+          "Formula": "003",
+          "Hidden": false,
+          "Address": "D5",
+          "Text": "003",
+          "Bold": false,
+          "Value": "003",
+          "Font": "FF000000",
+          "Fill": "FF83CCEB"
+        },
+        {
+          "Formula": "row3",
+          "Hidden": false,
+          "Address": "E5",
+          "Text": "row3",
+          "Bold": false,
+          "Value": "row3",
+          "Font": "FF000000",
+          "Fill": "FF83CCEB"
+        },
+        {
+          "Formula": "B",
+          "Hidden": false,
+          "Address": "B6",
+          "Text": "B",
+          "Bold": false,
+          "Value": "B",
+          "Font": "FF000000",
+          "Fill": "FFC0E6F5"
+        },
+        {
+          "Formula": "40",
+          "Hidden": false,
+          "Address": "C6",
+          "Text": "40",
+          "Bold": false,
+          "Value": 40.0,
+          "Font": "FF000000",
+          "Fill": "FFC0E6F5"
+        },
+        {
+          "Formula": "004",
+          "Hidden": false,
+          "Address": "D6",
+          "Text": "004",
+          "Bold": false,
+          "Value": "004",
+          "Font": "FF000000",
+          "Fill": "FFC0E6F5"
+        },
+        {
+          "Formula": "row4",
+          "Hidden": false,
+          "Address": "E6",
+          "Text": "row4",
+          "Bold": false,
+          "Value": "row4",
+          "Font": "FF000000",
+          "Fill": "FFC0E6F5"
+        },
+        {
+          "Formula": "A",
+          "Hidden": false,
+          "Address": "B7",
+          "Text": "A",
+          "Bold": false,
+          "Value": "A",
+          "Font": "FF000000",
+          "Fill": "FF83CCEB"
+        },
+        {
+          "Formula": "50",
+          "Hidden": false,
+          "Address": "C7",
+          "Text": "50",
+          "Bold": false,
+          "Value": 50.0,
+          "Font": "FF000000",
+          "Fill": "FF83CCEB"
+        },
+        {
+          "Formula": "005",
+          "Hidden": false,
+          "Address": "D7",
+          "Text": "005",
+          "Bold": false,
+          "Value": "005",
+          "Font": "FF000000",
+          "Fill": "FF83CCEB"
+        },
+        {
+          "Formula": "row5",
+          "Hidden": false,
+          "Address": "E7",
+          "Text": "row5",
+          "Bold": false,
+          "Value": "row5",
+          "Font": "FF000000",
+          "Fill": "FF83CCEB"
+        },
+        {
+          "Formula": "Total",
+          "Hidden": false,
+          "Address": "B8",
+          "Text": "Total",
+          "Bold": true,
+          "Value": "Total",
+          "Font": "FFFFFFFF",
+          "Fill": "FF156082"
+        },
+        {
+          "Formula": "150",
+          "Hidden": false,
+          "Address": "C8",
+          "Text": "150",
+          "Bold": true,
+          "Value": "150",
+          "Font": "FFFFFFFF",
+          "Fill": "FF156082"
+        },
+        {
+          "Formula": "",
+          "Hidden": false,
+          "Address": "D8",
+          "Text": "",
+          "Bold": true,
+          "Value": null,
+          "Font": "FFFFFFFF",
+          "Fill": "FF156082"
+        },
+        {
+          "Formula": "",
+          "Hidden": false,
+          "Address": "E8",
+          "Text": "",
+          "Bold": true,
+          "Value": null,
+          "Font": "FFFFFFFF",
+          "Fill": "FF156082"
+        }
+      ]
+    }
+  ],
+  "Stable": true,
+  "Sha256": "1D71BC2480735D862FABF18D10D8DDC160405A88ED8FAEF8461606BA749E58BD",
+  "Parts": {
+    "[Content_Types].xml": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\"><Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/><Default Extension=\"xml\" ContentType=\"application/xml\"/><Override PartName=\"/xl/workbook.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml\"/><Override PartName=\"/xl/worksheets/sheet1.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml\"/><Override PartName=\"/xl/worksheets/sheet2.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml\"/><Override PartName=\"/xl/worksheets/sheet3.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml\"/><Override PartName=\"/xl/worksheets/sheet4.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml\"/><Override PartName=\"/xl/worksheets/sheet5.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml\"/><Override PartName=\"/xl/worksheets/sheet6.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml\"/><Override PartName=\"/xl/worksheets/sheet7.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml\"/><Override PartName=\"/xl/worksheets/sheet8.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml\"/><Override PartName=\"/xl/theme/theme1.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.theme+xml\"/><Override PartName=\"/xl/styles.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml\"/><Override PartName=\"/xl/sharedStrings.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml\"/><Override PartName=\"/xl/tables/table1.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.table+xml\"/><Override PartName=\"/xl/tables/table2.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.table+xml\"/><Override PartName=\"/xl/tables/table3.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.table+xml\"/><Override PartName=\"/xl/tables/table4.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.table+xml\"/><Override PartName=\"/xl/tables/table5.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.table+xml\"/><Override PartName=\"/xl/tables/table6.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.table+xml\"/><Override PartName=\"/xl/tables/table7.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.table+xml\"/><Override PartName=\"/xl/tables/table8.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.table+xml\"/><Override PartName=\"/docProps/core.xml\" ContentType=\"application/vnd.openxmlformats-package.core-properties+xml\"/><Override PartName=\"/docProps/app.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.extended-properties+xml\"/></Types>",
+    "_rels/.rels": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId3\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties\" Target=\"docProps/app.xml\"/><Relationship Id=\"rId2\" Type=\"http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties\" Target=\"docProps/core.xml\"/><Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument\" Target=\"xl/workbook.xml\"/></Relationships>",
+    "xl/workbook.xml": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<workbook xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" mc:Ignorable=\"x15 xr xr6 xr10 xr2\" xmlns:x15=\"http://schemas.microsoft.com/office/spreadsheetml/2010/11/main\" xmlns:xr=\"http://schemas.microsoft.com/office/spreadsheetml/2014/revision\" xmlns:xr6=\"http://schemas.microsoft.com/office/spreadsheetml/2016/revision6\" xmlns:xr10=\"http://schemas.microsoft.com/office/spreadsheetml/2016/revision10\" xmlns:xr2=\"http://schemas.microsoft.com/office/spreadsheetml/2015/revision2\"><fileVersion appName=\"xl\" lastEdited=\"7\" lowestEdited=\"7\" rupBuild=\"30527\"/><workbookPr defaultThemeVersion=\"202300\"/><mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\"><mc:Choice Requires=\"x15\"><x15ac:absPath url=\"D:\\Projects\\QuickExcel\\artifacts\\compatibility\\xc0302-excel-01\\\" xmlns:x15ac=\"http://schemas.microsoft.com/office/spreadsheetml/2010/11/ac\"/></mc:Choice></mc:AlternateContent><xr:revisionPtr revIDLastSave=\"0\" documentId=\"8_{5A4A73F1-3E51-405D-AC90-58AB47E2764A}\" xr6:coauthVersionLast=\"47\" xr6:coauthVersionMax=\"47\" xr10:uidLastSave=\"{00000000-0000-0000-0000-000000000000}\"/><bookViews><workbookView xWindow=\"-108\" yWindow=\"-108\" windowWidth=\"30936\" windowHeight=\"18696\" activeTab=\"7\" xr2:uid=\"{83465790-91D8-4E1F-BD22-AA3AC46EB3E4}\"/></bookViews><sheets><sheet name=\"light\" sheetId=\"1\" r:id=\"rId1\"/><sheet name=\"medium\" sheetId=\"2\" r:id=\"rId2\"/><sheet name=\"dark\" sheetId=\"3\" r:id=\"rId3\"/><sheet name=\"bands\" sheetId=\"4\" r:id=\"rId4\"/><sheet name=\"noheader\" sheetId=\"5\" r:id=\"rId5\"/><sheet name=\"nofilter\" sheetId=\"6\" r:id=\"rId6\"/><sheet name=\"filtered\" sheetId=\"7\" r:id=\"rId7\"/><sheet name=\"totals\" sheetId=\"8\" r:id=\"rId8\"/></sheets><calcPr calcId=\"191029\"/><extLst><ext uri=\"{140A7094-0E35-4892-8432-C4D2E57EDEB5}\" xmlns:x15=\"http://schemas.microsoft.com/office/spreadsheetml/2010/11/main\"><x15:workbookPr chartTrackingRefBase=\"1\"/></ext><ext uri=\"{B58B0392-4F1F-4190-BB64-5DF3571DCE5F}\" xmlns:xcalcf=\"http://schemas.microsoft.com/office/spreadsheetml/2018/calcfeatures\"><xcalcf:calcFeatures><xcalcf:feature name=\"microsoft.com:RD\"/><xcalcf:feature name=\"microsoft.com:Single\"/><xcalcf:feature name=\"microsoft.com:FV\"/><xcalcf:feature name=\"microsoft.com:CNMTM\"/><xcalcf:feature name=\"microsoft.com:LET_WF\"/><xcalcf:feature name=\"microsoft.com:LAMBDA_WF\"/><xcalcf:feature name=\"microsoft.com:ARRAYTEXT_WF\"/></xcalcf:calcFeatures></ext><ext uri=\"{D14903EA-33C4-47F7-8F05-3474C54BE107}\" xmlns:xlwcv=\"http://schemas.microsoft.com/office/spreadsheetml/2024/workbookCompatibilityVersion\"><xlwcv:version setVersion=\"2\"/></ext></extLst></workbook>",
+    "xl/_rels/workbook.xml.rels": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId8\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet\" Target=\"worksheets/sheet8.xml\"/><Relationship Id=\"rId3\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet\" Target=\"worksheets/sheet3.xml\"/><Relationship Id=\"rId7\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet\" Target=\"worksheets/sheet7.xml\"/><Relationship Id=\"rId2\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet\" Target=\"worksheets/sheet2.xml\"/><Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet\" Target=\"worksheets/sheet1.xml\"/><Relationship Id=\"rId6\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet\" Target=\"worksheets/sheet6.xml\"/><Relationship Id=\"rId11\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings\" Target=\"sharedStrings.xml\"/><Relationship Id=\"rId5\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet\" Target=\"worksheets/sheet5.xml\"/><Relationship Id=\"rId10\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles\" Target=\"styles.xml\"/><Relationship Id=\"rId4\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet\" Target=\"worksheets/sheet4.xml\"/><Relationship Id=\"rId9\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme\" Target=\"theme/theme1.xml\"/></Relationships>",
+    "xl/worksheets/sheet1.xml": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" mc:Ignorable=\"x14ac xr xr2 xr3\" xmlns:x14ac=\"http://schemas.microsoft.com/office/spreadsheetml/2009/9/ac\" xmlns:xr=\"http://schemas.microsoft.com/office/spreadsheetml/2014/revision\" xmlns:xr2=\"http://schemas.microsoft.com/office/spreadsheetml/2015/revision2\" xmlns:xr3=\"http://schemas.microsoft.com/office/spreadsheetml/2016/revision3\" xr:uid=\"{42E4B75E-EF54-4E36-B525-B31DF2F532DC}\"><dimension ref=\"B2:E7\"/><sheetViews><sheetView workbookViewId=\"0\"/></sheetViews><sheetFormatPr defaultRowHeight=\"13.8\" x14ac:dyDescent=\"0.25\"/><cols><col min=\"2\" max=\"5\" width=\"20.77734375\" customWidth=\"1\"/></cols><sheetData><row r=\"2\" spans=\"2:5\" x14ac:dyDescent=\"0.25\"><c r=\"B2\" t=\"s\"><v>0</v></c><c r=\"C2\" t=\"s\"><v>1</v></c><c r=\"D2\" t=\"s\"><v>2</v></c><c r=\"E2\" t=\"s\"><v>3</v></c></row><row r=\"3\" spans=\"2:5\" x14ac:dyDescent=\"0.25\"><c r=\"B3\" t=\"s\"><v>4</v></c><c r=\"C3\"><v>10</v></c><c r=\"D3\" s=\"1\" t=\"s\"><v>5</v></c><c r=\"E3\" t=\"s\"><v>6</v></c></row><row r=\"4\" spans=\"2:5\" x14ac:dyDescent=\"0.25\"><c r=\"B4\" t=\"s\"><v>7</v></c><c r=\"C4\"><v>20</v></c><c r=\"D4\" s=\"1\" t=\"s\"><v>8</v></c><c r=\"E4\" t=\"s\"><v>9</v></c></row><row r=\"5\" spans=\"2:5\" x14ac:dyDescent=\"0.25\"><c r=\"B5\" t=\"s\"><v>4</v></c><c r=\"C5\"><v>30</v></c><c r=\"D5\" s=\"1\" t=\"s\"><v>10</v></c><c r=\"E5\" t=\"s\"><v>11</v></c></row><row r=\"6\" spans=\"2:5\" x14ac:dyDescent=\"0.25\"><c r=\"B6\" t=\"s\"><v>7</v></c><c r=\"C6\"><v>40</v></c><c r=\"D6\" s=\"1\" t=\"s\"><v>12</v></c><c r=\"E6\" t=\"s\"><v>13</v></c></row><row r=\"7\" spans=\"2:5\" x14ac:dyDescent=\"0.25\"><c r=\"B7\" t=\"s\"><v>4</v></c><c r=\"C7\"><v>50</v></c><c r=\"D7\" s=\"1\" t=\"s\"><v>14</v></c><c r=\"E7\" t=\"s\"><v>15</v></c></row></sheetData><phoneticPr fontId=\"1\" type=\"noConversion\"/><pageMargins left=\"0.7\" right=\"0.7\" top=\"0.75\" bottom=\"0.75\" header=\"0.3\" footer=\"0.3\"/><tableParts count=\"1\"><tablePart r:id=\"rId1\"/></tableParts></worksheet>",
+    "xl/worksheets/sheet2.xml": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" mc:Ignorable=\"x14ac xr xr2 xr3\" xmlns:x14ac=\"http://schemas.microsoft.com/office/spreadsheetml/2009/9/ac\" xmlns:xr=\"http://schemas.microsoft.com/office/spreadsheetml/2014/revision\" xmlns:xr2=\"http://schemas.microsoft.com/office/spreadsheetml/2015/revision2\" xmlns:xr3=\"http://schemas.microsoft.com/office/spreadsheetml/2016/revision3\" xr:uid=\"{93DFD67D-22CB-48FD-BCB5-D35FCD94317C}\"><dimension ref=\"B2:E7\"/><sheetViews><sheetView workbookViewId=\"0\"/></sheetViews><sheetFormatPr defaultRowHeight=\"13.8\" x14ac:dyDescent=\"0.25\"/><cols><col min=\"2\" max=\"5\" width=\"20.77734375\" customWidth=\"1\"/></cols><sheetData><row r=\"2\" spans=\"2:5\" x14ac:dyDescent=\"0.25\"><c r=\"B2\" t=\"s\"><v>0</v></c><c r=\"C2\" t=\"s\"><v>1</v></c><c r=\"D2\" t=\"s\"><v>2</v></c><c r=\"E2\" t=\"s\"><v>3</v></c></row><row r=\"3\" spans=\"2:5\" x14ac:dyDescent=\"0.25\"><c r=\"B3\" t=\"s\"><v>4</v></c><c r=\"C3\"><v>10</v></c><c r=\"D3\" s=\"1\" t=\"s\"><v>5</v></c><c r=\"E3\" t=\"s\"><v>6</v></c></row><row r=\"4\" spans=\"2:5\" x14ac:dyDescent=\"0.25\"><c r=\"B4\" t=\"s\"><v>7</v></c><c r=\"C4\"><v>20</v></c><c r=\"D4\" s=\"1\" t=\"s\"><v>8</v></c><c r=\"E4\" t=\"s\"><v>9</v></c></row><row r=\"5\" spans=\"2:5\" x14ac:dyDescent=\"0.25\"><c r=\"B5\" t=\"s\"><v>4</v></c><c r=\"C5\"><v>30</v></c><c r=\"D5\" s=\"1\" t=\"s\"><v>10</v></c><c r=\"E5\" t=\"s\"><v>11</v></c></row><row r=\"6\" spans=\"2:5\" x14ac:dyDescent=\"0.25\"><c r=\"B6\" t=\"s\"><v>7</v></c><c r=\"C6\"><v>40</v></c><c r=\"D6\" s=\"1\" t=\"s\"><v>12</v></c><c r=\"E6\" t=\"s\"><v>13</v></c></row><row r=\"7\" spans=\"2:5\" x14ac:dyDescent=\"0.25\"><c r=\"B7\" t=\"s\"><v>4</v></c><c r=\"C7\"><v>50</v></c><c r=\"D7\" s=\"1\" t=\"s\"><v>14</v></c><c r=\"E7\" t=\"s\"><v>15</v></c></row></sheetData><phoneticPr fontId=\"1\" type=\"noConversion\"/><pageMargins left=\"0.7\" right=\"0.7\" top=\"0.75\" bottom=\"0.75\" header=\"0.3\" footer=\"0.3\"/><tableParts count=\"1\"><tablePart r:id=\"rId1\"/></tableParts></worksheet>",
+    "xl/worksheets/sheet3.xml": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" mc:Ignorable=\"x14ac xr xr2 xr3\" xmlns:x14ac=\"http://schemas.microsoft.com/office/spreadsheetml/2009/9/ac\" xmlns:xr=\"http://schemas.microsoft.com/office/spreadsheetml/2014/revision\" xmlns:xr2=\"http://schemas.microsoft.com/office/spreadsheetml/2015/revision2\" xmlns:xr3=\"http://schemas.microsoft.com/office/spreadsheetml/2016/revision3\" xr:uid=\"{05989E7F-0F35-49F7-ABAF-D6D91D2B8B11}\"><dimension ref=\"B2:E7\"/><sheetViews><sheetView workbookViewId=\"0\"/></sheetViews><sheetFormatPr defaultRowHeight=\"13.8\" x14ac:dyDescent=\"0.25\"/><cols><col min=\"2\" max=\"5\" width=\"20.77734375\" customWidth=\"1\"/></cols><sheetData><row r=\"2\" spans=\"2:5\" x14ac:dyDescent=\"0.25\"><c r=\"B2\" t=\"s\"><v>0</v></c><c r=\"C2\" t=\"s\"><v>1</v></c><c r=\"D2\" t=\"s\"><v>2</v></c><c r=\"E2\" t=\"s\"><v>3</v></c></row><row r=\"3\" spans=\"2:5\" x14ac:dyDescent=\"0.25\"><c r=\"B3\" t=\"s\"><v>4</v></c><c r=\"C3\"><v>10</v></c><c r=\"D3\" s=\"1\" t=\"s\"><v>5</v></c><c r=\"E3\" t=\"s\"><v>6</v></c></row><row r=\"4\" spans=\"2:5\" x14ac:dyDescent=\"0.25\"><c r=\"B4\" t=\"s\"><v>7</v></c><c r=\"C4\"><v>20</v></c><c r=\"D4\" s=\"1\" t=\"s\"><v>8</v></c><c r=\"E4\" t=\"s\"><v>9</v></c></row><row r=\"5\" spans=\"2:5\" x14ac:dyDescent=\"0.25\"><c r=\"B5\" t=\"s\"><v>4</v></c><c r=\"C5\"><v>30</v></c><c r=\"D5\" s=\"1\" t=\"s\"><v>10</v></c><c r=\"E5\" t=\"s\"><v>11</v></c></row><row r=\"6\" spans=\"2:5\" x14ac:dyDescent=\"0.25\"><c r=\"B6\" t=\"s\"><v>7</v></c><c r=\"C6\"><v>40</v></c><c r=\"D6\" s=\"1\" t=\"s\"><v>12</v></c><c r=\"E6\" t=\"s\"><v>13</v></c></row><row r=\"7\" spans=\"2:5\" x14ac:dyDescent=\"0.25\"><c r=\"B7\" t=\"s\"><v>4</v></c><c r=\"C7\"><v>50</v></c><c r=\"D7\" s=\"1\" t=\"s\"><v>14</v></c><c r=\"E7\" t=\"s\"><v>15</v></c></row></sheetData><phoneticPr fontId=\"1\" type=\"noConversion\"/><pageMargins left=\"0.7\" right=\"0.7\" top=\"0.75\" bottom=\"0.75\" header=\"0.3\" footer=\"0.3\"/><tableParts count=\"1\"><tablePart r:id=\"rId1\"/></tableParts></worksheet>",
+    "xl/worksheets/sheet4.xml": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" mc:Ignorable=\"x14ac xr xr2 xr3\" xmlns:x14ac=\"http://schemas.microsoft.com/office/spreadsheetml/2009/9/ac\" xmlns:xr=\"http://schemas.microsoft.com/office/spreadsheetml/2014/revision\" xmlns:xr2=\"http://schemas.microsoft.com/office/spreadsheetml/2015/revision2\" xmlns:xr3=\"http://schemas.microsoft.com/office/spreadsheetml/2016/revision3\" xr:uid=\"{F484C31C-D50D-4AF1-A30F-9E3511650528}\"><dimension ref=\"B2:E7\"/><sheetViews><sheetView workbookViewId=\"0\"/></sheetViews><sheetFormatPr defaultRowHeight=\"13.8\" x14ac:dyDescent=\"0.25\"/><cols><col min=\"2\" max=\"5\" width=\"20.77734375\" customWidth=\"1\"/></cols><sheetData><row r=\"2\" spans=\"2:5\" x14ac:dyDescent=\"0.25\"><c r=\"B2\" t=\"s\"><v>0</v></c><c r=\"C2\" t=\"s\"><v>1</v></c><c r=\"D2\" t=\"s\"><v>2</v></c><c r=\"E2\" t=\"s\"><v>3</v></c></row><row r=\"3\" spans=\"2:5\" x14ac:dyDescent=\"0.25\"><c r=\"B3\" t=\"s\"><v>4</v></c><c r=\"C3\"><v>10</v></c><c r=\"D3\" s=\"1\" t=\"s\"><v>5</v></c><c r=\"E3\" t=\"s\"><v>6</v></c></row><row r=\"4\" spans=\"2:5\" x14ac:dyDescent=\"0.25\"><c r=\"B4\" t=\"s\"><v>7</v></c><c r=\"C4\"><v>20</v></c><c r=\"D4\" s=\"1\" t=\"s\"><v>8</v></c><c r=\"E4\" t=\"s\"><v>9</v></c></row><row r=\"5\" spans=\"2:5\" x14ac:dyDescent=\"0.25\"><c r=\"B5\" t=\"s\"><v>4</v></c><c r=\"C5\"><v>30</v></c><c r=\"D5\" s=\"1\" t=\"s\"><v>10</v></c><c r=\"E5\" t=\"s\"><v>11</v></c></row><row r=\"6\" spans=\"2:5\" x14ac:dyDescent=\"0.25\"><c r=\"B6\" t=\"s\"><v>7</v></c><c r=\"C6\"><v>40</v></c><c r=\"D6\" s=\"1\" t=\"s\"><v>12</v></c><c r=\"E6\" t=\"s\"><v>13</v></c></row><row r=\"7\" spans=\"2:5\" x14ac:dyDescent=\"0.25\"><c r=\"B7\" t=\"s\"><v>4</v></c><c r=\"C7\"><v>50</v></c><c r=\"D7\" s=\"1\" t=\"s\"><v>14</v></c><c r=\"E7\" t=\"s\"><v>15</v></c></row></sheetData><phoneticPr fontId=\"1\" type=\"noConversion\"/><pageMargins left=\"0.7\" right=\"0.7\" top=\"0.75\" bottom=\"0.75\" header=\"0.3\" footer=\"0.3\"/><tableParts count=\"1\"><tablePart r:id=\"rId1\"/></tableParts></worksheet>",
+    "xl/worksheets/sheet5.xml": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" mc:Ignorable=\"x14ac xr xr2 xr3\" xmlns:x14ac=\"http://schemas.microsoft.com/office/spreadsheetml/2009/9/ac\" xmlns:xr=\"http://schemas.microsoft.com/office/spreadsheetml/2014/revision\" xmlns:xr2=\"http://schemas.microsoft.com/office/spreadsheetml/2015/revision2\" xmlns:xr3=\"http://schemas.microsoft.com/office/spreadsheetml/2016/revision3\" xr:uid=\"{05BE47AF-F9F2-4EDA-B473-954E01A58BA1}\"><dimension ref=\"B3:E7\"/><sheetViews><sheetView workbookViewId=\"0\"/></sheetViews><sheetFormatPr defaultRowHeight=\"13.8\" x14ac:dyDescent=\"0.25\"/><cols><col min=\"2\" max=\"5\" width=\"20.77734375\" customWidth=\"1\"/></cols><sheetData><row r=\"3\" spans=\"2:5\" x14ac:dyDescent=\"0.25\"><c r=\"B3\" t=\"s\"><v>4</v></c><c r=\"C3\"><v>10</v></c><c r=\"D3\" s=\"1\" t=\"s\"><v>5</v></c><c r=\"E3\" t=\"s\"><v>6</v></c></row><row r=\"4\" spans=\"2:5\" x14ac:dyDescent=\"0.25\"><c r=\"B4\" t=\"s\"><v>7</v></c><c r=\"C4\"><v>20</v></c><c r=\"D4\" s=\"1\" t=\"s\"><v>8</v></c><c r=\"E4\" t=\"s\"><v>9</v></c></row><row r=\"5\" spans=\"2:5\" x14ac:dyDescent=\"0.25\"><c r=\"B5\" t=\"s\"><v>4</v></c><c r=\"C5\"><v>30</v></c><c r=\"D5\" s=\"1\" t=\"s\"><v>10</v></c><c r=\"E5\" t=\"s\"><v>11</v></c></row><row r=\"6\" spans=\"2:5\" x14ac:dyDescent=\"0.25\"><c r=\"B6\" t=\"s\"><v>7</v></c><c r=\"C6\"><v>40</v></c><c r=\"D6\" s=\"1\" t=\"s\"><v>12</v></c><c r=\"E6\" t=\"s\"><v>13</v></c></row><row r=\"7\" spans=\"2:5\" x14ac:dyDescent=\"0.25\"><c r=\"B7\" t=\"s\"><v>4</v></c><c r=\"C7\"><v>50</v></c><c r=\"D7\" s=\"1\" t=\"s\"><v>14</v></c><c r=\"E7\" t=\"s\"><v>15</v></c></row></sheetData><phoneticPr fontId=\"1\" type=\"noConversion\"/><pageMargins left=\"0.7\" right=\"0.7\" top=\"0.75\" bottom=\"0.75\" header=\"0.3\" footer=\"0.3\"/><tableParts count=\"1\"><tablePart r:id=\"rId1\"/></tableParts></worksheet>",
+    "xl/worksheets/sheet6.xml": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" mc:Ignorable=\"x14ac xr xr2 xr3\" xmlns:x14ac=\"http://schemas.microsoft.com/office/spreadsheetml/2009/9/ac\" xmlns:xr=\"http://schemas.microsoft.com/office/spreadsheetml/2014/revision\" xmlns:xr2=\"http://schemas.microsoft.com/office/spreadsheetml/2015/revision2\" xmlns:xr3=\"http://schemas.microsoft.com/office/spreadsheetml/2016/revision3\" xr:uid=\"{824C6246-B639-4859-9E15-623759C21A64}\"><dimension ref=\"B2:E7\"/><sheetViews><sheetView workbookViewId=\"0\"/></sheetViews><sheetFormatPr defaultRowHeight=\"13.8\" x14ac:dyDescent=\"0.25\"/><cols><col min=\"2\" max=\"5\" width=\"20.77734375\" customWidth=\"1\"/></cols><sheetData><row r=\"2\" spans=\"2:5\" x14ac:dyDescent=\"0.25\"><c r=\"B2\" t=\"s\"><v>0</v></c><c r=\"C2\" t=\"s\"><v>1</v></c><c r=\"D2\" t=\"s\"><v>2</v></c><c r=\"E2\" t=\"s\"><v>3</v></c></row><row r=\"3\" spans=\"2:5\" x14ac:dyDescent=\"0.25\"><c r=\"B3\" t=\"s\"><v>4</v></c><c r=\"C3\"><v>10</v></c><c r=\"D3\" s=\"1\" t=\"s\"><v>5</v></c><c r=\"E3\" t=\"s\"><v>6</v></c></row><row r=\"4\" spans=\"2:5\" x14ac:dyDescent=\"0.25\"><c r=\"B4\" t=\"s\"><v>7</v></c><c r=\"C4\"><v>20</v></c><c r=\"D4\" s=\"1\" t=\"s\"><v>8</v></c><c r=\"E4\" t=\"s\"><v>9</v></c></row><row r=\"5\" spans=\"2:5\" x14ac:dyDescent=\"0.25\"><c r=\"B5\" t=\"s\"><v>4</v></c><c r=\"C5\"><v>30</v></c><c r=\"D5\" s=\"1\" t=\"s\"><v>10</v></c><c r=\"E5\" t=\"s\"><v>11</v></c></row><row r=\"6\" spans=\"2:5\" x14ac:dyDescent=\"0.25\"><c r=\"B6\" t=\"s\"><v>7</v></c><c r=\"C6\"><v>40</v></c><c r=\"D6\" s=\"1\" t=\"s\"><v>12</v></c><c r=\"E6\" t=\"s\"><v>13</v></c></row><row r=\"7\" spans=\"2:5\" x14ac:dyDescent=\"0.25\"><c r=\"B7\" t=\"s\"><v>4</v></c><c r=\"C7\"><v>50</v></c><c r=\"D7\" s=\"1\" t=\"s\"><v>14</v></c><c r=\"E7\" t=\"s\"><v>15</v></c></row></sheetData><phoneticPr fontId=\"1\" type=\"noConversion\"/><pageMargins left=\"0.7\" right=\"0.7\" top=\"0.75\" bottom=\"0.75\" header=\"0.3\" footer=\"0.3\"/><tableParts count=\"1\"><tablePart r:id=\"rId1\"/></tableParts></worksheet>",
+    "xl/worksheets/sheet7.xml": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" mc:Ignorable=\"x14ac xr xr2 xr3\" xmlns:x14ac=\"http://schemas.microsoft.com/office/spreadsheetml/2009/9/ac\" xmlns:xr=\"http://schemas.microsoft.com/office/spreadsheetml/2014/revision\" xmlns:xr2=\"http://schemas.microsoft.com/office/spreadsheetml/2015/revision2\" xmlns:xr3=\"http://schemas.microsoft.com/office/spreadsheetml/2016/revision3\" xr:uid=\"{E19E06AC-CD42-457F-9785-3D436898E82D}\"><dimension ref=\"B2:E7\"/><sheetViews><sheetView workbookViewId=\"0\"/></sheetViews><sheetFormatPr defaultRowHeight=\"13.8\" x14ac:dyDescent=\"0.25\"/><cols><col min=\"2\" max=\"5\" width=\"20.77734375\" customWidth=\"1\"/></cols><sheetData><row r=\"2\" spans=\"2:5\" x14ac:dyDescent=\"0.25\"><c r=\"B2\" t=\"s\"><v>0</v></c><c r=\"C2\" t=\"s\"><v>1</v></c><c r=\"D2\" t=\"s\"><v>2</v></c><c r=\"E2\" t=\"s\"><v>3</v></c></row><row r=\"3\" spans=\"2:5\" x14ac:dyDescent=\"0.25\"><c r=\"B3\" t=\"s\"><v>4</v></c><c r=\"C3\"><v>10</v></c><c r=\"D3\" s=\"1\" t=\"s\"><v>5</v></c><c r=\"E3\" t=\"s\"><v>6</v></c></row><row r=\"4\" spans=\"2:5\" hidden=\"1\" x14ac:dyDescent=\"0.25\"><c r=\"B4\" t=\"s\"><v>7</v></c><c r=\"C4\"><v>20</v></c><c r=\"D4\" s=\"1\" t=\"s\"><v>8</v></c><c r=\"E4\" t=\"s\"><v>9</v></c></row><row r=\"5\" spans=\"2:5\" x14ac:dyDescent=\"0.25\"><c r=\"B5\" t=\"s\"><v>4</v></c><c r=\"C5\"><v>30</v></c><c r=\"D5\" s=\"1\" t=\"s\"><v>10</v></c><c r=\"E5\" t=\"s\"><v>11</v></c></row><row r=\"6\" spans=\"2:5\" hidden=\"1\" x14ac:dyDescent=\"0.25\"><c r=\"B6\" t=\"s\"><v>7</v></c><c r=\"C6\"><v>40</v></c><c r=\"D6\" s=\"1\" t=\"s\"><v>12</v></c><c r=\"E6\" t=\"s\"><v>13</v></c></row><row r=\"7\" spans=\"2:5\" x14ac:dyDescent=\"0.25\"><c r=\"B7\" t=\"s\"><v>4</v></c><c r=\"C7\"><v>50</v></c><c r=\"D7\" s=\"1\" t=\"s\"><v>14</v></c><c r=\"E7\" t=\"s\"><v>15</v></c></row></sheetData><phoneticPr fontId=\"1\" type=\"noConversion\"/><pageMargins left=\"0.7\" right=\"0.7\" top=\"0.75\" bottom=\"0.75\" header=\"0.3\" footer=\"0.3\"/><tableParts count=\"1\"><tablePart r:id=\"rId1\"/></tableParts></worksheet>",
+    "xl/worksheets/sheet8.xml": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" mc:Ignorable=\"x14ac xr xr2 xr3\" xmlns:x14ac=\"http://schemas.microsoft.com/office/spreadsheetml/2009/9/ac\" xmlns:xr=\"http://schemas.microsoft.com/office/spreadsheetml/2014/revision\" xmlns:xr2=\"http://schemas.microsoft.com/office/spreadsheetml/2015/revision2\" xmlns:xr3=\"http://schemas.microsoft.com/office/spreadsheetml/2016/revision3\" xr:uid=\"{8C533A00-6291-4DCD-83CC-0BB6F9033BDA}\"><dimension ref=\"B2:E8\"/><sheetViews><sheetView tabSelected=\"1\" workbookViewId=\"0\"/></sheetViews><sheetFormatPr defaultRowHeight=\"13.8\" x14ac:dyDescent=\"0.25\"/><cols><col min=\"2\" max=\"5\" width=\"20.77734375\" customWidth=\"1\"/></cols><sheetData><row r=\"2\" spans=\"2:5\" x14ac:dyDescent=\"0.25\"><c r=\"B2\" t=\"s\"><v>0</v></c><c r=\"C2\" t=\"s\"><v>1</v></c><c r=\"D2\" t=\"s\"><v>2</v></c><c r=\"E2\" t=\"s\"><v>3</v></c></row><row r=\"3\" spans=\"2:5\" x14ac:dyDescent=\"0.25\"><c r=\"B3\" t=\"s\"><v>4</v></c><c r=\"C3\"><v>10</v></c><c r=\"D3\" s=\"1\" t=\"s\"><v>5</v></c><c r=\"E3\" t=\"s\"><v>6</v></c></row><row r=\"4\" spans=\"2:5\" x14ac:dyDescent=\"0.25\"><c r=\"B4\" t=\"s\"><v>7</v></c><c r=\"C4\"><v>20</v></c><c r=\"D4\" s=\"1\" t=\"s\"><v>8</v></c><c r=\"E4\" t=\"s\"><v>9</v></c></row><row r=\"5\" spans=\"2:5\" x14ac:dyDescent=\"0.25\"><c r=\"B5\" t=\"s\"><v>4</v></c><c r=\"C5\"><v>30</v></c><c r=\"D5\" s=\"1\" t=\"s\"><v>10</v></c><c r=\"E5\" t=\"s\"><v>11</v></c></row><row r=\"6\" spans=\"2:5\" x14ac:dyDescent=\"0.25\"><c r=\"B6\" t=\"s\"><v>7</v></c><c r=\"C6\"><v>40</v></c><c r=\"D6\" s=\"1\" t=\"s\"><v>12</v></c><c r=\"E6\" t=\"s\"><v>13</v></c></row><row r=\"7\" spans=\"2:5\" x14ac:dyDescent=\"0.25\"><c r=\"B7\" t=\"s\"><v>4</v></c><c r=\"C7\"><v>50</v></c><c r=\"D7\" s=\"1\" t=\"s\"><v>14</v></c><c r=\"E7\" t=\"s\"><v>15</v></c></row><row r=\"8\" spans=\"2:5\" x14ac:dyDescent=\"0.25\"><c r=\"B8\" t=\"s\"><v>16</v></c><c r=\"C8\" t=\"s\"><v>17</v></c></row></sheetData><phoneticPr fontId=\"1\" type=\"noConversion\"/><pageMargins left=\"0.7\" right=\"0.7\" top=\"0.75\" bottom=\"0.75\" header=\"0.3\" footer=\"0.3\"/><tableParts count=\"1\"><tablePart r:id=\"rId1\"/></tableParts></worksheet>",
+    "xl/theme/theme1.xml": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<a:theme xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" name=\"Office 主题​​\"><a:themeElements><a:clrScheme name=\"Office\"><a:dk1><a:sysClr val=\"windowText\" lastClr=\"000000\"/></a:dk1><a:lt1><a:sysClr val=\"window\" lastClr=\"FFFFFF\"/></a:lt1><a:dk2><a:srgbClr val=\"0E2841\"/></a:dk2><a:lt2><a:srgbClr val=\"E8E8E8\"/></a:lt2><a:accent1><a:srgbClr val=\"156082\"/></a:accent1><a:accent2><a:srgbClr val=\"E97132\"/></a:accent2><a:accent3><a:srgbClr val=\"196B24\"/></a:accent3><a:accent4><a:srgbClr val=\"0F9ED5\"/></a:accent4><a:accent5><a:srgbClr val=\"A02B93\"/></a:accent5><a:accent6><a:srgbClr val=\"4EA72E\"/></a:accent6><a:hlink><a:srgbClr val=\"467886\"/></a:hlink><a:folHlink><a:srgbClr val=\"96607D\"/></a:folHlink></a:clrScheme><a:fontScheme name=\"Office\"><a:majorFont><a:latin typeface=\"Aptos Display\" panose=\"02110004020202020204\"/><a:ea typeface=\"\"/><a:cs typeface=\"\"/><a:font script=\"Jpan\" typeface=\"游ゴシック Light\"/><a:font script=\"Hang\" typeface=\"맑은 고딕\"/><a:font script=\"Hans\" typeface=\"等线 Light\"/><a:font script=\"Hant\" typeface=\"新細明體\"/><a:font script=\"Arab\" typeface=\"Times New Roman\"/><a:font script=\"Hebr\" typeface=\"Times New Roman\"/><a:font script=\"Thai\" typeface=\"Tahoma\"/><a:font script=\"Ethi\" typeface=\"Nyala\"/><a:font script=\"Beng\" typeface=\"Vrinda\"/><a:font script=\"Gujr\" typeface=\"Shruti\"/><a:font script=\"Khmr\" typeface=\"MoolBoran\"/><a:font script=\"Knda\" typeface=\"Tunga\"/><a:font script=\"Guru\" typeface=\"Raavi\"/><a:font script=\"Cans\" typeface=\"Euphemia\"/><a:font script=\"Cher\" typeface=\"Plantagenet Cherokee\"/><a:font script=\"Yiii\" typeface=\"Microsoft Yi Baiti\"/><a:font script=\"Tibt\" typeface=\"Microsoft Himalaya\"/><a:font script=\"Thaa\" typeface=\"MV Boli\"/><a:font script=\"Deva\" typeface=\"Mangal\"/><a:font script=\"Telu\" typeface=\"Gautami\"/><a:font script=\"Taml\" typeface=\"Latha\"/><a:font script=\"Syrc\" typeface=\"Estrangelo Edessa\"/><a:font script=\"Orya\" typeface=\"Kalinga\"/><a:font script=\"Mlym\" typeface=\"Kartika\"/><a:font script=\"Laoo\" typeface=\"DokChampa\"/><a:font script=\"Sinh\" typeface=\"Iskoola Pota\"/><a:font script=\"Mong\" typeface=\"Mongolian Baiti\"/><a:font script=\"Viet\" typeface=\"Times New Roman\"/><a:font script=\"Uigh\" typeface=\"Microsoft Uighur\"/><a:font script=\"Geor\" typeface=\"Sylfaen\"/><a:font script=\"Armn\" typeface=\"Arial\"/><a:font script=\"Bugi\" typeface=\"Leelawadee UI\"/><a:font script=\"Bopo\" typeface=\"Microsoft JhengHei\"/><a:font script=\"Java\" typeface=\"Javanese Text\"/><a:font script=\"Lisu\" typeface=\"Segoe UI\"/><a:font script=\"Mymr\" typeface=\"Myanmar Text\"/><a:font script=\"Nkoo\" typeface=\"Ebrima\"/><a:font script=\"Olck\" typeface=\"Nirmala UI\"/><a:font script=\"Osma\" typeface=\"Ebrima\"/><a:font script=\"Phag\" typeface=\"Phagspa\"/><a:font script=\"Syrn\" typeface=\"Estrangelo Edessa\"/><a:font script=\"Syrj\" typeface=\"Estrangelo Edessa\"/><a:font script=\"Syre\" typeface=\"Estrangelo Edessa\"/><a:font script=\"Sora\" typeface=\"Nirmala UI\"/><a:font script=\"Tale\" typeface=\"Microsoft Tai Le\"/><a:font script=\"Talu\" typeface=\"Microsoft New Tai Lue\"/><a:font script=\"Tfng\" typeface=\"Ebrima\"/></a:majorFont><a:minorFont><a:latin typeface=\"Aptos Narrow\" panose=\"02110004020202020204\"/><a:ea typeface=\"\"/><a:cs typeface=\"\"/><a:font script=\"Jpan\" typeface=\"游ゴシック\"/><a:font script=\"Hang\" typeface=\"맑은 고딕\"/><a:font script=\"Hans\" typeface=\"等线\"/><a:font script=\"Hant\" typeface=\"新細明體\"/><a:font script=\"Arab\" typeface=\"Arial\"/><a:font script=\"Hebr\" typeface=\"Arial\"/><a:font script=\"Thai\" typeface=\"Tahoma\"/><a:font script=\"Ethi\" typeface=\"Nyala\"/><a:font script=\"Beng\" typeface=\"Vrinda\"/><a:font script=\"Gujr\" typeface=\"Shruti\"/><a:font script=\"Khmr\" typeface=\"DaunPenh\"/><a:font script=\"Knda\" typeface=\"Tunga\"/><a:font script=\"Guru\" typeface=\"Raavi\"/><a:font script=\"Cans\" typeface=\"Euphemia\"/><a:font script=\"Cher\" typeface=\"Plantagenet Cherokee\"/><a:font script=\"Yiii\" typeface=\"Microsoft Yi Baiti\"/><a:font script=\"Tibt\" typeface=\"Microsoft Himalaya\"/><a:font script=\"Thaa\" typeface=\"MV Boli\"/><a:font script=\"Deva\" typeface=\"Mangal\"/><a:font script=\"Telu\" typeface=\"Gautami\"/><a:font script=\"Taml\" typeface=\"Latha\"/><a:font script=\"Syrc\" typeface=\"Estrangelo Edessa\"/><a:font script=\"Orya\" typeface=\"Kalinga\"/><a:font script=\"Mlym\" typeface=\"Kartika\"/><a:font script=\"Laoo\" typeface=\"DokChampa\"/><a:font script=\"Sinh\" typeface=\"Iskoola Pota\"/><a:font script=\"Mong\" typeface=\"Mongolian Baiti\"/><a:font script=\"Viet\" typeface=\"Arial\"/><a:font script=\"Uigh\" typeface=\"Microsoft Uighur\"/><a:font script=\"Geor\" typeface=\"Sylfaen\"/><a:font script=\"Armn\" typeface=\"Arial\"/><a:font script=\"Bugi\" typeface=\"Leelawadee UI\"/><a:font script=\"Bopo\" typeface=\"Microsoft JhengHei\"/><a:font script=\"Java\" typeface=\"Javanese Text\"/><a:font script=\"Lisu\" typeface=\"Segoe UI\"/><a:font script=\"Mymr\" typeface=\"Myanmar Text\"/><a:font script=\"Nkoo\" typeface=\"Ebrima\"/><a:font script=\"Olck\" typeface=\"Nirmala UI\"/><a:font script=\"Osma\" typeface=\"Ebrima\"/><a:font script=\"Phag\" typeface=\"Phagspa\"/><a:font script=\"Syrn\" typeface=\"Estrangelo Edessa\"/><a:font script=\"Syrj\" typeface=\"Estrangelo Edessa\"/><a:font script=\"Syre\" typeface=\"Estrangelo Edessa\"/><a:font script=\"Sora\" typeface=\"Nirmala UI\"/><a:font script=\"Tale\" typeface=\"Microsoft Tai Le\"/><a:font script=\"Talu\" typeface=\"Microsoft New Tai Lue\"/><a:font script=\"Tfng\" typeface=\"Ebrima\"/></a:minorFont></a:fontScheme><a:fmtScheme name=\"Office\"><a:fillStyleLst><a:solidFill><a:schemeClr val=\"phClr\"/></a:solidFill><a:gradFill rotWithShape=\"1\"><a:gsLst><a:gs pos=\"0\"><a:schemeClr val=\"phClr\"><a:lumMod val=\"110000\"/><a:satMod val=\"105000\"/><a:tint val=\"67000\"/></a:schemeClr></a:gs><a:gs pos=\"50000\"><a:schemeClr val=\"phClr\"><a:lumMod val=\"105000\"/><a:satMod val=\"103000\"/><a:tint val=\"73000\"/></a:schemeClr></a:gs><a:gs pos=\"100000\"><a:schemeClr val=\"phClr\"><a:lumMod val=\"105000\"/><a:satMod val=\"109000\"/><a:tint val=\"81000\"/></a:schemeClr></a:gs></a:gsLst><a:lin ang=\"5400000\" scaled=\"0\"/></a:gradFill><a:gradFill rotWithShape=\"1\"><a:gsLst><a:gs pos=\"0\"><a:schemeClr val=\"phClr\"><a:satMod val=\"103000\"/><a:lumMod val=\"102000\"/><a:tint val=\"94000\"/></a:schemeClr></a:gs><a:gs pos=\"50000\"><a:schemeClr val=\"phClr\"><a:satMod val=\"110000\"/><a:lumMod val=\"100000\"/><a:shade val=\"100000\"/></a:schemeClr></a:gs><a:gs pos=\"100000\"><a:schemeClr val=\"phClr\"><a:lumMod val=\"99000\"/><a:satMod val=\"120000\"/><a:shade val=\"78000\"/></a:schemeClr></a:gs></a:gsLst><a:lin ang=\"5400000\" scaled=\"0\"/></a:gradFill></a:fillStyleLst><a:lnStyleLst><a:ln w=\"12700\" cap=\"flat\" cmpd=\"sng\" algn=\"ctr\"><a:solidFill><a:schemeClr val=\"phClr\"/></a:solidFill><a:prstDash val=\"solid\"/><a:miter lim=\"800000\"/></a:ln><a:ln w=\"19050\" cap=\"flat\" cmpd=\"sng\" algn=\"ctr\"><a:solidFill><a:schemeClr val=\"phClr\"/></a:solidFill><a:prstDash val=\"solid\"/><a:miter lim=\"800000\"/></a:ln><a:ln w=\"25400\" cap=\"flat\" cmpd=\"sng\" algn=\"ctr\"><a:solidFill><a:schemeClr val=\"phClr\"/></a:solidFill><a:prstDash val=\"solid\"/><a:miter lim=\"800000\"/></a:ln></a:lnStyleLst><a:effectStyleLst><a:effectStyle><a:effectLst/></a:effectStyle><a:effectStyle><a:effectLst/></a:effectStyle><a:effectStyle><a:effectLst><a:outerShdw blurRad=\"57150\" dist=\"19050\" dir=\"5400000\" algn=\"ctr\" rotWithShape=\"0\"><a:srgbClr val=\"000000\"><a:alpha val=\"63000\"/></a:srgbClr></a:outerShdw></a:effectLst></a:effectStyle></a:effectStyleLst><a:bgFillStyleLst><a:solidFill><a:schemeClr val=\"phClr\"/></a:solidFill><a:solidFill><a:schemeClr val=\"phClr\"><a:tint val=\"95000\"/><a:satMod val=\"170000\"/></a:schemeClr></a:solidFill><a:gradFill rotWithShape=\"1\"><a:gsLst><a:gs pos=\"0\"><a:schemeClr val=\"phClr\"><a:tint val=\"93000\"/><a:satMod val=\"150000\"/><a:shade val=\"98000\"/><a:lumMod val=\"102000\"/></a:schemeClr></a:gs><a:gs pos=\"50000\"><a:schemeClr val=\"phClr\"><a:tint val=\"98000\"/><a:satMod val=\"130000\"/><a:shade val=\"90000\"/><a:lumMod val=\"103000\"/></a:schemeClr></a:gs><a:gs pos=\"100000\"><a:schemeClr val=\"phClr\"><a:shade val=\"63000\"/><a:satMod val=\"120000\"/></a:schemeClr></a:gs></a:gsLst><a:lin ang=\"5400000\" scaled=\"0\"/></a:gradFill></a:bgFillStyleLst></a:fmtScheme></a:themeElements><a:objectDefaults><a:lnDef><a:spPr/><a:bodyPr/><a:lstStyle/><a:style><a:lnRef idx=\"2\"><a:schemeClr val=\"accent1\"/></a:lnRef><a:fillRef idx=\"0\"><a:schemeClr val=\"accent1\"/></a:fillRef><a:effectRef idx=\"1\"><a:schemeClr val=\"accent1\"/></a:effectRef><a:fontRef idx=\"minor\"><a:schemeClr val=\"tx1\"/></a:fontRef></a:style></a:lnDef></a:objectDefaults><a:extraClrSchemeLst/><a:extLst><a:ext uri=\"{05A4C25C-085E-4340-85A3-A5531E510DB2}\"><thm15:themeFamily xmlns:thm15=\"http://schemas.microsoft.com/office/thememl/2012/main\" name=\"Office Theme\" id=\"{2E142A2C-CD16-42D6-873A-C26D2A0506FA}\" vid=\"{1BDDFF52-6CD6-40A5-AB3C-68EB2F1E4D0A}\"/></a:ext></a:extLst></a:theme>",
+    "xl/styles.xml": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<styleSheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" mc:Ignorable=\"x14ac x16r2 xr\" xmlns:x14ac=\"http://schemas.microsoft.com/office/spreadsheetml/2009/9/ac\" xmlns:x16r2=\"http://schemas.microsoft.com/office/spreadsheetml/2015/02/main\" xmlns:xr=\"http://schemas.microsoft.com/office/spreadsheetml/2014/revision\"><fonts count=\"2\" x14ac:knownFonts=\"1\"><font><sz val=\"11\"/><color theme=\"1\"/><name val=\"等线\"/><family val=\"2\"/><charset val=\"134\"/><scheme val=\"minor\"/></font><font><sz val=\"9\"/><name val=\"等线\"/><family val=\"2\"/><charset val=\"134\"/><scheme val=\"minor\"/></font></fonts><fills count=\"2\"><fill><patternFill patternType=\"none\"/></fill><fill><patternFill patternType=\"gray125\"/></fill></fills><borders count=\"1\"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count=\"1\"><xf numFmtId=\"0\" fontId=\"0\" fillId=\"0\" borderId=\"0\"><alignment vertical=\"center\"/></xf></cellStyleXfs><cellXfs count=\"2\"><xf numFmtId=\"0\" fontId=\"0\" fillId=\"0\" borderId=\"0\" xfId=\"0\"><alignment vertical=\"center\"/></xf><xf numFmtId=\"49\" fontId=\"0\" fillId=\"0\" borderId=\"0\" xfId=\"0\" applyNumberFormat=\"1\"><alignment vertical=\"center\"/></xf></cellXfs><cellStyles count=\"1\"><cellStyle name=\"常规\" xfId=\"0\" builtinId=\"0\"/></cellStyles><dxfs count=\"8\"><dxf><numFmt numFmtId=\"30\" formatCode=\"@\"/></dxf><dxf><numFmt numFmtId=\"30\" formatCode=\"@\"/></dxf><dxf><numFmt numFmtId=\"30\" formatCode=\"@\"/></dxf><dxf><numFmt numFmtId=\"30\" formatCode=\"@\"/></dxf><dxf><numFmt numFmtId=\"30\" formatCode=\"@\"/></dxf><dxf><numFmt numFmtId=\"30\" formatCode=\"@\"/></dxf><dxf><numFmt numFmtId=\"30\" formatCode=\"@\"/></dxf><dxf><numFmt numFmtId=\"30\" formatCode=\"@\"/></dxf></dxfs><tableStyles count=\"0\" defaultTableStyle=\"TableStyleMedium2\" defaultPivotStyle=\"PivotStyleLight16\"/><extLst><ext uri=\"{EB79DEF2-80B8-43e5-95BD-54CBDDF9020C}\" xmlns:x14=\"http://schemas.microsoft.com/office/spreadsheetml/2009/9/main\"><x14:slicerStyles defaultSlicerStyle=\"SlicerStyleLight1\"/></ext><ext uri=\"{9260A510-F301-46a8-8635-F512D64BE5F5}\" xmlns:x15=\"http://schemas.microsoft.com/office/spreadsheetml/2010/11/main\"><x15:timelineStyles defaultTimelineStyle=\"TimeSlicerStyleLight1\"/></ext></extLst></styleSheet>",
+    "xl/sharedStrings.xml": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<sst xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" count=\"150\" uniqueCount=\"18\"><si><t>Group</t></si><si><t>Amount</t></si><si><t>Code</t></si><si><t>Label</t></si><si><t>A</t></si><si><t>001</t></si><si><t>row1</t></si><si><t>B</t></si><si><t>002</t></si><si><t>row2</t></si><si><t>003</t></si><si><t>row3</t></si><si><t>004</t></si><si><t>row4</t></si><si><t>005</t></si><si><t>row5</t></si><si><t>Total</t></si><si><t>150</t></si></sst>",
+    "xl/worksheets/_rels/sheet1.xml.rels": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/table\" Target=\"../tables/table1.xml\"/></Relationships>",
+    "xl/worksheets/_rels/sheet2.xml.rels": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/table\" Target=\"../tables/table2.xml\"/></Relationships>",
+    "xl/worksheets/_rels/sheet3.xml.rels": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/table\" Target=\"../tables/table3.xml\"/></Relationships>",
+    "xl/worksheets/_rels/sheet4.xml.rels": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/table\" Target=\"../tables/table4.xml\"/></Relationships>",
+    "xl/worksheets/_rels/sheet5.xml.rels": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/table\" Target=\"../tables/table5.xml\"/></Relationships>",
+    "xl/worksheets/_rels/sheet6.xml.rels": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/table\" Target=\"../tables/table6.xml\"/></Relationships>",
+    "xl/worksheets/_rels/sheet7.xml.rels": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/table\" Target=\"../tables/table7.xml\"/></Relationships>",
+    "xl/worksheets/_rels/sheet8.xml.rels": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/table\" Target=\"../tables/table8.xml\"/></Relationships>",
+    "xl/tables/table1.xml": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<table xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" mc:Ignorable=\"xr xr3\" xmlns:xr=\"http://schemas.microsoft.com/office/spreadsheetml/2014/revision\" xmlns:xr3=\"http://schemas.microsoft.com/office/spreadsheetml/2016/revision3\" id=\"1\" xr:uid=\"{86724651-0D28-49BC-94F7-E6C21E082532}\" name=\"QE_light\" displayName=\"QE_light\" ref=\"B2:E7\" totalsRowShown=\"0\"><autoFilter ref=\"B2:E7\" xr:uid=\"{86724651-0D28-49BC-94F7-E6C21E082532}\"/><tableColumns count=\"4\"><tableColumn id=\"1\" xr3:uid=\"{E6827679-A7DA-4D47-829A-73FEFCCC0A1C}\" name=\"Group\"/><tableColumn id=\"2\" xr3:uid=\"{B7E35F2B-EA1F-437F-933F-E3C172901EF9}\" name=\"Amount\"/><tableColumn id=\"3\" xr3:uid=\"{16DF0A74-F018-46AF-8FAD-1CF8209E4E08}\" name=\"Code\" dataDxfId=\"7\"/><tableColumn id=\"4\" xr3:uid=\"{AF50D904-5499-4381-BAF9-2044FA4D87EE}\" name=\"Label\"/></tableColumns><tableStyleInfo name=\"TableStyleLight1\" showFirstColumn=\"0\" showLastColumn=\"0\" showRowStripes=\"1\" showColumnStripes=\"0\"/></table>",
+    "xl/tables/table2.xml": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<table xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" mc:Ignorable=\"xr xr3\" xmlns:xr=\"http://schemas.microsoft.com/office/spreadsheetml/2014/revision\" xmlns:xr3=\"http://schemas.microsoft.com/office/spreadsheetml/2016/revision3\" id=\"2\" xr:uid=\"{B9F038AA-6422-48A0-986F-F31D8D6F7E8A}\" name=\"QE_medium\" displayName=\"QE_medium\" ref=\"B2:E7\" totalsRowShown=\"0\"><autoFilter ref=\"B2:E7\" xr:uid=\"{B9F038AA-6422-48A0-986F-F31D8D6F7E8A}\"/><tableColumns count=\"4\"><tableColumn id=\"1\" xr3:uid=\"{1422218D-4928-4CE1-A90B-4AF6BDA3C819}\" name=\"Group\"/><tableColumn id=\"2\" xr3:uid=\"{B13CCD30-FDAA-4104-B8B1-8AC939DDCCDD}\" name=\"Amount\"/><tableColumn id=\"3\" xr3:uid=\"{CCDE5990-E379-4914-9929-998C81DC6416}\" name=\"Code\" dataDxfId=\"6\"/><tableColumn id=\"4\" xr3:uid=\"{62730B05-8125-460A-BE15-81324947D755}\" name=\"Label\"/></tableColumns><tableStyleInfo name=\"TableStyleMedium2\" showFirstColumn=\"0\" showLastColumn=\"0\" showRowStripes=\"1\" showColumnStripes=\"0\"/></table>",
+    "xl/tables/table3.xml": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<table xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" mc:Ignorable=\"xr xr3\" xmlns:xr=\"http://schemas.microsoft.com/office/spreadsheetml/2014/revision\" xmlns:xr3=\"http://schemas.microsoft.com/office/spreadsheetml/2016/revision3\" id=\"3\" xr:uid=\"{98742E48-9014-42D7-9FBF-5C428686263D}\" name=\"QE_dark\" displayName=\"QE_dark\" ref=\"B2:E7\" totalsRowShown=\"0\"><autoFilter ref=\"B2:E7\" xr:uid=\"{98742E48-9014-42D7-9FBF-5C428686263D}\"/><tableColumns count=\"4\"><tableColumn id=\"1\" xr3:uid=\"{7A41379E-D9B6-4DA0-B5FA-61459803098A}\" name=\"Group\"/><tableColumn id=\"2\" xr3:uid=\"{59EB852C-1BD6-4CF9-9E22-DD1699D705E0}\" name=\"Amount\"/><tableColumn id=\"3\" xr3:uid=\"{4A726C42-E5E2-4DD2-A41C-4F74925263B2}\" name=\"Code\" dataDxfId=\"5\"/><tableColumn id=\"4\" xr3:uid=\"{BDF20DB5-8A84-4205-93AC-AD3310519CDD}\" name=\"Label\"/></tableColumns><tableStyleInfo name=\"TableStyleDark1\" showFirstColumn=\"0\" showLastColumn=\"0\" showRowStripes=\"1\" showColumnStripes=\"0\"/></table>",
+    "xl/tables/table7.xml": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<table xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" mc:Ignorable=\"xr xr3\" xmlns:xr=\"http://schemas.microsoft.com/office/spreadsheetml/2014/revision\" xmlns:xr3=\"http://schemas.microsoft.com/office/spreadsheetml/2016/revision3\" id=\"7\" xr:uid=\"{B0D778DE-22D5-4A16-B22F-B53B7D56065B}\" name=\"QE_filtered\" displayName=\"QE_filtered\" ref=\"B2:E7\" totalsRowShown=\"0\"><autoFilter ref=\"B2:E7\" xr:uid=\"{B0D778DE-22D5-4A16-B22F-B53B7D56065B}\"><filterColumn colId=\"0\"><filters><filter val=\"A\"/></filters></filterColumn></autoFilter><tableColumns count=\"4\"><tableColumn id=\"1\" xr3:uid=\"{9CBAB5C0-320A-4473-A3E1-9AEE7EC9C85E}\" name=\"Group\"/><tableColumn id=\"2\" xr3:uid=\"{F612925C-75BC-4F39-9F95-0C2B57C49939}\" name=\"Amount\"/><tableColumn id=\"3\" xr3:uid=\"{E47585AC-17C3-483B-AA8F-3138FCFF1E38}\" name=\"Code\" dataDxfId=\"1\"/><tableColumn id=\"4\" xr3:uid=\"{A6434E25-4053-45CE-9C79-FAA77E9FC835}\" name=\"Label\"/></tableColumns><tableStyleInfo name=\"TableStyleDark1\" showFirstColumn=\"0\" showLastColumn=\"0\" showRowStripes=\"1\" showColumnStripes=\"0\"/></table>",
+    "xl/tables/table8.xml": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<table xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" mc:Ignorable=\"xr xr3\" xmlns:xr=\"http://schemas.microsoft.com/office/spreadsheetml/2014/revision\" xmlns:xr3=\"http://schemas.microsoft.com/office/spreadsheetml/2016/revision3\" id=\"8\" xr:uid=\"{59AE3AC9-152B-457D-965E-EEFA2E4A1073}\" name=\"QE_totals\" displayName=\"QE_totals\" ref=\"B2:E8\" totalsRowCount=\"1\"><autoFilter ref=\"B2:E7\" xr:uid=\"{59AE3AC9-152B-457D-965E-EEFA2E4A1073}\"/><tableColumns count=\"4\"><tableColumn id=\"1\" xr3:uid=\"{87E8F658-6A92-4218-985C-E8CCB0D2911A}\" name=\"Group\" totalsRowLabel=\"Total\"/><tableColumn id=\"2\" xr3:uid=\"{A534396A-B58B-432F-8AA4-E4696002B60A}\" name=\"Amount\" totalsRowLabel=\"150\"/><tableColumn id=\"3\" xr3:uid=\"{B24D44C0-7C6B-4AA8-8C20-ED171BBF334C}\" name=\"Code\" dataDxfId=\"0\"/><tableColumn id=\"4\" xr3:uid=\"{C18DA9BB-6CA2-46E5-ABCD-CF21F05E4C2D}\" name=\"Label\"/></tableColumns><tableStyleInfo name=\"TableStyleMedium9\" showFirstColumn=\"0\" showLastColumn=\"0\" showRowStripes=\"1\" showColumnStripes=\"0\"/></table>",
+    "docProps/core.xml": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<cp:coreProperties xmlns:cp=\"http://schemas.openxmlformats.org/package/2006/metadata/core-properties\" xmlns:dc=\"http://purl.org/dc/elements/1.1/\" xmlns:dcterms=\"http://purl.org/dc/terms/\" xmlns:dcmitype=\"http://purl.org/dc/dcmitype/\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"><dc:creator>Carlos Rain</dc:creator><cp:lastModifiedBy>Carlos Rain</cp:lastModifiedBy><dcterms:created xsi:type=\"dcterms:W3CDTF\">2026-10-30T16:53:30Z</dcterms:created><dcterms:modified xsi:type=\"dcterms:W3CDTF\">2026-10-30T16:53:32Z</dcterms:modified></cp:coreProperties>",
+    "docProps/app.xml": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<Properties xmlns=\"http://schemas.openxmlformats.org/officeDocument/2006/extended-properties\" xmlns:vt=\"http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes\"><Application>Microsoft Excel</Application><DocSecurity>0</DocSecurity><ScaleCrop>false</ScaleCrop><HeadingPairs><vt:vector size=\"2\" baseType=\"variant\"><vt:variant><vt:lpstr>工作表</vt:lpstr></vt:variant><vt:variant><vt:i4>8</vt:i4></vt:variant></vt:vector></HeadingPairs><TitlesOfParts><vt:vector size=\"8\" baseType=\"lpstr\"><vt:lpstr>light</vt:lpstr><vt:lpstr>medium</vt:lpstr><vt:lpstr>dark</vt:lpstr><vt:lpstr>bands</vt:lpstr><vt:lpstr>noheader</vt:lpstr><vt:lpstr>nofilter</vt:lpstr><vt:lpstr>filtered</vt:lpstr><vt:lpstr>totals</vt:lpstr></vt:vector></TitlesOfParts><Company></Company><LinksUpToDate>false</LinksUpToDate><SharedDoc>false</SharedDoc><HyperlinksChanged>false</HyperlinksChanged><AppVersion>16.0300</AppVersion></Properties>",
+    "xl/tables/table4.xml": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<table xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" mc:Ignorable=\"xr xr3\" xmlns:xr=\"http://schemas.microsoft.com/office/spreadsheetml/2014/revision\" xmlns:xr3=\"http://schemas.microsoft.com/office/spreadsheetml/2016/revision3\" id=\"4\" xr:uid=\"{5F3F36E1-7DD7-45AD-88B9-96455702741D}\" name=\"QE_bands\" displayName=\"QE_bands\" ref=\"B2:E7\" totalsRowShown=\"0\"><autoFilter ref=\"B2:E7\" xr:uid=\"{5F3F36E1-7DD7-45AD-88B9-96455702741D}\"/><tableColumns count=\"4\"><tableColumn id=\"1\" xr3:uid=\"{A274C845-7B8A-4661-A1F1-DAE1FE66FDAE}\" name=\"Group\"/><tableColumn id=\"2\" xr3:uid=\"{884021DE-612F-4294-991D-DE32AB702CCB}\" name=\"Amount\"/><tableColumn id=\"3\" xr3:uid=\"{5032A3DA-B6F5-498D-AB78-62718453063D}\" name=\"Code\" dataDxfId=\"4\"/><tableColumn id=\"4\" xr3:uid=\"{A25274E9-4B4C-48A0-AD5E-97A414E07D2D}\" name=\"Label\"/></tableColumns><tableStyleInfo name=\"TableStyleMedium9\" showFirstColumn=\"1\" showLastColumn=\"1\" showRowStripes=\"1\" showColumnStripes=\"1\"/></table>",
+    "xl/tables/table6.xml": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<table xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" mc:Ignorable=\"xr xr3\" xmlns:xr=\"http://schemas.microsoft.com/office/spreadsheetml/2014/revision\" xmlns:xr3=\"http://schemas.microsoft.com/office/spreadsheetml/2016/revision3\" id=\"6\" xr:uid=\"{693AAB18-3FD1-4618-9ADA-E1C1BB20DAB7}\" name=\"QE_nofilter\" displayName=\"QE_nofilter\" ref=\"B2:E7\" totalsRowShown=\"0\"><tableColumns count=\"4\"><tableColumn id=\"1\" xr3:uid=\"{B3F9B86F-F70D-45AA-9C42-D266ECA0E098}\" name=\"Group\"/><tableColumn id=\"2\" xr3:uid=\"{2C1298FB-3888-4227-B754-6AFFB93812E2}\" name=\"Amount\"/><tableColumn id=\"3\" xr3:uid=\"{CD404DDD-8994-4323-ABAE-04712132A086}\" name=\"Code\" dataDxfId=\"2\"/><tableColumn id=\"4\" xr3:uid=\"{C1C055CF-6FB0-4289-8871-4169D3403995}\" name=\"Label\"/></tableColumns><tableStyleInfo name=\"TableStyleMedium2\" showFirstColumn=\"0\" showLastColumn=\"0\" showRowStripes=\"1\" showColumnStripes=\"0\"/></table>",
+    "xl/tables/table5.xml": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<table xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" mc:Ignorable=\"xr xr3\" xmlns:xr=\"http://schemas.microsoft.com/office/spreadsheetml/2014/revision\" xmlns:xr3=\"http://schemas.microsoft.com/office/spreadsheetml/2016/revision3\" id=\"5\" xr:uid=\"{4A616839-4D33-4649-9EB9-A4E33DAABA15}\" name=\"QE_noheader\" displayName=\"QE_noheader\" ref=\"B3:E7\" headerRowCount=\"0\" totalsRowShown=\"0\"><tableColumns count=\"4\"><tableColumn id=\"1\" xr3:uid=\"{A2DDC04E-7D05-4255-A05C-265F2B3A1E4E}\" name=\"Group\"/><tableColumn id=\"2\" xr3:uid=\"{C71CDE6C-5569-4242-BFA3-EAF2D8A2C79C}\" name=\"Amount\"/><tableColumn id=\"3\" xr3:uid=\"{D5F4FA59-A720-46C8-BD19-ADA7E5191C79}\" name=\"Code\" dataDxfId=\"3\"/><tableColumn id=\"4\" xr3:uid=\"{28B31D5A-B22E-4683-95D7-7CB703C307A2}\" name=\"Label\"/></tableColumns><tableStyleInfo name=\"TableStyleLight1\" showFirstColumn=\"0\" showLastColumn=\"0\" showRowStripes=\"1\" showColumnStripes=\"0\"/></table>"
+  },
+  "OracleSha256": "722C583B33CCE3349947947A7E30314221857E3363129AF034E640858674967C"
+}

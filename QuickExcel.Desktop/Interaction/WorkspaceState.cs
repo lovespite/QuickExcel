@@ -12,15 +12,33 @@ internal sealed class SheetViewState
     private GridRange? _legacyRange;
     private WorksheetData? _persistedData;
     private bool _persistedFilter;
-    public void Synchronize(WorkbookSnapshot snapshot, SheetId id)
+    private SheetId _sheetId;
+    public int? TableId { get; private set; }
+    public void Synchronize(WorkbookSnapshot snapshot, SheetId id, CellPosition? current = null)
     {
         var data = snapshot.GetSheet(id).Data;
-        if (ReferenceEquals(_persistedData, data)) return;
-        _persistedData = data; _persistedFilter = data.Filter is not null;
+        var table = current is { } position ? data.Tables.FirstOrDefault(t => t.Range.Contains(position.Row, position.Column)) : null;
+        if (ReferenceEquals(_persistedData, data) && TableId == table?.Id) return;
+        _sheetId = id; TableId = table?.Id;
+        _persistedData = data; _persistedFilter = data.AllFilters.Any();
         _legacyRange = null; _evaluatedSnapshot = null; FilterError = null; FilterUsesSourceCaches = false; _hidden = [];
-        Region = data.Filter is { } filter ? new(id.Value, id, new(filter.Range.Top, filter.Range.Left, filter.Range.Bottom, filter.Range.Right)) : null;
-        Filters = data.Filter?.Columns.ToImmutableDictionary(p => p.Key, p => PersistentFiltering.Restore(p.Value)) ?? ImmutableDictionary<int, ColumnFilter>.Empty;
-        SortKeys = data.Sort?.Keys.ToArray() ?? [];
+        var filter = table is null ? data.Filter : table.Filter;
+        Region = filter is not null ? new(id.Value, id, new(filter.Range.Top, filter.Range.Left, filter.Range.Bottom, filter.Range.Right)) : null;
+        Filters = filter?.Columns.ToImmutableDictionary(p => p.Key, p => PersistentFiltering.Restore(p.Value)) ?? ImmutableDictionary<int, ColumnFilter>.Empty;
+        SortKeys = (table is null ? data.Sort : table.Sort)?.Keys.ToArray() ?? [];
+    }
+
+    public IEnumerable<(GridRange Range, WorksheetAutoFilter Filter, WorksheetSortState? Sort)> HeaderRegions()
+    {
+        if (_persistedData is null) yield break;
+        if (_persistedData.Filter is { } filter) yield return (new(filter.Range.Top, filter.Range.Left, filter.Range.Bottom, filter.Range.Right), filter, _persistedData.Sort);
+        foreach (var table in _persistedData.Tables)
+            if (table.Filter is { } tableFilter) yield return (new(tableFilter.Range.Top, tableFilter.Range.Left, tableFilter.Range.Bottom, tableFilter.Range.Right), tableFilter, table.Sort);
+    }
+    public static string HeaderMarker(int column, WorksheetAutoFilter filter, WorksheetSortState? sort)
+    {
+        var key = sort?.Keys.FirstOrDefault(k => k.Column == column); var index = key is null ? -1 : sort!.Keys.IndexOf(key);
+        return (filter.Columns.ContainsKey(column) ? "●" : "") + (key is null ? "▾" : (key.Descending ? "↓" : "↑") + (index + 1));
     }
 
     private WorkbookSnapshot? _evaluatedSnapshot;
@@ -63,13 +81,13 @@ internal sealed class SheetViewState
     public void ClearConditions() { Filters = Filters.Clear(); _hidden = []; _evaluatedSnapshot = null; FilterError = null; }
     public void RefreshFilter(WorkbookSnapshot snapshot)
     {
-        if (Region is null || ReferenceEquals(_evaluatedSnapshot, snapshot)) return;
+        if (!_persistedFilter && Region is null || ReferenceEquals(_evaluatedSnapshot, snapshot)) return;
         try
         {
             var allowSourceCaches = WorksheetFilterEngine.CanUseSourceCaches(snapshot);
-            _hidden = _persistedFilter ? WorksheetFilterEngine.Evaluate(snapshot, Region.SheetId, allowSourceCaches) : DataFilterEngine.Evaluate(snapshot, Region, Filters);
-            FilterUsesSourceCaches = _persistedFilter && allowSourceCaches && snapshot.GetSheet(Region.SheetId).Cells.Any(p =>
-                p.Key.Row > Region.Range.Top && p.Key.Row <= Region.Range.Bottom && Filters.ContainsKey(p.Key.Column) && p.Value.Content.Kind == CellContentKind.Formula &&
+            _hidden = _persistedFilter ? WorksheetFilterEngine.Evaluate(snapshot, _sheetId, allowSourceCaches) : DataFilterEngine.Evaluate(snapshot, Region!, Filters);
+            FilterUsesSourceCaches = _persistedFilter && allowSourceCaches && snapshot.GetSheet(_sheetId).Cells.Any(p =>
+                _persistedData!.AllFilters.Any(f => p.Key.Row > f.Range.Top && p.Key.Row <= f.Range.Bottom && f.Columns.ContainsKey(p.Key.Column)) && p.Value.Content.Kind == CellContentKind.Formula &&
                 (p.Value.Calculation?.InputRevision != snapshot.Revision || p.Value.Calculation.State is not (CalculationState.Fresh or CalculationState.Error)));
             FilterError = null;
         }
@@ -78,6 +96,7 @@ internal sealed class SheetViewState
     }
     public bool IsFilteredOut(WorkbookSnapshot snapshot, int sheetIndex, int row)
     {
+        if (_persistedFilter) { if (snapshot.Sheets[sheetIndex].Id != _sheetId) return false; RefreshFilter(snapshot); return _hidden.Contains(row); }
         if (Region is not null)
         {
             if (snapshot.Sheets[sheetIndex].Id != Region.SheetId) return false;
@@ -104,9 +123,9 @@ internal sealed class SheetViewState
     public Func<int, bool> CaptureRowFilter(WorkbookSnapshot snapshot, int sheetIndex)
     {
         RequireCurrentFilter(snapshot);
-        if (Region is not null)
+        if (_persistedFilter || Region is not null)
         {
-            var hidden = _hidden; var matching = Region.SheetId == snapshot.Sheets[sheetIndex].Id;
+            var hidden = _hidden; var matching = (_persistedFilter ? _sheetId : Region!.SheetId) == snapshot.Sheets[sheetIndex].Id;
             return row => matching && hidden.Contains(row);
         }
         var range = _legacyRange; var column = FilterColumn; var text = FilterText; var sheet = snapshot.Sheets[sheetIndex];

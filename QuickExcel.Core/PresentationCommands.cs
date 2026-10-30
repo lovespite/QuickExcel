@@ -28,6 +28,11 @@ public sealed class SortRangeCommand : DocumentCommand
         var sheet = snapshot.GetSheet(sheetId);
         StructureEdits.RequireSimpleStructure(sheet);
         var dataFirst = first.Row + (_descriptor.HasHeader ? 1 : 0);
+        var affectedTables = sheet.Data.Tables.Where(t => first.Row <= t.Range.Bottom && last.Row >= t.Range.Top && first.Column <= t.Range.Right && last.Column >= t.Range.Left).ToArray();
+        var table = affectedTables.SingleOrDefault();
+        if (table is not null && _descriptor.Keys.Any(k => k.Basis != SortBasis.Value)) throw new NotSupportedException("Table 的条纹/差异颜色排序暂不支持重应用；请选择按值排序。");
+        if (table is not null && (first.Column != table.Range.Left || last.Column != table.Range.Right || dataFirst != table.Range.Top + (table.HeaderRow ? 1 : 0) || last.Row != table.Range.Bottom - (table.TotalsRow ? 1 : 0)))
+            throw new InvalidOperationException("表排序必须覆盖完整数据区，保留表头和汇总行；本次没有修改。");
         (CellValue Value, StyleDefinition Style) Key(int row, SortKey key)
         {
             var cell = sheet.GetCell(row, key.Column);
@@ -48,7 +53,8 @@ public sealed class SortRangeCommand : DocumentCommand
             }
             return a.Row.CompareTo(b.Row);
         })).Select(record => record.Row).ToArray();
-        var dataState = sheet.Data with { Sort = dataFirst <= last.Row ? new WorksheetSortState(new(dataFirst, first.Column, last.Row, last.Column), _descriptor.Keys) : null };
+        var sortState = dataFirst <= last.Row ? new WorksheetSortState(new(dataFirst, first.Column, last.Row, last.Column), _descriptor.Keys) : null;
+        var dataState = table is null ? sheet.Data with { Sort = sortState } : sheet.Data with { Tables = sheet.Data.Tables.Replace(table, table.WithSort(sortState)) };
         if (order.Select((row, index) => row == dataFirst + index).All(v => v))
             return sheet.Data.ContentEquals(dataState) ? new(snapshot, [], false) :
                 new(snapshot.WithSheets(snapshot.Sheets.Select(s => s.Id == sheetId ? s.WithData(dataState) : s)), [], false) { CalculationUnchanged = true };

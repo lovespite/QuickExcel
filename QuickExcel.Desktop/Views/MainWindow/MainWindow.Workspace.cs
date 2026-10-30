@@ -41,11 +41,12 @@ public partial class MainWindow
     {
         var view = CurrentView;
         view.RefreshFilter(_document.Snapshot);
-        ViewStatus.Text = (view.FilterRange is null ? "" : view.Region is null ? $"筛选 {ColumnName(view.FilterColumn)} · {view.FilterText}  " :
+        var table = _document.Snapshot.Sheets[_sheetIndex].Data.Tables.FirstOrDefault(t => t.Id == view.TableId);
+        ViewStatus.Text = (table is null ? "" : $"表 {table.Name} · {table.Range}{(table.TotalsRow ? " · 汇总行" : "")}  ") + (view.FilterRange is null ? "" : view.Region is null ? $"筛选 {ColumnName(view.FilterColumn)} · {view.FilterText}  " :
             view.FilterError is not null ? $"筛选待更新：{view.FilterError}（暂显示全部行）  " : $"筛选区域 · {view.Filters.Count} 列条件{(view.FilterUsesSourceCaches ? " · 来源缓存" : "")}  ") +
             (view.FrozenRows + view.FrozenColumns == 0 ? "" : $"冻结 {view.FrozenRows} 行 / {view.FrozenColumns} 列");
         ViewStatus.ToolTip = "筛选首行为表头；筛选条件、排序和冻结随工作簿保存；手动隐藏与筛选隐藏分别管理。\n外部文件若未记录隐藏来源，筛选失败行的手动隐藏历史不能恢复；详情见兼容性报告。";
-        ViewStatus.Visibility = view.FilterRange is not null || view.FrozenRows + view.FrozenColumns > 0 ? Visibility.Visible : Visibility.Collapsed;
+        ViewStatus.Visibility = table is not null || view.FilterRange is not null || view.FrozenRows + view.FrozenColumns > 0 ? Visibility.Visible : Visibility.Collapsed;
     }
     private SheetViewState CurrentView
     {
@@ -53,7 +54,7 @@ public partial class MainWindow
         {
             var id = _document.Snapshot.Sheets[_sheetIndex].Id;
             if (!_sheetViews.TryGetValue(id, out var view)) _sheetViews[id] = view = new();
-            view.Synchronize(_document.Snapshot, id);
+            view.Synchronize(_document.Snapshot, id, new(_selectedRow, _selectedColumn));
             var stored = _document.Snapshot.GetSheet(id).View;
             view.FrozenRows = stored.FrozenRows <= 10 ? stored.FrozenRows : 0;
             view.FrozenColumns = stored.FrozenColumns < 256 ? stored.FrozenColumns : 0;
@@ -225,14 +226,31 @@ public partial class MainWindow
         try
         {
             var range = SelectedRange();
-            if (range.Rows >= 2) EstablishDataRegion(range);
+            if (CurrentView.TableId is { } tableId)
+            {
+                var sheet = _document.Snapshot.Sheets[_sheetIndex]; var table = sheet.Data.Tables.Single(t => t.Id == tableId);
+                if (!table.HeaderRow) throw new InvalidOperationException("此表不显示表头，不能在当前范围建立筛选。");
+                if (table.Filter is null) ExecuteWorkbookCommand(new SetTableFilterCommand(sheet.Id, tableId, new(table.Range with { Bottom = table.Range.Bottom - (table.TotalsRow ? 1 : 0) })));
+                await OpenHeaderFilterAsync(_selectedColumn, sender as FrameworkElement ?? SheetGrid);
+            }
+            else if (range.Rows >= 2) EstablishDataRegion(range);
             else if (CurrentView.Region is null) throw new ArgumentException("请选择含表头和数据的矩形，再建立筛选区域。");
             else await OpenHeaderFilterAsync(_selectedColumn, sender as FrameworkElement ?? SheetGrid);
         }
         catch (Exception ex) { ReportEditFailure(ex); }
     }
     private void ClearFilter_Click(object sender, RoutedEventArgs e)
-    { if (_busy || !CommitEditors()) return; if (ExecuteWorkbookCommand(new SetAutoFilterCommand(_document.Snapshot.Sheets[_sheetIndex].Id, null))) { RefreshSheet(); GridSurface.Select(new(_selectedRow, _selectedColumn)); } }
+    {
+        if (_busy || !CommitEditors()) return;
+        var sheet = _document.Snapshot.Sheets[_sheetIndex]; DocumentCommand command;
+        if (CurrentView.TableId is { } id)
+        {
+            var table = sheet.Data.Tables.Single(t => t.Id == id); if (table.Filter is null) return;
+            command = new SetTableFilterCommand(sheet.Id, id, new(table.Filter.Range));
+        }
+        else command = new SetAutoFilterCommand(sheet.Id, null);
+        if (ExecuteWorkbookCommand(command)) { RefreshSheet(); GridSurface.Select(new(_selectedRow, _selectedColumn)); }
+    }
 
     private void Freeze_Click(object sender, RoutedEventArgs e)
     {

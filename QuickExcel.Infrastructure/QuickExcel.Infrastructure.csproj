@@ -6,6 +6,8 @@
     <Version>0.2.0</Version>
   </PropertyGroup>
   <ItemGroup>
+    <EmbeddedResource Include="Storage/BuiltinTableStyles.xml" />
+    <EmbeddedResource Include="Storage/DefaultTableTheme.xml" />
     <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="10.0.0" />
     <InternalsVisibleTo Include="QuickExcel.Core.Test" />
     <InternalsVisibleTo Include="SandboxHostFixture" />

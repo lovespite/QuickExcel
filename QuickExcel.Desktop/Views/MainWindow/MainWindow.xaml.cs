@@ -82,7 +82,7 @@ public partial class MainWindow : Window
             _scriptTrust = new(Path.Combine(folder, "trusted-script-certificates.json"));
             args = [];
         }
-        if (args.Length > 0 && args[0] is "--smoke-test" or "--interaction-smoke" or "--workspace-smoke" or "--product-smoke" or "--ribbon-smoke" or "--signature-smoke" or "--grid-benchmark" or "--resize-benchmark" or "--data-operations-smoke" or "--horizontal-scroll-benchmark" or "--fast-grid-benchmark" or "--fast-grid-drag-benchmark" or "--grid-integration-smoke" or "--xlsx-rendering-smoke" or "--fill-smoke" or "--formula-entry-smoke" or "--sheet-management-smoke" or "--format-efficiency-smoke")
+        if (args.Length > 0 && args[0] is "--smoke-test" or "--interaction-smoke" or "--workspace-smoke" or "--product-smoke" or "--ribbon-smoke" or "--signature-smoke" or "--grid-benchmark" or "--resize-benchmark" or "--data-operations-smoke" or "--horizontal-scroll-benchmark" or "--fast-grid-benchmark" or "--fast-grid-drag-benchmark" or "--grid-integration-smoke" or "--xlsx-rendering-smoke" or "--fill-smoke" or "--formula-entry-smoke" or "--sheet-management-smoke" or "--format-efficiency-smoke" or "--table-basics-smoke")
         {
             _smokeMode = true;
             _recentFiles = new(Path.Combine(args.Length > 1 ? args[1] : AppContext.BaseDirectory, "recent-files.json"));
@@ -92,7 +92,8 @@ public partial class MainWindow : Window
             try
             {
                 var folder = args.Length > 1 ? args[1] : Path.Combine(AppContext.BaseDirectory, "smoke");
-                if (args[0] == "--format-efficiency-smoke") await RunFormatEfficiencySmokeAsync(folder);
+                if (args[0] == "--table-basics-smoke") await RunTableBasicsSmokeAsync(folder, args.ElementAtOrDefault(2));
+                else if (args[0] == "--format-efficiency-smoke") await RunFormatEfficiencySmokeAsync(folder);
                 else if (args[0] == "--sheet-management-smoke") await RunSheetManagementSmokeAsync(folder);
                 else if (args[0] == "--formula-entry-smoke") await RunFormulaEditingSmokeAsync(folder);
                 else if (args[0] == "--fill-smoke") await RunFillSmokeOnlyAsync(folder);
@@ -203,6 +204,8 @@ public partial class MainWindow : Window
             var lastColumn = Math.Max(sheet.UsedColumnCount, Math.Max(sheet.Images.Select(i => i.ColumnIndex + i.ColumnSpan).DefaultIfEmpty().Max(), ranges.Select(m => m.Right + 1).DefaultIfEmpty().Max()));
             lastRow = Math.Max(lastRow, Math.Max(sheet.Data.Filter?.Range.Bottom + 1 ?? 0, sheet.Data.Sort?.Range.Bottom + 1 ?? 0));
             lastColumn = Math.Max(lastColumn, Math.Max(sheet.Data.Filter?.Range.Right + 1 ?? 0, sheet.Data.Sort?.Range.Right + 1 ?? 0));
+            lastRow = Math.Max(lastRow, sheet.Data.Tables.Select(t => t.Range.Bottom + 1).DefaultIfEmpty().Max());
+            lastColumn = Math.Max(lastColumn, sheet.Data.Tables.Select(t => t.Range.Right + 1).DefaultIfEmpty().Max());
             _rowCount = Math.Clamp(Math.Max(_rowCount, Math.Max(lastRow + 20, Math.Max(sheet.View.ActiveCell.Row, sheet.View.PaneTopLeftCell.Row) + 20)), 100, WorkbookLimits.MaxRows);
             _columnCount = Math.Clamp(Math.Max(_columnCount, Math.Max(lastColumn + 2, Math.Max(sheet.View.ActiveCell.Column, sheet.View.PaneTopLeftCell.Column) + 2)), 12, 256);
             _refreshing = true;
@@ -390,6 +393,7 @@ public partial class MainWindow : Window
             return;
         }
         UpdateFormulaBar();
+        if (!_document.Snapshot.Sheets[_sheetIndex].Data.Tables.IsEmpty) RefreshWorkspaceView();
         QueueSelectionStatistics();
         QueueRecalculation();
     }

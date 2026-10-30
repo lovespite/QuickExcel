@@ -144,13 +144,14 @@ internal static class XlsxFiltering
                 metadata.Attributes().Any(a => !a.IsNamespaceDeclaration && (a.Name.NamespaceName.Length != 0 || a.Name.LocalName is not ("filtered" or "manual" or "generated"))))
                 throw new InvalidDataException("筛选行扩展字段无效。");
         }
-        if (sheet.Data.Filter is null) return sheet;
+        if (!sheet.Data.AllFilters.Any()) return sheet;
+        WorksheetSnapshot WithoutFilters() => sheet.WithData(sheet.Data with { Filter = null, Tables = sheet.Data.Tables.Select(t => t.WithFilter(null)).ToImmutableArray() });
         ImmutableHashSet<int> filtered;
         try { filtered = WorksheetFilterEngine.Evaluate(sheet, styles, system, 0, allowSourceCaches: true); }
         catch (InvalidOperationException ex)
         {
-            package.Loss(ex.Message + " 筛选隐藏来源无法确认，保留源行可见性。", "worksheet/autoFilter", path, range: sheet.Data.Filter.Range.ToString());
-            return sheet.WithData(sheet.Data with { Filter = null });
+            package.Loss(ex.Message + " 筛选隐藏来源无法确认，保留源行可见性。", "worksheet/autoFilter", path, range: string.Join(' ', sheet.Data.AllFilters.Select(f => f.Range.ToString())));
+            return WithoutFilters();
         }
         var recorded = Rows((string?)metadata?.Attribute("filtered")); var manual = Rows((string?)metadata?.Attribute("manual")); var generated = Rows((string?)metadata?.Attribute("generated"));
         var trusted = metadata is not null && recorded.SetEquals(filtered) && filtered.All(r => sheet.Rows.GetValueOrDefault(r)?.Hidden == true) &&
@@ -161,8 +162,8 @@ internal static class XlsxFiltering
         {
             if (!rows.TryGetValue(row, out var old) || !old.Hidden)
             {
-                package.Loss("来源筛选条件与保存的隐藏行不一致，保留原包和源行状态；请在 Excel 重新应用筛选。", "worksheet/autoFilter-stale", path, range: sheet.Data.Filter.Range.ToString());
-                return sheet.WithData(sheet.Data with { Filter = null });
+                package.Loss("来源筛选条件与保存的隐藏行不一致，保留原包和源行状态；请在 Excel 重新应用筛选。", "worksheet/autoFilter-stale", path, range: string.Join(' ', sheet.Data.AllFilters.Select(f => f.Range.ToString())));
+                return WithoutFilters();
             }
             var next = old with { Hidden = trusted && manual.Contains(row) };
             if (trusted ? generated.Contains(row) : next == new RowMetadata()) rows.Remove(row); else rows[row] = next;
@@ -221,7 +222,7 @@ internal static class XlsxFiltering
 
     public static XElement? WriteHidden(WorksheetSnapshot sheet, ImmutableHashSet<int> filtered)
     {
-        if (sheet.Data.Filter is null) return null;
+        if (!sheet.Data.AllFilters.Any()) return null;
         string EncodeRows(IEnumerable<int> rows) => string.Join(',', rows.Order().Select(r => r + 1));
         return new XElement(Main + "extLst", new XElement(Main + "ext", new XAttribute("uri", Extension), new XElement(Quick + "rows",
             new XAttribute("filtered", EncodeRows(filtered)), new XAttribute("manual", EncodeRows(sheet.Rows.Where(p => p.Value.Hidden).Select(p => p.Key))),
