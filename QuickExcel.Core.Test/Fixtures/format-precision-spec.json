@@ -1,0 +1,1044 @@
+{
+  "Cases": [
+    {
+      "Id": "precision-1",
+      "Address": "A1",
+      "Kind": "Number",
+      "Value": 1234.567,
+      "Format": "General",
+      "Steps": [
+        1
+      ]
+    },
+    {
+      "Id": "precision-2",
+      "Address": "A2",
+      "Kind": "Number",
+      "Value": 1234.567,
+      "Format": "General",
+      "Steps": [
+        -1
+      ]
+    },
+    {
+      "Id": "precision-3",
+      "Address": "A3",
+      "Kind": "Number",
+      "Value": -12.3,
+      "Format": "General",
+      "Steps": [
+        1
+      ]
+    },
+    {
+      "Id": "precision-4",
+      "Address": "A4",
+      "Kind": "Number",
+      "Value": -12.3,
+      "Format": "General",
+      "Steps": [
+        -1
+      ]
+    },
+    {
+      "Id": "precision-5",
+      "Address": "A5",
+      "Kind": "Number",
+      "Value": 0,
+      "Format": "General",
+      "Steps": [
+        1
+      ]
+    },
+    {
+      "Id": "precision-6",
+      "Address": "A6",
+      "Kind": "Number",
+      "Value": 0,
+      "Format": "General",
+      "Steps": [
+        -1
+      ]
+    },
+    {
+      "Id": "precision-7",
+      "Address": "A7",
+      "Kind": "Number",
+      "Value": 1234.567,
+      "Format": "0",
+      "Steps": [
+        1
+      ]
+    },
+    {
+      "Id": "precision-8",
+      "Address": "A8",
+      "Kind": "Number",
+      "Value": 1234.567,
+      "Format": "0",
+      "Steps": [
+        -1
+      ]
+    },
+    {
+      "Id": "precision-9",
+      "Address": "A9",
+      "Kind": "Number",
+      "Value": -12.3,
+      "Format": "0",
+      "Steps": [
+        1
+      ]
+    },
+    {
+      "Id": "precision-10",
+      "Address": "A10",
+      "Kind": "Number",
+      "Value": -12.3,
+      "Format": "0",
+      "Steps": [
+        -1
+      ]
+    },
+    {
+      "Id": "precision-11",
+      "Address": "A11",
+      "Kind": "Number",
+      "Value": 0,
+      "Format": "0",
+      "Steps": [
+        1
+      ]
+    },
+    {
+      "Id": "precision-12",
+      "Address": "A12",
+      "Kind": "Number",
+      "Value": 0,
+      "Format": "0",
+      "Steps": [
+        -1
+      ]
+    },
+    {
+      "Id": "precision-13",
+      "Address": "A13",
+      "Kind": "Number",
+      "Value": 1234.567,
+      "Format": "0.00",
+      "Steps": [
+        1
+      ]
+    },
+    {
+      "Id": "precision-14",
+      "Address": "A14",
+      "Kind": "Number",
+      "Value": 1234.567,
+      "Format": "0.00",
+      "Steps": [
+        -1
+      ]
+    },
+    {
+      "Id": "precision-15",
+      "Address": "A15",
+      "Kind": "Number",
+      "Value": -12.3,
+      "Format": "0.00",
+      "Steps": [
+        1
+      ]
+    },
+    {
+      "Id": "precision-16",
+      "Address": "A16",
+      "Kind": "Number",
+      "Value": -12.3,
+      "Format": "0.00",
+      "Steps": [
+        -1
+      ]
+    },
+    {
+      "Id": "precision-17",
+      "Address": "A17",
+      "Kind": "Number",
+      "Value": 0,
+      "Format": "0.00",
+      "Steps": [
+        1
+      ]
+    },
+    {
+      "Id": "precision-18",
+      "Address": "A18",
+      "Kind": "Number",
+      "Value": 0,
+      "Format": "0.00",
+      "Steps": [
+        -1
+      ]
+    },
+    {
+      "Id": "precision-19",
+      "Address": "A19",
+      "Kind": "Number",
+      "Value": 1234.567,
+      "Format": "#,##0.00",
+      "Steps": [
+        1
+      ]
+    },
+    {
+      "Id": "precision-20",
+      "Address": "A20",
+      "Kind": "Number",
+      "Value": 1234.567,
+      "Format": "#,##0.00",
+      "Steps": [
+        -1
+      ]
+    },
+    {
+      "Id": "precision-21",
+      "Address": "A21",
+      "Kind": "Number",
+      "Value": -12.3,
+      "Format": "#,##0.00",
+      "Steps": [
+        1
+      ]
+    },
+    {
+      "Id": "precision-22",
+      "Address": "A22",
+      "Kind": "Number",
+      "Value": -12.3,
+      "Format": "#,##0.00",
+      "Steps": [
+        -1
+      ]
+    },
+    {
+      "Id": "precision-23",
+      "Address": "A23",
+      "Kind": "Number",
+      "Value": 0,
+      "Format": "#,##0.00",
+      "Steps": [
+        1
+      ]
+    },
+    {
+      "Id": "precision-24",
+      "Address": "A24",
+      "Kind": "Number",
+      "Value": 0,
+      "Format": "#,##0.00",
+      "Steps": [
+        -1
+      ]
+    },
+    {
+      "Id": "precision-25",
+      "Address": "A25",
+      "Kind": "Number",
+      "Value": 1234.567,
+      "Format": "0.00%",
+      "Steps": [
+        1
+      ]
+    },
+    {
+      "Id": "precision-26",
+      "Address": "A26",
+      "Kind": "Number",
+      "Value": 1234.567,
+      "Format": "0.00%",
+      "Steps": [
+        -1
+      ]
+    },
+    {
+      "Id": "precision-27",
+      "Address": "A27",
+      "Kind": "Number",
+      "Value": -12.3,
+      "Format": "0.00%",
+      "Steps": [
+        1
+      ]
+    },
+    {
+      "Id": "precision-28",
+      "Address": "A28",
+      "Kind": "Number",
+      "Value": -12.3,
+      "Format": "0.00%",
+      "Steps": [
+        -1
+      ]
+    },
+    {
+      "Id": "precision-29",
+      "Address": "A29",
+      "Kind": "Number",
+      "Value": 0,
+      "Format": "0.00%",
+      "Steps": [
+        1
+      ]
+    },
+    {
+      "Id": "precision-30",
+      "Address": "A30",
+      "Kind": "Number",
+      "Value": 0,
+      "Format": "0.00%",
+      "Steps": [
+        -1
+      ]
+    },
+    {
+      "Id": "precision-31",
+      "Address": "A31",
+      "Kind": "Number",
+      "Value": 1234.567,
+      "Format": "\"¥\"#,##0.00;[Red](\"¥\"#,##0.00)",
+      "Steps": [
+        1
+      ]
+    },
+    {
+      "Id": "precision-32",
+      "Address": "A32",
+      "Kind": "Number",
+      "Value": 1234.567,
+      "Format": "\"¥\"#,##0.00;[Red](\"¥\"#,##0.00)",
+      "Steps": [
+        -1
+      ]
+    },
+    {
+      "Id": "precision-33",
+      "Address": "A33",
+      "Kind": "Number",
+      "Value": -12.3,
+      "Format": "\"¥\"#,##0.00;[Red](\"¥\"#,##0.00)",
+      "Steps": [
+        1
+      ]
+    },
+    {
+      "Id": "precision-34",
+      "Address": "A34",
+      "Kind": "Number",
+      "Value": -12.3,
+      "Format": "\"¥\"#,##0.00;[Red](\"¥\"#,##0.00)",
+      "Steps": [
+        -1
+      ]
+    },
+    {
+      "Id": "precision-35",
+      "Address": "A35",
+      "Kind": "Number",
+      "Value": 0,
+      "Format": "\"¥\"#,##0.00;[Red](\"¥\"#,##0.00)",
+      "Steps": [
+        1
+      ]
+    },
+    {
+      "Id": "precision-36",
+      "Address": "A36",
+      "Kind": "Number",
+      "Value": 0,
+      "Format": "\"¥\"#,##0.00;[Red](\"¥\"#,##0.00)",
+      "Steps": [
+        -1
+      ]
+    },
+    {
+      "Id": "precision-37",
+      "Address": "A37",
+      "Kind": "Number",
+      "Value": 1234.567,
+      "Format": "0.00E+00",
+      "Steps": [
+        1
+      ]
+    },
+    {
+      "Id": "precision-38",
+      "Address": "A38",
+      "Kind": "Number",
+      "Value": 1234.567,
+      "Format": "0.00E+00",
+      "Steps": [
+        -1
+      ]
+    },
+    {
+      "Id": "precision-39",
+      "Address": "A39",
+      "Kind": "Number",
+      "Value": -12.3,
+      "Format": "0.00E+00",
+      "Steps": [
+        1
+      ]
+    },
+    {
+      "Id": "precision-40",
+      "Address": "A40",
+      "Kind": "Number",
+      "Value": -12.3,
+      "Format": "0.00E+00",
+      "Steps": [
+        -1
+      ]
+    },
+    {
+      "Id": "precision-41",
+      "Address": "A41",
+      "Kind": "Number",
+      "Value": 0,
+      "Format": "0.00E+00",
+      "Steps": [
+        1
+      ]
+    },
+    {
+      "Id": "precision-42",
+      "Address": "A42",
+      "Kind": "Number",
+      "Value": 0,
+      "Format": "0.00E+00",
+      "Steps": [
+        -1
+      ]
+    },
+    {
+      "Id": "precision-43",
+      "Address": "A43",
+      "Kind": "Number",
+      "Value": 1234.567,
+      "Format": "##0.0E+0",
+      "Steps": [
+        1
+      ]
+    },
+    {
+      "Id": "precision-44",
+      "Address": "A44",
+      "Kind": "Number",
+      "Value": 1234.567,
+      "Format": "##0.0E+0",
+      "Steps": [
+        -1
+      ]
+    },
+    {
+      "Id": "precision-45",
+      "Address": "A45",
+      "Kind": "Number",
+      "Value": -12.3,
+      "Format": "##0.0E+0",
+      "Steps": [
+        1
+      ]
+    },
+    {
+      "Id": "precision-46",
+      "Address": "A46",
+      "Kind": "Number",
+      "Value": -12.3,
+      "Format": "##0.0E+0",
+      "Steps": [
+        -1
+      ]
+    },
+    {
+      "Id": "precision-47",
+      "Address": "A47",
+      "Kind": "Number",
+      "Value": 0,
+      "Format": "##0.0E+0",
+      "Steps": [
+        1
+      ]
+    },
+    {
+      "Id": "precision-48",
+      "Address": "A48",
+      "Kind": "Number",
+      "Value": 0,
+      "Format": "##0.0E+0",
+      "Steps": [
+        -1
+      ]
+    },
+    {
+      "Id": "precision-49",
+      "Address": "A49",
+      "Kind": "Number",
+      "Value": 1234.567,
+      "Format": "0.0,,\"M\"",
+      "Steps": [
+        1
+      ]
+    },
+    {
+      "Id": "precision-50",
+      "Address": "A50",
+      "Kind": "Number",
+      "Value": 1234.567,
+      "Format": "0.0,,\"M\"",
+      "Steps": [
+        -1
+      ]
+    },
+    {
+      "Id": "precision-51",
+      "Address": "A51",
+      "Kind": "Number",
+      "Value": -12.3,
+      "Format": "0.0,,\"M\"",
+      "Steps": [
+        1
+      ]
+    },
+    {
+      "Id": "precision-52",
+      "Address": "A52",
+      "Kind": "Number",
+      "Value": -12.3,
+      "Format": "0.0,,\"M\"",
+      "Steps": [
+        -1
+      ]
+    },
+    {
+      "Id": "precision-53",
+      "Address": "A53",
+      "Kind": "Number",
+      "Value": 0,
+      "Format": "0.0,,\"M\"",
+      "Steps": [
+        1
+      ]
+    },
+    {
+      "Id": "precision-54",
+      "Address": "A54",
+      "Kind": "Number",
+      "Value": 0,
+      "Format": "0.0,,\"M\"",
+      "Steps": [
+        -1
+      ]
+    },
+    {
+      "Id": "precision-55",
+      "Address": "A55",
+      "Kind": "Number",
+      "Value": 1234.567,
+      "Format": "[>=0]0.00;[Red](0.0)",
+      "Steps": [
+        1
+      ]
+    },
+    {
+      "Id": "precision-56",
+      "Address": "A56",
+      "Kind": "Number",
+      "Value": 1234.567,
+      "Format": "[>=0]0.00;[Red](0.0)",
+      "Steps": [
+        -1
+      ]
+    },
+    {
+      "Id": "precision-57",
+      "Address": "A57",
+      "Kind": "Number",
+      "Value": -12.3,
+      "Format": "[>=0]0.00;[Red](0.0)",
+      "Steps": [
+        1
+      ]
+    },
+    {
+      "Id": "precision-58",
+      "Address": "A58",
+      "Kind": "Number",
+      "Value": -12.3,
+      "Format": "[>=0]0.00;[Red](0.0)",
+      "Steps": [
+        -1
+      ]
+    },
+    {
+      "Id": "precision-59",
+      "Address": "A59",
+      "Kind": "Number",
+      "Value": 0,
+      "Format": "[>=0]0.00;[Red](0.0)",
+      "Steps": [
+        1
+      ]
+    },
+    {
+      "Id": "precision-60",
+      "Address": "A60",
+      "Kind": "Number",
+      "Value": 0,
+      "Format": "[>=0]0.00;[Red](0.0)",
+      "Steps": [
+        -1
+      ]
+    },
+    {
+      "Id": "precision-61",
+      "Address": "A61",
+      "Kind": "Number",
+      "Value": 1234.567,
+      "Format": "0.0\" kg\"",
+      "Steps": [
+        1
+      ]
+    },
+    {
+      "Id": "precision-62",
+      "Address": "A62",
+      "Kind": "Number",
+      "Value": 1234.567,
+      "Format": "0.0\" kg\"",
+      "Steps": [
+        -1
+      ]
+    },
+    {
+      "Id": "precision-63",
+      "Address": "A63",
+      "Kind": "Number",
+      "Value": -12.3,
+      "Format": "0.0\" kg\"",
+      "Steps": [
+        1
+      ]
+    },
+    {
+      "Id": "precision-64",
+      "Address": "A64",
+      "Kind": "Number",
+      "Value": -12.3,
+      "Format": "0.0\" kg\"",
+      "Steps": [
+        -1
+      ]
+    },
+    {
+      "Id": "precision-65",
+      "Address": "A65",
+      "Kind": "Number",
+      "Value": 0,
+      "Format": "0.0\" kg\"",
+      "Steps": [
+        1
+      ]
+    },
+    {
+      "Id": "precision-66",
+      "Address": "A66",
+      "Kind": "Number",
+      "Value": 0,
+      "Format": "0.0\" kg\"",
+      "Steps": [
+        -1
+      ]
+    },
+    {
+      "Id": "precision-67",
+      "Address": "A67",
+      "Kind": "Number",
+      "Value": 1234.567,
+      "Format": "\"total; \"0.00",
+      "Steps": [
+        1
+      ]
+    },
+    {
+      "Id": "precision-68",
+      "Address": "A68",
+      "Kind": "Number",
+      "Value": 1234.567,
+      "Format": "\"total; \"0.00",
+      "Steps": [
+        -1
+      ]
+    },
+    {
+      "Id": "precision-69",
+      "Address": "A69",
+      "Kind": "Number",
+      "Value": -12.3,
+      "Format": "\"total; \"0.00",
+      "Steps": [
+        1
+      ]
+    },
+    {
+      "Id": "precision-70",
+      "Address": "A70",
+      "Kind": "Number",
+      "Value": -12.3,
+      "Format": "\"total; \"0.00",
+      "Steps": [
+        -1
+      ]
+    },
+    {
+      "Id": "precision-71",
+      "Address": "A71",
+      "Kind": "Number",
+      "Value": 0,
+      "Format": "\"total; \"0.00",
+      "Steps": [
+        1
+      ]
+    },
+    {
+      "Id": "precision-72",
+      "Address": "A72",
+      "Kind": "Number",
+      "Value": 0,
+      "Format": "\"total; \"0.00",
+      "Steps": [
+        -1
+      ]
+    },
+    {
+      "Id": "precision-73",
+      "Address": "A73",
+      "Kind": "Number",
+      "Value": 1234.567,
+      "Format": "0.00;[Red](0.00);\"-\";\"ID: \"@",
+      "Steps": [
+        1
+      ]
+    },
+    {
+      "Id": "precision-74",
+      "Address": "A74",
+      "Kind": "Number",
+      "Value": 1234.567,
+      "Format": "0.00;[Red](0.00);\"-\";\"ID: \"@",
+      "Steps": [
+        -1
+      ]
+    },
+    {
+      "Id": "precision-75",
+      "Address": "A75",
+      "Kind": "Number",
+      "Value": -12.3,
+      "Format": "0.00;[Red](0.00);\"-\";\"ID: \"@",
+      "Steps": [
+        1
+      ]
+    },
+    {
+      "Id": "precision-76",
+      "Address": "A76",
+      "Kind": "Number",
+      "Value": -12.3,
+      "Format": "0.00;[Red](0.00);\"-\";\"ID: \"@",
+      "Steps": [
+        -1
+      ]
+    },
+    {
+      "Id": "precision-77",
+      "Address": "A77",
+      "Kind": "Number",
+      "Value": 0,
+      "Format": "0.00;[Red](0.00);\"-\";\"ID: \"@",
+      "Steps": [
+        1
+      ]
+    },
+    {
+      "Id": "precision-78",
+      "Address": "A78",
+      "Kind": "Number",
+      "Value": 0,
+      "Format": "0.00;[Red](0.00);\"-\";\"ID: \"@",
+      "Steps": [
+        -1
+      ]
+    },
+    {
+      "Id": "precision-79",
+      "Address": "A79",
+      "Kind": "Number",
+      "Value": 1234.567,
+      "Format": "0.##",
+      "Steps": [
+        1
+      ]
+    },
+    {
+      "Id": "precision-80",
+      "Address": "A80",
+      "Kind": "Number",
+      "Value": 1234.567,
+      "Format": "0.##",
+      "Steps": [
+        -1
+      ]
+    },
+    {
+      "Id": "precision-81",
+      "Address": "A81",
+      "Kind": "Number",
+      "Value": -12.3,
+      "Format": "0.##",
+      "Steps": [
+        1
+      ]
+    },
+    {
+      "Id": "precision-82",
+      "Address": "A82",
+      "Kind": "Number",
+      "Value": -12.3,
+      "Format": "0.##",
+      "Steps": [
+        -1
+      ]
+    },
+    {
+      "Id": "precision-83",
+      "Address": "A83",
+      "Kind": "Number",
+      "Value": 0,
+      "Format": "0.##",
+      "Steps": [
+        1
+      ]
+    },
+    {
+      "Id": "precision-84",
+      "Address": "A84",
+      "Kind": "Number",
+      "Value": 0,
+      "Format": "0.##",
+      "Steps": [
+        -1
+      ]
+    },
+    {
+      "Id": "precision-85",
+      "Address": "A85",
+      "Kind": "Number",
+      "Value": 1234.567,
+      "Format": "_($* #,##0.00_);_($* (#,##0.00);_($* \"-\"??_);_(@_)",
+      "Steps": [
+        1
+      ]
+    },
+    {
+      "Id": "precision-86",
+      "Address": "A86",
+      "Kind": "Number",
+      "Value": 1234.567,
+      "Format": "_($* #,##0.00_);_($* (#,##0.00);_($* \"-\"??_);_(@_)",
+      "Steps": [
+        -1
+      ]
+    },
+    {
+      "Id": "precision-87",
+      "Address": "A87",
+      "Kind": "Number",
+      "Value": -12.3,
+      "Format": "_($* #,##0.00_);_($* (#,##0.00);_($* \"-\"??_);_(@_)",
+      "Steps": [
+        1
+      ]
+    },
+    {
+      "Id": "precision-88",
+      "Address": "A88",
+      "Kind": "Number",
+      "Value": -12.3,
+      "Format": "_($* #,##0.00_);_($* (#,##0.00);_($* \"-\"??_);_(@_)",
+      "Steps": [
+        -1
+      ]
+    },
+    {
+      "Id": "precision-89",
+      "Address": "A89",
+      "Kind": "Number",
+      "Value": 0,
+      "Format": "_($* #,##0.00_);_($* (#,##0.00);_($* \"-\"??_);_(@_)",
+      "Steps": [
+        1
+      ]
+    },
+    {
+      "Id": "precision-90",
+      "Address": "A90",
+      "Kind": "Number",
+      "Value": 0,
+      "Format": "_($* #,##0.00_);_($* (#,##0.00);_($* \"-\"??_);_(@_)",
+      "Steps": [
+        -1
+      ]
+    },
+    {
+      "Id": "precision-91",
+      "Address": "A91",
+      "Kind": "Number",
+      "Value": 1234.567,
+      "Format": ".00",
+      "Steps": [
+        1
+      ]
+    },
+    {
+      "Id": "precision-92",
+      "Address": "A92",
+      "Kind": "Number",
+      "Value": 1234.567,
+      "Format": ".00",
+      "Steps": [
+        -1
+      ]
+    },
+    {
+      "Id": "precision-93",
+      "Address": "A93",
+      "Kind": "Number",
+      "Value": -12.3,
+      "Format": ".00",
+      "Steps": [
+        1
+      ]
+    },
+    {
+      "Id": "precision-94",
+      "Address": "A94",
+      "Kind": "Number",
+      "Value": -12.3,
+      "Format": ".00",
+      "Steps": [
+        -1
+      ]
+    },
+    {
+      "Id": "precision-95",
+      "Address": "A95",
+      "Kind": "Number",
+      "Value": 0,
+      "Format": ".00",
+      "Steps": [
+        1
+      ]
+    },
+    {
+      "Id": "precision-96",
+      "Address": "A96",
+      "Kind": "Number",
+      "Value": 0,
+      "Format": ".00",
+      "Steps": [
+        -1
+      ]
+    },
+    {
+      "Id": "precision-97",
+      "Address": "A97",
+      "Kind": "Number",
+      "Value": 1.234,
+      "Format": "General",
+      "Steps": [
+        1
+      ]
+    },
+    {
+      "Id": "precision-98",
+      "Address": "A98",
+      "Kind": "Number",
+      "Value": 1.234,
+      "Format": "General",
+      "Steps": [
+        -1
+      ]
+    },
+    {
+      "Id": "precision-99",
+      "Address": "A99",
+      "Kind": "Number",
+      "Value": 1e+20,
+      "Format": "General",
+      "Steps": [
+        1
+      ]
+    },
+    {
+      "Id": "precision-100",
+      "Address": "A100",
+      "Kind": "Number",
+      "Value": 1e+20,
+      "Format": "General",
+      "Steps": [
+        -1
+      ]
+    },
+    {
+      "Id": "precision-101",
+      "Address": "A101",
+      "Kind": "Number",
+      "Value": 1.234e-12,
+      "Format": "General",
+      "Steps": [
+        1
+      ]
+    },
+    {
+      "Id": "precision-102",
+      "Address": "A102",
+      "Kind": "Number",
+      "Value": 1.234e-12,
+      "Format": "General",
+      "Steps": [
+        -1
+      ]
+    },
+    {
+      "Id": "precision-103",
+      "Address": "A103",
+      "Kind": "Number",
+      "Value": 1e-20,
+      "Format": "General",
+      "Steps": [
+        1
+      ]
+    },
+    {
+      "Id": "precision-104",
+      "Address": "A104",
+      "Kind": "Number",
+      "Value": 1e-20,
+      "Format": "General",
+      "Steps": [
+        -1
+      ]
+    }
+  ]
+}

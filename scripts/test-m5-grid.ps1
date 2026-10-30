@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
     [string]$PackageDirectory = 'artifacts\QuickExcel',
-    [ValidateSet('Interaction', 'Workspace', 'Product', 'Ribbon', 'DataOperations', 'GridIntegration', 'FastGridBenchmark', 'HorizontalScrollBenchmark', 'FastGridDragBenchmark', 'Benchmark', 'ResizeBenchmark', 'All')][string]$Mode = 'All',
+    [ValidateSet('Interaction', 'Workspace', 'Product', 'Ribbon', 'DataOperations', 'FormatEfficiency', 'GridIntegration', 'FastGridBenchmark', 'HorizontalScrollBenchmark', 'FastGridDragBenchmark', 'Benchmark', 'ResizeBenchmark', 'All')][string]$Mode = 'All',
     [string]$WorkbookPath,
     [switch]$SoftwareRendering,
     [switch]$DefaultRendering
@@ -29,8 +29,8 @@ $modes = if ($Mode -eq 'All') { @('Interaction', 'Workspace', 'Product', 'Ribbon
 foreach ($scenario in $modes) {
     $directory = Join-Path $evidence $scenario
     New-Item -ItemType Directory -Path $directory | Out-Null
-    $argument = switch ($scenario) { 'HorizontalScrollBenchmark' { '--horizontal-scroll-benchmark' } 'GridIntegration' { '--grid-integration-smoke' } 'FastGridDragBenchmark' { '--fast-grid-drag-benchmark' } 'FastGridBenchmark' { '--fast-grid-benchmark' } 'DataOperations' { '--data-operations-smoke' } 'Ribbon' { '--ribbon-smoke' } 'ResizeBenchmark' { '--resize-benchmark' } 'Benchmark' { '--grid-benchmark' } 'Workspace' { '--workspace-smoke' } 'Product' { '--product-smoke' } default { '--interaction-smoke' } }
-    $result = switch ($scenario) { 'HorizontalScrollBenchmark' { 'horizontal-scroll-benchmark-result.txt' } 'GridIntegration' { 'grid-integration-smoke-result.txt' } 'FastGridDragBenchmark' { 'fast-grid-drag-benchmark-result.txt' } 'FastGridBenchmark' { 'fast-grid-benchmark-result.txt' } 'DataOperations' { 'data-operations-smoke-result.txt' } 'Ribbon' { 'ribbon-smoke-result.txt' } 'ResizeBenchmark' { 'resize-benchmark-result.txt' } 'Benchmark' { 'grid-benchmark-result.txt' } 'Workspace' { 'workspace-smoke-result.txt' } 'Product' { 'product-smoke-result.txt' } default { 'interaction-smoke-result.txt' } }
+    $argument = switch ($scenario) { 'FormatEfficiency' { '--format-efficiency-smoke' } 'HorizontalScrollBenchmark' { '--horizontal-scroll-benchmark' } 'GridIntegration' { '--grid-integration-smoke' } 'FastGridDragBenchmark' { '--fast-grid-drag-benchmark' } 'FastGridBenchmark' { '--fast-grid-benchmark' } 'DataOperations' { '--data-operations-smoke' } 'Ribbon' { '--ribbon-smoke' } 'ResizeBenchmark' { '--resize-benchmark' } 'Benchmark' { '--grid-benchmark' } 'Workspace' { '--workspace-smoke' } 'Product' { '--product-smoke' } default { '--interaction-smoke' } }
+    $result = switch ($scenario) { 'FormatEfficiency' { 'format-efficiency-result.txt' } 'HorizontalScrollBenchmark' { 'horizontal-scroll-benchmark-result.txt' } 'GridIntegration' { 'grid-integration-smoke-result.txt' } 'FastGridDragBenchmark' { 'fast-grid-drag-benchmark-result.txt' } 'FastGridBenchmark' { 'fast-grid-benchmark-result.txt' } 'DataOperations' { 'data-operations-smoke-result.txt' } 'Ribbon' { 'ribbon-smoke-result.txt' } 'ResizeBenchmark' { 'resize-benchmark-result.txt' } 'Benchmark' { 'grid-benchmark-result.txt' } 'Workspace' { 'workspace-smoke-result.txt' } 'Product' { 'product-smoke-result.txt' } default { 'interaction-smoke-result.txt' } }
     $process = $null
     try {
         $arguments = @($argument, ('"{0}"' -f $directory))

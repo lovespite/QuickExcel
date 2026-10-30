@@ -74,7 +74,7 @@ public static partial class CellDisplayFormatter
         }
         var digits = fixedText.Split('.');
         var integer = digits[0];
-        var required = integerPattern.Count(c => c == '0');
+        var required = exponent is not null && magnitude == 0 ? integerPattern.Length : integerPattern.Count(c => c == '0');
         if (integer == "0" && required == 0) integer = "";
         integer = integer.PadLeft(required, '0');
         if (grouping && integer.Length > 0)

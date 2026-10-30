@@ -1,0 +1,845 @@
+{
+  "Version": "16.0",
+  "Build": "20527",
+  "Language": 2052,
+  "SpecSha256": "2DB026B06CA7C51B6E1999D997AABB00F4EF8D8BAFC3AE9C03E47E2E0AF8D827",
+  "SourceSha256": null,
+  "SourceUnchanged": true,
+  "WorkbookSha256": "CC188BE43C71C7EC6DBF01059B189404FA3EC10A5D0221AF59DFFCF028187773",
+  "Stable": true,
+  "Cases": [
+    {
+      "Id": "precision-1",
+      "Address": "A1",
+      "Value": 1234.567,
+      "Text": "1234.5670",
+      "Format": "0.0000",
+      "LocalFormat": "0.0000"
+    },
+    {
+      "Id": "precision-2",
+      "Address": "A2",
+      "Value": 1234.567,
+      "Text": "1234.57",
+      "Format": "0.00",
+      "LocalFormat": "0.00"
+    },
+    {
+      "Id": "precision-3",
+      "Address": "A3",
+      "Value": -12.3,
+      "Text": "-12.30",
+      "Format": "0.00",
+      "LocalFormat": "0.00"
+    },
+    {
+      "Id": "precision-4",
+      "Address": "A4",
+      "Value": -12.3,
+      "Text": "-12",
+      "Format": "0",
+      "LocalFormat": "0"
+    },
+    {
+      "Id": "precision-5",
+      "Address": "A5",
+      "Value": 0.0,
+      "Text": "0.0",
+      "Format": "0.0",
+      "LocalFormat": "0.0"
+    },
+    {
+      "Id": "precision-6",
+      "Address": "A6",
+      "Value": 0.0,
+      "Text": "0",
+      "Format": "General",
+      "LocalFormat": "G/通用格式"
+    },
+    {
+      "Id": "precision-7",
+      "Address": "A7",
+      "Value": 1234.567,
+      "Text": "1234.6",
+      "Format": "0.0",
+      "LocalFormat": "0.0"
+    },
+    {
+      "Id": "precision-8",
+      "Address": "A8",
+      "Value": 1234.567,
+      "Text": "1235",
+      "Format": "0",
+      "LocalFormat": "0"
+    },
+    {
+      "Id": "precision-9",
+      "Address": "A9",
+      "Value": -12.3,
+      "Text": "-12.3",
+      "Format": "0.0",
+      "LocalFormat": "0.0"
+    },
+    {
+      "Id": "precision-10",
+      "Address": "A10",
+      "Value": -12.3,
+      "Text": "-12",
+      "Format": "0",
+      "LocalFormat": "0"
+    },
+    {
+      "Id": "precision-11",
+      "Address": "A11",
+      "Value": 0.0,
+      "Text": "0.0",
+      "Format": "0.0",
+      "LocalFormat": "0.0"
+    },
+    {
+      "Id": "precision-12",
+      "Address": "A12",
+      "Value": 0.0,
+      "Text": "0",
+      "Format": "0",
+      "LocalFormat": "0"
+    },
+    {
+      "Id": "precision-13",
+      "Address": "A13",
+      "Value": 1234.567,
+      "Text": "1234.567",
+      "Format": "0.000",
+      "LocalFormat": "0.000"
+    },
+    {
+      "Id": "precision-14",
+      "Address": "A14",
+      "Value": 1234.567,
+      "Text": "1234.6",
+      "Format": "0.0",
+      "LocalFormat": "0.0"
+    },
+    {
+      "Id": "precision-15",
+      "Address": "A15",
+      "Value": -12.3,
+      "Text": "-12.300",
+      "Format": "0.000",
+      "LocalFormat": "0.000"
+    },
+    {
+      "Id": "precision-16",
+      "Address": "A16",
+      "Value": -12.3,
+      "Text": "-12.3",
+      "Format": "0.0",
+      "LocalFormat": "0.0"
+    },
+    {
+      "Id": "precision-17",
+      "Address": "A17",
+      "Value": 0.0,
+      "Text": "0.000",
+      "Format": "0.000",
+      "LocalFormat": "0.000"
+    },
+    {
+      "Id": "precision-18",
+      "Address": "A18",
+      "Value": 0.0,
+      "Text": "0.0",
+      "Format": "0.0",
+      "LocalFormat": "0.0"
+    },
+    {
+      "Id": "precision-19",
+      "Address": "A19",
+      "Value": 1234.567,
+      "Text": "1,234.567",
+      "Format": "#,##0.000",
+      "LocalFormat": "#,##0.000"
+    },
+    {
+      "Id": "precision-20",
+      "Address": "A20",
+      "Value": 1234.567,
+      "Text": "1,234.6",
+      "Format": "#,##0.0",
+      "LocalFormat": "#,##0.0"
+    },
+    {
+      "Id": "precision-21",
+      "Address": "A21",
+      "Value": -12.3,
+      "Text": "-12.300",
+      "Format": "#,##0.000",
+      "LocalFormat": "#,##0.000"
+    },
+    {
+      "Id": "precision-22",
+      "Address": "A22",
+      "Value": -12.3,
+      "Text": "-12.3",
+      "Format": "#,##0.0",
+      "LocalFormat": "#,##0.0"
+    },
+    {
+      "Id": "precision-23",
+      "Address": "A23",
+      "Value": 0.0,
+      "Text": "0.000",
+      "Format": "#,##0.000",
+      "LocalFormat": "#,##0.000"
+    },
+    {
+      "Id": "precision-24",
+      "Address": "A24",
+      "Value": 0.0,
+      "Text": "0.0",
+      "Format": "#,##0.0",
+      "LocalFormat": "#,##0.0"
+    },
+    {
+      "Id": "precision-25",
+      "Address": "A25",
+      "Value": 1234.567,
+      "Text": "123456.700%",
+      "Format": "0.000%",
+      "LocalFormat": "0.000%"
+    },
+    {
+      "Id": "precision-26",
+      "Address": "A26",
+      "Value": 1234.567,
+      "Text": "123456.7%",
+      "Format": "0.0%",
+      "LocalFormat": "0.0%"
+    },
+    {
+      "Id": "precision-27",
+      "Address": "A27",
+      "Value": -12.3,
+      "Text": "-1230.000%",
+      "Format": "0.000%",
+      "LocalFormat": "0.000%"
+    },
+    {
+      "Id": "precision-28",
+      "Address": "A28",
+      "Value": -12.3,
+      "Text": "-1230.0%",
+      "Format": "0.0%",
+      "LocalFormat": "0.0%"
+    },
+    {
+      "Id": "precision-29",
+      "Address": "A29",
+      "Value": 0.0,
+      "Text": "0.000%",
+      "Format": "0.000%",
+      "LocalFormat": "0.000%"
+    },
+    {
+      "Id": "precision-30",
+      "Address": "A30",
+      "Value": 0.0,
+      "Text": "0.0%",
+      "Format": "0.0%",
+      "LocalFormat": "0.0%"
+    },
+    {
+      "Id": "precision-31",
+      "Address": "A31",
+      "Value": 1234.567,
+      "Text": "¥1,234.567",
+      "Format": "¥#,##0.000;[Red](¥#,##0.000)",
+      "LocalFormat": "¥#,##0.000;[红色](¥#,##0.000)"
+    },
+    {
+      "Id": "precision-32",
+      "Address": "A32",
+      "Value": 1234.567,
+      "Text": "¥1,234.6",
+      "Format": "¥#,##0.0;[Red](¥#,##0.0)",
+      "LocalFormat": "¥#,##0.0;[红色](¥#,##0.0)"
+    },
+    {
+      "Id": "precision-33",
+      "Address": "A33",
+      "Value": -12.3,
+      "Text": "(¥12.300)",
+      "Format": "¥#,##0.000;[Red](¥#,##0.000)",
+      "LocalFormat": "¥#,##0.000;[红色](¥#,##0.000)"
+    },
+    {
+      "Id": "precision-34",
+      "Address": "A34",
+      "Value": -12.3,
+      "Text": "(¥12.3)",
+      "Format": "¥#,##0.0;[Red](¥#,##0.0)",
+      "LocalFormat": "¥#,##0.0;[红色](¥#,##0.0)"
+    },
+    {
+      "Id": "precision-35",
+      "Address": "A35",
+      "Value": 0.0,
+      "Text": "¥0.000",
+      "Format": "¥#,##0.000;[Red](¥#,##0.000)",
+      "LocalFormat": "¥#,##0.000;[红色](¥#,##0.000)"
+    },
+    {
+      "Id": "precision-36",
+      "Address": "A36",
+      "Value": 0.0,
+      "Text": "¥0.0",
+      "Format": "¥#,##0.0;[Red](¥#,##0.0)",
+      "LocalFormat": "¥#,##0.0;[红色](¥#,##0.0)"
+    },
+    {
+      "Id": "precision-37",
+      "Address": "A37",
+      "Value": 1234.567,
+      "Text": "1.235E+03",
+      "Format": "0.000E+00",
+      "LocalFormat": "0.000E+00"
+    },
+    {
+      "Id": "precision-38",
+      "Address": "A38",
+      "Value": 1234.567,
+      "Text": "1.2E+03",
+      "Format": "0.0E+00",
+      "LocalFormat": "0.0E+00"
+    },
+    {
+      "Id": "precision-39",
+      "Address": "A39",
+      "Value": -12.3,
+      "Text": "-1.230E+01",
+      "Format": "0.000E+00",
+      "LocalFormat": "0.000E+00"
+    },
+    {
+      "Id": "precision-40",
+      "Address": "A40",
+      "Value": -12.3,
+      "Text": "-1.2E+01",
+      "Format": "0.0E+00",
+      "LocalFormat": "0.0E+00"
+    },
+    {
+      "Id": "precision-41",
+      "Address": "A41",
+      "Value": 0.0,
+      "Text": "0.000E+00",
+      "Format": "0.000E+00",
+      "LocalFormat": "0.000E+00"
+    },
+    {
+      "Id": "precision-42",
+      "Address": "A42",
+      "Value": 0.0,
+      "Text": "0.0E+00",
+      "Format": "0.0E+00",
+      "LocalFormat": "0.0E+00"
+    },
+    {
+      "Id": "precision-43",
+      "Address": "A43",
+      "Value": 1234.567,
+      "Text": "1.23E+3",
+      "Format": "##0.00E+0",
+      "LocalFormat": "##0.00E+0"
+    },
+    {
+      "Id": "precision-44",
+      "Address": "A44",
+      "Value": 1234.567,
+      "Text": "1E+3",
+      "Format": "##0E+0",
+      "LocalFormat": "##0E+0"
+    },
+    {
+      "Id": "precision-45",
+      "Address": "A45",
+      "Value": -12.3,
+      "Text": "-12.30E+0",
+      "Format": "##0.00E+0",
+      "LocalFormat": "##0.00E+0"
+    },
+    {
+      "Id": "precision-46",
+      "Address": "A46",
+      "Value": -12.3,
+      "Text": "-12E+0",
+      "Format": "##0E+0",
+      "LocalFormat": "##0E+0"
+    },
+    {
+      "Id": "precision-47",
+      "Address": "A47",
+      "Value": 0.0,
+      "Text": "000.00E+0",
+      "Format": "##0.00E+0",
+      "LocalFormat": "##0.00E+0"
+    },
+    {
+      "Id": "precision-48",
+      "Address": "A48",
+      "Value": 0.0,
+      "Text": "000E+0",
+      "Format": "##0E+0",
+      "LocalFormat": "##0E+0"
+    },
+    {
+      "Id": "precision-49",
+      "Address": "A49",
+      "Value": 1234.567,
+      "Text": "0.00M",
+      "Format": "0.00,,\"M\"",
+      "LocalFormat": "0.00,,\"M\""
+    },
+    {
+      "Id": "precision-50",
+      "Address": "A50",
+      "Value": 1234.567,
+      "Text": "0M",
+      "Format": "0,,\"M\"",
+      "LocalFormat": "0,,\"M\""
+    },
+    {
+      "Id": "precision-51",
+      "Address": "A51",
+      "Value": -12.3,
+      "Text": "0.00M",
+      "Format": "0.00,,\"M\"",
+      "LocalFormat": "0.00,,\"M\""
+    },
+    {
+      "Id": "precision-52",
+      "Address": "A52",
+      "Value": -12.3,
+      "Text": "0M",
+      "Format": "0,,\"M\"",
+      "LocalFormat": "0,,\"M\""
+    },
+    {
+      "Id": "precision-53",
+      "Address": "A53",
+      "Value": 0.0,
+      "Text": "0.00M",
+      "Format": "0.00,,\"M\"",
+      "LocalFormat": "0.00,,\"M\""
+    },
+    {
+      "Id": "precision-54",
+      "Address": "A54",
+      "Value": 0.0,
+      "Text": "0M",
+      "Format": "0,,\"M\"",
+      "LocalFormat": "0,,\"M\""
+    },
+    {
+      "Id": "precision-55",
+      "Address": "A55",
+      "Value": 1234.567,
+      "Text": "1234.567",
+      "Format": "[>=0]0.000;[Red](0.00)",
+      "LocalFormat": "[>=0]0.000;[红色](0.00)"
+    },
+    {
+      "Id": "precision-56",
+      "Address": "A56",
+      "Value": 1234.567,
+      "Text": "1234.6",
+      "Format": "[>=0]0.0;[Red](0)",
+      "LocalFormat": "[>=0]0.0;[红色](0)"
+    },
+    {
+      "Id": "precision-57",
+      "Address": "A57",
+      "Value": -12.3,
+      "Text": "(12.30)",
+      "Format": "[>=0]0.000;[Red](0.00)",
+      "LocalFormat": "[>=0]0.000;[红色](0.00)"
+    },
+    {
+      "Id": "precision-58",
+      "Address": "A58",
+      "Value": -12.3,
+      "Text": "(12)",
+      "Format": "[>=0]0.0;[Red](0)",
+      "LocalFormat": "[>=0]0.0;[红色](0)"
+    },
+    {
+      "Id": "precision-59",
+      "Address": "A59",
+      "Value": 0.0,
+      "Text": "0.000",
+      "Format": "[>=0]0.000;[Red](0.00)",
+      "LocalFormat": "[>=0]0.000;[红色](0.00)"
+    },
+    {
+      "Id": "precision-60",
+      "Address": "A60",
+      "Value": 0.0,
+      "Text": "0.0",
+      "Format": "[>=0]0.0;[Red](0)",
+      "LocalFormat": "[>=0]0.0;[红色](0)"
+    },
+    {
+      "Id": "precision-61",
+      "Address": "A61",
+      "Value": 1234.567,
+      "Text": "1234.57 kg",
+      "Format": "0.00\" kg\"",
+      "LocalFormat": "0.00\" kg\""
+    },
+    {
+      "Id": "precision-62",
+      "Address": "A62",
+      "Value": 1234.567,
+      "Text": "1235 kg",
+      "Format": "0\" kg\"",
+      "LocalFormat": "0\" kg\""
+    },
+    {
+      "Id": "precision-63",
+      "Address": "A63",
+      "Value": -12.3,
+      "Text": "-12.30 kg",
+      "Format": "0.00\" kg\"",
+      "LocalFormat": "0.00\" kg\""
+    },
+    {
+      "Id": "precision-64",
+      "Address": "A64",
+      "Value": -12.3,
+      "Text": "-12 kg",
+      "Format": "0\" kg\"",
+      "LocalFormat": "0\" kg\""
+    },
+    {
+      "Id": "precision-65",
+      "Address": "A65",
+      "Value": 0.0,
+      "Text": "0.00 kg",
+      "Format": "0.00\" kg\"",
+      "LocalFormat": "0.00\" kg\""
+    },
+    {
+      "Id": "precision-66",
+      "Address": "A66",
+      "Value": 0.0,
+      "Text": "0 kg",
+      "Format": "0\" kg\"",
+      "LocalFormat": "0\" kg\""
+    },
+    {
+      "Id": "precision-67",
+      "Address": "A67",
+      "Value": 1234.567,
+      "Text": "total; 1234.567",
+      "Format": "\"total; \"0.000",
+      "LocalFormat": "\"total; \"0.000"
+    },
+    {
+      "Id": "precision-68",
+      "Address": "A68",
+      "Value": 1234.567,
+      "Text": "total; 1234.6",
+      "Format": "\"total; \"0.0",
+      "LocalFormat": "\"total; \"0.0"
+    },
+    {
+      "Id": "precision-69",
+      "Address": "A69",
+      "Value": -12.3,
+      "Text": "-total; 12.300",
+      "Format": "\"total; \"0.000",
+      "LocalFormat": "\"total; \"0.000"
+    },
+    {
+      "Id": "precision-70",
+      "Address": "A70",
+      "Value": -12.3,
+      "Text": "-total; 12.3",
+      "Format": "\"total; \"0.0",
+      "LocalFormat": "\"total; \"0.0"
+    },
+    {
+      "Id": "precision-71",
+      "Address": "A71",
+      "Value": 0.0,
+      "Text": "total; 0.000",
+      "Format": "\"total; \"0.000",
+      "LocalFormat": "\"total; \"0.000"
+    },
+    {
+      "Id": "precision-72",
+      "Address": "A72",
+      "Value": 0.0,
+      "Text": "total; 0.0",
+      "Format": "\"total; \"0.0",
+      "LocalFormat": "\"total; \"0.0"
+    },
+    {
+      "Id": "precision-73",
+      "Address": "A73",
+      "Value": 1234.567,
+      "Text": "1234.567",
+      "Format": "0.000;[Red](0.000);\"-\";\"ID: \"@",
+      "LocalFormat": "0.000;[红色](0.000);\"-\";\"ID: \"@"
+    },
+    {
+      "Id": "precision-74",
+      "Address": "A74",
+      "Value": 1234.567,
+      "Text": "1234.6",
+      "Format": "0.0;[Red](0.0);\"-\";\"ID: \"@",
+      "LocalFormat": "0.0;[红色](0.0);\"-\";\"ID: \"@"
+    },
+    {
+      "Id": "precision-75",
+      "Address": "A75",
+      "Value": -12.3,
+      "Text": "(12.300)",
+      "Format": "0.000;[Red](0.000);\"-\";\"ID: \"@",
+      "LocalFormat": "0.000;[红色](0.000);\"-\";\"ID: \"@"
+    },
+    {
+      "Id": "precision-76",
+      "Address": "A76",
+      "Value": -12.3,
+      "Text": "(12.3)",
+      "Format": "0.0;[Red](0.0);\"-\";\"ID: \"@",
+      "LocalFormat": "0.0;[红色](0.0);\"-\";\"ID: \"@"
+    },
+    {
+      "Id": "precision-77",
+      "Address": "A77",
+      "Value": 0.0,
+      "Text": "-",
+      "Format": "0.000;[Red](0.000);\"-\";\"ID: \"@",
+      "LocalFormat": "0.000;[红色](0.000);\"-\";\"ID: \"@"
+    },
+    {
+      "Id": "precision-78",
+      "Address": "A78",
+      "Value": 0.0,
+      "Text": "-",
+      "Format": "0.0;[Red](0.0);\"-\";\"ID: \"@",
+      "LocalFormat": "0.0;[红色](0.0);\"-\";\"ID: \"@"
+    },
+    {
+      "Id": "precision-79",
+      "Address": "A79",
+      "Value": 1234.567,
+      "Text": "1234.567",
+      "Format": "0.###",
+      "LocalFormat": "0.###"
+    },
+    {
+      "Id": "precision-80",
+      "Address": "A80",
+      "Value": 1234.567,
+      "Text": "1234.6",
+      "Format": "0.#",
+      "LocalFormat": "0.#"
+    },
+    {
+      "Id": "precision-81",
+      "Address": "A81",
+      "Value": -12.3,
+      "Text": "-12.3",
+      "Format": "0.###",
+      "LocalFormat": "0.###"
+    },
+    {
+      "Id": "precision-82",
+      "Address": "A82",
+      "Value": -12.3,
+      "Text": "-12.3",
+      "Format": "0.#",
+      "LocalFormat": "0.#"
+    },
+    {
+      "Id": "precision-83",
+      "Address": "A83",
+      "Value": 0.0,
+      "Text": "0.",
+      "Format": "0.###",
+      "LocalFormat": "0.###"
+    },
+    {
+      "Id": "precision-84",
+      "Address": "A84",
+      "Value": 0.0,
+      "Text": "0.",
+      "Format": "0.#",
+      "LocalFormat": "0.#"
+    },
+    {
+      "Id": "precision-85",
+      "Address": "A85",
+      "Value": 1234.567,
+      "Text": " $                                                                                          1,234.567 ",
+      "Format": "_($* #,##0.000_);_($* (#,##0.000);_($* \"-\"??_);_(@_)",
+      "LocalFormat": "_($* #,##0.000_);_($* (#,##0.000);_($* \"-\"??_);_(@_)"
+    },
+    {
+      "Id": "precision-86",
+      "Address": "A86",
+      "Value": 1234.567,
+      "Text": " $                                                                                             1,234.6 ",
+      "Format": "_($* #,##0.0_);_($* (#,##0.0);_($* \"-\"??_);_(@_)",
+      "LocalFormat": "_($* #,##0.0_);_($* (#,##0.0);_($* \"-\"??_);_(@_)"
+    },
+    {
+      "Id": "precision-87",
+      "Address": "A87",
+      "Value": -12.3,
+      "Text": " $                                                                                             (12.300)",
+      "Format": "_($* #,##0.000_);_($* (#,##0.000);_($* \"-\"??_);_(@_)",
+      "LocalFormat": "_($* #,##0.000_);_($* (#,##0.000);_($* \"-\"??_);_(@_)"
+    },
+    {
+      "Id": "precision-88",
+      "Address": "A88",
+      "Value": -12.3,
+      "Text": " $                                                                                                 (12.3)",
+      "Format": "_($* #,##0.0_);_($* (#,##0.0);_($* \"-\"??_);_(@_)",
+      "LocalFormat": "_($* #,##0.0_);_($* (#,##0.0);_($* \"-\"??_);_(@_)"
+    },
+    {
+      "Id": "precision-89",
+      "Address": "A89",
+      "Value": 0.0,
+      "Text": " $                                                                                                    -   ",
+      "Format": "_($* #,##0.000_);_($* (#,##0.000);_($* \"-\"??_);_(@_)",
+      "LocalFormat": "_($* #,##0.000_);_($* (#,##0.000);_($* \"-\"??_);_(@_)"
+    },
+    {
+      "Id": "precision-90",
+      "Address": "A90",
+      "Value": 0.0,
+      "Text": " $                                                                                                    -   ",
+      "Format": "_($* #,##0.0_);_($* (#,##0.0);_($* \"-\"??_);_(@_)",
+      "LocalFormat": "_($* #,##0.0_);_($* (#,##0.0);_($* \"-\"??_);_(@_)"
+    },
+    {
+      "Id": "precision-91",
+      "Address": "A91",
+      "Value": 1234.567,
+      "Text": "1234.567",
+      "Format": ".000",
+      "LocalFormat": ".000"
+    },
+    {
+      "Id": "precision-92",
+      "Address": "A92",
+      "Value": 1234.567,
+      "Text": "1234.6",
+      "Format": ".0",
+      "LocalFormat": ".0"
+    },
+    {
+      "Id": "precision-93",
+      "Address": "A93",
+      "Value": -12.3,
+      "Text": "-12.300",
+      "Format": ".000",
+      "LocalFormat": ".000"
+    },
+    {
+      "Id": "precision-94",
+      "Address": "A94",
+      "Value": -12.3,
+      "Text": "-12.3",
+      "Format": ".0",
+      "LocalFormat": ".0"
+    },
+    {
+      "Id": "precision-95",
+      "Address": "A95",
+      "Value": 0.0,
+      "Text": ".000",
+      "Format": ".000",
+      "LocalFormat": ".000"
+    },
+    {
+      "Id": "precision-96",
+      "Address": "A96",
+      "Value": 0.0,
+      "Text": ".0",
+      "Format": ".0",
+      "LocalFormat": ".0"
+    },
+    {
+      "Id": "precision-97",
+      "Address": "A97",
+      "Value": 1.234,
+      "Text": "1.2340",
+      "Format": "0.0000",
+      "LocalFormat": "0.0000"
+    },
+    {
+      "Id": "precision-98",
+      "Address": "A98",
+      "Value": 1.234,
+      "Text": "1.23",
+      "Format": "0.00",
+      "LocalFormat": "0.00"
+    },
+    {
+      "Id": "precision-99",
+      "Address": "A99",
+      "Value": 1e+20,
+      "Text": "1.0E+20",
+      "Format": "0.0E+00",
+      "LocalFormat": "0.0E+00"
+    },
+    {
+      "Id": "precision-100",
+      "Address": "A100",
+      "Value": 1e+20,
+      "Text": "1E+20",
+      "Format": "General",
+      "LocalFormat": "G/通用格式"
+    },
+    {
+      "Id": "precision-101",
+      "Address": "A101",
+      "Value": 1.234e-12,
+      "Text": "1.2340E-12",
+      "Format": "0.0000E+00",
+      "LocalFormat": "0.0000E+00"
+    },
+    {
+      "Id": "precision-102",
+      "Address": "A102",
+      "Value": 1.234e-12,
+      "Text": "1.23E-12",
+      "Format": "0.00E+00",
+      "LocalFormat": "0.00E+00"
+    },
+    {
+      "Id": "precision-103",
+      "Address": "A103",
+      "Value": 1e-20,
+      "Text": "1.0E-20",
+      "Format": "0.0E+00",
+      "LocalFormat": "0.0E+00"
+    },
+    {
+      "Id": "precision-104",
+      "Address": "A104",
+      "Value": 1e-20,
+      "Text": "1E-20",
+      "Format": "General",
+      "LocalFormat": "G/通用格式"
+    }
+  ],
+  "OracleSha256": "4CFFD9333452E4C83318B0EAB3E2B4DEB81D170247586F2B257A3EAE78D5D258"
+}

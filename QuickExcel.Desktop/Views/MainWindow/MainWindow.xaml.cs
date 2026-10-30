@@ -82,7 +82,7 @@ public partial class MainWindow : Window
             _scriptTrust = new(Path.Combine(folder, "trusted-script-certificates.json"));
             args = [];
         }
-        if (args.Length > 0 && args[0] is "--smoke-test" or "--interaction-smoke" or "--workspace-smoke" or "--product-smoke" or "--ribbon-smoke" or "--signature-smoke" or "--grid-benchmark" or "--resize-benchmark" or "--data-operations-smoke" or "--horizontal-scroll-benchmark" or "--fast-grid-benchmark" or "--fast-grid-drag-benchmark" or "--grid-integration-smoke" or "--xlsx-rendering-smoke" or "--fill-smoke" or "--formula-entry-smoke" or "--sheet-management-smoke")
+        if (args.Length > 0 && args[0] is "--smoke-test" or "--interaction-smoke" or "--workspace-smoke" or "--product-smoke" or "--ribbon-smoke" or "--signature-smoke" or "--grid-benchmark" or "--resize-benchmark" or "--data-operations-smoke" or "--horizontal-scroll-benchmark" or "--fast-grid-benchmark" or "--fast-grid-drag-benchmark" or "--grid-integration-smoke" or "--xlsx-rendering-smoke" or "--fill-smoke" or "--formula-entry-smoke" or "--sheet-management-smoke" or "--format-efficiency-smoke")
         {
             _smokeMode = true;
             _recentFiles = new(Path.Combine(args.Length > 1 ? args[1] : AppContext.BaseDirectory, "recent-files.json"));
@@ -92,7 +92,8 @@ public partial class MainWindow : Window
             try
             {
                 var folder = args.Length > 1 ? args[1] : Path.Combine(AppContext.BaseDirectory, "smoke");
-                if (args[0] == "--sheet-management-smoke") await RunSheetManagementSmokeAsync(folder);
+                if (args[0] == "--format-efficiency-smoke") await RunFormatEfficiencySmokeAsync(folder);
+                else if (args[0] == "--sheet-management-smoke") await RunSheetManagementSmokeAsync(folder);
                 else if (args[0] == "--formula-entry-smoke") await RunFormulaEditingSmokeAsync(folder);
                 else if (args[0] == "--fill-smoke") await RunFillSmokeOnlyAsync(folder);
                 else if (args[0] == "--xlsx-rendering-smoke") await RunXlsxRenderingSmokeAsync(folder, args.ElementAtOrDefault(2));
@@ -140,6 +141,7 @@ public partial class MainWindow : Window
     {
         if (disposePrevious) _document.Dispose();
         _document = document;
+        CancelFormatBrush();
         _verifiedScriptModules = null;
         _signatureVerification = null;
         _viewModel = new DocumentViewModel(document);
@@ -212,8 +214,7 @@ public partial class MainWindow : Window
             GridSurface.Select(new(filter.Top, _selectedColumn));
         UpdateFormulaBar();
         _viewModel.Refresh();
-        var stale = _viewModel.StaleCacheCount;
-        SelectionText.Text = $"{sheet.Cells.Count:N0} 格" + (stale > 0 ? $" · {stale} 个结果待重算" : "");
+        QueueSelectionStatistics();
     }
 
     private void UpdateChrome()
@@ -387,6 +388,7 @@ public partial class MainWindow : Window
             return;
         }
         UpdateFormulaBar();
+        QueueSelectionStatistics();
         QueueRecalculation();
     }
 
@@ -706,6 +708,8 @@ public partial class MainWindow : Window
 
     private async void Window_KeyDown(object sender, KeyEventArgs e)
     {
+        if (e.Key == Key.Escape && _formatBrush is not null && !_editState.IsComposing && !_grid.IsComposing)
+        { CancelFormatBrush(); StatusText.Text = "已取消格式刷。"; e.Handled = true; return; }
         if (_busy)
         {
             if (e.Key == Key.Escape) _calculationCancellation?.Cancel();
@@ -782,6 +786,7 @@ public partial class MainWindow : Window
     protected override void OnClosed(EventArgs e)
     {
         _windowClosed = true;
+        _selectionStatisticsCancellation?.Cancel();
         _document.Dispose();
         base.OnClosed(e);
     }

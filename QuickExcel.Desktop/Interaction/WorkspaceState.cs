@@ -78,6 +78,18 @@ internal sealed class SheetViewState
         RefreshFilter(snapshot);
         if (FilterError is not null) throw new InvalidOperationException(FilterError);
     }
+    public Func<int, bool> CaptureRowFilter(WorkbookSnapshot snapshot, int sheetIndex)
+    {
+        RequireCurrentFilter(snapshot);
+        if (Region is not null)
+        {
+            var hidden = _hidden; var matching = Region.SheetId == snapshot.Sheets[sheetIndex].Id;
+            return row => matching && hidden.Contains(row);
+        }
+        var range = _legacyRange; var column = FilterColumn; var text = FilterText; var sheet = snapshot.Sheets[sheetIndex];
+        return row => range is { } r && row > r.Top && row <= r.Bottom && !CellDisplayFormatter.Format(sheet.GetCell(row, column)?.Value ?? CellValue.Blank,
+            snapshot.Styles[sheet.GetStyleId(row, column)], snapshot.DateSystem).Contains(text, StringComparison.OrdinalIgnoreCase);
+    }
 }
 
 internal sealed class RecentFileStore(string path)

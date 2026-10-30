@@ -260,6 +260,8 @@ public partial class MainWindow
                 "wrap" => new(WrapText: !style.WrapText),
                 "border" => new(Border: true), "noBorder" => new(Border: false),
                 "number" => new(NumberFormatId: 2), "percent" => new(NumberFormatId: 10),
+                "thousands" => new(NumberFormatId: 4), "scientific" => new(NumberFormatId: 11),
+                "currency" => new(NumberFormatId: 0, NumberFormatCode: "\"¥\"#,##0.00;[Red](\"¥\"#,##0.00)"),
                 "date" => new(NumberFormatId: 0, NumberFormatCode: "yyyy-mm-dd"),
                 "general" => new(NumberFormatId: 0), "reset" => new(Reset: true), _ => throw new ArgumentException("未知样式。")
             };

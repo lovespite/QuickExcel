@@ -1,0 +1,31 @@
+{
+  "Version": "16.0",
+  "Build": "20527",
+  "Language": 2052,
+  "WorkbookSha256": "D9831DCB7C64C3695823572437A868A6D4CBF8436428AA11DF7C4AD6F6BD10C8",
+  "NormalReopen": true,
+  "Cases": [
+    {
+      "State": "all",
+      "Sum": 307.0,
+      "Average": 61.4,
+      "Numbers": 5.0,
+      "Count": 9.0
+    },
+    {
+      "State": "manual-hidden",
+      "Sum": 207.0,
+      "Average": 51.75,
+      "Numbers": 4.0,
+      "Count": 8.0
+    },
+    {
+      "State": "filtered-and-manual",
+      "Sum": 7.0,
+      "Average": 2.3333333333333335,
+      "Numbers": 3.0,
+      "Count": 7.0
+    }
+  ],
+  "OracleSha256": "905AA0C2D8FFFD0F35EE81479C4B2851109B384D289F661365983052D7D80F19"
+}

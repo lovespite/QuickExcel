@@ -33,6 +33,7 @@ public partial class MainWindow
             AutoSumButton.IsEnabled = !_busy && !FormulaBar.IsReadOnly;
             RibbonPasteButton.IsEnabled = !readOnly;
             RibbonCutButton.IsEnabled = !readOnly;
+            RibbonFormatBrush.IsEnabled = !readOnly;
             foreach (var group in HomeRibbonContent.Children.OfType<GroupBox>().Where(g => g.Header as string is "字体" or "对齐方式" or "数字" or "单元格"))
                 group.IsEnabled = !readOnly;
             var sheet = snapshot.Sheets[_sheetIndex];
@@ -54,8 +55,8 @@ public partial class MainWindow
             RibbonAlignTop.IsChecked = style.Vertical == 0;
             RibbonAlignMiddle.IsChecked = style.Vertical == 1;
             RibbonAlignBottom.IsChecked = style.Vertical == 2;
-            var number = style.NumberFormatCode == "yyyy-mm-dd" ? "date" : style.NumberFormatCode is not null ? null :
-                style.NumberFormatId switch { 0 => "general", 2 => "number", 10 => "percent", _ => null };
+            var number = style.NumberFormatCode == "yyyy-mm-dd" ? "date" : style.NumberFormatCode == "\"¥\"#,##0.00;[Red](\"¥\"#,##0.00)" ? "currency" : style.NumberFormatCode is not null ? null :
+                style.NumberFormatId switch { 0 => "general", 2 => "number", 4 => "thousands", 10 => "percent", 11 => "scientific", _ => null };
             RibbonNumberFormat.SelectedItem = RibbonNumberFormat.Items.OfType<ComboBoxItem>().FirstOrDefault(i => i.Tag as string == number);
             RibbonNumberFormat.ToolTip = number is null ? "当前格式：" + (style.NumberFormatCode ?? style.NumberFormatId.ToString(CultureInfo.InvariantCulture)) : "数字格式";
         }

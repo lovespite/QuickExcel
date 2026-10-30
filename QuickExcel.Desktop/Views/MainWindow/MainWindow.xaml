@@ -86,6 +86,7 @@
                           Foreground="#B17A22"
                           ToolTip="内部复制保留值、公式和格式；外部文本按值粘贴 · Ctrl+V"/>
                   <StackPanel>
+                    <StackPanel Orientation="Horizontal">
                     <Button Content="复制"
                             local:Ribbon.Icon="Copy"
                             Style="{StaticResource RibbonButton}"
@@ -97,6 +98,7 @@
                             Style="{StaticResource RibbonButton}"
                             Click="RibbonCut_Click"
                             ToolTip="粘贴后移动，Esc 取消 · Ctrl+X"/>
+                    </StackPanel>
                     <Button Content="选择性粘贴 ▾"
                             local:Ribbon.Icon="ClipboardPaste"
                             Style="{StaticResource RibbonButton}"
@@ -112,6 +114,9 @@
                         </ContextMenu>
                       </Button.ContextMenu>
                     </Button>
+                    <Button x:Name="RibbonFormatBrush" Content="格式刷"
+                            local:Ribbon.Icon="PaintBrush" Style="{StaticResource RibbonButton}"
+                            Click="FormatBrush_Click" ToolTip="采样当前格格式，选择目标后再次点击应用；Esc 取消"/>
                   </StackPanel>
                 </StackPanel>
               </GroupBox>
@@ -276,6 +281,9 @@
                                   Tag="percent"/>
                     <ComboBoxItem Content="短日期"
                                   Tag="date"/>
+                    <ComboBoxItem Content="千分位" Tag="thousands"/>
+                    <ComboBoxItem Content="货币（¥）" Tag="currency"/>
+                    <ComboBoxItem Content="科学计数" Tag="scientific"/>
                   </ComboBox>
                   <StackPanel Orientation="Horizontal"
                               Margin="0,8,0,0">
@@ -289,11 +297,8 @@
                             Click="Style_Click"
                             Tag="number"
                             ToolTip="两位小数"/>
-                    <Button local:Ribbon.Icon="Calendar"
-                            Style="{StaticResource RibbonButton}"
-                            Click="Style_Click"
-                            Tag="date"
-                            ToolTip="日期 yyyy-mm-dd"/>
+                    <Button local:Ribbon.Icon="DecimalArrowLeft" Style="{StaticResource RibbonButton}" Click="DecimalPlaces_Click" Tag="increase" ToolTip="增加小数位（只改变显示）" AutomationProperties.Name="增加小数位"/>
+                    <Button local:Ribbon.Icon="DecimalArrowRight" Style="{StaticResource RibbonButton}" Click="DecimalPlaces_Click" Tag="decrease" ToolTip="减少小数位（只改变显示）" AutomationProperties.Name="减少小数位"/>
                   </StackPanel>
                 </StackPanel>
               </GroupBox>

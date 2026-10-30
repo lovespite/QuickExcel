@@ -4,6 +4,7 @@ using QuickExcel.CompatibilityProbe;
 
 try
 {
+    if (args is ["format-efficiency", var formatSpec, var formatOracle, var formatDirectory]) return FormatEfficiencyProbe.Run(formatSpec, formatOracle, formatDirectory);
     if (args is ["scalar-functions", var scalarSpec, var scalarOracle, var scalarDirectory]) return ScalarFunctionsProbe.Run(scalarSpec, scalarOracle, scalarDirectory);
     if (args is ["verify-scalar-functions", var scalarExpected, var scalarInitial, var scalarEdited, var scalarModel, var scalarVerdict]) return ScalarFunctionsProbe.Verify(scalarExpected, scalarInitial, scalarEdited, scalarModel, scalarVerdict);
     if (args is ["conditional-functions", var conditionalOracle, var conditionalDirectory]) return ConditionalFunctionsProbe.Run(conditionalOracle, conditionalDirectory);
