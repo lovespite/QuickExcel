@@ -21,8 +21,17 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage
     public WorkbookSnapshot Open(string path) => Open(path, CancellationToken.None);
     public WorkbookSnapshot Open(string path, CancellationToken cancellationToken)
     {
-        RequireExtension(path, ".xlsx", ".xlsq");
-        return OpenBytes(ReadFile(path, new(cancellationToken)), path, Path.GetExtension(path).Equals(".xlsq", StringComparison.OrdinalIgnoreCase), new(cancellationToken));
+        try
+        {
+            RequireExtension(path, ".xlsx", ".xlsq");
+            return OpenBytes(ReadFile(path, new(cancellationToken)), path, Path.GetExtension(path).Equals(".xlsq", StringComparison.OrdinalIgnoreCase), new(cancellationToken));
+        }
+        catch (Exception exception) when (exception is InvalidDataException or IOException or ArgumentException or NotSupportedException)
+        {
+            exception.Data[RejectionKey] = DescribeRejection(exception) ?? new CompatibilityDiagnostic("workbook.import-rejected", CompatibilityKind.Rejected,
+                "file/open", exception.Message, Path.GetFileName(path));
+            throw;
+        }
     }
 
     private static WorkbookSnapshot OpenBytes(byte[] bytes, string sourcePath, bool isPackage, FileReadBudget budget)

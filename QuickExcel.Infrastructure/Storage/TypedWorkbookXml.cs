@@ -19,6 +19,12 @@ internal static class TypedWorkbookXml
     public static TypedWorkbookRead Read(byte[] bytes, FileReadBudget budget)
     {
         var package = new XlsxPackage(bytes, budget);
+        try { return Read(package, budget); }
+        catch (Exception exception) when (exception is InvalidDataException or FormatException or OverflowException or ArgumentException or NotSupportedException)
+        { package.AttachRejection(exception); throw; }
+    }
+    private static TypedWorkbookRead Read(XlsxPackage package, FileReadBudget budget)
+    {
         var workbookPart = package.RelatedByType("", "officeDocument", true)!;
         package.RequireType(workbookPart, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml");
         var root = package.XmlPart(workbookPart).Root!;
@@ -37,17 +43,21 @@ internal static class TypedWorkbookXml
         var styles = TypedStyles.Read(package, workbookPart);
         var textReader = new XlsxCellText(package, workbookPart);
         var strings = new List<XlsxTextValue>();
-        if (package.RelatedByType(workbookPart, "sharedStrings") is { } stringsPart)
+        var stylesPart = package.RelatedByType(workbookPart, "styles");
+        var stringsPart = package.RelatedByType(workbookPart, "sharedStrings");
+        if (stringsPart is not null)
         {
             package.RequireType(stringsPart, "application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml");
             var sst = package.XmlPart(stringsPart).Root!;
             if (sst.Name != Main + "sst") throw new InvalidDataException("无效共享字符串。");
             foreach (var item in sst.Elements(Main + "si"))
             {
+                using var sourceRange = package.SourceRange(stringsPart, "sharedStrings[" + strings.Count + "]");
                 if (strings.Count >= WorkbookLimits.MaxCells) throw new InvalidDataException("共享字符串过多。");
                 strings.Add(textReader.Read(item, stringsPart));
             }
         }
+        package.PrepareSharedLocations();
         var sheets = new List<WorksheetSnapshot>();
         var bindings = new List<WorkbookPartBinding>();
         var sheetIds = new HashSet<string>();
@@ -58,6 +68,7 @@ internal static class TypedWorkbookXml
         long inspectedArrayCells = 0;
         foreach (var definition in root.Element(Main + "sheets")?.Elements(Main + "sheet") ?? [])
         {
+            package.SetReadContext(workbookPart, "sheet:" + (string?)definition.Attribute("name"), "workbook/sheet");
             budget.Check();
             if (sheets.Count >= WorkbookLimits.MaxSheets) throw new InvalidDataException("工作表数量超过限制。");
             foreach (var attribute in definition.Attributes().Where(a => !a.IsNamespaceDeclaration && a.Name != Rel + "id" && a.Name.LocalName is not ("name" or "sheetId" or "state")))
@@ -82,11 +93,13 @@ internal static class TypedWorkbookXml
             var seenRows = new HashSet<int>();
             foreach (var column in sheet.Element(Main + "cols")?.Elements(Main + "col") ?? [])
             {
+                package.SetReadContext(path, "columns:" + (string?)column.Attribute("min") + ":" + (string?)column.Attribute("max"), "worksheet/column");
                 package.Shape(column, "", "min max width hidden style customWidth", path);
                 var min = Int(Attr(column, "min"), WorkbookLimits.MaxColumns);
                 var max = Int(Attr(column, "max"), WorkbookLimits.MaxColumns);
                 if (min == 0 || max < min) throw new InvalidDataException("列范围无效。");
                 var metadata = new ColumnMetadata(OptionalDouble(column.Attribute("width")), Bool((string?)column.Attribute("hidden")), Style(column, "style", styles.Count));
+                if (column.Attribute("style") is not null) package.RegisterSharedUsage(stylesPart, "cellXfs[" + metadata.StyleId + "]", path, $"columns:{min}:{max}");
                 for (var col = min - 1; col < max; col++)
                 {
                     budget.Parse(96);
@@ -95,6 +108,7 @@ internal static class TypedWorkbookXml
             }
             foreach (var row in sheet.Element(Main + "sheetData")?.Elements(Main + "row") ?? [])
             {
+                package.SetReadContext(path, "row:" + (string?)row.Attribute("r"), "worksheet/row");
                 budget.Parse(128);
                 var rowIndex = Int(Attr(row, "r"), WorkbookLimits.MaxRows) - 1;
                 if (rowIndex < 0 || !seenRows.Add(rowIndex)) throw new InvalidDataException("工作表行重复或无效。");
@@ -102,9 +116,11 @@ internal static class TypedWorkbookXml
                 var rowMetadata = new RowMetadata(OptionalDouble(row.Attribute("ht")) / 0.75, Bool((string?)row.Attribute("hidden")),
                     Style(row, "s", styles.Count), Bool((string?)row.Attribute("customFormat")));
                 if (rowMetadata != new RowMetadata() || row.Attribute("s") is not null || row.Attribute("customFormat") is not null) rows.Add(rowIndex, rowMetadata);
+                if (rowMetadata.ApplyStyle) package.RegisterSharedUsage(stylesPart, "cellXfs[" + rowMetadata.StyleId + "]", path, "row:" + (rowIndex + 1));
                 var nextColumn = 0;
                 foreach (var element in row.Elements(Main + "c"))
                 {
+                    package.SetReadContext(path, (string?)element.Attribute("r") ?? Reference(new(rowIndex, nextColumn)), "worksheet/cell");
                     budget.Parse(320);
                     if (++cellCount > WorkbookLimits.MaxCells) throw new InvalidDataException("单元格累计数量超过限制。");
                     var position = element.Attribute("r") is { } address ? Position(address.Value) : new CellPosition(rowIndex, nextColumn);
@@ -114,6 +130,13 @@ internal static class TypedWorkbookXml
                     var style = element.Attribute("s") is not null ? Style(element, "s", styles.Count)
                         : rowMetadata.ApplyStyle ? rowMetadata.StyleId : columns.GetValueOrDefault(position.Column)?.StyleId ?? 0;
                     var value = Value(element, strings, package, path, textReader, out var richText);
+                    if (package.HasSharedLocations)
+                    {
+                        var cellReference = Reference(position);
+                        package.RegisterSharedUsage(stylesPart, "cellXfs[" + style + "]", path, cellReference);
+                        if ((string?)element.Attribute("t") == "s")
+                            package.RegisterSharedUsage(stringsPart, "sharedStrings[" + Int(element.Element(Main + "v")!.Value, strings.Count - 1) + "]", path, cellReference);
+                    }
                     if (element.Element(Main + "v") is not null) cachedCells.Add(position);
                     CellSnapshot cell;
                     if (element.Element(Main + "f") is { } formula)
@@ -165,6 +188,7 @@ internal static class TypedWorkbookXml
                     if (!cells.TryAdd(position, cell)) throw new InvalidDataException("单元格地址重复。");
                 }
             }
+            package.SetReadContext(path, null, "worksheet/layout");
             var view = sheet.Element(Main + "sheetViews")?.Element(Main + "sheetView");
             for (var p = firstPreserved; p < preservedFormulas.Count; p++)
             {
@@ -195,6 +219,7 @@ internal static class TypedWorkbookXml
                 viewState, visibility, XlsxPrinting.Read(package, path, sheet), XlsxAnnotations.Read(package, path, sheet, textReader)));
             bindings.Add(new(sheetId, path));
         }
+        package.SetReadContext(workbookPart, null, "workbook/model");
         if (sheets.Count == 0) throw new InvalidDataException("工作簿没有工作表。");
         if (selectedTabs > 1) package.Loss(workbookPart + ": 成组选择工作表尚不支持编辑。", "sheetViews/grouped-tabs", workbookPart);
         var window = XlsxViews.ReadWorkbook(package, workbookPart, root, sheets);
@@ -204,6 +229,7 @@ internal static class TypedWorkbookXml
         var inspectedNames = 0;
         foreach (var element in root.Element(Main + "definedNames")?.Elements() ?? [])
         {
+            package.SetReadContext(workbookPart, (string?)element.Attribute("name"), "definedName");
             budget.Check();
             if (++inspectedNames > 4096) throw new InvalidDataException("名称数量超过 4096。");
             package.Shape(element, "", "name localSheetId", workbookPart);
@@ -240,6 +266,7 @@ internal static class TypedWorkbookXml
                         scopeIndex < 0 ? "(工作簿)" : sheets[scopeIndex].Name, name, null, element.Value));
             }
         }
+        package.SetReadContext(workbookPart, null, "workbook/model");
         var snapshot = new WorkbookSnapshot(Guid.NewGuid(), 0, dateSystem, sheets, styles: styles, definedNames: names, activeSheetId: window.Active, window: window.Window);
         var preservedLocations = preservedFormulas.Select(f => (f.Part, f.Cell)).ToHashSet();
         // Names can hide unsupported syntax or circular/oversized binding behind an otherwise simple formula.

@@ -9,7 +9,7 @@ public static class CompatibilityReportText
     {
         var lines = new List<string> {
             report.OriginalPackageUnchanged
-                ? "工作簿内容与导入时一致，普通保存 XLSQ 可保留原 XLSX 包；仅保留不代表可编辑写回。"
+                ? "工作簿内容与导入时一致，普通保存 XLSX/XLSQ 可保留原 XLSX 包；仅保留不代表可编辑写回。"
                 : report.Diagnostics.Any(d => d.Kind == CompatibilityKind.PotentialLoss)
                     ? "当前内容未走原包不变保留路径。潜在损失会阻止普通保存，须明确另存受支持副本。"
                     : "当前报告未列出格式损失阻止项；保存时仍会执行完整校验。",
@@ -23,6 +23,9 @@ public static class CompatibilityReportText
         }
         return string.Join("\n\n", lines);
     }
+
+    public static string Rejection(CompatibilityDiagnostic diagnostic) => "【拒绝】" + string.Join(" · ",
+        new[] { diagnostic.SheetName, diagnostic.Range, diagnostic.Part, diagnostic.Feature }.Where(s => !string.IsNullOrEmpty(s))) + "：" + diagnostic.Message;
 
     public static string Label(CompatibilityKind kind) => kind switch
     {

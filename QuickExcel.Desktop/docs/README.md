@@ -1,8 +1,8 @@
 # QuickExcel 架构与实施文档
 
-XC-0001/0002 完成：[真实 Excel 业务基线](37-excel-business-baseline.md) 覆盖五类六文件，5384 属性通过；[独立编辑矩阵](38-excel-edit-matrix.md) 的 48 路径及 Excel 重开对照通过，原始差异、诊断副本和预期公式表示均明确登记。继续 XC-0003 收尾，再进入 E2。
+XC-0001/0002 完成：[真实 Excel 业务基线](37-excel-business-baseline.md) 覆盖五类六文件，5384 属性通过；[独立编辑矩阵](38-excel-edit-matrix.md) 的 48 路径及 Excel 重开对照通过，原始差异、诊断副本和预期公式表示均明确登记。[XC-0003 诊断收尾](39-xlsx-diagnostic-closure.md) 完成，E0/E1 按声明范围关闭，接续 XC-0201。
 
-XC-0107 已完成常见富文本、超链接和传统批注的读显写；右键显式转换富文本后可普通编辑，支持撤销。真实 Excel 对照及限制见 [内容记录](36-xlsx-rich-text-links-and-notes.md)。下一步补齐 E0 阶段证据并进入 E2。
+XC-0107 已完成常见富文本、超链接和传统批注的读显写；右键显式转换富文本后可普通编辑，支持撤销。真实 Excel 对照及限制见 [内容记录](36-xlsx-rich-text-links-and-notes.md)。E0 证据现已补齐，下一步进入 E2。
 
 XC-0106 已完成受控公式保留：数组/结构化引用等以整簿只读打开，未知函数及依赖保留旧缓存，保存不冒充已重算。真实 Excel 对照及范围见 [公式保留](35-xlsx-preserved-formulas.md)。
 
@@ -12,7 +12,7 @@ XC-0106 已完成受控公式保留：数组/结构化引用等以整簿只读�
 
 阅读时先看实施计划的当前状态和下一轮切片，再查专题契约与证据。日期早于当前状态的“下一步”“默认网格”“尚未交付”属于当时记录，不覆盖新状态。源码版本仍为 `0.6.0-preview.3`；旧发布目录不会随构建自动更新，身份以包内 `BUILD-METADATA.json` 为准。
 
-E0 的 [兼容基线](27-xlsx-compatibility-baseline.md) 包含当前 R/D/C/E/W 矩阵、12 个合成样本和独立校验；[真实 Excel 样本台账](37-excel-business-baseline.md) 已补齐。编辑后预期差异和诊断剩余边界继续单独验收，E0 尚未整体关闭。
+E0 的 [兼容基线](27-xlsx-compatibility-baseline.md) 包含当前 R/D/C/E/W 矩阵、12 个合成样本和独立校验；[真实 Excel 样本台账](37-excel-business-baseline.md) 已补齐。编辑后预期差异和诊断定位已分别按 38/39 号记录完成，E0 声明范围关闭。
 
 XC-0003 首切片已接入：[兼容诊断分级](28-xlsx-compatibility-diagnostics.md) 记录五类诊断、来源/当前单元格定位、缓存说明及保存保护回归。
 

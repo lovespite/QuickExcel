@@ -83,6 +83,7 @@ public partial class MainWindow
             await RunWorkbookViewSmokeAsync(folder, Check);
             await RunPreservedFormulaSmokeAsync(folder, Check);
             await RunCellTextSmokeAsync(folder, Check);
+            await RunCompatibilityClosureSmokeAsync(folder, Check);
 
             if (source is not null)
             {

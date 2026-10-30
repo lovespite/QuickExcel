@@ -26,6 +26,7 @@ internal static class TypedStyles
         if (XlsxStylePreservation.CanPreserveStyles(package, path, root)) shape.Element(Main + "extLst")?.Remove();
         package.Shape(shape, "numFmts fonts fills borders cellXfs cellStyleXfs cellStyles colors dxfs tableStyles", "", path);
         var colors = new XlsxColors(package, workbookPart, root, path);
+        package.SetReadContext(path, null, "styles");
         var baseStyles = root.Element(Main + "cellStyleXfs")?.Elements(Main + "xf").ToArray() ?? [];
         if (baseStyles.Length > 4096) throw new InvalidDataException("命名样式基表超过 4096。");
         var namedStyles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -47,8 +48,10 @@ internal static class TypedStyles
         var fonts = root.Element(Main + "fonts")?.Elements(Main + "font").ToArray() ?? [new XElement(Main + "font")];
         var fills = root.Element(Main + "fills")?.Elements(Main + "fill").ToArray() ?? [new XElement(Main + "fill")];
         var borders = root.Element(Main + "borders")?.Elements(Main + "border").ToArray() ?? [new XElement(Main + "border")];
-        foreach (var parent in baseStyles)
+        for (var parentIndex = 0; parentIndex < baseStyles.Length; parentIndex++)
         {
+            var parent = baseStyles[parentIndex];
+            using var sourceRange = package.SourceRange(path, "cellStyleXfs[" + parentIndex + "]");
             package.Shape(parent, "alignment protection", "numFmtId fontId fillId borderId applyFont applyFill applyBorder applyAlignment applyNumberFormat applyProtection", path);
             _ = Int((string?)parent.Attribute("fontId") ?? "0", fonts.Length - 1);
             _ = Int((string?)parent.Attribute("fillId") ?? "0", fills.Length - 1);
@@ -57,13 +60,16 @@ internal static class TypedStyles
             if (numberId >= 164 && !formats.ContainsKey(numberId)) throw new InvalidDataException("命名样式数字格式定义缺失。");
             foreach (var flag in parent.Attributes().Where(a => a.Name.LocalName.StartsWith("apply", StringComparison.Ordinal))) _ = Bool(flag.Value);
         }
+        package.PrepareSharedLocations();
         var result = new List<StyleDefinition>();
         foreach (var xf in root.Element(Main + "cellXfs")?.Elements(Main + "xf") ?? [])
         {
+            using var sourceRange = package.SourceRange(path, "cellXfs[" + result.Count + "]");
             if (result.Count >= 4096) throw new InvalidDataException("样式数量超过 4096。");
             package.Shape(xf, "alignment", "numFmtId fontId fillId borderId xfId applyFont applyFill applyBorder applyAlignment applyNumberFormat", path);
             if (xf.Attribute("xfId") is not null && baseStyles.Length == 0) throw new InvalidDataException("单元格引用了缺失的命名样式基表。");
             var parentId = Int((string?)xf.Attribute("xfId") ?? "0", Math.Max(0, baseStyles.Length - 1));
+            package.RegisterSharedUsage(path, "cellStyleXfs[" + parentId + "]", path, "cellXfs[" + result.Count + "]");
             foreach (var flag in xf.Attributes().Where(a => a.Name.LocalName.StartsWith("apply", StringComparison.Ordinal))) _ = Bool(flag.Value);
             var font = fonts[Int((string?)xf.Attribute("fontId") ?? "0", fonts.Length - 1)];
             var fill = fills[Int((string?)xf.Attribute("fillId") ?? "0", fills.Length - 1)];

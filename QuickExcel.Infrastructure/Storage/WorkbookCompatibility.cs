@@ -12,9 +12,20 @@ public sealed class WorkbookFeatureRejectedException(CompatibilityDiagnostic dia
 
 public sealed partial class TypedWorkbookStorage
 {
+    internal const string RejectionKey = "QuickExcel.CompatibilityRejection";
+    public static CompatibilityDiagnostic? DescribeRejection(Exception exception)
+    {
+        for (var current = exception; current is not null; current = current.InnerException)
+        {
+            if (current is WorkbookFeatureRejectedException rejected) return rejected.Diagnostic;
+            if (current.Data[RejectionKey] is CompatibilityDiagnostic diagnostic) return diagnostic;
+        }
+        return null;
+    }
     /// <summary>Read-only inspection of the current snapshot. Does not calculate, load scripts or change save policy.</summary>
     public static WorkbookCompatibilityReport InspectCompatibility(WorkbookSnapshot snapshot, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var inspected = PrepareReadOnlyFormulaSave(snapshot, false);
         var unchanged = inspected.FileState is { } state && ContentEquals(inspected, state.OriginalModel);
         var diagnostics = (snapshot.FileState?.CompatibilityDiagnostics ?? []).Select(d => d with {
@@ -80,6 +91,11 @@ public sealed partial class TypedWorkbookStorage
             {
                 code = "formula.unsupported-syntax"; feature = "formula/syntax";
                 message = "当前公式语法或名称绑定不支持：" + ex.Message + " 结构编辑仍受现有安全检查限制。";
+            }
+            if (message is null && cell.Calculation is { State: CalculationState.Blocked } blocked && blocked.InputRevision == snapshot.Revision)
+            {
+                code = "formula.blocked-dependency"; feature = "formula/dependency";
+                message = "当前计算已将此公式标记为不可用依赖/只读公式阻塞；保留来源缓存，不是新结果。";
             }
             if (message is null) continue;
             message += cell.Calculation?.Value is null ? " 当前无缓存结果。" :

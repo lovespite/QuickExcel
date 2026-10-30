@@ -7,6 +7,27 @@ namespace QuickExcel.Core.Test;
 
 public sealed class CompatibilityReportTests
 {
+    [Fact]
+    public void CurrentBlockedDependenciesAreLocatedWithoutCalculatingDuringInspection()
+    {
+        var snapshot = Model("=UNKNOWN_FN(1)", "=A1+1", "=SUM(1,2)"); using var session = new DocumentSession(snapshot);
+        var result = new QuickExcel.Calculation.WorkbookCalculator(new M3CalculationTests.NoScripts()).Calculate(session.BeginCalculation());
+        Assert.True(session.TryCommitCalculation(result)); var before = session.Snapshot;
+        var report = TypedWorkbookStorage.InspectCompatibility(before);
+        Assert.Contains(report.Diagnostics, d => d.Code == "formula.blocked-dependency" && d.Range == "A2" && d.Kind == CompatibilityKind.CannotCalculate);
+        Assert.DoesNotContain(report.Diagnostics, d => d.Kind == CompatibilityKind.CannotCalculate && d.Range == "A3");
+        Assert.Same(before, session.Snapshot); Assert.False(session.ScriptsEnabled);
+    }
+    [Fact]
+    public void ImportRejectionsRetainOriginalExceptionTypeAndLocateFile()
+    {
+        var folder = Path.Combine(AppContext.BaseDirectory, "artifacts", "rejected-" + Guid.NewGuid().ToString("N")); Directory.CreateDirectory(folder);
+        var path = Path.Combine(folder, "bad.xlsx"); File.WriteAllText(path, "not a ZIP");
+        var error = Assert.Throws<InvalidDataException>(() => new TypedWorkbookStorage().Open(path));
+        var diagnostic = Assert.IsType<CompatibilityDiagnostic>(TypedWorkbookStorage.DescribeRejection(error));
+        Assert.Equal(CompatibilityKind.Rejected, diagnostic.Kind); Assert.Equal("bad.xlsx", diagnostic.Part);
+        Assert.Contains("【拒绝】", CompatibilityReportText.Rejection(diagnostic)); Assert.Equal("not a ZIP", File.ReadAllText(path));
+    }
     private static WorkbookSnapshot Model(params string[] formulas) => new(Guid.NewGuid(), 0, ExcelDateSystem.Windows1900,
         [new WorksheetSnapshot(SheetId.New(), "当前表", formulas.Select((f, i) => new KeyValuePair<CellPosition, CellSnapshot>(
             new(i, 0), new(CellContent.FromFormula(f), new(CellValue.FromNumber(7), CalculationState.Stale, 0, 0, 0)))))],

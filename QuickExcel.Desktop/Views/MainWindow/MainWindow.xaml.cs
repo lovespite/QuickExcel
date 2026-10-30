@@ -279,8 +279,9 @@ public partial class MainWindow : Window
         {
             if (ex is OperationCanceledException) { StatusText.Text = "操作已停止，保留已提交的数据与结果。"; return false; }
             StatusText.Text = "操作未完成";
-            AppendLog(ex.Message);
-            if (!_smokeMode) MessageBox.Show(this, ex.Message, "QuickExcel", MessageBoxButton.OK, MessageBoxImage.Warning);
+            var errorText = QuickExcel.Storage.TypedWorkbookStorage.DescribeRejection(ex) is { } rejected ? CompatibilityReportText.Rejection(rejected) : ex.Message;
+            AppendLog(errorText);
+            if (!_smokeMode) MessageBox.Show(this, errorText, "QuickExcel", MessageBoxButton.OK, MessageBoxImage.Warning);
             return false;
         }
         finally

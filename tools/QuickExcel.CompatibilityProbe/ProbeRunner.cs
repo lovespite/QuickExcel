@@ -37,10 +37,12 @@ public static class ProbeRunner
             IReadOnlyList<CompatibilityDiagnostic> diagnostics = [];
             var operation = Describe(mode);
             var stage = "open";
+            string? sheetName = null;
             try
             {
                 var storage = new TypedWorkbookStorage();
                 var snapshot = storage.Open(sourcePath);
+                sheetName = snapshot.Sheets[0].Name;
                 dateSystem = snapshot.DateSystem.ToString();
                 issues = snapshot.FileState!.CompatibilityIssues.ToArray();
                 using var session = new DocumentSession(snapshot);
@@ -73,7 +75,9 @@ public static class ProbeRunner
             }
             catch (Exception ex) when (ex is InvalidDataException or InvalidOperationException or ArgumentException or NotSupportedException)
             {
-                if (ex is WorkbookFeatureRejectedException rejected) diagnostics = [rejected.Diagnostic];
+                if (TypedWorkbookStorage.DescribeRejection(ex) is { } rejected) diagnostics = [rejected];
+                else if (stage == "edit") diagnostics = diagnostics.Append(new CompatibilityDiagnostic("command.rejected", CompatibilityKind.Rejected,
+                    mode, ex.Message, SheetName: sheetName, Range: operation)).ToArray();
                 paths.Add(new(mode, operation, stage + "-rejected", issues, ex.Message, null, null, [], diagnostics));
             }
         }

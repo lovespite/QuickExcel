@@ -1,6 +1,6 @@
 # QuickExcel 0.6 交互预览版
 
-XC-0107 已完成常见富文本、超链接和传统批注的读显写；右键显式转换富文本后可普通编辑，支持撤销。真实 Excel 对照及限制见 [内容记录](docs/36-xlsx-rich-text-links-and-notes.md)。下一步补齐 E0 阶段证据并进入 E2。
+XC-0107 已完成常见富文本、超链接和传统批注的读显写；右键显式转换富文本后可普通编辑，支持撤销。真实 Excel 对照及限制见 [内容记录](docs/36-xlsx-rich-text-links-and-notes.md)。[E0 证据及诊断收尾](docs/39-xlsx-diagnostic-closure.md) 已完成，下一步为 E2 的复制粘贴语义。
 
 XC-0106 已完成受控公式保留：数组/结构化引用等以整簿只读打开，未知函数及依赖保留旧缓存，保存不冒充已重算。真实 Excel 对照及范围见 [公式保留](docs/35-xlsx-preserved-formulas.md)。
 

@@ -14,6 +14,9 @@ internal sealed class XlsxPackage
     private readonly HashSet<string> _used = new(StringComparer.Ordinal) { "[Content_Types].xml" };
     private readonly Dictionary<string, string> _types = new(StringComparer.Ordinal);
     private readonly Dictionary<string, string> _sheetNames = new(StringComparer.Ordinal);
+    private (string Part, string Range)? _sourceRange;
+    private (string Part, string? Range, string Feature)? _readContext;
+    private Dictionary<(string Part, string Range), CompatibilityDiagnostic[]> _sharedDiagnostics = [];
     public Dictionary<string, byte[]> Parts { get; }
     public FileReadBudget Budget { get; }
     public CompatibilityIssueCollection Issues { get; } = new();
@@ -80,6 +83,7 @@ internal sealed class XlsxPackage
     }
     public XDocument XmlPart(string path)
     {
+        SetReadContext(path, null, "XML/part");
         _used.Add(path);
         if (!_xml.TryGetValue(path, out var result)) _xml[path] = result = Xml(Required(Parts, path), Budget);
         return result;
@@ -126,6 +130,29 @@ internal sealed class XlsxPackage
         foreach (var name in Parts.Keys.Where(n => !_used.Contains(n))) Loss($"未建模部件：{name}", "part/" + _types.GetValueOrDefault(name), name);
     }
     public void RegisterSheet(string path, string name) => _sheetNames[path] = name;
+    public void SetReadContext(string part, string? range, string feature) => _readContext = (part, range, feature);
+    public void AttachRejection(Exception exception)
+    {
+        if (_readContext is { } context)
+            exception.Data[TypedWorkbookStorage.RejectionKey] = new CompatibilityDiagnostic("xlsx.import-rejected", CompatibilityKind.Rejected,
+                context.Feature, exception.Message, context.Part, _sheetNames.GetValueOrDefault(context.Part), context.Range);
+    }
+    public IDisposable SourceRange(string part, string range)
+    {
+        var previous = _sourceRange; _sourceRange = (part, range); SetReadContext(part, range, "shared-content");
+        return new RestoreScope(() => _sourceRange = previous);
+    }
+    private sealed class RestoreScope(Action restore) : IDisposable { public void Dispose() => restore(); }
+    public void PrepareSharedLocations() => _sharedDiagnostics = Issues.Diagnostics.Where(d => d.Part is not null && d.Range is not null)
+        .GroupBy(d => (d.Part!, d.Range!)).ToDictionary(g => g.Key, g => g.ToArray());
+    public bool HasSharedLocations => _sharedDiagnostics.Count != 0;
+    public void RegisterSharedUsage(string? sourcePart, string sourceRange, string sheetPart, string range)
+    {
+        if (sourcePart is null || !_sharedDiagnostics.TryGetValue((sourcePart, sourceRange), out var diagnostics)) return;
+        foreach (var diagnostic in diagnostics)
+            Issues.Add(diagnostic with { Code = "xlsx.affected-location", SheetName = _sheetNames.GetValueOrDefault(sheetPart),
+                Range = range, Feature = diagnostic.Feature + " · " + sourceRange });
+    }
     public IReadOnlyList<CompatibilityDiagnostic> Diagnostics => Issues.Diagnostics.Select(d => d with {
         SheetName = d.SheetName ?? (d.Part is { } part ? _sheetNames.GetValueOrDefault(
             part.EndsWith(".rels", StringComparison.Ordinal) ? SourceForRelationships(part) : part) : null)
@@ -137,6 +164,7 @@ internal sealed class XlsxPackage
         range ??= (string?)cell?.Attribute("r") ?? (string?)element?.Attribute("ref");
         if (range is null && element?.Name == Main + "row") range = "row:" + (string?)element.Attribute("r");
         if (range is null && element?.Name == Main + "col") range = "columns:" + (string?)element.Attribute("min") + ":" + (string?)element.Attribute("max");
+        if (range is null && _sourceRange is { } source && source.Part == part) range = source.Range;
         Issues.Add(new CompatibilityDiagnostic("xlsx.unmodeled", CompatibilityKind.PreservedOnly, feature, message, part, sheetName, range));
     }
     public void Shape(XElement element, string children, string attributes, string part)
