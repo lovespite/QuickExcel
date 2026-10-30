@@ -15,7 +15,7 @@ S = 支持该行限定子集；P = 部分支持；O = 仅原包保留；N = 不�
 | 基础字体、实色填充、边框/对齐、换行 | S | P | — | S | S | `TypedStyles` 与 [25](25-xlsx-rendering.md)；本轮修复字体 XML 子元素顺序 |
 | 主题/索引/tint 颜色 | P | P | — | P | P | XC-0102 按验证后的原样式/主题关系保留，单格编辑追加明确覆盖，范围见 [31](31-xlsx-named-styles-and-theme.md) |
 | Normal/命名样式、继承、apply 标志、主题字体 | P | P | — | P | P | 常用样式及主题关联、旋转/缩进/缩小填充已有 104 属性 Excel 对照，完整边界见 [31](31-xlsx-named-styles-and-theme.md) |
-| 行列尺寸/隐藏/样式优先级 | P | P | — | P | P | 行列单格优先级与 customFormat 已有 [29 号专项证据](29-xlsx-row-style-inheritance.md)，新增 `row-column-styles` 第 10 个夹具；完整继承/outline 未验收，XC-0102/0307 |
+| 行列尺寸/隐藏/样式优先级 | P | P | — | P | P | 行列单格优先级与 customFormat 已有 [29 号专项证据](29-xlsx-row-style-inheritance.md)，新增 `row-column-styles` 第 10 个夹具；完整继承仍有限制；outline 已独立验收，见 [56](56-outline-and-subtotals.md) |
 | 合并和基础浮动图片 | P | P | — | P | P | 既有 `TypedStorageTests`；复杂锚点/结构变化限制保持，XC-0402 |
 | 普通/共享公式、跨表 A1、定义名称 | P | P | P | P | P | `cross-sheet`、`M3StorageTests`；支持函数与参数见 [10](10-m3-calculation.md)，缓存不等于重算 |
 | 未知函数、`_xlfn` 前缀 | S | P | N | P | S | XC-0106：原公式/旧缓存保留，函数和依赖为 Blocked，独立公式可重算；结构变换拒绝，值/样式受限编辑可保存，见 [35](35-xlsx-preserved-formulas.md) |
@@ -33,6 +33,8 @@ S = 支持该行限定子集；P = 部分支持；O = 仅原包保留；N = 不�
 | AutoFilter / sortState | P | P | — | P | P | XC-0301 多列列表/比较、排序设置和手动隐藏区分已持久化；37 个真实 Excel 案例及范围/来源限制见 [50](50-filter-and-sort-persistence.md) |
 | Excel Table 基础 | P | P | — | P | P | XC-0302 名称/范围/列/表头/汇总/60 内置样式及独立筛选读显写、受限创建/底边调整；60,336 项往返和 Excel 复验见 [51](51-excel-table-basics.md)；结构化公式见 [52](52-structured-references-and-table-editing.md) |
 | 常用清洗命令 | — | S | — | P | S | XC-0306 删除重复项、分隔/定宽分列、显式数字/日期类型；预览原子提交，双日期系统 Excel 对照和边界见 [55](55-data-cleaning.md) |
+| 行列 outline 分组/折叠 | S | P | — | P | S | XC-0307 层级、隐藏/折叠、上下/左右方向及分组栏，复制/撤销/往返已验收；分组与活动筛选组合保留/报告，见 [56](56-outline-and-subtotals.md) |
+| SUBTOTAL / 分类汇总生成 | P | P | P | P | P | 22 种模式的筛选/手动隐藏语义及 11 种预览生成；真实 Excel 14 表六阶段验证，引用/结构/混合状态边界见 [56](56-outline-and-subtotals.md) |
 | 未知部件与关系 | O | N | — | N | O | 不变保留原 XLSX 字节；变更时可能阻止普通保存，不复制未知失效关系 |
 
 矩阵的 S/P/O 不是互相替代的验收结论。对于一个含多种特性的文件，即使修改的单元格本身属于 S，其他特性的兼容问题仍可能阻止普通保存。未知函数的旧缓存已在后续报告中单独说明，但仍不能据此承诺安全重算或任意结构编辑。

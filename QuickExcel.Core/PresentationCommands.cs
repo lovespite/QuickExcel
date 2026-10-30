@@ -27,6 +27,7 @@ public sealed class SortRangeCommand : DocumentCommand
         foreach (var key in _descriptor.Keys) key.Validate();
         var sheet = snapshot.GetSheet(sheetId);
         StructureEdits.RequireSimpleStructure(sheet);
+        if (WorksheetOutline.HasGroups(sheet)) throw new NotSupportedException("含分组的工作表暂不排序，请先取消分组。");
         var dataFirst = first.Row + (_descriptor.HasHeader ? 1 : 0);
         if (sheet.Data.ConditionalFormats.Any(r => r.Ranges.Any(a =>
                 ValidationSafety.Overlaps(a, new(dataFirst, first.Column, last.Row, last.Column)) &&
@@ -212,6 +213,8 @@ public sealed class SetAxisMetadataCommand(SheetId sheetId, SheetAxis axis, int 
         if (!Enum.IsDefined(axis) || first < 0 || count < 1 || first > limit - count) throw new ArgumentOutOfRangeException(nameof(first));
         WorkbookLimits.ValidateDimension(size, nameof(size));
         var sheet = snapshot.GetSheet(sheetId);
+        if (hidden == false && WorksheetOutline.Groups(sheet, axis).Any(g => g.Collapsed && g.First < first + count && g.Last >= first))
+            throw new InvalidOperationException("该区域由分组折叠隐藏，请通过展开分组恢复可见性。");
         var rows = sheet.Rows.ToBuilder(); var columns = sheet.Columns.ToBuilder();
         for (var i = first; i < first + count; i++)
             if (axis == SheetAxis.Row) { var old = rows.GetValueOrDefault(i) ?? new(); rows[i] = old with { Height = size ?? old.Height, Hidden = hidden ?? old.Hidden }; }

@@ -1,5 +1,7 @@
 # QuickExcel 架构与实施文档
 
+2026-10-31 当前状态：XLSX / Excel 对齐计划 E0–E3 已逐项完成声明范围；最后一项 [分组与分类汇总](56-outline-and-subtotals.md) 已通过真实 Excel、202 项相关测试及 WPF 验收，混合筛选/分组等限制明确保留。以下较早的阶段描述为历史；E4/E5、M4/M6 剩余门禁未完成。
+
 XC-0001/0002 完成：[真实 Excel 业务基线](37-excel-business-baseline.md) 覆盖五类六文件，5384 属性通过；[独立编辑矩阵](38-excel-edit-matrix.md) 的 48 路径及 Excel 重开对照通过，原始差异、诊断副本和预期公式表示均明确登记。[XC-0003 诊断收尾](39-xlsx-diagnostic-closure.md) 完成，E0/E1 按声明范围关闭，[XC-0201 内部剪贴板](40-internal-clipboard.md)、[XC-0202 填充与序列](41-fill-and-series.md) 已完成声明范围，[XC-0203 录入和公式编辑](42-formula-entry-and-navigation.md) 完成声明范围，[XC-0204 工作表与名称管理](43-sheet-and-name-management.md) 已完成声明范围，[XC-0205 条件统计公式](44-conditional-functions.md) 已完成声明范围，[XC-0206 查找公式](45-lookup-functions.md) 已完成声明范围，[XC-0207 日期/数学及工作日](46-date-and-math-functions.md) 已完成声明范围，接续 XC-0208。
 
 XC-0107 已完成常见富文本、超链接和传统批注的读显写；右键显式转换富文本后可普通编辑，支持撤销。真实 Excel 对照及限制见 [内容记录](36-xlsx-rich-text-links-and-notes.md)。E0 证据现已补齐，下一步进入 E2。
@@ -36,6 +38,7 @@ E1 七项实现及各自真实 Excel 对照已完成；[行列样式优先级](2
 
 | 文档 | 解决的问题 |
 | --- | --- |
+| [分组与分类汇总](56-outline-and-subtotals.md) | E3 收尾：outline、SUBTOTAL、预览生成、真实 Excel 验收及混合状态边界 |
 | [XLSX / Excel 对齐专项](26-excel-compatibility-roadmap.md) | 当前重点工程的阶段、优先级、支持维度及完成清单 |
 | [XLSX 兼容基线](27-xlsx-compatibility-baseline.md) | 当前特性矩阵、样本台账、独立比较工具、首轮缺陷与证据 |
 | [XLSX 兼容诊断](28-xlsx-compatibility-diagnostics.md) | 分级报告、未知函数与旧缓存、拒绝定位及保存保护证据 |

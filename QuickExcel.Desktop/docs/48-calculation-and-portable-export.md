@@ -4,6 +4,8 @@
 
 ## 67 个函数的参数契约
 
+2026-10-31 增补：XC-0307 新增 SUBTOTAL，签名为 2–255 参数，当前共 68 个函数；五个真实 Excel 参数个数案例已追加到同一 fixture，原有 270 个案例保持。其引用、可见性和保留边界见 [56](56-outline-and-subtotals.md)。下表保留本项原 67 个函数的验收范围。
+
 `StandardFunctions.AcceptsArguments` 是计算与导出共用的参数个数判定。Excel 16.0 build 20527、语言 2052 的 270 次真实公式赋值/拒绝记录固定在 `QuickExcel.Core.Test/Fixtures/excel-function-arity.json`。参数个数合法不代表该函数的所有数组、引用或文化模式已经实现；对应模式见 [44](44-conditional-functions.md)、[45](45-lookup-functions.md)、[46](46-date-and-math-functions.md)、[47](47-text-and-type-functions.md)。
 
 | 函数 | 参数数 |

@@ -14,6 +14,7 @@ public sealed class WorkbookDependencyIndex
         public string? ParseError { get; set; }
         public bool Script { get; set; }
         public bool Volatile { get; set; }
+        public bool VisibilityBlocked { get; set; }
         public string? PortableFormula { get; set; }
         public HashSet<CellAddress> Dependencies { get; } = [];
         public HashSet<CellAddress> Dependents { get; } = [];
@@ -42,6 +43,7 @@ public sealed class WorkbookDependencyIndex
             try
             {
                 node.Expression = FormulaBinding.Bind(FormulaSyntax.Parse(cell.Content.FormulaText), snapshot, sheet.Id, position);
+                node.VisibilityBlocked = SubtotalFunctions.Contains(node.Expression) && SubtotalFunctions.HasUnmodeledFilters(snapshot);
                 var depthCheck = new Stack<(FormulaNode Node, int Depth)>();
                 depthCheck.Push((node.Expression, 0));
                 while (depthCheck.TryPop(out var item))
@@ -55,13 +57,13 @@ public sealed class WorkbookDependencyIndex
                         case FunctionNode f: foreach (var a in f.Arguments) depthCheck.Push((a, item.Depth + 1)); break;
                     }
                 }
-                foreach (var part in FormulaSyntax.Walk(ConditionalRanges.ForDependencies(node.Expression)))
+                foreach (var part in FormulaSyntax.Walk(ConditionalRanges.ForDependencies(node.Expression)).Concat(SubtotalFunctions.FilterDependencies(node.Expression, snapshot)))
                 {
                     check();
                     if (part is FunctionNode function)
                     {
                         node.Script |= !StandardFunctions.Signatures.ContainsKey(function.Name);
-                        node.Volatile |= function.Name is "TODAY" or "NOW";
+                        node.Volatile |= function.Name is "TODAY" or "NOW" or "SUBTOTAL";
                     }
                     if (part is not ReferenceNode reference) continue;
                     var target = sheets[reference.Sheet!].Id;
@@ -87,7 +89,7 @@ public sealed class WorkbookDependencyIndex
             }
         }
         CycleMembers = FindCycles(check);
-        NonPortableCells = Closure(Nodes.Where(p => p.Value.Script || p.Value.ParseError is not null || p.Value.PortableFormula is null || p.Value.Expression is ReferenceNode { IsRange: true }
+        NonPortableCells = Closure(Nodes.Where(p => p.Value.Script || p.Value.VisibilityBlocked || p.Value.ParseError is not null || p.Value.PortableFormula is null || p.Value.Expression is ReferenceNode { IsRange: true }
             || FormulaSyntax.Walk(p.Value.Expression).OfType<FunctionNode>().Any(f => !StandardFunctions.AcceptsArguments(f.Name, f.Arguments.Count))
             || FormulaSyntax.Walk(p.Value.Expression).OfType<ValueNode>().Any(n => n.Value.Kind == CellValueKind.Error && n.Value.ErrorCode is CellErrorCode.Cycle or CellErrorCode.Script))
             .Select(p => p.Key).Concat(CycleMembers), check);

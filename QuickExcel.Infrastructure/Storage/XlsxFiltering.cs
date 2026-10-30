@@ -146,6 +146,12 @@ internal static class XlsxFiltering
         }
         if (!sheet.Data.AllFilters.Any()) return sheet;
         WorksheetSnapshot WithoutFilters() => sheet.WithData(sheet.Data with { Filter = null, Tables = sheet.Data.Tables.Select(t => t.WithFilter(null)).ToImmutableArray() });
+        if (WorksheetOutline.HasGroups(sheet) && sheet.Data.AllFilters.Any(f => f.Columns.Count > 0))
+        {
+            package.Loss("分组与活动筛选共存时，Excel 折叠/展开会改变 SUBTOTAL 的隐藏来源；当前保留原条件和源行状态，不重新解释此组合。",
+                "worksheet/autoFilter-outline", path, range: string.Join(' ', sheet.Data.AllFilters.Select(f => f.Range.ToString())));
+            return WithoutFilters();
+        }
         ImmutableHashSet<int> filtered;
         try { filtered = WorksheetFilterEngine.Evaluate(sheet, styles, system, 0, allowSourceCaches: true); }
         catch (InvalidOperationException ex)

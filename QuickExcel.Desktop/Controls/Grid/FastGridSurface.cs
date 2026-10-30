@@ -211,7 +211,7 @@ internal sealed partial class FastGridSurface : IGridSurface
         var sheet = _snapshot.Sheets[_sheetIndex];
         var rows = sheet.Rows.Where(p => p.Value.Height.HasValue && !p.Value.Hidden).ToDictionary(p => p.Key, p => Math.Clamp(p.Value.Height!.Value, 1, 10000));
         var columns = Enumerable.Range(0, _model.Columns).Where(c => sheet.Columns.GetValueOrDefault(c)?.Hidden != true).ToDictionary(c => c,
-            c => sheet.Columns.GetValueOrDefault(c)?.Width is { } width ? Math.Clamp(width * 7 + 5, 1, 10000) : c == 0 ? 160d : 112d);
+            c => sheet.Columns.GetValueOrDefault(c)?.Width is { } width ? Math.Clamp(width * 7 + 5, 1, 10000) : WorkbookLimits.DefaultColumnWidth(c) * 7 + 5);
         if (previewAxis == SheetAxis.Row) rows[previewIndex] = previewPixels;
         if (previewAxis == SheetAxis.Column) columns[previewIndex] = previewPixels;
         Control.SetModelDimensions(rows, columns, Math.Clamp(sheet.DefaultRowHeight ?? 31, 1, 10000));

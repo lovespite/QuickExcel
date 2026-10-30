@@ -96,15 +96,18 @@ public sealed class WorksheetSortState
             string.Equals(p.First.PreferredColor, p.Second.PreferredColor, StringComparison.OrdinalIgnoreCase) && p.First.CustomOrder.SequenceEqual(p.Second.CustomOrder));
 }
 
+public sealed record OutlineSettings(bool SummaryBelow = true, bool SummaryRight = true, bool ShowSymbols = true, bool ApplyStyles = false);
+
 public sealed record WorksheetData(WorksheetAutoFilter? Filter = null, WorksheetSortState? Sort = null)
 {
+    public OutlineSettings? Outline { get; init; }
     public ImmutableArray<WorksheetTable> Tables { get; init; } = [];
     public ImmutableArray<WorksheetValidation> Validations { get; init; } = [];
     public ImmutableArray<ConditionalFormatRule> ConditionalFormats { get; init; } = [];
     public IEnumerable<WorksheetAutoFilter> AllFilters => (Filter is null ? Enumerable.Empty<WorksheetAutoFilter>() : [Filter]).Concat(Tables.Select(t => t.Filter).OfType<WorksheetAutoFilter>());
-    public bool IsEmpty => Filter is null && Sort is null && Tables.IsEmpty && Validations.IsEmpty && ConditionalFormats.IsEmpty;
+    public bool IsEmpty => Filter is null && Sort is null && Tables.IsEmpty && Validations.IsEmpty && ConditionalFormats.IsEmpty && Outline is null;
     public bool ContentEquals(WorksheetData other, bool equivalentFormulas = false) => (Filter is null ? other.Filter is null : other.Filter is not null && Filter.ContentEquals(other.Filter)) &&
-        (Sort is null ? other.Sort is null : other.Sort is not null && Sort.ContentEquals(other.Sort)) &&
+        Outline == other.Outline && (Sort is null ? other.Sort is null : other.Sort is not null && Sort.ContentEquals(other.Sort)) &&
         Tables.Length == other.Tables.Length && Tables.Zip(other.Tables).All(p => p.First.ContentEquals(p.Second, equivalentFormulas)) &&
         Validations.Length == other.Validations.Length && Validations.Zip(other.Validations).All(p => p.First.ContentEquals(p.Second)) &&
         ConditionalFormats.Length == other.ConditionalFormats.Length && ConditionalFormats.Zip(other.ConditionalFormats).All(p => p.First.ContentEquals(p.Second));

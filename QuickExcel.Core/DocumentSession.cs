@@ -95,6 +95,12 @@ public sealed class DocumentSession : IDisposable
             var before = _snapshot;
             if (before.FileState?.FormulaReadOnly == true) throw new InvalidOperationException(WorkbookFileState.FormulaReadOnlyMessage);
             var draft = command.Prepare(before); // No session state is changed until every check succeeds.
+            if (draft.Snapshot.Sheets.Any(s => WorksheetOutline.HasGroups(s) && s.Data.AllFilters.Any(f => f.Columns.Count > 0)))
+                throw new NotSupportedException("分组与活动筛选的混合编辑暂未对齐 Excel；请先展开并取消分组，或清除筛选条件。");
+            // Visibility aggregates also depend on filter metadata and displayed filter labels.
+            // Conservatively recalculate these workbooks for presentation-only commands.
+            if (draft.CalculationUnchanged && !ReferenceEquals(draft.Snapshot, before) && Formulas.SubtotalFunctions.Present(draft.Snapshot))
+                draft = draft with { CalculationUnchanged = false };
             TableSafety.ValidateEdit(before, draft.Snapshot);
             var inputChanges = draft.Changes.Where(c => c.Before?.Content.WithStyle(0) != c.After?.Content.WithStyle(0)).Select(c => c.Address).ToArray();
             if (inputChanges.Length > 0 && before.FileState?.CompatibilityDiagnostics.Any(d => d.Feature.Contains("dataValidation", StringComparison.OrdinalIgnoreCase)) == true)

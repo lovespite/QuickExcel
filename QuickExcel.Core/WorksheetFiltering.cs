@@ -98,6 +98,7 @@ public sealed class SetAutoFilterCommand(SheetId sheetId, WorksheetAutoFilter? f
 {
     internal override CommandDraft Prepare(WorkbookSnapshot snapshot)
     {
+        WorksheetOutline.RequireEditable(snapshot);
         var sheet = snapshot.GetSheet(sheetId); var data = sheet.Data with { Filter = filter };
         if (sheet.Data.ContentEquals(data)) return new(snapshot, [], false);
         var next = sheet.WithData(data);

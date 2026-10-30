@@ -253,6 +253,8 @@ internal static class StructureEdits
     internal static WorkbookSnapshot Axis(WorkbookSnapshot snapshot, WorksheetSnapshot target, SheetAxis axis,
         Func<int, int?> position, Func<int, int, (int Start, int End)?> interval)
     {
+        if (WorksheetOutline.HasGroups(target))
+            throw new NotSupportedException("分组层级的行列插删/搬移尚未支持，请先取消分组；操作未应用。");
         if (snapshot.Sheets.Any(s => !s.Data.Validations.IsEmpty))
             throw new NotSupportedException("含数据验证的工作簿暂不支持行列插删/搬移，避免改变规则的相对引用；操作未应用。");
         var limit = axis == SheetAxis.Row ? WorkbookLimits.MaxRows : WorkbookLimits.MaxColumns;

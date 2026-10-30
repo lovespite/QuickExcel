@@ -103,6 +103,7 @@ public sealed class SetTableFilterCommand(SheetId sheetId, int tableId, Workshee
 {
     internal override CommandDraft Prepare(WorkbookSnapshot snapshot)
     {
+        WorksheetOutline.RequireEditable(snapshot);
         var sheet = snapshot.GetSheet(sheetId); var table = sheet.Data.Tables.Single(t => t.Id == tableId); var updated = table.WithFilter(filter);
         if (table.ContentEquals(updated)) return new(snapshot, [], false);
         var next = snapshot.WithSheets(snapshot.Sheets.Select(s => s.Id == sheetId ? s.WithData(sheet.Data with { Tables = sheet.Data.Tables.Replace(table, updated) }) : s));

@@ -41,7 +41,7 @@ public sealed class ApplyCleaningCommand(CleaningPreview preview, bool allowOver
             preview.Result.Styles, snapshot.ScriptModules, snapshot.FileState, snapshot.DefinedNames, snapshot.ActiveSheetId, snapshot.Window, snapshot.TextCompatibilityVersion);
         return new SetCellsCommand(preview.Changes.Select(c => new CellEdit(c.Address, c.After))).Prepare(styled);
     }
-    private static bool SameInputs(WorkbookSnapshot a, WorkbookSnapshot b) => ReferenceEquals(a, b) ||
+    internal static bool SameInputs(WorkbookSnapshot a, WorkbookSnapshot b) => ReferenceEquals(a, b) ||
         a.DocumentId == b.DocumentId && a.Revision == b.Revision && a.DateSystem == b.DateSystem && a.TextCompatibilityVersion == b.TextCompatibilityVersion &&
         a.Styles == b.Styles && a.ScriptModules == b.ScriptModules && a.FileState == b.FileState && a.DefinedNames == b.DefinedNames && a.Sheets.Length == b.Sheets.Length &&
         a.Sheets.Zip(b.Sheets).All(p => p.First.Id == p.Second.Id && p.First.Name == p.Second.Name && ReferenceEquals(p.First.Cells, p.Second.Cells) &&
@@ -69,6 +69,7 @@ public static class DataCleaning
     public static CleaningPreview RemoveDuplicates(WorkbookSnapshot book, SheetId sheetId, CellRectangle range, IEnumerable<int> keyColumns, bool hasHeader = true)
     {
         var sheet = RequireRange(book, sheetId, range); var keys = keyColumns.Take(1025).ToArray();
+        if (WorksheetOutline.HasGroups(sheet)) throw new NotSupportedException("删除重复项暂不压缩分组，请先取消分组。");
         if (keys.Length is 0 or > 1024 || keys.Any(c => c < range.Left || c > range.Right) || keys.Distinct().Count() != keys.Length)
             throw new ArgumentException("请选择不重复的区域内判重列。");
         if (sheet.Data.Filter is { } filter && ValidationSafety.Overlaps(filter.Range, range) || sheet.Data.Tables.Any(t => ValidationSafety.Overlaps(t.Range, range)) ||

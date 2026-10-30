@@ -40,6 +40,7 @@ public partial class MainWindow
     }
     private void RefreshWorkspaceView()
     {
+        RefreshOutlineView();
         var view = CurrentView;
         view.RefreshFilter(_document.Snapshot);
         var table = _document.Snapshot.Sheets[_sheetIndex].Data.Tables.FirstOrDefault(t => t.Id == view.TableId);

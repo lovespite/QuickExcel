@@ -263,7 +263,7 @@ public static class FormulaSyntax
                 {
                     while (true)
                     {
-                        if (Current.Kind is "," or ")" && (functionName == "XLOOKUP" && (args.Count == 0 || args.Count >= 3) || functionName == "XMATCH" && args.Count >= 2))
+                        if (Current.Kind is "," or ")" && (functionName == "XLOOKUP" && (args.Count == 0 || args.Count >= 3) || functionName == "XMATCH" && args.Count >= 2 || functionName == "SUBTOTAL" && args.Count == 0))
                         {
                             if (++_nodes > 2048) throw new FormatException("公式过长。");
                             args.Add(new MissingNode());

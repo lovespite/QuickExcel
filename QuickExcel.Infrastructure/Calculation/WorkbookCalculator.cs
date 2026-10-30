@@ -88,7 +88,7 @@ public sealed class WorkbookCalculator(IScriptRuntimeFactory runtimeFactory) : I
             }
         }
         var evaluator = new TypedEvaluator(request.Snapshot, cells, runtime, functions, Check);
-        var unavailable = index.Nodes.Where(p => FormulaSyntax.Walk(p.Value.Expression).OfType<FunctionNode>().Any(f =>
+        var unavailable = index.Nodes.Where(p => p.Value.VisibilityBlocked || FormulaSyntax.Walk(p.Value.Expression).OfType<FunctionNode>().Any(f =>
             !StandardFunctions.Signatures.ContainsKey(f.Name) && (!functions.ContainsKey(f.Name) || f.Name.StartsWith("_xlfn.", StringComparison.OrdinalIgnoreCase) || f.Name.StartsWith("_xlws.", StringComparison.OrdinalIgnoreCase))))
             .Select(p => p.Key);
         var blockedByUnavailable = index.Closure(unavailable, Check);

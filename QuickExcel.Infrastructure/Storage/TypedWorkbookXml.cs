@@ -97,11 +97,12 @@ internal static class TypedWorkbookXml
             foreach (var column in sheet.Element(Main + "cols")?.Elements(Main + "col") ?? [])
             {
                 package.SetReadContext(path, "columns:" + (string?)column.Attribute("min") + ":" + (string?)column.Attribute("max"), "worksheet/column");
-                package.Shape(column, "", "min max width hidden style customWidth", path);
+                package.Shape(column, "", "min max width hidden style customWidth outlineLevel collapsed", path);
                 var min = Int(Attr(column, "min"), WorkbookLimits.MaxColumns);
                 var max = Int(Attr(column, "max"), WorkbookLimits.MaxColumns);
                 if (min == 0 || max < min) throw new InvalidDataException("列范围无效。");
-                var metadata = new ColumnMetadata(OptionalDouble(column.Attribute("width")), Bool((string?)column.Attribute("hidden")), Style(column, "style", styles.Count));
+                var metadata = new ColumnMetadata(OptionalDouble(column.Attribute("width")), Bool((string?)column.Attribute("hidden")), Style(column, "style", styles.Count))
+                { OutlineLevel = Int((string?)column.Attribute("outlineLevel") ?? "0", 7), Collapsed = Bool((string?)column.Attribute("collapsed")) };
                 if (column.Attribute("style") is not null) package.RegisterSharedUsage(stylesPart, "cellXfs[" + metadata.StyleId + "]", path, $"columns:{min}:{max}");
                 for (var col = min - 1; col < max; col++)
                 {
@@ -115,9 +116,10 @@ internal static class TypedWorkbookXml
                 budget.Parse(128);
                 var rowIndex = Int(Attr(row, "r"), WorkbookLimits.MaxRows) - 1;
                 if (rowIndex < 0 || !seenRows.Add(rowIndex)) throw new InvalidDataException("工作表行重复或无效。");
-                package.Shape(row, "c", "r ht hidden s customHeight customFormat spans", path);
+                package.Shape(row, "c", "r ht hidden s customHeight customFormat spans outlineLevel collapsed", path);
                 var rowMetadata = new RowMetadata(OptionalDouble(row.Attribute("ht")) / 0.75, Bool((string?)row.Attribute("hidden")),
-                    Style(row, "s", styles.Count), Bool((string?)row.Attribute("customFormat")));
+                    Style(row, "s", styles.Count), Bool((string?)row.Attribute("customFormat")))
+                { OutlineLevel = Int((string?)row.Attribute("outlineLevel") ?? "0", 7), Collapsed = Bool((string?)row.Attribute("collapsed")) };
                 if (rowMetadata != new RowMetadata() || row.Attribute("s") is not null || row.Attribute("customFormat") is not null) rows.Add(rowIndex, rowMetadata);
                 if (rowMetadata.ApplyStyle) package.RegisterSharedUsage(stylesPart, "cellXfs[" + rowMetadata.StyleId + "]", path, "row:" + (rowIndex + 1));
                 var nextColumn = 0;
@@ -211,16 +213,16 @@ internal static class TypedWorkbookXml
             var viewState = XlsxViews.ReadSheet(package, path, sheet);
             if (Bool((string?)view?.Attribute("tabSelected"))) selectedTabs++;
             var format = sheet.Element(Main + "sheetFormatPr");
-            if (format is not null) package.Shape(format, "", "defaultRowHeight", path);
+            if (format is not null) package.Shape(format, "", "defaultRowHeight outlineLevelRow outlineLevelCol", path);
             var properties = sheet.Element(Main + "sheetPr");
-            if (properties is not null) package.Shape(properties, "tabColor pageSetUpPr", "filterMode", path);
+            if (properties is not null) package.Shape(properties, "tabColor outlinePr pageSetUpPr", "filterMode", path);
             var tabColor = properties?.Element(Main + "tabColor");
             if (tabColor is not null) package.Shape(tabColor, "", "rgb", path);
             var merges = sheet.Element(Main + "mergeCells")?.Elements(Main + "mergeCell").Select(e => Attr(e, "ref")).ToArray() ?? [];
             foreach (var merge in merges) ValidateRange(merge);
             var images = TypedImages.Read(package, path, sheet);
             var dataState = XlsxFiltering.Read(package, workbookPart, path, sheet) with
-            { Tables = XlsxTables.Read(package, workbookPart, path, sheet, preservedFormulas, Decode(Attr(definition, "name"))),
+            { Outline = XlsxOutline.Read(package, path, sheet), Tables = XlsxTables.Read(package, workbookPart, path, sheet, preservedFormulas, Decode(Attr(definition, "name"))),
                 Validations = XlsxValidation.Read(package, path, sheet), ConditionalFormats = XlsxConditionalFormatting.Read(package, workbookPart, path, sheet) };
             var modeledSheet = new WorksheetSnapshot(SheetId.New(), Decode(Attr(definition, "name")), cells, rows, columns, merges, images,
                 view?.Attribute("showGridLines") is null || Bool((string?)view.Attribute("showGridLines")), OptionalDouble(format?.Attribute("defaultRowHeight")) / 0.75, (string?)tabColor?.Attribute("rgb"),
@@ -460,15 +462,16 @@ internal static class TypedWorkbookXml
             Override(path, SheetType);
             var root = new XElement(Main + "worksheet", new XAttribute(XNamespace.Xmlns + "r", Rel));
             var filteredRows = QuickExcel.Core.WorksheetFilterEngine.Evaluate(snapshot, sheet.Id, allowSourceCaches: valuesOnly, cancellationToken: cancellationToken);
-            if (sheet.TabColor is not null || sheet.Printing.Properties is not null || sheet.Data.AllFilters.Any())
+            if (sheet.TabColor is not null || sheet.Printing.Properties is not null || sheet.Data.AllFilters.Any() || sheet.Data.Outline is not null)
                 root.Add(new XElement(Main + "sheetPr", sheet.Data.AllFilters.Any() ? new XAttribute("filterMode", sheet.Data.AllFilters.Any(f => f.Columns.Count > 0) ? 1 : 0) : null, sheet.TabColor is not null ? new XElement(Main + "tabColor", new XAttribute("rgb", sheet.TabColor)) : null,
-                    XlsxPrinting.WriteProperties(sheet.Printing)));
+                    XlsxOutline.Write(sheet.Data.Outline), XlsxPrinting.WriteProperties(sheet.Printing)));
             root.Add(XlsxViews.WriteSheet(sheet, sheet.Id == snapshot.ActiveSheetId));
             if (sheet.DefaultRowHeight is { } height) root.Add(new XElement(Main + "sheetFormatPr", new XAttribute("defaultRowHeight", height * 0.75)));
             if (sheet.Columns.Count > 0)
                 root.Add(new XElement(Main + "cols", sheet.Columns.OrderBy(p => p.Key).Select(p => new XElement(Main + "col",
                     new XAttribute("min", p.Key + 1), new XAttribute("max", p.Key + 1), p.Value.Width is { } width ? new XAttribute("width", width) : null,
-                    p.Value.Width.HasValue ? new XAttribute("customWidth", 1) : null, new XAttribute("hidden", p.Value.Hidden ? 1 : 0), new XAttribute("style", p.Value.StyleId)))));
+                    p.Value.Width.HasValue ? new XAttribute("customWidth", 1) : null, new XAttribute("hidden", p.Value.Hidden ? 1 : 0), new XAttribute("style", p.Value.StyleId),
+                    p.Value.OutlineLevel > 0 ? new XAttribute("outlineLevel", p.Value.OutlineLevel) : null, p.Value.Collapsed ? new XAttribute("collapsed", 1) : null))));
             var data = new XElement(Main + "sheetData");
             var grouped = sheet.Cells.GroupBy(c => c.Key.Row).ToDictionary(g => g.Key, g => g.OrderBy(c => c.Key.Column));
             foreach (var rowIndex in grouped.Keys.Union(sheet.Rows.Keys).Union(filteredRows).Order())
@@ -480,6 +483,8 @@ internal static class TypedWorkbookXml
                     if (metadata.Height.HasValue) row.Add(new XAttribute("ht", metadata.Height.Value * 0.75), new XAttribute("customHeight", 1));
                     row.Add(new XAttribute("hidden", metadata.Hidden ? 1 : 0), new XAttribute("s", metadata.StyleId),
                         new XAttribute("customFormat", metadata.ApplyStyle ? 1 : 0));
+                    if (metadata.OutlineLevel > 0) row.Add(new XAttribute("outlineLevel", metadata.OutlineLevel));
+                    if (metadata.Collapsed) row.Add(new XAttribute("collapsed", 1));
                 }
                 if (filteredRows.Contains(rowIndex)) row.SetAttributeValue("hidden", 1);
                 if (grouped.TryGetValue(rowIndex, out var rowCells))

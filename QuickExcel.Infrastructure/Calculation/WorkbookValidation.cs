@@ -110,6 +110,7 @@ public sealed class WorkbookValidation : IWorkbookValidation
             // A list range is consumed as a range, rather than as a scalar cell formula.
             var bound = FormulaBinding.Bind(list ? new FunctionNode("SUM", [expression]) : expression, snapshot, sheet, position);
             if (list) bound = ((FunctionNode)bound).Arguments[0];
+            if (SubtotalFunctions.Contains(bound) && SubtotalFunctions.HasUnmodeledFilters(snapshot)) throw new NotSupportedException("未建模的筛选/表可能影响 SUBTOTAL，不能用未知可见性验证输入。");
             if (FormulaSyntax.Walk(bound).OfType<FunctionNode>().Any(f => !StandardFunctions.Signatures.ContainsKey(f.Name) ||
                 f.Name is "NOW" or "TODAY" or "RAND" or "RANDBETWEEN"))
                 throw new NotSupportedException("验证暂不执行脚本、未知或易变函数。");
@@ -135,7 +136,7 @@ public sealed class WorkbookValidation : IWorkbookValidation
         }
         private CellValue Evaluate(FormulaNode expression, SheetId sheet, bool cellResult = false)
         {
-            foreach (var reference in FormulaSyntax.Walk(expression).OfType<ReferenceNode>())
+            foreach (var reference in FormulaSyntax.Walk(expression).OfType<ReferenceNode>().Concat(SubtotalFunctions.FilterDependencies(expression, snapshot)))
             {
                 var owner = snapshot.Sheets.Single(s => s.Name.Equals(reference.Sheet, StringComparison.OrdinalIgnoreCase));
                 if (!reference.IsRange && !reference.WholeColumns) { _ = Cell(new(owner.Id, reference.Row, reference.Column)); continue; }

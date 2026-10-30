@@ -81,7 +81,9 @@ public partial class MainWindow
             revision = _document.Snapshot.Revision;
             Check(_grid.Control.GetModelCellBounds(2, 0) is null, "Filter reaches WPF row visibility");
             GridSurface.SelectRange(new(0, 0, 3, 2), new(0, 0)); CopySelection();
-            Check(Clipboard.GetText().Contains("first") && !Clipboard.GetText().Contains("second"), "Filtered copy contains only visible rows");
+            var filteredClipboard = Clipboard.GetText();
+            Check(filteredClipboard.Contains("first") && !filteredClipboard.Contains("second"),
+                $"Filtered copy contains only visible rows: first={filteredClipboard.Contains("first")}, second={filteredClipboard.Contains("second")}, selected={string.Join(';', GridSurface.SelectionRanges)}, status={StatusText.Text}");
             GridSurface.Select(new(1, 0));
             try { await PasteSelectionAsync("9\n8", false); throw new Exception("Filtered paste accepted hidden target"); }
             catch (InvalidOperationException) { }

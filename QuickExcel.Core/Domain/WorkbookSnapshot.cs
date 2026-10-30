@@ -75,9 +75,15 @@ public sealed record RowMetadata
     public int StyleId { get; init; }
     /// <summary>Independent of the index: an active style 0 overrides column formatting.</summary>
     public bool ApplyStyle { get; init; }
+    public int OutlineLevel { get; init; }
+    public bool Collapsed { get; init; }
     public void Deconstruct(out double? height, out bool hidden, out int styleId) => (height, hidden, styleId) = (Height, Hidden, StyleId);
 }
-public sealed record ColumnMetadata(double? Width = null, bool Hidden = false, int StyleId = 0);
+public sealed record ColumnMetadata(double? Width = null, bool Hidden = false, int StyleId = 0)
+{
+    public int OutlineLevel { get; init; }
+    public bool Collapsed { get; init; }
+}
 
 public sealed class SheetImage
 {
@@ -143,6 +149,7 @@ public sealed class WorksheetSnapshot
             ArgumentNullException.ThrowIfNull(metadata);
             ArgumentOutOfRangeException.ThrowIfNegative(metadata.StyleId);
             WorkbookLimits.ValidateDimension(metadata.Height, nameof(rows));
+            if (metadata.OutlineLevel is < 0 or > 7) throw new ArgumentException("行分组最多 7 层。");
         }
         Columns = columns?.ToImmutableDictionary() ?? ImmutableDictionary<int, ColumnMetadata>.Empty;
         foreach (var (column, metadata) in Columns)
@@ -151,6 +158,7 @@ public sealed class WorksheetSnapshot
             ArgumentNullException.ThrowIfNull(metadata);
             ArgumentOutOfRangeException.ThrowIfNegative(metadata.StyleId);
             WorkbookLimits.ValidateDimension(metadata.Width, nameof(columns));
+            if (metadata.OutlineLevel is < 0 or > 7) throw new ArgumentException("列分组最多 7 层。");
         }
         MergedCells = mergedCells?.ToImmutableArray() ?? [];
         if (MergedCells.Any(string.IsNullOrWhiteSpace)) throw new ArgumentException("Merge references cannot be empty.", nameof(mergedCells));

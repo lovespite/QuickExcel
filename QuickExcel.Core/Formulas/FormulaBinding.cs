@@ -84,6 +84,7 @@ public static class StandardFunctions
         {
             ["SUM"] = (1, 255), ["AVERAGE"] = (1, 255), ["MIN"] = (1, 255), ["MAX"] = (1, 255),
             ["COUNT"] = (1, 255), ["COUNTA"] = (1, 255), ["PRODUCT"] = (1, 255),
+            ["SUBTOTAL"] = (2, 255),
             ["SUMIF"] = (2, 3), ["SUMIFS"] = (3, 255), ["COUNTIF"] = (2, 2), ["COUNTIFS"] = (2, 254),
             ["AVERAGEIF"] = (2, 3), ["AVERAGEIFS"] = (3, 255), ["COUNTBLANK"] = (1, 1),
             ["ROUND"] = (2, 2), ["ABS"] = (1, 1), ["IF"] = (2, 3), ["IFERROR"] = (2, 2),

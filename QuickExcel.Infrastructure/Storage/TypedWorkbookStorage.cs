@@ -72,7 +72,7 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage
                     declaredViews = features.Contains("workbook-views");
                     declaredTextVersion = features.Contains("text-compatibility-v2");
                     declaredExtendedErrors = features.Contains("extended-cell-errors");
-                    if (features.Distinct().Count() != features.Length || Features.Except(features).Any() || features.Except(Features.Concat(["script-actions", "script-signatures", "workbook-views", "worksheet-printing", "preserved-formulas", "cell-text-annotations", "worksheet-data", "worksheet-tables", "worksheet-validation", "worksheet-conditional-formatting", "text-compatibility-v2", "extended-cell-errors"])).Any() ||
+                    if (features.Distinct().Count() != features.Length || Features.Except(features).Any() || features.Except(Features.Concat(["script-actions", "script-signatures", "workbook-views", "worksheet-printing", "preserved-formulas", "cell-text-annotations", "worksheet-data", "worksheet-tables", "worksheet-validation", "worksheet-conditional-formatting", "worksheet-outline", "text-compatibility-v2", "extended-cell-errors"])).Any() ||
                         features.Contains("script-actions") && scriptApiVersion != 2)
                         throw new InvalidDataException("XLSQ 缺少必要能力或包含未知必需能力。");
                     var referenced = new HashSet<string>(StringComparer.Ordinal) { "manifest.json" };
@@ -266,6 +266,7 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage
             .Concat(snapshot.Sheets.Any(s => !s.Data.IsEmpty) ? ["worksheet-data"] : [])
             .Concat(snapshot.Sheets.Any(s => !s.Data.Tables.IsEmpty) ? ["worksheet-tables"] : [])
             .Concat(snapshot.Sheets.Any(s => !s.Data.Validations.IsEmpty) ? ["worksheet-validation"] : [])
+            .Concat(snapshot.Sheets.Any(s => s.Data.Outline is not null || QuickExcel.Core.WorksheetOutline.HasGroups(s)) ? ["worksheet-outline"] : [])
             .Concat(snapshot.Sheets.Any(s => !s.Data.ConditionalFormats.IsEmpty) ? ["worksheet-conditional-formatting"] : [])
             .Concat(snapshot.Sheets.Any(s => !s.Annotations.IsEmpty || s.Cells.Values.Any(c => c.Content.RichText is not null)) ? ["cell-text-annotations"] : [])
             .Concat(snapshot.FileState?.FormulaReadOnly == true ? ["preserved-formulas"] : [])
@@ -357,7 +358,7 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage
             var a = left.Sheets[i]; var b = right.Sheets[i];
             if (a.Name != b.Name || a.View != b.View || a.Visibility != b.Visibility || !a.Printing.ContentEquals(b.Printing) || !a.Annotations.ContentEquals(b.Annotations) || !a.Data.ContentEquals(b.Data, allowRowHeightRounding) || a.ShowGridLines != b.ShowGridLines || !SameHeight(a.DefaultRowHeight, b.DefaultRowHeight) || a.TabColor != b.TabColor ||
                 !a.MergedCells.SequenceEqual(b.MergedCells) || a.Cells.Count != b.Cells.Count || a.Rows.Count != b.Rows.Count || a.Columns.Count != b.Columns.Count || a.Images.Length != b.Images.Length) return false;
-            if (a.Rows.Any(p => !b.Rows.TryGetValue(p.Key, out var value) || value.Hidden != p.Value.Hidden || value.StyleId != p.Value.StyleId || value.ApplyStyle != p.Value.ApplyStyle ||
+            if (a.Rows.Any(p => !b.Rows.TryGetValue(p.Key, out var value) || value.Hidden != p.Value.Hidden || value.OutlineLevel != p.Value.OutlineLevel || value.Collapsed != p.Value.Collapsed || value.StyleId != p.Value.StyleId || value.ApplyStyle != p.Value.ApplyStyle ||
                     !SameHeight(value.Height, p.Value.Height)) || a.Columns.Any(p => !b.Columns.TryGetValue(p.Key, out var value) || value != p.Value)) return false;
             foreach (var (position, cell) in a.Cells)
                 if (!b.Cells.TryGetValue(position, out var value) || !SameContent(cell.Content, value.Content) ||
