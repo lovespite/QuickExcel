@@ -38,7 +38,7 @@ namespace FastWpfGrid
         private int _invalidationCount;
         private bool _renderQueued;
         /// <summary>True until queued bitmap changes are painted; this is not a physical presentation fence.</summary>
-        public bool IsRenderPending => _isInvalidated || _renderQueued || selectionOverlay.IsPending;
+        public bool IsRenderPending => _isInvalidated || _renderQueued || selectionOverlay.IsPending || _pendingHorizontalScroll.HasValue;
 
         private void LeaveInvalidation()
         {

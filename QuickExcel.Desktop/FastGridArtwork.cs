@@ -16,9 +16,16 @@ internal sealed class FastGridArtwork(FastGridSurface surface) : FrameworkElemen
     private WorksheetSnapshot? _sheet;
     private bool _hasStyles;
     private static readonly StyleDefinition DefaultStyle = new();
+    private readonly record struct CellDrawingKey(CellRectangle Range, double Width, double Height, double DpiX, double DpiY);
+    private readonly Dictionary<CellDrawingKey, DrawingGroup> _cellDrawings = [];
+    internal long CellDrawingCount { get; private set; }
+    internal int CachedCellDrawingCount => _cellDrawings.Count;
 
     internal void Refresh()
     {
+        // Values, styles, merges and gridlines belong to this immutable snapshot.
+        // Geometry/DPI are part of each key; scrolling only translates the drawing.
+        _cellDrawings.Clear();
         _sheet = surface.Sheet;
         _hasStyles = surface.Snapshot.Styles.Any(style => style != DefaultStyle);
         _merges = _sheet.MergedCells.Select(CellRectangle.Parse).ToArray();
@@ -45,6 +52,8 @@ internal sealed class FastGridArtwork(FastGridSurface surface) : FrameworkElemen
     {
         if (_sheet is null) return;
         var grid = surface.Control;
+        var used = new HashSet<CellDrawingKey>();
+        var dpi = VisualTreeHelper.GetDpi(this);
         void Paint(CellRectangle range, Action<Rect> paint)
         {
             foreach (var (bounds, clip) in grid.GetModelRangeFragments(new(range.Top, range.Left, range.Bottom, range.Right)))
@@ -52,17 +61,43 @@ internal sealed class FastGridArtwork(FastGridSurface surface) : FrameworkElemen
                 drawing.PushClip(new RectangleGeometry(clip)); paint(bounds); drawing.Pop();
             }
         }
+        void PaintCachedCell(CellRectangle range, StyleDefinition style)
+        {
+            Paint(range, rect =>
+            {
+                var key = new CellDrawingKey(range, rect.Width, rect.Height, dpi.DpiScaleX, dpi.DpiScaleY);
+                used.Add(key);
+                if (!_cellDrawings.TryGetValue(key, out var content))
+                {
+                    content = new DrawingGroup();
+                    using (var context = content.Open())
+                        PaintCell(context, new Rect(0, 0, rect.Width, rect.Height), style,
+                            surface.DisplayText(range.Top, range.Left), _sheet.ShowGridLines);
+                    content.Freeze();
+                    // Keep immutable vector content. RenderTargetBitmap.Render
+                    // here synchronously renders each newly exposed cell on the
+                    // UI thread and churns native surfaces during thumb dragging.
+                    _cellDrawings.Add(key, content);
+                    CellDrawingCount++;
+                }
+                drawing.PushTransform(new TranslateTransform(rect.Left, rect.Top));
+                drawing.DrawDrawing(content);
+                drawing.Pop();
+            });
+        }
         var columns = _hasStyles ? grid.GetVisibleModelColumns() : [];
         foreach (var row in _hasStyles ? grid.GetVisibleModelRows() : [])
         foreach (var column in columns)
         {
             var style = surface.Snapshot.Styles[_sheet.GetStyleId(row, column)];
             if (style == DefaultStyle) continue;
-            Paint(new(row, column, row, column), rect => PaintCell(drawing, rect, style, surface.DisplayText(row, column), _sheet.ShowGridLines));
+            PaintCachedCell(new(row, column, row, column), style);
         }
         foreach (var merge in _merges)
-            Paint(merge, rect => PaintCell(drawing, rect, surface.Snapshot.Styles[_sheet.GetStyleId(merge.Top, merge.Left)],
-                surface.DisplayText(merge.Top, merge.Left), _sheet.ShowGridLines));
+            PaintCachedCell(merge, surface.Snapshot.Styles[_sheet.GetStyleId(merge.Top, merge.Left)]);
+        // Keep only visible cells/merge fragments; traversing a sheet cannot grow
+        // the cache with every visited address or retain a previous viewport's DPI.
+        foreach (var key in _cellDrawings.Keys.Where(key => !used.Contains(key)).ToArray()) _cellDrawings.Remove(key);
         foreach (var image in _sheet.Images)
         {
             if (image.RowIndex >= surface.RowCount || image.ColumnIndex >= surface.ColumnCount) continue;
@@ -74,6 +109,7 @@ internal sealed class FastGridArtwork(FastGridSurface surface) : FrameworkElemen
             });
         }
     }
+    internal static bool PaintsStyle(StyleDefinition style) => style != DefaultStyle;
 
     private void PaintCell(DrawingContext drawing, Rect rect, StyleDefinition style, string value, bool gridLines)
     {

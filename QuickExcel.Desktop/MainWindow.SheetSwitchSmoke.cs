@@ -89,7 +89,7 @@ public partial class MainWindow
         void Scroll(string axis, double value)
         {
             var bar = (ScrollBar)grid.FindName(axis);
-            bar.Value = value;
+            bar.Value = axis == "hscroll" ? value * 140 : value;
             bar.RaiseEvent(new ScrollEventArgs(ScrollEventType.ThumbPosition, bar.Value) { RoutedEvent = ScrollBar.ScrollEvent });
         }
         foreach (var (row, column) in new[] { (2, 1), (20, 5), (0, 0) })
@@ -132,7 +132,7 @@ public partial class MainWindow
         byte[] Pixels(FrameworkElement element) => CaptureStylePixels(element);
         void Scroll(string axis, double value)
         {
-            var bar = (ScrollBar)grid.FindName(axis); bar.Value = value;
+            var bar = (ScrollBar)grid.FindName(axis); bar.Value = axis == "hscroll" ? value * 140 : value;
             bar.RaiseEvent(new ScrollEventArgs(ScrollEventType.ThumbPosition, bar.Value) { RoutedEvent = ScrollBar.ScrollEvent });
         }
         var baselines = new List<(byte[] Content, byte[] Artwork)>();

@@ -183,6 +183,7 @@ namespace FastWpfGrid
 
         public void ScrollIntoView(FastGridCellAddress cell)
         {
+            CancelPendingHorizontalScroll();
             if (RetainedContentEnabled)
             {
                 var alignRow = cell.Row == FirstVisibleRowScrollIndex + _rowSizes.FrozenCount && _scrollOffsetY > 0;
@@ -254,6 +255,7 @@ namespace FastWpfGrid
 
         private void UpdateSeriesCounts()
         {
+            CancelPendingHorizontalScroll();
             _scrollOffsetX = _scrollOffsetY = 0;
             _rowSizes.Count = IsTransposed ? _modelColumnCount : _modelRowCount;
             _columnSizes.Count = IsTransposed ? _modelRowCount : _modelColumnCount;
@@ -561,7 +563,7 @@ namespace FastWpfGrid
         private void FixScrollPosition()
         {
             if (FirstVisibleRowScrollIndex >= vscroll.Maximum) FirstVisibleRowScrollIndex = (int) vscroll.Maximum;
-            if (FirstVisibleColumnScrollIndex >= hscroll.Maximum) FirstVisibleColumnScrollIndex = (int) hscroll.Maximum;
+            FirstVisibleColumnScrollIndex = Math.Clamp(FirstVisibleColumnScrollIndex, 0, _columnSizes.GetMaximumScrollIndex(GridScrollAreaWidth));
             ClearSelectedCells();
             if (_currentCell.Row.HasValue)
             {

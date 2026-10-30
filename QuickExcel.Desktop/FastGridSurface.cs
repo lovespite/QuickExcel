@@ -372,6 +372,10 @@ internal sealed partial class FastGridSurface : IGridSurface
             if (Snapshot is null) return new FastGridCellImpl();
             var sheet = Snapshot.Sheets[SheetIndex]; var style = Snapshot.Styles[sheet.GetStyleId(row, column)];
             var cell = new FastGridCellImpl { BackgroundColor = Color(style.FillColor) ?? Colors.White };
+            // Artwork owns the opaque styled cell, including text. Rasterizing
+            // the same text underneath it doubles formatting/glyph work and
+            // creates bitmaps that cannot be seen.
+            if (FastGridArtwork.PaintsStyle(style)) return cell;
             var block = cell.AddTextBlock(GetCellText(row, column)); block.IsBold = style.Bold; block.IsItalic = style.Italic; block.FontColor = Color(style.FontColor);
             return cell;
         }

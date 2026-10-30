@@ -170,7 +170,7 @@ public partial class MainWindow
         foreach (var name in new[] { "hscroll", "vscroll" })
         {
             var bar = (ScrollBar)grid.FindName(name);
-            bar.Value = 10;
+            bar.Value = name == "hscroll" ? 1400 : 10;
             bar.RaiseEvent(new ScrollEventArgs(ScrollEventType.ThumbPosition, bar.Value) { RoutedEvent = ScrollBar.ScrollEvent });
         }
         await Idle();

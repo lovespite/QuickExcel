@@ -21,6 +21,7 @@ partial class FastGridControl
             _useSelectionOverlay = value;
             if (!value) _scrollOffsetX = _scrollOffsetY = 0;
             if (_dragRenderingSubscribed || _dragTimer?.IsEnabled == true) StartDragScrolling();
+            AdjustScrollbars();
             InvalidateAll();
         }
     }

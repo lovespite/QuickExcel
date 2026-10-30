@@ -56,7 +56,7 @@ namespace FastWpfGrid
             _dragTimer.Interval = TimeSpan.FromSeconds(0.05);
             _dragTimer.Tick += _dragTimer_Tick;
             Loaded += (_, _) => InvalidateAll();
-            Unloaded += (_, _) => { StopDragScrolling(); _contentTiles.Clear(); _tileCanvas?.Freeze(); _tileCanvas = null; };
+            Unloaded += (_, _) => { StopDragScrolling(); CancelPendingHorizontalScroll(); _contentTiles.Clear(); _tileCanvas?.Freeze(); _tileCanvas = null; };
             AllowSelectAll = true;
         }
 
@@ -154,19 +154,18 @@ namespace FastWpfGrid
 
         private void ScrollChanged()
         {
-            //int rowIndex = _rowSizes.GetScrollIndexOnPosition((int) vscroll.Value);
-            //int columnIndex = _columnSizes.GetScrollIndexOnPosition((int) hscroll.Value);
-
             int rowIndex = (int) Math.Round(vscroll.Value);
-            int columnIndex = (int) Math.Round(hscroll.Value);
-
-            //FirstVisibleRow = rowIndex;
-            //FirstVisibleColumn = columnIndex;
-            //RenderGrid();
-            ScrollContent(rowIndex, columnIndex);
+            if (RetainedContentEnabled)
+            {
+                // The horizontal thumb measures device pixels, including the
+                // partial leading column. Vertical input preserves that offset.
+                var horizontalPosition = hscroll.Value;
+                ScrollContent(rowIndex, FirstVisibleColumnScrollIndex);
+                ScrollHorizontalPixels(horizontalPosition);
+            }
+            else ScrollContent(rowIndex, (int)Math.Round(hscroll.Value));
             AdjustInlineEditorPosition();
             AdjustSelectionMenuPosition();
-            NotifyViewportChanged();
         }
 
 
@@ -177,6 +176,13 @@ namespace FastWpfGrid
 
         private void hscroll_Scroll(object sender, ScrollEventArgs e)
         {
+            if (RetainedContentEnabled && e.ScrollEventType == ScrollEventType.ThumbTrack)
+            {
+                QueueHorizontalScroll(e.NewValue);
+                return;
+            }
+            // Release/end/line/page events commit the latest thumb value now.
+            CancelPendingHorizontalScroll();
             ScrollChanged();
         }
 
@@ -215,10 +221,11 @@ namespace FastWpfGrid
 
         private void AdjustScrollbars()
         {
+            CancelPendingHorizontalScroll();
             hscroll.Minimum = 0;
-            hscroll.Maximum = _columnSizes.GetMaximumScrollIndex(GridScrollAreaWidth);
-            hscroll.SmallChange = 1; // GridScrollAreaWidth / 10.0;
-            hscroll.LargeChange = 3; // GridScrollAreaWidth / 2.0;
+            hscroll.Maximum = RetainedContentEnabled ? MaximumHorizontalPixelScroll : _columnSizes.GetMaximumScrollIndex(GridScrollAreaWidth);
+            hscroll.SmallChange = RetainedContentEnabled ? Math.Max(1, _columnSizes.DefaultSize) : 1;
+            hscroll.LargeChange = RetainedContentEnabled ? Math.Max(1, GridScrollAreaWidth) : 3;
 
             vscroll.Minimum = 0;
             // Imported/custom row heights must participate after filtering, just as column widths do.
@@ -229,17 +236,16 @@ namespace FastWpfGrid
             // WPF coerces the thumb value when Maximum shrinks, but not our viewport indices.
             // Clamp before measuring the viewport, otherwise filtering near the bottom reports zero visible rows.
             ScrollContent(Math.Clamp(FirstVisibleRowScrollIndex, 0, (int)vscroll.Maximum),
-                Math.Clamp(FirstVisibleColumnScrollIndex, 0, (int)hscroll.Maximum));
-            hscroll.ViewportSize = VisibleColumnCount;
+                Math.Clamp(FirstVisibleColumnScrollIndex, 0, _columnSizes.GetMaximumScrollIndex(GridScrollAreaWidth)));
+            if (RetainedContentEnabled) ScrollHorizontalPixels(_columnSizes.GetPositionByScrollIndex(FirstVisibleColumnScrollIndex) + _scrollOffsetX);
+            hscroll.ViewportSize = RetainedContentEnabled ? Math.Max(0, GridScrollAreaWidth) : VisibleColumnCount;
             vscroll.ViewportSize = VisibleRowCount;
             AdjustScrollBarPositions();
         }
 
         private void AdjustScrollBarPositions()
         {
-            //hscroll.Value = _columnSizes.GetPositionByScrollIndex(FirstVisibleColumnScrollIndex); //FirstVisibleColumn* ColumnWidth;
-            //vscroll.Value = _rowSizes.GetPositionByScrollIndex(FirstVisibleRowScrollIndex);
-            hscroll.Value = FirstVisibleColumnScrollIndex;
+            hscroll.Value = RetainedContentEnabled ? _columnSizes.GetPositionByScrollIndex(FirstVisibleColumnScrollIndex) + _scrollOffsetX : FirstVisibleColumnScrollIndex;
             vscroll.Value = FirstVisibleRowScrollIndex;
         }
 

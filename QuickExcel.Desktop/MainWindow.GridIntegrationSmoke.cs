@@ -15,6 +15,7 @@ public partial class MainWindow
         _suppressAutoCalculation = true;
         try
         {
+            await RunHorizontalScrollSmokeAsync(folder);
             await RunFilterScrollSmokeAsync(folder);
             await RunSheetSwitchSmokeAsync(folder);
             await RunSelectionOutlineSmokeAsync(folder);

@@ -13,6 +13,121 @@
 
 ## 验证
 
+### 恢复默认自动渲染（2026-10-30）
+
+用户反馈软件渲染虽然不再卡死其他窗口，但绘制速度慢到无法正常使用，因此撤回上一轮默认启用软件渲染的处置。普通启动恢复 `RenderMode.Default`，由 WPF 自动选择渲染路径；只有显式传入 `--software-rendering` 才使用 `SoftwareOnly`。`--default-rendering` 对照入口继续兼容。验证脚本的默认期望同步恢复为 `Default` / `automatic-default`。
+
+软件渲染仅保留为诊断选项，不能作为此问题的可用修复。此前硬件合成方向的排查线索及原始测试证据保留，整桌面停顿的根因仍未确认。
+
+撤回后 Desktop Release 构建通过（仅既有 NU1900 警告），无渲染参数的 GridIntegration 通过，实际配置确认为 `Default` / `automatic-default`。证据：`artifacts/validation/m5-grid/20261030-023425-a9ad49d9/GridIntegration/`。未运行完整回归或重复性能基准。
+
+### 默认启用软件渲染的尝试（历史处置，已撤回，2026-10-30）
+
+用户进一步确认：同一操作只在默认渲染模式出现整桌面停顿，`Start-QuickExcel-Software.cmd` 的软件渲染模式不出现。这个人工对照将主要疑点指向 WPF 硬件合成/显示驱动路径，但没有故障时的原生线程栈，仍不能确定具体驱动调用或声称已找到 GPU 死锁根因。
+
+复查 FastGrid 的事件与资源路径：
+
+1. `hscroll_Scroll` 的 `ThumbTrack` 仅覆盖最新位置；`QueueHorizontalScroll` 每个控件最多订阅一次 Rendering，另有一个后备定时器；处理后解除订阅。`CheckInvalidation` 只保留一个排队绘制请求。没有发现全局输入钩子、`BlockInput`、`AttachThreadInput` 或循环同步发送跨窗口消息的生产路径。
+2. `HorizontalScrollRendering → RenderGrid → RenderRetainedContent` 每次提交新的、冻结的 `DrawingImage`；缓存未命中时栅格化可见 tile，然后交给 WPF 上屏。缓存按视口淘汰，私有 `_tileCanvas` / `_drawBuffer` 不直接交给合成器；不能仅因 `BitmapContext` 中有 `WriteableBitmap.Lock` 就断定正在等待 GPU。新位图/绘图资源的提交是硬件模式下需要进一步采样的边界。
+3. 纠正一个容易误判的细节：`GrayScaleLetterGlyph.CreateGlyph` 的 `RenderTargetBitmap.Render` 确实是同步调用，但所查 .NET 10 WPF 基线源码中，`RenderTargetBitmap.FinalizeCreation` 传入 DEFAULT flags，`CMILFactory::CreateBitmapRenderTarget` 实际创建 `CSwRenderTargetBitmap`。所以它是冷字形生成的 UI 线程成本，不能直接等同于 GPU 渲染；这部分在两种模式下都存在。[RenderTargetBitmap 源码](https://github.com/dotnet/wpf/blob/v10.0.0/src/Microsoft.DotNet.Wpf/src/PresentationCore/System/Windows/Media/Imaging/RenderTargetBitmap.cs)、[原生工厂源码](https://github.com/dotnet/wpf/blob/v10.0.0/src/Microsoft.DotNet.Wpf/src/WpfGfx/core/api/api_factory.cpp)。
+4. WPF `Thumb` 在 MouseUp 时释放捕获，之后才发 DragCompleted/EndScroll；FastGrid 没有在横向 Scroll 处理器重新捕获鼠标。UI 线程阻塞会延迟这个流程，但捕获本身不足以解释其他进程窗口失去响应。[Thumb 源码](https://github.com/dotnet/wpf/blob/v10.0.0/src/Microsoft.DotNet.Wpf/src/PresentationFramework/System/Windows/Controls/Primitives/Thumb.cs)、[SetCapture 语义](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setcapture)。
+
+处置采用已由用户确认有效的进程级规避：`App.OnStartup` 在创建任何窗口前默认设置 `RenderOptions.ProcessRenderMode = SoftwareOnly`。没有修改系统注册表或显示驱动，也没有改变 FastGrid 的输入/滚动语义。`--software-rendering` 继续兼容；`--default-rendering` 显式恢复 WPF 自动选择模式，供后续诊断使用，不保证一定使用 GPU；两者同时出现时软件模式优先。软件渲染可能增加 CPU 成本，这次不声称关闭性能门禁。[微软的进程级软件渲染说明](https://learn.microsoft.com/en-us/dotnet/api/system.windows.media.renderoptions.processrendermode?view=windowsdesktop-10.0)。
+
+`test-m5-grid.ps1` 新增 `-DefaultRendering` 对照参数，并对每次运行的 `rendering.json` 同时核对实际进程配置和选择来源（`software-default` / `explicit-software` / `explicit-default`），避免无参数启动误测成硬件模式。旧的软件启动脚本仍可使用。
+
+本轮 Desktop Release 构建成功，0 错误；有既有 NU1900 数据源警告及 apphost 文件占用后的复制重试。未终止用户进程。无渲染参数的 GridIntegration 通过，横向专项 31 项，`rendering.json` 确认 `software-default` / `SoftwareOnly`，证据：`artifacts/validation/m5-grid/20261030-022853-7b42a68c/GridIntegration/`。
+
+单独运行原工作簿六场景压力检查，全部到达终点，原文件 SHA-256 保持 `21E8714CBB95CA1105B50E699E21246CC364E6B00147C0F1B614BFEB60F518F6`。两张表宽列内容提交间隔 p95 为 26.19 / 27.72 ms；首次全宽场景最大间隔仍有 523.18 ms，说明冷路径性能问题仍在。原始记录：`artifacts/validation/m5-grid/20261030-022909-f9bd4a5e/HorizontalScrollBenchmark/`。这些是 WPF 路由事件压力检查，不能替代物理鼠标或 GPU/DWM 跟踪；本轮未运行完整回归。
+
+### 横向拖动输入停顿与消息路径审计（2026-10-30）
+
+用户补充的准确现象是：连续拖动时鼠标仍能移动，但点击其他窗口无反应；松手后还要等待数秒或更久。此前应用内内容提交节拍的改善不能证明这一问题已经修复。
+
+检查 Desktop/Grid 的生产代码及 .NET 10 WPF 源码后，未发现直接循环调用 `SendMessage` / `PostMessage`、全局鼠标钩子或 `AttachThreadInput` 的路径。`ThumbTrack` 只覆盖一个 `_pendingHorizontalScroll`，`CheckInvalidation` 用 `_renderQueued` 合并绘制请求；WPF Dispatcher 自己也合并唤醒消息。因此没有源码证据支持“每次 MouseMove 无界新增 Windows 消息”。需要区分队列长度与单次处理/等待耗时：有界队列仍可能长时间无法处理输入。
+
+确认并移除一处多余排队：`HorizontalScrollRendering` 原先调用 `ApplyPendingHorizontalScroll` 时，视口失效会排入一个 Render 优先级回调；紧接着又同步 `RenderGrid`，使排入的回调通常只做空检查。本次在同帧处理外包裹已有 invalidation context，避免这次冗余排队。该缺陷不构成已证实的整桌面停顿根因。
+
+其余重点是渲染/布局与同步等待，而非消息发送数量：
+
+- `FastGridControl_RetainedContent` 每次内容提交都创建 `DrawingImage` 并设置 `Image.Source`；该依赖属性影响 Measure/Render。视口通知还更新编辑框/筛选按钮位置、裁剪及格式层。在 Rendering 回调内产生布局失效可能使 WPF 在同帧再做布局；显式 Image 尺寸限制了传播范围，尚未测得这部分实际耗时。
+- `GrayScaleLetterGlyph.CreateGlyph` 在缓存未命中时同步调用 `RenderTargetBitmap.Render`；WPF 的 `BitmapVisualManager` 使用同步通道，存在 UI 线程等待的可能。字形命中后不重复调用，且样式文字已由格式层负责，不能把所有宽列绘制都算作此路径。底层私有 scratch bitmap 的 Lock/Unlock 亦不能直接当作 compositor 阻塞证据。
+- 超大单元格的缓存键包含可见裁剪偏移，超过 4096 像素或 1,048,576 像素面积时，逐像素滚动可能持续生成新 tile；样本的约 1768/1049 DIP 宽列与普通行高在本次环境未触发这一阈值，不据此认定样本根因。
+- 横向滑块由 WPF `Thumb` 捕获鼠标；UI 线程若迟迟不能处理 MouseUp，释放捕获也会延迟。但 Windows 文档允许用户在捕获期间点击其他窗口，不能仅凭捕获机制解释 Explorer 也不响应。
+
+增加进程级 `--software-rendering` 对照入口，须在创建窗口前设置 `RenderOptions.ProcessRenderMode = SoftwareOnly`；默认启动不变。`Start-QuickExcel-Software.cmd` 使用 Release 配置启动该模式。`test-m5-grid.ps1 -SoftwareRendering` 会核对新的 `rendering.json`，记录实际配置、能力等级、运行时与 OS；能力等级不代表该进程实际使用 GPU。
+
+本轮 Desktop Release 构建成功，仍有 NU1900 数据源警告。当前 Debug 实例占用 DLL，Debug 重建因 MSB3027/MSB3021 文件锁失败，未关闭用户实例。默认和软件渲染下 GridIntegration 均通过，证据分别在 `artifacts/validation/m5-grid/20261030-020728-0bc7ee45/GridIntegration/` 与 `20261030-020634-654c5631/GridIntegration/`。软件模式首轮暴露 smoke 中 2×2 网格误用 B2:C3 合并范围的测试夹具问题，已改用独立小表；失败证据 `20261030-020443-99c44748` 保留。
+
+软件渲染的原文件六场景压力检查位于 `20261030-020805-abdc10d4/HorizontalScrollBenchmark/`，全部到达终点且原文件 SHA-256 未变。两张表宽列场景内容提交间隔 p95 为 26.01/26.27 ms，首次全宽场景仍出现约 490 ms 间隔；不能据此声称软件渲染解决停顿。此次压力检查直接投递 WPF ScrollEvent，未覆盖原生 WM_MOUSEMOVE/WM_LBUTTONUP 与 Thumb 捕获流程。要确定用户描述的数秒停顿，仍需卡住时 UI/渲染线程栈，以及原生输入到达和 Dispatcher 处理时序。未运行完整回归，未关闭物理输入或 M6 性能门禁。
+
+框架依据：[Dispatcher 消息合并](https://github.com/dotnet/wpf/blob/v10.0.0/src/Microsoft.DotNet.Wpf/src/WindowsBase/System/Windows/Threading/Dispatcher.cs)、[MediaContext 帧内布局](https://github.com/dotnet/wpf/blob/v10.0.0/src/Microsoft.DotNet.Wpf/src/PresentationCore/System/Windows/Media/MediaContext.cs)、[Image.Source 元数据](https://github.com/dotnet/wpf/blob/v10.0.0/src/Microsoft.DotNet.Wpf/src/PresentationFramework/System/Windows/Controls/Image.cs)、[BitmapVisualManager 同步通道](https://github.com/dotnet/wpf/blob/v10.0.0/src/Microsoft.DotNet.Wpf/src/PresentationCore/System/Windows/Media/Imaging/BitmapVisualManager.cs)、[Thumb 捕获生命周期](https://github.com/dotnet/wpf/blob/v10.0.0/src/Microsoft.DotNet.Wpf/src/PresentationFramework/System/Windows/Controls/Primitives/Thumb.cs)、[SetCapture 跨窗口语义](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setcapture)。
+
+### 横向滑块持续拖动的帧节拍修复（2026-10-30）
+
+用户再次指出“直接点击位置和左右箭头正常，只有鼠标拖动卡顿，宽列尤其明显”。在已有事件合并和矢量缓存基础上，补测 `笼卡demo.xlsx` 的 I 列连续移动：原来的 16 ms Background 定时器与 WPF 合成帧不同步，定时器触发后还要等绘制提交，使内容更新频率明显低于输入频率。此前只统计事件处理/排队的测试无法发现这种画面停顿。
+
+`ThumbTrack` 现在只覆盖待处理位置，在 `CompositionTarget.Rendering` 中每帧至多提交一次最新位置，并在同一帧提交网格内容；相同 `RenderingTime` 的重复回调不重复工作。50 ms Background 定时器只作为窗口被遮挡、合成停止时的后备。完成或取消会同时解除 Rendering 订阅并停表，松手、点击、程序导航、重新绑定和卸载仍保留原有立即提交/取消语义。
+
+`HorizontalScrollBenchmark -WorkbookPath` 新增最宽列场景：独立后台每 8 ms 提交一次输入，四次往返共 241 个请求；在 WPF Rendering 回调观察内容版本变化，保存帧时间、间隔、列位置及全部输入排队样本。计时是 WPF 内容提交节拍，**不是物理显示帧率或鼠标到显示器延迟**，不丢弃冷启动样本。
+
+| 最宽列场景 | 修复前内容更新数 / p95 间隔 | 最终修复后内容更新数 / p95 间隔 | 最终输入排队 p95 |
+| --- | ---: | ---: | ---: |
+| Sheet1（约 2.1 秒） | 80 / 38.18 ms | 120 / 25.94 ms | 0.78 ms |
+| 模板（约 2.1 秒） | 76 / 45.64 ms | 118 / 25.42 ms | 0.95 ms |
+
+原始对照位于 `artifacts/validation/m5-grid/20261030-014419-df2ba4f3/HorizontalScrollBenchmark/`；最终结果位于 `20261030-014855-dff47feb/HorizontalScrollBenchmark/`，中间测量 `20261030-014538-e07e966d/` 亦保留。最终全宽/宽列六个场景均到达请求终点，源文件 SHA-256 未变。首次全宽移动仍记录到约 244 ms 的冷路径停顿（基线约 286 ms），因此这些结果只证明持续拖动节拍改善，不能声称所有冷路径卡顿已消失或稳定 60 FPS。
+
+Debug / Release 构建通过，仅有既有 NU1900 警告。`GridScrollRangeTests|OversizedGridCellTests` 13 项通过；`GridIntegration` 通过，横向专项从 26 增至 31 项，新增同帧内容提交、重复帧回调去重、最新位置覆盖、无延后重播、卸载取消检查，保留冻结/隐藏/合并/编辑器及缓存像素一致性验证。WPF 证据位于 `20261030-014806-140e9173/GridIntegration/`。未运行完整回归。
+
+### 横向拖动回退修正与实际文件验证（2026-10-30）
+
+首轮改动后用户报告打开“笼卡demo.xlsx”拖动更卡，拖到最后可能卡死。检查发现首轮格式缓存对新出现的单元格在 `OnRender` 内逐格执行 `RenderTargetBitmap.Render`，把同步栅格化和原生位图分配放到了 UI 线程；底层网格还重复绘制随后被格式层盖住的文字。原先的小步基准每步等绘制结束才继续，无法测出连续输入积压，不能作为该文件拖动体验的验收依据。
+
+本轮撤掉逐格位图缓存，只缓存冻结的矢量 `DrawingGroup`，按可见范围淘汰；格式层负责的文字不再在底层重复绘制。横向 `ThumbTrack` 仅保存最新位置，由 16 ms、Background 优先级的 DispatcherTimer 合并处理，释放滑块的 EndScroll 立即提交最终位置。尺寸变化、重新绑定、程序导航与卸载会取消待处理位置，避免过期输入覆盖新状态。保留像素滚动及实际宽度终点计算。
+
+新增 `-WorkbookPath` 基准入口，在不写回源文件的条件下遍历工作簿的每个工作表。后台独立以 16 ms / 2 ms 间隔发送各 241 个真实 WPF `ThumbTrack` 路由请求，覆盖四次全宽移动和最终右端位置；保留所有调度排队和处理时间样本。“笼卡demo.xlsx”的两个工作表有明显不等宽列（I 列约 1768 / 1049 DIP），适合补充原先等宽、小幅测试的空缺。测试前后源文件 SHA-256 均为 `21E8714CBB95CA1105B50E699E21246CC364E6B00147C0F1B614BFEB60F518F6`。
+
+| 2 ms 请求场景 | 修正前 Release 排队 p95 | 修正后 Release 排队 p95 | 修正后 Debug 排队 p95 |
+| --- | ---: | ---: | ---: |
+| Sheet1 | 48.09 ms | 14.46 ms | 29.77 ms |
+| 模板 | 62.72 ms | 13.78 ms | 12.52 ms |
+
+Release 修正前、后原始样本分别位于 `artifacts/validation/horizontal-regression-before/`、`artifacts/validation/horizontal-regression-after/`；Debug 为 `artifacts/validation/m5-grid/20261030-012832-f209d721/HorizontalScrollBenchmark/`。所有场景最终位置正确，释放并完成绘制后的输入探针仍能响应。该探针不是“松手到显示完成”的耗时；调度排队也不是物理显示延迟。16 ms 请求下 Release 排队 p95 修正前为 1.47 / 0.69 ms，修正后为 5.43 / 2.28 ms，并非所有指标都降低。此次没有稳定复现永久死锁，故不将这些结果表述为已证明消除所有卡死或达到稳定 60 FPS。
+
+修正后的 Debug 另经 Windows SendInput 验证：打开同一源文件，两张表分别将底部滑块拖到最右端、反向拖回，之后切换工作表仍正常；源文件哈希未变。此项验证不是人工物理鼠标验收。Debug / Release 构建成功，仍有既有 NU1900 数据源警告。定向 WPF 检查通过：GridIntegration（横向专项从 21 增至 **26** 项，覆盖突发输入合并、释放提交、过期位置取消）、Workspace **151** 项、Interaction **92** 项、DataOperations **81** 项。对应目录为 `20261030-012748-1e331d12`、`20261030-012759-4bae67cb`、`20261030-012810-864cb3d3`、`20261030-013157-2bfe6b2d`。未运行完整回归。
+
+```powershell
+.\scripts\test-m5-grid.ps1 -PackageDirectory artifacts\build\bin\QuickExcel.Desktop\release -Mode HorizontalScrollBenchmark -WorkbookPath 'D:\Downloads\笼卡demo.xlsx'
+```
+
+### 首轮底部横向滑块改动（历史结果，已由上节修正）
+
+原先底部滑块把 `Value` 四舍五入成列索引，已有像素滚动只用于拖选自动滚动。因此小幅拖动时内容停住，越过半列后突然跳一列；`ScrollChanged` 还在实际滚动之外重复通知视口，即使没有移动也会触发格式重绘。`FastGridArtwork` 每帧重新创建可见格式单元格的 `FormattedText`，重复格式化、排版及提交字形。
+
+首轮将 retained 模式的横向滑块改为以设备像素计量，保留首列内偏移，按实际列宽计算终点；纵向滚动保留横向偏移，窗口变宽会校正右端位置。内容变化只发一次视口通知，未移动的 EndScroll 不重绘。旧 bitmap 模式继续按列滚动。首轮格式层按可见地址、尺寸和 DPI 缓存不可变绘制结果，其中普通单元格逐格栅格化、超大单元格保留矢量绘制；逐格栅格化已在上述回退修正中移除。快照刷新清缓存，离开视口的内容被淘汰，选区、编辑框和图片仍按各自分区绘制。
+
+新增独立 `HorizontalScrollBenchmark`，使用 100×100 已填充单元格、100,000×256 逻辑网格和 1400×850 DIP 窗口，以真实 WPF `ThumbTrack` 处理器测试每次 1/8 列的移动。5 次预热、60 个原始计时样本；模型读取和分配量包含预热的 65 次操作。相同循环原先只有 6 个不同显示位置，修复后有 40 个。计时终点为 Dispatcher/内容与选区重绘完成，不是物理鼠标到显示器延迟。
+
+| 指标 | 首轮前 | 首轮结束（非当前版本） |
+| --- | ---: | ---: |
+| 普通内容重绘 p95 | 8.78 ms | 14.20 ms |
+| 带格式内容重绘 p50 | 24.37 ms | 6.13 ms |
+| 带格式内容重绘 p95 | 47.50 ms | 26.35 ms |
+| 带格式场景累计托管分配 | 222.62 MB | 57.57 MB |
+| 带格式场景模型读取 | 20,025 | 1,050 |
+
+普通内容现在每个像素步骤都会移动和绘制，不能与原先多数步骤停住的耗时直接解释为同等工作量。带格式 p95 仍超过预先声明的 16.67 ms 预算，不声称稳定 60 FPS 或关闭 M6。中间轮 p95 为 18.38 ms，也保留原始数据，不以较好的一轮代替最终数据。隐藏格式层的对照只移除合成；WPF 仍可能调用 `OnRender`，不能解释为完全移除格式计算。
+
+基线证据：`artifacts/validation/m5-grid/20261030-010506-2952a5b7/HorizontalScrollBenchmark/`；最终：`20261030-011341-cad19f53/HorizontalScrollBenchmark/`。中间轮为 `010711-b0c445e5`（仅复用文字布局）及 `010846-6aad381e`（加入栅格缓存），均保留 JSON 原始样本。
+
+Desktop Release 构建成功，只有既有 NU1900 数据源警告。`GridScrollRangeTests|OversizedGridCellTests` **13 项通过**；Interaction **92 项**、Workspace **151 项**通过，目录分别为 `20261030-011157-e15eb26c`、`20261030-011200-780a0f5c`。最终 GridIntegration 位于 `20261030-011328-77eb1739`，新增 **21 项横向专项断言**覆盖单像素位移、零重复读取/排版、通知次数、冻结/隐藏/合并、编辑裁剪、缓存有界、快照失效、超大单元格、两种模式切换和右侧终点；缓存与清空缓存后的像素一致。未运行完整回归，未声称物理鼠标、跨屏 DPI 或完整 OS IME 验收。
+
+```powershell
+.\scripts\test-m5-grid.ps1 -PackageDirectory artifacts\build\bin\QuickExcel.Desktop\release -Mode HorizontalScrollBenchmark
+.\scripts\test-m5-grid.ps1 -PackageDirectory artifacts\build\bin\QuickExcel.Desktop\release -Mode GridIntegration
+```
+
 ### 双击自动调整列宽／行高（2026-10-30）
 
 双击列标题右边界按显示内容自动调整该列宽度；双击行标题下边界按当前列宽、字体和换行设置自动调整该行高度。测量使用与网格相同的普通字形／样式文字布局及数字日期格式，包括视口外的已存储单元格；跳过手动隐藏、筛选隐藏及合并单元格，不计图片。列宽以最长显示行测量，空轴恢复默认尺寸，上限沿用 10,000 DIP。测量按稀疏内容遍历，使用有界文字尺寸缓存；合并范围按轴排序后顺序跳过。

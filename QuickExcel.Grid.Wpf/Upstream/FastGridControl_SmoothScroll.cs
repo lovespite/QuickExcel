@@ -2,6 +2,7 @@ using System;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using System.Windows.Threading;
 
 namespace FastWpfGrid;
 
@@ -12,6 +13,10 @@ partial class FastGridControl
     private long _lastDragScrollTimestamp;
     private bool _dragRenderingSubscribed;
     private TimeSpan? _lastDragRenderingTime;
+    private double? _pendingHorizontalScroll;
+    private DispatcherTimer _horizontalScrollTimer;
+    private bool _horizontalRenderingSubscribed;
+    private TimeSpan? _lastHorizontalRenderingTime;
     private int ScrollOffsetX => RetainedContentEnabled ? (int)Math.Round(_scrollOffsetX) : 0;
     private int ScrollOffsetY => RetainedContentEnabled ? (int)Math.Round(_scrollOffsetY) : 0;
 
@@ -26,8 +31,79 @@ partial class FastGridControl
             _scrollOffsetX = _scrollOffsetY = 0; _lastDragScrollTimestamp = 0;
             _dragTimer.Interval = TimeSpan.FromMilliseconds(value ? 16 : 50);
             if (_dragRenderingSubscribed || _dragTimer.IsEnabled) StartDragScrolling();
+            AdjustScrollbars();
             InvalidateAll();
         }
+    }
+
+    private int MaximumHorizontalPixelScroll => Math.Max(0,
+        _columnSizes.GetPositionByScrollIndex(_columnSizes.ScrollCount) - Math.Max(0, GridScrollAreaWidth));
+
+    private void QueueHorizontalScroll(double position)
+    {
+        _pendingHorizontalScroll = position;
+        if (!_horizontalRenderingSubscribed)
+        {
+            CompositionTarget.Rendering += HorizontalScrollRendering;
+            _horizontalRenderingSubscribed = true;
+        }
+        if (_horizontalScrollTimer == null)
+        {
+            _horizontalScrollTimer = new DispatcherTimer(DispatcherPriority.Background, Dispatcher)
+                { Interval = TimeSpan.FromMilliseconds(50) };
+            _horizontalScrollTimer.Tick += (_, _) => ApplyPendingHorizontalScroll();
+        }
+        // Input only replaces the pending position. Commit at most once per WPF
+        // frame; a separate 16 ms timer beats against composition and drops frames.
+        // The timer is only a fallback when an occluded window stops rendering.
+        if (!_horizontalScrollTimer.IsEnabled) _horizontalScrollTimer.Start();
+    }
+
+    private void HorizontalScrollRendering(object sender, EventArgs e)
+    {
+        var time = ((RenderingEventArgs)e).RenderingTime;
+        if (_lastHorizontalRenderingTime == time) return;
+        _lastHorizontalRenderingTime = time;
+        // We render synchronously below. Suppress the extra Render-priority
+        // dispatcher callback that viewport invalidation would otherwise post.
+        using var invalidation = CreateInvalidationContext();
+        ApplyPendingHorizontalScroll();
+        // Rendering is already in progress. Submit the content in this frame,
+        // alongside the invalidated selection/artwork, rather than one frame later.
+        if (_isInvalidated) RenderGrid();
+    }
+
+    private void ApplyPendingHorizontalScroll()
+    {
+        var latest = _pendingHorizontalScroll;
+        CancelPendingHorizontalScroll();
+        if (!latest.HasValue || !IsLoaded) return;
+        ScrollHorizontalPixels(latest.Value);
+        AdjustInlineEditorPosition();
+        AdjustSelectionMenuPosition();
+    }
+
+    private void CancelPendingHorizontalScroll()
+    {
+        _pendingHorizontalScroll = null;
+        _horizontalScrollTimer?.Stop();
+        if (_horizontalRenderingSubscribed) CompositionTarget.Rendering -= HorizontalScrollRendering;
+        _horizontalRenderingSubscribed = false;
+    }
+
+    private void ScrollHorizontalPixels(double position)
+    {
+        position = Math.Round(Math.Clamp(position, 0, MaximumHorizontalPixelScroll));
+        var column = _columnSizes.ScrollCount == 0 ? 0 : Math.Clamp(
+            _columnSizes.GetScrollIndexOnPosition((int)position), 0, _columnSizes.ScrollCount - 1);
+        var offset = position - _columnSizes.GetPositionByScrollIndex(column);
+        var columnsChanged = column != FirstVisibleColumnScrollIndex;
+        if (!columnsChanged && offset == _scrollOffsetX) return;
+        FirstVisibleColumnScrollIndex = column;
+        _scrollOffsetX = offset;
+        if (CountVisibleRowHeights()) InvalidateAll();
+        if (columnsChanged) { if (IsTransposed) OnScrolledModelRows(); else OnScrolledModelColumns(); }
+        InvalidateViewportPosition();
     }
 
     private void StartDragScrolling()
