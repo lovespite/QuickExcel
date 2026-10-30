@@ -1,6 +1,8 @@
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
+using System.Windows.Input;
 using System.Windows.Threading;
 using QuickExcel.Core;
 using QuickExcel.Domain;
@@ -105,5 +107,105 @@ public partial class MainWindow
                 "Resize retains fresh formula caches at the current revision");
         }
         finally { _document.Session.Changed -= Changed; }
+        await RunResizeHeaderSmokeAsync(check);
+        CaptureGridEvidence(Path.Combine(folder, "resize-headers.png"));
+    }
+
+    private async Task RunResizeHeaderSmokeAsync(Action<bool, string> check)
+    {
+        InstallDocument(WorkbookDocument.CreateBlank(_services), null, "尺寸标题回归.xlsq");
+        var grid = _grid.Control;
+        var content = (Image)grid.FindName("image");
+        async Task Idle()
+        {
+            await Dispatcher.InvokeAsync(UpdateLayout, DispatcherPriority.ApplicationIdle);
+            await WaitForFastGridPaintAsync(grid);
+        }
+        Point HeaderEdge(SheetAxis axis, int index)
+        {
+            var row = axis == SheetAxis.Row ? index : grid.GetVisibleModelRows()[0];
+            var column = axis == SheetAxis.Column ? index : grid.GetVisibleModelColumns()[0];
+            var bounds = grid.GetModelCellBounds(row, column)!.Value;
+            return content.TranslatePoint(axis == SheetAxis.Row ? new(8, bounds.Bottom) : new(bounds.Right, 8), grid);
+        }
+        Cursor QueryCursor()
+        {
+            var query = new QueryCursorEventArgs(Mouse.PrimaryDevice, 0) { RoutedEvent = Mouse.QueryCursorEvent };
+            content.RaiseEvent(query);
+            return query.Cursor;
+        }
+        await Idle();
+        foreach (var axis in new[] { SheetAxis.Column, SheetAxis.Row })
+        {
+            var edge = HeaderEdge(axis, 0);
+            grid.Cursor = Cursors.Arrow;
+            UpdateGridResizeCursor(edge);
+            check(QueryCursor() == (axis == SheetAxis.Row ? Cursors.SizeNS : Cursors.SizeWE),
+                $"{axis} header resize cursor wins over the child grid Arrow cursor");
+            UpdateGridResizeCursor(content.TranslatePoint(new(80, 80), grid));
+            check(!SheetGrid.ForceCursor && QueryCursor() == Cursors.Arrow, "Leaving a resize edge restores the content cursor");
+            var revision = _document.Snapshot.Revision;
+            check(BeginGridResize(axis, 0, edge), "Header edge starts the resize transaction");
+            PreviewGridResize(25); await Idle();
+            UpdateGridResizeCursor(new(-20, -20));
+            check(SheetGrid.ForceCursor && QueryCursor() == (axis == SheetAxis.Row ? Cursors.SizeNS : Cursors.SizeWE),
+                "Captured drag keeps the resize cursor outside the header");
+            if (axis == SheetAxis.Column)
+            {
+                var escape = new KeyEventArgs(Keyboard.PrimaryDevice, PresentationSource.FromVisual(grid), 0, Key.Escape)
+                    { RoutedEvent = Keyboard.PreviewKeyDownEvent };
+                content.RaiseEvent(escape);
+                check(escape.Handled, "Escape is handled by the resize transaction before cell editing");
+            }
+            // Headless smoke windows cannot acquire OS mouse capture. Route its loss
+            // through the real handler; actual capture is checked by desktop dragging.
+            else content.RaiseEvent(new MouseEventArgs(Mouse.PrimaryDevice, 0) { RoutedEvent = Mouse.LostMouseCaptureEvent });
+            await Idle();
+            var restored = grid.GetModelCellBounds(0, 0)!.Value;
+            check(_gridResize is null && Mouse.Captured != SheetGrid && !SheetGrid.ForceCursor &&
+                _document.Snapshot.Revision == revision && Math.Abs(restored.Width - 160) < 1 && Math.Abs(restored.Height - 31) < 1,
+                "Escape/capture loss restores dimensions and releases the cursor without history");
+        }
+        CurrentView.FrozenRows = CurrentView.FrozenColumns = 1; RefreshSheet(); await Idle();
+        foreach (var name in new[] { "hscroll", "vscroll" })
+        {
+            var bar = (ScrollBar)grid.FindName(name);
+            bar.Value = 10;
+            bar.RaiseEvent(new ScrollEventArgs(ScrollEventType.ThumbPosition, bar.Value) { RoutedEvent = ScrollBar.ScrollEvent });
+        }
+        await Idle();
+        foreach (var axis in new[] { SheetAxis.Column, SheetAxis.Row })
+        {
+            var visible = axis == SheetAxis.Row ? grid.GetVisibleModelRows() : grid.GetVisibleModelColumns();
+            var scrolling = visible.First(i => i > 0);
+            check(scrolling > 1 && FindGridResize(HeaderEdge(axis, scrolling)) == (axis, scrolling) &&
+                FindGridResize(HeaderEdge(axis, 0)) == (axis, 0), "Frozen and scrolled header edges resolve to their own model indexes");
+        }
+        CurrentView.FrozenRows = CurrentView.FrozenColumns = 0; RefreshSheet(); GridSurface.Select(new(0, 0)); await Idle();
+        var id = _document.Snapshot.Sheets[0].Id;
+        ExecuteWorkbookCommand(new SetAxisMetadataCommand(id, SheetAxis.Row, 0, 6, 1)); await Idle();
+        check(FindGridResize(HeaderEdge(SheetAxis.Row, 3)) == (SheetAxis.Row, 3), "Overlapping resize hit areas choose the closest thin row boundary");
+        await UndoAsync(false); await Idle();
+        var columnEdge = HeaderEdge(SheetAxis.Column, 0);
+        ExecuteWorkbookCommand(new SetAxisMetadataCommand(id, SheetAxis.Row, 0, _rowCount, hidden: true)); await Idle();
+        check(grid.GetVisibleModelRows().Count == 0 && FindGridResize(columnEdge) == (SheetAxis.Column, 0),
+            "Column headers remain resizable when every row is hidden");
+        await UndoAsync(false); await Idle();
+        var rowEdge = HeaderEdge(SheetAxis.Row, 0);
+        ExecuteWorkbookCommand(new SetAxisMetadataCommand(id, SheetAxis.Column, 0, _columnCount, hidden: true)); await Idle();
+        check(grid.GetVisibleModelColumns().Count == 0 && FindGridResize(rowEdge) == (SheetAxis.Row, 0),
+            "Row headers remain resizable when every column is hidden");
+        await UndoAsync(false); await Idle();
+        ExecuteWorkbookCommand(new SetAxisMetadataCommand(id, SheetAxis.Column, 1, 1, hidden: true)); await Idle();
+        check(FindGridResize(HeaderEdge(SheetAxis.Column, 2)) == (SheetAxis.Column, 2), "Hidden columns do not change the resized model index");
+        await UndoAsync(false); await Idle();
+        check(FindGridResize(new(2, 2)) is null && FindGridResize(new(-1, -1)) is null &&
+            FindGridResize(content.TranslatePoint(new(content.ActualWidth + 5, 8), grid)) is null &&
+            FindGridResize(content.TranslatePoint(new(8, content.ActualHeight + 5), grid)) is null,
+            "Corner, outside points and scrollbars never start a resize");
+        ExecuteWorkbookCommand(new SetAxisMetadataCommand(id, SheetAxis.Column, 0, 1, 1000)); await Idle();
+        check(FindGridResize(content.TranslatePoint(new(content.ActualWidth - 2, 8), grid)) is null,
+            "Clipping a wide column at the viewport does not create a false resize boundary");
+        await UndoAsync(false); await Idle();
     }
 }

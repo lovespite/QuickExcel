@@ -79,17 +79,13 @@ internal sealed class FastGridArtwork(FastGridSurface surface) : FrameworkElemen
     {
         drawing.DrawRectangle(Brush(style.FillColor, Brushes.White), null, rect);
         drawing.PushClip(new RectangleGeometry(rect));
-        var text = new FormattedText(value, CultureInfo.CurrentCulture, FlowDirection.LeftToRight,
-            new Typeface(Font(style.FontName), style.Italic ? FontStyles.Italic : FontStyles.Normal,
-                style.Bold ? FontWeights.Bold : FontWeights.Normal, FontStretches.Normal),
-            (style.FontSize ?? 11) * 96 / 72, Brush(style.FontColor, Brushes.Black), VisualTreeHelper.GetDpi(this).PixelsPerDip)
-        {
-            // MaxTextHeight suppresses the entire first line when font fallback metrics exceed the row.
-            // Keep the natural line box and let the cell clip trim glyphs, as a spreadsheet does.
-            MaxTextWidth = Math.Max(1, rect.Width - 4),
-            MaxLineCount = style.WrapText ? int.MaxValue : 1, Trimming = TextTrimming.CharacterEllipsis,
-            TextAlignment = style.Horizontal switch { 2 => TextAlignment.Center, 3 => TextAlignment.Right, _ => TextAlignment.Left }
-        };
+        var text = CreateText(value, style, VisualTreeHelper.GetDpi(this).PixelsPerDip);
+        // Keep the natural line box and let the cell clip trim glyphs. The same
+        // font/layout settings are used to measure automatic row heights.
+        text.MaxTextWidth = Math.Max(1, rect.Width - 4);
+        text.MaxLineCount = style.WrapText ? int.MaxValue : 1;
+        text.Trimming = TextTrimming.CharacterEllipsis;
+        text.TextAlignment = style.Horizontal switch { 2 => TextAlignment.Center, 3 => TextAlignment.Right, _ => TextAlignment.Left };
         var y = style.Vertical switch { 0 => 1, 1 => (rect.Height - text.Height) / 2, _ => rect.Height - text.Height - 1 };
         drawing.DrawText(text, new(rect.Left + 2, rect.Top + y));
         if (gridLines) drawing.DrawRectangle(null, new Pen(Brushes.Gainsboro, 1), rect);
@@ -101,6 +97,12 @@ internal sealed class FastGridArtwork(FastGridSurface surface) : FrameworkElemen
         Border(style.BottomBorder, style.BottomBorderColor, rect.BottomLeft, rect.BottomRight);
         drawing.Pop();
     }
+    internal static FormattedText CreateText(string value, StyleDefinition style, double pixelsPerDip) =>
+        new(value, CultureInfo.CurrentCulture, FlowDirection.LeftToRight,
+            new Typeface(Font(style.FontName), style.Italic ? FontStyles.Italic : FontStyles.Normal,
+                style.Bold ? FontWeights.Bold : FontWeights.Normal, FontStretches.Normal),
+            (style.FontSize ?? 11) * 96 / 72, Brush(style.FontColor, Brushes.Black), pixelsPerDip);
+
     internal static FontFamily Font(string? name)
     {
         try { return new(string.IsNullOrWhiteSpace(name) ? "Microsoft YaHei UI" : name); }

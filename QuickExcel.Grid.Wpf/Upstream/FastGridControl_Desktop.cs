@@ -65,6 +65,43 @@ namespace FastWpfGrid
             AdjustScrollbars(); InvalidateAll(); NotifyViewportChanged();
         }
         public FastGridCellAddress HitTestModel(Point point) => RealToModel(GetCellAddress(new Point(point.X * DpiDetector.DpiXKoef, point.Y * DpiDetector.DpiYKoef)));
+        /// <summary>Visible row/column trailing header edge, in control DIP. No document writes.</summary>
+        public FastGridCellAddress HitTestResizeHeader(Point point, double tolerance = 4)
+        {
+            if (_drawBuffer == null || !double.IsFinite(point.X) || !double.IsFinite(point.Y) ||
+                !double.IsFinite(tolerance) || tolerance < 0) return FastGridCellAddress.Empty;
+            point = TranslatePoint(point, image);
+            var x = point.X * DpiDetector.DpiXKoef;
+            var y = point.Y * DpiDetector.DpiYKoef;
+            if (x < 0 || y < 0 || x >= _drawBuffer.PixelWidth || y >= _drawBuffer.PixelHeight)
+                return FastGridCellAddress.Empty;
+            var columnHeader = y < HeaderHeight && x > HeaderWidth;
+            var rowHeader = x < HeaderWidth && y > HeaderHeight;
+            if (!columnHeader && !rowHeader) return FastGridCellAddress.Empty;
+            var sizes = rowHeader ? _rowSizes : _columnSizes;
+            var coordinate = rowHeader ? y : x;
+            var nearest = tolerance * (rowHeader ? DpiDetector.DpiYKoef : DpiDetector.DpiXKoef);
+            var index = -1;
+            foreach (var pane in VisibleAxis(sizes,
+                rowHeader ? FirstVisibleRowScrollIndex : FirstVisibleColumnScrollIndex,
+                rowHeader ? VisibleRowCount : VisibleColumnCount,
+                rowHeader ? HeaderHeight : HeaderWidth,
+                rowHeader ? _drawBuffer.PixelHeight : _drawBuffer.PixelWidth))
+            {
+                for (var real = pane.First; real <= pane.Last && real < sizes.RealCount; real++)
+                {
+                    var edge = (rowHeader ? GetRowTop(real) : GetColumnLeft(real)) + sizes.GetSizeByRealIndex(real);
+                    // Clipped/offscreen edges must not resize an invisible item or a frozen neighbor.
+                    if (edge <= pane.Min || edge > pane.Max) continue;
+                    var distance = Math.Abs(coordinate - edge);
+                    if (distance > nearest || index >= 0 && distance == nearest) continue;
+                    nearest = distance;
+                    index = real;
+                }
+            }
+            return index < 0 ? FastGridCellAddress.Empty :
+                RealToModel(rowHeader ? new FastGridCellAddress(index, null) : new FastGridCellAddress(null, index));
+        }
         public IReadOnlyList<int> GetVisibleModelRows() => VisibleAxis(_rowSizes, FirstVisibleRowScrollIndex, VisibleRowCount, HeaderHeight, _drawBuffer?.PixelHeight ?? 0)
             .SelectMany(a => Enumerable.Range(a.First, Math.Max(0, Math.Min(a.Last + 1, _realRowCount) - a.First))).Select(_rowSizes.RealToModel).ToArray();
         public IReadOnlyList<int> GetVisibleModelColumns() => VisibleAxis(_columnSizes, FirstVisibleColumnScrollIndex, VisibleColumnCount, HeaderWidth, _drawBuffer?.PixelWidth ?? 0)

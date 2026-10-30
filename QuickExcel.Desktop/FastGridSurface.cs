@@ -10,7 +10,7 @@ using QuickExcel.Domain;
 namespace QuickExcel.Desktop;
 
 /// <summary>Snapshot projection plus a native editor. Commit is an injected controller operation, never a model setter.</summary>
-internal sealed class FastGridSurface : IGridSurface
+internal sealed partial class FastGridSurface : IGridSurface
 {
     internal FastGridControl Control { get; } = new() { IsReadOnly = true, UseSelectionOverlay = true, UseSmoothScrolling = true, AllowColumnResize = false, UseClearType = false, CellFontName = "Microsoft YaHei UI", CellFontSize = 14 };
     public Grid Element { get; } = new();

@@ -27,6 +27,7 @@ public partial class MainWindow
         {
             await RunCalculationRefreshSmokeAsync(Check);
             await RunGridResizeSmokeAsync(folder, Check);
+            await RunAutoFitSmokeAsync(folder, Check);
             InstallDocument(WorkbookDocument.CreateBlank(_services), path, "工作区验收.xlsq");
             ApplyValues([(0, 0, "Key"), (0, 1, "Label"), (0, 2, "Value"), (1, 0, "2"), (1, 1, "second"), (1, 2, "=A2*10"),
                 (2, 0, "1"), (2, 1, "first"), (2, 2, "=A3*10"), (3, 0, "2"), (3, 1, "third"), (3, 2, "=A4*10")]);
