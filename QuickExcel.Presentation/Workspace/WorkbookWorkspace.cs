@@ -72,10 +72,37 @@ public sealed class WorkbookWorkspace : IDisposable
         }
         finally { IsBusy = false; Changed?.Invoke(); }
     }
-    public async Task CalculateAsync()
+    public async Task<bool> CalculateAsync(CancellationToken cancellationToken = default, bool forceFull = false)
     {
         RequireIdle(); IsBusy = true; Changed?.Invoke();
-        try { await Task.Run(() => Document.Calculate()); }
+        try { return await Task.Run(() => Document.Calculate(cancellationToken, forceFull), cancellationToken); }
+        finally { IsBusy = false; Changed?.Invoke(); }
+    }
+    public async Task<T> InspectAsync<T>(Func<WorkbookSnapshot, T> inspect)
+    {
+        RequireIdle(); IsBusy = true; Changed?.Invoke();
+        try { var snapshot = Document.Snapshot; return await Task.Run(() => inspect(snapshot)); }
+        finally { IsBusy = false; Changed?.Invoke(); }
+    }
+    public async Task<PortableExportReport> InspectPortableExportAsync()
+    {
+        RequireIdle(); IsBusy = true; Changed?.Invoke();
+        try { return await Task.Run(Document.InspectPortableExport); }
+        finally { IsBusy = false; Changed?.Invoke(); }
+    }
+    public async Task ExportAsync(LocalFileSelection selected, bool portable, bool allowStaleCaches = false, bool discardUnsupported = false)
+    {
+        RequireIdle();
+        if (string.Equals(FilePath, selected.Path, PathComparison)) throw new InvalidOperationException("导出需要使用新副本路径，不能覆盖当前打开的工作簿。");
+        IsBusy = true; Changed?.Invoke();
+        try
+        {
+            await Task.Run(() =>
+            {
+                if (portable) Document.ExportPortableXlsx(selected.Path, allowStaleCaches, discardUnsupported);
+                else Document.ExportXlsx(selected.Path, allowStaleCaches, discardUnsupported);
+            });
+        }
         finally { IsBusy = false; Changed?.Invoke(); }
     }
     public void DetachFile()

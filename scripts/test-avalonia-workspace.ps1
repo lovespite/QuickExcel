@@ -1,5 +1,5 @@
 [CmdletBinding()]
-param([switch]$SkipBuild)
+param([switch]$SkipBuild, [ValidateSet('Workspace', 'Grid')][string]$Mode = 'Workspace')
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 $root = [IO.Path]::GetFullPath((Split-Path $PSScriptRoot -Parent))
@@ -12,15 +12,16 @@ try {
         if ($LASTEXITCODE -ne 0) { throw 'Avalonia workspace build failed.' }
     }
     $exe = Join-Path $root 'artifacts/build/bin/QuickExcel.Desktop.Avalonia/release/QuickExcel.Avalonia.exe'
-    $process = Start-Process -FilePath $exe -ArgumentList @('--workspace-smoke', ('"{0}"' -f $run)) -WorkingDirectory $root -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $run 'stdout.log') -RedirectStandardError (Join-Path $run 'stderr.log')
+    $argument = if ($Mode -eq 'Grid') { '--grid-smoke' } else { '--workspace-smoke' }
+    $process = Start-Process -FilePath $exe -ArgumentList @($argument, ('"{0}"' -f $run)) -WorkingDirectory $root -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $run 'stdout.log') -RedirectStandardError (Join-Path $run 'stderr.log')
     try {
         if (-not $process.WaitForExit(60000)) { throw "Avalonia workspace exceeded 60 seconds: $run" }
         $process.WaitForExit()
+        [ordered]@{ exitCode = $process.ExitCode; sourceHead = (& git rev-parse HEAD); dirty = [bool](& git status --porcelain); binarySha256 = (Get-FileHash $exe -Algorithm SHA256).Hash } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $run 'process.json') -Encoding utf8
         $resultPath = Join-Path $run 'result.json'
         if (-not (Test-Path -LiteralPath $resultPath)) { throw "Missing workspace result; exit $($process.ExitCode): $run" }
         $result = Get-Content -LiteralPath $resultPath -Raw | ConvertFrom-Json
         if ($process.ExitCode -ne 0 -or -not $result.passed) { throw "Workspace failed: $($result.error) Evidence: $run" }
-        [ordered]@{ exitCode = $process.ExitCode; sourceHead = (& git rev-parse HEAD); dirty = [bool](& git status --porcelain); binarySha256 = (Get-FileHash $exe -Algorithm SHA256).Hash } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $run 'process.json') -Encoding utf8
         Write-Host "PASS: $($result.checks.Count) Avalonia workspace checks. Evidence: $run"
     }
     finally { if (-not $process.HasExited) { $process.Kill(); [void]$process.WaitForExit(5000) }; $process.Dispose() }

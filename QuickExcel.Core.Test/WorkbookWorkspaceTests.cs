@@ -8,6 +8,43 @@ namespace QuickExcel.Core.Test;
 
 public sealed class WorkbookWorkspaceTests : IDisposable
 {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ExportPreservesBindingDirtyStateAndHistory(bool portable)
+    {
+        using var workspace = Create(); var path = FilePath("original.xlsq");
+        workspace.Editor.SetCell(0, 0, 0, "1"); await workspace.SaveAsync(new(path));
+        var version = workspace.Version;
+        workspace.Editor.SetCell(0, 0, 0, "2"); workspace.Editor.SetCell(0, 0, 1, "=A1+1"); await workspace.CalculateAsync();
+        var revision = workspace.Document.Snapshot.Revision;
+        var copy = FilePath("export.xlsx"); await workspace.ExportAsync(new(copy), portable);
+        Assert.True(File.Exists(copy)); Assert.Equal(path, workspace.FilePath); Assert.Equal(version, workspace.Version);
+        Assert.True(workspace.Document.IsDirty); Assert.Equal(revision, workspace.Document.Snapshot.Revision);
+        Assert.False(workspace.IsBusy); workspace.Editor.Undo(); Assert.Equal("", workspace.Document.GetCellInput(0, 0, 1));
+        var output = _storage.Open(copy); Assert.Equal(portable ? CellContentKind.Formula : CellContentKind.Literal, output.Sheets[0].GetCell(0, 1)!.Content.Kind);
+    }
+    [Fact]
+    public async Task FailedExportAndInspectionReleaseBusyAndNeverOverwriteOpenedFile()
+    {
+        using var workspace = Create(); var path = FilePath("original.xlsq"); await workspace.SaveAsync(new(path));
+        var bytes = File.ReadAllBytes(path); workspace.Editor.SetCell(0, 0, 0, "pending");
+        await Assert.ThrowsAsync<InvalidOperationException>(() => workspace.ExportAsync(new(path), false));
+        Assert.Equal(bytes, File.ReadAllBytes(path));
+        await Assert.ThrowsAsync<DirectoryNotFoundException>(() => workspace.ExportAsync(new(FilePath("missing/export.xlsx")), false));
+        await Assert.ThrowsAsync<IOException>(() => workspace.InspectAsync<int>(_ => throw new IOException("injected")));
+        Assert.False(workspace.IsBusy); Assert.True(workspace.Document.IsDirty); Assert.Equal(path, workspace.FilePath);
+    }
+    [Fact]
+    public void ShowAllRowsDoesNotMaterializeDefaultRowMetadata()
+    {
+        using var workspace = Create(); var id = workspace.Document.Snapshot.ActiveSheetId;
+        workspace.Editor.Execute(new SetAxisMetadataCommand(id, SheetAxis.Row, 150_000, 1, hidden: true));
+        workspace.Editor.Execute(new SetAxisMetadataCommand(id, SheetAxis.Row, 0, WorkbookLimits.MaxRows, hidden: false));
+        var sheet = workspace.Document.Snapshot.GetSheet(id);
+        Assert.Single(sheet.Rows); Assert.False(sheet.Rows[150_000].Hidden);
+        workspace.Editor.Undo(); Assert.True(workspace.Document.Snapshot.GetSheet(id).Rows[150_000].Hidden);
+    }
     private readonly string _directory = Path.Combine(AppContext.BaseDirectory, "test-data", "workspace-" + Guid.NewGuid().ToString("N"));
     private readonly TypedWorkbookStorage _storage = new();
     private WorkbookWorkspace Create(IWorkbookFileAccess? files = null) => new(new(_storage, new WorkbookCalculator(new NoScripts())), files ?? new Files(_storage));

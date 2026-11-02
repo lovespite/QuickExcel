@@ -6,6 +6,22 @@ namespace QuickExcel.Core.Test;
 public sealed class M5ProductTests
 {
     [Fact]
+    public void SearchUsesSparseRangePredicateAndDoesNotRevealProtectedFormulas()
+    {
+        var sheet = Sheet("Data", (0, 0, F("=1+1")), (WorkbookLimits.MaxRows - 1, WorkbookLimits.MaxColumns - 1, T("far")));
+        using var session = new DocumentSession(Book(sheet));
+        var calls = 0;
+        var hits = WorkbookSearch.Find(session.Snapshot, 0, new("far", SearchScope.Selection), selected: address =>
+        { calls++; return address.SheetId == sheet.Id; });
+        Assert.Single(hits); Assert.Equal(2, calls);
+        session.Execute(new SetCellProtectionCommand(sheet.Id, new(0, 0, 0, 0), true, true));
+        session.Execute(new SetProtectionCommand(sheet.Id, new()));
+        Assert.Empty(WorkbookSearch.Find(session.Snapshot, 0, new("1", Target: SearchTarget.Formula)));
+        session.Execute(new SetProtectionCommand(sheet.Id, null));
+        Assert.Single(WorkbookSearch.Find(session.Snapshot, 0, new("1", Target: SearchTarget.Formula)));
+    }
+
+    [Fact]
     public void WorkbookSearchAndReplacementExcludeHiddenWorksheets()
     {
         var visible = Sheet("Visible", (0, 0, T("hit")));

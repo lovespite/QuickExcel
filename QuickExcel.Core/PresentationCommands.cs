@@ -253,7 +253,11 @@ public sealed class SetAxisMetadataCommand(SheetId sheetId, SheetAxis axis, int 
         if (hidden == false && WorksheetOutline.Groups(sheet, axis).Any(g => g.Collapsed && g.First < first + count && g.Last >= first))
             throw new InvalidOperationException("该区域由分组折叠隐藏，请通过展开分组恢复可见性。");
         var rows = sheet.Rows.ToBuilder(); var columns = sheet.Columns.ToBuilder();
-        for (var i = first; i < first + count; i++)
+        // Showing an axis changes only existing metadata, without materializing every default row.
+        var indexes = size is null && hidden != true
+            ? (axis == SheetAxis.Row ? sheet.Rows.Keys : sheet.Columns.Keys).Where(i => i >= first && i < first + count)
+            : Enumerable.Range(first, count);
+        foreach (var i in indexes)
             if (axis == SheetAxis.Row) { var old = rows.GetValueOrDefault(i) ?? new(); rows[i] = old with { Height = size ?? old.Height, Hidden = hidden ?? old.Hidden }; }
             else { var old = columns.GetValueOrDefault(i) ?? new(); columns[i] = old with { Width = size ?? old.Width, Hidden = hidden ?? old.Hidden }; }
         if (rows.SequenceEqual(sheet.Rows) && columns.SequenceEqual(sheet.Columns)) return new(snapshot, [], false);

@@ -17,11 +17,11 @@ public static class WorkbookSearch
 {
     public const int Limit = 20_000;
     public static IReadOnlyList<SearchHit> Find(WorkbookSnapshot snapshot, int activeSheet, SearchOptions options,
-        IReadOnlySet<CellAddress>? selection = null, Func<int, int, bool>? filtered = null)
+        IReadOnlySet<CellAddress>? selection = null, Func<int, int, bool>? filtered = null, Func<CellAddress, bool>? selected = null)
     {
         if (string.IsNullOrEmpty(options.Query)) throw new ArgumentException("请输入查找内容。");
         if (options.Query.Length > WorkbookLimits.MaxCellTextLength) throw new ArgumentException("查找内容过长。");
-        if (options.Scope == SearchScope.Selection && (selection is null || selection.Count == 0)) throw new ArgumentException("请先选择查找区域。");
+        if (options.Scope == SearchScope.Selection && selected is null && (selection is null || selection.Count == 0)) throw new ArgumentException("请先选择查找区域。");
         var comparison = options.MatchCase ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
         var result = new List<SearchHit>();
         for (var index = 0; index < snapshot.Sheets.Length; index++)
@@ -32,10 +32,11 @@ public static class WorkbookSearch
             foreach (var (position, cell) in sheet.Cells.OrderBy(p => p.Key.Row).ThenBy(p => p.Key.Column))
             {
                 var address = new CellAddress(sheet.Id, position.Row, position.Column);
-                if (options.Scope == SearchScope.Selection && !selection!.Contains(address)) continue;
+                if (options.Scope == SearchScope.Selection && !(selected?.Invoke(address) ?? selection!.Contains(address))) continue;
                 if (!options.IncludeHidden && (sheet.Rows.GetValueOrDefault(position.Row)?.Hidden == true ||
                     sheet.Columns.GetValueOrDefault(position.Column)?.Hidden == true || filtered?.Invoke(index, position.Row) == true)) continue;
                 if (options.Target == SearchTarget.Formula && cell.Content.Kind != CellContentKind.Formula) continue;
+                if (options.Target == SearchTarget.Formula && ProtectionSafety.HidesFormula(snapshot, sheet, position.Row, position.Column)) continue;
                 var text = options.Target == SearchTarget.Formula ? cell.Content.FormulaText :
                     CellDisplayFormatter.Format(cell.Value, snapshot.Styles[sheet.GetStyleId(position.Row, position.Column)], snapshot.DateSystem);
                 if (!(options.WholeCell ? text.Equals(options.Query, comparison) : text.Contains(options.Query, comparison))) continue;

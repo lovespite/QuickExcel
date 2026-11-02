@@ -1,0 +1,135 @@
+using System.Text.Json;
+using Avalonia;
+using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Input;
+using Avalonia.Controls;
+using Avalonia.Interactivity;
+using Avalonia.Media.Imaging;
+using Avalonia.Threading;
+using QuickExcel.Core;
+using QuickExcel.Domain;
+using QuickExcel.Presentation;
+using QuickExcel.Storage;
+using SkiaSharp;
+
+namespace QuickExcel.Desktop.Avalonia;
+
+public sealed partial class MainWindow
+{
+    private sealed class MemoryClipboard : IClipboardExchange
+    {
+        public ClipboardExchange Value = new(null);
+        public Task<ClipboardExchange> ReadAsync() => Task.FromResult(Value);
+        public Task WriteAsync(ClipboardExchange value) { Value = value; return Task.CompletedTask; }
+    }
+    private async Task RunGridSmokeAsync(string directory)
+    {
+        Directory.CreateDirectory(directory); var checks = new List<string>(); Exception? error = null;
+        void Check(bool result, string label) { if (!result) throw new InvalidOperationException(label); checks.Add(label); }
+        void PressKey(Key key, KeyModifiers modifiers = KeyModifiers.None) => _grid.CellEditor.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = key, KeyModifiers = modifiers });
+        async Task<string> Capture(string name)
+        {
+            await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Background);
+            var file = Path.Combine(directory, name + ".png");
+            using var image = new RenderTargetBitmap(new PixelSize((int)_grid.Bounds.Width, (int)_grid.Bounds.Height), new Vector(96, 96));
+            image.Render(_grid); image.Save(file, PngBitmapEncoderOptions.Default); return file;
+        }
+        try
+        {
+            _clipboard = new MemoryClipboard(); ShowBook();
+            var id = SheetId.New();
+            var cells = new Dictionary<CellPosition, CellSnapshot>
+            {
+                [new(0, 0)] = new(CellContent.FromLiteral(CellValue.FromText("合并标题"), 1)),
+                [new(5, 0)] = new(CellInput.Parse("10")), [new(5, 1)] = new(CellInput.Parse("=A6+1")),
+                [new(10, 3)] = new(CellInput.Parse("远端"))
+            };
+            var sheet = new WorksheetSnapshot(id, "网格", cells, rows: new Dictionary<int, RowMetadata> { [2] = new(Hidden: true) },
+                mergedCells: ["A1:C2"], view: new WorksheetView { FrozenRows = 1, FrozenColumns = 1, PaneTopLeftCell = new(1, 1) });
+            var snapshot = new WorkbookSnapshot(Guid.NewGuid(), 0, ExcelDateSystem.Windows1900, [sheet], styles: [new(), new() { FillColor = "FFFF0000" }]);
+            var path = Path.Combine(directory, "grid.xlsq"); new TypedWorkbookStorage().Save(path, snapshot); await OpenPathAsync(path);
+            _grid.ScrollTo(40, 15);
+            var rendered = await Capture("frozen-merge");
+            using (var bitmap = SKBitmap.Decode(rendered))
+            {
+                foreach (var (x, y) in new[] { (75, 40), (235, 40), (75, 68), (235, 68) })
+                {
+                    var color = bitmap.GetPixel(x, y);
+                    Check(color.Red > 180 && color.Green < 80 && color.Blue < 80, $"Merged fill reaches frozen/scrolling quadrant at {x},{y}");
+                }
+            }
+            _grid.Select(new(0, 0));
+            Check(_grid.SelectionRanges.Single() == new GridRange(0, 0, 1, 2), "Merged selection expands without per-cell storage");
+            PressKey(Key.Right); Check(_grid.Current == new CellPosition(0, 3), "Right arrow exits entire merged range");
+            _grid.Select(new(0, 0)); PressKey(Key.Down); Check(_grid.Current.Row == 3, "Down skips merge extent and hidden row");
+            _grid.ScrollTo(0, 0); await Capture("before-selection"); var renderedCount = _grid.ContentRenderCount; var recordings = _grid.CellDrawingCount;
+            _grid.Select(new(5, 0)); await Capture("after-selection");
+            Check(_grid.ContentRenderCount == renderedCount && _grid.CellDrawingCount == recordings, "Selection-only change reuses content raster and recorded cells");
+            _grid.SelectRanges([new(5, 0, 5, 1), new(8, 0, 8, 1)], new(5, 0)); Check(_grid.SelectionRanges.Count == 2, "Disjoint selections remain rectangular ranges");
+            _grid.SelectRange(new(0, 0, WorkbookLimits.MaxRows - 1, WorkbookLimits.MaxColumns - 1), new(0, 0));
+            Check(_grid.SelectionRanges.Sum(r => r.Count) == (long)WorkbookLimits.MaxRows * WorkbookLimits.MaxColumns, "Select-all stores a bounded range");
+            try { _ = _grid.Selection; throw new InvalidOperationException("Unbounded enumeration succeeded"); }
+            catch (InvalidOperationException ex) when (ex.Message != "Unbounded enumeration succeeded") { checks.Add("Unbounded cell enumeration is refused"); }
+            await CalculateAsync();
+            _grid.SelectRange(new(5, 0, 5, 1), new(5, 0)); await CopyAsync(false);
+            _grid.Select(new(7, 0)); await PasteAsync("all");
+            Check(Document.GetCellInput(0, 7, 1) == "=(A8+1)" && Document.GetCellValue(0, 7, 1) == "11", "Internal paste preserves types and relocates formula references");
+            await History(false); Check(Document.GetCellInput(0, 7, 0) == "" && Document.GetCellInput(0, 7, 1) == "", "Paste is one undo entry");
+            var memory = (MemoryClipboard)_clipboard; memory.Value = new("=1+2\t'文本");
+            _grid.Select(new(8, 0)); await PasteAsync("all");
+            Check(Document.Snapshot.Sheets[0].GetCell(8, 0)!.Content.Kind == CellContentKind.Literal && Document.GetCellValue(0, 8, 0) == "=1+2", "External normal paste keeps formulas literal");
+            Check(Document.GetCellValue(0, 8, 1) == "'文本", "External apostrophe remains data");
+            _grid.Select(new(9, 0)); await PasteAsync("formulas"); Check(Document.GetCellValue(0, 9, 0) == "3", "Explicit formula paste opts into parsing");
+            _grid.Select(new(5, 0)); await CopyAsync(true); _workspace.Editor.SetCell(0, 15, 0, "changed"); Synchronize();
+            _grid.Select(new(16, 0)); var before = Document.Snapshot;
+            try { await PasteAsync("all"); throw new InvalidOperationException("Stale cut succeeded"); }
+            catch (InvalidOperationException ex) when (ex.Message != "Stale cut succeeded") { Check(ReferenceEquals(before, Document.Snapshot), "Stale cut rejects atomically"); }
+            var revision = Document.Snapshot.Revision;
+            await FillAsync(new(5, 0, 5, 1), new(5, 0, 7, 1), revision);
+            Check(Document.GetCellInput(0, 7, 1) == "=(A8+1)", "Fill relocates references through shared command");
+            await History(false); Check(Document.GetCellInput(0, 7, 1) == "", "Fill is one undo entry");
+            _grid.SelectRange(new(0, 3, 3, 3), new(0, 3)); memory.Value = new("value"); before = Document.Snapshot;
+            try { await PasteAsync("all"); throw new InvalidOperationException("Hidden paste succeeded"); }
+            catch (InvalidOperationException ex) when (ex.Message != "Hidden paste succeeded") { Check(ReferenceEquals(before, Document.Snapshot), "Paste never remaps across hidden rows"); }
+            await Capture("final-grid"); Check(_grid.CachedNativeBytes <= 96L * 1024 * 1024, "Native content caches remain within budgets");
+            var validation = new WorksheetValidation([new(20, 0, 20, 0)], ValidationKind.Whole, "=1", "=5", alert: ValidationAlert.Warning);
+            await ExecuteAsync(new SetValidationCommand(id, validation)); _grid.Select(new(20, 0)); _grid.BeginEdit(); _grid.CellEditor.Text = "9";
+            var answer = new TaskCompletionSource<bool>(); _validationChoice = _ => answer.Task;
+            var pending = _grid.CommitAsync(); Check(!pending.IsCompleted && _grid.IsCommitPending, "Native validation awaits confirmation without blocking dispatcher");
+            _workspace.Editor.SetCell(0, 21, 0, "concurrent"); answer.SetResult(true);
+            Check(!await pending && Document.GetCellInput(0, 20, 0) == "" && _grid.IsEditing, "Concurrent edit rejects old validation commit and retains draft");
+            _validationChoice = _ => Task.FromResult(false);
+            Check(!await _grid.CommitAsync() && _grid.IsEditing, "Cancelled validation keeps original cell draft");
+            _validationChoice = _ => Task.FromResult(true);
+            Check(await _grid.CommitAsync() && Document.GetCellValue(0, 20, 0) == "9", "Confirmed native validation commits original owner");
+            _validationChoice = null; await History(false);
+            Check(Document.GetCellInput(0, 20, 0) == "" && Document.GetCellInput(0, 21, 0) == "concurrent", "Validation override contributes one history transaction");
+            _grid.Select(new(30, 0)); _grid.BeginEdit(); _grid.CellEditor.Text = "=SU"; _grid.CellEditor.CaretIndex = 3;
+            _formulaSuggestions.SelectedItem = "SUM";
+            Check(AcceptCompletion() && _grid.CellEditor.Text == "=SUM(", "Native formula completion uses shared bounded suggestions");
+            _grid.CellEditor.Text = "=A6"; _grid.CellEditor.SelectionStart = _grid.CellEditor.SelectionEnd = 3;
+            PressKey(Key.F4); Check(_grid.CellEditor.Text == "=$A$6", "Routed F4 cycles absolute references in native editor");
+            _grid.Cancel(); _grid.Select(new(30, 0)); _formula.Focus(); _formula.Text = "=SUM()"; _formula.CaretIndex = 5; _formula.SelectionStart = _formula.SelectionEnd = 5;
+            Check(PickFormulaReference(new(5, 0, 5, 0)) && PickFormulaReference(new(5, 0, 7, 1)) && _formula.Text == "=SUM(A6:B8)", "Formula-bar reference drag replaces one draft slot");
+            _formulaGesture = null; Check(await CommitFormulaAsync() && Document.GetCellInput(0, 30, 0) == "=SUM(A6:B8)", "Picked formula commits to original owner");
+            _grid.Select(new(35, 0)); _workspace.Editor.SetCell(0, 35, 0, "自动列宽需要完整测量远端内容"); Synchronize();
+            var oldWidth = DrawingGeometry.ColumnSize(Document.Snapshot.Sheets[0], 0); await AutoFitAsync(SheetAxis.Column, 0);
+            Check(DrawingGeometry.ColumnSize(Document.Snapshot.Sheets[0], 0) > oldWidth, "Auto-fit measures offscreen stored content");
+            await History(false); Check(DrawingGeometry.ColumnSize(Document.Snapshot.Sheets[0], 0) == oldWidth, "Auto-fit is undoable dimension metadata");
+            var bold = _mutationControls.OfType<Button>().Single(b => b.Content as string == "加粗");
+            bold.RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); await _operation;
+            Check(CurrentStyle.Bold, "Native ribbon click reaches shared style command");
+            await History(false); Check(!CurrentStyle.Bold, "Ribbon style is one undo entry");
+            await FreezeAsync(2, 2); Check(Document.Snapshot.Sheets[0].View.FrozenRows == 2 && Document.Snapshot.Sheets[0].View.FrozenColumns == 2, "Native freeze command persists both axes");
+            _grid.ScrollTo(180, 100); Check(Document.Snapshot.Sheets[0].View.PaneTopLeftCell.Row >= 2, "Scroll captures persisted pane navigation");
+            await Capture("native-ribbon");
+            await RunDataFeatureChecksAsync(Check);
+            await RunFileObjectChecksAsync(directory, Check);
+            await Capture("data-features");
+        }
+        catch (Exception ex) { error = ex; }
+        await File.WriteAllTextAsync(Path.Combine(directory, "result.json"), JsonSerializer.Serialize(new { passed = error is null, checks, error = error?.ToString(),
+            scaling = RenderScaling, contentRenders = _grid.ContentRenderCount, recordings = _grid.CellDrawingCount, cachedNativeBytes = _grid.CachedNativeBytes }, new JsonSerializerOptions { WriteIndented = true }));
+        _allowClose = true; (Application.Current!.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)!.Shutdown(error is null ? 0 : 1);
+    }
+}

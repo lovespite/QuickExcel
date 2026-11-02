@@ -21,7 +21,7 @@ internal static class Dialogs
         ok.Click += (_, _) => window.Close(input.Text); cancel.Click += (_, _) => window.Close(null);
         buttons.Children.Add(ok); buttons.Children.Add(cancel); panel.Children.Add(buttons); window.Content = panel;
         window.Opened += (_, _) => { input.Focus(); input.SelectAll(); };
-        return await window.ShowDialog<string?>(owner);
+        return await (owner is MainWindow main ? main.ShowOwnedAsync<string?>(window) : window.ShowDialog<string?>(owner));
     }
     private static Task<T> Choose<T>(Window owner, string title, string message, (string Text, T Value)[] choices, T cancelled)
     {
@@ -36,7 +36,7 @@ internal static class Dialogs
         }
         panel.Children.Add(buttons); window.Content = panel;
         window.Closing += (_, e) => { if (!selected) { e.Cancel = true; selected = true; window.Close(cancelled); } };
-        return window.ShowDialog<T>(owner);
+        return owner is MainWindow main ? main.ShowOwnedAsync<T>(window) : window.ShowDialog<T>(owner);
     }
     private static Window Window(Window owner, string title) => new()
     { Title = title, SizeToContent = SizeToContent.WidthAndHeight, WindowStartupLocation = WindowStartupLocation.CenterOwner, CanResize = false, ShowInTaskbar = false };

@@ -52,6 +52,28 @@ public sealed class PresentationContractTests
     }
 
     [Fact]
+    public async Task AsyncValidationKeepsRevisionAcrossAwaitAndCancel()
+    {
+        var rule = new WorksheetValidation([new(0, 0, 0, 0)], ValidationKind.Whole, "=1", "=5", alert: ValidationAlert.Warning);
+        var sheet = Sheet("Data").WithData(new() { Validations = [rule] });
+        using var document = new WorkbookDocument(Book(sheet), Services);
+        var editor = new EditorController(document);
+        var command = new SetCellsCommand([new(new(sheet.Id, 0, 0), CellInput.Parse("9"))]);
+        var answer = new TaskCompletionSource<bool>();
+        var pending = editor.ExecuteAsync(command, _ => answer.Task);
+        Assert.False(pending.IsCompleted);
+        Assert.Null(document.Snapshot.Sheets[0].GetCell(0, 0));
+        editor.SetCell(0, 1, 0, "42"); answer.SetResult(true);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => pending);
+        Assert.Null(document.Snapshot.Sheets[0].GetCell(0, 0));
+        await Assert.ThrowsAsync<DataValidationException>(() => editor.ExecuteAsync(command, _ => Task.FromResult(false)));
+        await editor.ExecuteAsync(command, _ => Task.FromResult(true));
+        Assert.Equal("9", document.GetCellValue(0, 0, 0));
+        editor.Undo(); Assert.Null(document.Snapshot.Sheets[0].GetCell(0, 0));
+        Assert.Equal("42", document.GetCellValue(0, 1, 0));
+    }
+
+    [Fact]
     public void LocalFileSelectionRejectsProviderUrisAndRelativePaths()
     {
         Assert.Throws<NotSupportedException>(() => LocalFileSelection.FromUri(new("https://example.invalid/book.xlsx")));

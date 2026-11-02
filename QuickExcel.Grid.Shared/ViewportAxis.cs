@@ -5,6 +5,7 @@ using FastWpfGrid;
 namespace QuickExcel.GridGeometry;
 
 public readonly record struct AxisCell(int ModelIndex, double Start, double Size, bool Frozen);
+public readonly record struct AxisFragment(double Start, double Size, double ClipStart, double ClipSize, bool Frozen);
 
 /// <summary>Pixel scrolling over sparse dimensions. All coordinates are unscaled DIPs.</summary>
 public sealed class ViewportAxis
@@ -62,7 +63,33 @@ public sealed class ViewportAxis
     public int Neighbor(int model, int delta)
     {
         if (_sizes.RealCount == 0) return -1;
-        return _sizes.RealToModel(Math.Clamp(_sizes.ModelToReal(model) + delta, 0, _sizes.RealCount - 1));
+        var real = _sizes.ModelToReal(model);
+        if (real < 0) return NearestVisible(model, delta < 0 ? -1 : 1);
+        return _sizes.RealToModel(Math.Clamp(real + delta, 0, _sizes.RealCount - 1));
+    }
+    public int NearestVisible(int model, int direction = 1)
+    {
+        if (_sizes.RealCount == 0) return -1;
+        model = Math.Clamp(model, 0, Count - 1);
+        if (_sizes.ModelToReal(model) >= 0) return model;
+        int Find(bool forward)
+        {
+            var ranges = _sizes.GetRealRanges(forward ? model : 0, forward ? Count - 1 : model);
+            var found = -1;
+            foreach (var range in ranges)
+            {
+                var candidate = _sizes.RealToModel(forward ? range.First : range.Last);
+                if (found < 0 || (forward ? candidate < found : candidate > found)) found = candidate;
+            }
+            return found;
+        }
+        var result = Find(direction >= 0);
+        return result >= 0 ? result : Find(direction < 0);
+    }
+    public void PreviewSize(int model, int pixels)
+    {
+        var real = _sizes.ModelToReal(model);
+        if (real >= 0) _sizes.Resize(real, Math.Max(1, pixels));
     }
     public void EnsureVisible(int model, double extent)
     {
@@ -71,5 +98,27 @@ public sealed class ViewportAxis
         if (value.Size > extent - FrozenSize || value.Start < FrozenSize)
             ScrollTo(Offset + value.Start - FrozenSize, extent);
         else if (value.Start + value.Size > extent) ScrollTo(Offset + value.Start + value.Size - extent, extent);
+    }
+
+    /// <summary>Project a model interval into frozen/scrolling clips without enumerating its cells.</summary>
+    public IReadOnlyList<AxisFragment> Project(int first, int last, double extent)
+    {
+        var ranges = _sizes.GetRealRanges(first, last);
+        var result = new List<AxisFragment>();
+        if (ranges.Count == 0) return result;
+        double Position(int real) => _sizes.GetPositionByRealIndex(real) + (real < _sizes.FrozenCount ? 0 : FrozenSize);
+        var begin = ranges[0].First; var end = ranges[ranges.Count - 1].Last;
+        var origin = Position(begin); var length = Position(end) + _sizes.GetSizeByRealIndex(end) - origin;
+        void Add(bool frozen)
+        {
+            var start = origin - (frozen ? 0 : Offset);
+            var clipStart = frozen ? 0 : FrozenSize;
+            var clipEnd = frozen ? Math.Min(extent, FrozenSize) : extent;
+            if (clipEnd <= clipStart || start >= clipEnd || start + length <= clipStart) return;
+            result.Add(new(start, length, clipStart, clipEnd - clipStart, frozen));
+        }
+        if (begin < _sizes.FrozenCount) Add(true);
+        if (end >= _sizes.FrozenCount) Add(false);
+        return result;
     }
 }

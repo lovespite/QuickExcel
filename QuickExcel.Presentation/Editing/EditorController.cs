@@ -42,6 +42,17 @@ public sealed class EditorController(WorkbookDocument document, Func<DataValidat
             return document.Session.Execute(command, revision, acceptValidationWarnings: true);
         }
     }
+    public async Task<CommandResult> ExecuteAsync(DocumentCommand command,
+        Func<DataValidationException, Task<bool>> confirm, long? expectedRevision = null)
+    {
+        var revision = expectedRevision ?? document.Session.Revision;
+        try { return document.Session.Execute(command, revision); }
+        catch (DataValidationException ex) when (ex.CanOverride)
+        {
+            if (!await confirm(ex)) throw;
+            return document.Session.Execute(command, revision, acceptValidationWarnings: true);
+        }
+    }
     public void UpdateScriptSource(string source) => document.ScriptSource = source;
     public CommandResult Undo() => document.Session.UndoWithResult();
     public CommandResult Redo() => document.Session.RedoWithResult();

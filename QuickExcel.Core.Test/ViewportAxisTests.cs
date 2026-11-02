@@ -5,6 +5,17 @@ namespace QuickExcel.Core.Test;
 public sealed class ViewportAxisTests
 {
     [Fact]
+    public void HiddenFarTargetsChooseAdjacentModelAddressesIndependentlyOfViewport()
+    {
+        var axis = new ViewportAxis(); axis.Configure(200_000, 30, [], [0, 199_997, 199_998, 199_999], [0, 1]);
+        Assert.Equal(199_996, axis.NearestVisible(199_998));
+        Assert.Equal(199_996, axis.Neighbor(199_998, -1));
+        Assert.Equal(1, axis.Neighbor(0, 1));
+        axis.Configure(200_000, 30, [], [150_000, 150_001], [0]);
+        Assert.Equal(150_002, axis.NearestVisible(150_000));
+        Assert.Equal(149_999, axis.NearestVisible(150_001, -1));
+    }
+    [Fact]
     public void HiddenAndFrozenCellsShareHalfOpenHitCoordinatesWithScrolling()
     {
         var axis = new ViewportAxis();
@@ -45,5 +56,17 @@ public sealed class ViewportAxisTests
         axis.Configure(10, 30, [], Enumerable.Range(0, 10).ToHashSet(), []);
         Assert.Empty(axis.Visible(600)); Assert.Null(axis.Cell(0));
         Assert.Equal(-1, axis.HitTest(5, 600)); Assert.Equal(-1, axis.Neighbor(0, 1));
+    }
+
+    [Fact]
+    public void MergedIntervalWithHiddenEndpointsUsesTheSameLogicalExtentInBothPanes()
+    {
+        var axis = new ViewportAxis(); axis.Configure(100, 30, [], [0, 4], [0, 1, 2]);
+        axis.ScrollTo(15, 200);
+        var fragments = axis.Project(0, 4, 200);
+        Assert.Equal(2, fragments.Count);
+        Assert.Equal(new AxisFragment(0, 90, 0, 60, true), fragments[0]);
+        Assert.Equal(new AxisFragment(-15, 90, 60, 140, false), fragments[1]);
+        Assert.Empty(axis.Project(4, 4, 200));
     }
 }

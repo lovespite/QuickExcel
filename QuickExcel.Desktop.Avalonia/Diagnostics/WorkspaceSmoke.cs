@@ -16,7 +16,8 @@ public sealed partial class MainWindow
     private sealed class SmokeFiles : ILocalFileDialogs
     {
         public string? NextSave;
-        public Task<LocalFileSelection?> OpenAsync(FileDialogRequest request) => Task.FromResult<LocalFileSelection?>(null);
+        public string? NextOpen;
+        public Task<LocalFileSelection?> OpenAsync(FileDialogRequest request) => Task.FromResult(NextOpen is null ? null : new LocalFileSelection(NextOpen));
         public Task<LocalFileSelection?> SaveAsync(FileDialogRequest request) => Task.FromResult(NextSave is null ? null : new LocalFileSelection(NextSave));
     }
     private async Task RunWorkspaceSmokeAsync(string directory)
