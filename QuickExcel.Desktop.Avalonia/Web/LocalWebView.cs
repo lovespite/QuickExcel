@@ -31,6 +31,7 @@ internal sealed class LocalWebView : IAsyncDisposable
 
     internal LocalWebView(WebAssetCatalog assets, string page, string document, long generation, string profileRoot, IEnumerable<string> capabilities)
     {
+        var browserDirectory = WebRuntimePrerequisite.Require();
         _document = document; _generation = generation;
         _capabilities = new(capabilities, StringComparer.Ordinal); _capabilities.UnionWith(["ready", "pong", "disposed", "error"]);
         // A stable application-owned cache with in-private browser sessions. No prefix sweep or recursive deletion.
@@ -42,7 +43,7 @@ internal sealed class LocalWebView : IAsyncDisposable
         {
             e.EnableDevTools = false;
             if (e is WindowsWebView2EnvironmentRequestedEventArgs windows)
-            { windows.UserDataFolder = profile; windows.IsInPrivateModeEnabled = true; windows.AllowSingleSignOnUsingOSPrimaryAccount = false; }
+            { windows.BrowserExecutableFolder = browserDirectory; windows.UserDataFolder = profile; windows.IsInPrivateModeEnabled = true; windows.AllowSingleSignOnUsingOSPrimaryAccount = false; }
             if (e is AppleWKWebViewEnvironmentRequestedEventArgs apple) apple.NonPersistentDataStore = true;
             if (e is LinuxWpeWebViewEnvironmentRequestedEventArgs linux)
             { linux.DataDirectory = profile; linux.CacheDirectory = Path.Combine(profile, "cache"); }

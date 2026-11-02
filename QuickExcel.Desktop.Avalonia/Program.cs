@@ -6,18 +6,38 @@ namespace QuickExcel.Desktop.Avalonia;
 
 internal static class Program
 {
-    internal static string? SmokeDirectory;
+    internal static string? SmokeDirectory = null;
     internal static string SmokeMode = "workspace";
     internal static string? InitialFile;
-    internal static bool WebTestMode => SmokeMode is "web" or "web-benchmark";
+    internal static bool WebTestMode =>
+#if QUICKEXCEL_DIAGNOSTICS
+        SmokeMode is "web" or "web-benchmark";
+#else
+        false;
+#endif
+    internal static string? SelfCheckDirectory, UserDataDirectory;
+    internal static string? SettingsMigrationError;
     internal static string WebBenchmarkKind = "all";
     [STAThread]
     public static int Main(string[] args)
     {
+#if !QUICKEXCEL_DIAGNOSTICS
+        if (args.FirstOrDefault()?.StartsWith("--", StringComparison.Ordinal) == true &&
+            (args.Length < 2 || args[0] is not ("--self-check" or "--user-data"))) return 2;
+#endif
+        if (args.Length >= 2 && args[0] == "--self-check" && Directory.Exists(args[1])) return 2;
+#if QUICKEXCEL_DIAGNOSTICS
         if (args.Length >= 2 && args[0] is "--workspace-smoke" or "--grid-smoke" or "--grid-benchmark" or "--web-smoke" or "--web-benchmark" or "--manual-check")
         { SmokeDirectory = Path.GetFullPath(args[1]); SmokeMode = args[0] switch { "--grid-smoke" => "grid", "--grid-benchmark" => "benchmark", "--web-smoke" => "web", "--web-benchmark" => "web-benchmark", "--manual-check" => "manual", _ => "workspace" }; if (SmokeMode == "manual") InitialFile = args.ElementAtOrDefault(2); }
         else InitialFile = args.FirstOrDefault(a => !a.StartsWith("--", StringComparison.Ordinal));
         if (SmokeMode == "web-benchmark") WebBenchmarkKind = args.ElementAtOrDefault(2) ?? "all";
+#else
+        InitialFile = args.FirstOrDefault(a => !a.StartsWith("--", StringComparison.Ordinal));
+#endif
+        if (args.Length >= 2 && args[0] == "--self-check")
+        { SelfCheckDirectory = Path.GetFullPath(args[1]); UserDataDirectory = Path.Combine(SelfCheckDirectory, "settings"); InitialFile = null; }
+        if (args.Length >= 2 && args[0] == "--user-data")
+        { UserDataDirectory = Path.GetFullPath(args[1]); InitialFile = args.ElementAtOrDefault(2); }
         return AppBuilder.Configure<DesktopApp>().UsePlatformDetect().With(new X11PlatformOptions { UseGLibMainLoop = true })
             .LogToTrace().StartWithClassicDesktopLifetime(args);
     }
@@ -30,7 +50,10 @@ public sealed class DesktopApp : Application
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            var data = Program.SmokeDirectory is null ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "QuickExcel", "Avalonia") : Path.Combine(Program.SmokeDirectory, "settings");
+            var legacy = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "QuickExcel");
+            var data = Program.UserDataDirectory ?? (Program.SmokeDirectory is null ? Path.Combine(legacy, "Avalonia") : Path.Combine(Program.SmokeDirectory, "settings"));
+            if (Program.UserDataDirectory is null && Program.SmokeDirectory is null)
+                Program.SettingsMigrationError = QuickExcel.Presentation.DesktopSettingsMigration.ImportOnce(legacy, data);
             desktop.MainWindow = new MainWindow(data);
         }
         base.OnFrameworkInitializationCompleted();

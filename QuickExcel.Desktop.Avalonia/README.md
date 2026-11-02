@@ -1,6 +1,6 @@
 # QuickExcel Avalonia desktop
 
-迁移中的新宿主，A1–A4 工程检查完成，已接入 PDF.js/Monaco 与原生打印代码。默认启动器仍指向 WPF；平台发布门槛尚未关闭。
+迁移中的新宿主，A1–A4 工程检查完成，已接入 PDF.js/Monaco 与原生打印代码。默认启动器已切到 Avalonia，正式 Windows 包通过安装自检；实机与完整非 Windows 平台门槛仍延期或待完成。
 
 从仓库根目录运行：
 

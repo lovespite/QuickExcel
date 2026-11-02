@@ -5,7 +5,9 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AssemblyName>QuickExcel.Avalonia</AssemblyName>
-    <Version>0.6.0-preview.3</Version>
+    <Version>0.6.0-preview.5</Version>
+    <QuickExcelDiagnostics Condition="'$(QuickExcelDiagnostics)' == ''">true</QuickExcelDiagnostics>
+    <DefineConstants Condition="'$(QuickExcelDiagnostics)' == 'true'">$(DefineConstants);QUICKEXCEL_DIAGNOSTICS</DefineConstants>
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
     <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
@@ -22,4 +24,17 @@
     <None Include="../artifacts/avalonia/web/**/*" Link="Web/%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
   <Import Project="../scripts/ScriptWorker.targets" />
+  <ItemGroup Condition="'$(QuickExcelDiagnostics)' != 'true'">
+    <Compile Remove="Diagnostics/**/*.cs" />
+  </ItemGroup>
+  <!-- This application does not use the previewer. Keep design-time support out of
+       the production runtime/deps manifest, not just out of the copied folder. -->
+  <Target Name="ExcludeAvaloniaDesigner" AfterTargets="ResolvePackageAssets">
+    <ItemGroup>
+      <RuntimeCopyLocalItems Remove="@(RuntimeCopyLocalItems)" Condition="'%(Filename)' == 'Avalonia.DesignerSupport'" />
+    </ItemGroup>
+  </Target>
+  <Target Name="ExcludeReleaseSymbols" AfterTargets="ComputeFilesToPublish" Condition="'$(QuickExcelDiagnostics)' != 'true'">
+    <ItemGroup><ResolvedFileToPublish Remove="@(ResolvedFileToPublish)" Condition="'%(Extension)' == '.pdb'" /></ItemGroup>
+  </Target>
 </Project>

@@ -44,9 +44,14 @@ public sealed partial class MainWindow
         catch (DataValidationException ex) when (ex.CanOverride) { Error(ex); return false; }
         Synchronize(); return true;
     }
-    private Task<bool> ConfirmValidationAsync(DataValidationException error) => _validationChoice?.Invoke(error) ??
+    private Task<bool> ConfirmValidationAsync(DataValidationException error) =>
+#if QUICKEXCEL_DIAGNOSTICS
+        _validationChoice?.Invoke(error) ??
+#endif
         Dialogs.Confirm(this, "数据验证", error.Message + "\n仍要提交整批输入吗？");
+#if QUICKEXCEL_DIAGNOSTICS
     private Func<DataValidationException, Task<bool>>? _validationChoice;
+#endif
     private void RequireVisiblePaste(GridRange target)
     {
         var snapshot = Document.Snapshot; var sheet = snapshot.Sheets[SheetIndex];

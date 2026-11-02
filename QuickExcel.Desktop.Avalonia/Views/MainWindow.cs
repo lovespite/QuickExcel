@@ -37,7 +37,9 @@ public sealed partial class MainWindow : Window
     private bool _synchronizing, _formulaDirty, _allowClose, _closePending, _working;
     private CellAddress? _formulaOwner;
     private Task _operation = Task.CompletedTask;
+#if QUICKEXCEL_DIAGNOSTICS
     private Func<Task<SaveDecision>>? _discardChoice;
+#endif
     private WorkbookDocument Document => _workspace.Document;
     private int SheetIndex => Document.Snapshot.Sheets.IndexOf(Document.Snapshot.GetSheet(Document.Snapshot.ActiveSheetId));
 
@@ -86,8 +88,12 @@ public sealed partial class MainWindow : Window
             // Opened can run before the platform main loop starts. GTK's native WebView
             // needs the GLib dispatcher running before an owned page is constructed.
             await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Background);
+            if (Program.SelfCheckDirectory is { } evidence) { await RunSelfCheckAsync(evidence); return; }
+#if QUICKEXCEL_DIAGNOSTICS
             if (Program.SmokeDirectory is { } smoke && Program.SmokeMode != "manual") { if (Program.SmokeMode == "grid") await RunGridSmokeAsync(smoke); else if (Program.SmokeMode == "benchmark") await RunGridBenchmarkAsync(smoke); else if (Program.SmokeMode == "web") await RunWebSmokeAsync(smoke); else if (Program.SmokeMode == "web-benchmark") await RunWebBenchmarkAsync(smoke); else await RunWorkspaceSmokeAsync(smoke); return; }
+#endif
             if (Program.InitialFile is { } path) await PerformAsync(() => OpenPathAsync(path));
+            if (Program.SettingsMigrationError is { } migrationError) _status.Text = migrationError;
         };
         Synchronize(); ShowHome();
     }
@@ -238,7 +244,11 @@ public sealed partial class MainWindow : Window
         var accepted = !Document.IsDirty;
         if (!accepted)
         {
+#if QUICKEXCEL_DIAGNOSTICS
             var choice = _discardChoice is null ? await Dialogs.Unsaved(this) : await _discardChoice();
+#else
+            var choice = await Dialogs.Unsaved(this);
+#endif
             accepted = choice == SaveDecision.Discard || choice == SaveDecision.Save && await SaveAsync(false);
         }
         if (accepted) await CloseScriptWindowAsync();

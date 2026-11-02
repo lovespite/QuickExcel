@@ -1,9 +1,5 @@
 @echo off
 setlocal
 cd /d "%~dp0"
-@REM  if exist "artifacts\QuickExcel\QuickExcel.exe" (
-@REM    start "" "artifacts\QuickExcel\QuickExcel.exe" %*
-@REM    exit /b 0
-@REM  )
-dotnet run --project "QuickExcel.Desktop\QuickExcel.Desktop.csproj" --artifacts-path "%~dp0artifacts\build" -- %*
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\start-quickexcel.ps1" %*
 if errorlevel 1 pause

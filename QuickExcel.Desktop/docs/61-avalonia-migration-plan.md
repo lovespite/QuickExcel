@@ -1,6 +1,6 @@
 # QuickExcel Avalonia 迁移方案与实施计划
 
-2026-11-02 制定，2026-11-03 更新。状态：**A0 工程验证完成，实机验收按用户要求延期，A1–A4 工程完成，A5 开始实施**，实际实现与证据见 [62 号 A0 记录](62-avalonia-a0-validation.md)。本方案采用 MIT 许可的开源 Avalonia，将现有 WPF 桌面迁移到 Avalonia，再在新宿主中接入 PDF.js 打印预览和 Monaco 脚本编辑器。WebView 的小规模可行性验证放在迁移开始时，正式功能接入安排在核心工作区稳定之后。
+2026-11-02 制定，2026-11-03 更新。状态：**A0 工程验证完成，实机验收按用户要求延期，A1–A5 工程完成，A6 开始实施**，实际实现与证据见 [62 号 A0 记录](62-avalonia-a0-validation.md)。本方案采用 MIT 许可的开源 Avalonia，将现有 WPF 桌面迁移到 Avalonia，再在新宿主中接入 PDF.js 打印预览和 Monaco 脚本编辑器。WebView 的小规模可行性验证放在迁移开始时，正式功能接入安排在核心工作区稳定之后。
 
 迁移分为两个独立交付目标：**Windows 上的 Avalonia 功能对齐**，以及 **macOS/Linux 的完整平台支持**。前者不得降低当前功能和脚本隔离；后者必须完成原生库、打印、用户数据保护和脚本沙箱适配，不能以窗口能够打开作为完成依据。
 
@@ -249,7 +249,7 @@ QuickJS 原生桥按 RID 生成对应共享库，清除 Windows-only 拷贝和�
 
 ## 11 实施阶段与退出条件
 
-当前 A0 **工程验证完成、实机项延期**，A1–A4 **工程完成**，A5 **实施中**，A6–A7 **未开始**。A4 实际实现与检查见 [65 号日志](65-avalonia-web-components.md)。2026-11-03 用户要求实机验证先跳过、记入日志后统一验证；这些项不阻塞后续代码实施，也不视为通过。责任列表示所需工作角色，不预设已经安排人员或并行执行。
+当前 A0 **工程验证完成、实机项延期**，A1–A5 **工程完成**，A6 **实施中**，A7 **未开始**。A5 发布与切换见 [66 号日志](66-avalonia-windows-release.md)。2026-11-03 用户要求实机验证先跳过、记入日志后统一验证；这些项不阻塞后续代码实施，也不视为通过。责任列表示所需工作角色，不预设已经安排人员或并行执行。
 
 | 阶段 | 责任范围 | 主要交付物 | 退出条件 |
 | --- | --- | --- | --- |
@@ -379,3 +379,5 @@ dotnet test .\QuickExcel.Rendering.Test\QuickExcel.Rendering.Test.csproj -c Rele
 A1 已完成：共享程序集、编辑控制器和文件选择端口、177 项定向测试及 WPF 95/157 项检查见 [63 号实施日志](63-avalonia-implementation-log.md)。
 
 A2 已完成：新宿主基础工作区、32 项 Avalonia 检查与文件/几何测试见 [63 号实施日志](63-avalonia-implementation-log.md)。A3 功能与性能工程检查完成，77 项网格/入口检查、105 项共享测试及滚动预算见 [64 号记录](64-avalonia-grid-and-workspace.md)；A4 工程完成，42 项 Windows 与 35 项 Linux Web 专项及性能证据见 [65 号记录](65-avalonia-web-components.md)。
+
+A5 Windows 工程切换完成：自包含包、正式安装自检、隔离复验、设置迁移与实际 WPF 回退见 [66 号记录](66-avalonia-windows-release.md)。实机门禁仍延期，非 Windows 完整支持待 A6。

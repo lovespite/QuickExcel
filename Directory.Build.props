@@ -1,0 +1,8 @@
+<Project>
+  <!-- Release RID restores have their own recorded locks under artifacts, while
+       ordinary builds keep the checked-in platform-neutral locks unchanged. -->
+  <PropertyGroup Condition="'$(QuickExcelReleaseLockDirectory)' != ''">
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+    <NuGetLockFilePath>$(QuickExcelReleaseLockDirectory)/$(MSBuildProjectName).packages.lock.json</NuGetLockFilePath>
+  </PropertyGroup>
+</Project>

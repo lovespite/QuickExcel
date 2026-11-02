@@ -4,10 +4,13 @@ namespace QuickExcel.Desktop.Avalonia;
 
 public sealed partial class MainWindow
 {
+#if QUICKEXCEL_DIAGNOSTICS
     private Func<Window, Task>? _dialogDriver;
+#endif
     internal async Task<T> ShowOwnedAsync<T>(Window window)
     {
         Exception? failure = null;
+#if QUICKEXCEL_DIAGNOSTICS
         if (Program.SmokeDirectory is not null && _dialogDriver is { } driver)
         {
             _dialogDriver = null;
@@ -17,6 +20,7 @@ public sealed partial class MainWindow
                 catch (Exception ex) { failure = ex; window.Close(default(T)); }
             };
         }
+#endif
         var result = await window.ShowDialog<T>(this);
         if (failure is not null) throw new InvalidOperationException("对话框专项检查失败。", failure);
         return result;

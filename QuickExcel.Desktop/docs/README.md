@@ -1,6 +1,6 @@
 # QuickExcel 架构与实施文档
 
-2026-11-02：[Avalonia 迁移](61-avalonia-migration-plan.md) **A0 技术验证进行中**，独立探针、固定依赖、Windows/Linux Skia/PDF 与离线 worker、Windows 输入及虚拟 HTTPS 已有证据，Linux 桌面输入门禁仍待关闭。详见 [62 号 A0 记录](62-avalonia-a0-validation.md)；A1–A7 未开始，当前 WPF 交付与 M4/M6 状态不变。
+2026-11-03：[Avalonia 迁移](61-avalonia-migration-plan.md) **A0–A5 工程完成，A6 实施中**。默认入口已切换 Avalonia，Windows 发布与 WPF 回退见 [66 号记录](66-avalonia-windows-release.md)。实机项目按用户要求延期；Linux 中文输入无候选框仍未解决，非 Windows 完整支持尚未完成。
 
 2026-11-02：[SkiaSharp 方案](59-skia-rendering-and-pdf-plan.md) **P0–P4 声明范围完成**，包括共享文字/图片/图表渲染、直接 PDF、按需页面预览、主网格和旧依赖清理。Windows/Linux 实际输出、功能定向验证和原有滚动预算通过，完整状态、测量修正与外部门禁见 [60 号实施记录](60-skia-rendering-and-pdf-implementation.md)。
 
@@ -16,7 +16,7 @@ XC-0106 已完成受控公式保留：数组/结构化引用等以整簿只读�
 
 **当前重点工程：[XLSX 兼容性与 Excel 功能对齐计划](26-excel-compatibility-roadmap.md)。** 2026-10-30 按用户要求提升为当前优先工作，提供 E0–E5 阶段、已交付基线和待完成清单，逐项标记重要性、常用程度、复杂度及验收条件。
 
-阅读时先看实施计划的当前状态和下一轮切片，再查专题契约与证据。日期早于当前状态的“下一步”“默认网格”“尚未交付”属于当时记录，不覆盖新状态。源码版本仍为 `0.6.0-preview.3`；旧发布目录不会随构建自动更新，身份以包内 `BUILD-METADATA.json` 为准。
+阅读时先看实施计划的当前状态和下一轮切片，再查专题契约与证据。日期早于当前状态的“下一步”“默认网格”“尚未交付”属于当时记录，不覆盖新状态。Avalonia 源码版本为 `0.6.0-preview.5`；旧发布目录不会随构建自动更新，身份以包内 `release.json` 为准，旧 WPF 包保留 `BUILD-METADATA.json`。
 
 E0 的 [兼容基线](27-xlsx-compatibility-baseline.md) 包含当前 R/D/C/E/W 矩阵、12 个合成样本和独立校验；[真实 Excel 样本台账](37-excel-business-baseline.md) 已补齐。编辑后预期差异和诊断定位已分别按 38/39 号记录完成，E0 声明范围关闭。
 
@@ -42,7 +42,11 @@ E1 七项实现及各自真实 Excel 对照已完成；[行列样式优先级](2
 
 | 文档 | 解决的问题 |
 | --- | --- |
-| [Avalonia 迁移方案与实施计划](61-avalonia-migration-plan.md) | MIT 依赖准入、模块边界、主网格迁移、PDF.js/Monaco、A0–A7 工作项、平台隔离与发布回退；A0 进行中 |
+| [Avalonia 迁移方案与实施计划](61-avalonia-migration-plan.md) | MIT 依赖准入、模块边界、主网格迁移、PDF.js/Monaco、A0–A7 工作项、平台隔离与发布回退；A0–A5 工程完成 |
+| [Avalonia 实施日志](63-avalonia-implementation-log.md) | 分阶段实现、验证与延期事项 |
+| [Avalonia 网格与工作区](64-avalonia-grid-and-workspace.md) | 功能入口矩阵、交互及滚动性能 |
+| [Avalonia Web 组件](65-avalonia-web-components.md) | Monaco/PDF.js、协议、打印会话与浏览器证据 |
+| [Avalonia Windows 发布](66-avalonia-windows-release.md) | 正式包、依赖与设置、切换回退及部署证据 |
 | [Avalonia A0 技术验证与基线](62-avalonia-a0-validation.md) | 固定来源/锁文件、Windows/Linux 探针、WebView 生命周期修复、离线 worker/虚拟 HTTPS、WPF 基线及待验收门禁 |
 | [SkiaSharp 引入方案](59-skia-rendering-and-pdf-plan.md) | 原始跨平台渲染、PDF 生成/预览、分阶段迁移方案；P0–P4 已实施 |
 | [Skia 实施记录](60-skia-rendering-and-pdf-implementation.md) | 实际架构/预算/依赖、Windows/Linux 输出、原有性能预算、候选包证据与外部门禁 |
