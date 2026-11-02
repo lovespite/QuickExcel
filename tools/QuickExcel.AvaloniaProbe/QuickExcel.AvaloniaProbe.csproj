@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+    <IsPackable>false</IsPackable>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <RuntimeIdentifiers>win-x64;linux-x64;osx-arm64</RuntimeIdentifiers>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Avalonia.Desktop" Version="[12.1.4]" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="[12.1.4]" />
+    <PackageReference Include="Avalonia.Controls.WebView" Version="[12.1.1]" />
+    <!-- Only the public COM projection is needed for the Windows HTTPS experiment.
+         Exclude the package's WPF/WinForms controls, targets and native loader. -->
+    <PackageReference Include="Microsoft.Web.WebView2" Version="[1.0.4022.49]" GeneratePathProperty="true" ExcludeAssets="all" />
+    <Reference Include="Microsoft.Web.WebView2.Core">
+      <HintPath>$(PkgMicrosoft_Web_WebView2)/lib_manual/netcoreapp3.0/Microsoft.Web.WebView2.Core.dll</HintPath>
+    </Reference>
+    <None Include="Licenses/*.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Compile Include="../../QuickExcel.Rendering.Smoke/ReportFixture.cs" Link="Fixtures/ReportFixture.cs" />
+    <Compile Include="../../QuickExcel.Rendering.Smoke/ImageFixtures.cs" Link="Fixtures/ImageFixtures.cs" />
+    <ProjectReference Include="../../QuickExcel.Rendering.Skia/QuickExcel.Rendering.Skia.csproj" />
+  </ItemGroup>
+</Project>

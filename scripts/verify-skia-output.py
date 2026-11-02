@@ -9,6 +9,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("folder", type=Path)
 parser.add_argument("--dependencies", type=Path)
 parser.add_argument("--compare", type=Path)
+parser.add_argument("--report-only", action="store_true", help="Validate the shared report fixture from another host; skip the separate text smoke")
 args = parser.parse_args()
 if args.dependencies:
     sys.path.insert(0, str(args.dependencies.resolve()))
@@ -17,11 +18,12 @@ import numpy as np
 from PIL import Image, ImageFilter
 
 folder = args.folder.resolve()
-text_pdf = pymupdf.open(folder / "text.pdf")
-semantic = text_pdf[0].get_text()
-for required in ["QuickExcel 中文报表：收入、成本和利润", "e\u0301 A\u030a", "office ffi", "العربية", "עברית", "𝄞", "𠮷"]:
-    assert required in semantic, f"Missing Unicode/cluster text: {required!r}"
-(folder / "semantic-text.txt").write_text(semantic, encoding="utf-8")
+if not args.report_only:
+    text_pdf = pymupdf.open(folder / "text.pdf")
+    semantic = text_pdf[0].get_text()
+    for required in ["QuickExcel 中文报表：收入、成本和利润", "e\u0301 A\u030a", "office ffi", "العربية", "עברית", "𝄞", "𠮷"]:
+        assert required in semantic, f"Missing Unicode/cluster text: {required!r}"
+    (folder / "semantic-text.txt").write_text(semantic, encoding="utf-8")
 layout = json.loads((folder / "report-layout.json").read_text(encoding="utf-8-sig"))
 diagnostics = json.loads((folder / "report-diagnostics.json").read_text(encoding="utf-8-sig"))
 assert not diagnostics["Warnings"]

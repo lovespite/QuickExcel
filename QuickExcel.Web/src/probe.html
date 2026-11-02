@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self'; connect-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>QuickExcel A0 offline components</title>
+  <link rel="stylesheet" href="probe.css">
+  <style>body { margin: 8px; background: white; color: #202020; font: 14px sans-serif; } canvas { max-width: 100%; } #status { min-height: 2.5em; }</style>
+  <script type="module" src="probe.js"></script>
+</head>
+<body>
+  <p id="status">正在验证离线 PDF.js 与 Monaco…</p>
+  <div id="editor" style="height:260px;border:1px solid #888"></div>
+  <canvas id="pdf"></canvas>
+</body>
+</html>

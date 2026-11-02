@@ -1,0 +1,14 @@
+{
+  "name": "quickexcel-web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Offline Avalonia A0 probes; not a production editor or preview",
+  "dependencies": {
+    "monaco-editor": "0.57.0",
+    "pdfjs-dist": "6.5.438"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2"
+  }
+}
