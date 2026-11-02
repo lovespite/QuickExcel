@@ -44,6 +44,9 @@ namespace FastWpfGrid
 
         public int RightAlignBlockCount { get; set; }
 
+        /// <summary>Vertical text alignment: 0 top, 1 centre, 2 bottom. Hosts may set it per cell.</summary>
+        public int VerticalAlignment { get; set; } = 1;
+
         public IFastGridCellBlock GetBlock(int blockIndex)
         {
             return Blocks[blockIndex];

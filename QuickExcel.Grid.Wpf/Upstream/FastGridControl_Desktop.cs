@@ -10,6 +10,9 @@ namespace FastWpfGrid
     partial class FastGridControl
     {
         private bool _hasModelDimensions;
+        private IReadOnlyDictionary<int, double> _modelRowDips;
+        private IReadOnlyDictionary<int, double> _modelColumnDips;
+        private double? _modelDefaultRowDip;
         public event EventHandler ViewportChanged;
         public void SetContentDecoration(FrameworkElement decoration)
         {
@@ -23,8 +26,8 @@ namespace FastWpfGrid
                 !_rowSizes.IsVisible(real.Row.Value, FirstVisibleRowScrollIndex, GridScrollAreaHeight + ScrollOffsetY) ||
                 !_columnSizes.IsVisible(real.Column.Value, FirstVisibleColumnScrollIndex, GridScrollAreaWidth + ScrollOffsetX)) return null;
             var rect = GetCellRect(real.Row.Value, real.Column.Value);
-            return new Rect(rect.Left / DpiDetector.DpiXKoef, rect.Top / DpiDetector.DpiYKoef,
-                Math.Max(0, (rect.Right - rect.Left) / DpiDetector.DpiXKoef), Math.Max(0, (rect.Bottom - rect.Top) / DpiDetector.DpiYKoef));
+            return new Rect(rect.Left / _renderScaleX, rect.Top / _renderScaleY,
+                Math.Max(0, (rect.Right - rect.Left) / _renderScaleX), Math.Max(0, (rect.Bottom - rect.Top) / _renderScaleY));
         }
         public IReadOnlyList<GridCellRange> GetSelectedModelRanges()
         {
@@ -56,23 +59,35 @@ namespace FastWpfGrid
         public void SetModelDimensions(IReadOnlyDictionary<int, double> rows, IReadOnlyDictionary<int, double> columns, double? defaultRowHeight = null)
         {
             _hasModelDimensions = true;
-            if (defaultRowHeight.HasValue) _rowSizes.DefaultSize = Math.Max(1, (int)Math.Round(defaultRowHeight.Value * DpiDetector.DpiYKoef));
-            _rowSizes.ReplaceSizeOverrides(rows.ToDictionary(p => p.Key, p => (int)Math.Round(p.Value * DpiDetector.DpiYKoef)));
-            _columnSizes.ReplaceSizeOverrides(columns.ToDictionary(p => p.Key, p => (int)Math.Round(p.Value * DpiDetector.DpiXKoef)));
+            // Workbook dimensions are DIP; the viewport works in final device
+            // pixels, so the current render scale (monitor DPI x layout zoom) is
+            // applied here and re-applied if that scale later changes.
+            _modelRowDips = rows;
+            _modelColumnDips = columns;
+            _modelDefaultRowDip = defaultRowHeight;
+            ApplyStoredDimensions();
             // NotifyRefresh runs before the host installs the new sheet's dimensions.
             // Recompute header geometry too, instead of retaining the previous sheet's height.
             RecalculateHeaderSize();
             AdjustScrollbars(); InvalidateAll(); NotifyViewportChanged();
         }
-        public FastGridCellAddress HitTestModel(Point point) => RealToModel(GetCellAddress(new Point(point.X * DpiDetector.DpiXKoef, point.Y * DpiDetector.DpiYKoef)));
+        private void ApplyStoredDimensions()
+        {
+            if (_modelRowDips is null || _modelColumnDips is null) return;
+            if (_modelDefaultRowDip is { } defaultRowHeight)
+                _rowSizes.DefaultSize = Math.Max(1, (int)Math.Round(defaultRowHeight * _renderScaleY));
+            _rowSizes.ReplaceSizeOverrides(_modelRowDips.ToDictionary(p => p.Key, p => (int)Math.Round(p.Value * _renderScaleY)));
+            _columnSizes.ReplaceSizeOverrides(_modelColumnDips.ToDictionary(p => p.Key, p => (int)Math.Round(p.Value * _renderScaleX)));
+        }
+        public FastGridCellAddress HitTestModel(Point point) => RealToModel(GetCellAddress(new Point(point.X * _renderScaleX, point.Y * _renderScaleY)));
         /// <summary>Visible row/column trailing header edge, in control DIP. No document writes.</summary>
         public FastGridCellAddress HitTestResizeHeader(Point point, double tolerance = 4)
         {
             if (_drawBuffer == null || !double.IsFinite(point.X) || !double.IsFinite(point.Y) ||
                 !double.IsFinite(tolerance) || tolerance < 0) return FastGridCellAddress.Empty;
             point = TranslatePoint(point, image);
-            var x = point.X * DpiDetector.DpiXKoef;
-            var y = point.Y * DpiDetector.DpiYKoef;
+            var x = point.X * _renderScaleX;
+            var y = point.Y * _renderScaleY;
             if (x < 0 || y < 0 || x >= _drawBuffer.PixelWidth || y >= _drawBuffer.PixelHeight)
                 return FastGridCellAddress.Empty;
             var columnHeader = y < HeaderHeight && x > HeaderWidth;
@@ -80,7 +95,7 @@ namespace FastWpfGrid
             if (!columnHeader && !rowHeader) return FastGridCellAddress.Empty;
             var sizes = rowHeader ? _rowSizes : _columnSizes;
             var coordinate = rowHeader ? y : x;
-            var nearest = tolerance * (rowHeader ? DpiDetector.DpiYKoef : DpiDetector.DpiXKoef);
+            var nearest = tolerance * (rowHeader ? _renderScaleY : _renderScaleX);
             var index = -1;
             foreach (var pane in VisibleAxis(sizes,
                 rowHeader ? FirstVisibleRowScrollIndex : FirstVisibleColumnScrollIndex,
@@ -106,8 +121,15 @@ namespace FastWpfGrid
             .SelectMany(a => Enumerable.Range(a.First, Math.Max(0, Math.Min(a.Last + 1, _realRowCount) - a.First))).Select(_rowSizes.RealToModel).ToArray();
         public IReadOnlyList<int> GetVisibleModelColumns() => VisibleAxis(_columnSizes, FirstVisibleColumnScrollIndex, VisibleColumnCount, HeaderWidth, _drawBuffer?.PixelWidth ?? 0)
             .SelectMany(a => Enumerable.Range(a.First, Math.Max(0, Math.Min(a.Last + 1, _realColumnCount) - a.First))).Select(_columnSizes.RealToModel).ToArray();
-        public double RowHeaderWidth => HeaderWidth / DpiDetector.DpiXKoef;
-        public double ColumnHeaderHeight => HeaderHeight / DpiDetector.DpiYKoef;
+        public double RowHeaderWidth => HeaderWidth / _renderScaleX;
+        public double ColumnHeaderHeight => HeaderHeight / _renderScaleY;
+        /// <summary>Offset of the raster viewport inside the control, in DIP.</summary>
+        /// <remarks>
+        /// The vector layers (artwork, selection, editor) draw from the control
+        /// origin, so the bitmap must not be re-centred by layout: an explicit
+        /// <c>Width</c>/<c>Height</c> with Stretch alignment shifts it by ~1 DIP.
+        /// </remarks>
+        public Point RasterOrigin => image.TranslatePoint(new Point(0, 0), this);
         public int FrozenRowCount => _rowSizes.FrozenCount;
         public int FrozenColumnCount => _columnSizes.FrozenCount;
 
@@ -137,7 +159,7 @@ namespace FastWpfGrid
                 sizes.FrozenSize + sizes.GetPositionByScrollIndex(index - sizes.FrozenCount);
             var top = rr.Min(r => r.First); var bottom = rr.Max(r => r.Last) + 1;
             var left = cc.Min(c => c.First); var right = cc.Max(c => c.Last) + 1;
-            var dx = DpiDetector.DpiXKoef; var dy = DpiDetector.DpiYKoef;
+            var dx = _renderScaleX; var dy = _renderScaleY;
             foreach (var rows in VisibleAxis(_rowSizes, FirstVisibleRowScrollIndex, VisibleRowCount, HeaderHeight, _drawBuffer.PixelHeight))
             foreach (var columns in VisibleAxis(_columnSizes, FirstVisibleColumnScrollIndex, VisibleColumnCount, HeaderWidth, _drawBuffer.PixelWidth))
             {

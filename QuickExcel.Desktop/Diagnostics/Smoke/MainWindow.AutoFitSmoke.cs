@@ -43,7 +43,7 @@ public partial class MainWindow
             check(_grid.Control.GetModelCellBounds(80, 0) is null, "Auto-fit fixture includes text outside the viewport");
             await Fit(SheetAxis.Column, 0);
             var fittedWidth = Width(0);
-            check(fittedWidth > 160 && _grid.Control.GetTextWidth(longText, false, false) / System.Windows.Media.Imaging.DpiDetector.DpiXKoef + 4 <= fittedWidth,
+            check(fittedWidth > 160 && _grid.Control.GetTextWidth(longText, false, false) / _grid.Control.RenderScaleX + 4 <= fittedWidth,
                 "Column auto-fit includes the complete offscreen display text and padding");
             check(_document.Snapshot.Revision == revision + 1 && selection.SequenceEqual(GridSurface.Selection) && _grid.Current == new CellPosition(1, 2),
                 "Auto-fit commits one dimension transaction without changing selection");

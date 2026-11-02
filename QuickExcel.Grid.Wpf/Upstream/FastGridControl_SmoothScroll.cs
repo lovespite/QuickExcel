@@ -170,8 +170,8 @@ partial class FastGridControl
             var dipsPerSecond = 360 + Math.Clamp(outside / dpi, 0, 180) * 4;
             return (before ? -1 : 1) * dipsPerSecond * dpi;
         }
-        var vx = Speed(_mouseIsBehindLeft, _mouseIsBehindRight, pointer?.X ?? (_mouseIsBehindLeft ? 0 : _drawBuffer.PixelWidth), _drawBuffer.PixelWidth, DpiDetector.DpiXKoef);
-        var vy = Speed(_mouseIsBehindTop, _mouseIsBehindBottom, pointer?.Y ?? (_mouseIsBehindTop ? 0 : _drawBuffer.PixelHeight), _drawBuffer.PixelHeight, DpiDetector.DpiYKoef);
+        var vx = Speed(_mouseIsBehindLeft, _mouseIsBehindRight, pointer?.X ?? (_mouseIsBehindLeft ? 0 : _drawBuffer.PixelWidth), _drawBuffer.PixelWidth, _renderScaleX);
+        var vy = Speed(_mouseIsBehindTop, _mouseIsBehindBottom, pointer?.Y ?? (_mouseIsBehindTop ? 0 : _drawBuffer.PixelHeight), _drawBuffer.PixelHeight, _renderScaleY);
         bool Advance(SeriesSizes sizes, int extent, double delta, ref int first, ref double offset)
         {
             if (delta == 0 || sizes.ScrollCount == 0 || extent <= 0) return false;

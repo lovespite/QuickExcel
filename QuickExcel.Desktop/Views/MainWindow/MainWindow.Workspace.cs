@@ -196,19 +196,24 @@ public partial class MainWindow
         => await (_workspaceInput = SortSelectionAsync(((FrameworkElement)sender).Tag?.ToString() == "desc"));
     private async Task SortSelectionAsync(bool descending)
     {
-        if (_busy || !await FlushEditsAsync()) return;
+        if (_busy) { StatusText.Text = "正在处理其他操作，请稍后再排序。"; return; }
+        if (!await FlushEditsAsync()) { StatusText.Text = "排序未开始：当前编辑没有提交成功。"; return; }
         try
         {
-            if (CurrentView.Region is { } region)
+            if ((CurrentView.Region ?? TableSortRegion()) is { } region)
             {
+                // A filter region may grow sideways; a table already owns an exact, guarded rectangle.
                 var column = Math.Clamp(_selectedColumn, region.Range.Left, region.Range.Right);
-                await SortDataRegionAsync(region, [new(column, descending)]); return;
+                await SortDataRegionAsync(region, [new(column, descending)], expandColumns: CurrentView.TableId is null); return;
             }
             if (CurrentView.FilterRange is not null) throw new InvalidOperationException("请清除筛选后排序，避免隐藏行的参与范围不明确。");
-            var range = SelectedRange();
-            if (range.Rows < 2) throw new ArgumentException("请选中至少两行数据（不含表头）；按当前单元格所在列排序。");
-            ExecuteWorkbookCommand(new SortRangeCommand(_document.Snapshot.Sheets[_sheetIndex].Id, new(range.Top, range.Left), new(range.Bottom, range.Right),
-                _selectedColumn, descending), new(range.Top, _selectedColumn));
+            var snapshot = _document.Snapshot;
+            var sheet = snapshot.Sheets[_sheetIndex];
+            var block = SortPlanning.Resolve(sheet, SelectionBounds(), new(_selectedRow, _selectedColumn));
+            if (block.Range.Rows < 2) throw new ArgumentException("当前位置没有可排序的多行数据；请点击数据区内的单元格，或选出包含记录的矩形。");
+            var key = Math.Clamp(_selectedColumn, block.Range.Left, block.Range.Right);
+            var regionRange = new GridRange(block.Range.Top, block.Range.Left, block.Range.Bottom, block.Range.Right);
+            await SortDataRegionAsync(new(Guid.NewGuid(), sheet.Id, regionRange, block.HasHeader), [new(key, descending)], expandColumns: false);
         }
         catch (Exception ex) { ReportEditFailure(ex); }
     }

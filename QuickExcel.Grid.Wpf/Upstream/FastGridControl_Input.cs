@@ -71,8 +71,8 @@ namespace FastWpfGrid
             _showCellEditorIfMouseUp = FastGridCellAddress.Empty;
 
             var pt = e.GetPosition(image);
-            pt.X *= DpiDetector.DpiXKoef;
-            pt.Y *= DpiDetector.DpiYKoef;
+            pt.X *= _renderScaleX;
+            pt.Y *= _renderScaleY;
             var cell = GetCellAddress(pt);
 
             var currentRegion = CurrentCellActiveRegions.FirstOrDefault(x => x.Rect.Contains(pt));
@@ -293,8 +293,8 @@ namespace FastWpfGrid
             }
 
             var pt = e.GetPosition(image);
-            pt.X *= DpiDetector.DpiXKoef;
-            pt.Y *= DpiDetector.DpiYKoef;
+            pt.X *= _renderScaleX;
+            pt.Y *= _renderScaleY;
             var cell = GetCellAddress(pt);
 
             if (cell == _showCellEditorIfMouseUp)
@@ -326,8 +326,8 @@ namespace FastWpfGrid
             base.OnMouseRightButtonDown(e);
 
             var pt = e.GetPosition(image);
-            pt.X *= DpiDetector.DpiXKoef;
-            pt.Y *= DpiDetector.DpiYKoef;
+            pt.X *= _renderScaleX;
+            pt.Y *= _renderScaleY;
             var cell = GetCellAddress(pt);
 
             if (!_selectedCells.Contains(cell))
@@ -558,8 +558,8 @@ namespace FastWpfGrid
                 _mouseIsBehindTop = pt.Y < 0;
                 _mouseIsBehindBottom = pt.Y > image.ActualHeight;
 
-                pt.X *= DpiDetector.DpiXKoef;
-                pt.Y *= DpiDetector.DpiYKoef;
+                pt.X *= _renderScaleX;
+                pt.Y *= _renderScaleY;
                 _mouseCursorPoint = pt;
                 var cell = GetDragEndpoint(pt);
                 _mouseMoveRow = GetSeriesIndexOnPosition(pt.Y, HeaderHeight, _rowSizes, FirstVisibleRowScrollIndex);

@@ -5,6 +5,9 @@ namespace QuickExcel.Domain;
 /// <summary>Validated rectangular merge geometry shared by presentation and structure commands.</summary>
 public readonly record struct CellRectangle(int Top, int Left, int Bottom, int Right)
 {
+    public int Rows => Bottom - Top + 1;
+    public int Columns => Right - Left + 1;
+    public long Count => (long)Rows * Columns;
     public bool Contains(int row, int column) => row >= Top && row <= Bottom && column >= Left && column <= Right;
     public static CellRectangle Parse(string reference)
     {

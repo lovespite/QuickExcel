@@ -38,13 +38,21 @@ namespace System.Windows.Media.Imaging
         /// <returns></returns>
         public static WriteableBitmap New(int pixelWidth, int pixelHeight)
         {
+            return New(pixelWidth, pixelHeight, 0, 0);
+        }
+
+        /// <summary>Creates a bitmap tagged with an explicit device scale; non-positive values fall back to the window DPI.</summary>
+        public static WriteableBitmap New(int pixelWidth, int pixelHeight, double scaleX, double scaleY)
+        {
             if (pixelHeight < 1) pixelHeight = 1;
             if (pixelWidth < 1) pixelWidth = 1;
+            if (scaleX <= 0) scaleX = DpiDetector.DpiXKoef;
+            if (scaleY <= 0) scaleY = DpiDetector.DpiYKoef;
 
 #if SILVERLIGHT
          return new WriteableBitmap(pixelWidth, pixelHeight);
 #elif WPF
-            return new WriteableBitmap(pixelWidth, pixelHeight, DpiDetector.DpiXKoef * 96.0, DpiDetector.DpiYKoef * 96.0, PixelFormats.Pbgra32, null);
+            return new WriteableBitmap(pixelWidth, pixelHeight, scaleX * 96.0, scaleY * 96.0, PixelFormats.Pbgra32, null);
 #elif NETFX_CORE
          return new WriteableBitmap(pixelWidth, pixelHeight);
 #endif

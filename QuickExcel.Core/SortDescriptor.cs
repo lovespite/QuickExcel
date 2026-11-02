@@ -67,10 +67,12 @@ public sealed class SortDescriptor
     public CellPosition Last { get; }
     public bool HasHeader { get; }
     public ImmutableArray<SortKey> Keys { get; }
+    /// <summary>Expand the rectangle across adjacent data columns so the whole record moves with the key column.</summary>
+    public bool ExpandColumns { get; }
 
-    public SortDescriptor(SheetId sheetId, CellPosition first, CellPosition last, IEnumerable<SortKey> keys, bool hasHeader = false)
+    public SortDescriptor(SheetId sheetId, CellPosition first, CellPosition last, IEnumerable<SortKey> keys, bool hasHeader = false, bool expandColumns = false)
     {
-        SheetId = sheetId; First = first; Last = last; HasHeader = hasHeader;
+        SheetId = sheetId; First = first; Last = last; HasHeader = hasHeader; ExpandColumns = expandColumns;
         Keys = keys.Take(33).ToImmutableArray();
     }
 }

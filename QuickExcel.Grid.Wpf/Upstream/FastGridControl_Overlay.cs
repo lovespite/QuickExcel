@@ -58,8 +58,8 @@ partial class FastGridControl
             var x2 = Math.Min(GetColumnLeft(right) + _columnSizes.GetSizeByRealIndex(right), columns.Max);
             var y2 = Math.Min(GetRowTop(bottom) + _rowSizes.GetSizeByRealIndex(bottom), rows.Max);
             if (x2 > x1 && y2 > y1)
-                yield return new Rect(x1 / DpiDetector.DpiXKoef, y1 / DpiDetector.DpiYKoef,
-                    (x2 - x1) / DpiDetector.DpiXKoef, (y2 - y1) / DpiDetector.DpiYKoef);
+                yield return new Rect(x1 / _renderScaleX, y1 / _renderScaleY,
+                    (x2 - x1) / _renderScaleX, (y2 - y1) / _renderScaleY);
         }
     }
 
@@ -90,13 +90,13 @@ partial class FastGridControl
         {
             if (!row.HasValue || _realColumnCount == 0) return;
             foreach (var rect in GetOverlayRectangles(new(row.Value, 0, row.Value, _realColumnCount - 1)))
-            { drawing.DrawRectangle(brush, null, new Rect(0, rect.Top, HeaderWidth / DpiDetector.DpiXKoef, rect.Height)); break; }
+            { drawing.DrawRectangle(brush, null, new Rect(0, rect.Top, HeaderWidth / _renderScaleX, rect.Height)); break; }
         }
         void ColumnHeader(int? column, Brush brush)
         {
             if (!column.HasValue || _realRowCount == 0) return;
             foreach (var rect in GetOverlayRectangles(new(0, column.Value, _realRowCount - 1, column.Value)))
-            { drawing.DrawRectangle(brush, null, new Rect(rect.Left, 0, rect.Width, HeaderHeight / DpiDetector.DpiYKoef)); break; }
+            { drawing.DrawRectangle(brush, null, new Rect(rect.Left, 0, rect.Width, HeaderHeight / _renderScaleY)); break; }
         }
         RowHeader(_currentCell.Row, header); ColumnHeader(_currentCell.Column, header);
         RowHeader(_mouseOverRowHeader, hover); ColumnHeader(_mouseOverColumnHeader, hover);

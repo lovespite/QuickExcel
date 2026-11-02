@@ -7,11 +7,36 @@ namespace QuickExcel.Core;
 /// <summary>Stable rectangular row sort. Moved formulas use copy semantics; outside references keep their addresses.</summary>
 public sealed class SortRangeCommand : DocumentCommand
 {
+    public const int MaxCells = 20_000;
     private readonly SortDescriptor _descriptor;
     public SortRangeCommand(SheetId sheetId, CellPosition first, CellPosition last, int keyColumn, bool descending = false)
         : this(new SortDescriptor(sheetId, first, last, [new SortKey(keyColumn, descending)])) { }
 
     public SortRangeCommand(SortDescriptor descriptor) => _descriptor = descriptor ?? throw new ArgumentNullException(nameof(descriptor));
+
+    /// <summary>Excel-style “扩展列”: keep extending across adjacent columns that hold record data, excluding the header row.</summary>
+    public static CellRectangle ExpandColumns(WorksheetSnapshot sheet, CellRectangle range, bool hasHeader)
+    {
+        var top = range.Top + (hasHeader ? 1 : 0);
+        if (top > range.Bottom) return range;
+        var rows = range.Bottom - top + 1;
+        static bool HasRecordCell(WorksheetSnapshot sheet, int row, int column)
+        {
+            var cell = sheet.GetCell(row, column);
+            return cell is not null && (cell.Content.Kind == CellContentKind.Formula || cell.Value.Kind != CellValueKind.Blank);
+        }
+        bool ColumnHasRecordData(int column) => column >= 0 && column < WorkbookLimits.MaxColumns &&
+            Enumerable.Range(top, rows).Any(row => HasRecordCell(sheet, row, column));
+        void CheckBudget(int left, int right)
+        {
+            if ((long)rows * (right - left + 1) > MaxCells)
+                throw new InvalidOperationException($"扩展列后排序范围超过 {MaxCells:N0} 格，请先缩小选区或关闭“扩展列”。");
+        }
+        var first = range.Left; var last = range.Right;
+        while (first > 0 && ColumnHasRecordData(first - 1)) { first--; CheckBudget(first, last); }
+        while (last < WorkbookLimits.MaxColumns - 1 && ColumnHasRecordData(last + 1)) { last++; CheckBudget(first, last); }
+        return range with { Left = first, Right = last };
+    }
 
     internal override CommandDraft Prepare(WorkbookSnapshot snapshot)
     {
@@ -22,12 +47,18 @@ public sealed class SortRangeCommand : DocumentCommand
         if (first.Row > last.Row || first.Column > last.Column || _descriptor.Keys.IsEmpty || _descriptor.Keys.Length > 32 ||
             _descriptor.Keys.Any(key => key.Column < first.Column || key.Column > last.Column) ||
             _descriptor.Keys.Select(key => (key.Column, key.Basis)).Distinct().Count() != _descriptor.Keys.Length ||
-            (long)(last.Row - first.Row + 1) * (last.Column - first.Column + 1) > 20_000)
-            throw new ArgumentException("排序需要不超过 20,000 格的矩形，以及 1–32 个不重复的区域内排序键。");
+            (long)(last.Row - first.Row + 1) * (last.Column - first.Column + 1) > MaxCells)
+            throw new ArgumentException($"排序需要不超过 {MaxCells:N0} 格的矩形，以及 1–32 个不重复的区域内排序键。");
         foreach (var key in _descriptor.Keys) key.Validate();
         var sheet = snapshot.GetSheet(sheetId);
         StructureEdits.RequireSimpleStructure(sheet);
         if (WorksheetOutline.HasGroups(sheet)) throw new NotSupportedException("含分组的工作表暂不排序，请先取消分组。");
+        if (_descriptor.ExpandColumns)
+        {
+            // Keys stay in the explicitly selected columns; only the moved record becomes wider.
+            var expanded = ExpandColumns(sheet, new CellRectangle(first.Row, first.Column, last.Row, last.Column), _descriptor.HasHeader);
+            first = first with { Column = expanded.Left }; last = last with { Column = expanded.Right };
+        }
         var dataFirst = first.Row + (_descriptor.HasHeader ? 1 : 0);
         if (sheet.Data.ConditionalFormats.Any(r => r.Ranges.Any(a =>
                 ValidationSafety.Overlaps(a, new(dataFirst, first.Column, last.Row, last.Column)) &&

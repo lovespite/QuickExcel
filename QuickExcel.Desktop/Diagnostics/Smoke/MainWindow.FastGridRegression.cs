@@ -171,6 +171,12 @@ public partial class MainWindow
             host.Width = 1100; host.Height = 650;
             surface.Element.LayoutTransform = new ScaleTransform(1.5, 1.5); await Idle();
             check(ReadPixels(Frame()).SequenceEqual(Pixels()), "Resizing and 150% zoom present a correctly sized complete frame");
+            var dpi = VisualTreeHelper.GetDpi(grid);
+            var viewport = (FrameworkElement)grid.FindName("imageGrid");
+            var buffer = (WriteableBitmap)typeof(FastGridControl).GetField("_drawBuffer", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(grid)!;
+            check(Math.Abs(grid.RenderScaleX - dpi.DpiScaleX * 1.5) < 0.01 && Math.Abs(grid.RenderScaleY - dpi.DpiScaleY * 1.5) < 0.01 &&
+                Math.Abs(buffer.PixelWidth - (int)Math.Ceiling(((int)viewport.ActualWidth - 2) * grid.RenderScaleX)) <= 1,
+                "Layout zoom drives the raster density instead of resampling a window-DPI bitmap");
             host.Content = null; await Idle(); host.Content = surface.Element; await Idle();
             check(ReadPixels(Frame()).SequenceEqual(Pixels()), "Reloading the grid refreshes the presented frame");
             surface.Element.LayoutTransform = Transform.Identity; surface.Select(new(0, 0)); await Idle();
@@ -247,8 +253,8 @@ public partial class MainWindow
         reads = surface.ReadCount; grid.InvalidateAll(); await Idle(); var fullReads = surface.ReadCount - reads;
         check(addedReads < fullReads * 3, "Twenty diagonal pixel steps read only newly exposed content instead of twenty viewports");
         var center = grid.GetModelCellBounds(8, 8)!.Value;
-        var hit = grid.GetCellAddress(new Point((center.Left + center.Width / 2) * DpiDetector.DpiXKoef,
-            (center.Top + center.Height / 2) * DpiDetector.DpiYKoef));
+        var hit = grid.GetCellAddress(new Point((center.Left + center.Width / 2) * grid.RenderScaleX,
+            (center.Top + center.Height / 2) * grid.RenderScaleY));
         check(hit.Row == 8 && hit.Column == 8, "Hit testing agrees with translated cell geometry after fractional scroll");
         Field("_mouseIsBehindBottom", false); Field("_mouseIsBehindRight", false);
         var stopped = grid.GetModelCellBounds(8, 8)!.Value; advance(0.05); await Idle();
@@ -283,7 +289,7 @@ public partial class MainWindow
         Field("_dragStartCell", new FastGridCellAddress(0, 0)); Field("_mouseIsBehindBottom", true); Field("_mouseIsBehindRight", true);
         advance(0.016); await Idle();
         var sized = grid.GetModelCellBounds(3, 3)!.Value;
-        hit = grid.GetCellAddress(new Point((sized.Left + sized.Width / 2) * DpiDetector.DpiXKoef, (sized.Top + sized.Height / 2) * DpiDetector.DpiYKoef));
+        hit = grid.GetCellAddress(new Point((sized.Left + sized.Width / 2) * grid.RenderScaleX, (sized.Top + sized.Height / 2) * grid.RenderScaleY));
         check(Math.Abs(sized.Width - 180) < 1 && Math.Abs(sized.Height - 72) < 1 && hit.Row == 3 && hit.Column == 3,
             "Custom row heights and column widths remain aligned with pixel hit testing");
         var beforeStall = grid.GetModelCellBounds(3, 3)!.Value; advance(5); await Idle();
@@ -303,8 +309,8 @@ public partial class MainWindow
         for (var i = 0; i < 30; i++) advance(0.05);
         await Idle(); var endFrame = Content(); advance(0.05); await Idle();
         var endCell = grid.GetModelCellBounds(99_999, 255)!.Value;
-        check(ReferenceEquals(endFrame, Content()) && endCell.Bottom <= canvas.PixelHeight / DpiDetector.DpiYKoef + 1 &&
-            endCell.Right <= canvas.PixelWidth / DpiDetector.DpiXKoef + 1,
+        check(ReferenceEquals(endFrame, Content()) && endCell.Bottom <= canvas.PixelHeight / grid.RenderScaleY + 1 &&
+            endCell.Right <= canvas.PixelWidth / grid.RenderScaleX + 1,
             "Pixel scrolling clamps at the bottom and right without blank overscroll or redundant frames");
         Field("_dragStartCell", FastGridCellAddress.Empty); Field("_mouseIsBehindBottom", false); Field("_mouseIsBehindRight", false);
         surface.Bind(snapshot, 0, 2, 4); await Idle();

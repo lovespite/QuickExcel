@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 using QuickExcel.Core;
 using QuickExcel.Domain;
 
@@ -11,9 +12,13 @@ internal sealed class SortDialog : Window
     private readonly List<(ComboBox Column, ComboBox Direction, ComboBox Basis, CheckBox Case, TextBox Option)> _keys = [];
     public IReadOnlyList<SortKey> Keys { get; private set; } = [];
     public bool HasHeader => _header.IsChecked == true;
+    /// <summary>Move adjacent data columns as well; unavailable when the resolved block is already that wide.</summary>
+    public bool ExpandColumns => _expand.IsEnabled && _expand.IsChecked == true;
     private readonly CheckBox _header = new() { Content = "首行为标题，不参与排序", Margin = new(0, 6, 0, 6) };
+    private readonly CheckBox _expand = new() { Content = "扩展列（同步移动选区外相邻数据列，保持整条记录对齐）", Margin = new(0, 0, 0, 6) };
 
-    public SortDialog(Window owner, WorkbookSnapshot snapshot, SheetId sheetId, GridRange range, IReadOnlyList<SortKey> existing, bool header, bool fixedHeader)
+    public SortDialog(Window owner, WorkbookSnapshot snapshot, SheetId sheetId, GridRange range, IReadOnlyList<SortKey> existing, bool header,
+        bool fixedHeader, bool expandColumns = false, string? expandNote = null)
     {
         Owner = owner; Title = "多级排序"; Width = 830; Height = 500; WindowStartupLocation = WindowStartupLocation.CenterOwner; ShowInTaskbar = false;
         var sheet = snapshot.GetSheet(sheetId);
@@ -22,7 +27,26 @@ internal sealed class SortDialog : Window
         var top = new StackPanel(); DockPanel.SetDock(top, Dock.Top); panel.Children.Add(top);
         top.Children.Add(new TextBlock { Text = "排序移动区域内完整记录，筛选隐藏和手动隐藏的记录均参与。行高、隐藏状态留在原地址。", TextWrapping = TextWrapping.Wrap });
         _header.IsChecked = header; _header.IsEnabled = !fixedHeader; top.Children.Add(_header);
+        _expand.IsChecked = expandColumns; _expand.IsEnabled = expandNote is null;
+        if (expandNote is not null) _expand.Content = $"扩展列（{expandNote}）";
+        top.Children.Add(_expand);
         top.Children.Add(new TextBlock { Text = "顺序：列 / 方向 / 依据 / 大小写 / 选项。值排序可填自定义文本列表（用 | 分隔）；颜色填 ARGB。", TextWrapping = TextWrapping.Wrap });
+        var scope = new TextBlock { TextWrapping = TextWrapping.Wrap, Foreground = Brushes.DimGray, Margin = new(0, 2, 0, 2) };
+        top.Children.Add(scope);
+        void UpdateScope()
+        {
+            try
+            {
+                var selected = new CellRectangle(range.Top, range.Left, range.Bottom, range.Right);
+                var effective = ExpandColumns ? SortRangeCommand.ExpandColumns(sheet, selected, HasHeader) : selected;
+                var grew = effective.Left < selected.Left || effective.Right > selected.Right;
+                scope.Text = $"实际排序范围：{A1(effective.Top, effective.Left)}–{A1(effective.Bottom, effective.Right)}" +
+                    (grew ? $"（原选区 {A1(selected.Top, selected.Left)}–{A1(selected.Bottom, selected.Right)}，键列不变）" : "");
+            }
+            catch (InvalidOperationException ex) { scope.Text = ex.Message; }
+        }
+        _header.Checked += (_, _) => UpdateScope(); _header.Unchecked += (_, _) => UpdateScope();
+        _expand.Checked += (_, _) => UpdateScope(); _expand.Unchecked += (_, _) => UpdateScope(); UpdateScope();
         var add = new Button { Content = "添加级别", HorizontalAlignment = HorizontalAlignment.Left, Margin = new(0, 6, 0, 6) };
         top.Children.Add(add);
         void Add(SortKey key)
@@ -60,6 +84,8 @@ internal sealed class SortDialog : Window
         ok.Click += (_, _) =>
         {
             if (_keys.Count == 0) { error.Text = "请添加至少一个排序级别。"; return; }
+            try { if (ExpandColumns) SortRangeCommand.ExpandColumns(sheet, new(range.Top, range.Left, range.Bottom, range.Right), HasHeader); }
+            catch (InvalidOperationException ex) { error.Text = ex.Message; return; }
             Keys = _keys.Select(k => new SortKey(range.Left + k.Column.SelectedIndex, k.Direction.SelectedIndex == 1, k.Case.IsChecked == true,
                 (SortBasis)k.Basis.SelectedIndex, k.Basis.SelectedIndex == 0 ? null : k.Option.Text.Trim(),
                 k.Basis.SelectedIndex == 0 && k.Option.Text.Length > 0 ? k.Option.Text.Split('|') : null)).ToArray();
@@ -67,4 +93,6 @@ internal sealed class SortDialog : Window
         };
         panel.Children.Add(new ScrollViewer { Content = _levels, VerticalScrollBarVisibility = ScrollBarVisibility.Auto }); Content = panel;
     }
+
+    private static string A1(int row, int column) => MainWindow.ColumnName(column) + (row + 1);
 }

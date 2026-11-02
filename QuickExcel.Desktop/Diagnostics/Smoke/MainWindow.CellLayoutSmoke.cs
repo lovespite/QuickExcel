@@ -62,6 +62,11 @@ public partial class MainWindow
         var below = _grid.Control.GetModelCellBounds(1, 0)!.Value;
         check(Math.Abs(first.Right - right.Left) < 1 && Math.Abs(first.Bottom - below.Top) < 1,
             "Adjacent rendered cells tile without horizontal or vertical gaps");
+        // The artwork draws from the control origin; a centred (explicitly sized)
+        // raster viewport would shift every styled cell by ~1 DIP (~2px at 200%).
+        var origin = _grid.Control.RasterOrigin;
+        check(Math.Abs(origin.X) < 0.01 && Math.Abs(origin.Y) < 0.01,
+            $"Raster viewport shares the control origin with the artwork layer ({origin.X:0.##},{origin.Y:0.##})");
 
         var artwork = _grid.Artwork;
         var dpi = VisualTreeHelper.GetDpi(artwork);

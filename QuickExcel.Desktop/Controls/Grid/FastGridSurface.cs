@@ -306,7 +306,8 @@ internal sealed partial class FastGridSurface : IGridSurface
     {
         Editor.Opacity = 1;
         var style = ConditionalPresentation.GetStyle(_snapshot, Sheet, _current.Row, _current.Column);
-        Editor.FontFamily = FastGridArtwork.Font(style.FontName, style.EastAsianFontName); Editor.FontSize = (style.FontSize ?? 11) * 96 / 72;
+        Editor.FontFamily = FastGridArtwork.Font(style.FontName, style.EastAsianFontName);
+        Editor.FontSize = FastGridArtwork.FontPixels(style, Control.CellFontSize);
         Editor.FontWeight = style.Bold ? FontWeights.SemiBold : FontWeights.Normal;
         Editor.FontStyle = style.Italic ? FontStyles.Italic : FontStyles.Normal;
         Editor.TextWrapping = style.WrapText ? TextWrapping.Wrap : TextWrapping.NoWrap;
@@ -433,7 +434,7 @@ internal sealed partial class FastGridSurface : IGridSurface
         {
             if (Snapshot is null) return new FastGridCellImpl();
             var sheet = Snapshot.Sheets[SheetIndex]; var style = ConditionalPresentation.GetStyle(Snapshot, sheet, row, column);
-            var cell = new FastGridCellImpl { BackgroundColor = Color(style.FillColor) ?? Colors.White };
+            var cell = new FastGridCellImpl { BackgroundColor = Color(style.FillColor) ?? Colors.White, VerticalAlignment = style.Vertical };
             // Artwork owns the opaque styled cell, including text. Rasterizing
             // the same text underneath it doubles formatting/glyph work and
             // creates bitmaps that cannot be seen.

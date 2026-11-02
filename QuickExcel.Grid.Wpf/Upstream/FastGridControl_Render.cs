@@ -251,7 +251,7 @@ namespace FastWpfGrid
             return witdh;
         }
 
-        private int RenderBlock(int leftPos, int rightPos, Color? selectedTextColor, Color bgColor, IntRect rectContent, IFastGridCellBlock block, FastGridCellAddress cellAddr, bool leftAlign, bool isHoverCell)
+        private int RenderBlock(int leftPos, int rightPos, Color? selectedTextColor, Color bgColor, IntRect rectContent, IFastGridCellBlock block, FastGridCellAddress cellAddr, bool leftAlign, bool isHoverCell, int verticalAlignment = 1)
         {
             bool renderBlock = true;
             if (block.MouseHoverBehaviour == MouseHoverBehaviours.HideWhenMouseOut && !isHoverCell) renderBlock = false;
@@ -265,7 +265,14 @@ namespace FastWpfGrid
                     int textHeight = font.GetTextHeight(block.TextData);
                     width = font.GetTextWidth(block.TextData, _columnSizes.MaxSize);
                     height = textHeight;
-                    top = rectContent.Top + (int) Math.Round(rectContent.Height/2.0 - textHeight/2.0);
+                    // Honour the workbook's vertical alignment instead of always
+                    // centring, so plain and styled cells place text identically.
+                    top = rectContent.Top + (verticalAlignment switch
+                    {
+                        0 => 0,
+                        1 => (int) Math.Round(rectContent.Height/2.0 - textHeight/2.0),
+                        _ => rectContent.Height - textHeight,
+                    });
                     break;
                 case FastGridBlockType.Image:
                     top = rectContent.Top + (int) Math.Round(rectContent.Height/2.0 - block.ImageHeight/2.0);
@@ -344,13 +351,14 @@ namespace FastWpfGrid
             int leftCount = count - rightCount;
             int leftPos = rectContent.Left;
             int rightPos = rectContent.Right;
+            var verticalAlignment = (cell as FastGridCellImpl)?.VerticalAlignment ?? 1;
 
             for (int i = count - 1; i >= count - rightCount; i--)
             {
                 var block = cell.GetBlock(i);
                 if (block == null) continue;
                 if (i < count - 1) rightPos -= BlockPadding;
-                int blockWi = RenderBlock(leftPos, rightPos, selectedTextColor, bgColor, rectContent, block, cellAddr, false, isHoverCell);
+                int blockWi = RenderBlock(leftPos, rightPos, selectedTextColor, bgColor, rectContent, block, cellAddr, false, isHoverCell, verticalAlignment);
                 rightPos -= blockWi;
             }
 
@@ -359,7 +367,7 @@ namespace FastWpfGrid
                 var block = cell.GetBlock(i);
                 if (block == null) continue;
                 if (i > 0) leftPos += BlockPadding;
-                int blockWi = RenderBlock(leftPos, rightPos, selectedTextColor, bgColor, rectContent, block, cellAddr, true, isHoverCell);
+                int blockWi = RenderBlock(leftPos, rightPos, selectedTextColor, bgColor, rectContent, block, cellAddr, true, isHoverCell, verticalAlignment);
                 leftPos += blockWi;
             }
             switch (cell.Decoration)

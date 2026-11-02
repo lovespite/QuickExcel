@@ -55,7 +55,10 @@ namespace FastWpfGrid
             _dragTimer.IsEnabled = false;
             _dragTimer.Interval = TimeSpan.FromSeconds(0.05);
             _dragTimer.Tick += _dragTimer_Tick;
-            Loaded += (_, _) => InvalidateAll();
+            Loaded += (_, _) => { if (UpdateRenderScale()) RebuildViewport(); InvalidateAll(); };
+            // A layout zoom can also reach us through an ancestor scale change
+            // that resizes this control without a separate viewport event.
+            SizeChanged += (_, _) => { if (UpdateRenderScale()) RebuildViewport(); };
             Unloaded += (_, _) => { StopDragScrolling(); CancelPendingHorizontalScroll(); _contentTiles.Clear(); _tileCanvas?.Freeze(); _tileCanvas = null; };
             AllowSelectAll = true;
         }
@@ -76,7 +79,8 @@ namespace FastWpfGrid
             var key = Tuple.Create(isBold, isItalic);
             if (!_glyphFonts.ContainsKey(key))
             {
-                var font = LetterGlyphTool.GetFont(new PortableFontDesc(CellFontName, CellFontSize, isBold, isItalic, UseClearType));
+                var font = LetterGlyphTool.GetFont(new PortableFontDesc(CellFontName, CellFontSize, isBold, isItalic, UseClearType,
+                    RenderScaleX, RenderScaleY));
                 _glyphFonts[key] = font;
             }
             return _glyphFonts[key];
@@ -431,10 +435,10 @@ namespace FastWpfGrid
 
                 edText.Margin = new Thickness
                     {
-                        Left = rect.Left / DpiDetector.DpiXKoef,
-                        Top = rect.Top / DpiDetector.DpiYKoef,
-                        Right = imageGrid.ActualWidth - rect.Right / DpiDetector.DpiXKoef,
-                        Bottom = imageGrid.ActualHeight - rect.Bottom / DpiDetector.DpiYKoef,
+                        Left = rect.Left / _renderScaleX,
+                        Top = rect.Top / _renderScaleY,
+                        Right = imageGrid.ActualWidth - rect.Right / _renderScaleX,
+                        Bottom = imageGrid.ActualHeight - rect.Bottom / _renderScaleY,
                     };
             }
         }
@@ -457,8 +461,8 @@ namespace FastWpfGrid
 
             mnuSelection.Margin = new Thickness
             {
-                Left = left / DpiDetector.DpiXKoef,
-                Top = top / DpiDetector.DpiYKoef,
+                Left = left / _renderScaleX,
+                Top = top / _renderScaleY,
             };
         }
 
@@ -595,39 +599,62 @@ namespace FastWpfGrid
 
         private void imageGridResized(object sender, SizeChangedEventArgs e)
         {
+            // Layout zoom and monitor DPI change the raster density before any
+            // geometry is measured, so the viewport is rebuilt at the new scale.
+            UpdateRenderScale();
+            RebuildViewport();
+        }
+
+        private void RebuildViewport()
+        {
             bool wasEmpty = _drawBuffer == null;
             int width = (int) imageGrid.ActualWidth - 2;
             int height = (int) imageGrid.ActualHeight - 2;
             if (width > 0 && height > 0)
             {
-				//To avoid flicker (blank image) while resizing, crop the current buffer and set it as the image source instead of using a new one.
-				//This will be shown during the refresh.
-				int pixelWidth = (int) Math.Ceiling(width*DpiDetector.DpiXKoef);
-	            int pixelHeight = (int) Math.Ceiling(height*DpiDetector.DpiYKoef);
-	            if (_drawBuffer == null)
-	            {
-		            _drawBuffer = BitmapFactory.New(pixelWidth, pixelHeight);
-	            }
-	            else
-	            {
-		            var oldBuffer = _drawBuffer;
-		            _drawBuffer = oldBuffer.Crop(0, 0, pixelWidth, pixelHeight);
-					
-					//The unmanaged memory when crating new WritableBitmaps doesn't reliably garbage collect and can still cause out of memory exceptions
-					//Profiling revealed handles on the object that aren't able to be collected.
-					//Freezing the object removes all handles and should help in garbage collection.
-					oldBuffer.Freeze();
-	            }
+                //To avoid flicker (blank image) while resizing, crop the current buffer and set it as the image source instead of using a new one.
+                //This will be shown during the refresh.
+                int pixelWidth = (int) Math.Ceiling(width * _renderScaleX);
+                int pixelHeight = (int) Math.Ceiling(height * _renderScaleY);
+                if (_drawBuffer == null || Math.Abs(_drawBuffer.DpiX - _renderScaleX * 96) > 0.01 || Math.Abs(_drawBuffer.DpiY - _renderScaleY * 96) > 0.01)
+                {
+                    var previous = _drawBuffer;
+                    _drawBuffer = BitmapFactory.New(pixelWidth, pixelHeight, _renderScaleX, _renderScaleY);
+                    //The unmanaged memory when crating new WritableBitmaps doesn't reliably garbage collect and can still cause out of memory exceptions
+                    //Profiling revealed handles on the object that aren't able to be collected.
+                    //Freezing the object removes all handles and should help in garbage collection.
+                    previous?.Freeze();
+                }
+                else
+                {
+                    var oldBuffer = _drawBuffer;
+                    _drawBuffer = CropBuffer(oldBuffer, pixelWidth, pixelHeight);
+
+                    //The unmanaged memory when crating new WritableBitmaps doesn't reliably garbage collect and can still cause out of memory exceptions
+                    //Profiling revealed handles on the object that aren't able to be collected.
+                    //Freezing the object removes all handles and should help in garbage collection.
+                    oldBuffer.Freeze();
+                }
             }
             else
             {
-				_drawBuffer = null;
+                _drawBuffer = null;
             }
             if (_drawBuffer == null) image.Source = null;
             image.Margin = new Thickness(0);
-            image.Width = Math.Max(0, width);
-            image.Height = Math.Max(0, height);
-            selectionOverlay.Width = image.Width; selectionOverlay.Height = image.Height;
+            //Present the bitmap at its natural size. Stretching the viewport to a
+            //rounded DIP width resamples every rasterized glyph.
+            if (_drawBuffer != null)
+            {
+                image.Width = _drawBuffer.PixelWidth / _renderScaleX;
+                image.Height = _drawBuffer.PixelHeight / _renderScaleY;
+            }
+            else
+            {
+                image.Width = Math.Max(0, width);
+                image.Height = Math.Max(0, height);
+            }
+            selectionOverlay.Width = imageGrid.ActualWidth; selectionOverlay.Height = imageGrid.ActualHeight;
 
             //var screenPos = imageGrid.PointToScreen(new Point(0, 0));
             //double fracX = screenPos.X - Math.Truncate(screenPos.X);

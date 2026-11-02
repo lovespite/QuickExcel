@@ -332,13 +332,14 @@ namespace FastWpfGrid
 
         private void SetScrollbarMargin()
         {
+            // Header/frozen sizes are content pixels; scrollbar margins are DIP.
             vscroll.Margin = new Thickness
                 {
-                    Top = HeaderHeight + FrozenHeight,
+                    Top = (HeaderHeight + FrozenHeight) / _renderScaleY,
                 };
             hscroll.Margin = new Thickness
                 {
-                    Left = HeaderWidth + FrozenWidth,
+                    Left = (HeaderWidth + FrozenWidth) / _renderScaleX,
                 };
         }
 

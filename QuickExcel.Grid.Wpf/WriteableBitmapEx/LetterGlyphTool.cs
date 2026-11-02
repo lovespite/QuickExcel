@@ -242,8 +242,10 @@ namespace System.Windows.Media.Imaging
                                             typeface.IsBold ? FontWeights.Bold : FontWeights.Normal,
                                             FontStretches.Normal),
                 EmSize = typeface.EmSize,
-                Font = new Font(typeface.FontName, typeface.EmSize * 76.0f / 92.0f, fontFlags),
+                Font = new Font(typeface.FontName, (float)(typeface.EmSize * typeface.ScaleY * 76.0 / 92.0), fontFlags),
                 IsClearType = typeface.IsClearType,
+                ScaleX = typeface.ScaleX,
+                ScaleY = typeface.ScaleY,
             };
             font.Typeface.TryGetGlyphTypeface(out font.GlyphTypeface);
             lock (FontCache)
@@ -300,6 +302,9 @@ namespace System.Windows.Media.Imaging
         public GlyphTypeface GlyphTypeface;
         public System.Drawing.Font Font;
         public bool IsClearType;
+        /// <summary>Device pixels per DIP used when the glyphs were rasterized.</summary>
+        public double ScaleX = 1;
+        public double ScaleY = 1;
 
         public GrayScaleLetterGlyph GetGrayScaleLetter(char ch)
         {
@@ -308,7 +313,7 @@ namespace System.Windows.Media.Imaging
                 if (!Glyphs.ContainsKey(ch))
                 {
                     if (Glyphs.Count >= 4096) Glyphs.Clear();
-                    Glyphs[ch] = GrayScaleLetterGlyph.CreateGlyph(Typeface, GlyphTypeface, EmSize, ch);
+                    Glyphs[ch] = GrayScaleLetterGlyph.CreateGlyph(Typeface, GlyphTypeface, EmSize, ch, ScaleX, ScaleY);
                 }
                 return Glyphs[ch];
             }
@@ -324,7 +329,7 @@ namespace System.Windows.Media.Imaging
                 if (!ColorGlyphs.TryGetValue(key, out glyph))
                 {
                     if (ColorGlyphs.Count >= 4096) ColorGlyphs.Clear();
-                    glyph = ClearTypeLetterGlyph.CreateGlyph(GlyphTypeface, Font, EmSize, ch, fontColor, bgColor);
+                    glyph = ClearTypeLetterGlyph.CreateGlyph(GlyphTypeface, Font, EmSize, ch, fontColor, bgColor, ScaleX, ScaleY);
                     ColorGlyphs[key] = glyph;
                 }
                 return glyph;
@@ -378,7 +383,7 @@ namespace System.Windows.Media.Imaging
 
         public int TextHeight
         {
-            get { return (int)Math.Ceiling(GlyphTypeface.Height * EmSize * DpiDetector.DpiYKoef); }
+            get { return (int)Math.Ceiling(GlyphTypeface.Height * EmSize * ScaleY); }
         }
     }
 }

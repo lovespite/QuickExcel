@@ -24,7 +24,9 @@ internal sealed partial class FastGridSurface
         var mergeIndex = 0;
         var maximum = 0d;
         var defaultStyle = new StyleDefinition();
-        var dpi = VisualTreeHelper.GetDpi(Artwork);
+        var pixelsPerDip = Math.Max(Control.RenderScaleY, DpiDetector.DpiYKoef);
+        var scaleX = Control.RenderScaleX;
+        var scaleY = Control.RenderScaleY;
         var cache = new Dictionary<(string Text, StyleDefinition Style, double Width, RichCellText? Rich), double>();
         foreach (var (position, _) in cells)
         {
@@ -46,22 +48,22 @@ internal sealed partial class FastGridSurface
                     // Default cells use the bitmap glyph renderer, whose rounded
                     // advances differ from FormattedText for an entire string.
                     var font = Control.GetFont(false, false);
-                    size = isRow ? (font.GetTextHeight(value) + 2 * Control.CellPaddingVertical + 2) / DpiDetector.DpiYKoef :
-                        (font.GetTextWidth(value, (int)(10000 * DpiDetector.DpiXKoef)) + 2 * Control.CellPaddingHorizontal + 2) / DpiDetector.DpiXKoef;
+                    size = isRow ? (font.GetTextHeight(value) + 2 * Control.CellPaddingVertical + 2) / scaleY :
+                        (font.GetTextWidth(value, (int)(10000 * scaleX)) + 2 * Control.CellPaddingHorizontal + 2) / scaleX;
                 }
                 else
                 {
-                    var text = FastGridArtwork.CreateText(value, style, dpi.PixelsPerDip, rich);
+                    var text = FastGridArtwork.CreateText(value, style, pixelsPerDip, rich, Control.CellFontSize);
                     if (isRow && style.TextRotation == 0)
                     {
-                        text.MaxTextWidth = Math.Max(1, Math.Round(width * DpiDetector.DpiXKoef) / DpiDetector.DpiXKoef - 4);
+                        text.MaxTextWidth = Math.Max(1, Math.Round(width * scaleX) / scaleX - 4);
                         text.MaxLineCount = style.WrapText ? int.MaxValue : 1;
                         text.Trimming = System.Windows.TextTrimming.CharacterEllipsis;
                     }
                     var bounds = new System.Windows.Rect(0, 0, text.WidthIncludingTrailingWhitespace, text.Height);
                     if (style.TextRotation is > 0 and <= 180)
                         bounds = new RotateTransform(style.TextRotation <= 90 ? -style.TextRotation : style.TextRotation - 90).TransformBounds(bounds);
-                    size = isRow ? bounds.Height + 3 : bounds.Width + FastGridArtwork.IndentWidth(style, dpi.PixelsPerDip) + 6;
+                    size = isRow ? bounds.Height + 3 : bounds.Width + FastGridArtwork.IndentWidth(style, pixelsPerDip, Control.CellFontSize) + 6;
                 }
                 if (cache.Count < 4096) cache[key] = size;
             }
@@ -69,7 +71,7 @@ internal sealed partial class FastGridSurface
             if (maximum >= 10000) break;
         }
         if (maximum == 0) return Math.Clamp(isRow ? sheet.DefaultRowHeight ?? 31 : index == 0 ? 160 : 112, isRow ? 1 : 12, 10000);
-        var scale = isRow ? DpiDetector.DpiYKoef : DpiDetector.DpiXKoef;
+        var scale = isRow ? scaleY : scaleX;
         return Math.Clamp(Math.Ceiling(maximum * scale) / scale, isRow ? 1 : 12, 10000);
     }
 }

@@ -15,9 +15,14 @@
             <ColumnDefinition Width="Auto" />
         </Grid.ColumnDefinitions>
 
-        <Grid x:Name="imageGrid" Grid.Row="0" Grid.Column="0" SizeChanged="imageGridResized">
-            <Image 
-                x:Name="image" SnapsToDevicePixels="True" Focusable="True" KeyDown="imageKeyDown" MouseDown="imageMouseDown" 
+        <Grid x:Name="imageGrid" Grid.Row="0" Grid.Column="0" ClipToBounds="True" SizeChanged="imageGridResized">
+            <!-- RebuildViewport sets an explicit Width/Height on the raster viewport.
+                 With the default Stretch alignment WPF centres a sized child, which
+                 shifts the whole bitmap by ~1 DIP against the vector layers (artwork,
+                 selection, editor) that draw from the control origin. Anchor it. -->
+            <Image
+                x:Name="image" Stretch="None" SnapsToDevicePixels="True" HorizontalAlignment="Left" VerticalAlignment="Top"
+                Focusable="True" KeyDown="imageKeyDown" MouseDown="imageMouseDown"
                 Mouse.MouseLeave="imageMouseLeave"
                 RenderOptions.BitmapScalingMode="NearestNeighbor" TextInput="imageTextInput" MouseWheel="imageMouseWheel" />
             <FastWpfGrid:GridSelectionOverlay x:Name="selectionOverlay" IsHitTestVisible="False" ClipToBounds="True" />

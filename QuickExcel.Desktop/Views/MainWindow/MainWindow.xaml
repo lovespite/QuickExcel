@@ -491,13 +491,13 @@
                             Style="{StaticResource RibbonButton}"
                             Click="Sort_Click"
                             Tag="asc"
-                            ToolTip="按当前列升序；选区不含表头，移动公式调整相对引用"/>
+                            ToolTip="按当前列升序；单格自动扩展到整条记录（含相邻数据列），首行文本标题不参与排序，可一步撤销"/>
                     <Button Content="降序"
                             local:Ribbon.Icon="TextSortDescending"
                             Style="{StaticResource RibbonButton}"
                             Click="Sort_Click"
                             Tag="desc"
-                            ToolTip="按当前列降序；选区不含表头"/>
+                            ToolTip="按当前列降序；单格自动扩展到整条记录（含相邻数据列），首行文本标题不参与排序，可一步撤销"/>
                     <Button Content="清除标记" local:Ribbon.Icon="TextSortAscending" Style="{StaticResource RibbonButton}"
                             Click="ClearSortState_Click" ToolTip="清除上次排序设置和标记，保留当前记录顺序，可撤销"/>
                   </StackPanel>

@@ -33,7 +33,7 @@ partial class FastGridControl
         var used = new HashSet<ContentTileKey>();
         var group = new DrawingGroup();
         var width = _drawBuffer.PixelWidth; var height = _drawBuffer.PixelHeight;
-        var dx = DpiDetector.DpiXKoef; var dy = DpiDetector.DpiYKoef;
+        var dx = _renderScaleX; var dy = _renderScaleY;
         using (var drawing = group.Open())
         {
             drawing.DrawRectangle(Brushes.White, null, new Rect(0, 0, width / dx, height / dy));
@@ -103,7 +103,7 @@ partial class FastGridControl
             var old = _tileCanvas;
             var w = Math.Max(key.PixelWidth, old?.PixelWidth ?? 0); var h = Math.Max(key.PixelHeight, old?.PixelHeight ?? 0);
             if ((long)w * h > Math.Max(1_048_576L, (long)key.PixelWidth * key.PixelHeight)) { w = key.PixelWidth; h = key.PixelHeight; }
-            _tileCanvas = BitmapFactory.New(w, h);
+            _tileCanvas = BitmapFactory.New(w, h, _renderScaleX, _renderScaleY);
             old?.Freeze();
         }
         var viewportCanvas = _drawBuffer; var pointer = _mouseCursorPoint;
