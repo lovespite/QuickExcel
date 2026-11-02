@@ -2,6 +2,8 @@
 
 ## 当前进度（2026-11-02）
 
+新增 [61 号 Avalonia 迁移方案](61-avalonia-migration-plan.md)：使用 MIT 开源 Avalonia，A0–A7 覆盖技术验证、共享层/主网格迁移、PDF.js/Monaco、新宿主发布和非 Windows 平台支持。当前仅完成方案编写，各实施阶段均未开始；现有 WPF 交付、XLSX 对齐成果及 M4/M5/M6/E5 未关闭项保持各自状态。
+
 59 号 Skia 迁移 P0–P4 声明范围完成：共享 net10.0 渲染、直接 PDF、按需预览、主网格和旧绘制依赖清理已接入；Windows/Linux 无界面输出、定向功能检查及原有 16.67 ms 横向/33.34 ms 拖选预算通过。最终候选包、固定版本、许可证、测量修正与失败样本见 [60 号实施记录](60-skia-rendering-and-pdf-implementation.md)。物理设备、完整应用跨平台及既有 M4/M6 门禁保持独立。
 
 E4 XC-0401–0405 已完成声明范围：打印/PDF、三类图片锚点、基础图表、工作表保护/传统批注、容量分级均实现并有 Excel、WPF、PDF/DPI 与原始基准证据，详见 [57](57-e4-reporting-and-capacity.md)。289 项相关回归和最后 117 项专项通过，Excel 81 项、WPF 23 项通过。当前为工作区实现，未生成新发布包；E5、M4/M6 保持未完成。

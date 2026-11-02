@@ -1,5 +1,7 @@
 # QuickExcel 架构与实施文档
 
+2026-11-02：新增 [Avalonia 迁移方案与实施计划](61-avalonia-migration-plan.md)，采用 MIT 开源 Avalonia 和经核验的开源 WebView，排除 XPF/商业授权依赖；按技术验证、共享层、核心工作区、PDF.js/Monaco、Windows 切换及其他平台支持推进。当前为目标方案，尚未实施，不改变现有 WPF 交付状态或 M4/M6 门禁。
+
 2026-11-02：[SkiaSharp 方案](59-skia-rendering-and-pdf-plan.md) **P0–P4 声明范围完成**，包括共享文字/图片/图表渲染、直接 PDF、按需页面预览、主网格和旧依赖清理。Windows/Linux 实际输出、功能定向验证和原有滚动预算通过，完整状态、测量修正与外部门禁见 [60 号实施记录](60-skia-rendering-and-pdf-implementation.md)。
 
 2026-11-02 当前状态：XLSX / Excel 对齐计划 E0–E4 已逐项完成声明范围；[E4 报表、打印与容量](57-e4-reporting-and-capacity.md) 的五项实现、289 项相关回归、最终 117 项专项、81 项 Excel、23 项 WPF、PDF/DPI 和容量分级验收完成。以下较早的阶段描述为历史；E5、M4/M6 剩余门禁未完成，本轮未发布新包。
@@ -40,6 +42,7 @@ E1 七项实现及各自真实 Excel 对照已完成；[行列样式优先级](2
 
 | 文档 | 解决的问题 |
 | --- | --- |
+| [Avalonia 迁移方案与实施计划](61-avalonia-migration-plan.md) | MIT 依赖准入、模块边界、主网格迁移、PDF.js/Monaco、A0–A7 工作项、平台隔离与发布回退；目标方案尚未实施 |
 | [SkiaSharp 引入方案](59-skia-rendering-and-pdf-plan.md) | 原始跨平台渲染、PDF 生成/预览、分阶段迁移方案；P0–P4 已实施 |
 | [Skia 实施记录](60-skia-rendering-and-pdf-implementation.md) | 实际架构/预算/依赖、Windows/Linux 输出、原有性能预算、候选包证据与外部门禁 |
 | [分组与分类汇总](56-outline-and-subtotals.md) | E3 收尾：outline、SUBTOTAL、预览生成、真实 Excel 验收及混合状态边界 |
