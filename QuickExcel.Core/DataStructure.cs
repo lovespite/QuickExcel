@@ -60,6 +60,6 @@ internal static class DataStructure
         }
         var conditional = data.ConditionalFormats.Select(r => (Rule: r, Ranges: r.Ranges.Select(Range).OfType<CellRectangle>().ToArray()))
             .Where(p => p.Ranges.Length > 0).Select(p => p.Rule.WithRanges(p.Ranges)).ToImmutableArray();
-        return new(filter, sort) { Tables = tables.ToImmutableArray(), Validations = data.Validations, ConditionalFormats = conditional, Outline = data.Outline };
+        return data with { Filter = filter, Sort = sort, Tables = tables.ToImmutableArray(), ConditionalFormats = conditional };
     }
 }

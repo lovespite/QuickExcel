@@ -145,8 +145,8 @@ public sealed class WorkbookSnapshotTests
     [Theory]
     [InlineData(-1, 0)]
     [InlineData(0, -1)]
-    [InlineData(100_000, 0)]
-    [InlineData(0, 1_024)]
+    [InlineData(WorkbookLimits.MaxRows, 0)]
+    [InlineData(0, WorkbookLimits.MaxColumns)]
     public void InvalidCoordinatesAreRejectedAtSnapshotBoundary(int row, int column)
     {
         Assert.Throws<ArgumentOutOfRangeException>(() => new WorksheetSnapshot(SheetId.New(), "Sheet1",
@@ -187,7 +187,7 @@ public sealed class WorkbookSnapshotTests
     {
         Assert.Throws<ArgumentOutOfRangeException>(() => new WorksheetSnapshot(SheetId.New(), "Sheet1",
             rows: new Dictionary<int, RowMetadata> { [0] = new(double.NaN) }));
-        Assert.Throws<ArgumentOutOfRangeException>(() => new SheetImage([1], "png", 99_999, 0, 2));
+        Assert.Throws<ArgumentOutOfRangeException>(() => new SheetImage([1], "png", WorkbookLimits.MaxRows - 1, 0, 2));
         Assert.Throws<ArgumentException>(() => new CellSnapshot(CellContent.FromLiteral(CellValue.FromText(new('x', 32_768)))));
         Assert.Throws<ArgumentException>(() => CellInput.Parse(new('x', 32_768)));
         Assert.Equal(32_767, CellInput.Parse("'" + new string('x', 32_767)).LiteralValue.TextValue.Length);

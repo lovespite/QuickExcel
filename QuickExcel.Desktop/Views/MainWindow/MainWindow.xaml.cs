@@ -57,6 +57,7 @@ public partial class MainWindow : Window
         SheetGrid.Children.Add(_grid.Element);
         _grid.BeforeNavigate = () => !_busy && CanCommitComposition() && CommitFormulaBar();
         _grid.BeforeBeginEdit = () => !_busy && _document.Snapshot.FileState?.FormulaReadOnly != true &&
+            ProtectionSafety.CanEdit(_document.Snapshot, _document.Snapshot.Sheets[_sheetIndex], _grid.Current.Row, _grid.Current.Column) &&
             _document.Snapshot.Sheets[_sheetIndex].GetCell(_grid.Current.Row, _grid.Current.Column)?.Content.RichText is null && CanCommitComposition() && CommitFormulaBar();
         _grid.LatestSnapshot = () => _document.Snapshot;
         _grid.SelectionChanged += Grid_CurrentCellChanged;
@@ -83,7 +84,7 @@ public partial class MainWindow : Window
             _scriptTrust = new(Path.Combine(folder, "trusted-script-certificates.json"));
             args = [];
         }
-        if (args.Length > 0 && args[0] is "--smoke-test" or "--interaction-smoke" or "--workspace-smoke" or "--product-smoke" or "--ribbon-smoke" or "--signature-smoke" or "--grid-benchmark" or "--resize-benchmark" or "--data-operations-smoke" or "--horizontal-scroll-benchmark" or "--fast-grid-benchmark" or "--fast-grid-drag-benchmark" or "--grid-integration-smoke" or "--xlsx-rendering-smoke" or "--fill-smoke" or "--formula-entry-smoke" or "--sheet-management-smoke" or "--format-efficiency-smoke" or "--table-basics-smoke" or "--structured-tables-smoke" or "--data-validation-smoke" or "--conditional-formatting-smoke" or "--data-cleaning-smoke" or "--outline-smoke")
+        if (args.Length > 0 && args[0] is "--reporting-smoke" or "--smoke-test" or "--interaction-smoke" or "--workspace-smoke" or "--product-smoke" or "--ribbon-smoke" or "--signature-smoke" or "--grid-benchmark" or "--resize-benchmark" or "--data-operations-smoke" or "--horizontal-scroll-benchmark" or "--fast-grid-benchmark" or "--fast-grid-drag-benchmark" or "--grid-integration-smoke" or "--xlsx-rendering-smoke" or "--fill-smoke" or "--formula-entry-smoke" or "--sheet-management-smoke" or "--format-efficiency-smoke" or "--table-basics-smoke" or "--structured-tables-smoke" or "--data-validation-smoke" or "--conditional-formatting-smoke" or "--data-cleaning-smoke" or "--outline-smoke")
         {
             _smokeMode = true;
             _recentFiles = new(Path.Combine(args.Length > 1 ? args[1] : AppContext.BaseDirectory, "recent-files.json"));
@@ -93,7 +94,8 @@ public partial class MainWindow : Window
             try
             {
                 var folder = args.Length > 1 ? args[1] : Path.Combine(AppContext.BaseDirectory, "smoke");
-                if (args[0] == "--outline-smoke") await RunOutlineSmokeAsync(folder, args.ElementAtOrDefault(2));
+                if (args[0] == "--reporting-smoke") await RunReportingSmokeAsync(folder, args.ElementAtOrDefault(2));
+                else if (args[0] == "--outline-smoke") await RunOutlineSmokeAsync(folder, args.ElementAtOrDefault(2));
                 else if (args[0] == "--data-cleaning-smoke") await RunDataCleaningSmokeAsync(folder, args.ElementAtOrDefault(2));
                 else if (args[0] == "--conditional-formatting-smoke") await RunConditionalFormattingSmokeAsync(folder, args.ElementAtOrDefault(2));
                 else if (args[0] == "--data-validation-smoke") await RunDataValidationSmokeAsync(folder, args.ElementAtOrDefault(2));
@@ -190,9 +192,9 @@ public partial class MainWindow : Window
             LogText.Text += "\n多模块源码已保留；执行需要显式声明脚本 API v2。";
         else if (document.Snapshot.ScriptModules.ScriptApiVersion == 2)
             LogText.Text += $"\n包内模块：{document.Snapshot.ScriptModules.Modules.Count} 个；编辑器显示首入口 {document.Snapshot.ScriptModules.EntryModules[0]}。应用时执行全部声明入口。";
-        if (document.Snapshot.Sheets.Any(sheet => sheet.UsedColumnCount > 256))
+        if (document.Snapshot.Sheets.Any(sheet => sheet.UsedColumnCount > WorkbookLimits.MaxColumns))
             StatusText.Text = "部分列未显示，可在文件菜单查看兼容性报告。";
-        if (document.Snapshot.Sheets.Any(sheet => sheet.View.ActiveCell.Column >= 256 || sheet.View.FrozenRows > 10 || sheet.View.FrozenColumns >= 256))
+        if (document.Snapshot.Sheets.Any(sheet => sheet.View.ActiveCell.Column >= WorkbookLimits.MaxColumns || sheet.View.FrozenRows > 10 || sheet.View.FrozenColumns >= WorkbookLimits.MaxColumns))
             StatusText.Text = "部分视图超出网格显示范围；原设置仍会保存，详情见兼容性报告。";
         if (document.Snapshot.FileState?.FormulaReadOnly == true)
         { StatusText.Text = "只读公式工作簿 · 显示来源缓存，未重算"; LogText.Text += "\n" + WorkbookFileState.FormulaReadOnlyMessage; }
@@ -208,12 +210,18 @@ public partial class MainWindow : Window
             var ranges = sheet.MergedCells.Select(CellRectangle.Parse).ToArray();
             var lastRow = Math.Max(sheet.UsedRowCount, Math.Max(sheet.Images.Select(i => i.RowIndex + i.RowSpan).DefaultIfEmpty().Max(), ranges.Select(m => m.Bottom + 1).DefaultIfEmpty().Max()));
             var lastColumn = Math.Max(sheet.UsedColumnCount, Math.Max(sheet.Images.Select(i => i.ColumnIndex + i.ColumnSpan).DefaultIfEmpty().Max(), ranges.Select(m => m.Right + 1).DefaultIfEmpty().Max()));
+            foreach (var anchor in sheet.Images.Select(i => i.Anchor).Concat(sheet.Data.Charts.Select(c => c.Anchor)))
+            {
+                var bounds = anchor.Bounds(sheet); if (bounds.Width <= 0 || bounds.Height <= 0) continue;
+                var extent = DrawingGeometry.FromBounds(sheet, bounds, DrawingAnchorKind.TwoCell);
+                lastRow = Math.Max(lastRow, extent.EndRow + 1); lastColumn = Math.Max(lastColumn, extent.EndColumn + 1);
+            }
             lastRow = Math.Max(lastRow, Math.Max(sheet.Data.Filter?.Range.Bottom + 1 ?? 0, sheet.Data.Sort?.Range.Bottom + 1 ?? 0));
             lastColumn = Math.Max(lastColumn, Math.Max(sheet.Data.Filter?.Range.Right + 1 ?? 0, sheet.Data.Sort?.Range.Right + 1 ?? 0));
             lastRow = Math.Max(lastRow, sheet.Data.Tables.Select(t => t.Range.Bottom + 1).DefaultIfEmpty().Max());
             lastColumn = Math.Max(lastColumn, sheet.Data.Tables.Select(t => t.Range.Right + 1).DefaultIfEmpty().Max());
             _rowCount = Math.Clamp(Math.Max(_rowCount, Math.Max(lastRow + 20, Math.Max(sheet.View.ActiveCell.Row, sheet.View.PaneTopLeftCell.Row) + 20)), 100, WorkbookLimits.MaxRows);
-            _columnCount = Math.Clamp(Math.Max(_columnCount, Math.Max(lastColumn + 2, Math.Max(sheet.View.ActiveCell.Column, sheet.View.PaneTopLeftCell.Column) + 2)), 12, 256);
+            _columnCount = Math.Clamp(Math.Max(_columnCount, Math.Max(lastColumn + 2, Math.Max(sheet.View.ActiveCell.Column, sheet.View.PaneTopLeftCell.Column) + 2)), 12, WorkbookLimits.MaxColumns);
             _refreshing = true;
             try { GridSurface.Bind(_document.Snapshot, _sheetIndex, _rowCount, _columnCount); }
             finally { _refreshing = false; }
@@ -250,7 +258,10 @@ public partial class MainWindow : Window
         if (_formulaPending) return; // A selection/refresh must not overwrite an unsubmitted edit.
         CellAddress.Text = ColumnName(_selectedColumn) + (_selectedRow + 1);
         _updatingFormula = true;
-        CellEditorText.InitializeText(FormulaBar, _document.GetCellInput(_sheetIndex, _selectedRow, _selectedColumn));
+        var sheet = _document.Snapshot.Sheets[_sheetIndex];
+        var hide = ProtectionSafety.HidesFormula(_document.Snapshot, sheet, _selectedRow, _selectedColumn);
+        FormulaBar.IsReadOnly = sheet.Data.Protection?.Sheet == true && _document.Snapshot.Styles[sheet.GetStyleId(_selectedRow, _selectedColumn)].Locked;
+        CellEditorText.InitializeText(FormulaBar, hide ? "" : _document.GetCellInput(_sheetIndex, _selectedRow, _selectedColumn));
         _updatingFormula = false;
         UpdateValidationHint();
     }
@@ -390,6 +401,12 @@ public partial class MainWindow : Window
     private void Grid_CurrentCellChanged()
     {
         if (_refreshing || _busy || _restoringWorkbookView) return;
+        if (!ProtectionSafety.CanSelect(_document.Snapshot, _document.Snapshot.Sheets[_sheetIndex], _grid.Current.Row, _grid.Current.Column))
+        {
+            _refreshing = true;
+            try { GridSurface.Select(new(_selectedRow, _selectedColumn)); } finally { _refreshing = false; }
+            StatusText.Text = "工作表保护不允许选择此单元格。"; return;
+        }
         _selectedRow = _grid.Current.Row;
         _selectedColumn = _grid.Current.Column;
         _document.Session.UpdateNavigation(_document.Snapshot.Sheets[_sheetIndex].Id, new(_selectedRow, _selectedColumn));
@@ -468,8 +485,8 @@ public partial class MainWindow : Window
         QueueRecalculation();
     }
 
-    private void MoreRows_Click(object sender, RoutedEventArgs e) { if (!CommitEdit()) return; _rowCount = Math.Min(100000, _rowCount + 100); RefreshSheet(true); }
-    private void MoreColumns_Click(object sender, RoutedEventArgs e) { if (!CommitEdit()) return; _columnCount = Math.Min(256, _columnCount + 8); RefreshSheet(true); }
+    private void MoreRows_Click(object sender, RoutedEventArgs e) { if (!CommitEdit()) return; _rowCount = Math.Min(WorkbookLimits.MaxRows, _rowCount + 100); RefreshSheet(true); }
+    private void MoreColumns_Click(object sender, RoutedEventArgs e) { if (!CommitEdit()) return; _columnCount = Math.Min(WorkbookLimits.MaxColumns, _columnCount + 8); RefreshSheet(true); }
     private void AddSheet_Click(object sender, RoutedEventArgs e)
     {
         if (_busy || !CommitEdit()) return;

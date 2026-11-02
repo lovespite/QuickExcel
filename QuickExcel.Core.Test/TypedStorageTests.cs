@@ -114,14 +114,17 @@ public sealed partial class TypedStorageTests : IDisposable
         anchor.Element(xdr + "to")!.Element(xdr + "row")!.Value = "4";
         anchor.Element(xdr + "to")!.Element(xdr + "col")!.Value = "5";
         anchor.Element(xdr + "to")!.Element(xdr + "colOff")!.Value = "1021081";
+        anchor.Element(xdr + "to")!.Element(xdr + "rowOff")!.Value = "200000";
         parts["xl/drawings/drawing1.xml"] = Encoding.UTF8.GetBytes(drawing.ToString());
         File.WriteAllBytes(path, Zip(parts));
         var opened = _storage.Open(path);
         var image = Assert.Single(opened.Sheets[0].Images);
         Assert.Equal((4, 5, 1, 1), (image.RowIndex, image.ColumnIndex, image.RowSpan, image.ColumnSpan));
         Assert.Equal(Pixel, image.Data.ToArray());
-        Assert.Contains(opened.FileState!.CompatibilityIssues, issue => issue.Contains("像素偏移"));
-        Assert.Contains(opened.FileState.CompatibilityIssues, issue => issue.Contains("非随单元格缩放"));
+        Assert.Empty(opened.FileState!.CompatibilityIssues);
+        Assert.Equal(DrawingAnchorKind.OneCell, image.Anchor.Kind);
+        Assert.Equal(38101, image.Anchor.RowOffset);
+        Assert.Equal(161899, image.Anchor.Height);
     }
 
     [Fact]
@@ -321,12 +324,12 @@ public sealed partial class TypedStorageTests : IDisposable
         _storage.Export(path, Model([Literal(CellValue.FromNumber(5))]));
         var parts = ReadZip(File.ReadAllBytes(path));
         var sheet = XDocument.Parse(Encoding.UTF8.GetString(parts["xl/worksheets/sheet1.xml"]));
-        sheet.Root!.Add(new XElement(Ns + "sheetProtection", new XAttribute("password", "CF7C"), new XAttribute("sheet", "1")));
+        sheet.Root!.Add(new XElement(Ns + "extLst", new XElement(Ns + "ext", new XAttribute("uri", "urn:quickexcel:test:unknown"))));
         parts["xl/worksheets/sheet1.xml"] = Encoding.UTF8.GetBytes(sheet.ToString());
         File.WriteAllBytes(path, Zip(parts));
         var original = File.ReadAllBytes(path);
         var loaded = _storage.Open(path);
-        Assert.Contains(loaded.FileState!.CompatibilityIssues, issue => issue.Contains("sheetProtection"));
+        Assert.Contains(loaded.FileState!.CompatibilityIssues, issue => issue.Contains("extLst"));
         var saved = PathFor("preserved.xlsq");
         _storage.Save(saved, loaded.WithScriptSource("// source only"));
         Assert.Equal(original, ReadZip(File.ReadAllBytes(saved))["workbook.xlsx"]);

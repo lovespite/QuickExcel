@@ -5,8 +5,9 @@ public static class WorkbookLimits
 {
     // Existing desktop defaults, expressed in the same XLSX width units as ColumnMetadata.
     public static double DefaultColumnWidth(int column) => ((column == 0 ? 160d : 112d) - 5) / 7;
-    public const int MaxRows = 100_000;
-    public const int MaxColumns = 1_024;
+    public const int MaxRows = 200_000;
+    public const int MaxColumns = 2_048;
+    public const int MaxStyles = 8_192;
     public const int MaxCells = 1_000_000;
     public const int MaxSheets = 64;
     public const int MaxCellTextLength = 32_767;

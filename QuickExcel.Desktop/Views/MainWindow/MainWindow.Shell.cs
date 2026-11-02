@@ -1,3 +1,4 @@
+using QuickExcel.Domain;
 using System.IO;
 using System.Windows;
 using System.Windows.Automation;
@@ -138,8 +139,8 @@ public partial class MainWindow
 
     private void NavigateToCell(int sheet, int row, int column)
     {
-        if (row < 0 || row >= QuickExcel.Domain.WorkbookLimits.MaxRows || column < 0 || column >= 256)
-            throw new ArgumentException("当前界面支持 A–IV 列及 1–100000 行。");
+        if (row < 0 || row >= QuickExcel.Domain.WorkbookLimits.MaxRows || column < 0 || column >= WorkbookLimits.MaxColumns)
+            throw new ArgumentException($"当前界面支持 {WorkbookLimits.MaxRows:N0} 行 × {WorkbookLimits.MaxColumns:N0} 列。");
         var target = _document.Snapshot.Sheets[sheet];
         if (target.Visibility != QuickExcel.Domain.SheetVisibility.Visible) throw new InvalidOperationException("目标工作表被隐藏，请先使用工作表显示操作。");
         ShowWorkbookPage();
@@ -177,8 +178,8 @@ public partial class MainWindow
         if (snapshot.FileState?.RequiresMigration == true) notices.Add("XLSQ v1 → v2：首次保存为新副本，原文件保留。");
         foreach (var sheet in snapshot.Sheets)
         {
-            if (sheet.UsedColumnCount > 256) notices.Add($"{sheet.Name}：IV 列之后的数据会保存，当前网格不显示。");
-            if (sheet.View.ActiveCell.Column >= 256 || sheet.View.FrozenRows > 10 || sheet.View.FrozenColumns >= 256)
+            if (sheet.UsedColumnCount > WorkbookLimits.MaxColumns) notices.Add($"{sheet.Name}：数据超出当前网格坐标范围。");
+            if (sheet.View.ActiveCell.Column >= WorkbookLimits.MaxColumns || sheet.View.FrozenRows > 10 || sheet.View.FrozenColumns >= WorkbookLimits.MaxColumns)
                 notices.Add($"{sheet.Name}：原活动格/冻结设置会保存，但超出当前网格的 10 冻结行或 A–IV 显示范围；显示采用受限视图。");
         }
         var dialog = new CompatibilityDialog(this, report!, saveMode: false, notices);

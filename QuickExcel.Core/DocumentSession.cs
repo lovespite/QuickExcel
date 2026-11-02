@@ -95,6 +95,7 @@ public sealed class DocumentSession : IDisposable
             var before = _snapshot;
             if (before.FileState?.FormulaReadOnly == true) throw new InvalidOperationException(WorkbookFileState.FormulaReadOnlyMessage);
             var draft = command.Prepare(before); // No session state is changed until every check succeeds.
+            ProtectionSafety.Validate(before, draft.Snapshot, command);
             if (draft.Snapshot.Sheets.Any(s => WorksheetOutline.HasGroups(s) && s.Data.AllFilters.Any(f => f.Columns.Count > 0)))
                 throw new NotSupportedException("分组与活动筛选的混合编辑暂未对齐 Excel；请先展开并取消分组，或清除筛选条件。");
             // Visibility aggregates also depend on filter metadata and displayed filter labels.
@@ -496,10 +497,11 @@ public sealed class DocumentSession : IDisposable
             + After.DefinedNames.Sum(n => 128L + 2L * (n.Name.Length + n.Formula.Length))
             + RemovedSheetMetadata(Before, After) + RemovedSheetMetadata(After, Before)
             + ChangedDataMetadata(Before, After) + ChangedDataMetadata(After, Before)
+            + ChangedPresentationMetadata(Before, After) + ChangedPresentationMetadata(After, Before)
             + (StructureChanged ? 512L * Math.Abs(After.Sheets.Length - Before.Sheets.Length) : 0);
         private static long ChangedDataMetadata(WorkbookSnapshot from, WorkbookSnapshot to) => from.Sheets
             .Where(s => !ReferenceEquals(s.Data, to.Sheets.FirstOrDefault(other => other.Id == s.Id)?.Data))
-            .Sum(s => 128L + s.Data.Validations.Sum(v => v.EstimatedBytes) + s.Data.ConditionalFormats.Sum(v => v.EstimatedBytes) + (s.Data.Filter?.Columns.Values.Sum(c => 256L + (c.Values?.Sum(v => 32L + v.Length * 2L) ?? 0) +
+            .Sum(s => 128L + s.Data.Charts.Sum(c => c.EstimatedBytes) + s.Data.Validations.Sum(v => v.EstimatedBytes) + s.Data.ConditionalFormats.Sum(v => v.EstimatedBytes) + (s.Data.Filter?.Columns.Values.Sum(c => 256L + (c.Values?.Sum(v => 32L + v.Length * 2L) ?? 0) +
                 ((c.First?.Operand.Length ?? 0) + (c.Second?.Operand.Length ?? 0)) * 2L) ?? 0) +
                 (s.Data.Sort?.Keys.Sum(k => 128L + k.CustomOrder.Sum(v => 32L + v.Length * 2L)) ?? 0) +
                 s.Data.Tables.Sum(t => 1024L + t.Style.Elements.Length * 512L + t.Columns.Sum(c => 512L + 2L * (c.Name.Length + (c.CalculatedFormula?.Length ?? 0) + (c.TotalsFormula?.Length ?? 0) + (c.TotalsLabel?.Length ?? 0))) +
@@ -508,7 +510,24 @@ public sealed class DocumentSession : IDisposable
         private static long RemovedSheetMetadata(WorkbookSnapshot from, WorkbookSnapshot to) => from.Sheets
             .Where(s => !to.Sheets.Any(other => other.Id == s.Id))
             .Sum(s => 96L * (s.Rows.Count + s.Columns.Count) + s.Images.Sum(image => 128L + image.Data.Length)
-                + s.MergedCells.Sum(merge => 32L + merge.Length * 2L));
+                + s.MergedCells.Sum(merge => 32L + merge.Length * 2L) + Notes(s) + Printing(s));
+        private static long Notes(WorksheetSnapshot s) => s.Annotations.NoteDrawing.Length + s.Annotations.Notes.Sum(n => 256L + n.Value.Author.Length * 2L + n.Value.Text.Text.Length * 2L + n.Value.Text.Runs.Length * 128L);
+        private static long Printing(WorksheetSnapshot s) => 512L + s.Printing.PrinterSettings.Length + 48L * (s.Printing.Areas.Length + s.Printing.Titles.Length + s.Printing.RowBreaks.Length + s.Printing.ColumnBreaks.Length) +
+            (s.Printing.HeaderFooter is { } h ? new[] { h.OddHeader, h.EvenHeader, h.FirstHeader, h.OddFooter, h.EvenFooter, h.FirstFooter }.Sum(t => (t?.Length ?? 0) * 2L) : 0);
+        private static long ChangedPresentationMetadata(WorkbookSnapshot from, WorkbookSnapshot to)
+        {
+            long bytes = from.Styles.Length > to.Styles.Length ? (from.Styles.Length - to.Styles.Length) * 2048L : 0;
+            foreach (var s in from.Sheets)
+            {
+                var other = to.Sheets.FirstOrDefault(t => t.Id == s.Id); if (other is null) continue;
+                if (!s.Images.Equals(other.Images)) bytes += s.Images.Sum(i => 256L + (other.Images.Any(j => i.Data.Equals(j.Data)) ? 0 : i.Data.Length));
+                bytes += s.Rows.Count(p => !other.Rows.TryGetValue(p.Key, out var value) || value != p.Value) * 192L;
+                bytes += s.Columns.Count(p => !other.Columns.TryGetValue(p.Key, out var value) || value != p.Value) * 192L;
+                if (!ReferenceEquals(s.Annotations, other.Annotations)) bytes += Notes(s);
+                if (!ReferenceEquals(s.Printing, other.Printing)) bytes += Printing(s);
+            }
+            return bytes;
+        }
         private static long FormulaCaches(WorkbookSnapshot snapshot) => snapshot.Sheets.Sum(sheet => sheet.Cells.Values
             .Where(cell => cell.Content.Kind == CellContentKind.Formula).Sum(cell => 256L
                 + (cell.Calculation?.Value is { Kind: CellValueKind.Text } value ? value.TextValue.Length * 2L : 0)

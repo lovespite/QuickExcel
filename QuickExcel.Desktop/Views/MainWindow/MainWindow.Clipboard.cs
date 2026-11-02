@@ -45,8 +45,8 @@ public partial class MainWindow
             var fill = payload.Rows == 1 && payload.Columns == 1 && !payload.IsCut;
             var rows = fill ? range.Rows : transpose ? payload.Columns : payload.Rows;
             var columns = fill ? range.Columns : transpose ? payload.Rows : payload.Columns;
-            if ((long)range.Top + rows > WorkbookLimits.MaxRows || (long)range.Left + columns > 256)
-                throw new ArgumentException("粘贴超出界面 100,000 行 × 256 列范围。");
+            if ((long)range.Top + rows > WorkbookLimits.MaxRows || (long)range.Left + columns > WorkbookLimits.MaxColumns)
+                throw new ArgumentException($"粘贴超出界面 {WorkbookLimits.MaxRows:N0} 行 × {WorkbookLimits.MaxColumns:N0} 列范围。");
             if (!CommitEditors()) return;
             CurrentView.RequireVisibleTargets(_document.Snapshot, _sheetIndex, Enumerable.Range(range.Top, rows));
             var sourceIndex = _document.Snapshot.Sheets.IndexOf(_document.Snapshot.GetSheet(payload.SheetId));

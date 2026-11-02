@@ -82,8 +82,8 @@ public class M5InteractionTests
     [Fact]
     public void AllPasteBudgetsAreValidatedBeforeCommit()
     {
-        Assert.Throws<ArgumentException>(() => GridClipboard.Prepare("1\t2", new(0, 255, 0, 255), false));
-        Assert.Throws<ArgumentException>(() => GridClipboard.Prepare("1\n2", new(99_999, 0, 99_999, 0), false));
+        Assert.Throws<ArgumentException>(() => GridClipboard.Prepare("1\t2", new(0, WorkbookLimits.MaxColumns - 1, 0, WorkbookLimits.MaxColumns - 1), false));
+        Assert.Throws<ArgumentException>(() => GridClipboard.Prepare("1\n2", new(WorkbookLimits.MaxRows - 1, 0, WorkbookLimits.MaxRows - 1, 0), false));
         Assert.Throws<ArgumentException>(() => GridClipboard.Prepare("1", new(0, 0, 200, 100), false));
         Assert.Throws<ArgumentException>(() => GridClipboard.Read(new string('x', GridClipboard.MaxCharacters + 1)));
         Assert.Throws<ArgumentException>(() => GridClipboard.Read(string.Join('\n', Enumerable.Repeat("1", 20_001))));

@@ -59,7 +59,7 @@ public partial class MainWindow
             view.Synchronize(_document.Snapshot, id, new(_selectedRow, _selectedColumn));
             var stored = _document.Snapshot.GetSheet(id).View;
             view.FrozenRows = stored.FrozenRows <= 10 ? stored.FrozenRows : 0;
-            view.FrozenColumns = stored.FrozenColumns < 256 ? stored.FrozenColumns : 0;
+            view.FrozenColumns = stored.FrozenColumns < WorkbookLimits.MaxColumns ? stored.FrozenColumns : 0;
             return view;
         }
     }

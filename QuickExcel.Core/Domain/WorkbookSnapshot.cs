@@ -33,6 +33,8 @@ public sealed record CellSnapshot
 /// <summary>Value-only style definition. Alignment and border integer values match the storage adapter's supported enums.</summary>
 public sealed record StyleDefinition
 {
+    public bool Locked { get; init; } = true;
+    public bool FormulaHidden { get; init; }
     public int NumberFormatId { get; init; }
     public string? NumberFormatCode { get; init; }
     public string? FontName { get; init; }
@@ -88,7 +90,7 @@ public sealed record ColumnMetadata(double? Width = null, bool Hidden = false, i
 public sealed class SheetImage
 {
     public SheetImage(IEnumerable<byte> data, string extension, int rowIndex, int columnIndex,
-        int rowSpan = 1, int columnSpan = 1, bool placeInCell = false)
+        int rowSpan = 1, int columnSpan = 1, bool placeInCell = false, DrawingAnchor? anchor = null)
     {
         ArgumentNullException.ThrowIfNull(data);
         ArgumentException.ThrowIfNullOrWhiteSpace(extension);
@@ -106,6 +108,8 @@ public sealed class SheetImage
         RowSpan = rowSpan;
         ColumnSpan = columnSpan;
         PlaceInCell = placeInCell;
+        Anchor = anchor ?? new DrawingAnchor { Row = rowIndex, Column = columnIndex, EndRow = rowIndex + rowSpan, EndColumn = columnIndex + columnSpan };
+        Anchor.Validate();
     }
 
     public ImmutableArray<byte> Data { get; }
@@ -115,6 +119,9 @@ public sealed class SheetImage
     public int RowSpan { get; }
     public int ColumnSpan { get; }
     public bool PlaceInCell { get; }
+    public DrawingAnchor Anchor { get; }
+    public SheetImage WithAnchor(DrawingAnchor anchor) => new(Data, Extension, anchor.Row, anchor.Column,
+        Math.Max(1, anchor.EndRow - anchor.Row), Math.Max(1, anchor.EndColumn - anchor.Column), PlaceInCell, anchor);
 }
 
 /// <summary>A sparse immutable sheet. Empty positions do not allocate cells or rows.</summary>
@@ -163,6 +170,7 @@ public sealed class WorksheetSnapshot
         MergedCells = mergedCells?.ToImmutableArray() ?? [];
         if (MergedCells.Any(string.IsNullOrWhiteSpace)) throw new ArgumentException("Merge references cannot be empty.", nameof(mergedCells));
         Images = images?.ToImmutableArray() ?? [];
+        if (Images.Length > 1024 || Images.Sum(i => (long)i.Data.Length) > 64 * 1024 * 1024) throw new ArgumentException("每表图片最多 1024 张、共 64 MiB。", nameof(images));
         if (Images.Any(image => image is null)) throw new ArgumentException("Images cannot contain null entries.", nameof(images));
         ShowGridLines = showGridLines;
         DefaultRowHeight = defaultRowHeight;
@@ -173,6 +181,11 @@ public sealed class WorksheetSnapshot
         Printing = printing ?? new(); Printing.Validate();
         Annotations = annotations ?? new();
         Data = data ?? new();
+        WorkbookLimits.ValidateDimension(Data.DefaultColumnWidth, nameof(data));
+        if (Data.ImplicitColumnWidth && Data.DefaultColumnWidth != 8.43) throw new ArgumentException("隐式 Excel 默认列宽需要 8.43 字符的布局基准。", nameof(data));
+        Data.Protection?.Validate();
+        if (Data.Charts.IsDefault || Data.Charts.Length > 128 || Data.Charts.Sum(c => c.EstimatedBytes) > 8 * 1024 * 1024) throw new ArgumentException("每表图表最多 128 张、8 MiB 定义。");
+        foreach (var chart in Data.Charts) chart.Validate();
         QuickExcel.Core.ValidationSafety.Validate(Data);
         if (Data.ConditionalFormats.IsDefault || Data.ConditionalFormats.Length > 1024 || Data.ConditionalFormats.Any(r => r is null) ||
             Data.ConditionalFormats.Sum(r => r.Ranges.Length) > 4096 || Data.ConditionalFormats.Sum(r => r.EstimatedBytes) > 4 * 1024 * 1024 ||
@@ -238,6 +251,10 @@ public sealed class WorksheetSnapshot
         new(Id, Name, Cells, Rows, Columns, MergedCells, Images, ShowGridLines, DefaultRowHeight, TabColor, View, Visibility, Printing, Annotations, data);
     public WorksheetSnapshot WithPrinting(WorksheetPrinting printing) =>
         new(Id, Name, Cells, Rows, Columns, MergedCells, Images, ShowGridLines, DefaultRowHeight, TabColor, View, Visibility, printing, Annotations, Data);
+    public WorksheetSnapshot WithImages(IEnumerable<SheetImage> images) =>
+        new(Id, Name, Cells, Rows, Columns, MergedCells, images, ShowGridLines, DefaultRowHeight, TabColor, View, Visibility, Printing, Annotations, Data);
+    public WorksheetSnapshot WithAnnotations(WorksheetAnnotations annotations) =>
+        new(Id, Name, Cells, Rows, Columns, MergedCells, Images, ShowGridLines, DefaultRowHeight, TabColor, View, Visibility, Printing, annotations, Data);
 }
 
 /// <summary>A shareable committed document state, independent of IO libraries and mutable sessions.</summary>
@@ -269,7 +286,7 @@ public sealed class WorkbookSnapshot
         if (Sheets.Sum(sheet => (long)sheet.Cells.Count) > WorkbookLimits.MaxCells)
             throw new ArgumentException("The workbook exceeds the cell limit.", nameof(sheets));
         Styles = styles?.ToImmutableArray() ?? [new StyleDefinition()];
-        if (Styles.IsEmpty || Styles.Any(style => style is null))
+        if (Styles.IsEmpty || Styles.Length > WorkbookLimits.MaxStyles || Styles.Any(style => style is null))
             throw new ArgumentException("A workbook requires a nonempty style table without null entries.", nameof(styles));
         foreach (var style in Styles)
         {

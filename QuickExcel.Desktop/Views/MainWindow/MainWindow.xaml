@@ -584,6 +584,29 @@
               </GroupBox>
             </StackPanel>
           </TabItem>
+          <TabItem Header="报表">
+            <StackPanel Orientation="Horizontal">
+              <GroupBox Header="打印与交付" Style="{StaticResource RibbonGroup}">
+                <StackPanel>
+                  <Button Content="页面设置…" Style="{StaticResource RibbonButton}" Click="PageSettings_Click"/>
+                  <Button Content="打印预览 / PDF…" Style="{StaticResource RibbonButton}" Click="PrintPreview_Click"/>
+                </StackPanel>
+              </GroupBox>
+              <GroupBox Header="图片" Style="{StaticResource RibbonGroup}">
+                <StackPanel><Button Content="插入 / 编辑图片…" Style="{StaticResource RibbonButton}" Click="ImageManage_Click"/></StackPanel>
+              </GroupBox>
+              <GroupBox Header="图表" Style="{StaticResource RibbonGroup}">
+                <StackPanel><Button Content="插入 / 编辑图表…" Style="{StaticResource RibbonButton}" Click="ChartManage_Click"/></StackPanel>
+              </GroupBox>
+              <GroupBox Header="保护与批注" Style="{StaticResource RibbonGroup}">
+                <StackPanel>
+                  <Button Content="工作表保护…" Style="{StaticResource RibbonButton}" Click="Protection_Click"/>
+                  <Button Content="单元格锁定属性…" Style="{StaticResource RibbonButton}" Click="CellProtection_Click"/>
+                  <Button Content="编辑 / 删除批注…" Style="{StaticResource RibbonButton}" Click="NoteEdit_Click"/>
+                </StackPanel>
+              </GroupBox>
+            </StackPanel>
+          </TabItem>
         </TabControl>
         <Menu VerticalAlignment="Top"
               HorizontalAlignment="Left"

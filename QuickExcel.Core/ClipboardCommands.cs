@@ -16,6 +16,8 @@ public sealed class WorkbookClipboard
         Cells = Enumerable.Range(range.Top, Rows).SelectMany(row => Enumerable.Range(range.Left, Columns).Select(column =>
         {
             var cell = sheet.GetCell(row, column) ?? new(CellContent.FromLiteral(CellValue.Blank));
+            if (ProtectionSafety.HidesFormula(snapshot, sheet, row, column) && cell.Content.Kind == CellContentKind.Formula)
+                return new CellSnapshot(CellContent.FromLiteral(cell.Value, sheet.GetStyleId(row, column)));
             return new CellSnapshot(cell.Content.WithStyle(sheet.GetStyleId(row, column)), cell.Calculation);
         })).ToImmutableArray();
         HasAnnotations = sheet.Annotations.Links.Keys.Concat(sheet.Annotations.Notes.Keys).Any(p => range.Contains(p.Row, p.Column));
@@ -53,7 +55,12 @@ public sealed class WorkbookClipboard
     {
         bool Intersects(int top, int left, int bottom, int right) => top <= range.Bottom && bottom >= range.Top && left <= range.Right && right >= range.Left;
         if (sheet.MergedCells.Select(CellRectangle.Parse).Any(m => Intersects(m.Top, m.Left, m.Bottom, m.Right)) ||
-            sheet.Images.Any(i => Intersects(i.RowIndex, i.ColumnIndex, i.RowIndex + i.RowSpan - 1, i.ColumnIndex + i.ColumnSpan - 1)))
+            sheet.Images.Select(i => i.Anchor).Concat(sheet.Data.Charts.Select(c => c.Anchor)).Any(a =>
+            {
+                var b = a.Bounds(sheet); if (b.Width <= 0 || b.Height <= 0) return false;
+                var extent = DrawingGeometry.FromBounds(sheet, b, DrawingAnchorKind.TwoCell);
+                return Intersects(extent.Row, extent.Column, extent.EndRow - (extent.EndRowOffset == 0 ? 1 : 0), extent.EndColumn - (extent.EndColumnOffset == 0 ? 1 : 0));
+            }))
             throw new NotSupportedException("内部复制/粘贴区域含合并单元格或图片，尚不能完整复制其结构；整批操作未应用。");
     }
     internal static void RequireVisibleDimensions(WorksheetSnapshot sheet, CellRectangle range)

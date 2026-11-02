@@ -13,8 +13,8 @@ internal sealed class EditorController(WorkbookDocument document, Func<DataValid
     {
         var edits = values.Take(20_001).ToArray();
         if (edits.Length > 20_000) throw new ArgumentException("单次编辑上限为 20,000 个单元格。");
-        if (edits.Any(edit => edit.Row < 0 || edit.Row >= WorkbookLimits.MaxRows || edit.Column < 0 || edit.Column >= 256))
-            throw new ArgumentException("界面编辑范围为 100,000 行 × 256 列。");
+        if (edits.Any(edit => edit.Row < 0 || edit.Row >= WorkbookLimits.MaxRows || edit.Column < 0 || edit.Column >= WorkbookLimits.MaxColumns))
+            throw new ArgumentException($"界面编辑范围为 {WorkbookLimits.MaxRows:N0} 行 × {WorkbookLimits.MaxColumns:N0} 列。");
         var snapshot = document.Snapshot; var sheet = snapshot.Sheets[sheetIndex];
         return Execute(new SetCellsCommand(edits.Select(v => new CellEdit(new(sheet.Id, v.Row, v.Column),
             CellInput.ParseForCell(v.Value, snapshot, sheet, v.Row, v.Column)))), snapshot.Revision);
@@ -24,8 +24,8 @@ internal sealed class EditorController(WorkbookDocument document, Func<DataValid
     {
         var cells = positions.Take(20_001).ToArray();
         if (cells.Length > 20_000) throw new ArgumentException("单次编辑上限为 20,000 个单元格。");
-        if (cells.Any(cell => cell.Row < 0 || cell.Row >= WorkbookLimits.MaxRows || cell.Column < 0 || cell.Column >= 256))
-            throw new ArgumentException("界面编辑范围为 100,000 行 × 256 列。");
+        if (cells.Any(cell => cell.Row < 0 || cell.Row >= WorkbookLimits.MaxRows || cell.Column < 0 || cell.Column >= WorkbookLimits.MaxColumns))
+            throw new ArgumentException($"界面编辑范围为 {WorkbookLimits.MaxRows:N0} 行 × {WorkbookLimits.MaxColumns:N0} 列。");
         var snapshot = document.Snapshot;
         var sheet = snapshot.Sheets[sheetIndex];
         return Execute(new ClearCellsCommand(cells.Select(cell => new CellAddress(sheet.Id, cell.Row, cell.Column))), snapshot.Revision);

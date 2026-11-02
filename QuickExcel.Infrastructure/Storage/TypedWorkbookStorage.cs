@@ -72,7 +72,7 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage
                     declaredViews = features.Contains("workbook-views");
                     declaredTextVersion = features.Contains("text-compatibility-v2");
                     declaredExtendedErrors = features.Contains("extended-cell-errors");
-                    if (features.Distinct().Count() != features.Length || Features.Except(features).Any() || features.Except(Features.Concat(["script-actions", "script-signatures", "workbook-views", "worksheet-printing", "preserved-formulas", "cell-text-annotations", "worksheet-data", "worksheet-tables", "worksheet-validation", "worksheet-conditional-formatting", "worksheet-outline", "text-compatibility-v2", "extended-cell-errors"])).Any() ||
+                    if (features.Distinct().Count() != features.Length || Features.Except(features).Any() || features.Except(Features.Concat(["script-actions", "script-signatures", "workbook-views", "worksheet-printing", "preserved-formulas", "cell-text-annotations", "worksheet-data", "worksheet-tables", "worksheet-validation", "worksheet-conditional-formatting", "worksheet-outline", "text-compatibility-v2", "extended-cell-errors", "drawing-anchors", "worksheet-protection", "worksheet-charts", "worksheet-default-width", "extended-capacity"])).Any() ||
                         features.Contains("script-actions") && scriptApiVersion != 2)
                         throw new InvalidDataException("XLSQ 缺少必要能力或包含未知必需能力。");
                     var referenced = new HashSet<string>(StringComparer.Ordinal) { "manifest.json" };
@@ -263,6 +263,11 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage
         var manifest = Object(snapshot.FileState?.ManifestJson);
         manifest["format"] = "QuickExcel"; manifest["formatVersion"] = 2; manifest["minReaderVersion"] = 2; manifest["scriptApiVersion"] = snapshot.ScriptModules.ScriptApiVersion;
         manifest["requiredFeatures"] = JsonSerializer.SerializeToNode(Features
+            .Concat(snapshot.Sheets.Any(s => s.Data.DefaultColumnWidth is not null) ? ["worksheet-default-width"] : [])
+            .Concat(snapshot.Styles.Length > 4096 || snapshot.Sheets.Any(s => s.UsedRowCount > 100_000 || s.UsedColumnCount > 1024 || s.Rows.Keys.Any(r => r >= 100_000) || s.Columns.Keys.Any(c => c >= 1024)) ? ["extended-capacity"] : [])
+            .Concat(snapshot.Sheets.Any(s => !s.Data.Charts.IsEmpty) ? ["worksheet-charts"] : [])
+            .Concat(snapshot.Sheets.Any(s => s.Images.Any(i => i.Anchor.Kind != DrawingAnchorKind.TwoCell || i.Anchor.RowOffset != 0 || i.Anchor.ColumnOffset != 0 || i.Anchor.EndRowOffset != 0 || i.Anchor.EndColumnOffset != 0)) ? ["drawing-anchors"] : [])
+            .Concat(snapshot.Sheets.Any(s => s.Data.Protection is not null) || snapshot.Styles.Any(s => !s.Locked || s.FormulaHidden) ? ["worksheet-protection"] : [])
             .Concat(snapshot.Sheets.Any(s => !s.Data.IsEmpty) ? ["worksheet-data"] : [])
             .Concat(snapshot.Sheets.Any(s => !s.Data.Tables.IsEmpty) ? ["worksheet-tables"] : [])
             .Concat(snapshot.Sheets.Any(s => !s.Data.Validations.IsEmpty) ? ["worksheet-validation"] : [])
@@ -356,7 +361,7 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage
         for (var i = 0; i < left.Sheets.Length; i++)
         {
             var a = left.Sheets[i]; var b = right.Sheets[i];
-            if (a.Name != b.Name || a.View != b.View || a.Visibility != b.Visibility || !a.Printing.ContentEquals(b.Printing) || !a.Annotations.ContentEquals(b.Annotations) || !a.Data.ContentEquals(b.Data, allowRowHeightRounding) || a.ShowGridLines != b.ShowGridLines || !SameHeight(a.DefaultRowHeight, b.DefaultRowHeight) || a.TabColor != b.TabColor ||
+            if (a.Name != b.Name || a.View != b.View || a.Visibility != b.Visibility || !a.Printing.ContentEquals(b.Printing) || !a.Annotations.ContentEquals(b.Annotations) || !a.Data.ContentEquals(b.Data, allowRowHeightRounding) || a.ShowGridLines != b.ShowGridLines || !SameHeight(a.DefaultRowHeight ?? 31, b.DefaultRowHeight ?? 31) || a.TabColor != b.TabColor ||
                 !a.MergedCells.SequenceEqual(b.MergedCells) || a.Cells.Count != b.Cells.Count || a.Rows.Count != b.Rows.Count || a.Columns.Count != b.Columns.Count || a.Images.Length != b.Images.Length) return false;
             if (a.Rows.Any(p => !b.Rows.TryGetValue(p.Key, out var value) || value.Hidden != p.Value.Hidden || value.OutlineLevel != p.Value.OutlineLevel || value.Collapsed != p.Value.Collapsed || value.StyleId != p.Value.StyleId || value.ApplyStyle != p.Value.ApplyStyle ||
                     !SameHeight(value.Height, p.Value.Height)) || a.Columns.Any(p => !b.Columns.TryGetValue(p.Key, out var value) || value != p.Value)) return false;
@@ -366,7 +371,7 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage
             for (var image = 0; image < a.Images.Length; image++)
             {
                 var x = a.Images[image]; var y = b.Images[image];
-                if (x.Extension != y.Extension || x.RowIndex != y.RowIndex || x.ColumnIndex != y.ColumnIndex || x.RowSpan != y.RowSpan || x.ColumnSpan != y.ColumnSpan || x.PlaceInCell != y.PlaceInCell || !x.Data.SequenceEqual(y.Data)) return false;
+                if (x.Extension != y.Extension || x.Anchor != y.Anchor || x.PlaceInCell != y.PlaceInCell || !x.Data.SequenceEqual(y.Data)) return false;
             }
         }
         return true;

@@ -117,8 +117,8 @@ internal static class GridClipboard
         if (target.Count != 1 && !fill && (target.Rows != rows || target.Columns != columns))
             throw new ArgumentException("选区尺寸须与粘贴数据相同，或只选择左上角单元格。");
         if ((long)rows * columns > MaxEditCells || target.Top < 0 || target.Left < 0 ||
-            target.Top + rows > WorkbookLimits.MaxRows || target.Left + columns > 256)
-            throw new ArgumentException("粘贴超出 20,000 格或界面 100,000 行 × 256 列范围。");
+            target.Top + rows > WorkbookLimits.MaxRows || target.Left + columns > WorkbookLimits.MaxColumns)
+            throw new ArgumentException($"粘贴超出 20,000 格或界面 {WorkbookLimits.MaxRows:N0} 行 × {WorkbookLimits.MaxColumns:N0} 列范围。");
         var edits = new List<(int, int, string)>();
         for (var r = 0; r < rows; r++)
             for (var c = 0; c < columns; c++)

@@ -9,6 +9,7 @@ public sealed class SortRangeCommand : DocumentCommand
 {
     public const int MaxCells = 20_000;
     private readonly SortDescriptor _descriptor;
+    internal SortDescriptor Descriptor => _descriptor;
     public SortRangeCommand(SheetId sheetId, CellPosition first, CellPosition last, int keyColumn, bool descending = false)
         : this(new SortDescriptor(sheetId, first, last, [new SortKey(keyColumn, descending)])) { }
 
@@ -203,7 +204,7 @@ public sealed class SetCellStyleCommand : DocumentCommand
             var style = _patch.Apply(snapshot.Styles[sheet.GetStyleId(address.Row, address.Column)]);
             if (!styleIds.TryGetValue(style, out var id))
             {
-                if (styles.Count >= 4096) throw new InvalidOperationException("样式数量超过 4096，操作未应用。");
+                if (styles.Count >= WorkbookLimits.MaxStyles) throw new InvalidOperationException($"样式数量超过 {WorkbookLimits.MaxStyles}，操作未应用。");
                 id = styles.Count; styles.Add(style); styleIds.Add(style, id);
             }
             var content = sheet.GetCell(address.Row, address.Column)?.Content ?? CellContent.FromLiteral(CellValue.Blank);

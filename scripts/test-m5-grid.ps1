@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
     [string]$PackageDirectory = 'artifacts\QuickExcel',
-    [ValidateSet('Interaction', 'Workspace', 'Product', 'Ribbon', 'DataOperations', 'FormatEfficiency', 'GridIntegration', 'FastGridBenchmark', 'HorizontalScrollBenchmark', 'FastGridDragBenchmark', 'Benchmark', 'ResizeBenchmark', 'All')][string]$Mode = 'All',
+    [ValidateSet('Interaction', 'Workspace', 'Product', 'Ribbon', 'Reporting', 'DataOperations', 'FormatEfficiency', 'GridIntegration', 'FastGridBenchmark', 'HorizontalScrollBenchmark', 'FastGridDragBenchmark', 'Benchmark', 'ResizeBenchmark', 'All')][string]$Mode = 'All',
     [string]$WorkbookPath,
     [switch]$SoftwareRendering,
     [switch]$DefaultRendering
@@ -10,7 +10,7 @@ $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 if ($SoftwareRendering -and $DefaultRendering) { throw 'Choose only one rendering override.' }
 if ($WorkbookPath) {
-    if ($Mode -ne 'HorizontalScrollBenchmark') { throw 'WorkbookPath is supported only by HorizontalScrollBenchmark.' }
+    if ($Mode -notin @('HorizontalScrollBenchmark', 'Reporting')) { throw 'WorkbookPath is supported only by HorizontalScrollBenchmark and Reporting.' }
     $WorkbookPath = (Resolve-Path -LiteralPath $WorkbookPath).Path
     if (-not (Test-Path -LiteralPath $WorkbookPath -PathType Leaf)) { throw 'WorkbookPath must be a file.' }
 }
@@ -32,6 +32,7 @@ foreach ($scenario in $modes) {
     $argument = switch ($scenario) { 'FormatEfficiency' { '--format-efficiency-smoke' } 'HorizontalScrollBenchmark' { '--horizontal-scroll-benchmark' } 'GridIntegration' { '--grid-integration-smoke' } 'FastGridDragBenchmark' { '--fast-grid-drag-benchmark' } 'FastGridBenchmark' { '--fast-grid-benchmark' } 'DataOperations' { '--data-operations-smoke' } 'Ribbon' { '--ribbon-smoke' } 'ResizeBenchmark' { '--resize-benchmark' } 'Benchmark' { '--grid-benchmark' } 'Workspace' { '--workspace-smoke' } 'Product' { '--product-smoke' } default { '--interaction-smoke' } }
     $result = switch ($scenario) { 'FormatEfficiency' { 'format-efficiency-result.txt' } 'HorizontalScrollBenchmark' { 'horizontal-scroll-benchmark-result.txt' } 'GridIntegration' { 'grid-integration-smoke-result.txt' } 'FastGridDragBenchmark' { 'fast-grid-drag-benchmark-result.txt' } 'FastGridBenchmark' { 'fast-grid-benchmark-result.txt' } 'DataOperations' { 'data-operations-smoke-result.txt' } 'Ribbon' { 'ribbon-smoke-result.txt' } 'ResizeBenchmark' { 'resize-benchmark-result.txt' } 'Benchmark' { 'grid-benchmark-result.txt' } 'Workspace' { 'workspace-smoke-result.txt' } 'Product' { 'product-smoke-result.txt' } default { 'interaction-smoke-result.txt' } }
     $process = $null
+    if ($scenario -eq 'Reporting') { $argument = '--reporting-smoke'; $result = 'reporting-result.txt' }
     try {
         $arguments = @($argument, ('"{0}"' -f $directory))
         if ($WorkbookPath) { $arguments += ('"{0}"' -f $WorkbookPath) }

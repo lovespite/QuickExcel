@@ -13,6 +13,7 @@ namespace QuickExcel.Desktop;
 internal sealed class FastGridArtwork(FastGridSurface surface) : FrameworkElement
 {
     private readonly Dictionary<SheetImage, BitmapSource?> _images = [];
+    private readonly Dictionary<SheetImage, (CellRectangle Range, DrawingBounds Bounds)> _imageGeometry = [];
     private CellRectangle[] _merges = [];
     private WorksheetSnapshot? _sheet;
     private bool _hasStyles;
@@ -28,6 +29,14 @@ internal sealed class FastGridArtwork(FastGridSurface surface) : FrameworkElemen
         // Geometry/DPI are part of each key; scrolling only translates the drawing.
         _cellDrawings.Clear();
         _sheet = surface.Sheet;
+        _imageGeometry.Clear();
+        foreach (var picture in _sheet.Images)
+        {
+            var bounds = picture.Anchor.Bounds(_sheet);
+            if (bounds.Width <= 0 || bounds.Height <= 0) continue;
+            var anchor = DrawingGeometry.FromBounds(_sheet, bounds, DrawingAnchorKind.TwoCell);
+            _imageGeometry[picture] = (new(anchor.Row, anchor.Column, Math.Min(WorkbookLimits.MaxRows - 1, anchor.EndRow), Math.Min(WorkbookLimits.MaxColumns - 1, anchor.EndColumn)), bounds);
+        }
         _hasStyles = surface.Snapshot.Styles.Any(style => style != DefaultStyle) || _sheet.Cells.Values.Any(c => c.Content.RichText is not null) || !_sheet.Annotations.IsEmpty || !_sheet.Data.Tables.IsEmpty || !_sheet.Data.ConditionalFormats.IsEmpty;
         _merges = _sheet.MergedCells.Select(CellRectangle.Parse).ToArray();
         foreach (var image in _images.Keys.Where(i => !_sheet.Images.Contains(i)).ToArray()) _images.Remove(image);
@@ -111,13 +120,22 @@ internal sealed class FastGridArtwork(FastGridSurface surface) : FrameworkElemen
         foreach (var key in _cellDrawings.Keys.Where(key => !used.Contains(key)).ToArray()) _cellDrawings.Remove(key);
         foreach (var image in _sheet.Images)
         {
-            if (image.RowIndex >= surface.RowCount || image.ColumnIndex >= surface.ColumnCount) continue;
-            Paint(new(image.RowIndex, image.ColumnIndex, Math.Min(surface.RowCount, image.RowIndex + image.RowSpan) - 1,
-                Math.Min(surface.ColumnCount, image.ColumnIndex + image.ColumnSpan) - 1), rect =>
+            if (!_imageGeometry.TryGetValue(image, out var geometry) || geometry.Range.Top >= surface.RowCount || geometry.Range.Left >= surface.ColumnCount) continue;
+            Paint(geometry.Range with { Bottom = Math.Min(surface.RowCount - 1, geometry.Range.Bottom), Right = Math.Min(surface.ColumnCount - 1, geometry.Range.Right) }, rect =>
             {
-                if (_images.GetValueOrDefault(image) is { } bitmap) drawing.DrawImage(bitmap, rect);
-                else PaintCell(drawing, rect, DefaultStyle, "图片无法预览", true);
+                var bounds = geometry.Bounds;
+                var actual = new Rect(rect.Left + bounds.X - DrawingGeometry.ColumnStart(_sheet, geometry.Range.Left), rect.Top + bounds.Y - DrawingGeometry.RowStart(_sheet, geometry.Range.Top), bounds.Width, bounds.Height);
+                if (_images.GetValueOrDefault(image) is { } bitmap) drawing.DrawImage(bitmap, actual);
+                else PaintCell(drawing, actual, DefaultStyle, "图片无法预览", true);
             });
+        }
+        foreach (var chart in _sheet.Data.Charts)
+        {
+            var bounds = chart.Anchor.Bounds(_sheet); if (bounds.Width <= 0 || bounds.Height <= 0) continue;
+            var anchor = DrawingGeometry.FromBounds(_sheet, bounds, DrawingAnchorKind.TwoCell);
+            var range = new CellRectangle(anchor.Row, anchor.Column, Math.Min(surface.RowCount - 1, anchor.EndRow), Math.Min(surface.ColumnCount - 1, anchor.EndColumn));
+            if (range.Top > range.Bottom || range.Left > range.Right) continue;
+            Paint(range, rect => ChartDrawing.Paint(drawing, new Rect(rect.Left + bounds.X - DrawingGeometry.ColumnStart(_sheet, range.Left), rect.Top + bounds.Y - DrawingGeometry.RowStart(_sheet, range.Top), bounds.Width, bounds.Height), surface.Snapshot, chart));
         }
     }
     internal static bool PaintsStyle(StyleDefinition style) => style != DefaultStyle;

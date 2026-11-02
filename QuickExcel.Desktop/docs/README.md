@@ -1,6 +1,6 @@
 # QuickExcel 架构与实施文档
 
-2026-10-31 当前状态：XLSX / Excel 对齐计划 E0–E3 已逐项完成声明范围；最后一项 [分组与分类汇总](56-outline-and-subtotals.md) 已通过真实 Excel、202 项相关测试及 WPF 验收，混合筛选/分组等限制明确保留。以下较早的阶段描述为历史；E4/E5、M4/M6 剩余门禁未完成。
+2026-11-02 当前状态：XLSX / Excel 对齐计划 E0–E4 已逐项完成声明范围；[E4 报表、打印与容量](57-e4-reporting-and-capacity.md) 的五项实现、289 项相关回归、最终 117 项专项、81 项 Excel、23 项 WPF、PDF/DPI 和容量分级验收完成。以下较早的阶段描述为历史；E5、M4/M6 剩余门禁未完成，本轮未发布新包。
 
 XC-0001/0002 完成：[真实 Excel 业务基线](37-excel-business-baseline.md) 覆盖五类六文件，5384 属性通过；[独立编辑矩阵](38-excel-edit-matrix.md) 的 48 路径及 Excel 重开对照通过，原始差异、诊断副本和预期公式表示均明确登记。[XC-0003 诊断收尾](39-xlsx-diagnostic-closure.md) 完成，E0/E1 按声明范围关闭，[XC-0201 内部剪贴板](40-internal-clipboard.md)、[XC-0202 填充与序列](41-fill-and-series.md) 已完成声明范围，[XC-0203 录入和公式编辑](42-formula-entry-and-navigation.md) 完成声明范围，[XC-0204 工作表与名称管理](43-sheet-and-name-management.md) 已完成声明范围，[XC-0205 条件统计公式](44-conditional-functions.md) 已完成声明范围，[XC-0206 查找公式](45-lookup-functions.md) 已完成声明范围，[XC-0207 日期/数学及工作日](46-date-and-math-functions.md) 已完成声明范围，接续 XC-0208。
 
@@ -8,7 +8,7 @@ XC-0107 已完成常见富文本、超链接和传统批注的读显写；右键
 
 XC-0106 已完成受控公式保留：数组/结构化引用等以整簿只读打开，未知函数及依赖保留旧缓存，保存不冒充已重算。真实 Excel 对照及范围见 [公式保留](35-xlsx-preserved-formulas.md)。
 
-**当前进度入口：[实施计划](05-implementation-plan.md)（2026-10-30 同步）。** M1–M3 受支持子集已交付；当前为 M5 桌面交互收敛，M4 严格策略/完整部署与 M6 恢复/性能/发布仍未完成。横向拖动导致整桌面停顿已由用户确认解决，关闭记录见 [24 号文档](24-main-grid-migration.md)。
+**当前进度入口：[实施计划](05-implementation-plan.md)（2026-11-02 同步）。** M1–M3 受支持子集已交付；当前为 M5 桌面交互收敛，M4 严格策略/完整部署与 M6 恢复/性能/发布仍未完成。横向拖动导致整桌面停顿已由用户确认解决，关闭记录见 [24 号文档](24-main-grid-migration.md)。
 
 **当前重点工程：[XLSX 兼容性与 Excel 功能对齐计划](26-excel-compatibility-roadmap.md)。** 2026-10-30 按用户要求提升为当前优先工作，提供 E0–E5 阶段、已交付基线和待完成清单，逐项标记重要性、常用程度、复杂度及验收条件。
 

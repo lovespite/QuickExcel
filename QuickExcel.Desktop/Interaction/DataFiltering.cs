@@ -12,7 +12,7 @@ internal sealed record DataRegion(Guid Id, SheetId SheetId, GridRange Range, boo
     {
         if (Range.Top < 0 || Range.Left < 0 || Range.Bottom >= WorkbookLimits.MaxRows || Range.Right >= WorkbookLimits.MaxColumns ||
             Range.Top > Range.Bottom || Range.Left > Range.Right)
-            throw new ArgumentException("筛选区域须是 100,000 行 × 1024 列范围内、包含数据的矩形。");
+            throw new ArgumentException($"筛选区域须是 {WorkbookLimits.MaxRows:N0} 行 × {WorkbookLimits.MaxColumns:N0} 列范围内、包含数据的矩形。");
     }
 }
 

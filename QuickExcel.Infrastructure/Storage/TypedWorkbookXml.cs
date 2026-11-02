@@ -86,7 +86,7 @@ internal static class TypedWorkbookXml
             var visibility = XlsxViews.Visibility(definition);
             var sheet = package.XmlPart(path).Root!;
             if (sheet.Name != Main + "worksheet") throw new InvalidDataException("无效工作表部件。");
-            package.Shape(XlsxFiltering.Shape(sheet), "autoFilter sortState tableParts dataValidations conditionalFormatting dimension sheetPr sheetViews sheetFormatPr cols sheetData mergeCells hyperlinks printOptions pageMargins pageSetup headerFooter rowBreaks colBreaks drawing legacyDrawing", "", path);
+            package.Shape(XlsxFiltering.Shape(sheet), "autoFilter sortState tableParts dataValidations conditionalFormatting dimension sheetPr sheetViews sheetFormatPr cols sheetData sheetProtection mergeCells hyperlinks printOptions pageMargins pageSetup headerFooter rowBreaks colBreaks drawing legacyDrawing", "", path);
             var sharedFormulas = new SharedFormulaExpander(sheet);
             var cells = new Dictionary<CellPosition, CellSnapshot>();
             var cachedCells = new HashSet<CellPosition>();
@@ -213,16 +213,26 @@ internal static class TypedWorkbookXml
             var viewState = XlsxViews.ReadSheet(package, path, sheet);
             if (Bool((string?)view?.Attribute("tabSelected"))) selectedTabs++;
             var format = sheet.Element(Main + "sheetFormatPr");
-            if (format is not null) package.Shape(format, "", "defaultRowHeight outlineLevelRow outlineLevelCol", path);
+            if (format is not null) package.Shape(format, "", "defaultRowHeight defaultColWidth baseColWidth outlineLevelRow outlineLevelCol", path);
+            var defaultColumnWidth = OptionalDouble(format?.Attribute("defaultColWidth")) ?? 8.43;
+            double? modeledDefaultWidth = defaultColumnWidth;
+            // Canonicalize QuickExcel's historical wide first column and default width without allocating blank cells.
+            if (defaultColumnWidth == WorkbookLimits.DefaultColumnWidth(1))
+            {
+                modeledDefaultWidth = null;
+                if (!columns.ContainsKey(0)) columns.Add(0, new(defaultColumnWidth));
+                else if (columns[0] == new ColumnMetadata(WorkbookLimits.DefaultColumnWidth(0))) columns.Remove(0);
+            }
             var properties = sheet.Element(Main + "sheetPr");
             if (properties is not null) package.Shape(properties, "tabColor outlinePr pageSetUpPr", "filterMode", path);
             var tabColor = properties?.Element(Main + "tabColor");
             if (tabColor is not null) package.Shape(tabColor, "", "rgb", path);
             var merges = sheet.Element(Main + "mergeCells")?.Elements(Main + "mergeCell").Select(e => Attr(e, "ref")).ToArray() ?? [];
             foreach (var merge in merges) ValidateRange(merge);
-            var images = TypedImages.Read(package, path, sheet);
+            var imageGeometry = new WorksheetSnapshot(SheetId.New(), "Geometry", rows: rows, columns: columns, defaultRowHeight: OptionalDouble(format?.Attribute("defaultRowHeight")) / 0.75, data: new() { DefaultColumnWidth = modeledDefaultWidth });
+            var images = TypedImages.Read(package, path, sheet, imageGeometry);
             var dataState = XlsxFiltering.Read(package, workbookPart, path, sheet) with
-            { Outline = XlsxOutline.Read(package, path, sheet), Tables = XlsxTables.Read(package, workbookPart, path, sheet, preservedFormulas, Decode(Attr(definition, "name"))),
+            { DefaultColumnWidth = modeledDefaultWidth, ImplicitColumnWidth = format?.Attribute("defaultColWidth") is null, Charts = XlsxCharts.Read(package, workbookPart, path, sheet, imageGeometry), Protection = XlsxProtection.Read(package, path, sheet), Outline = XlsxOutline.Read(package, path, sheet), Tables = XlsxTables.Read(package, workbookPart, path, sheet, preservedFormulas, Decode(Attr(definition, "name"))),
                 Validations = XlsxValidation.Read(package, path, sheet), ConditionalFormats = XlsxConditionalFormatting.Read(package, workbookPart, path, sheet) };
             var modeledSheet = new WorksheetSnapshot(SheetId.New(), Decode(Attr(definition, "name")), cells, rows, columns, merges, images,
                 view?.Attribute("showGridLines") is null || Bool((string?)view.Attribute("showGridLines")), OptionalDouble(format?.Attribute("defaultRowHeight")) / 0.75, (string?)tabColor?.Attribute("rgb"),
@@ -402,7 +412,8 @@ internal static class TypedWorkbookXml
         foreach (var sheet in snapshot.Sheets)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            allocation += sheet.Cells.Count * 640L + (sheet.Rows.Count + sheet.Columns.Count) * 256L;
+            allocation += sheet.Cells.Count * 1280L + (sheet.Rows.Count + sheet.Columns.Count) * 256L;
+            allocation += sheet.Data.Charts.Sum(c => c.EstimatedBytes * 4);
             foreach (var filter in sheet.Data.AllFilters)
                 allocation += (filter.Range.Bottom - filter.Range.Top + 1L) * 256L + filter.Columns.Values.Sum(c =>
                     (c.Values?.Sum(v => (long)v.Length) ?? 0) * 8L + ((c.First?.Operand.Length ?? 0) + (c.Second?.Operand.Length ?? 0)) * 8L + 512L);
@@ -424,7 +435,7 @@ internal static class TypedWorkbookXml
             imageBytes += sheet.Printing.PrinterSettings.Length;
             imageBytes += sheet.Annotations.NoteDrawing.Length;
         }
-        if (allocation > FileReadBudget.MaxExpandedBytes || imageBytes > FileReadBudget.MaxFileBytes)
+        if (allocation > FileReadBudget.MaxParsedBytes || imageBytes > FileReadBudget.MaxFileBytes)
             throw new InvalidDataException("写出 XML/图片预算超限，请缩小工作簿。");
         var parts = new Dictionary<string, byte[]>();
         var workbook = new XElement(Main + "workbook", new XAttribute(XNamespace.Xmlns + "r", Rel),
@@ -466,9 +477,11 @@ internal static class TypedWorkbookXml
                 root.Add(new XElement(Main + "sheetPr", sheet.Data.AllFilters.Any() ? new XAttribute("filterMode", sheet.Data.AllFilters.Any(f => f.Columns.Count > 0) ? 1 : 0) : null, sheet.TabColor is not null ? new XElement(Main + "tabColor", new XAttribute("rgb", sheet.TabColor)) : null,
                     XlsxOutline.Write(sheet.Data.Outline), XlsxPrinting.WriteProperties(sheet.Printing)));
             root.Add(XlsxViews.WriteSheet(sheet, sheet.Id == snapshot.ActiveSheetId));
-            if (sheet.DefaultRowHeight is { } height) root.Add(new XElement(Main + "sheetFormatPr", new XAttribute("defaultRowHeight", height * 0.75)));
-            if (sheet.Columns.Count > 0)
-                root.Add(new XElement(Main + "cols", sheet.Columns.OrderBy(p => p.Key).Select(p => new XElement(Main + "col",
+            root.Add(new XElement(Main + "sheetFormatPr", new XAttribute("defaultRowHeight", (sheet.DefaultRowHeight ?? 31) * 0.75), sheet.Data.ImplicitColumnWidth ? null : new XAttribute("defaultColWidth", sheet.Data.DefaultColumnWidth ?? WorkbookLimits.DefaultColumnWidth(1))));
+            var outputColumns = sheet.Columns;
+            if (sheet.Data.DefaultColumnWidth is null && !outputColumns.ContainsKey(0)) outputColumns = outputColumns.Add(0, new(WorkbookLimits.DefaultColumnWidth(0)));
+            if (outputColumns.Count > 0)
+                root.Add(new XElement(Main + "cols", outputColumns.OrderBy(p => p.Key).Select(p => new XElement(Main + "col",
                     new XAttribute("min", p.Key + 1), new XAttribute("max", p.Key + 1), p.Value.Width is { } width ? new XAttribute("width", width) : null,
                     p.Value.Width.HasValue ? new XAttribute("customWidth", 1) : null, new XAttribute("hidden", p.Value.Hidden ? 1 : 0), new XAttribute("style", p.Value.StyleId),
                     p.Value.OutlineLevel > 0 ? new XAttribute("outlineLevel", p.Value.OutlineLevel) : null, p.Value.Collapsed ? new XAttribute("collapsed", 1) : null))));
@@ -492,6 +505,7 @@ internal static class TypedWorkbookXml
                 data.Add(row);
             }
             root.Add(data);
+            root.Add(XlsxProtection.Write(sheet.Data.Protection));
             var sortState = XlsxFiltering.WriteSort(sheet.Data.Sort, stylePackage.Styles.Root!);
             var nestedSort = sheet.Data.Filter is { } autoFilter && sheet.Data.Sort is { } sort && sort.Range.Top > autoFilter.Range.Top &&
                 autoFilter.Range.Contains(sort.Range.Top, sort.Range.Left) && autoFilter.Range.Contains(sort.Range.Bottom, sort.Range.Right);
@@ -507,6 +521,7 @@ internal static class TypedWorkbookXml
             XlsxAnnotations.WriteLinks(sheet.Annotations, root);
             XlsxPrinting.WriteSheet(sheet.Printing, root);
             TypedImages.Write(sheet, i + 1, parts, root, types);
+            XlsxCharts.Write(snapshot, sheet, i + 1, parts, root, types);
             XlsxPrinting.WritePrinter(sheet.Printing, i + 1, parts, types);
             XlsxAnnotations.Write(sheet.Annotations, i + 1, parts, root, types);
             XlsxTables.Write(sheet, i + 1, parts, root, types, stylePackage.Styles.Root!, valuesOnly);

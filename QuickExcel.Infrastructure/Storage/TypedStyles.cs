@@ -65,10 +65,12 @@ internal static class TypedStyles
         foreach (var xf in root.Element(Main + "cellXfs")?.Elements(Main + "xf") ?? [])
         {
             using var sourceRange = package.SourceRange(path, "cellXfs[" + result.Count + "]");
-            if (result.Count >= 4096) throw new InvalidDataException("样式数量超过 4096。");
-            package.Shape(xf, "alignment", "numFmtId fontId fillId borderId xfId applyFont applyFill applyBorder applyAlignment applyNumberFormat", path);
+            if (result.Count >= WorkbookLimits.MaxStyles) throw new InvalidDataException($"样式数量超过 {WorkbookLimits.MaxStyles}。");
+            package.Shape(xf, "alignment protection", "numFmtId fontId fillId borderId xfId applyFont applyFill applyBorder applyAlignment applyNumberFormat applyProtection", path);
             if (xf.Attribute("xfId") is not null && baseStyles.Length == 0) throw new InvalidDataException("单元格引用了缺失的命名样式基表。");
             var parentId = Int((string?)xf.Attribute("xfId") ?? "0", Math.Max(0, baseStyles.Length - 1));
+            var protection = (string?)xf.Attribute("applyProtection") is "0" or "false" ? baseStyles.ElementAtOrDefault(parentId)?.Element(Main + "protection") : xf.Element(Main + "protection") ?? baseStyles.ElementAtOrDefault(parentId)?.Element(Main + "protection");
+            if (protection is not null) package.Shape(protection, "", "locked hidden", path);
             package.RegisterSharedUsage(path, "cellStyleXfs[" + parentId + "]", path, "cellXfs[" + result.Count + "]");
             foreach (var flag in xf.Attributes().Where(a => a.Name.LocalName.StartsWith("apply", StringComparison.Ordinal))) _ = Bool(flag.Value);
             var font = fonts[Int((string?)xf.Attribute("fontId") ?? "0", fonts.Length - 1)];
@@ -105,6 +107,7 @@ internal static class TypedStyles
             string? SideColor(string name) => colors.Read(border.Element(Main + name)?.Element(Main + "color"), package, path);
             result.Add(new StyleDefinition
             {
+                Locked = Bool((string?)protection?.Attribute("locked") ?? "1"), FormulaHidden = Bool((string?)protection?.Attribute("hidden")),
                 NumberFormatId = formats.ContainsKey(numberId) ? 0 : numberId,
                 NumberFormatCode = formats.GetValueOrDefault(numberId),
                 FontName = resolvedFont.Latin, EastAsianFontName = resolvedFont.EastAsian, FontScheme = scheme, NamedStyleId = parentId,
@@ -127,7 +130,7 @@ internal static class TypedStyles
 
     public static XDocument Write(IReadOnlyList<StyleDefinition> styles)
     {
-        if (styles.Count > 4096) throw new InvalidDataException("样式数量超过 4096。");
+        if (styles.Count > WorkbookLimits.MaxStyles) throw new InvalidDataException($"样式数量超过 {WorkbookLimits.MaxStyles}。");
         var fonts = new XElement(Main + "fonts", new XAttribute("count", styles.Count));
         var fills = new XElement(Main + "fills", new XAttribute("count", styles.Count + 2),
             new XElement(Main + "fill", new XElement(Main + "patternFill", new XAttribute("patternType", "none"))),
@@ -153,10 +156,10 @@ internal static class TypedStyles
                 Side("top", style.TopBorder, style.TopBorderColor), Side("bottom", style.BottomBorder, style.BottomBorderColor)));
             xfs.Add(new XElement(Main + "xf", new XAttribute("numFmtId", numFmtId), new XAttribute("fontId", index), new XAttribute("fillId", index + 2),
                 new XAttribute("borderId", index), new XAttribute("xfId", 0), new XAttribute("applyFont", 1), new XAttribute("applyFill", 1), new XAttribute("applyBorder", 1),
-                new XAttribute("applyNumberFormat", 1), new XAttribute("applyAlignment", 1), new XElement(Main + "alignment", new XAttribute("horizontal", Horizontal[style.Horizontal]),
+                new XAttribute("applyNumberFormat", 1), new XAttribute("applyAlignment", 1), new XAttribute("applyProtection", 1), new XElement(Main + "alignment", new XAttribute("horizontal", Horizontal[style.Horizontal]),
                     new XAttribute("vertical", Vertical[style.Vertical]), new XAttribute("wrapText", style.WrapText ? 1 : 0),
                     style.Indent == 0 ? null : new XAttribute("indent", style.Indent), style.TextRotation == 0 ? null : new XAttribute("textRotation", style.TextRotation),
-                    style.ShrinkToFit ? new XAttribute("shrinkToFit", 1) : null)));
+                    style.ShrinkToFit ? new XAttribute("shrinkToFit", 1) : null), new XElement(Main + "protection", new XAttribute("locked", style.Locked ? 1 : 0), new XAttribute("hidden", style.FormulaHidden ? 1 : 0))));
         }
         formats.SetAttributeValue("count", formats.Elements().Count());
         return new XDocument(new XElement(Main + "styleSheet", formats, fonts, fills, borders,

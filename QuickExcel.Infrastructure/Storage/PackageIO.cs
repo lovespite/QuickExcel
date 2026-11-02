@@ -11,6 +11,7 @@ internal sealed class FileReadBudget(CancellationToken cancellationToken)
 {
     public const int MaxFileBytes = 64 * 1024 * 1024;
     public const long MaxExpandedBytes = 256L * 1024 * 1024;
+    public const long MaxParsedBytes = 512L * 1024 * 1024;
     private long _expanded, _parsed;
     public CancellationToken CancellationToken { get; } = cancellationToken;
     public void Check() => CancellationToken.ThrowIfCancellationRequested();
@@ -23,7 +24,7 @@ internal sealed class FileReadBudget(CancellationToken cancellationToken)
     public void Parse(long count)
     {
         Check();
-        if (count < 0 || count > MaxExpandedBytes - _parsed) throw new InvalidDataException("XML/JSON 与领域对象累计解析预算超过 256 MiB。");
+        if (count < 0 || count > MaxParsedBytes - _parsed) throw new InvalidDataException("XML/JSON 与领域对象累计解析预算超过 512 MiB。");
         _parsed += count;
     }
 }

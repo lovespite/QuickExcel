@@ -12,7 +12,7 @@ internal static class TypedImages
     private static readonly XNamespace Drawing = "http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing";
     private static readonly XNamespace Art = "http://schemas.openxmlformats.org/drawingml/2006/main";
 
-    public static IReadOnlyList<SheetImage> Read(XlsxPackage package, string sheetPart, XElement sheet)
+    public static IReadOnlyList<SheetImage> Read(XlsxPackage package, string sheetPart, XElement sheet, WorksheetSnapshot geometry)
     {
         var images = new List<SheetImage>();
         foreach (var drawing in sheet.Elements(Main + "drawing"))
@@ -23,22 +23,13 @@ internal static class TypedImages
             if (root.Name != Drawing + "wsDr") throw new InvalidDataException("无效的绘图部件。");
             foreach (var anchor in root.Elements())
             {
-                if (anchor.Name != Drawing + "twoCellAnchor" || anchor.Element(Drawing + "pic") is not { } pic)
+                if (anchor.Element(Drawing + "graphicFrame") is not null) continue; // Chart adapter owns these objects and diagnostics.
+                if (anchor.Name.LocalName is not ("twoCellAnchor" or "oneCellAnchor" or "absoluteAnchor") || anchor.Element(Drawing + "pic") is not { } pic)
                 { package.Loss($"{path}: 未建模绘图或锚点", "drawing/anchor", path); continue; }
-                package.Shape(anchor, "from to pic clientData", "editAs", path);
-                if ((string?)anchor.Attribute("editAs") is not (null or "twoCell")) package.Loss($"{path}: 非随单元格缩放的图片锚点", "drawing/editAs", path);
-                int Marker(string name, string coordinate, int maximum)
-                {
-                    var value = anchor.Element(Drawing + name)?.Element(Drawing + coordinate)?.Value ?? throw new InvalidDataException("图片锚点缺失。");
-                    return Int(value, maximum);
-                }
-                var row = Marker("from", "row", WorkbookLimits.MaxRows - 1);
-                var column = Marker("from", "col", WorkbookLimits.MaxColumns - 1);
-                var bottom = Marker("to", "row", WorkbookLimits.MaxRows);
-                var right = Marker("to", "col", WorkbookLimits.MaxColumns);
-                foreach (var name in new[] { "from", "to" })
-                    if (Marker(name, "rowOff", int.MaxValue) != 0 || Marker(name, "colOff", int.MaxValue) != 0)
-                        package.Loss($"{path}: 图片像素偏移未建模", "drawing/offset", path);
+                package.Shape(anchor, "from to pos ext pic clientData", "editAs", path);
+                DrawingAnchor placement;
+                try { placement = XlsxDrawingAnchors.Read(anchor, geometry); }
+                catch (NotSupportedException ex) { package.Loss($"{path}: {ex.Message}", "drawing/anchor", path); continue; }
                 var blip = pic.Element(Drawing + "blipFill")?.Element(Art + "blip") ?? throw new InvalidDataException("图片引用缺失。");
                 var imagePath = package.Related(path, Attr(blip, Rel + "embed"), "image");
                 var extension = imagePath[(imagePath.LastIndexOf('.') + 1)..].ToLowerInvariant();
@@ -48,13 +39,8 @@ internal static class TypedImages
                     package.Loss($"{path}: 图片裁剪或旋转未建模", "drawing/transform", path);
                 var imageBytes = package.BinaryPart(imagePath);
                 package.Budget.Parse(imageBytes.Length + 256);
-                int Span(string axis, int first, int last)
-                {
-                    if (last < first) throw new InvalidDataException($"图片锚点 {axis} 坐标反向：{first} → {last}。");
-                    // Excel anchors images smaller than a cell with to == from; the cell-snapped model keeps one cell.
-                    return Math.Max(1, last - first);
-                }
-                images.Add(new SheetImage(imageBytes, extension, row, column, Span("row", row, bottom), Span("column", column, right)));
+                images.Add(new SheetImage(imageBytes, extension, placement.Row, placement.Column,
+                    Math.Max(1, placement.EndRow - placement.Row), Math.Max(1, placement.EndColumn - placement.Column), anchor: placement));
             }
         }
         return images;
@@ -75,13 +61,11 @@ internal static class TypedImages
             parts.Add(mediaPath, image.Data.ToArray());
             types.Add(new XElement(ContentTypes + "Override", new XAttribute("PartName", "/" + mediaPath), new XAttribute("ContentType", Mime(image.Extension))));
             relationships.Add(Relationship($"image{index + 1}", "image", "../media/" + filename));
-            XElement Marker(string name, int row, int col) => new(Drawing + name, new XElement(Drawing + "col", col), new XElement(Drawing + "colOff", 0), new XElement(Drawing + "row", row), new XElement(Drawing + "rowOff", 0));
-            drawing.Add(new XElement(Drawing + "twoCellAnchor", Marker("from", image.RowIndex, image.ColumnIndex),
-                Marker("to", image.RowIndex + image.RowSpan, image.ColumnIndex + image.ColumnSpan),
+            drawing.Add(XlsxDrawingAnchors.Write(image.Anchor,
                 new XElement(Drawing + "pic", new XElement(Drawing + "nvPicPr",
                     new XElement(Drawing + "cNvPr", new XAttribute("id", index + 1), new XAttribute("name", $"Image {index + 1}")), new XElement(Drawing + "cNvPicPr")),
                     new XElement(Drawing + "blipFill", new XElement(Art + "blip", new XAttribute(Rel + "embed", $"image{index + 1}")), new XElement(Art + "stretch", new XElement(Art + "fillRect"))),
-                    new XElement(Drawing + "spPr", new XElement(Art + "prstGeom", new XAttribute("prst", "rect"), new XElement(Art + "avLst")))), new XElement(Drawing + "clientData")));
+                    new XElement(Drawing + "spPr", new XElement(Art + "prstGeom", new XAttribute("prst", "rect"), new XElement(Art + "avLst"))))));
         }
         root.Add(new XElement(Main + "drawing", new XAttribute(Rel + "id", "drawing")));
         parts[RelationshipPart($"xl/worksheets/sheet{sheetNumber}.xml")] = XmlBytes(new XDocument(new XElement(PackageRel + "Relationships", Relationship("drawing", "drawing", $"../drawings/drawing{sheetNumber}.xml"))));

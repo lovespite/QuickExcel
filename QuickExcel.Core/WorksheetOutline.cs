@@ -15,7 +15,7 @@ public static class WorksheetOutline
         var metadata = sheet.Columns.GetValueOrDefault(column) ?? new();
         // Excel treats a col element without width as zero width. Materialize the
         // current default before adding an outline-only column or summary marker.
-        return metadata.Width.HasValue ? metadata : metadata with { Width = WorkbookLimits.DefaultColumnWidth(column) };
+        return metadata.Width.HasValue ? metadata : metadata with { Width = sheet.Data.DefaultColumnWidth ?? WorkbookLimits.DefaultColumnWidth(column) };
     }
     public static bool HasGroups(WorksheetSnapshot sheet) => sheet.Rows.Values.Any(r => r.OutlineLevel > 0 || r.Collapsed) || sheet.Columns.Values.Any(c => c.OutlineLevel > 0 || c.Collapsed);
     public static IReadOnlyList<OutlineGroup> Groups(WorksheetSnapshot sheet, SheetAxis axis)

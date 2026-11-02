@@ -27,7 +27,7 @@ public sealed partial class TypedStorageTests
         var path = PathFor("row-points.xlsx"); _storage.Export(path, Model([Literal(CellValue.FromText("18 point text"))]));
         var parts = ReadZip(File.ReadAllBytes(path));
         var xml = XDocument.Parse(Encoding.UTF8.GetString(parts["xl/worksheets/sheet1.xml"]));
-        xml.Root!.Add(new XElement(Ns + "sheetFormatPr", new XAttribute("defaultRowHeight", "22.8")));
+        xml.Root!.Element(Ns + "sheetFormatPr")!.SetAttributeValue("defaultRowHeight", "22.8");
         xml.Descendants(Ns + "row").Single().SetAttributeValue("ht", "25.2");
         parts["xl/worksheets/sheet1.xml"] = Encoding.UTF8.GetBytes(xml.ToString()); File.WriteAllBytes(path, Zip(parts));
         var snapshot = _storage.Open(path);

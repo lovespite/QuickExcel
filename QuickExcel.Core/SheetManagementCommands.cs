@@ -82,7 +82,7 @@ public sealed class CopySheetCommand : DocumentCommand
         var cells = source.Cells.Select(p => new KeyValuePair<CellPosition, CellSnapshot>(p.Key,
             p.Value.Content.Kind == CellContentKind.Formula ? new(CellContent.FromFormula(Formula(p.Value.Content.FormulaText, false, Source), p.Value.Content.StyleId)) : p.Value)).ToImmutableDictionary();
         var nextTableId = snapshot.Sheets.SelectMany(s => s.Data.Tables).Select(t => t.Id).DefaultIfEmpty().Max();
-        var data = source.Data with { Validations = source.Data.Validations.Select(v => v.MapFormulas(f => Formula(f, false, Source))).ToImmutableArray(),
+        var data = source.Data with { Charts = source.Data.Charts.Select(c => c.MapReferences(f => Formula(f, false, Source))).ToImmutableArray(), Validations = source.Data.Validations.Select(v => v.MapFormulas(f => Formula(f, false, Source))).ToImmutableArray(),
             ConditionalFormats = source.Data.ConditionalFormats.Select(v => v.MapFormulas(f => Formula(f, false, Source))).ToImmutableArray(),
             Tables = source.Data.Tables.Select(t => new WorksheetTable(checked(++nextTableId), tableNames[t.Name], t.Range,
             t.Columns.Select(c => c with { CalculatedFormula = c.CalculatedFormula is { } f ? Formula(f, false, Source) : null,

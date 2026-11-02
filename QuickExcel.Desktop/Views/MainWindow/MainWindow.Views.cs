@@ -13,7 +13,7 @@ public partial class MainWindow
     {
         if (_refreshing || _busy || _restoringWorkbookView || !_hasWorkbook) return;
         var sheet = _document.Snapshot.Sheets[_sheetIndex];
-        if (sheet.View.FrozenRows > 10 || sheet.View.FrozenColumns >= 256 || sheet.View.ActiveCell.Column >= 256) return;
+        if (sheet.View.FrozenRows > 10 || sheet.View.FrozenColumns >= WorkbookLimits.MaxColumns || sheet.View.ActiveCell.Column >= WorkbookLimits.MaxColumns) return;
         if (_grid.Control.GetScrollingModelCell() is { Row: { } row, Column: { } column } && row >= 0 && column >= 0)
             _document.Session.UpdateNavigation(sheet.Id, sheet.View.ActiveCell, new(row, column));
     }
@@ -50,7 +50,7 @@ public partial class MainWindow
         }
         finally { _restoringWorkbookView = false; }
         if (!sheet.Data.Tables.IsEmpty) RefreshWorkspaceView();
-        if (view.ActiveCell.Column >= 256 || view.FrozenRows > 10 || view.FrozenColumns >= 256)
+        if (view.ActiveCell.Column >= WorkbookLimits.MaxColumns || view.FrozenRows > 10 || view.FrozenColumns >= WorkbookLimits.MaxColumns)
             StatusText.Text = "视图超出当前网格显示范围；原视图仍保留，冻结显示上限为 10 行及可见列范围。";
     }
 

@@ -37,6 +37,11 @@ public enum SheetAxis { Row, Column }
 /// <summary>Insertion/deletion uses cut-style reference semantics: dollar flags remain, targets follow structure.</summary>
 public sealed class ShiftAxisCommand(SheetId sheetId, SheetAxis axis, int index, int count, bool delete = false) : DocumentCommand
 {
+    internal SheetId TargetSheet => sheetId;
+    internal SheetAxis Axis => axis;
+    internal bool Delete => delete;
+    internal int Index => index;
+    internal int Count => count;
     internal override CommandDraft Prepare(WorkbookSnapshot snapshot)
     {
         var limit = axis == SheetAxis.Row ? WorkbookLimits.MaxRows : WorkbookLimits.MaxColumns;
@@ -246,13 +251,16 @@ internal static class StructureEdits
     }
     internal static void RequireSimpleStructure(WorksheetSnapshot sheet)
     {
-        if (!sheet.Images.IsEmpty || !sheet.MergedCells.IsEmpty)
-            throw new NotSupportedException("带合并单元格或图片的工作表暂不支持结构移动；操作未应用。");
+        if (!sheet.Images.IsEmpty || !sheet.MergedCells.IsEmpty || !sheet.Data.Charts.IsEmpty)
+            throw new NotSupportedException("带合并单元格、图片或图表的工作表暂不支持结构移动；操作未应用。");
     }
 
     internal static WorkbookSnapshot Axis(WorkbookSnapshot snapshot, WorksheetSnapshot target, SheetAxis axis,
         Func<int, int?> position, Func<int, int, (int Start, int End)?> interval)
     {
+        if (!target.Data.Charts.IsEmpty || snapshot.Sheets.SelectMany(s => s.Data.Charts).SelectMany(c => c.Series).SelectMany(s => new[] { s.NameReference, s.Categories, s.Values })
+            .OfType<string>().Any(f => string.Equals(WorksheetChart.ParseReference(f).Sheet, target.Name, StringComparison.OrdinalIgnoreCase)))
+            throw new NotSupportedException("受影响工作表含图表或图表源引用，暂不插删或搬移行列；请先调整图表，避免锚点或系列错位。");
         if (WorksheetOutline.HasGroups(target))
             throw new NotSupportedException("分组层级的行列插删/搬移尚未支持，请先取消分组；操作未应用。");
         if (snapshot.Sheets.Any(s => !s.Data.Validations.IsEmpty))
@@ -315,9 +323,25 @@ internal static class StructureEdits
             var images = new List<SheetImage>();
             foreach (var image in sheet.Images)
             {
-                var original = new CellRectangle(image.RowIndex, image.ColumnIndex, image.RowIndex + image.RowSpan - 1, image.ColumnIndex + image.ColumnSpan - 1);
-                if (MapRectangle(original) is not { } mapped) continue;
-                images.Add(new(image.Data, image.Extension, mapped.Top, mapped.Left, mapped.Bottom - mapped.Top + 1, mapped.Right - mapped.Left + 1, image.PlaceInCell));
+                var a = image.Anchor;
+                if (a.Kind == DrawingAnchorKind.Absolute) { images.Add(image); continue; }
+                var start = axis == SheetAxis.Row ? a.Row : a.Column;
+                var end = a.Kind == DrawingAnchorKind.OneCell ? start : axis == SheetAxis.Row ? a.EndRow : a.EndColumn;
+                var endOffset = axis == SheetAxis.Row ? a.EndRowOffset : a.EndColumnOffset;
+                var last = a.Kind == DrawingAnchorKind.OneCell || endOffset > 0 ? end : Math.Max(start, end - 1);
+                var mapped = interval(start, last);
+                if (mapped is null)
+                {
+                    if (a.Kind == DrawingAnchorKind.OneCell) throw new NotSupportedException("删除将覆盖固定尺寸图片的起始单元格；请先移动图片。");
+                    continue;
+                }
+                var firstOffset = position(start) is null ? 0 : axis == SheetAxis.Row ? a.RowOffset : a.ColumnOffset;
+                var mappedEnd = a.Kind == DrawingAnchorKind.OneCell ? 0 : mapped.Value.End + (endOffset == 0 ? 1 : 0);
+                var finalOffset = position(last) is null ? 0 : endOffset;
+                a = axis == SheetAxis.Row
+                    ? a with { Row = mapped.Value.Start, RowOffset = firstOffset, EndRow = mappedEnd, EndRowOffset = finalOffset }
+                    : a with { Column = mapped.Value.Start, ColumnOffset = firstOffset, EndColumn = mappedEnd, EndColumnOffset = finalOffset };
+                images.Add(image.WithAnchor(a));
             }
             return new(sheet.Id, sheet.Name, relocated, axis == SheetAxis.Row ? Metadata(sheet.Rows) : sheet.Rows,
                 axis == SheetAxis.Column ? Metadata(sheet.Columns) : sheet.Columns, merges.Select(m => m.ToString()), images,
@@ -359,7 +383,7 @@ internal static class StructureEdits
                 var formula = Formula(cell.Content.FormulaText, sheet.Id, p);
                 if (formula != cell.Content.FormulaText) cells[p] = new(CellContent.FromFormula(formula, cell.Content.StyleId));
             }
-            var data = sheet.Data with { Validations = sheet.Data.Validations.Select(v => v.MapFormulas(f => Formula(f, sheet.Id, v.Anchor))).ToImmutableArray(),
+            var data = sheet.Data with { Charts = sheet.Data.Charts.Select(c => c.MapReferences(f => Formula(f, sheet.Id, null))).ToImmutableArray(), Validations = sheet.Data.Validations.Select(v => v.MapFormulas(f => Formula(f, sheet.Id, v.Anchor))).ToImmutableArray(),
                 ConditionalFormats = sheet.Data.ConditionalFormats.Select(v => v.MapFormulas(f => Formula(f, sheet.Id, v.Anchor))).ToImmutableArray(),
                 Tables = sheet.Data.Tables.Select(t => t.WithColumns(t.Columns.Select((c, i) => c with
             {

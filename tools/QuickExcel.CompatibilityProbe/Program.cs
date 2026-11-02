@@ -4,6 +4,8 @@ using QuickExcel.CompatibilityProbe;
 
 try
 {
+    if (args is ["e4-report", var reportSource, var reportDirectory]) return E4Probe.Run(reportSource, reportDirectory);
+    if (args is ["e4-capacity", var capacityDirectory]) return E4Probe.Capacity(capacityDirectory);
     if (args is ["outline-subtotal", var outlineOracle, var outlineDirectory]) return OutlineSubtotalProbe.Run(outlineOracle, outlineDirectory);
     if (args is ["data-cleaning", var cleaningOracle, var cleaningDirectory]) return DataCleaningProbe.Run(cleaningOracle, cleaningDirectory);
     if (args is ["verify-data-cleaning", var cleaningOutput, var cleaningVerdict]) return DataCleaningProbe.Verify(cleaningOutput, cleaningVerdict);

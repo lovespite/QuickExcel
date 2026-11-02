@@ -216,14 +216,14 @@ public partial class MainWindow
         if (edge)
         {
             var target = EntryNavigation.Edge(sheet, new(_selectedRow, _selectedColumn), key == Key.Up ? -1 : key == Key.Down ? 1 : 0,
-                key == Key.Left ? -1 : key == Key.Right ? 1 : 0, WorkbookLimits.MaxRows, 256,
+                key == Key.Left ? -1 : key == Key.Right ? 1 : 0, WorkbookLimits.MaxRows, WorkbookLimits.MaxColumns,
                 r => CurrentView.IsFilteredOut(_document.Snapshot, _sheetIndex, r));
             row = target.Row; column = target.Column;
         }
         if (row >= _rowCount || column >= _columnCount)
         {
             _rowCount = Math.Min(WorkbookLimits.MaxRows, Math.Max(_rowCount, row + 1));
-            _columnCount = Math.Min(256, Math.Max(_columnCount, column + 1));
+            _columnCount = Math.Min(WorkbookLimits.MaxColumns, Math.Max(_columnCount, column + 1));
             _grid.EnsureNavigationSize(_rowCount, _columnCount);
         }
         row = Math.Clamp(row, 0, _rowCount - 1);
