@@ -44,8 +44,16 @@ public partial class MainWindow
         if (_document is not null) UpdateChrome();
     }
 
-    private void Home_Click(object sender, RoutedEventArgs e)
-    { if (!_busy && CommitEditors()) ShowStartPage(); }
+    private Task _homeNavigation = Task.CompletedTask;
+    private async void Home_Click(object sender, RoutedEventArgs e) => await (_homeNavigation = NavigateHomeAsync());
+    private async Task NavigateHomeAsync()
+    {
+        // Leaving for the start page must not bypass the save prompt: the workbook
+        // stays in memory, but an unprompted exit hides unsaved edits behind
+        // "返回工作簿" and invites a later discard.
+        if (_busy || !await ConfirmDiscardAsync()) return;
+        ShowStartPage();
+    }
     private void WorkbookPage_Click(object sender, RoutedEventArgs e)
     {
         if (_busy || !CommitEditors()) return;

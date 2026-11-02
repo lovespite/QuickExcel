@@ -146,7 +146,7 @@ public partial class MainWindow
             await OpenPathAsync(path); await Idle();
             Check(_document.Snapshot.Sheets[0].MergedCells[0] == "A1:D1" && _document.Snapshot.Sheets[0].Images[0].RowIndex == 2 && !_document.ScriptsEnabled,
                 "Saved artwork reopens with stable anchors and scripts disabled");
-            Home_Click(this, new()); await Idle();
+            Home_Click(this, new()); await _homeNavigation; await Idle();
             Check(StartPage.IsVisible && ResumeButton.IsVisible && RecentList.Items.Count > 0, "Home retains current document and exposes recent files");
             WorkbookPage_Click(this, new());
             File.WriteAllText(Path.Combine(folder, "product-cases.json"), JsonSerializer.Serialize(new { cases,
