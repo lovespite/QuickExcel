@@ -3,7 +3,7 @@ using QuickExcel.Runtime;
 using System.Globalization;
 using System.IO.Compression;
 using System.Text;
-using QuickExcel.Diagnostics;
+using QuickExcel.Core.Test.Fixtures;
 using QuickExcel.Core;
 using QuickExcel.Domain;
 using QuickExcel.Storage;

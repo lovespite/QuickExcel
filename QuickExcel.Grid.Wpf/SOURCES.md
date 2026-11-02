@@ -1,3 +1,12 @@
+# Archived WPF grid provenance
+
+A7 (2026-11-03) removed the WPF project and its host sources from the active tree.
+Only licenses and original source identities remain here. Shared geometry in
+`QuickExcel.Grid.Shared` retains its source/notice; the Avalonia adapter references
+that assembly. The complete historical source is available at Git tag
+`avalonia-wpf-baseline-20261102`. The notes below describe earlier revisions,
+not currently compiled paths. No WPF or WriteableBitmapEx binary is shipped.
+
 # QuickExcel.Grid.Wpf source provenance
 
 ## Avalonia shared geometry extraction (2026-11-03)

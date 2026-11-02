@@ -9,7 +9,6 @@
     <ProjectReference Include="../QuickExcel.Presentation/QuickExcel.Presentation.csproj" />
 
     <None Update="Fixtures/*.json" CopyToOutputDirectory="PreserveNewest" />
-    <Compile Include="../QuickExcel.Desktop/Diagnostics/Smoke/WorkbookPackageFixture.cs" Link="Fixtures/WorkbookPackageFixture.cs" />
     <Compile Remove="WorkerFixture\**\*.cs" />
     <Compile Remove="SandboxHostFixture\**\*.cs" />
     <ProjectReference Include="WorkerFixture\WorkerFixture.csproj" ReferenceOutputAssembly="false" />

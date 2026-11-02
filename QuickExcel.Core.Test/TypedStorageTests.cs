@@ -6,7 +6,7 @@ using System.Text;
 using System.Text.Json.Nodes;
 using System.Xml.Linq;
 using QuickExcel.Domain;
-using QuickExcel.Diagnostics;
+using QuickExcel.Core.Test.Fixtures;
 using QuickExcel.Storage;
 
 namespace QuickExcel.Core.Test;

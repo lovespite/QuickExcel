@@ -6,6 +6,7 @@ namespace QuickExcel.Desktop.Avalonia;
 
 internal static class Program
 {
+    internal static bool SoftwareRendering => Environment.GetEnvironmentVariable("QUICKEXCEL_SOFTWARE_RENDERING") == "1";
     internal static string? SmokeDirectory = null;
     internal static string SmokeMode = "workspace";
     internal static string? InitialFile;
@@ -38,8 +39,9 @@ internal static class Program
         { SelfCheckDirectory = Path.GetFullPath(args[1]); UserDataDirectory = Path.Combine(SelfCheckDirectory, "settings"); InitialFile = null; }
         if (args.Length >= 2 && args[0] == "--user-data")
         { UserDataDirectory = Path.GetFullPath(args[1]); InitialFile = args.ElementAtOrDefault(2); }
-        return AppBuilder.Configure<DesktopApp>().UsePlatformDetect().With(new X11PlatformOptions { UseGLibMainLoop = true })
-            .LogToTrace().StartWithClassicDesktopLifetime(args);
+        var builder = AppBuilder.Configure<DesktopApp>().UsePlatformDetect().With(new X11PlatformOptions { UseGLibMainLoop = true });
+        if (OperatingSystem.IsWindows() && SoftwareRendering) builder = builder.With(new Win32PlatformOptions { RenderingMode = [Win32RenderingMode.Software] });
+        return builder.LogToTrace().StartWithClassicDesktopLifetime(args);
     }
 }
 

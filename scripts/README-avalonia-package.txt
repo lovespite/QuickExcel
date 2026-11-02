@@ -1,4 +1,4 @@
-QuickExcel Avalonia 0.6.0-preview.5 — Windows x64
+QuickExcel Avalonia — Windows x64 (version and identity: release.json)
 
 Run QuickExcel.Avalonia.exe. .NET 10 and the isolated script worker are included.
 Monaco and PDF.js are bundled locally; Node and an internet connection are not needed.

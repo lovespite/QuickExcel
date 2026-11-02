@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [string]$PackageDirectory = 'artifacts\QuickExcel',
+    [Parameter(Mandatory=$true)][string]$PackageDirectory,
     [ValidateSet('Interaction', 'Workspace', 'Product', 'Ribbon', 'Reporting', 'DataOperations', 'FormatEfficiency', 'GridIntegration', 'FastGridBenchmark', 'HorizontalScrollBenchmark', 'FastGridDragBenchmark', 'Benchmark', 'ResizeBenchmark', 'All')][string]$Mode = 'All',
     [string]$WorkbookPath,
     [switch]$SoftwareRendering,
@@ -16,10 +16,13 @@ if ($WorkbookPath) {
 }
 $root = [IO.Path]::GetFullPath((Split-Path $PSScriptRoot -Parent))
 $artifacts = [IO.Path]::GetFullPath((Join-Path $root 'artifacts'))
-$package = [IO.Path]::GetFullPath((Join-Path $root $PackageDirectory))
+$package = [IO.Path]::GetFullPath($(if ([IO.Path]::IsPathRooted($PackageDirectory)) { $PackageDirectory } else { Join-Path $root $PackageDirectory }))
 if (-not $package.StartsWith($artifacts + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) {
     throw 'PackageDirectory must be under this repository artifacts directory.'
 }
+# Historical rollback checks only; current UI tests use test-avalonia-*.ps1.
+$identity=Get-Content -LiteralPath (Join-Path $package 'release.json') -Raw | ConvertFrom-Json
+if ($identity.product -ne 'QuickExcel WPF rollback') { throw 'Choose an explicitly archived WPF rollback package.' }
 $exe = Join-Path $package 'QuickExcel.exe'
 if (-not (Test-Path -LiteralPath $exe -PathType Leaf)) { throw "Missing executable: $exe" }
 $run = [DateTime]::UtcNow.ToString('yyyyMMdd-HHmmss') + '-' + [Guid]::NewGuid().ToString('N').Substring(0, 8)

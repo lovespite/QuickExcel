@@ -3,6 +3,7 @@ param([ValidateSet('linux-x64','osx-arm64')][string]$Rid='linux-x64', [switch]$C
 $ErrorActionPreference='Stop'
 Set-StrictMode -Version Latest
 $root=[IO.Path]::GetFullPath((Split-Path $PSScriptRoot -Parent))
+$version=([xml](Get-Content -LiteralPath (Join-Path $root 'QuickExcel.Desktop.Avalonia/QuickExcel.Desktop.Avalonia.csproj') -Raw)).SelectSingleNode('/Project/PropertyGroup/Version').InnerText
 $id=[DateTime]::UtcNow.ToString('yyyyMMdd-HHmmss')+'-'+[Guid]::NewGuid().ToString('N').Substring(0,8)
 $run=Join-Path $root "artifacts/avalonia/platform-releases/$Rid-$id"
 $package=Join-Path $run 'application';$locks=Join-Path $run 'locks';$build=Join-Path $run 'build'
@@ -42,7 +43,7 @@ try {
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'README-avalonia-unix.txt') -Destination (Join-Path $package 'README.txt')
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'start-quickexcel-unix.sh') -Destination (Join-Path $package 'Start-QuickExcel.sh')
     $files=@(Get-ChildItem -LiteralPath $package -File -Recurse | Sort-Object FullName | ForEach-Object {[ordered]@{path=[IO.Path]::GetRelativePath($package,$_.FullName).Replace('\','/');size=$_.Length;sha256=(Get-FileHash $_.FullName -Algorithm SHA256).Hash}})
-    [ordered]@{schemaVersion=1;product='QuickExcel Avalonia';version='0.6.0-preview.6';rid=$Rid;selfContained=$true;diagnostics=$false;sourceHead=(& git rev-parse HEAD);workingTreeDirty=[bool](& git status --porcelain);sdk=(& dotnet --version);scriptCapability=$(if($Rid -eq 'linux-x64'){'Landlock/seccomp/cgroup: checked on every launch'}else{'disabled: macOS sandbox not qualified'});acceptance='Target-device acceptance deferred; package requires target self-check before distribution';webPackages=$web.packages;files=$files} | ConvertTo-Json -Depth 10 | Set-Content (Join-Path $package 'release.json') -Encoding utf8
+    [ordered]@{schemaVersion=1;product='QuickExcel Avalonia';version=$version;rid=$Rid;selfContained=$true;diagnostics=$false;sourceHead=(& git rev-parse HEAD);workingTreeDirty=[bool](& git status --porcelain);sdk=(& dotnet --version);scriptCapability=$(if($Rid -eq 'linux-x64'){'Landlock/seccomp/cgroup: checked on every launch'}else{'disabled: macOS sandbox not qualified'});acceptance='Target-device acceptance deferred; package requires target self-check before distribution';webPackages=$web.packages;files=$files} | ConvertTo-Json -Depth 10 | Set-Content (Join-Path $package 'release.json') -Encoding utf8
     if($CreateArchive) {
         # Python sets POSIX executable modes explicitly even for a Windows cross-publish.
         & python "$PSScriptRoot/archive-unix-package.py" $package (Join-Path $run "QuickExcel-$Rid.tar.gz")

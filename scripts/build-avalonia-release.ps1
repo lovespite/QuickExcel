@@ -4,6 +4,7 @@ param([switch]$SkipTests, [switch]$CreateArchive, [switch]$RunSmoke,
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 $root = [IO.Path]::GetFullPath((Split-Path $PSScriptRoot -Parent))
+$version=([xml](Get-Content -LiteralPath (Join-Path $root 'QuickExcel.Desktop.Avalonia/QuickExcel.Desktop.Avalonia.csproj') -Raw)).SelectSingleNode('/Project/PropertyGroup/Version').InnerText
 $artifacts = Join-Path $root 'artifacts'
 $runId = [DateTime]::UtcNow.ToString('yyyyMMdd-HHmmss') + '-' + [Guid]::NewGuid().ToString('N').Substring(0,8)
 function ArtifactPath([string]$value) {
@@ -77,9 +78,9 @@ try {
     }
     $files = @(Get-ChildItem -LiteralPath $package -File -Recurse | Sort-Object FullName | ForEach-Object { [ordered]@{ path = [IO.Path]::GetRelativePath($package,$_.FullName).Replace('\','/'); size=$_.Length; sha256=(Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash } })
     $locks = @(& git ls-files '*packages.lock.json' 'QuickExcel.Web/package-lock.json' | ForEach-Object { [ordered]@{ path=$_; sha256=(Get-FileHash -LiteralPath (Join-Path $root $_) -Algorithm SHA256).Hash } })
-    [ordered]@{ schemaVersion=1; product='QuickExcel Avalonia'; version='0.6.0-preview.5'; rid='win-x64'; selfContained=$true; diagnostics=$false; sourceHead=(& git rev-parse HEAD); workingTreeDirty=[bool](& git status --porcelain); sdk=(& dotnet --version); webPackages=$web.packages; webManifestSha256=(Get-FileHash (Join-Path $package 'Web/manifest.json') -Algorithm SHA256).Hash; locks=$locks; checks=$selfCheck; files=$files } | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath (Join-Path $package 'release.json') -Encoding utf8
+    [ordered]@{ schemaVersion=1; product='QuickExcel Avalonia'; version=$version; rid='win-x64'; selfContained=$true; diagnostics=$false; sourceHead=(& git rev-parse HEAD); workingTreeDirty=[bool](& git status --porcelain); sdk=(& dotnet --version); webPackages=$web.packages; webManifestSha256=(Get-FileHash (Join-Path $package 'Web/manifest.json') -Algorithm SHA256).Hash; locks=$locks; checks=$selfCheck; files=$files } | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath (Join-Path $package 'release.json') -Encoding utf8
     if ($CreateArchive) {
-        $archive=ArtifactPath "artifacts/avalonia/releases/QuickExcel-Avalonia-0.6.0-preview.5-win-x64-$runId.zip"
+        $archive=ArtifactPath "artifacts/avalonia/releases/QuickExcel-Avalonia-$version-win-x64-$runId.zip"
         Compress-Archive -LiteralPath $package -DestinationPath $archive
         (Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash + '  ' + [IO.Path]::GetFileName($archive) | Set-Content -LiteralPath ($archive+'.sha256') -Encoding ascii
     }

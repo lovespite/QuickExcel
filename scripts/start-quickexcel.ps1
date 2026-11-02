@@ -1,5 +1,12 @@
 param()
 $ApplicationArguments=@($args)
+# PowerShell 7 callers can pass an incompatible PSModulePath to Windows PowerShell.
+# Resolve the built-in 5.1 modules before hashing/JSON/Start-Process autoload.
+if ($PSVersionTable.PSVersion.Major -eq 5) {
+    $env:PSModulePath = (Join-Path $PSHOME 'Modules') + [IO.Path]::PathSeparator + $env:PSModulePath
+    Import-Module (Join-Path $PSHOME 'Modules/Microsoft.PowerShell.Utility/Microsoft.PowerShell.Utility.psd1') -ErrorAction Stop
+    Import-Module (Join-Path $PSHOME 'Modules/Microsoft.PowerShell.Management/Microsoft.PowerShell.Management.psd1') -ErrorAction Stop
+}
 $ErrorActionPreference='Stop'
 Set-StrictMode -Version Latest
 $root=[IO.Path]::GetFullPath((Split-Path $PSScriptRoot -Parent))
@@ -12,6 +19,7 @@ if (Test-Path -LiteralPath $pointer) {
     $manifest=Join-Path $package 'release.json'
     if ((Get-FileHash -LiteralPath $manifest -Algorithm SHA256).Hash -ne $active.manifestSha256) { throw 'Selected package identity changed; select a verified package again.' }
     $identity=Get-Content -LiteralPath $manifest -Raw|ConvertFrom-Json
+    if ($identity.product -eq 'QuickExcel WPF rollback' -and $env:QUICKEXCEL_SOFTWARE_RENDERING -eq '1') { $ApplicationArguments = @('--software-rendering') + $ApplicationArguments }
     $executable=if ($identity.product -eq 'QuickExcel WPF rollback') { 'QuickExcel.exe' } else { 'QuickExcel.Avalonia.exe' }
     $entry=@($identity.files|Where-Object {$_.path -eq $executable})
     if ($entry.Count -ne 1 -or (Get-FileHash -LiteralPath (Join-Path $package $executable) -Algorithm SHA256).Hash -ne $entry[0].sha256) { throw 'Selected executable identity mismatch.' }

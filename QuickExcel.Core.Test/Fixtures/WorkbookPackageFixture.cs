@@ -3,9 +3,9 @@ using System.IO;
 using System.IO.Compression;
 using System.Text;
 
-namespace QuickExcel.Diagnostics;
+namespace QuickExcel.Core.Test.Fixtures;
 
-/// <summary>Independent ZIP/XML fixtures for desktop smoke and linked storage tests; not a workbook serializer.</summary>
+/// <summary>Independent ZIP/XML fixtures for storage and v1 migration tests; not a workbook serializer.</summary>
 internal static class WorkbookPackageFixture
 {
     internal static byte[] Xlsx(string sheetData, IReadOnlyDictionary<string, string>? overrides = null)

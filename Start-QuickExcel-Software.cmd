@@ -1,6 +1,6 @@
 @echo off
 setlocal
 cd /d "%~dp0"
-rem Per-process WPF software rendering; applies only to this launch.
-dotnet run --project "QuickExcel.Desktop\QuickExcel.Desktop.csproj" -c Release --artifacts-path "%~dp0artifacts\build" -- --software-rendering %*
-if errorlevel 1 pause
+rem Per-launch Avalonia software rendering for graphics diagnosis.
+set "QUICKEXCEL_SOFTWARE_RENDERING=1"
+call "%~dp0Start-QuickExcel.cmd" %*

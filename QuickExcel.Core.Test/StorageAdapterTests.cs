@@ -1,4 +1,4 @@
-using QuickExcel.Diagnostics;
+using QuickExcel.Core.Test.Fixtures;
 using QuickExcel.Domain;
 using QuickExcel.Storage;
 

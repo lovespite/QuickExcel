@@ -242,3 +242,5 @@ QA-UI-01 覆盖实际 WPF 编辑和保存路径；QA-UI-02 覆盖查找替换、
 
 
 Avalonia A6 平台状态：Linux 工程与 Ubuntu 候选包完成，macOS 仅预备适配/打包、worker 尚未实现且执行关闭；实机验收延期。独立边界及证据见 [67 号记录](67-avalonia-platforms.md)。
+
+Avalonia A7 默认 Windows 范围工程收尾完成：两个 WPF 生产项目已移除，文件夹具、发布和启动器验证通过，受测归档仍可回退；见 [68 号记录](68-avalonia-retirement.md)。Mac worker 未完成与各平台延期实机项不随收尾而关闭。

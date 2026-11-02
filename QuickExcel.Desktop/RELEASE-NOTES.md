@@ -1,3 +1,9 @@
+# Avalonia 0.6.0-preview.7
+
+Windows 默认入口及发布已切换 Avalonia，旧 WPF 项目与发布脚本已移除。工作区、网格、Monaco 与 PDF.js 经过定向验证；共享编辑/保存/撤销、文件格式及脚本 API/协议保持。Linux 增加原生桥、Landlock/seccomp/cgroup worker、Secret Service 信任与 CUPS 打印，并提供独立包。macOS 为预备实现，worker 未实现、执行关闭。
+
+受测包、回退标签与未关闭项见 [A7 日志](docs/68-avalonia-retirement.md)。实机验证延期，不代表门槛通过。以下保留旧 WPF 发布历史。
+
 # 未发布 — 交互缺陷修复与填充/清洗/颜色扩展（2026-11-02）
 
 - 修复非 100% 缩放时普通单元格文字、列头与行头模糊：网格内容位图改为按“监控器 DPI × 布局缩放”的实际设备比例栅格化（不再只按窗口 DPI），字形位图、行高列宽与滚动几何使用同一比例；位图以自然尺寸显示，不再被取整后的 DIP 宽度二次缩放。
