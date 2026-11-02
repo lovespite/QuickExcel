@@ -12,6 +12,8 @@
     <Description>A programmable desktop spreadsheet with typed XLSX storage and QuickJS scripting.</Description>
   </PropertyGroup>
   <ItemGroup>
+    <ProjectReference Include="../QuickExcel.Presentation/QuickExcel.Presentation.csproj" />
+
     <PackageReference Include="FluentIcons.Wpf" Version="2.1.344" />
     <None Update="FLUENT-ICONS-LICENSE.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <ProjectReference Include="../QuickExcel.Core/QuickExcel.Core.csproj" />

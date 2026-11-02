@@ -3,7 +3,6 @@ using System.Text;
 using System.Xml.Linq;
 using QuickExcel.Core;
 using QuickExcel.Domain;
-using QuickExcel.Desktop;
 using QuickExcel.Storage;
 using static QuickExcel.Core.Test.M3CalculationTests;
 

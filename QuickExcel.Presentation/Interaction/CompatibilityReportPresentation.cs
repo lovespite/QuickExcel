@@ -1,6 +1,6 @@
 using QuickExcel.Domain;
 
-namespace QuickExcel.Desktop;
+namespace QuickExcel.Presentation;
 
 /// <summary>One visible row of a compatibility group; identical diagnostics are merged and located together.</summary>
 public sealed record CompatibilityIssueView(

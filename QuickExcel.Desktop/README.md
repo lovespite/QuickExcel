@@ -78,14 +78,13 @@ Desktop 按界面职责组织，根目录保留 `App.xaml` / `App.xaml.cs`、项
 QuickExcel.Desktop/
 ├─ Composition/          具体存储、计算和脚本运行时的依赖组装
 ├─ Controls/
-│  ├─ Grid/              网格视图接口、FastGrid 适配、自动尺寸与绘制
+│  ├─ Grid/              FastGrid 适配、自动尺寸与绘制
 │  └─ Ribbon/            Ribbon 附加属性
 ├─ Views/
 │  ├─ MainWindow/        主窗口 XAML、code-behind 和各功能 partial
 │  └─ Dialogs/           排序对话框、筛选弹层
-├─ Editing/              统一文档编辑入口、原生文本编辑器辅助
+├─ Editing/              WPF 原生文本编辑器辅助
 ├─ ViewModels/           文档状态的只读视图模型
-├─ Interaction/          不依赖 WPF 的输入、筛选、搜索和工作区规则
 ├─ Themes/               应用共享的 XAML 样式与模板
 ├─ Diagnostics/
 │  ├─ Smoke/             WPF smoke 场景、回归检查及共用验证辅助
@@ -93,7 +92,7 @@ QuickExcel.Desktop/
 └─ docs/                 产品、架构、契约与验收记录
 ```
 
-新增主窗口功能放入 `Views/MainWindow/MainWindow.<功能>.cs`；独立控件和对话框分别放入 `Controls` 与 `Views/Dialogs`。诊断场景放入 `Diagnostics`，避免继续堆积在界面实现旁。`Interaction` 继续由 Core.Test 链接编译，不能引入 WPF 依赖；所有文档修改仍经 `Editing/EditorController` 和 `DocumentSession`。
+新增主窗口功能放入 `Views/MainWindow/MainWindow.<功能>.cs`；独立控件和对话框分别放入 `Controls` 与 `Views/Dialogs`。诊断场景放入 `Diagnostics`，避免继续堆积在界面实现旁。共享规则和编辑控制器已迁入 `QuickExcel.Presentation`，尺寸/范围算法迁入 `QuickExcel.Grid.Shared`；Core.Test 使用项目引用，不再链接这些源文件。所有文档修改仍经共享 `EditorController` 和 `DocumentSession`。
 
 这次整理只调整物理路径，保留 `QuickExcel.Desktop` 命名空间和现有类型；主窗口诊断仍是同一 `MainWindow` 的 partial，继续随 Desktop 编译并通过原命令行入口运行。SDK 自动包含子目录中的 C# / XAML 文件，无需逐文件维护项目项。`App` 仍直接创建窗口，主题资源路径保持 `Themes/Ribbon.xaml`。
 

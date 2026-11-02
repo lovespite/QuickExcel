@@ -2,15 +2,15 @@ using System.Text.RegularExpressions;
 using QuickExcel.Domain;
 using QuickExcel.Formulas;
 
-namespace QuickExcel.Desktop;
+namespace QuickExcel.Presentation;
 
-internal readonly record struct FormulaTextEdit(int Start, int Length, string Text);
-internal sealed record FormulaCompletion(int Start, int Length, string[] Names);
-internal sealed record FormulaCallHint(string Name, int Argument, string Signature);
-internal sealed record FormulaReference(GridRange Range, string? Sheet);
+public readonly record struct FormulaTextEdit(int Start, int Length, string Text);
+public sealed record FormulaCompletion(int Start, int Length, string[] Names);
+public sealed record FormulaCallHint(string Name, int Argument, string Signature);
+public sealed record FormulaReference(GridRange Range, string? Sheet);
 
 /// <summary>Bounded lexical assistance for incomplete drafts; never evaluates or commits a formula.</summary>
-internal static class FormulaEditing
+public static class FormulaEditing
 {
     private sealed record Token(int Start, int Length, string Kind, string Text);
     private static readonly Regex Reference = new(@"\G(?:(?:'(?:''|[^'])*'|[\p{L}_\\][\p{L}\p{N}_.\\]*)!)?(?:\$?[A-Za-z]{1,3}\$?[1-9][0-9]*(?:\s*:\s*\$?[A-Za-z]{1,3}\$?[1-9][0-9]*)?|\$?[A-Za-z]{1,3}\s*:\s*\$?[A-Za-z]{1,3})(?![\p{L}\p{N}_.$\\])", RegexOptions.CultureInvariant, TimeSpan.FromMilliseconds(100));

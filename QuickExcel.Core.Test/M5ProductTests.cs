@@ -1,4 +1,3 @@
-using QuickExcel.Desktop;
 using QuickExcel.Domain;
 using static QuickExcel.Core.Test.M3CalculationTests;
 

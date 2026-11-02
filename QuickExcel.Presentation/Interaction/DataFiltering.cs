@@ -3,9 +3,9 @@ using System.Globalization;
 using QuickExcel.Core;
 using QuickExcel.Domain;
 
-namespace QuickExcel.Desktop;
+namespace QuickExcel.Presentation;
 
-internal sealed record DataRegion(Guid Id, SheetId SheetId, GridRange Range, bool HasHeader = true)
+public sealed record DataRegion(Guid Id, SheetId SheetId, GridRange Range, bool HasHeader = true)
 {
     public int FirstDataRow => Range.Top + (HasHeader ? 1 : 0);
     public void Validate()
@@ -16,9 +16,9 @@ internal sealed record DataRegion(Guid Id, SheetId SheetId, GridRange Range, boo
     }
 }
 
-internal enum FilterOperator { TextEquals, TextContains, TextStartsWith, TextEndsWith, NumberEquals, Greater, GreaterOrEqual, Less, LessOrEqual, DateOnOrAfter, DateOnOrBefore, ExcelEquals, ExcelNotEquals, ExcelLess, ExcelLessOrEqual, ExcelGreater, ExcelGreaterOrEqual }
+public enum FilterOperator { TextEquals, TextContains, TextStartsWith, TextEndsWith, NumberEquals, Greater, GreaterOrEqual, Less, LessOrEqual, DateOnOrAfter, DateOnOrBefore, ExcelEquals, ExcelNotEquals, ExcelLess, ExcelLessOrEqual, ExcelGreater, ExcelGreaterOrEqual }
 
-internal sealed record FilterTerm(FilterOperator Operator, string Operand)
+public sealed record FilterTerm(FilterOperator Operator, string Operand)
 {
     public void Validate()
     {
@@ -66,7 +66,7 @@ internal sealed record FilterTerm(FilterOperator Operator, string Operand)
 }
 
 /// <summary>Exact typed value membership OR two typed predicates. Search is a UI concern and never edits this set.</summary>
-internal sealed record ColumnFilter(ImmutableHashSet<CellValue>? Values = null, FilterTerm? First = null, FilterTerm? Second = null, bool UseOr = false, AutoFilterColumn? Stored = null)
+public sealed record ColumnFilter(ImmutableHashSet<CellValue>? Values = null, FilterTerm? First = null, FilterTerm? Second = null, bool UseOr = false, AutoFilterColumn? Stored = null)
 {
     public void Validate()
     {
@@ -80,9 +80,9 @@ internal sealed record ColumnFilter(ImmutableHashSet<CellValue>? Values = null, 
             : First.Matches(value, style, system) && Second.Matches(value, style, system));
 }
 
-internal sealed record FilterCandidate(CellValue Key, string Label, int Count, bool Selected);
+public sealed record FilterCandidate(CellValue Key, string Label, int Count, bool Selected);
 
-internal static class DataFilterEngine
+public static class DataFilterEngine
 {
     public const int MaxCandidateCharacters = 8 * 1024 * 1024;
 

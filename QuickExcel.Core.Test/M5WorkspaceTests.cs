@@ -1,6 +1,5 @@
 using System.Globalization;
 using QuickExcel.Calculation;
-using QuickExcel.Desktop;
 using QuickExcel.Domain;
 using QuickExcel.Formulas;
 using QuickExcel.Storage;
@@ -296,7 +295,7 @@ public sealed class M5WorkspaceTests : IDisposable
     public void InvalidLastStyleTargetDoesNotCommitEarlierChanges()
     {
         var sheet = Sheet("D", (0, 0, N(1))); using var session = new DocumentSession(Book(sheet)); var before = session.Snapshot;
-        Assert.Throws<ArgumentOutOfRangeException>(() => session.Execute(new SetCellStyleCommand([new(sheet.Id, 0, 0), new(sheet.Id, 100000, 0)], new(Bold: true))));
+        Assert.Throws<ArgumentOutOfRangeException>(() => session.Execute(new SetCellStyleCommand([new(sheet.Id, 0, 0), new(sheet.Id, WorkbookLimits.MaxRows, 0)], new(Bold: true))));
         Assert.Same(before, session.Snapshot); Assert.Single(session.Snapshot.Styles); Assert.False(session.CanUndo);
     }
 
@@ -315,7 +314,7 @@ public sealed class M5WorkspaceTests : IDisposable
     {
         var sheet = Sheet("D", (0, 0, N(1)));
         using var session = new DocumentSession(new(Guid.NewGuid(), 0, ExcelDateSystem.Windows1900, [sheet],
-            styles: Enumerable.Range(0, 4096).Select(i => new StyleDefinition { FontName = "font" + i })));
+            styles: Enumerable.Range(0, WorkbookLimits.MaxStyles).Select(i => new StyleDefinition { FontName = "font" + i })));
         var before = session.Snapshot;
         Assert.Throws<InvalidOperationException>(() => session.Execute(new SetCellStyleCommand([new(sheet.Id, 0, 0)], new(Bold: true))));
         Assert.Same(before, session.Snapshot);

@@ -627,8 +627,9 @@ public partial class MainWindow : Window
     private async void Open_Click(object sender, RoutedEventArgs e)
     {
         if (_busy || !CommitEditors()) return;
-        var dialog = new OpenFileDialog { Filter = "工作簿 (*.xlsq;*.xlsx)|*.xlsq;*.xlsx|QuickExcel (*.xlsq)|*.xlsq|Excel (*.xlsx)|*.xlsx", Title = "打开工作簿" };
-        if (dialog.ShowDialog(this) == true && await ConfirmDiscardAsync()) await OpenPathAsync(dialog.FileName);
+        var selected = await new WpfFileDialogs(this).OpenAsync(new("打开工作簿",
+            [new("工作簿 (*.xlsq;*.xlsx)", ["*.xlsq", "*.xlsx"]), new("QuickExcel (*.xlsq)", ["*.xlsq"]), new("Excel (*.xlsx)", ["*.xlsx"])]));
+        if (selected is not null && await ConfirmDiscardAsync()) await OpenPathAsync(selected.Path);
     }
 
     private async Task OpenPathAsync(string path, bool allowAutomaticScripts = true)
@@ -678,12 +679,14 @@ public partial class MainWindow : Window
         {
             var xlsx = !needsScripts && !migration && (_filePath is null || Path.GetExtension(_filePath).Equals(".xlsx", StringComparison.OrdinalIgnoreCase));
             var extension = xlsx ? ".xlsx" : ".xlsq";
-            var dialog = new SaveFileDialog { Filter = needsScripts ? "QuickExcel 工作簿（含脚本） (*.xlsq)|*.xlsq" : "Excel 工作簿（保留公式） (*.xlsx)|*.xlsx|QuickExcel 工作簿 (*.xlsq)|*.xlsq",
-                FilterIndex = needsScripts || xlsx ? 1 : 2, DefaultExt = extension, AddExtension = true,
-                FileName = Path.GetFileNameWithoutExtension(_displayName) + (migration ? "-v2" : discardUnsupported ? "-受支持副本" : "") + extension,
-                Title = needsScripts ? "脚本主文件保存为 XLSQ；交付 Excel 请另用 XLSX 导出副本" : "保存工作簿（保留公式源码和格式）" };
-            if ((_smokeMode && _smokeSaveDialog is not null ? _smokeSaveDialog(dialog) : dialog.ShowDialog(this)) != true) return false;
-            path = dialog.FileName;
+            FileDialogType[] types = needsScripts ? [new("QuickExcel 工作簿（含脚本） (*.xlsq)", ["*.xlsq"])] :
+                [new("Excel 工作簿（保留公式） (*.xlsx)", ["*.xlsx"]), new("QuickExcel 工作簿 (*.xlsq)", ["*.xlsq"])];
+            var selected = await new WpfFileDialogs(this, _smokeMode ? _smokeSaveDialog : null).SaveAsync(new(
+                needsScripts ? "脚本主文件保存为 XLSQ；交付 Excel 请另用 XLSX 导出副本" : "保存工作簿（保留公式源码和格式）", types,
+                Path.GetFileNameWithoutExtension(_displayName) + (migration ? "-v2" : discardUnsupported ? "-受支持副本" : "") + extension,
+                extension, needsScripts || xlsx ? 0 : 1));
+            if (selected is null) return false;
+            path = selected.Path;
         }
         FileVersion? expected = null;
         if (!await WorkAsync("检查文件版本…", () => expected = _filePath is not null && Path.GetFullPath(path).Equals(Path.GetFullPath(_filePath), StringComparison.OrdinalIgnoreCase)

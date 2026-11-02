@@ -2,9 +2,9 @@ using System.Collections;
 using System.Text;
 using QuickExcel.Domain;
 
-namespace QuickExcel.Desktop;
+namespace QuickExcel.Presentation;
 
-internal readonly record struct GridRange(int Top, int Left, int Bottom, int Right)
+public readonly record struct GridRange(int Top, int Left, int Bottom, int Right)
 {
     public int Rows => Bottom - Top + 1;
     public int Columns => Right - Left + 1;
@@ -26,7 +26,7 @@ internal readonly record struct GridRange(int Top, int Left, int Bottom, int Rig
 }
 
 /// <summary>Bounded TSV exchange. Normal paste interprets numbers/booleans but keeps formula text literal.</summary>
-internal static class GridClipboard
+public static class GridClipboard
 {
     public const int MaxCharacters = 4 * 1024 * 1024;
     public const int MaxEditCells = 20_000;
@@ -133,7 +133,7 @@ internal static class GridClipboard
     }
 }
 
-internal sealed class CellEditState
+public sealed class CellEditState
 {
     public sealed record FormulaDraft(int Sheet, int Row, int Column);
     public FormulaDraft? Formula { get; private set; }
@@ -149,7 +149,7 @@ internal sealed class CellEditState
 }
 
 /// <summary>Stable row identities without allocating one object per logical row at bind time.</summary>
-internal sealed class VirtualRowList<T>(int count, Func<int, T> factory, Func<T, int> index) : IList where T : class
+public sealed class VirtualRowList<T>(int count, Func<int, T> factory, Func<T, int> index) : IList where T : class
 {
     private readonly Dictionary<int, T> _created = [];
     public int Count { get; } = count;

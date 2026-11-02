@@ -1,6 +1,6 @@
 # QuickExcel Avalonia 迁移方案与实施计划
 
-2026-11-02 制定，2026-11-03 更新。状态：**A0 工程验证完成，实机验收按用户要求延期，A1 开始实施**，实际实现与证据见 [62 号 A0 记录](62-avalonia-a0-validation.md)。本方案采用 MIT 许可的开源 Avalonia，将现有 WPF 桌面迁移到 Avalonia，再在新宿主中接入 PDF.js 打印预览和 Monaco 脚本编辑器。WebView 的小规模可行性验证放在迁移开始时，正式功能接入安排在核心工作区稳定之后。
+2026-11-02 制定，2026-11-03 更新。状态：**A0 工程验证完成，实机验收按用户要求延期，A1 已完成，A2 开始实施**，实际实现与证据见 [62 号 A0 记录](62-avalonia-a0-validation.md)。本方案采用 MIT 许可的开源 Avalonia，将现有 WPF 桌面迁移到 Avalonia，再在新宿主中接入 PDF.js 打印预览和 Monaco 脚本编辑器。WebView 的小规模可行性验证放在迁移开始时，正式功能接入安排在核心工作区稳定之后。
 
 迁移分为两个独立交付目标：**Windows 上的 Avalonia 功能对齐**，以及 **macOS/Linux 的完整平台支持**。前者不得降低当前功能和脚本隔离；后者必须完成原生库、打印、用户数据保护和脚本沙箱适配，不能以窗口能够打开作为完成依据。
 
@@ -53,9 +53,9 @@ A0 必须同时验证 Avalonia 自身文字/控件、共享单元格绘制、PDF
 | `QuickExcel.Core` | 纯 .NET 领域、会话、命令、历史和端口 | 直接复用，保持无 UI 和 native 引用 |
 | `QuickExcel.Infrastructure` | `net10.0`；存储/计算可复用，但脚本启动和信任存储含 Windows 实现 | 分离平台能力选择；不能因 TFM 是 net10.0 就宣称整项目可跨平台执行 |
 | `QuickExcel.Rendering` / `Rendering.Skia` | 已共享文字、图片、图表、分页输出和直接 PDF | 复用；增加 Avalonia 上屏适配和目标 RID 的真实运行验证 |
-| [EditorController](../Editing/EditorController.cs) | 统一命令入口，主体不依赖 WPF | 提取至共享表现层，保留校验、预期修订和单事务提交 |
-| [Interaction](../Interaction/GridInteraction.cs) 与相关规则 | WPF-free，当前由 Core.Test 链接编译 | 迁入正式共享程序集，测试改为项目引用，避免两份源文件漂移 |
-| [IGridSurface](../Controls/Grid/GridSurface.cs) | 已有视图边界，接口本身无 WPF 控件类型 | 复用契约，按实际需要扩展异步编辑协调；具体控件生命周期留在宿主 |
+| [EditorController](../../QuickExcel.Presentation/Editing/EditorController.cs) | 统一命令入口，主体不依赖 WPF | 提取至共享表现层，保留校验、预期修订和单事务提交 |
+| [Interaction](../../QuickExcel.Presentation/Interaction/GridInteraction.cs) 与相关规则 | WPF-free，A1 已提取至 Presentation，Core.Test 使用项目引用 | 迁入正式共享程序集，测试改为项目引用，避免两份源文件漂移 |
+| [IGridSurface](../../QuickExcel.Presentation/Grid/IGridSurface.cs) | 已有视图边界，接口本身无 WPF 控件类型 | 复用契约，按实际需要扩展异步编辑协调；具体控件生命周期留在宿主 |
 | `QuickExcel.Grid.Wpf` | 仍有 WriteableBitmap、Dispatcher、WPF 输入及控件依赖 | 提取可复用几何和行为，新增 Avalonia 控件；不能直接改项目名称后作为跨平台网格 |
 | [FastGridArtwork](../Controls/Grid/FastGridArtwork.cs) | Skia picture 内容加 WPF DrawingGroup/BitmapSource 上屏 | 保留内容构建与缓存失效规则，重写上屏和资源所有权 |
 | [MainWindow](../Views/MainWindow/MainWindow.xaml.cs) 与各 partial | 工作区、菜单、事件协调和 UI 状态混合 | 分切片迁移命令/状态与视图，保留功能对照清单 |
@@ -68,7 +68,7 @@ A0 必须同时验证 Avalonia 自身文字/控件、共享单元格绘制、PDF
 
 ## 4 目标模块与依赖方向
 
-以下新增名称是实施目标，当前仓库尚未创建这些项目。
+Presentation 和 Grid.Shared 已在 A1 创建，其余新增模块按后续阶段实施。
 
 | 目标模块 | 目标框架与职责 | 依赖约束 |
 | --- | --- | --- |
@@ -249,7 +249,7 @@ QuickJS 原生桥按 RID 生成对应共享库，清除 Windows-only 拷贝和�
 
 ## 11 实施阶段与退出条件
 
-当前 A0 **工程验证完成、实机项延期**，A1 **实施中**，A2–A7 **未开始**。2026-11-03 用户要求实机验证先跳过、记入日志后统一验证；这些项不阻塞后续代码实施，也不视为通过。责任列表示所需工作角色，不预设已经安排人员或并行执行。
+当前 A0 **工程验证完成、实机项延期**，A1 **完成**，A2 **实施中**，A3–A7 **未开始**。2026-11-03 用户要求实机验证先跳过、记入日志后统一验证；这些项不阻塞后续代码实施，也不视为通过。责任列表示所需工作角色，不预设已经安排人员或并行执行。
 
 | 阶段 | 责任范围 | 主要交付物 | 退出条件 |
 | --- | --- | --- | --- |
@@ -375,3 +375,5 @@ dotnet test .\QuickExcel.Rendering.Test\QuickExcel.Rendering.Test.csproj -c Rele
 - [x] 根据上述结果填写 A0 工程结论、版本锁定及受测平台要求；按 2026-11-03 用户要求延期实机验收，进入共享层提取。Linux 中文输入未解决，详见 62 号记录。
 
 后续实施记录应保存为独立专题，并在本文工作项和 [总实施计划](05-implementation-plan.md) 中链接实际证据。原始日志、截图、基准、依赖清单和候选包存入 `artifacts/avalonia/<run-id>/`；文档记录来源与结论，生成产物不入 Git。
+
+A1 已完成：共享程序集、编辑控制器和文件选择端口、177 项定向测试及 WPF 95/157 项检查见 [63 号实施日志](63-avalonia-implementation-log.md)。

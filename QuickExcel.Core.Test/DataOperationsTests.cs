@@ -1,7 +1,6 @@
 using System.Collections.Immutable;
 using FastWpfGrid;
 using QuickExcel.Calculation;
-using QuickExcel.Desktop;
 using QuickExcel.Domain;
 using QuickExcel.Storage;
 using static QuickExcel.Core.Test.M3CalculationTests;

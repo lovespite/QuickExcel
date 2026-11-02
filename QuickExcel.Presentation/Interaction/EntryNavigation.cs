@@ -1,8 +1,8 @@
 using QuickExcel.Domain;
 
-namespace QuickExcel.Desktop;
+namespace QuickExcel.Presentation;
 
-internal static class EntryNavigation
+public static class EntryNavigation
 {
     public static bool HasContent(CellSnapshot? cell) => cell is not null && (cell.Content.Kind == CellContentKind.Formula || cell.Content.LiteralValue.Kind != CellValueKind.Blank);
     public static CellPosition Edge(WorksheetSnapshot sheet, CellPosition current, int dr, int dc, int rows, int columns, Func<int, bool>? filtered = null)

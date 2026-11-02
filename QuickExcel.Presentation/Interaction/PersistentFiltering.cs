@@ -3,9 +3,9 @@ using System.Globalization;
 using QuickExcel.Core;
 using QuickExcel.Domain;
 
-namespace QuickExcel.Desktop;
+namespace QuickExcel.Presentation;
 
-internal static class PersistentFiltering
+public static class PersistentFiltering
 {
     public static AutoFilterColumn Convert(ColumnFilter filter, ExcelDateSystem system)
     {

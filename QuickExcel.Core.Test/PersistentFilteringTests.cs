@@ -4,7 +4,6 @@ using QuickExcel.Core;
 using QuickExcel.Domain;
 using QuickExcel.Storage;
 using QuickExcel.Calculation;
-using QuickExcel.Desktop;
 using static QuickExcel.Core.Test.M3CalculationTests;
 
 namespace QuickExcel.Core.Test;

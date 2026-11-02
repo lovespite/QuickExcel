@@ -1,4 +1,3 @@
-using QuickExcel.Desktop;
 using QuickExcel.Domain;
 using QuickExcel.Formulas;
 using QuickExcel.Storage;

@@ -1,4 +1,6 @@
 <Solution>
+  <Project Path="QuickExcel.Presentation/QuickExcel.Presentation.csproj" />
+  <Project Path="QuickExcel.Grid.Shared/QuickExcel.Grid.Shared.csproj" />
   <Project Path="QuickExcel.Scripting/QuickExcel.Scripting.csproj" />
   <Project Path="QuickExcel.ScriptContracts/QuickExcel.ScriptContracts.csproj" />
   <Project Path="QuickExcel.ScriptWorker/QuickExcel.ScriptWorker.csproj" />

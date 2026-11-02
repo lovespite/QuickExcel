@@ -2,7 +2,7 @@
 
 ## 当前进度（2026-11-02）
 
-[61 号 Avalonia 迁移](61-avalonia-migration-plan.md) 的 **A0 技术验证进行中**：独立宿主、固定开源依赖、Windows/Linux 共享 Skia/PDF、离线 Monaco/PDF.js worker、Windows 虚拟 HTTPS 和 WPF 基线已接入验证；Linux 图形桌面中文输入等门禁仍待关闭，A1–A7 未开始。源码、失败修复及实际证据见 [62 号记录](62-avalonia-a0-validation.md)。现有 WPF 交付、XLSX 对齐成果及 M4/M5/M6/E5 未关闭项保持各自状态。
+[61 号 Avalonia 迁移](61-avalonia-migration-plan.md) 的 **A0 工程验证与 A1 共享层提取完成，A2 实施中**。2026-11-03 按用户要求将实机验证延期统一验收；Linux 中文输入无候选框是已知未解决问题。A0 证据见 [62 号记录](62-avalonia-a0-validation.md)，后续阶段见 [63 号实施日志](63-avalonia-implementation-log.md)。现有 WPF 交付及 M4/M5/M6/E5 未关闭项保持各自状态。
 
 59 号 Skia 迁移 P0–P4 声明范围完成：共享 net10.0 渲染、直接 PDF、按需预览、主网格和旧绘制依赖清理已接入；Windows/Linux 无界面输出、定向功能检查及原有 16.67 ms 横向/33.34 ms 拖选预算通过。最终候选包、固定版本、许可证、测量修正与失败样本见 [60 号实施记录](60-skia-rendering-and-pdf-implementation.md)。物理设备、完整应用跨平台及既有 M4/M6 门禁保持独立。
 

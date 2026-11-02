@@ -1,12 +1,12 @@
 using System.IO;
 using System.Text.Json;
 
-namespace QuickExcel.Desktop;
+namespace QuickExcel.Presentation;
 
-internal enum SheetNavigationPlacement { Bottom, Left, Right }
-internal sealed record DesktopPreferences(SheetNavigationPlacement Sheets = SheetNavigationPlacement.Bottom, int Zoom = 100);
+public enum SheetNavigationPlacement { Bottom, Left, Right }
+public sealed record DesktopPreferences(SheetNavigationPlacement Sheets = SheetNavigationPlacement.Bottom, int Zoom = 100);
 
-internal sealed class DesktopSettings(string path)
+public sealed class DesktopSettings(string path)
 {
     public DesktopPreferences Value { get; private set; } = new();
     public string? Error { get; private set; }

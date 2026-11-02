@@ -1,10 +1,10 @@
 using QuickExcel.Core;
 using QuickExcel.Domain;
 
-namespace QuickExcel.Desktop;
+namespace QuickExcel.Presentation;
 
 /// <summary>View-only boundary. All writes remain in EditorController/DocumentSession.</summary>
-internal interface IGridSurface
+public interface IGridSurface
 {
     void Bind(WorkbookSnapshot snapshot, int sheetIndex, int rows, int columns);
     void Refresh(WorkbookSnapshot snapshot);

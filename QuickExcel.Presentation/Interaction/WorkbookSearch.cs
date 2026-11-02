@@ -1,19 +1,19 @@
 using QuickExcel.Core;
 using QuickExcel.Domain;
 
-namespace QuickExcel.Desktop;
+namespace QuickExcel.Presentation;
 
-internal enum SearchScope { Sheet, Workbook, Selection }
-internal enum SearchTarget { Display, Formula }
-internal sealed record SearchOptions(string Query, SearchScope Scope = SearchScope.Sheet, SearchTarget Target = SearchTarget.Display,
+public enum SearchScope { Sheet, Workbook, Selection }
+public enum SearchTarget { Display, Formula }
+public sealed record SearchOptions(string Query, SearchScope Scope = SearchScope.Sheet, SearchTarget Target = SearchTarget.Display,
     bool MatchCase = false, bool WholeCell = false, bool IncludeHidden = false);
-internal sealed record SearchHit(CellAddress Address, int SheetIndex, string SheetName, string Text, CellContent Content)
+public sealed record SearchHit(CellAddress Address, int SheetIndex, string SheetName, string Text, CellContent Content)
 {
     public string Location => $"{SheetName}!{Column(Address.Column)}{Address.Row + 1}";
     private static string Column(int value) { var text = ""; do { text = (char)('A' + value % 26) + text; value = value / 26 - 1; } while (value >= 0); return text; }
 }
 
-internal static class WorkbookSearch
+public static class WorkbookSearch
 {
     public const int Limit = 20_000;
     public static IReadOnlyList<SearchHit> Find(WorkbookSnapshot snapshot, int activeSheet, SearchOptions options,

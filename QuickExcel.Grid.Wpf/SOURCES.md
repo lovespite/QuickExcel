@@ -1,5 +1,12 @@
 # QuickExcel.Grid.Wpf source provenance
 
+## Avalonia shared geometry extraction (2026-11-03)
+
+`Upstream/SeriesSizes.cs`, `Upstream/FastGridCellAddress.cs`, `Upstream/ActiveSeries.cs`
+and `GridCellRange.cs` moved unchanged to `QuickExcel.Grid.Shared`. WPF references
+that assembly; tests no longer link duplicate source. Both projects retain the
+original source identity and MIT notice. See [shared source record](../QuickExcel.Grid.Shared/SOURCES.md).
+
 ## Skia migration (2026-11-02)
 
 The historical source inventory below describes the original import. The unused WriteableBitmapEx drawing/filter/glyph implementations, GDI+ font/bitmap path and direct `msvcrt.dll` imports have now been deleted. Only `IntGeometry.cs` and `PortableFontDesc.cs` remain from that embedded directory; both upstream licenses and the original import hashes are retained.

@@ -8,6 +8,8 @@
     <ImplicitUsings>disable</ImplicitUsings>
   </PropertyGroup>
   <ItemGroup>
+    <ProjectReference Include="../QuickExcel.Grid.Shared/QuickExcel.Grid.Shared.csproj" />
+
     <ProjectReference Include="../QuickExcel.Rendering.Skia/QuickExcel.Rendering.Skia.csproj" />
     <None Update="*-LICENSE.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>

@@ -1,16 +1,16 @@
 using QuickExcel.Core;
 using QuickExcel.Domain;
 
-namespace QuickExcel.Desktop;
+namespace QuickExcel.Presentation;
 
 /// <summary>A resolved record rectangle plus whether its first row is a header that must stay in place.</summary>
-internal sealed record SortBlock(CellRectangle Range, bool HasHeader);
+public sealed record SortBlock(CellRectangle Range, bool HasHeader);
 
 /// <summary>
 /// WPF-free rule set shared by the ribbon, the header panel and the multi-level dialog. It answers
 /// “which records does this sort move?” without touching the document or the grid.
 /// </summary>
-internal static class SortPlanning
+public static class SortPlanning
 {
     public const int MaxCells = SortRangeCommand.MaxCells;
 

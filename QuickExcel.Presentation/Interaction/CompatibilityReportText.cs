@@ -1,6 +1,6 @@
 using QuickExcel.Domain;
 
-namespace QuickExcel.Desktop;
+namespace QuickExcel.Presentation;
 
 /// <summary>Text shared by the actual dialog and focused, WPF-free presentation tests.</summary>
 public static class CompatibilityReportText

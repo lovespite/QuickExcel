@@ -4,10 +4,10 @@ using System.Collections.Immutable;
 using QuickExcel.Core;
 using QuickExcel.Domain;
 
-namespace QuickExcel.Desktop;
+namespace QuickExcel.Presentation;
 
 /// <summary>View projection of persisted data state; isolated legacy views remain available for grid diagnostics.</summary>
-internal sealed class SheetViewState
+public sealed class SheetViewState
 {
     private GridRange? _legacyRange;
     private WorksheetData? _persistedData;
@@ -134,7 +134,7 @@ internal sealed class SheetViewState
     }
 }
 
-internal sealed class RecentFileStore(string path)
+public sealed class RecentFileStore(string path)
 {
     public const int Limit = 10;
     public IReadOnlyList<string> Paths { get; private set; } = [];

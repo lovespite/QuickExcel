@@ -1,10 +1,10 @@
 using QuickExcel.Core;
 using QuickExcel.Domain;
 
-namespace QuickExcel.Desktop;
+namespace QuickExcel.Presentation;
 
 /// <summary>One command path for grid edits, formula-bar edits, paste, clear, structure and history.</summary>
-internal sealed class EditorController(WorkbookDocument document, Func<DataValidationException, bool>? confirmValidation = null)
+public sealed class EditorController(WorkbookDocument document, Func<DataValidationException, bool>? confirmValidation = null)
 {
     public CommandResult SetCell(int sheetIndex, int row, int column, string value) =>
         SetCells(sheetIndex, [(row, column, value)]);
