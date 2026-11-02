@@ -90,5 +90,6 @@ public sealed class SkiaFonts : FontMapper, IDisposable
         _weights[face] = weight; return weight;
     }
     public override SKTypeface TypefaceFromStyle(IStyle style, bool ignoreFontVariants) => _faces[int.Parse(style.FontFamily, CultureInfo.InvariantCulture)];
+    internal void ReleaseShapingCaches() => SkiaTextLayout.ReleaseShapingCaches(_faces.Distinct());
     public void Dispose() { SkiaTextLayout.ReleaseFonts(_faces.Distinct()); _faces.Clear(); _requests.Clear(); _weights.Clear(); _coverage.Clear(); }
 }

@@ -1,5 +1,5 @@
 [CmdletBinding()]
-param()
+param([switch]$Probe, [switch]$Tests)
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 $root = Split-Path $PSScriptRoot -Parent
@@ -13,5 +13,6 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Locked web dependency installation failed.' }
 }
 finally { Pop-Location }
-& node (Join-Path $source 'build.mjs')
+$buildArguments = @(); if ($Probe) { $buildArguments += '--probe' }; if ($Tests) { $buildArguments += '--tests' }
+& node (Join-Path $source 'build.mjs') @buildArguments
 if ($LASTEXITCODE -ne 0) { throw 'Offline web build failed.' }

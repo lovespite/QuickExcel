@@ -10,11 +10,16 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
   <ItemGroup>
+    <!-- CJK PDF validation creates large short-lived font buffers. Keep the desktop
+         heap conservative; shared-grid latency is measured with this setting. -->
+    <RuntimeHostConfigurationOption Include="System.GC.ConserveMemory" Value="5" />
     <PackageReference Include="Avalonia.Desktop" Version="[12.1.4]" />
     <PackageReference Include="Avalonia.Themes.Fluent" Version="[12.1.4]" />
+    <PackageReference Include="Avalonia.Controls.WebView" Version="[12.1.1]" />
     <ProjectReference Include="../QuickExcel.Grid.Avalonia/QuickExcel.Grid.Avalonia.csproj" />
     <ProjectReference Include="../QuickExcel.Infrastructure/QuickExcel.Infrastructure.csproj" />
     <None Include="Licenses/*.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <None Include="../artifacts/avalonia/web/**/*" Link="Web/%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
   <Import Project="../scripts/ScriptWorker.targets" />
 </Project>

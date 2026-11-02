@@ -30,6 +30,16 @@ public sealed class SkiaTextLayout : IDisposable
             TextBlock.ResetPooledMemory();
         }
     }
+    internal static void ReleaseShapingCaches(IEnumerable<SKTypeface> faces)
+    {
+        lock (LayoutGate)
+        {
+            // The report still owns the exact font faces. Only recreatable HarfBuzz
+            // font tables and temporary layout pools are released between operations.
+            foreach (var face in faces) TextBlock.ReleaseTypeface(face);
+            TextBlock.ResetPooledMemory();
+        }
+    }
 
     internal static SkiaTextLayout Create(TextLayoutRequest request, SkiaFonts fonts, Action<string, string> diagnostic)
     {

@@ -49,7 +49,8 @@ public sealed partial class MainWindow : Window
         _files = new AvaloniaFileDialogs(this);
         _recentFiles = new(Path.Combine(userDataDirectory, "recent-files.json")); _recentFiles.Load();
         _settings = new(Path.Combine(userDataDirectory, "settings.json")); _settings.Load();
-        BuildView(); InstallEditingCommands(); InstallFormulaEditing(); InstallRibbon(); InstallCalculation(); InstallSheetCommands(); InstallSearch(); InstallDataCommands(); InstallValidation(); InstallCleaning(); InstallObjects(); InstallFileCommands();
+        _userDataDirectory = userDataDirectory;
+        BuildView(); InstallEditingCommands(); InstallFormulaEditing(); InstallRibbon(); InstallCalculation(); InstallSheetCommands(); InstallSearch(); InstallDataCommands(); InstallValidation(); InstallCleaning(); InstallObjects(); InstallFileCommands(); InstallScriptCommands(); InstallPrintCommands();
         _grid.ResolveStyle = ConditionalPresentation.GetStyle;
         _grid.RenderingFailed += Error;
         _grid.CommitCellAsync = CommitCellAsync;
@@ -82,7 +83,10 @@ public sealed partial class MainWindow : Window
         Closed += (_, _) => { _grid.Dispose(); _workspace.Dispose(); };
         Opened += async (_, _) =>
         {
-            if (Program.SmokeDirectory is { } smoke) { if (Program.SmokeMode == "grid") await RunGridSmokeAsync(smoke); else if (Program.SmokeMode == "benchmark") await RunGridBenchmarkAsync(smoke); else await RunWorkspaceSmokeAsync(smoke); return; }
+            // Opened can run before the platform main loop starts. GTK's native WebView
+            // needs the GLib dispatcher running before an owned page is constructed.
+            await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Background);
+            if (Program.SmokeDirectory is { } smoke && Program.SmokeMode != "manual") { if (Program.SmokeMode == "grid") await RunGridSmokeAsync(smoke); else if (Program.SmokeMode == "benchmark") await RunGridBenchmarkAsync(smoke); else if (Program.SmokeMode == "web") await RunWebSmokeAsync(smoke); else if (Program.SmokeMode == "web-benchmark") await RunWebBenchmarkAsync(smoke); else await RunWorkspaceSmokeAsync(smoke); return; }
             if (Program.InitialFile is { } path) await PerformAsync(() => OpenPathAsync(path));
         };
         Synchronize(); ShowHome();
@@ -150,11 +154,11 @@ public sealed partial class MainWindow : Window
             _sheets.ItemsSource = items; _sheets.SelectedItem = items.FirstOrDefault(s => s.Id == Document.Snapshot.ActiveSheetId);
         }
         finally { _synchronizing = false; }
-        UpdateFormula(); UpdateTitle(); UpdateRibbon(); UpdateValidation(); UpdateOutline(); QueueStatistics();
+        UpdateFormula(); UpdateTitle(); UpdateRibbon(); UpdateValidation(); UpdateOutline(); QueueStatistics(); RefreshPrintStatus();
     }
     private void UpdateTitle()
     {
-        Title = (Document.IsDirty ? "* " : "") + (_workspace.FilePath is { } path ? Path.GetFileName(path) : "未命名.xlsq") + " — QuickExcel";
+        Title = (Document.IsDirty || _scriptPage?.Drafts.IsDirty == true ? "* " : "") + (_workspace.FilePath is { } path ? Path.GetFileName(path) : "未命名.xlsq") + " — QuickExcel";
         _address.Text = WorkbookGrid.ColumnName(_grid.Current.Column) + (_grid.Current.Row + 1);
         var sheet = Document.Snapshot.Sheets[SheetIndex];
         var value = Document.GetCellValue(SheetIndex, _grid.Current.Row, _grid.Current.Column);
@@ -212,7 +216,7 @@ public sealed partial class MainWindow : Window
     {
         var task = CommitEditorsAsync(); return task.IsCompletedSuccessfully && task.Result;
     }
-    private async Task<bool> CommitEditorsAsync() => !_workspace.IsBusy && await _grid.CommitAsync() && await CommitFormulaAsync();
+    private async Task<bool> CommitEditorsAsync() => !_workspace.IsBusy && await _grid.CommitAsync() && await CommitFormulaAsync() && await CommitScriptsAsync();
     private bool TryEdit(Func<CommandResult> edit)
     {
         if (_workspace.IsBusy) return false;
@@ -224,16 +228,21 @@ public sealed partial class MainWindow : Window
     {
         if (_working) return;
         _working = true;
-        try { _operation = action(); await _operation; }
+        try { await using var hold = _scriptPage?.HoldEdits(); _operation = action(); await _operation; }
         catch (Exception ex) { Error(ex); }
         finally { _working = false; }
     }
     private async Task<bool> ConfirmDiscardAsync()
     {
         if (!await CommitEditorsAsync()) return false;
-        if (!Document.IsDirty) return true;
-        var choice = _discardChoice is null ? await Dialogs.Unsaved(this) : await _discardChoice();
-        return choice == SaveDecision.Discard || choice == SaveDecision.Save && await SaveAsync(false);
+        var accepted = !Document.IsDirty;
+        if (!accepted)
+        {
+            var choice = _discardChoice is null ? await Dialogs.Unsaved(this) : await _discardChoice();
+            accepted = choice == SaveDecision.Discard || choice == SaveDecision.Save && await SaveAsync(false);
+        }
+        if (accepted) await CloseScriptWindowAsync();
+        return accepted;
     }
     private async Task OpenAsync()
     {
@@ -244,9 +253,15 @@ public sealed partial class MainWindow : Window
     private async Task OpenPathAsync(string path)
     {
         await _workspace.OpenAsync(new(path)); _recentFiles.Remember(path); ShowBook(); _status.Text = "已打开 " + Path.GetFileName(path);
+        if (OperatingSystem.IsWindows() && Document.Snapshot.ScriptModules.Signature is not null)
+        {
+            var modules = Document.Snapshot.ScriptModules; var trust = await Task.Run(() => ScriptTrust.Verify(modules));
+            if (ReferenceEquals(modules, Document.Snapshot.ScriptModules) && trust.CanAutoEnable) await ApplyScriptsAsync();
+        }
     }
     private async Task<bool> SaveAsync(bool saveAs)
     {
+        await using var hold = _scriptPage?.HoldEdits();
         if (!await FlushEditsAsync()) return false;
         var snapshot = Document.Snapshot;
         var issues = TypedWorkbookStorage.SaveIssues(snapshot); var discard = false;
@@ -354,6 +369,7 @@ public sealed partial class MainWindow : Window
         {
             await _operation;
             if (!await ConfirmDiscardAsync()) return;
+            await ClosePrintPreviewAsync();
             _allowClose = true; Close();
         }
         catch (Exception ex) { Error(ex); }

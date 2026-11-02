@@ -5,6 +5,17 @@ namespace QuickExcel.Core.Test;
 public sealed class ViewportAxisTests
 {
     [Fact]
+    public void UnboundViewportHasNoVisibleOrHitCells()
+    {
+        var axis = new ViewportAxis();
+        Assert.Empty(axis.Visible(800)); Assert.Equal(-1, axis.HitTest(40, 800));
+        Assert.Null(axis.Cell(0)); Assert.Equal(-1, axis.Neighbor(0, 1));
+        axis.ScrollTo(100, 800); Assert.Equal(0, axis.Offset);
+        axis.Configure(0, 30, [], [], []);
+        Assert.Empty(axis.Visible(800)); Assert.Equal(-1, axis.HitTest(40, 800));
+    }
+
+    [Fact]
     public void HiddenFarTargetsChooseAdjacentModelAddressesIndependentlyOfViewport()
     {
         var axis = new ViewportAxis(); axis.Configure(200_000, 30, [], [0, 199_997, 199_998, 199_999], [0, 1]);

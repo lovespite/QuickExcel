@@ -54,3 +54,7 @@ Windows 组合根保持原 ScriptWorker 路径，非 Windows 明确关闭脚本�
 前期失败与修正保留：公式标准化括号断言、普通文本隐藏目标拒绝、函数补全排序、误用未建模 ROW 的测试、未绑定网格布局、主滚动条识别和导出测试前置格式。没有改变公式语义或扩大已支持格式。共享 SetAxisMetadataCommand 增加稀疏“显示全部”处理，避免生成默认行元数据；原 WPF 回归通过。
 
 实机项按用户要求延期，Linux 中文输入仍未解决；CPU 绘制提交/合成事件不冒充真实显示或输入法证据。A4 接入 PDF.js、Monaco 与脚本授权/签名/日志；A5–A7 尚未开始。当前设置使用独立 LocalApplicationData/QuickExcel/Avalonia 目录，默认启动器仍是 WPF。
+
+## A4 Web 组件（工程完成）
+
+正式 Monaco/PDF.js 页面、文档/视图代次消息协议、草稿 flush/ack、隔离 worker 操作/签名流程、不可变打印会话与 Windows 原生打印代码已接入。Windows 42 项、Linux WebKit 连续两轮各 35 项通过；独立冷启动、编辑/PDF/并发性能与完整进程树资源检查通过。逐项证据、已修复问题和未完成项见 [65 号日志](65-avalonia-web-components.md)。本阶段单独提交；实际输入法、打印、DPI 与设备验收按用户要求延期，不视为通过。

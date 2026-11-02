@@ -7,7 +7,7 @@ $run = Join-Path $root ('artifacts/avalonia/' + [DateTime]::UtcNow.ToString('yyy
 New-Item -ItemType Directory $run | Out-Null
 Push-Location $root
 try {
-    if (-not $SkipWebBuild) { & (Join-Path $PSScriptRoot 'build-avalonia-web.ps1') }
+    if (-not $SkipWebBuild) { & (Join-Path $PSScriptRoot 'build-avalonia-web.ps1') -Probe }
     & dotnet build tools/QuickExcel.AvaloniaProbe/QuickExcel.AvaloniaProbe.csproj -c Release --artifacts-path artifacts/avalonia/build -p:RestoreLockedMode=true -v minimal 2>&1 |
         Tee-Object -FilePath (Join-Path $run 'build.log')
     if ($LASTEXITCODE -ne 0) { throw 'A0 build failed.' }

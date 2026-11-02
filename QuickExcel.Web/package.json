@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Offline Avalonia A0 probes; not a production editor or preview",
+  "description": "Offline Avalonia Monaco editor and PDF.js preview; isolated optional A0/test bundles",
   "dependencies": {
     "monaco-editor": "0.57.0",
     "pdfjs-dist": "6.5.438"

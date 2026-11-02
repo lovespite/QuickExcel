@@ -14,7 +14,7 @@ namespace QuickExcel.Desktop.Avalonia;
 
 public sealed partial class MainWindow
 {
-    private async Task RunGridBenchmarkAsync(string directory)
+    private async Task<bool> RunGridBenchmarkAsync(string directory, bool shutdown = true)
     {
         Directory.CreateDirectory(directory); Exception? error = null; var passed = true;
         var results = new Dictionary<string, object>(); var raw = new Dictionary<string, object>();
@@ -60,8 +60,11 @@ public sealed partial class MainWindow
             }
             var frames = new List<long>(); void Frame(long stamp) => frames.Add(stamp);
             grid.DragFrameApplied += Frame;
+            // This is a synthetic pointer location: native hover events caused by adjacent browser
+            // zoom/repaint must not overwrite the benchmark's out-of-viewport position.
+            grid.IsHitTestVisible = false;
             try { grid.BeginBenchmarkDrag(new(grid.Bounds.Width + 100, grid.Bounds.Height + 100)); await Task.Delay(2200); }
-            finally { grid.CancelInputGesture(); grid.DragFrameApplied -= Frame; }
+            finally { grid.CancelInputGesture(); grid.DragFrameApplied -= Frame; grid.IsHitTestVisible = true; }
             var intervals = frames.Zip(frames.Skip(1), (a, b) => Stopwatch.GetElapsedTime(a, b).TotalMilliseconds).ToArray();
             var dragP95 = P95(intervals); passed &= frames.Count > 20 && dragP95 <= 33.34;
             results["drag"] = new { frames = frames.Count, intervalP95Ms = dragP95, withinBudget = dragP95 <= 33.34, offsetX = grid.ScrollOffset.X, offsetY = grid.ScrollOffset.Y };
@@ -90,7 +93,8 @@ public sealed partial class MainWindow
             paintBudgetP95Ms = 16.67, dragBudgetP95Ms = 33.34, samples = 60, warmup = 5, windowDip = "1400x850", scale = RenderScaling,
             endpoint = "16 ms paced native ScrollBar.ValueChanged to content bitmap copy + Avalonia DrawImage submission and selection CPU draw; not GPU completion or physical display latency",
             dragEndpoint = "synthetic drag position through production RequestAnimationFrame scheduler; not physical pointer input",
-            runtime = Environment.Version.ToString(), os = Environment.OSVersion.ToString() }, new JsonSerializerOptions { WriteIndented = true }));
-        _allowClose = true; ((IClassicDesktopStyleApplicationLifetime)Application.Current!.ApplicationLifetime!).Shutdown(passed ? 0 : 1);
+            runtime = Environment.Version.ToString(), os = Environment.OSVersion.ToString() }, new JsonSerializerOptions { WriteIndented = true, NumberHandling = System.Text.Json.Serialization.JsonNumberHandling.AllowNamedFloatingPointLiterals }));
+        if (shutdown) { _allowClose = true; ((IClassicDesktopStyleApplicationLifetime)Application.Current!.ApplicationLifetime!).Shutdown(passed ? 0 : 1); }
+        return passed;
     }
 }

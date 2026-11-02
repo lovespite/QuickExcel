@@ -35,7 +35,7 @@ public sealed class ViewportAxis
             if (start >= extent) break;
             result.Add(new(_sizes.RealToModel(i), start, _sizes.GetSizeByRealIndex(i), true));
         }
-        if (extent <= FrozenSize) return result;
+        if (extent <= FrozenSize || _sizes.ScrollCount == 0) return result;
         var first = Math.Max(0, _sizes.GetScrollIndexOnPosition((int)Offset));
         for (var i = first; i < _sizes.ScrollCount; i++)
         {

@@ -227,5 +227,6 @@ public sealed class SkiaReport : IDisposable
         }
     }
     private void ClearImages() { foreach (var image in _images.Values) image.Dispose(); _images.Clear(); _imageBytes = 0; }
+    public void ReleaseDrawingCaches() { lock (_gate) { ClearImages(); Renderer.Fonts.ReleaseShapingCaches(); } }
     public void Dispose() { lock (_gate) { ClearImages(); Renderer.Dispose(); } }
 }
