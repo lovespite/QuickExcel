@@ -32,7 +32,7 @@ E1 七项实现及各自真实 Excel 对照已完成；[行列样式优先级](2
 
 设计基线：2026-10-22；17/18 号文档保留旧网格的 M5 首切片与结构工作区证据。新主网格真实 IME、跨屏 DPI、辅助功能仍待验收；自动恢复目前只有手动打开副本入口。M4 部署和隔离边界继续见 [16](16-m4-recovery-and-deployment.md) 与 [15](15-m4-os-isolation-adr.md)。
 
-当前使用 XLSQ v2、类型化跨表计算及独立 AppContainer worker。Core 保持纯 .NET；ExcelIO 与脚本适配位于 Infrastructure。下文明确标记 0.2 的内容保留为历史。
+当前使用 XLSQ v2、类型化跨表计算及独立 AppContainer worker。Core 保持纯 .NET；自有存储/计算与脚本适配位于 Infrastructure，已移除 ExcelIO 和 ExcelIO.Formula 依赖，见 [清理记录](58-excelio-removal.md)。下文明确标记 0.2 的内容保留为历史。
 
 ## 阅读顺序
 
@@ -93,7 +93,7 @@ E1 七项实现及各自真实 Excel 对照已完成；[行列样式优先级](2
 | 兼容元数据 | 保留原型受支持的样式、尺寸、隐藏、合并与图片；界面呈现与完整类型保真尚不完整 |
 | 验证与产物 | 本轮 build/Core 日志位于 `artifacts/validation/release-0.2`；最终包 smoke、ZIP/hash 记录见实施记录 |
 
-源码入口：[Desktop 目录约定](../README.md#源码目录)、[桌面组合根](../Composition/DesktopComposition.cs)、[编辑控制器](../Editing/EditorController.cs)、[文档 facade](../../QuickExcel.Core/WorkbookDocument.cs)、[会话](../../QuickExcel.Core/DocumentSession.cs)、[存储适配](../../QuickExcel.Infrastructure/Storage/LegacyWorkbookStorage.cs)、[包封装](../../QuickExcel.Infrastructure/DocumentPackage.cs)、[原生桥](../../QuickExcel.Scripting/QuickJsSession.cs)。
+源码入口：[Desktop 目录约定](../README.md#源码目录)、[桌面组合根](../Composition/DesktopComposition.cs)、[编辑控制器](../Editing/EditorController.cs)、[文档 facade](../../QuickExcel.Core/WorkbookDocument.cs)、[会话](../../QuickExcel.Core/DocumentSession.cs)、`存储适配`（历史代码，已移除）、`包封装`（历史代码，已移除）、[原生桥](../../QuickExcel.Scripting/QuickJsSession.cs)。
 
 ## 文档维护
 

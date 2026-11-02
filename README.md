@@ -8,7 +8,7 @@
 
 源码版本仍为 `0.6.0-preview.3`，已增加正式工作区、脚本专页、模块编辑、查找替换、Ribbon、脚本数字签名、兼容/导出入口及 XLSX 渲染修复；范围见 [正式界面](QuickExcel.Desktop/docs/19-m5-product-workspace.md)、[签名信任](QuickExcel.Desktop/docs/20-script-signatures.md)及[渲染记录](QuickExcel.Desktop/docs/25-xlsx-rendering.md)。版本号相同不代表旧发布目录包含最新源码。
 
-Windows x64 桌面表格，基于 WPF、同级 ExcelIO 源码库与 QuickJS-NG。M4 宿主崩溃后的 profile/payload 回收已实现，本机部署验证五项通过、直接长路径 EXE 启动一项失败；后续环境见 [回收与部署验证](QuickExcel.Desktop/docs/16-m4-recovery-and-deployment.md)。工作簿恢复目前仅支持手动打开副本，自动恢复后端仍属 M6。
+Windows x64 桌面表格，基于 WPF、自有类型化存储/计算引擎与 QuickJS-NG。M4 宿主崩溃后的 profile/payload 回收已实现，本机部署验证五项通过、直接长路径 EXE 启动一项失败；后续环境见 [回收与部署验证](QuickExcel.Desktop/docs/16-m4-recovery-and-deployment.md)。工作簿恢复目前仅支持手动打开副本，自动恢复后端仍属 M6。
 
 ## 试用
 
@@ -27,12 +27,12 @@ Windows x64 桌面表格，基于 WPF、同级 ExcelIO 源码库与 QuickJS-NG�
 
 ## 仓库边界
 
-QuickExcel 与同级 `../ExcelIO` 是独立 Git 仓库。ExcelIO 是源码构建依赖；普通 QuickExcel 任务不修改、复制或提交同级库的源码。
+QuickExcel 与同级 `../ExcelIO` 是独立 Git 仓库。QuickExcel 已移除 ExcelIO 和 ExcelIO.Formula 依赖，构建、测试与发布无需同级库；不修改、复制或提交其源码。清理范围与兼容验证见 [依赖移除记录](QuickExcel.Desktop/docs/58-excelio-removal.md)。
 
 | 目录 | 职责 |
 | --- | --- |
 | `QuickExcel.Core` | 纯 .NET 领域快照、会话、命令、历史和端口 |
-| `QuickExcel.Infrastructure` | 类型化 XLSX/XLSQ v2、保留的 v1 适配、计算与运行时适配 |
+| `QuickExcel.Infrastructure` | 类型化 XLSX/XLSQ v2、v1 导入迁移、计算与运行时适配 |
 | `QuickExcel.Scripting` | QuickJS 托管桥和固定来源的原生引擎 |
 | `QuickExcel.ScriptContracts` / `QuickExcel.ScriptWorker` | 有界 IPC 协议与独立脚本执行进程 |
 | `QuickExcel.Desktop` | WPF、组合根、编辑控制器和集成 smoke |
@@ -41,7 +41,7 @@ QuickExcel 与同级 `../ExcelIO` 是独立 Git 仓库。ExcelIO 是源码构建
 
 ## 构建
 
-需要 Windows x64、.NET 10 SDK 和同级 ExcelIO。首次原生构建还需 CMake、Visual Studio C++ 工具及下载固定源码的网络连接，见[来源说明](QuickExcel.Scripting/native/SOURCES.md)。
+需要 Windows x64 和 .NET 10 SDK。首次原生构建还需 CMake、Visual Studio C++ 工具及下载固定源码的网络连接，见[来源说明](QuickExcel.Scripting/native/SOURCES.md)。
 
 ```powershell
 dotnet build .\QuickExcel.slnx -c Release --artifacts-path .\artifacts\build -v minimal

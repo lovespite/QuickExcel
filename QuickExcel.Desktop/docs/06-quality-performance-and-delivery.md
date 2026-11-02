@@ -45,7 +45,7 @@ XLSQ v2 的单元格权威数据仍在内嵌 `workbook.xlsx`，`state/document.j
 历史开发机记录过 10,000 次简单 JS 调用约 139 ms，首切片记录 135 ms；均为单次探索样本，不是固定机器/预热口径下的 p95，也不是 0.2 的性能承诺。
 当前 Core.Test 禁用并行执行；解除全局状态依赖、提供独立测试目录之后，才逐组启用并行。
 
-当前资源限制可从 [WorkbookDocument.cs](../../QuickExcel.Core/WorkbookDocument.cs)、[DocumentPackage.cs](../../QuickExcel.Infrastructure/DocumentPackage.cs) 和 [native/SOURCES.md](../../QuickExcel.Scripting/native/SOURCES.md) 核查：
+当前资源限制可从 [WorkbookDocument.cs](../../QuickExcel.Core/WorkbookDocument.cs)、`DocumentPackage.cs`（历史代码，已移除） 和 [native/SOURCES.md](../../QuickExcel.Scripting/native/SOURCES.md) 核查：
 
 - Core：64 张表、100,000 行、1,024 列、总计 1,000,000 个实际存储格。旧 IO 适配另有 1,000,000 个占位行/单元格预算；领域稀疏编辑不分配这些空洞。
 - UI：100,000 行 × 256 列；单次粘贴 20,000 格；模型允许的列数不等于界面可见列数。
@@ -239,20 +239,16 @@ Release x64、不附加调试器；冷启动与热运行分开；固定数据种
 
 | 触发/环境 | 必跑内容 | 必留产物 |
 | --- | --- | --- |
-| 每次 PR，固定 Windows x64 镜像 | Release 构建；Core 领域/格式/计算用例；ExcelIO、NetStandard、Formula 回归 | TRX、构建版本、失败最小样本 |
+| 每次 PR，固定 Windows x64 镜像 | Release 构建；QuickExcel 领域/格式/计算与 v1 迁移回归 | TRX、构建版本、失败最小样本 |
 | 涉及脚本/原生代码的 PR | 从固定源码强制重建 DLL；native smoke；Core 真 JS 集成 | 源码 hash、工具链版本、DLL hash、smoke 输出 |
 | 涉及 UI 的 PR，交互桌面 runner | ViewModel/命令测试；WPF `--smoke-test`；关键焦点用例 | 进程退出码、结果文本、必要截图 |
 | 夜间隔离 VM | ZIP/XML 变异输入、进程终止、保存故障、worker 故障、资源泄漏 | 种子、故障位置、预算与恢复报告 |
 | 发布候选，干净 Windows x64 | 完整源码构建→最终发布目录→无 SDK 环境验收 | 最终目录清单、hash、许可证、验收记录 |
 
 独立测试并行使用独立目录；UI 测试不与性能测量共享机器；故障注入只作用于隔离测试目录和测试进程。
-同级 ExcelIO 仓库的 `../ExcelIO/scripts/build.ps1` 包含 Web 路径且未完整覆盖 Formula，不应充当 QuickExcel 唯一门禁。
-以下命令从 QuickExcel 仓库根目录运行；ExcelIO 回归项目位于同级独立仓库，所有构建输出集中在 QuickExcel 的 artifacts/build 中。结果跳过项单列并有原因，不能把 skipped 计为 passed：
+2026-11-02 已移除 ExcelIO/ExcelIO.Formula 依赖，不再运行同级库的回归。以下是发布候选验证命令，从 QuickExcel 仓库根目录运行；普通功能修改只执行相关专项，不运行完整套件。所有构建输出集中在 QuickExcel 的 artifacts/build 中。跳过项单列并说明原因，不能计为通过：
 
 ```powershell
-dotnet test ..\ExcelIO\ExcelIO.Test\ExcelIO.Test.csproj -c Release --artifacts-path .\artifacts\build -v minimal
-dotnet test ..\ExcelIO\ExcelIO.NetStandard.Test\ExcelIO.NetStandard.Test.csproj -c Release --artifacts-path .\artifacts\build -v minimal
-dotnet test ..\ExcelIO\ExcelIO.Formula.Test\ExcelIO.Formula.Test.csproj -c Release --artifacts-path .\artifacts\build -v minimal
 dotnet test .\QuickExcel.Core.Test\QuickExcel.Core.Test.csproj -c Release --artifacts-path .\artifacts\build -v minimal
 dotnet run --project .\QuickExcel.Scripting\smoke\QuickExcel.Scripting.Smoke.csproj -c Release --artifacts-path .\artifacts\build
 ```

@@ -2,7 +2,7 @@
 
 ## Repository scope
 
-This is the independent QuickExcel repository. Keep desktop, Core, infrastructure adapters, scripting, tests, documentation, and generated artifacts here. The sibling `../ExcelIO` is a separate repository containing the ExcelIO libraries. It is a source dependency, not part of this repository. Do not edit, stage, commit, or copy sibling library sources as part of ordinary QuickExcel changes. Library changes require a separately scoped task.
+This is the independent QuickExcel repository. Keep desktop, Core, infrastructure adapters, scripting, tests, documentation, and generated artifacts here. The sibling `../ExcelIO` is a separate repository containing the ExcelIO libraries. QuickExcel no longer depends on ExcelIO or ExcelIO.Formula; the sibling is not part of this repository. Do not edit, stage, commit, or copy sibling library sources as part of ordinary QuickExcel changes. Library changes require a separately scoped task.
 
 ## Build and verification
 
@@ -15,15 +15,15 @@ dotnet run --project .\QuickExcel.Scripting\smoke\QuickExcel.Scripting.Smoke.csp
 .\scripts\build-quickexcel.ps1
 ```
 
-Always supply `--artifacts-path` for managed builds, tests, runs, and publishes so referenced ExcelIO projects also write their outputs inside QuickExcel. Native runtime build requirements and source provenance are in `QuickExcel.Scripting/native/SOURCES.md`.
+Always supply `--artifacts-path` for managed builds, tests, runs, and publishes so all managed outputs stay inside QuickExcel. Native runtime build requirements and source provenance are in `QuickExcel.Scripting/native/SOURCES.md`.
 
 Important! DO NOT run the full regression test suite for every feature change or bug fix! Only run the tests related to the modified areas!
 
 ## Structure
 
 - `QuickExcel.Core`: pure .NET domain model, document session, commands, history, facade and ports; no ExcelIO, WPF or native runtime references.
-- `QuickExcel.Infrastructure`: typed XLSX/XLSQ v2 storage, retained legacy v1 regression adapter, typed workbook calculator with sparse dependencies and incremental evaluation and the QuickJS runtime factory. Current file support and limits are in `QuickExcel.Desktop/docs/09-m2-files-and-types.md`.
-- `QuickExcel.Core.Test`: domain/session, typed/legacy storage and native scripting integration tests. File-format fixtures are constructed inline, including malformed ZIP/XML/JSON; keep prior v1 regressions.
+- `QuickExcel.Infrastructure`: typed XLSX/XLSQ v2 storage with v1 import/migration, typed workbook calculator with sparse dependencies and incremental evaluation and the QuickJS runtime factory. Current file support and limits are in `QuickExcel.Desktop/docs/09-m2-files-and-types.md`.
+- `QuickExcel.Core.Test`: domain/session, typed storage, v1 migration and native scripting integration tests. File-format fixtures are constructed inline, including malformed ZIP/XML/JSON; keep prior v1 regressions.
 - `QuickExcel.Scripting`: managed QuickJS bridge, native sources, and runtime smoke checks.
 - `QuickExcel.Desktop`: WPF application and product/architecture documentation.
 - `scripts/build-quickexcel.ps1`: test and publish the desktop app; `-RunSmoke -CreateArchive` validates the fresh package and creates a uniquely named ZIP plus SHA-256. `-OutputDirectory` must remain under this repository artifacts directory.
@@ -31,7 +31,7 @@ Important! DO NOT run the full regression test suite for every feature change or
 
 Keep `artifacts`, managed build caches, and native downloaded sources/build output out of Git. Preserve the native source version, SHA-256 verification, and license.
 
-M3 syntax/binding/structure commands live in Core/Formulas and StructureCommands; WorkbookCalculator and TypedEvaluator live in Infrastructure/Calculation. LegacyWorkbookCalculator remains only for historical regression. Current calculation/bridge/export limits are documented in QuickExcel.Desktop/docs/10-m3-calculation.md.
+M3 syntax/binding/structure commands live in Core/Formulas and StructureCommands; WorkbookCalculator and TypedEvaluator live in Infrastructure/Calculation. The legacy storage adapters and LegacyWorkbookCalculator have been removed. Keep v1 file compatibility covered by independent ZIP/XML fixtures; calculation regressions use WorkbookCalculator. Current calculation/bridge/export limits are documented in QuickExcel.Desktop/docs/10-m3-calculation.md.
 
 XLSX controlled formula preservation and rich text/link/note contracts are in QuickExcel.Desktop/docs/35-xlsx-preserved-formulas.md and docs/36-xlsx-rich-text-links-and-notes.md. Unmodeled formula semantics require the existing read-only/original-package path; old caches are never fresh results. Rich text replacement requires explicit flattening, and whole-cell font commands preserve inherited run fonts. Links are inert and note-only VML remains opaque. Structure/clipboard changes must implement attachment/reference rules before relaxing the existing guards; do not silently drop runs, links, notes, or unknown-content diagnostics.
 

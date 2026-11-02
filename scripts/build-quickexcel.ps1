@@ -92,6 +92,9 @@ try {
     if (Get-ChildItem -LiteralPath $publishPath -Recurse -File | Where-Object { $_.Name -like 'QuickExcel.SandboxProbe*' }) {
         throw 'Development sandbox probe must not be published.'
     }
+    if (Get-ChildItem -LiteralPath $publishPath -Recurse -File | Where-Object { $_.Name -like 'ExcelIO*' }) {
+        throw 'Retired ExcelIO dependencies must not be published.'
+    }
 
     if ($shouldRunSmoke) {
         New-Item -ItemType Directory -Force -Path $smokePath | Out-Null
@@ -132,9 +135,6 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Could not read the .NET SDK version.' }
     $runtimes = @(& dotnet --list-runtimes)
     if ($LASTEXITCODE -ne 0) { throw 'Could not read installed .NET runtimes.' }
-    $dependencyRoot = [IO.Path]::GetFullPath((Join-Path $projectRoot '..\ExcelIO'))
-    [xml]$excelIoProject = Get-Content -LiteralPath (Join-Path $dependencyRoot 'ExcelIO\ExcelIO.csproj') -Raw
-    [xml]$formulaProject = Get-Content -LiteralPath (Join-Path $dependencyRoot 'ExcelIO.Formula\ExcelIO.Formula.csproj') -Raw
     $nativeBuildText = Get-Content -LiteralPath (Join-Path $projectRoot 'QuickExcel.Scripting\native\build.ps1') -Raw
     $nativeVersionMatch = [regex]::Match($nativeBuildText, '\$version\s*=\s*''([^'']+)''')
     $nativeHashMatch = [regex]::Match($nativeBuildText, '\$expectedHash\s*=\s*''([0-9A-Fa-f]{64})''')
@@ -150,7 +150,6 @@ try {
         requiredRuntime = '.NET 10 Windows Desktop Runtime (x64)'
         cleanMachineValidated = $false
         source = Read-GitState $projectRoot
-        excelIoSource = Read-GitState $dependencyRoot
         gridSource = [ordered]@{
             upstreamCommit = (Get-Content -LiteralPath (Join-Path $projectRoot 'QuickExcel.Grid.Wpf\UPSTREAM-SOURCES.json') -Raw | ConvertFrom-Json).commit
             publishedDllSha256 = (Get-FileHash -LiteralPath (Join-Path $publishPath 'QuickExcel.Grid.Wpf.dll') -Algorithm SHA256).Hash
@@ -207,17 +206,6 @@ Source: https://github.com/quickjs-ng/quickjs
 Declared license: MIT. Complete copyright and license text: QUICKJS-LICENSE.txt.
 Source archive pin and build procedure: QUICKJS-SOURCES.md.
 
-ExcelIO $($excelIoProject.Project.PropertyGroup.Version)
-Author recorded by project: $($excelIoProject.Project.PropertyGroup.Authors)
-Repository recorded by project: $($excelIoProject.Project.PropertyGroup.RepositoryUrl)
-PackageLicenseExpression recorded by project: $($excelIoProject.Project.PropertyGroup.PackageLicenseExpression)
-
-ExcelIO.Formula $($formulaProject.Project.PropertyGroup.Version)
-Author recorded by project: $($formulaProject.Project.PropertyGroup.Authors)
-Repository recorded by project: $($formulaProject.Project.PropertyGroup.RepositoryUrl)
-PackageLicenseExpression recorded by project: $($formulaProject.Project.PropertyGroup.PackageLicenseExpression)
-
-The ExcelIO .NET project files declare the licenses above. No standalone .NET license text was supplied in the dependency source tree; no copyright year or license text is inferred from its separate npm package. This application package includes compiled dependency assemblies, not sibling repository sources.
 "@
     Set-Content -LiteralPath (Join-Path $publishPath 'THIRD-PARTY-NOTICES.txt') -Value $notices -Encoding UTF8
 
@@ -225,6 +213,11 @@ The ExcelIO .NET project files declare the licenses above. No standalone .NET li
     New-Item -ItemType Directory -Force -Path $outputPath | Out-Null
     foreach ($entry in Get-ChildItem -LiteralPath $publishPath -Force) {
         Copy-Item -LiteralPath $entry.FullName -Destination $outputPath -Recurse -Force
+    }
+    # Older installations may still contain these retired assemblies after the overlay copy.
+    foreach ($retiredName in @('ExcelIO.dll', 'ExcelIO.pdb', 'ExcelIO.xml', 'ExcelIO.Formula.dll', 'ExcelIO.Formula.pdb', 'ExcelIO.Formula.xml')) {
+        $retiredPath = Join-Path $outputPath $retiredName
+        if (Test-Path -LiteralPath $retiredPath -PathType Leaf) { Remove-Item -LiteralPath $retiredPath -Force }
     }
     if ($CreateArchive) {
         New-Item -ItemType Directory -Force -Path $releasePath | Out-Null

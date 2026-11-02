@@ -25,7 +25,7 @@ UI 负责展示结果与选择，不通过直接改 ZIP/XML 绕过命令或修�
 
 ## 2. 0.2 沿用的 `.xlsq` v1
 
-实现入口：[LegacyWorkbookStorage.cs](../../QuickExcel.Infrastructure/Storage/LegacyWorkbookStorage.cs)、[LegacyWorkbookAdapter.cs](../../QuickExcel.Infrastructure/Storage/LegacyWorkbookAdapter.cs)、[DocumentPackage.cs](../../QuickExcel.Infrastructure/DocumentPackage.cs)。Core 的 [WorkbookDocument.cs](../../QuickExcel.Core/WorkbookDocument.cs) 仅通过存储端口传递不可变快照，不再引用 ExcelIO。
+历史实现为 `LegacyWorkbookStorage`、`LegacyWorkbookAdapter`、`DocumentPackage`，已于 2026-11-02 删除；当前 v1 导入由 [TypedWorkbookStorage.cs](../../QuickExcel.Infrastructure/Storage/TypedWorkbookStorage.cs) 独立完成，保存升级为 v2，见 [58](58-excelio-removal.md)。Core 的 [WorkbookDocument.cs](../../QuickExcel.Core/WorkbookDocument.cs) 仅通过存储端口传递不可变快照，不再引用 ExcelIO。
 现有包正好写出三个条目：
 
 ```text

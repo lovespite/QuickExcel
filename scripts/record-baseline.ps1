@@ -74,10 +74,6 @@ try {
         }
     }
 
-    # The sibling repository is a read-only dependency; no source is copied or modified.
-    $excelIoRoot = [IO.Path]::GetFullPath((Join-Path $projectRoot '..\ExcelIO'))
-    $dependencyHead = Invoke-CapturedCommand 'git' @('-c', "safe.directory=$excelIoRoot", '-C', $excelIoRoot, 'rev-parse', 'HEAD')
-    $dependencyStatus = Invoke-CapturedCommand 'git' @('-c', "safe.directory=$excelIoRoot", '-C', $excelIoRoot, 'status', '--short')
     $vswherePath = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'
 
     $nativeFiles = @(
@@ -100,7 +96,6 @@ try {
         captureFinishedUtc = [DateTime]::UtcNow.ToString('O')
         interpretation = 'Observed files and environment only. This capture does not execute or attest builds/tests. Use run logs, timestamps and process exit codes to establish fresh validation.'
         source = [ordered]@{ repository = $projectRoot; head = $sourceHead; status = $sourceStatus; manifest = 'source-files.json'; diff = 'working-tree.patch'; untrackedSources = 'untracked-sources' }
-        dependency = [ordered]@{ repository = $excelIoRoot; head = $dependencyHead; status = $dependencyStatus; access = 'Read only; dependency sources are not copied.' }
         environment = [ordered]@{
             os = [Environment]::OSVersion.VersionString
             is64BitOperatingSystem = [Environment]::Is64BitOperatingSystem

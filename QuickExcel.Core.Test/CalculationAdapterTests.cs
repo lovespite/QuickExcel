@@ -14,7 +14,7 @@ public sealed class CalculationAdapterTests
             (0, 0, Formula("=B1+1")), (0, 1, Formula("=SUM(A100000:A100000)*2")));
         var request = Request(snapshot);
 
-        var result = new LegacyWorkbookCalculator(new RecordingFactory()).Calculate(request);
+        var result = new WorkbookCalculator(new RecordingFactory()).Calculate(request);
 
         Assert.Equal(request.Stamp, result.Stamp);
         Assert.Equal(CellValue.FromNumber(15), Value(result, snapshot, 0, 0));
@@ -32,7 +32,7 @@ public sealed class CalculationAdapterTests
     }
 
     [Fact]
-    public void DirectReferencesKeepTextBooleanBlankAndErrorIdentities()
+    public void DirectReferencesKeepTextBooleanAndErrorIdentitiesAndConvertBlankToZero()
     {
         var snapshot = Snapshot((0, 0, Literal(CellValue.FromText("00123"))),
             (1, 0, Literal(CellValue.FromText("#VALUE!"))), (2, 0, Literal(CellValue.FromBoolean(true))),
@@ -45,7 +45,7 @@ public sealed class CalculationAdapterTests
         Assert.Equal(CellValue.FromText("00123"), Value(result, snapshot, 0, 1));
         Assert.Equal(CellValue.FromText("#VALUE!"), Value(result, snapshot, 1, 1));
         Assert.Equal(CellValue.FromBoolean(true), Value(result, snapshot, 2, 1));
-        Assert.Equal(CellValue.Blank, Value(result, snapshot, 3, 1));
+        Assert.Equal(CellValue.FromNumber(0), Value(result, snapshot, 3, 1));
         Assert.Equal(CellValue.FromText("#VALUE!"), Value(result, snapshot, 4, 1));
         Assert.Equal(CellValue.FromText(""), Value(result, snapshot, 5, 1));
     }
@@ -75,7 +75,7 @@ public sealed class CalculationAdapterTests
             (0, 1, Formula("=A1+1", CellValue.FromNumber(9))), (0, 2, Formula("=SUM(A1:B1)", CellValue.FromNumber(17))),
             (1, 0, Formula("=2+3")), (1, 1, Formula("=PRIVATE(2)")));
 
-        var result = new LegacyWorkbookCalculator(factory).Calculate(Request(snapshot));
+        var result = new WorkbookCalculator(factory).Calculate(Request(snapshot));
 
         Assert.Empty(factory.Created);
         Assert.Equal(CellValue.FromNumber(8), Value(result, snapshot, 0, 0));
@@ -89,7 +89,7 @@ public sealed class CalculationAdapterTests
     }
 
     [Fact]
-    public void CrossSheetReferencesAndDependentsRetainBlockedCaches()
+    public void MissingSheetReferencesAndDependentsReportReferenceErrors()
     {
         var snapshot = Snapshot((0, 0, Formula("='Other sheet'!A1", CellValue.FromNumber(25))),
             (0, 1, Formula("=A1*2", CellValue.FromNumber(50))),
@@ -97,9 +97,9 @@ public sealed class CalculationAdapterTests
 
         var result = Calculate(snapshot);
 
-        Assert.Equal(CellValue.FromNumber(25), Value(result, snapshot, 0, 0));
-        Assert.Equal(CellValue.FromNumber(50), Value(result, snapshot, 0, 1));
-        Assert.Equal(CalculationState.Blocked, Cell(result, snapshot, 0, 1).State);
+        Assert.Equal(CellValue.FromError(CellErrorCode.Reference), Value(result, snapshot, 0, 0));
+        Assert.Equal(CellValue.FromError(CellErrorCode.Reference), Value(result, snapshot, 0, 1));
+        Assert.Equal(CalculationState.Error, Cell(result, snapshot, 0, 1).State);
         Assert.Equal(CellValue.FromText("literal!"), Value(result, snapshot, 0, 2));
     }
 
@@ -122,7 +122,6 @@ public sealed class CalculationAdapterTests
     [Theory]
     [InlineData("=SUM(")]
     [InlineData("=1+")]
-    [InlineData("=#VALUE!")]
     public void MalformedFormulasProduceAddressedDiagnosticsWithoutBlockingOtherCells(string formula)
     {
         var snapshot = Snapshot((0, 0, Formula(formula, CellValue.FromNumber(99))), (0, 1, Formula("=3+4")));
@@ -136,21 +135,21 @@ public sealed class CalculationAdapterTests
     }
 
     [Fact]
-    public void MissingAuthorizedFunctionBecomesNameErrorInsteadOfKeepingCache()
+    public void UnavailableFunctionKeepsOldCacheEvenWithScriptAuthorization()
     {
         var snapshot = Snapshot((0, 0, Formula("=MISSING()", CellValue.FromNumber(12))));
 
-        var result = new LegacyWorkbookCalculator(new RecordingFactory()).Calculate(Request(snapshot, true));
+        var result = new WorkbookCalculator(new RecordingFactory()).Calculate(Request(snapshot, true));
 
-        Assert.Equal(CellValue.FromError(CellErrorCode.Name), Value(result, snapshot, 0, 0));
-        Assert.Equal(CalculationState.Error, Cell(result, snapshot, 0, 0).State);
+        Assert.Equal(CellValue.FromNumber(12), Value(result, snapshot, 0, 0));
+        Assert.Equal(CalculationState.Blocked, Cell(result, snapshot, 0, 0).State);
     }
 
     [Fact]
     public void EveryAuthorizedRoundCreatesAndDisposesItsOwnRuntime()
     {
         var factory = new RecordingFactory();
-        var calculator = new LegacyWorkbookCalculator(factory);
+        var calculator = new WorkbookCalculator(factory);
         var snapshot = Snapshot((0, 0, Formula("=NEXT()")), (1, 0, Formula("=NEXT()")));
 
         var first = calculator.Calculate(Request(snapshot, true));
@@ -175,7 +174,7 @@ public sealed class CalculationAdapterTests
         var snapshot = Snapshot((0, 0, Formula("=IF(FALSE,NEXT(),7)")),
             (0, 1, Formula("=IFERROR(9,NEXT())")), (0, 2, Formula("=IFERROR(\"#VALUE!\",NEXT())")));
 
-        var result = new LegacyWorkbookCalculator(factory).Calculate(Request(snapshot, true));
+        var result = new WorkbookCalculator(factory).Calculate(Request(snapshot, true));
 
         Assert.Equal(0, calls);
         Assert.Equal(CellValue.FromNumber(7), Value(result, snapshot, 0, 0));
@@ -184,21 +183,17 @@ public sealed class CalculationAdapterTests
     }
 
     [Fact]
-    public void ScriptFunctionOverridesBuiltinWithoutBuiltinArgumentOrLazyRules()
+    public void ScriptFunctionCannotOverrideBuiltinAndFailedRoundDisposesRuntime()
     {
-        var names = new List<string>();
-        var factory = new RecordingFactory(() => new RecordingRuntime
-        {
-            FunctionNames = ["SUM", "IF"],
-            OnInvoke = (name, arguments) => { names.Add(name); return name == "SUM" ? "#VALUE!" : (double)arguments.Count; }
-        });
-        var snapshot = Snapshot((0, 0, Formula("=SUM()")), (1, 0, Formula("=IF(1)")));
+        var factory = new RecordingFactory(() => new RecordingRuntime { FunctionNames = ["SUM"] });
+        var snapshot = Snapshot((0, 0, Formula("=SUM(1,2)", CellValue.FromNumber(3))));
 
-        var result = new LegacyWorkbookCalculator(factory).Calculate(Request(snapshot, true));
+        var error = Assert.Throws<InvalidOperationException>(() =>
+            new WorkbookCalculator(factory).Calculate(Request(snapshot, true)));
 
-        Assert.Equal(new[] { "SUM", "IF" }, names);
-        Assert.Equal(CellValue.FromText("#VALUE!"), Value(result, snapshot, 0, 0));
-        Assert.Equal(CellValue.FromNumber(1), Value(result, snapshot, 1, 0));
+        Assert.Contains("SUM", error.Message);
+        Assert.True(Assert.Single(factory.Created).Disposed);
+        Assert.Equal(CellValue.FromNumber(3), snapshot.Sheets[0].GetCell(0, 0)!.Value);
     }
 
     [Theory]
@@ -210,7 +205,7 @@ public sealed class CalculationAdapterTests
         var factory = new RecordingFactory(() => new RecordingRuntime { OnInvoke = (_, _) => value });
         var snapshot = Snapshot((0, 0, Formula("=NEXT()")));
 
-        var result = new LegacyWorkbookCalculator(factory).Calculate(Request(snapshot, true));
+        var result = new WorkbookCalculator(factory).Calculate(Request(snapshot, true));
 
         Assert.Equal(CellValue.FromError(CellErrorCode.Number), Value(result, snapshot, 0, 0));
         Assert.Equal(CalculationState.Error, Cell(result, snapshot, 0, 0).State);
@@ -226,7 +221,7 @@ public sealed class CalculationAdapterTests
         var snapshot = Snapshot((0, 0, Formula("=NEXT(\"#VALUE!\")")),
             (1, 0, Formula("=NEXT(TRUE)")), (2, 0, Formula("=NEXT()")));
 
-        var result = new LegacyWorkbookCalculator(factory).Calculate(Request(snapshot, true));
+        var result = new WorkbookCalculator(factory).Calculate(Request(snapshot, true));
 
         Assert.Equal(CellValue.FromText("#VALUE!"), Value(result, snapshot, 0, 0));
         Assert.Equal(CellValue.FromBoolean(true), Value(result, snapshot, 1, 0));
@@ -245,7 +240,7 @@ public sealed class CalculationAdapterTests
             (0, 1, Literal(CellValue.FromText("00123"))), (0, 0, Literal(CellValue.FromNumber(2))),
             (0, 2, Formula("=NEXT(A1:B5)")));
 
-        new LegacyWorkbookCalculator(factory).Calculate(Request(snapshot, true));
+        new WorkbookCalculator(factory).Calculate(Request(snapshot, true));
 
         var values = Assert.IsType<List<object>>(Assert.Single(seen!));
         Assert.Equal(new object[] { 2d, "00123", "", "", "", "", "", "", true, "" }, values);
@@ -262,7 +257,7 @@ public sealed class CalculationAdapterTests
         var snapshot = Snapshot((0, 0, Literal(CellValue.FromNumber(1))), (2, 0, Literal(CellValue.FromNumber(3))),
             (0, 1, Formula("=NEXT(A1:A3)")), (1, 1, Formula("=NEXT(A)")));
 
-        new LegacyWorkbookCalculator(factory).Calculate(Request(snapshot, true));
+        new WorkbookCalculator(factory).Calculate(Request(snapshot, true));
 
         Assert.Equal(2, received.Count);
         Assert.All(received, values => Assert.Equal(new object[] { 1d, "", 3d }, values));
@@ -278,7 +273,7 @@ public sealed class CalculationAdapterTests
         });
         var snapshot = Snapshot((0, 20, Formula("=NEXT(A1:K100000)")));
 
-        var result = new LegacyWorkbookCalculator(factory).Calculate(Request(snapshot, true));
+        var result = new WorkbookCalculator(factory).Calculate(Request(snapshot, true));
 
         Assert.Equal(0, calls);
         Assert.Equal(CalculationState.Error, Cell(result, snapshot, 0, 20).State);
@@ -294,7 +289,7 @@ public sealed class CalculationAdapterTests
         });
         var snapshot = Snapshot((0, 0, Formula("=NEXT()")), (0, 1, Formula("=A1+1")));
 
-        var result = new LegacyWorkbookCalculator(factory).Calculate(Request(snapshot, true));
+        var result = new WorkbookCalculator(factory).Calculate(Request(snapshot, true));
 
         Assert.Equal(CellValue.FromError(CellErrorCode.Script), Value(result, snapshot, 0, 0));
         Assert.Equal(CellValue.FromError(CellErrorCode.Script), Value(result, snapshot, 0, 1));
@@ -308,7 +303,7 @@ public sealed class CalculationAdapterTests
         var factory = new RecordingFactory(() => throw new InvalidOperationException("compile failure"));
         var snapshot = Snapshot((0, 0, Formula("=NEXT()", CellValue.FromNumber(77))));
 
-        var error = Assert.Throws<InvalidOperationException>(() => new LegacyWorkbookCalculator(factory).Calculate(Request(snapshot, true)));
+        var error = Assert.Throws<InvalidOperationException>(() => new WorkbookCalculator(factory).Calculate(Request(snapshot, true)));
 
         Assert.Equal("compile failure", error.Message);
         Assert.Equal(CellValue.FromNumber(77), snapshot.Sheets[0].GetCell(0, 0)!.Value);
@@ -320,7 +315,7 @@ public sealed class CalculationAdapterTests
         var factory = new RecordingFactory();
         var snapshot = Snapshot((0, 0, Formula("=NEXT()")));
 
-        Assert.ThrowsAny<OperationCanceledException>(() => new LegacyWorkbookCalculator(factory)
+        Assert.ThrowsAny<OperationCanceledException>(() => new WorkbookCalculator(factory)
             .Calculate(Request(snapshot, true), new CancellationToken(true)));
 
         Assert.Empty(factory.Created);
@@ -337,7 +332,7 @@ public sealed class CalculationAdapterTests
         var snapshot = Snapshot((0, 0, Formula("=1+1", CellValue.FromNumber(12))),
             (0, 1, Formula("=NEXT()", CellValue.FromNumber(13))));
 
-        Assert.ThrowsAny<OperationCanceledException>(() => new LegacyWorkbookCalculator(factory)
+        Assert.ThrowsAny<OperationCanceledException>(() => new WorkbookCalculator(factory)
             .Calculate(Request(snapshot, true), cancellation.Token));
 
         Assert.True(factory.Created[0].Disposed);
@@ -384,14 +379,14 @@ public sealed class CalculationAdapterTests
     {
         var snapshot = Snapshot((0, 0, Formula("=NEXT()"))).WithScriptSource(
             "let count = 0; quickExcel.functions.register('NEXT', () => ++count);");
-        var calculator = new LegacyWorkbookCalculator(new QuickJsRuntimeFactory());
+        var calculator = new WorkbookCalculator(new QuickJsRuntimeFactory());
 
         Assert.Equal(CellValue.FromNumber(1), Value(calculator.Calculate(Request(snapshot, true)), snapshot, 0, 0));
         Assert.Equal(CellValue.FromNumber(1), Value(calculator.Calculate(Request(snapshot, true)), snapshot, 0, 0));
     }
 
     private static CalculationResult Calculate(WorkbookSnapshot snapshot) =>
-        new LegacyWorkbookCalculator(new RecordingFactory()).Calculate(Request(snapshot));
+        new WorkbookCalculator(new RecordingFactory()).Calculate(Request(snapshot));
 
     private static CalculationRequest Request(WorkbookSnapshot snapshot, bool scriptsEnabled = false) =>
         new(new CalculationStamp(Guid.NewGuid(), snapshot.Revision, 7, 3), snapshot, scriptsEnabled);

@@ -65,7 +65,7 @@ dotnet publish .\QuickExcel.Desktop\QuickExcel.Desktop.csproj -c Release --artif
 .\scripts\record-baseline.ps1 -EvidenceDirectory .\artifacts\validation\m1-dom001
 ```
 
-[record-baseline.ps1](../../scripts/record-baseline.ps1) 在该目录下新建唯一 `baseline-capture-*` 子目录，记录环境、两个仓库的 HEAD/status、本仓库源码 SHA-256、相对 HEAD 的二进制 patch、本仓库未跟踪源码副本、native 文件哈希及已有验证产物哈希。输出严格位于 QuickExcel 的 artifacts 内；ExcelIO 只读身份和状态，不复制其源码。每份元数据明确说明采集本身不代表任何构建或测试通过；新鲜运行结果由日志、TRX、命令时间和进程退出码共同证明。采集期间应暂停修改源码，最终文档更新后重新采集一次。
+[record-baseline.ps1](../../scripts/record-baseline.ps1) 在该目录下新建唯一 `baseline-capture-*` 子目录，记录环境、本仓库的 HEAD/status、源码 SHA-256、相对 HEAD 的二进制 patch、本仓库未跟踪源码副本、native 文件哈希及已有验证产物哈希。输出严格位于 QuickExcel 的 artifacts 内；2026-11-02 移除依赖后不再读取同级 ExcelIO 的身份或状态；此前采集保留为历史证据。每份元数据明确说明采集本身不代表任何构建或测试通过；新鲜运行结果由日志、TRX、命令时间和进程退出码共同证明。采集期间应暂停修改源码，最终文档更新后重新采集一次。
 
 ## 3. 固定的 21 个 Core 原型案例
 

@@ -6,6 +6,7 @@ using System.Text;
 using System.Text.Json.Nodes;
 using System.Xml.Linq;
 using QuickExcel.Domain;
+using QuickExcel.Diagnostics;
 using QuickExcel.Storage;
 
 namespace QuickExcel.Core.Test;
@@ -164,7 +165,9 @@ public sealed partial class TypedStorageTests : IDisposable
     public void V1MigrationDoesNotGuessTypesExecuteScriptsOrOverwriteOriginal()
     {
         var oldPath = PathFor("old.xlsq");
-        new LegacyWorkbookStorage().Save(oldPath, Model([Literal(CellValue.FromNumber(123)), Literal(CellValue.FromBoolean(true)), Formula(CellValue.FromNumber(2))]));
+        WorkbookPackageFixture.WriteV1(oldPath, WorkbookPackageFixture.Xlsx("""
+            <row r="1"><c r="A1" t="inlineStr"><is><t>123</t></is></c><c r="B1" t="inlineStr"><is><t>TRUE</t></is></c><c r="C1"><f>1+1</f><v>2</v></c></row>
+            """), "throw new Error('opening must not execute');");
         var original = File.ReadAllBytes(oldPath);
         var migrated = _storage.Open(oldPath);
         Assert.Equal(CellValue.FromText("123"), migrated.Sheets[0].GetCell(0, 0)!.Value);

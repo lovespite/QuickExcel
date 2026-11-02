@@ -15,12 +15,13 @@ public partial class MainWindow
     {
         var factory = new SmokeWorkerFactory();
         InstallDocument(WorkbookDocument.CreateBlank(new(_services.Storage, new WorkbookCalculator(factory))), null, "worker-smoke.xlsq");
-        ScriptEditor.Text = "quickExcel.functions.register('VALUE',()=>42);";
-        ApplyValues([(0, 0, "=VALUE()")]);
+        ScriptEditor.Text = "quickExcel.functions.register('WORKERVALUE',()=>42);";
+        ApplyValues([(0, 0, "=WORKERVALUE()")]);
         await RunScriptsAsync();
-        if (_document.GetCellValue(0, 0, 0) != "42") throw new Exception("Worker smoke initial calculation failed.");
+        if (_document.GetCellValue(0, 0, 0) != "42")
+            throw new Exception($"Worker smoke initial calculation failed: {_document.GetCellInput(0, 0, 0)} -> {_document.GetCellValue(0, 0, 0)}. {LogText.Text}");
 
-        ScriptEditor.Text = "quickExcel.functions.register('VALUE',()=>{while(true){}});";
+        ScriptEditor.Text = "quickExcel.functions.register('WORKERVALUE',()=>{while(true){}});";
         factory.Ready = new(TaskCreationOptions.RunContinuationsAsynchronously);
         var running = RunScriptsAsync();
         var runtime = await factory.Ready.Task.WaitAsync(TimeSpan.FromSeconds(4));
@@ -43,12 +44,12 @@ public partial class MainWindow
         ApplyValues([(1, 0, "still editable")]);
         _filePath = Path.Combine(folder, "worker-recovery.xlsq");
         if (!await SaveAsync(false)) throw new Exception("Saving after worker exit failed.");
-        ScriptEditor.Text = "quickExcel.functions.register('VALUE',()=>84);";
+        ScriptEditor.Text = "quickExcel.functions.register('WORKERVALUE',()=>84);";
         await RunScriptsAsync();
         if (_document.GetCellValue(0, 0, 0) != "84") throw new Exception("Explicit restart after worker exit failed.");
         var modules = new ScriptModuleSet(new Dictionary<string, ScriptModule>
         {
-            ["main"] = new("scripts/main.js", "import { value } from 'helper'; quickExcel.functions.register('VALUE',()=>value);"),
+            ["main"] = new("scripts/main.js", "import { value } from 'helper'; quickExcel.functions.register('WORKERVALUE',()=>value);"),
             ["helper"] = new("scripts/lib/helper.js", "export const value = 123;")
         }, ["main"], scriptApiVersion: 2);
         var modulePath = Path.Combine(folder, "worker-modules.xlsq");

@@ -1,6 +1,4 @@
 <Solution>
-  <Project Path="../ExcelIO/ExcelIO/ExcelIO.csproj" />
-  <Project Path="../ExcelIO/ExcelIO.Formula/ExcelIO.Formula.csproj" />
   <Project Path="QuickExcel.Scripting/QuickExcel.Scripting.csproj" />
   <Project Path="QuickExcel.ScriptContracts/QuickExcel.ScriptContracts.csproj" />
   <Project Path="QuickExcel.ScriptWorker/QuickExcel.ScriptWorker.csproj" />

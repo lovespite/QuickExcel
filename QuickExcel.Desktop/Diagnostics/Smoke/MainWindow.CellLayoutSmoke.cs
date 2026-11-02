@@ -17,6 +17,10 @@ public partial class MainWindow
             await Dispatcher.InvokeAsync(() => UpdateLayout(), DispatcherPriority.ApplicationIdle);
             await WaitForFastGridPaintAsync(_grid.Control);
         }
+        Rect VisibleBounds(int row, int column) => _grid.Control.GetModelCellBounds(row, column)
+            ?? throw new InvalidOperationException($"Cell layout fixture requires visible cell ({row}, {column}); " +
+                $"scroll=({_grid.Control.FirstVisibleRowScrollIndex}, {_grid.Control.FirstVisibleColumnScrollIndex}), " +
+                $"grid={_grid.Control.ActualWidth:0.##}x{_grid.Control.ActualHeight:0.##}, selection={_grid.Current}.");
         InstallDocument(WorkbookDocument.CreateBlank(_services), null, "网格布局回归.xlsq");
         ApplyValues([(0, 0, "中文 Aa 123"), (1, 0, "中文 Aa 123"), (2, 0, "多行\nAa 123")]);
         var id = _document.Snapshot.Sheets[0].Id;
@@ -33,7 +37,8 @@ public partial class MainWindow
                 for (var row = 0; row < 3; row++)
                 {
                     GridSurface.Select(new(3, 2)); await Idle();
-                    var before = _grid.Control.GetModelCellBounds(row, 0);
+                    _grid.Control.ScrollModelIntoView(new(row, 0)); await Idle();
+                    var before = VisibleBounds(row, 0);
                     await click(row, 0); await Idle();
                     var editor = _grid.Editor;
                     check(_gridEditorArmed && !editor.IsHitTestVisible && editor.Foreground == Brushes.Transparent &&
@@ -45,7 +50,7 @@ public partial class MainWindow
                         editor.FontSize == (row == 1 ? 18 : 11) * 96d / 72d &&
                         editor.TextWrapping == (row == 2 ? TextWrapping.Wrap : TextWrapping.NoWrap),
                         $"Explicit editor uses workbook size and wrapping at zoom {zoom:P0}, alignment {row}");
-                    check(Math.Abs(editor.Width - before!.Value.Width) < 1 && Math.Abs(editor.Height - before.Value.Height) < 1,
+                    check(Math.Abs(editor.Width - before.Width) < 1 && Math.Abs(editor.Height - before.Height) < 1,
                         "Native editor fits the same grid cell bounds");
                     await HandleGridKeyAsync(System.Windows.Input.Key.Escape, System.Windows.Input.ModifierKeys.None, true);
                 }
@@ -57,9 +62,15 @@ public partial class MainWindow
             (from row in Enumerable.Range(0, 3) from column in Enumerable.Range(0, 2) select new CellAddress(id, row, column)),
             new(FillColor: "FFCCEE99", Border: true)));
         await Idle();
-        var first = _grid.Control.GetModelCellBounds(0, 0)!.Value;
-        var right = _grid.Control.GetModelCellBounds(0, 1)!.Value;
-        var below = _grid.Control.GetModelCellBounds(1, 0)!.Value;
+        // Zoom and selection can leave A1 above the viewport. Exercise that state
+        // explicitly, then restore the sampled region without selecting its fill cells.
+        _grid.Control.ScrollModelIntoView(new(80, 8)); await Idle();
+        check(_grid.Control.GetModelCellBounds(0, 0) is null, "Layout fixture starts with the sampled region outside the viewport");
+        _grid.Control.ScrollModelIntoView(new(0, 0)); await Idle();
+        check(_grid.Current == new CellPosition(3, 2), "Restoring the sampled viewport preserves the selection outside the fill cells");
+        var first = VisibleBounds(0, 0);
+        var right = VisibleBounds(0, 1);
+        var below = VisibleBounds(1, 0);
         check(Math.Abs(first.Right - right.Left) < 1 && Math.Abs(first.Bottom - below.Top) < 1,
             "Adjacent rendered cells tile without horizontal or vertical gaps");
         // The artwork draws from the control origin; a centred (explicitly sized)
@@ -73,7 +84,7 @@ public partial class MainWindow
         var bitmap = new RenderTargetBitmap((int)Math.Ceiling(artwork.ActualWidth * dpi.DpiScaleX),
             (int)Math.Ceiling(artwork.ActualHeight * dpi.DpiScaleY), dpi.PixelsPerInchX, dpi.PixelsPerInchY, PixelFormats.Pbgra32);
         bitmap.Render(artwork);
-        var blank = _grid.Control.GetModelCellBounds(1, 1)!.Value;
+        var blank = VisibleBounds(1, 1);
         var crop = new CroppedBitmap(bitmap, new Int32Rect((int)(blank.Left * dpi.DpiScaleX), (int)(blank.Top * dpi.DpiScaleY),
             (int)(blank.Width * dpi.DpiScaleX), (int)(blank.Height * dpi.DpiScaleY)));
         var encoder = new PngBitmapEncoder(); encoder.Frames.Add(BitmapFrame.Create(crop));

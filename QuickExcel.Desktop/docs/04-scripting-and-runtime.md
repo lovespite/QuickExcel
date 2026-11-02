@@ -10,7 +10,7 @@
 
 ## 1. 0.2 历史实现与当时目标边界
 
-当前端口定义在纯 Core 的 [WorkbookPorts.cs](../../QuickExcel.Core/WorkbookPorts.cs)。具体实现位于 Infrastructure 的 [QuickJsRuntimeFactory](../../QuickExcel.Infrastructure/Scripting/QuickJsRuntimeFactory.cs) 和 [LegacyWorkbookCalculator](../../QuickExcel.Infrastructure/Calculation/LegacyWorkbookCalculator.cs)，分别使用 `QuickExcel.Runtime`、`QuickExcel.Calculation` 命名空间；它们封装 [QuickJsSession](../../QuickExcel.Scripting/QuickJsSession.cs) 与 [原生桥接](../../QuickExcel.Scripting/native/quickexcel-js.c)。Core 不引用 ExcelIO、QuickExcel.Scripting 或 native DLL。
+当前端口定义在纯 Core 的 [WorkbookPorts.cs](../../QuickExcel.Core/WorkbookPorts.cs)。具体实现位于 Infrastructure 的 [QuickJsRuntimeFactory](../../QuickExcel.Infrastructure/Scripting/QuickJsRuntimeFactory.cs) 和 `LegacyWorkbookCalculator`（历史代码，已移除），分别使用 `QuickExcel.Runtime`、`QuickExcel.Calculation` 命名空间；它们封装 [QuickJsSession](../../QuickExcel.Scripting/QuickJsSession.cs) 与 [原生桥接](../../QuickExcel.Scripting/native/quickexcel-js.c)。Core 不引用 ExcelIO、QuickExcel.Scripting 或 native DLL。
 
 | 项目 | 0.2 当前实现 | 目标实现 |
 | --- | --- | --- |

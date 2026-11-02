@@ -2,6 +2,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Text.Json;
 using QuickExcel.Core;
+using QuickExcel.Diagnostics;
 using QuickExcel.Domain;
 using QuickExcel.Storage;
 
@@ -25,7 +26,9 @@ public partial class MainWindow
         using (var manifest = JsonDocument.Parse(zip.GetEntry("manifest.json")!.Open()))
             if (manifest.RootElement.GetProperty("formatVersion").GetInt32() != 2) throw new Exception("UI still writes v1.");
         var v1 = Path.Combine(folder, "migration-source.xlsq");
-        new LegacyWorkbookStorage().Save(v1, _document.Snapshot);
+        WorkbookPackageFixture.WriteV1(v1, WorkbookPackageFixture.Xlsx("""
+            <row r="1"><c r="A1" t="inlineStr"><is><t>123</t></is></c><c r="B1"><f>A1*2</f><v>246</v></c></row>
+            """), "throw new Error('migration must not execute scripts');");
         var before = File.ReadAllBytes(v1);
         InstallDocument(WorkbookDocument.Open(v1, _services), v1, "migration-source.xlsq", fileVersion: FileVersions.Read(v1));
         if (!_document.IsDirty || !LogText.Text.Contains("另存") || _document.ScriptsEnabled)

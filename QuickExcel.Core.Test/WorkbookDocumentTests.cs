@@ -3,7 +3,7 @@ using QuickExcel.Runtime;
 using System.Globalization;
 using System.IO.Compression;
 using System.Text;
-using ExcelIO;
+using QuickExcel.Diagnostics;
 using QuickExcel.Core;
 using QuickExcel.Domain;
 using QuickExcel.Storage;
@@ -18,7 +18,7 @@ public sealed class WorkbookDocumentTests : IDisposable
 
     public WorkbookDocumentTests() => Directory.CreateDirectory(_folder);
     private string FilePath(string name) => Path.Combine(_folder, name);
-    private static WorkbookServices Services() => new(new LegacyWorkbookStorage(), new LegacyWorkbookCalculator(new QuickJsRuntimeFactory()));
+    private static WorkbookServices Services() => new(new TypedWorkbookStorage(), new WorkbookCalculator(new QuickJsRuntimeFactory()));
 
     [Fact]
     public void BlankDocumentSupportsLiteralsAndFormulaEditing()
@@ -54,7 +54,7 @@ public sealed class WorkbookDocumentTests : IDisposable
     public void MalformedFormulaDoesNotPreventOtherCellsCalculating()
     {
         using var document = WorkbookDocument.CreateBlank(Services());
-        document.SetCell(0, 0, 0, "=$");
+        document.SetCell(0, 0, 0, "=SUM(");
         document.SetCell(0, 0, 1, "=2+3");
         document.Calculate();
         Assert.Equal("#VALUE!", document.GetCellValue(0, 0, 0));
@@ -75,17 +75,19 @@ public sealed class WorkbookDocumentTests : IDisposable
     }
 
     [Fact]
-    public void UnsupportedCrossSheetReferenceRetainsItsSavedResult()
+    public void CrossSheetReferenceReplacesItsOldCache()
     {
         using var document = WorkbookDocument.CreateBlank(Services());
+        document.AddSheet("Sheet2");
+        document.SetCell(1, 0, 0, "84");
         document.SetCell(0, 0, 0, "=Sheet2!A1");
         var request = document.Session.BeginCalculation();
         var cache = new CellCalculation(CellValue.FromNumber(42), CalculationState.Stale, request.Stamp.InputRevision, request.Stamp.CalculationGeneration, request.Stamp.ScriptGeneration);
         Assert.True(document.Session.TryCommitCalculation(new CalculationResult(request.Stamp, new Dictionary<CellAddress, CellCalculation>
         { [new(document.Snapshot.Sheets[0].Id, 0, 0)] = cache })));
         document.Calculate();
-        Assert.Equal("42", document.GetCellValue(0, 0, 0));
-        Assert.Contains(document.ScriptErrors, message => message.Contains("跨工作表"));
+        Assert.Equal("84", document.GetCellValue(0, 0, 0));
+        Assert.Empty(document.ScriptErrors);
     }
 
     [Fact]
@@ -137,7 +139,8 @@ public sealed class WorkbookDocumentTests : IDisposable
         Assert.False(document.ScriptsEnabled);
         document.EnableScriptsAndCalculate();
         Assert.Equal("9", document.GetCellValue(0, 0, 1));
-        Assert.Equal("#NAME?", document.GetCellValue(0, 1, 1));
+        Assert.Equal("7", document.GetCellValue(0, 1, 1));
+        Assert.Equal(CalculationState.Blocked, document.Snapshot.Sheets[0].GetCell(1, 1)!.Calculation!.State);
     }
 
     [Fact]
@@ -182,8 +185,9 @@ public sealed class WorkbookDocumentTests : IDisposable
         Assert.Equal("测试内容", reopened.GetCellValue(1, 0, 0));
         Assert.Empty(reopened.ScriptErrors);
         using var archive = ZipFile.OpenRead(path);
-        Assert.Equal(3, archive.Entries.Count);
-        Assert.NotNull(archive.GetEntry("scripts/functions.js"));
+        Assert.Equal(4, archive.Entries.Count);
+        Assert.NotNull(archive.GetEntry("scripts/main.js"));
+        Assert.NotNull(archive.GetEntry("state/document.json"));
     }
 
     [Fact]
@@ -214,6 +218,8 @@ public sealed class WorkbookDocumentTests : IDisposable
         Assert.Equal("far right", reopened.GetCellValue(0, 0, 4));
         Assert.Equal("=6*7", reopened.GetCellInput(0, 3, 1));
         var exportPath = FilePath("sparse.xlsx");
+        Assert.Throws<InvalidOperationException>(() => reopened.ExportXlsx(exportPath));
+        reopened.Calculate();
         reopened.ExportXlsx(exportPath);
         using var exported = WorkbookDocument.Open(exportPath, Services());
         Assert.Equal("42", exported.GetCellValue(0, 3, 1));
@@ -224,11 +230,9 @@ public sealed class WorkbookDocumentTests : IDisposable
     public void ImportedExcelFormulaAlwaysDisplaysLeadingEqualsInEditor()
     {
         var path = FilePath("formula.xlsx");
-        var workbook = new XlWorkbook();
-        var sheet = workbook.NewWorksheet("Sheet1");
-        sheet.AddRow("42");
-        sheet[0].Cells[0].SetFormula("6*7", "42");
-        XlHelper.Save(path, workbook);
+        File.WriteAllBytes(path, WorkbookPackageFixture.Xlsx("""
+            <row r="1"><c r="A1"><f>6*7</f><v>42</v></c></row>
+            """));
         using var document = WorkbookDocument.Open(path, Services());
         Assert.Equal("=6*7", document.GetCellInput(0, 0, 0));
         document.SetCell(0, 0, 0, document.GetCellInput(0, 0, 0));
@@ -254,7 +258,7 @@ public sealed class WorkbookDocumentTests : IDisposable
     }
 
     [Theory]
-    [InlineData("{\"formatVersion\":2}", "scripts/functions.js")]
+    [InlineData("{\"formatVersion\":3}", "scripts/functions.js")]
     [InlineData("{\"formatVersion\":1}", "missing.js")]
     public void InvalidVersionOrMissingScriptFailsClearly(string manifest, string scriptEntry)
     {
@@ -263,6 +267,8 @@ public sealed class WorkbookDocumentTests : IDisposable
         {
             WriteText(archive, "manifest.json", manifest);
             WriteText(archive, scriptEntry, "");
+            using var workbookEntry = archive.CreateEntry("workbook.xlsx").Open();
+            workbookEntry.Write(WorkbookPackageFixture.Xlsx(""));
         }
         Assert.Throws<InvalidDataException>(() => WorkbookDocument.Open(path, Services()));
     }
@@ -282,12 +288,14 @@ public sealed class WorkbookDocumentTests : IDisposable
         {
             WriteText(archive, "manifest.json", "{\"formatVersion\":1}");
             WriteText(archive, "scripts/functions.js", new string('a', 1024 * 1024 + 1));
+            using var workbookEntry = archive.CreateEntry("workbook.xlsx").Open();
+            workbookEntry.Write(WorkbookPackageFixture.Xlsx(""));
         }
         Assert.Throws<InvalidDataException>(() => WorkbookDocument.Open(hugePath, Services()));
     }
 
     [Fact]
-    public void ImportRejectsRowsThatWouldForceHugeDenseAllocations()
+    public void IncompleteXlsxPackageIsRejected()
     {
         var path = FilePath("huge.xlsx");
         using (var archive = ZipFile.Open(path, ZipArchiveMode.Create))
@@ -296,33 +304,14 @@ public sealed class WorkbookDocumentTests : IDisposable
     }
 
     [Fact]
-    public void EmptyImportedWorkbookGetsOneEditableSheet()
+    public void WorkbookWithoutSheetsIsRejected()
     {
         var path = FilePath("empty.xlsx");
-        XlHelper.Save(path, new XlWorkbook());
-        using var document = WorkbookDocument.Open(path, Services());
-        Assert.Single(document.Snapshot.Sheets);
-        document.SetCell(0, 0, 0, "ready");
-        Assert.Equal("ready", document.GetCellValue(0, 0, 0));
-    }
-
-    [Fact]
-    public void DocumentsDoNotAccumulateGlobalCellChangeHandlers()
-    {
-        var original = XlCell.OnValueChanged;
-        Action<XlCell> external = _ => { };
-        XlCell.OnValueChanged += external;
-        try
+        File.WriteAllBytes(path, WorkbookPackageFixture.Xlsx("", new Dictionary<string, string>
         {
-            var expected = XlCell.OnValueChanged;
-            for (var index = 0; index < 20; index++)
-            {
-                using var document = WorkbookDocument.CreateBlank(Services());
-                document.DisableScripts();
-            }
-            Assert.Equal(expected, XlCell.OnValueChanged);
-        }
-        finally { XlCell.OnValueChanged = original; }
+            ["xl/workbook.xml"] = "<workbook xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\"><sheets/></workbook>"
+        }));
+        Assert.Throws<InvalidDataException>(() => WorkbookDocument.Open(path, Services()));
     }
 
     private static void WriteText(ZipArchive archive, string name, string text)

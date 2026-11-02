@@ -1,7 +1,4 @@
-using System.Collections.Immutable;
-using System.IO.Compression;
-using System.Text.Json;
-using ExcelIO;
+using QuickExcel.Diagnostics;
 using QuickExcel.Domain;
 using QuickExcel.Storage;
 
@@ -16,167 +13,134 @@ public sealed class StorageAdapterTests : IDisposable
     private string FilePath(string name) => Path.Combine(_folder, name);
 
     [Fact]
-    public void ImportPreservesLiteralTextIdentityAndOnlyInterpretsFormulaCache()
+    public void V1ImportPreservesLiteralTextIdentityAndTypedFormulaCache()
     {
-        var legacy = new XlWorkbook();
-        var sheet = legacy.NewWorksheet("Sheet1");
-        sheet.AddRow("00123", "TRUE", "#VALUE!", "", "42");
-        sheet[0].Cells[4].SetFormula("6*7", "42");
-        var snapshot = LegacyWorkbookAdapter.FromWorkbook(legacy, "throw new Error('must not run');");
-        foreach (var column in Enumerable.Range(0, 4))
-        {
-            var cell = snapshot.Sheets[0].GetCell(0, column)!;
-            Assert.Equal(CellValueKind.Text, cell.Content.LiteralValue.Kind);
-            Assert.Equal(sheet[0].Cells[column].Value, cell.Content.LiteralValue.TextValue);
-        }
+        var path = FilePath("text-v1.xlsq");
+        // Shared strings reproduce the old writer's text-only literals, including an explicit empty cell.
+        var xlsx = WorkbookPackageFixture.Xlsx("""
+            <row r="1"><c r="A1" t="s"><v>0</v></c><c r="B1" t="s"><v>1</v></c><c r="C1" t="s"><v>2</v></c><c r="D1" t="s"><v>3</v></c><c r="E1"><f>6*7</f><v>42</v></c></row>
+            """, new Dictionary<string, string>
+            {
+                ["[Content_Types].xml"] = """
+                    <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                      <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                      <Default Extension="xml" ContentType="application/xml"/>
+                      <Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
+                      <Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
+                      <Override PartName="/xl/sharedStrings.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml"/>
+                    </Types>
+                    """,
+                ["xl/sharedStrings.xml"] = """
+                    <sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="4" uniqueCount="4"><si><t>00123</t></si><si><t>TRUE</t></si><si><t>#VALUE!</t></si><si><t></t></si></sst>
+                    """,
+                ["xl/_rels/workbook.xml.rels"] = """
+                    <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings" Target="sharedStrings.xml"/></Relationships>
+                    """
+            });
+        const string script = "throw new Error('must not run');";
+        WorkbookPackageFixture.WriteV1(path, xlsx, script);
+        var snapshot = new TypedWorkbookStorage().Open(path);
+        string[] texts = ["00123", "TRUE", "#VALUE!", ""];
+        for (var column = 0; column < texts.Length; column++)
+            Assert.Equal(CellValue.FromText(texts[column]), snapshot.Sheets[0].GetCell(0, column)!.Value);
         var formula = snapshot.Sheets[0].GetCell(0, 4)!;
         Assert.Equal("=6*7", formula.Content.FormulaText);
-        Assert.Equal(42, formula.Calculation!.Value!.Value.NumberValue);
-        Assert.Equal(CalculationState.Stale, formula.Calculation.State);
-        Assert.Equal("throw new Error('must not run');", snapshot.ScriptSource);
+        Assert.Equal(CellValue.FromNumber(42), formula.Value);
+        Assert.Equal(CalculationState.Stale, formula.Calculation!.State);
+        Assert.Equal(script, snapshot.ScriptSource);
+        using var session = new DocumentSession(snapshot);
+        Assert.True(session.IsDirty);
+        Assert.False(session.ScriptsEnabled);
     }
 
     [Fact]
-    public void AdaptersDeepCopyStyleMetadataAndImageBytesInBothDirections()
+    public void V1MigrationKeepsSparseCoordinatesAndDoesNotRewriteTheSource()
     {
-        var source = new XlWorkbook();
-        var sheet = source.NewWorksheet("Styled");
-        sheet.AddRow("hello");
-        var style = new XlStyle
-        {
-            Bold = true, FontName = "Calibri", FontSize = 12, FillColor = "FF00FF00",
-            Alignment = new XlAlignment { Horizontal = XlHorizontalAlignment.Right, WrapText = true },
-            Border = new XlBorder { Left = XlBorderStyle.Thin, LeftColor = "FFFF0000" }
-        };
-        sheet[0].Cells[0].Style = style;
-        sheet[0].Style = style;
-        sheet[0].Height = 28;
-        sheet.Columns[0] = new XlColumn { Width = 24, Hidden = true, Style = style };
-        sheet.MergedCells.Add("A1:B1");
-        sheet.Options.ShowGridLines = false;
-        sheet.Options.TabColor = "FF123456";
-        sheet.AddImage(Pixel, "png", 3, 2, placeInCell: true);
-        var snapshot = LegacyWorkbookAdapter.FromWorkbook(source);
-        style.Bold = false;
-        style.Alignment.Horizontal = XlHorizontalAlignment.Left;
-        style.Border.Left = XlBorderStyle.Thick;
-        sheet.Images[0].Bytes[0] = 0;
-        sheet.MergedCells.Clear();
-
-        var copied = LegacyWorkbookAdapter.ToWorkbook(snapshot);
-        Assert.True(copied[0][0].Cells[0].Style!.Bold);
-        Assert.Equal(XlHorizontalAlignment.Right, copied[0][0].Cells[0].Style!.Alignment!.Horizontal);
-        Assert.Equal(XlBorderStyle.Thin, copied[0][0].Cells[0].Style!.Border!.Left);
-        Assert.Equal(28, copied[0][0].Height);
-        Assert.True(copied[0].Columns[0].Hidden);
-        Assert.Equal(24, copied[0].Columns[0].Width);
-        Assert.Equal(new[] { "A1:B1" }, copied[0].MergedCells);
-        Assert.False(copied[0].Options.ShowGridLines);
-        Assert.Equal("FF123456", copied[0].Options.TabColor);
-        Assert.Equal(Pixel, copied[0].Images[0].Bytes);
-        Assert.NotSame(copied[0][0].Style, copied[0][0].Cells[0].Style);
-        copied[0][0].Cells[0].Style!.Alignment!.WrapText = false;
-        copied[0][0].Cells[0].Style!.Border!.LeftColor = "FF000000";
-        copied[0].Images[0].Bytes[0] = 1;
-        var originalStyle = snapshot.Styles[snapshot.Sheets[0].GetCell(0, 0)!.Content.StyleId];
-        Assert.True(originalStyle.WrapText);
-        Assert.Equal("FFFF0000", originalStyle.LeftBorderColor);
-        Assert.Equal(Pixel[0], snapshot.Sheets[0].Images[0].Data[0]);
-    }
-
-    [Fact]
-    public void PackageKeepsV1AndSparseCoordinatesWhileReportingLiteralTypeLoss()
-    {
-        var cells = new Dictionary<CellPosition, CellSnapshot>
-        {
-            [new(3, 12)] = new(CellContent.FromLiteral(CellValue.FromNumber(123))),
-            [new(10, 2)] = new(CellContent.FromFormula("=6*7"), new CellCalculation(CellValue.FromNumber(42), CalculationState.Fresh, 0, 0, 0))
-        };
-        var snapshot = Snapshot(cells);
-        var storage = new LegacyWorkbookStorage();
-        var path = FilePath("roundtrip.xlsq");
-        storage.Save(path, snapshot);
-        var loaded = storage.Open(path);
+        var path = FilePath("sparse-v1.xlsq");
+        WorkbookPackageFixture.WriteV1(path, WorkbookPackageFixture.Xlsx("""
+            <row r="4"><c r="M4" t="inlineStr"><is><t>123</t></is></c></row>
+            <row r="11"><c r="C11"><f>6*7</f><v>42</v></c></row>
+            """));
+        var original = File.ReadAllBytes(path);
+        var storage = new TypedWorkbookStorage();
+        var imported = storage.Open(path);
+        var upgraded = FilePath("upgraded.xlsq");
+        storage.Save(upgraded, imported);
+        var loaded = storage.Open(upgraded);
         Assert.Equal(2, loaded.Sheets[0].Cells.Count);
         Assert.Null(loaded.Sheets[0].GetCell(3, 0));
-        Assert.Equal(CellValue.FromText("123"), loaded.Sheets[0].GetCell(3, 12)!.Content.LiteralValue);
+        Assert.Equal(CellValue.FromText("123"), loaded.Sheets[0].GetCell(3, 12)!.Value);
         Assert.Equal("=6*7", loaded.Sheets[0].GetCell(10, 2)!.Content.FormulaText);
         Assert.Equal(CalculationState.Stale, loaded.Sheets[0].GetCell(10, 2)!.Calculation!.State);
-        Assert.Contains("文本", LegacyWorkbookStorage.LegacyTypeWarning);
-        Assert.Equal(CellValue.FromNumber(123), snapshot.Sheets[0].GetCell(3, 12)!.Content.LiteralValue);
-        using var archive = ZipFile.OpenRead(path);
-        using var manifest = JsonDocument.Parse(archive.GetEntry("manifest.json")!.Open());
-        Assert.Equal(1, manifest.RootElement.GetProperty("formatVersion").GetInt32());
-        Assert.Equal(3, archive.Entries.Count);
+        Assert.Equal(original, File.ReadAllBytes(path));
+        Assert.Equal(1, imported.FileState!.SourceFormatVersion);
+        Assert.Equal(2, loaded.FileState!.SourceFormatVersion);
     }
 
     [Fact]
-    public void SavePreservesSupportedStylesSizesMergesAndImages()
+    public void SavePreservesSupportedStylesSizesMergesAndImagesWithoutMutatingSnapshot()
     {
-        var workbook = new XlWorkbook();
-        var sheet = workbook.NewWorksheet("Supported");
-        sheet.AddRow("header");
-        sheet[0].Height = 31;
-        sheet[0].Cells[0].Style = new XlStyle
-        {
-            FontName = "Calibri", FontSize = 14, Bold = true, FillColor = "FFCCFFCC",
-            Alignment = new XlAlignment { Horizontal = XlHorizontalAlignment.Center },
-            Border = new XlBorder { Bottom = XlBorderStyle.Thin, BottomColor = "FF000000" }
-        };
-        sheet.Columns[0] = new XlColumn { Width = 29 };
-        sheet.MergedCells.Add("A1:B1");
-        sheet.AddImage(Pixel, "png", 4, 3);
-        var storage = new LegacyWorkbookStorage();
+        var style = new StyleDefinition { FontName = "Calibri", FontSize = 14, Bold = true, FillColor = "FFCCFFCC",
+            Horizontal = 2, BottomBorder = 1, BottomBorderColor = "FF000000" };
+        var bytes = Pixel.ToArray();
+        var sheet = new WorksheetSnapshot(SheetId.New(), "Supported",
+            [new(new(0, 0), new(CellContent.FromLiteral(CellValue.FromText("header"), 1)))],
+            rows: [new(0, new(31, false, 1))], columns: [new(0, new(29, true, 1))],
+            mergedCells: ["A1:B1"], images: [new SheetImage(bytes, "png", 4, 3)],
+            showGridLines: false, tabColor: "FF123456");
+        var snapshot = new WorkbookSnapshot(Guid.NewGuid(), 0, ExcelDateSystem.Windows1900, [sheet], styles: [new(), style]);
+        bytes[0] = 0;
         var path = FilePath("styles.xlsq");
-        storage.Save(path, LegacyWorkbookAdapter.FromWorkbook(workbook));
-        var result = LegacyWorkbookAdapter.ToWorkbook(storage.Open(path));
-        Assert.Equal(31, result[0][0].Height);
-        Assert.Equal(29, result[0].Columns[0].Width);
-        Assert.Contains("A1:B1", result[0].MergedCells);
-        Assert.True(result[0][0].Cells[0].Style!.Bold);
-        Assert.Equal("FFCCFFCC", result[0][0].Cells[0].Style!.FillColor);
-        Assert.Equal(XlHorizontalAlignment.Center, result[0][0].Cells[0].Style!.Alignment!.Horizontal);
-        Assert.Equal(XlBorderStyle.Thin, result[0][0].Cells[0].Style!.Border!.Bottom);
-        Assert.Equal(Pixel, Assert.Single(result[0].Images).Bytes);
+        var storage = new TypedWorkbookStorage();
+        storage.Save(path, snapshot);
+        var loaded = storage.Open(path);
+        var result = loaded.Sheets[0];
+        Assert.Equal(style, loaded.Styles[result.GetCell(0, 0)!.Content.StyleId]);
+        Assert.Equal(sheet.Rows, result.Rows);
+        Assert.Equal(sheet.Columns, result.Columns);
+        Assert.Equal(sheet.MergedCells.ToArray(), result.MergedCells.ToArray());
+        Assert.False(result.ShowGridLines);
+        Assert.Equal("FF123456", result.TabColor);
+        Assert.Equal(Pixel, Assert.Single(result.Images).Data.ToArray());
+        Assert.Equal(Pixel, Assert.Single(sheet.Images).Data.ToArray());
+        Assert.Single(sheet.Cells);
     }
 
-    [Fact]
-    public void ExportUsesCacheAndLeavesFormulaAndImageSnapshotUntouched()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void ExportPreservesSnapshotAndRejectsUnsupportedInCellImages(bool placeInCell)
     {
         var source = Snapshot(new Dictionary<CellPosition, CellSnapshot>
         {
             [new(0, 0)] = new(CellContent.FromFormula("=6*7"), new CellCalculation(CellValue.FromNumber(42), CalculationState.Fresh, 0, 0, 0))
-        }, [new SheetImage(Pixel, "png", 40, 10, placeInCell: true)]);
-        var storage = new LegacyWorkbookStorage();
+        }, [new SheetImage(Pixel, "png", 40, 10, placeInCell: placeInCell)]);
+        var storage = new TypedWorkbookStorage();
         var path = FilePath("values.xlsx");
-        storage.Export(path, source);
-        var loaded = storage.Open(path);
-        Assert.Equal(CellContentKind.Literal, loaded.Sheets[0].GetCell(0, 0)!.Content.Kind);
-        Assert.Equal(CellValue.FromText("42"), loaded.Sheets[0].GetCell(0, 0)!.Value);
+        if (placeInCell)
+        {
+            File.WriteAllText(path, "previous bytes");
+            Assert.Throws<NotSupportedException>(() => storage.Export(path, source));
+            Assert.Equal("previous bytes", File.ReadAllText(path));
+            Assert.Empty(Directory.GetFiles(_folder, "*.tmp"));
+        }
+        else
+        {
+            storage.Export(path, source);
+            var loaded = storage.Open(path);
+            Assert.Equal(CellContentKind.Literal, loaded.Sheets[0].GetCell(0, 0)!.Content.Kind);
+            Assert.Equal(CellValue.FromNumber(42), loaded.Sheets[0].GetCell(0, 0)!.Value);
+        }
         Assert.Single(source.Sheets[0].Cells);
         Assert.Equal("=6*7", source.Sheets[0].GetCell(0, 0)!.Content.FormulaText);
         Assert.Equal(Pixel, source.Sheets[0].Images[0].Data.ToArray());
     }
 
     [Fact]
-    public void DenseLegacyConversionBudgetRejectsSparseExpansionBeforeAllocationOrFileReplacement()
-    {
-        var path = FilePath("budget.xlsq");
-        File.WriteAllText(path, "previous bytes");
-        var sparse = Enumerable.Range(0, 977).ToDictionary(row => new CellPosition(row, 1023),
-            _ => new CellSnapshot(CellContent.FromLiteral(CellValue.FromText("one"))));
-        var snapshot = Snapshot(sparse);
-        Assert.Equal(977, snapshot.Sheets[0].Cells.Count);
-        Assert.Throws<InvalidDataException>(() => new LegacyWorkbookStorage().Save(path, snapshot));
-        Assert.Equal("previous bytes", File.ReadAllText(path));
-        Assert.Empty(Directory.GetFiles(_folder, "*.tmp"));
-    }
-
-    [Fact]
     public void FailedReplacementLeavesPreviousPackageAndSnapshotUntouched()
     {
         if (!OperatingSystem.IsWindows()) return; // The product and its replacement semantics target Windows x64.
-        var storage = new LegacyWorkbookStorage();
+        var storage = new TypedWorkbookStorage();
         var path = FilePath("locked.xlsq");
         var snapshot = Snapshot(new Dictionary<CellPosition, CellSnapshot>
         { [new(0, 0)] = new(CellContent.FromLiteral(CellValue.FromText("original"))) });

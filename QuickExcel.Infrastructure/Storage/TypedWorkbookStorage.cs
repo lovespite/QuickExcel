@@ -14,7 +14,7 @@ public sealed class WorkbookCompatibilityException(IEnumerable<string> issues) :
     public IReadOnlyList<string> Issues { get; } = issues.ToArray();
 }
 
-/// <summary>M2 typed XLSX and XLSQ v2 boundary. Legacy storage remains available for explicit v1 regression.</summary>
+/// <summary>Typed XLSX and XLSQ v2 storage, with read-only import and migration of XLSQ v1 packages.</summary>
 public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage
 {
     private static readonly string[] Features = ["typed-workbook", "stable-sheet-ids", "script-modules"];

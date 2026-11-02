@@ -1,6 +1,6 @@
 # QuickExcel 系统架构
 
-## 当前实现（2026-10-30）
+## 当前实现（2026-11-02）
 
 当前源码版本为 `0.6.0-preview.3`，主线为 M5 桌面交互收敛。里程碑与剩余项统一见 [实施计划](05-implementation-plan.md)，以下先列实际接线，随后保留早期架构演进记录。
 
@@ -9,7 +9,7 @@
 | 模块 / 入口 | 当前职责 |
 | --- | --- |
 | `QuickExcel.Core` / `DocumentSession` | 纯 .NET 类型化稀疏模型、不可变快照、命令事务、历史、修订和计算代次门禁；不引用 ExcelIO/WPF/native |
-| `QuickExcel.Infrastructure` / `TypedWorkbookStorage` | XLSX/XLSQ v2、v1 迁移、兼容报告、原包保留、保存校验与版本指纹；Legacy 适配只作历史回归 |
+| `QuickExcel.Infrastructure` / `TypedWorkbookStorage` | XLSX/XLSQ v2、v1 迁移、兼容报告、原包保留、保存校验与版本指纹；自有实现，无 ExcelIO 依赖 |
 | `WorkbookCalculator` / `TypedEvaluator` | 跨表、名称、依赖和标准公式增量求值；JS 继续每轮重建上下文并保守完整重算 |
 | `ScriptWorkerRuntimeFactory` / `ScriptWorkerActionExecutor` | 公式与 actions 的强制 AppContainer worker 客户端、快照/patch 校验、取消与生命周期；无进程内或同权限回退 |
 | `QuickExcel.ScriptContracts` / `QuickExcel.ScriptWorker` / `QuickExcel.Scripting` | BCL-only IPC 契约、独立执行程序、托管 QuickJS 桥与固定来源的原生引擎；协议 4、16 MiB 帧上限 |
@@ -23,6 +23,8 @@
 Desktop 的物理目录、源码归属及新增文件约定见 [源码目录](../README.md#源码目录)。主窗口位于 `Views/MainWindow`，网格与 Ribbon 组件位于 `Controls`，WPF 验证与性能诊断位于 `Diagnostics`。
 
 ## 架构演进背景（历史）
+
+2026-11-02 已删除下文提到的旧存储/计算适配器与 ExcelIO/ExcelIO.Formula 引用。下文记录当时的设计与演进过程，不代表当前依赖；回归迁移与验证见 [58](58-excelio-removal.md)。
 
 M5 UI-004/UI-005 的结构/排序/样式/尺寸命令在 Core，由 EditorController 提交。筛选/冻结属于按 SheetId 隔离的临时视图，最近文件属于用户配置。桌面保存使用 IVersionedWorkbookStorage 的指纹检查；Core 只传递令牌，Infrastructure 读取并在替换前核对文件。具体边界见 [结构与工作区](18-m5-structure-and-workspace.md)。
 
@@ -38,15 +40,15 @@ M5 UI-004/UI-005 的结构/排序/样式/尺寸命令在 Core，由 EditorContro
 | --- | --- | --- |
 | [MainWindow.xaml.cs](../Views/MainWindow/MainWindow.xaml.cs)、[EditorController.cs](../Editing/EditorController.cs)、[DocumentViewModel.cs](../ViewModels/DocumentViewModel.cs) | 控件提交、统一编辑/粘贴/撤销入口、会话状态投影；保留 DataGrid | M5 扩展视图拆分、网格和交互验收 |
 | [WorkbookDocument.cs](../../QuickExcel.Core/WorkbookDocument.cs)、[DocumentSession.cs](../../QuickExcel.Core/DocumentSession.cs) | facade、不可变快照、串行写入门禁、事务历史、计算代次与保存修订 | M3 扩展计算协调，M4 接入动作事务 |
-| [LegacyWorkbookStorage.cs](../../QuickExcel.Infrastructure/Storage/LegacyWorkbookStorage.cs)、[DocumentPackage.cs](../../QuickExcel.Infrastructure/DocumentPackage.cs) | Infrastructure 内的 XLSQ v1/XLSX 适配、容量预检、同目录原子保存 | M2 实现类型保真、v2 格式和损失报告 |
-| [LegacyWorkbookCalculator.cs](../../QuickExcel.Infrastructure/Calculation/LegacyWorkbookCalculator.cs) | 消费稀疏快照，按类型求值和同表依赖完整重算 | M3 完成跨表、名称、增量和完整公式契约 |
+| `LegacyWorkbookStorage.cs`（历史代码，已移除）、`DocumentPackage.cs`（历史代码，已移除） | Infrastructure 内的 XLSQ v1/XLSX 适配、容量预检、同目录原子保存 | M2 实现类型保真、v2 格式和损失报告 |
+| `LegacyWorkbookCalculator.cs`（历史代码，已移除） | 消费稀疏快照，按类型求值和同表依赖完整重算 | M3 完成跨表、名称、增量和完整公式契约 |
 | [QuickJsRuntimeFactory.cs](../../QuickExcel.Infrastructure/Scripting/QuickJsRuntimeFactory.cs)、[QuickJsSession.cs](../../QuickExcel.Scripting/QuickJsSession.cs) | 每轮授权计算新建并释放进程内 QuickJS 上下文 | M4 移入 ScriptWorker |
 | [ExcelIO.Formula](../../../ExcelIO/ExcelIO.Formula/ExcelIO.Formula.csproj) | 解析器、内置函数和旧计算引擎 | 先复用解析与函数；typed evaluator、重算图逐步统一到 Calculation |
 | [XlCell.cs](../../../ExcelIO/ExcelIO/XlCell.cs) | 字符串值、公式、静态变更回调 | 作为旧库兼容模型，停止承担新编辑器的唯一数据模型 |
 
 当前只有 `DocumentSession.TryCommitCalculation` 发布公式缓存。适配器复用旧解析器和内置函数，不调用 `FormulaEngine.Calculate` 另行写入文档。ExcelIO 仍是独立源依赖，本次 M1 不修改其源码。
 
-## 模块和依赖
+## 0.2 模块和依赖（历史）
 
 0.2 已建立真实编译边界：`QuickExcel.Core` 仅引用 .NET，包含 `QuickExcel.Domain`、会话及存储/计算/脚本端口；`QuickExcel.Infrastructure` 引用 Core、ExcelIO、ExcelIO.Formula 和 QuickExcel.Scripting，承载 `QuickExcel.Storage`、`QuickExcel.Calculation`、`QuickExcel.Runtime` 具体适配器。Desktop 的 [应用组合根](../Composition/DesktopComposition.cs) 注入服务；Core 不构造旧库模型或 native 会话。
 

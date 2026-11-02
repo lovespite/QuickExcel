@@ -40,7 +40,7 @@
 
 运算符顺序对照 [Microsoft 的 Excel 运算符说明](https://support.microsoft.com/en-us/excel/calculation-operators-and-precedence-in-excel)：负号高于百分号和幂，同级从左到右。固定回归包括 `=-2^2` → 4、`=2^3^2` → 64。这里只引用运算符规则，不将其作为本实现的整体 Excel 兼容认证。
 
-旧 `CalculationAdapterTests` 保留并明确属于 LegacyWorkbookCalculator。跨表 Blocked、脚本覆盖内置、旧聚合/转换等历史行为不迁入新引擎；类型保持、错误传播、惰性求值、稀疏范围、运行时释放等契约由 M3 固定预期夹具重新验证。独立 ExcelIO.Formula 项目既有测试不等同于新求值器验收。
+2026-11-02：`LegacyWorkbookCalculator` 与 ExcelIO.Formula 依赖已移除；`CalculationAdapterTests` 改用当前 `WorkbookCalculator`。类型保持、错误传播、惰性求值、稀疏范围、取消和运行时释放回归继续保留；跨表拒算、脚本覆盖内置等旧行为按当前契约替换，见 [58](58-excelio-removal.md)。
 
 ## 结构编辑契约
 

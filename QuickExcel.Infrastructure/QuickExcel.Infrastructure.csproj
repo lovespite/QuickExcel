@@ -13,8 +13,6 @@
     <InternalsVisibleTo Include="SandboxHostFixture" />
     <InternalsVisibleTo Include="QuickExcel.SandboxProbe" />
     <ProjectReference Include="..\QuickExcel.Core\QuickExcel.Core.csproj" />
-    <ProjectReference Include="..\..\ExcelIO\ExcelIO\ExcelIO.csproj" />
-    <ProjectReference Include="..\..\ExcelIO\ExcelIO.Formula\ExcelIO.Formula.csproj" />
     <ProjectReference Include="..\QuickExcel.Scripting\QuickExcel.Scripting.csproj" />
     <ProjectReference Include="..\QuickExcel.ScriptContracts\QuickExcel.ScriptContracts.csproj" />
   </ItemGroup>

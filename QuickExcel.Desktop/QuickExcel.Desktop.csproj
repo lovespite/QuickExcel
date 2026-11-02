@@ -9,7 +9,7 @@
     <AssemblyName>QuickExcel</AssemblyName>
     <Version>0.6.0-preview.3</Version>
     <Product>QuickExcel</Product>
-    <Description>A programmable desktop spreadsheet powered by ExcelIO and QuickJS.</Description>
+    <Description>A programmable desktop spreadsheet with typed XLSX storage and QuickJS scripting.</Description>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="FluentIcons.Wpf" Version="2.1.344" />
