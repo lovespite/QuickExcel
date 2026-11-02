@@ -1,4 +1,6 @@
 <Solution>
+  <Project Path="QuickExcel.Desktop.Avalonia/QuickExcel.Desktop.Avalonia.csproj" />
+  <Project Path="QuickExcel.Grid.Avalonia/QuickExcel.Grid.Avalonia.csproj" />
   <Project Path="QuickExcel.Presentation/QuickExcel.Presentation.csproj" />
   <Project Path="QuickExcel.Grid.Shared/QuickExcel.Grid.Shared.csproj" />
   <Project Path="QuickExcel.Scripting/QuickExcel.Scripting.csproj" />

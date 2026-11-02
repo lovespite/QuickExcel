@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>QuickExcel.Avalonia</AssemblyName>
+    <Version>0.6.0-preview.3</Version>
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Avalonia.Desktop" Version="[12.1.4]" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="[12.1.4]" />
+    <ProjectReference Include="../QuickExcel.Grid.Avalonia/QuickExcel.Grid.Avalonia.csproj" />
+    <ProjectReference Include="../QuickExcel.Infrastructure/QuickExcel.Infrastructure.csproj" />
+    <None Include="Licenses/*.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+  <Import Project="../scripts/ScriptWorker.targets" />
+</Project>

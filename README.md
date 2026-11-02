@@ -1,6 +1,6 @@
 # QuickExcel 0.6 交互预览版
 
-Avalonia 迁移：A0 工程验证与 A1 共享层完成，A2 实施中；实机验证按用户要求延期，默认入口仍为 WPF。[实施日志](QuickExcel.Desktop/docs/63-avalonia-implementation-log.md)。
+Avalonia 迁移：A0 工程验证与 A1/A2 完成，A3 实施中；实机验证按用户要求延期，默认入口仍为 WPF。[实施日志](QuickExcel.Desktop/docs/63-avalonia-implementation-log.md)。
 
 2026-10-30 进度同步：M1–M3 受支持子集已交付，当前处于 **M5 桌面交互收敛**；M4 严格策略/部署与 M6 恢复/发布验收仍未完成。当前状态与后续顺序统一见 [实施计划](QuickExcel.Desktop/docs/05-implementation-plan.md)。
 
