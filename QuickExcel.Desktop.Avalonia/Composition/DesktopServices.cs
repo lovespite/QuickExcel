@@ -10,9 +10,12 @@ namespace QuickExcel.Desktop.Avalonia;
 
 internal static class DesktopServices
 {
+    // Linux verifies the actual kernel/cgroup protection on every launch.
+    internal static bool SupportsScripts => (OperatingSystem.IsWindows() || OperatingSystem.IsLinux()) &&
+        System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture == System.Runtime.InteropServices.Architecture.X64;
     public static WorkbookServices Create() => new(new TypedWorkbookStorage(),
-        new WorkbookCalculator(OperatingSystem.IsWindows() ? new ScriptWorkerRuntimeFactory() : new UnavailableScripts()),
-        OperatingSystem.IsWindows() ? new ScriptWorkerActionExecutor() : null);
+        new WorkbookCalculator(SupportsScripts ? new ScriptWorkerRuntimeFactory() : new UnavailableScripts()),
+        SupportsScripts ? new ScriptWorkerActionExecutor() : null);
     private sealed class UnavailableScripts : IScriptRuntimeFactory
     {
         public IScriptRuntime Create(string source) => throw new PlatformNotSupportedException("此平台尚未完成独立脚本沙箱，脚本执行不可用。");

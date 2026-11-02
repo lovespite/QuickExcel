@@ -68,3 +68,31 @@ Run the runtime smoke checks with:
 ```powershell
 dotnet run --project .\QuickExcel.Scripting\smoke\QuickExcel.Scripting.Smoke.csproj --artifacts-path .\artifacts\build
 ```
+
+
+## Avalonia A6 platform builds
+
+`build.sh` runs on Linux x64 or macOS arm64, verifies the same source ZIP/hash,
+extracts into a fresh owned `artifacts/native/<rid>/build-*` directory and emits
+`libquickexcel-js.so` / `.dylib` plus source/compiler/binary identity. Linux was
+built with Clang 18 on Ubuntu 24.04.5; GCC 13 encountered an upstream optimization
+compiler failure, retained in A6 evidence. No engine edits were made. macOS has a
+build entry point but no executed device evidence. Unix uses `clock_gettime` and
+PIC; the C ABI, logical module loader, limits and license remain unchanged.
+
+Linux additionally builds repository-owned `QuickExcel.ScriptWorker/native/linux-sandbox.c`
+with `CC=clang-18 bash QuickExcel.ScriptWorker/native/build-linux.sh`. This produces
+the launcher and final TSYNC guard, not a third-party sandbox binary. The policy
+uses kernel headers and libc, with no libseccomp runtime dependency. Identity
+records contain policy source, compiler and both binary SHA-256 values.
+
+Cross-publish must set both `RuntimeIdentifier` and global `QuickExcelNativeRid`:
+RID-neutral referenced projects otherwise select the build host's native bridge.
+`scripts/publish-avalonia-unix.ps1` enforces this, uses fresh build directories and
+separate RID lock files under artifacts, rejects Windows/test/UI worker payloads,
+and records native identities and licenses. Native outputs are never committed.
+The ordinary production desktop never uses the in-process bridge as a fallback.
+
+Linux Landlock/seccomp/cgroup requirements, negative probes, lifetime and resource
+evidence are in `QuickExcel.Desktop/docs/67-avalonia-platforms.md`. macOS script
+execution remains closed; a portable bridge or signed app is not a worker sandbox.

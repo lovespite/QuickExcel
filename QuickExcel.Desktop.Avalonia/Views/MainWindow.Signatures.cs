@@ -18,14 +18,16 @@ public sealed partial class MainWindow
         var modules = Document.Snapshot.ScriptModules;
         if (modules.Signature is null) return true; // Explicit Apply is required for unsigned sources.
         DisableScripts();
-        var result = await Task.Run(() => ScriptTrust.Verify(modules));
+        ScriptSignatureVerification result; string? protectionFailure=null;
+        try { result=await Task.Run(() => ScriptTrust.Verify(modules)); }
+        catch(UserProtectionUnavailableException ex) {protectionFailure=ex.Message;result=await Task.Run(()=>ScriptSignatures.Verify(modules));}
         if (!ReferenceEquals(modules, Document.Snapshot.ScriptModules)) return false;
         if (result.CanAutoEnable) return true;
         if (result.Status == ScriptSignatureStatus.UntrustedSelfSigned)
         {
             var dialog = new FieldsDialog("核对脚本签名证书").Note(CertificateDetails(result))
-                .Note("始终信任会允许此证书签署的其他工作簿自动启用脚本。请确认发布者和指纹。")
-                .Choice("trust", "信任选择", ["取消，保持停用", "仅本次允许", "始终信任此证书"]);
+                .Note(protectionFailure ?? "始终信任会允许此证书签署的其他工作簿自动启用脚本。请确认发布者和指纹。")
+                .Choice("trust", "信任选择", protectionFailure is null ? ["取消，保持停用", "仅本次允许", "始终信任此证书"] : ["取消，保持停用", "仅本次允许"]);
             if (!await dialog.ShowAsync(this) || !ReferenceEquals(modules, Document.Snapshot.ScriptModules)) return false;
             if (dialog.Index("trust") == 1) return true;
             if (dialog.Index("trust") == 2)
@@ -42,7 +44,9 @@ public sealed partial class MainWindow
         await using var hold = _scriptPage?.HoldEdits();
         if (!await CommitEditorsAsync()) return;
         var modules = Document.Snapshot.ScriptModules;
-        var result = await Task.Run(() => ScriptTrust.Verify(modules));
+        ScriptSignatureVerification result;
+        try { result = await Task.Run(() => ScriptTrust.Verify(modules)); }
+        catch (UserProtectionUnavailableException) { result = await Task.Run(() => ScriptSignatures.Verify(modules)); }
         var dialog = new FieldsDialog("脚本签名详情").Note(CertificateDetails(result)).Note("签名保护全部源码与用途绑定，不包含单元格数据。")
             .Choice("action", "操作", modules.Signature is null ? ["关闭", "签署脚本…"] : ["关闭", "签署脚本…", "移除签名并停用"]);
         if (!await dialog.ShowAsync(this)) return;
@@ -94,7 +98,6 @@ public sealed partial class MainWindow
     private async Task TrustedCertificatesAsync()
     {
         if (!await CommitEditorsAsync()) return;
-        if (!OperatingSystem.IsWindows()) throw new PlatformNotSupportedException("此平台尚未开放受保护的证书信任存储。");
         var entries = await Task.Run(() => ScriptTrust.Read());
         if (entries.Count == 0) { _status.Text = "尚未记住任何脚本签名证书。"; return; }
         var dialog = new FieldsDialog("受信任脚本证书").Note("移除后当前工作簿脚本会停用。系统证书信任由操作系统管理。")

@@ -43,7 +43,7 @@ try {
         if (-not (Test-Path -LiteralPath (Join-Path $package $file) -PathType Leaf)) { throw "Missing release payload: $file" }
     }
     $all = @(Get-ChildItem -LiteralPath $package -File -Recurse)
-    $forbidden = @($all | Where-Object { $_.Name -match 'WorkerFixture|HostFixture|SandboxProbe|Designer|Avalonia\.Diagnostics|\.pdb$|\.map$|\.pfx$|ExcelIO|Grid\.Wpf|^PresentationFramework|^PresentationCore|Xpf|quickjs-eval' })
+    $forbidden = @($all | Where-Object { $_.Name -match 'WorkerFixture|HostFixture|SandboxProbe|PlatformSmoke|TestProbe|Designer|Avalonia\.Diagnostics|\.pdb$|\.map$|\.pfx$|ExcelIO|Grid\.Wpf|^PresentationFramework|^PresentationCore|Xpf|quickjs-eval' })
     if ($forbidden) { throw "Forbidden release payload: $($forbidden.FullName -join ', ')" }
     if (@($all | Where-Object { $_.FullName.StartsWith((Join-Path $package 'ScriptWorker') + [IO.Path]::DirectorySeparatorChar) -and $_.Name -match 'Avalonia|WebView|Skia|HarfBuzz|RichTextKit|PdfPig|Rendering|LibTiff|Monaco' })) { throw 'UI/Web/rendering payload leaked into ScriptWorker.' }
     $web = Get-Content -LiteralPath (Join-Path $package 'Web/manifest.json') -Raw | ConvertFrom-Json

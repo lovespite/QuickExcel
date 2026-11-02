@@ -8,7 +8,7 @@ namespace QuickExcel.Runtime;
 
 public sealed class ScriptWorkerActionExecutor(string? executablePath = null) : IScriptActionExecutor
 {
-    private readonly string _executable = Path.GetFullPath(executablePath ?? Path.Combine(AppContext.BaseDirectory, "ScriptWorker", "QuickExcel.ScriptWorker.exe"));
+    private readonly string _executable = Path.GetFullPath(executablePath ?? Path.Combine(AppContext.BaseDirectory, "ScriptWorker", OperatingSystem.IsWindows() ? "QuickExcel.ScriptWorker.exe" : "QuickExcel.ScriptWorker"));
     private ScriptWorkerRuntime Create(ScriptActionRequest request, CancellationToken token) => ScriptWorkerRuntime.Start(_executable,
         new ScriptRuntimeRequest(request.Snapshot.ScriptModules, request.Stamp, TimeSpan.FromSeconds(5), token), actionsMode: true);
 

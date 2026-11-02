@@ -23,7 +23,8 @@
     <None Include="Licenses/*.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <None Include="../artifacts/avalonia/web/**/*" Link="Web/%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
-  <Import Project="../scripts/ScriptWorker.targets" />
+  <!-- macOS remains a no-script preview until its separate sandbox is qualified. -->
+  <Import Project="../scripts/ScriptWorker.targets" Condition="'$(RuntimeIdentifier)' != 'osx-arm64' and '$(RuntimeIdentifier)' != 'osx-x64'" />
   <ItemGroup Condition="'$(QuickExcelDiagnostics)' != 'true'">
     <Compile Remove="Diagnostics/**/*.cs" />
   </ItemGroup>

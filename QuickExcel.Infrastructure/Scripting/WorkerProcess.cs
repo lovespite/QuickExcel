@@ -7,18 +7,18 @@ using Microsoft.Win32.SafeHandles;
 namespace QuickExcel.Runtime;
 
 /// <summary>The only production launch path: zero-capability AppContainer, explicit IPC handles, suspended until contained.</summary>
-internal sealed class WorkerProcess : IDisposable
+internal sealed class WorkerProcess : IWorkerProcess
 {
     private WorkerSandbox? _sandbox;
     private WorkerJob? _job;
     private Process? _process;
     private SafeProcessHandle? _nativeProcess;
-    internal Stream Input { get; private set; } = Stream.Null;
-    internal Stream Output { get; private set; } = Stream.Null;
-    internal Stream Error { get; private set; } = Stream.Null;
-    internal int Id => _process!.Id;
-    internal string ProfileName => _sandbox!.ProfileName;
-    internal string PayloadDirectory => _sandbox!.PayloadDirectory;
+    public Stream Input { get; private set; } = Stream.Null;
+    public Stream Output { get; private set; } = Stream.Null;
+    public Stream Error { get; private set; } = Stream.Null;
+    public int Id => _process!.Id;
+    public string ProfileName => _sandbox!.ProfileName;
+    public string PayloadDirectory => _sandbox!.PayloadDirectory;
 
     internal static WorkerProcess Start(string executable, CancellationToken cancellation, string? ownershipRoot = null)
     {
@@ -124,7 +124,7 @@ internal sealed class WorkerProcess : IDisposable
         }
     }
 
-    internal void Kill()
+    public void Kill()
     {
         _job?.Dispose();
         if (_nativeProcess is { IsClosed: false, IsInvalid: false }) _ = TerminateProcess(_nativeProcess, 1);

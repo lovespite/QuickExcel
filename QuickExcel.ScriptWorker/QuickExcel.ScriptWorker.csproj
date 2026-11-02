@@ -4,11 +4,14 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <PlatformTarget>x64</PlatformTarget>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../QuickExcel.ScriptContracts/QuickExcel.ScriptContracts.csproj" />
     <ProjectReference Include="../QuickExcel.Scripting/QuickExcel.Scripting.csproj" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(RuntimeIdentifier)' == 'linux-x64' or ('$(RuntimeIdentifier)' == '' and $([MSBuild]::IsOSPlatform('Linux')))">
+    <None Include="../artifacts/native/linux-x64/quickexcel-sandbox;../artifacts/native/linux-x64/libquickexcel-sandbox.so" Link="%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
   <Target Name="GetWorkerPayload" Returns="@(WorkerPayload)">
     <ItemGroup><WorkerPayload Include="$(TargetDir)*" Exclude="$(TargetDir)*.pdb" /></ItemGroup>

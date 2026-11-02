@@ -52,7 +52,7 @@ public sealed partial class MainWindow
             await Test(new { action = "edit", module = "main", text = large });
             Check(await CommitScriptsAsync() && Document.Snapshot.ScriptModules.PrimarySource == large, "Multi-chunk Unicode drafts reassemble and validate before a document command");
             await Test(new { action = "edit", module = "main", text = changed }); Check(await CommitScriptsAsync(), "Restored valid function source commits");
-            if (OperatingSystem.IsWindows()) { await ApplyScriptsAsync(); Check(Document.ScriptsEnabled, "Explicit application uses the existing isolated worker"); }
+            if (DesktopServices.SupportsScripts) { await ApplyScriptsAsync(); Check(Document.ScriptsEnabled, "Explicit application uses the existing isolated worker"); }
             else
             {
                 var blocked = false; try { await ApplyScriptsAsync(); } catch (PlatformNotSupportedException) { blocked = true; }
@@ -70,7 +70,7 @@ public sealed partial class MainWindow
             Check(!_scriptPage!.Drafts.Failed && await SaveAsync(false) && Document.Snapshot.ScriptModules.PrimarySource == confirmed, "Explicit recovery creates a new page generation and preserves confirmed Unicode/source");
             await CloseScriptWindowAsync(); Check(_scriptPage is null && _scriptWindow is null, "Closing waits for editor/model/worker disposal and detaches native WebView");
             // Run the migrated actions/role/signature flows through the actual worker and native dialog handlers.
-            if (OperatingSystem.IsWindows())
+            if (DesktopServices.SupportsScripts)
             {
             _workspace.New();
             const string actionSource = "quickExcel.actions.register('写入', ({snapshot,patch}) => { patch.setValue(snapshot.sheets[0].id, 'A1', 42); console.log('原子写入完成'); });";
@@ -169,7 +169,7 @@ public sealed partial class MainWindow
         catch (Exception ex) { error = ex; }
         finally { try { await CloseScriptWindowAsync(); await ClosePrintPreviewAsync(); } catch (Exception ex) { error ??= ex; } }
         await File.WriteAllTextAsync(Path.Combine(directory, "result.json"), JsonSerializer.Serialize(new { passed = error is null, checks, error = error?.ToString(), elapsedMs = watch.Elapsed.TotalMilliseconds,
-            platform = Environment.OSVersion.ToString(), skipped = OperatingSystem.IsWindows() ? Array.Empty<string>() : ["Windows AppContainer actions and DPAPI trust: platform-specific; non-Windows execution remains closed"] }, new JsonSerializerOptions { WriteIndented = true }));
+            platform = Environment.OSVersion.ToString(), skipped = DesktopServices.SupportsScripts ? Array.Empty<string>() : ["Platform sandbox is not qualified; execution remains closed"] }, new JsonSerializerOptions { WriteIndented = true }));
         _allowClose = true; (Application.Current!.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)!.Shutdown(error is null ? 0 : 1);
     }
 }

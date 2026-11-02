@@ -9,15 +9,21 @@ namespace QuickExcel.Security;
 public sealed record TrustedScriptCertificate(string Fingerprint, string Subject, DateTime NotAfter);
 
 /// <summary>Integrity-protected, per-user QuickExcel trust pins. Never changes Windows certificate stores.</summary>
-public sealed class ScriptCertificateTrustStore(string path)
+public sealed class ScriptCertificateTrustStore
 {
+    private readonly string path;
+    private readonly TrustDataProtection _protection;
+    public ScriptCertificateTrustStore(string path) : this(path,TrustDataProtection.Create()) { }
+    internal ScriptCertificateTrustStore(string path,TrustDataProtection protection) {this.path=path;_protection=protection;}
     private const int MaximumFileSize = 1024 * 1024;
-    private sealed record ProtectedTrust(int Version, byte[] Data);
+    private sealed record ProtectedTrust(int Version, byte[] Data, [property:JsonIgnore(Condition=JsonIgnoreCondition.WhenWritingNull)] string? Protection=null);
     private static readonly JsonSerializerOptions Format = new() { UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow };
 
     // Bind the DPAPI payload to this purpose and location, including isolated smoke/test stores.
     // This is domain separation, not a secret. DPAPI is not a boundary against code running as this user.
-    private byte[] Entropy => Encoding.UTF8.GetBytes("QuickExcel.ScriptCertificateTrust.v1\0" + Path.GetFullPath(path).ToUpperInvariant());
+    private bool IsDpapi=>_protection.Id=="dpapi-current-user-v1";
+    private byte[] Entropy => Encoding.UTF8.GetBytes(IsDpapi ? "QuickExcel.ScriptCertificateTrust.v1\0" + Path.GetFullPath(path).ToUpperInvariant()
+        : "QuickExcel.ScriptCertificateTrust.v2\0"+_protection.Id+"\0"+Path.GetFullPath(path));
 
     public IReadOnlyList<TrustedScriptCertificate> Read()
     {
@@ -29,10 +35,10 @@ public sealed class ScriptCertificateTrustStore(string path)
         if (json.RootElement.ValueKind != JsonValueKind.Object)
             throw new InvalidDataException("旧版或未经验证的证书信任列表不能授予信任；请移除该列表并在应用中重新确认。");
         var envelope = json.RootElement.Deserialize<ProtectedTrust>(Format);
-        if (envelope is not { Version: 1, Data.Length: > 0 }) throw new InvalidDataException("证书信任列表格式无效。");
-        if (!OperatingSystem.IsWindows()) throw new PlatformNotSupportedException("证书信任列表需要 Windows 用户数据保护。");
+        if (envelope is not { Data.Length: > 0 } || (IsDpapi ? envelope.Version!=1 || envelope.Protection is not null : envelope.Version!=2 || envelope.Protection!=_protection.Id))
+            throw new InvalidDataException("证书信任列表格式或平台保护方式不匹配；不会跨平台迁移信任。");
         byte[] plaintext;
-        try { plaintext = ProtectedData.Unprotect(envelope.Data, Entropy, DataProtectionScope.CurrentUser); }
+        try { plaintext = _protection.Unprotect(envelope.Data, Entropy); }
         catch (CryptographicException ex) { throw new InvalidDataException("证书信任列表完整性验证失败；脚本保持停用。", ex); }
         TrustedScriptCertificate[] entries;
         try { entries = JsonSerializer.Deserialize<TrustedScriptCertificate[]>(plaintext, Format) ?? throw new InvalidDataException("证书信任列表无效。"); }
@@ -64,12 +70,11 @@ public sealed class ScriptCertificateTrustStore(string path)
         using var lease = new FileStream(full + ".lock", FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
         var entries = change(Read());
         if (entries.Length > 1024) throw new InvalidOperationException("最多信任 1024 张证书，请先移除不用的证书。");
-        if (!OperatingSystem.IsWindows()) throw new PlatformNotSupportedException("证书信任列表需要 Windows 用户数据保护。");
         var plaintext = JsonSerializer.SerializeToUtf8Bytes(entries, Format);
         byte[] data;
-        try { data = ProtectedData.Protect(plaintext, Entropy, DataProtectionScope.CurrentUser); }
+        try { data = _protection.Protect(plaintext, Entropy); }
         finally { CryptographicOperations.ZeroMemory(plaintext); }
-        var encoded = JsonSerializer.SerializeToUtf8Bytes(new ProtectedTrust(1, data), Format);
+        var encoded = JsonSerializer.SerializeToUtf8Bytes(new ProtectedTrust(IsDpapi?1:2, data,IsDpapi?null:_protection.Id), Format);
         if (encoded.Length > MaximumFileSize) throw new InvalidOperationException("证书信任列表超过容量限制，请先移除不用的证书。");
         var temporary = full + "." + Guid.NewGuid().ToString("N") + ".tmp";
         try

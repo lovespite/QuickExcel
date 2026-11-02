@@ -3,15 +3,23 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <PlatformTarget>x64</PlatformTarget>
+    <QuickExcelNativeRid Condition="'$(RuntimeIdentifier)' != ''">$(RuntimeIdentifier)</QuickExcelNativeRid>
+    <QuickExcelNativeRid Condition="'$(QuickExcelNativeRid)' == ''">$(NETCoreSdkRuntimeIdentifier)</QuickExcelNativeRid>
+    <QuickExcelNativeLibrary Condition="'$(QuickExcelNativeRid)' == 'win-x64'">$(MSBuildProjectDirectory)/native/bin/quickexcel-js.dll</QuickExcelNativeLibrary>
+    <QuickExcelNativeLibrary Condition="'$(QuickExcelNativeRid)' == 'linux-x64'">$(MSBuildProjectDirectory)/../artifacts/native/linux-x64/libquickexcel-js.so</QuickExcelNativeLibrary>
+    <QuickExcelNativeLibrary Condition="'$(QuickExcelNativeRid)' == 'osx-arm64'">$(MSBuildProjectDirectory)/../artifacts/native/osx-arm64/libquickexcel-js.dylib</QuickExcelNativeLibrary>
   </PropertyGroup>
   <ItemGroup>
     <Compile Remove="smoke\**\*.cs" />
-    <None Include="native\bin\quickexcel-js.dll" Link="quickexcel-js.dll" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <None Include="$(QuickExcelNativeLibrary)" Link="%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <None Update="native\QUICKJS-LICENSE.txt" Link="QUICKJS-LICENSE.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
-  <Target Name="BuildQuickJsNative" BeforeTargets="PrepareForBuild" Condition="$([MSBuild]::IsOSPlatform('Windows'))"
+  <Target Name="BuildQuickJsNative" BeforeTargets="PrepareForBuild" Condition="$([MSBuild]::IsOSPlatform('Windows')) and '$(QuickExcelNativeRid)' == 'win-x64'"
           Inputs="$(MSBuildProjectDirectory)\native\quickexcel-js.c;$(MSBuildProjectDirectory)\native\CMakeLists.txt;$(MSBuildProjectDirectory)\native\build.ps1" Outputs="$(MSBuildProjectDirectory)\native\bin\quickexcel-js.dll">
     <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\native\build.ps1&quot; -Rebuild" />
+  </Target>
+  <Target Name="RequireQuickJsNative" BeforeTargets="PrepareForBuild" DependsOnTargets="BuildQuickJsNative">
+    <Error Condition="'$(QuickExcelNativeLibrary)' == ''" Text="Unsupported native bridge RID: $(QuickExcelNativeRid)." />
+    <Error Condition="!Exists('$(QuickExcelNativeLibrary)')" Text="Build the verified native bridge for $(QuickExcelNativeRid) using QuickExcel.Scripting/native/build.sh on that platform first." />
   </Target>
 </Project>

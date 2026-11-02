@@ -9,7 +9,8 @@ New-Item -ItemType Directory -Force $npmRoot | Out-Null
 Copy-Item -LiteralPath (Join-Path $source 'package.json'), (Join-Path $source 'package-lock.json') -Destination $npmRoot
 Push-Location $npmRoot
 try {
-    & npm.cmd ci --cache (Join-Path $root 'artifacts/avalonia/npm-cache') --ignore-scripts --no-audit --no-fund
+    $npm = if ([Environment]::OSVersion.Platform -eq [PlatformID]::Win32NT) { 'npm.cmd' } else { 'npm' }
+    & $npm ci --cache (Join-Path $root 'artifacts/avalonia/npm-cache') --ignore-scripts --no-audit --no-fund
     if ($LASTEXITCODE -ne 0) { throw 'Locked web dependency installation failed.' }
 }
 finally { Pop-Location }

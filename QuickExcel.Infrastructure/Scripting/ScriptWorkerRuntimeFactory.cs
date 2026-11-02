@@ -11,14 +11,15 @@ namespace QuickExcel.Runtime;
 public sealed class ScriptWorkerRuntimeFactory(string? executablePath = null) : IScriptRuntimeFactory
 {
     private readonly string _executable = Path.GetFullPath(executablePath ??
-        Path.Combine(AppContext.BaseDirectory, "ScriptWorker", "QuickExcel.ScriptWorker.exe"));
+        Path.Combine(AppContext.BaseDirectory, "ScriptWorker", OperatingSystem.IsWindows() ? "QuickExcel.ScriptWorker.exe" : "QuickExcel.ScriptWorker"));
     public IScriptRuntime Create(string source) => Create(new ScriptRuntimeRequest(source, new(Guid.NewGuid(), 0, 0, 0), TimeSpan.FromSeconds(5), default));
     public IScriptRuntime Create(ScriptRuntimeRequest request) => ScriptWorkerRuntime.Start(_executable, request);
 
     /// <summary>Reclaims abandoned rounds for the current Windows user, without executing scripts.</summary>
     public static int RecoverAbandonedSandboxes(CancellationToken cancellation = default)
     {
-        if (!OperatingSystem.IsWindows()) throw new PlatformNotSupportedException("Worker requires Windows.");
+        if (OperatingSystem.IsLinux()) return LinuxWorkerLease.Recover(cancellation);
+        if (!OperatingSystem.IsWindows()) throw new PlatformNotSupportedException("此平台尚未开放脚本隔离。");
         try { return WorkerSandboxLease.Recover(cancellation); }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or Win32Exception)
         { throw new ScriptRuntimeFailureException("WorkerCleanup", "脚本 worker 残留资源回收失败，将在下次启动时重试。", e); }
@@ -28,7 +29,7 @@ public sealed class ScriptWorkerRuntimeFactory(string? executablePath = null) : 
 public sealed class ScriptWorkerRuntime : IScriptBatchRuntime
 {
     private readonly ScriptRuntimeRequest _request;
-    private WorkerProcess? _process;
+    private IWorkerProcess? _process;
     private readonly object _processGate = new();
     private readonly SemaphoreSlim _exchangeGate = new(1, 1);
     private readonly CancellationTokenSource _deadline = new();
@@ -61,7 +62,8 @@ public sealed class ScriptWorkerRuntime : IScriptBatchRuntime
     {
         request.CancellationToken.ThrowIfCancellationRequested();
         if (request.TimeLimit <= TimeSpan.Zero) throw new TimeoutException("重算已达到时间限制。");
-        if (!OperatingSystem.IsWindows() || !Environment.Is64BitProcess) throw new PlatformNotSupportedException("Worker requires Windows x64.");
+        if ((!OperatingSystem.IsWindows() && !OperatingSystem.IsLinux()) || System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture != System.Runtime.InteropServices.Architecture.X64)
+            throw new PlatformNotSupportedException("此平台尚未开放脚本隔离。");
         if (!File.Exists(executable)) throw new ScriptRuntimeFailureException("WorkerMissing", "找不到脚本 worker，请重新构建或安装完整发布包。");
         if (!request.Modules.CanExecute) throw new NotSupportedException("多模块执行需要显式声明脚本 API v2。");
         if (request.Modules.Modules.Sum(m => (long)Encoding.UTF8.GetByteCount(m.Value.Source)) > 1024 * 1024)
@@ -72,7 +74,7 @@ public sealed class ScriptWorkerRuntime : IScriptBatchRuntime
         {
             runtime._identity.Validate();
             runtime._deadline.CancelAfter(request.TimeLimit < TimeSpan.FromSeconds(5) ? request.TimeLimit : TimeSpan.FromSeconds(5));
-            runtime._process = WorkerProcess.Start(executable, runtime._lifetime.Token);
+            runtime._process = OperatingSystem.IsWindows() ? WorkerProcess.Start(executable, runtime._lifetime.Token) : LinuxWorkerProcess.Start(executable, runtime._lifetime.Token);
             runtime.ProcessId = runtime._process.Id;
             runtime._registration = runtime._lifetime.Token.Register(runtime.Abort);
             _ = runtime.DrainStderrAsync();
@@ -81,6 +83,7 @@ public sealed class ScriptWorkerRuntime : IScriptBatchRuntime
             if (accepted.Engine != hello.Engine || accepted.Policy != hello.Policy ||
                 !accepted.ApiVersions.SequenceEqual(hello.ApiVersions) || accepted.MaxFrameBytes != hello.MaxFrameBytes)
                 throw new ProtocolException("Worker handshake is incompatible.");
+            if (OperatingSystem.IsLinux() && runtime._process is LinuxWorkerProcess linux) linux.VerifyBeforeSource();
             string digest;
             LoadedScript loaded;
             if (request.Modules.ScriptApiVersion == 2)

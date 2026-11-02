@@ -155,7 +155,7 @@ public sealed partial class MainWindow
         finally { _scriptPicking = false; }
         var modules = Document.Snapshot.ScriptModules;
         if (_scriptStatus is not null && _scriptPage?.Drafts.Failed != true)
-            _scriptStatus.Text = $"{modules.Modules[_selectedModule].Path} · API v{modules.ScriptApiVersion} · {(Document.ScriptsEnabled ? "已授权" : "未授权")} · {(modules.Signature is null ? "未签名" : "已签名")} · " + (OperatingSystem.IsWindows() ? "独立隔离进程执行" : "此平台尚未开放脚本执行");
+            _scriptStatus.Text = $"{modules.Modules[_selectedModule].Path} · API v{modules.ScriptApiVersion} · {(Document.ScriptsEnabled ? "已授权" : "未授权")} · {(modules.Signature is null ? "未签名" : "已签名")} · " + (DesktopServices.SupportsScripts ? "独立隔离进程执行" : "此平台尚未开放脚本执行");
     }
     private void DisableScripts()
     { _scriptCancellation?.Cancel(); Document.DisableScripts(); if (_actionPicker is not null) _actionPicker.ItemsSource = null; RefreshScriptChrome(); }
@@ -192,7 +192,7 @@ public sealed partial class MainWindow
     {
         await using var hold = _scriptPage?.HoldEdits();
         if (!await CommitEditorsAsync()) return;
-        if (!OperatingSystem.IsWindows()) throw new PlatformNotSupportedException("此平台的脚本隔离尚未开放，不能执行脚本。");
+        if (!DesktopServices.SupportsScripts) throw new PlatformNotSupportedException("此平台的脚本隔离尚未开放，不能执行脚本。");
         if (!await CheckScriptTrustAsync()) return;
         await ScriptWorkAsync(async token =>
         {

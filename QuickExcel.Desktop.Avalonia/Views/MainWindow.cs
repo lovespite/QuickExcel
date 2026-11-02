@@ -263,10 +263,15 @@ public sealed partial class MainWindow : Window
     private async Task OpenPathAsync(string path)
     {
         await _workspace.OpenAsync(new(path)); _recentFiles.Remember(path); ShowBook(); _status.Text = "已打开 " + Path.GetFileName(path);
-        if (OperatingSystem.IsWindows() && Document.Snapshot.ScriptModules.Signature is not null)
+        if (DesktopServices.SupportsScripts && Document.Snapshot.ScriptModules.Signature is not null)
         {
-            var modules = Document.Snapshot.ScriptModules; var trust = await Task.Run(() => ScriptTrust.Verify(modules));
-            if (ReferenceEquals(modules, Document.Snapshot.ScriptModules) && trust.CanAutoEnable) await ApplyScriptsAsync();
+            var modules = Document.Snapshot.ScriptModules;
+            try
+            {
+                var trust = await Task.Run(() => ScriptTrust.Verify(modules));
+                if (ReferenceEquals(modules, Document.Snapshot.ScriptModules) && trust.CanAutoEnable) await ApplyScriptsAsync();
+            }
+            catch (QuickExcel.Security.UserProtectionUnavailableException ex) { _status.Text = "文件已打开；无法读取持久信任，脚本保持停用：" + ex.Message; }
         }
     }
     private async Task<bool> SaveAsync(bool saveAs)

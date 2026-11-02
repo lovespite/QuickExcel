@@ -25,7 +25,9 @@ public sealed class PrintSession : IAsyncDisposable
     {
         var root = Path.GetFullPath(temporaryRoot); Directory.CreateDirectory(root);
         if ((File.GetAttributes(root) & FileAttributes.ReparsePoint) != 0) throw new IOException("打印临时目录不能是重解析点。");
-        var directory = Path.Combine(root, "print-" + Guid.NewGuid().ToString("N")); Directory.CreateDirectory(directory);
+        var directory = Path.Combine(root, "print-" + Guid.NewGuid().ToString("N"));
+        if(OperatingSystem.IsWindows())Directory.CreateDirectory(directory);
+        else Directory.CreateDirectory(directory,UnixFileMode.UserRead|UnixFileMode.UserWrite|UnixFileMode.UserExecute);
         PrintSession? session = null;
         try
         {

@@ -1,10 +1,28 @@
+#ifdef _WIN32
 #include <windows.h>
+#else
+#include <time.h>
+#endif
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include "quickjs.h"
 
+#ifdef _WIN32
 #define QX_EXPORT __declspec(dllexport)
+#else
+#define QX_EXPORT __attribute__((visibility("default")))
+#endif
+
+static uint64_t qx_monotonic_milliseconds(void) {
+#ifdef _WIN32
+    return GetTickCount64();
+#else
+    struct timespec now;
+    if (clock_gettime(CLOCK_MONOTONIC, &now) != 0) abort();
+    return (uint64_t)now.tv_sec * 1000 + (uint64_t)now.tv_nsec / 1000000;
+#endif
+}
 #define QX_RESULT_LIMIT (16 * 1024 * 1024)
 
 typedef struct {
@@ -18,7 +36,7 @@ typedef struct {
     JSContext *context;
     JSValue bridge;
     JSValue error_stack_getter;
-    ULONGLONG deadline;
+    uint64_t deadline;
     int interrupted;
     qx_module modules[64];
     uint32_t module_count;
@@ -38,7 +56,7 @@ static void set_error(char **error, const char *message) {
 static int interrupt(JSRuntime *runtime, void *opaque) {
     (void)runtime;
     qx_session *session = opaque;
-    if (GetTickCount64() >= session->deadline) {
+    if (qx_monotonic_milliseconds() >= session->deadline) {
         session->interrupted = 1;
         return 1;
     }
@@ -48,7 +66,7 @@ static int interrupt(JSRuntime *runtime, void *opaque) {
 static void start_operation(qx_session *session) {
     JS_UpdateStackTop(session->runtime);
     session->interrupted = 0;
-    session->deadline = GetTickCount64() + 1000;
+    session->deadline = qx_monotonic_milliseconds() + 1000;
 }
 
 static size_t diagnostic_length(const char *text, size_t length, size_t budget) {

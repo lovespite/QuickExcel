@@ -30,10 +30,10 @@ public sealed partial class MainWindow
             _workspace.Editor.Execute(new UpdateScriptModulesCommand(new(new Dictionary<string, ScriptModule> { ["main"] = new("scripts/main.js", "quickExcel.functions.register('INSTALLCHECK', value => value + 1);") }, ["main"], scriptApiVersion: 2)));
             await OpenScriptsAsync(); Check(_scriptPage!.Browser.IsReady && await CommitScriptsAsync(), "Production Monaco worker and unchanged draft confirmation");
             await CloseScriptWindowAsync();
-            if (OperatingSystem.IsWindows())
+            if (DesktopServices.SupportsScripts)
             {
                 using var runtime = await Task.Run(() => new ScriptWorkerRuntimeFactory().Create("quickExcel.functions.register('INSTALLCHECK', value => value + 1);"));
-                Check(Convert.ToDouble(await Task.Run(() => runtime.Invoke("INSTALLCHECK", [41d]))) == 42, "Published native bridge in isolated Windows worker");
+                Check(Convert.ToDouble(await Task.Run(() => runtime.Invoke("INSTALLCHECK", [41d]))) == 42, "Published native bridge in platform-isolated worker");
             }
             await OpenPrintPreviewAsync(); Check(_pdfPage!.Browser.IsReady && _printSession!.Job.Layout.Pages.Length > 0, "Production PDF.js worker and complete print-session PDF");
             await _printSession!.ExportAsync(Path.Combine(directory, "installation.pdf"));

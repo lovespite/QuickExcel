@@ -233,8 +233,8 @@ public sealed class QuickJsSession : IDisposable
                 modules.Sum(m => (long)Encoding.UTF8.GetByteCount(m.Value)) > 1024 * 1024)
                 throw new ArgumentException("Invalid package module mapping or source budget.");
         }
-        if (!OperatingSystem.IsWindows() || !Environment.Is64BitProcess)
-            throw new PlatformNotSupportedException("QuickExcel currently includes a Windows x64 QuickJS runtime.");
+        if (!Environment.Is64BitProcess || !(OperatingSystem.IsWindows() || OperatingSystem.IsLinux() || OperatingSystem.IsMacOS()))
+            throw new PlatformNotSupportedException("QuickExcel requires a supported 64-bit native QuickJS runtime.");
         _session = NativeCreate(Bootstrap, out var error);
         if (_session == IntPtr.Zero) throw ReadException(error);
         try

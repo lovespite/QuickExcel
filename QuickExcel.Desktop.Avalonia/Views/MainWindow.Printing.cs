@@ -101,13 +101,34 @@ public sealed partial class MainWindow
     }
     private async Task PrintPreviewAsync()
     {
-        if (!OperatingSystem.IsWindows()) throw new PlatformNotSupportedException("此平台的原生打印适配尚未开放，请导出 PDF 后使用系统打印工具。");
         var session = _printSession ?? throw new InvalidOperationException("请先生成打印预览。");
+        if(!OperatingSystem.IsWindows()) {await PrintCupsAsync(session);return;}
         using var job = WindowsPrintJob.Choose((_printWindow ?? this).TryGetPlatformHandle()?.Handle ?? 0, session);
         if (job is null) return;
         using var cancellation = new CancellationTokenSource(); _printCancellation = cancellation;
         try { await job.PrintAsync(session, cancellation.Token); if (_printStatus is not null) _printStatus.Text = "当前预览任务已提交给系统打印服务。"; }
         finally { if (ReferenceEquals(_printCancellation, cancellation)) _printCancellation = null; }
+    }
+    private async Task PrintCupsAsync(PrintSession session)
+    {
+        var printers=await QuickExcel.Printing.CupsPrintService.GetDestinationsAsync();
+        if(printers.Count==0)throw new InvalidOperationException("没有可用的系统打印机，请先在系统设置中添加打印机。");
+        var dialog=new FieldsDialog("系统打印").Note($"当前预览共 {session.Job.Layout.Pages.Length} 页；按原始尺寸提交 PDF。")
+            .Choice("printer","打印机",printers.Select(p=>p.DisplayName).ToArray(),Math.Max(0,printers.ToList().FindIndex(p=>p.IsDefault)))
+            .Text("pages","页范围（留空为全部，例如 1-3,5）").Text("copies","份数","1");
+        dialog.Validate=()=>{_ = QuickExcel.Printing.CupsPrintService.NormalizePageRanges(dialog.String("pages"),session.Job.Layout.Pages.Length);dialog.Integer("copies",1,999);};
+        if(!await dialog.ShowAsync(this))return;
+        var printer=printers[dialog.Index("printer")];
+        var ranges=QuickExcel.Printing.CupsPrintService.NormalizePageRanges(dialog.String("pages"),session.Job.Layout.Pages.Length);
+        await using var lease=session.RetainPdf();
+        using var cancellation=new CancellationTokenSource();_printCancellation=cancellation;
+        try
+        {
+            var media=await QuickExcel.Printing.CupsPrintService.ValidateMediaAsync(printer,session.Job.Layout,cancellation.Token);
+            var receipt=await QuickExcel.Printing.CupsPrintService.SubmitAsync(printer,media,session.PdfPath,ranges,dialog.Integer("copies",1,999),cancellation.Token);
+            if(_printStatus is not null)_printStatus.Text="已提交系统打印队列："+receipt;
+        }
+        finally{if(ReferenceEquals(_printCancellation,cancellation))_printCancellation=null;}
     }
     private Task ClosePrintPreviewAsync() => _printClose ??= ClosePrintCoreAsync();
     private async Task ClosePrintCoreAsync()
