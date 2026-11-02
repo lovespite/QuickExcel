@@ -48,7 +48,13 @@ internal static class TypedImages
                     package.Loss($"{path}: 图片裁剪或旋转未建模", "drawing/transform", path);
                 var imageBytes = package.BinaryPart(imagePath);
                 package.Budget.Parse(imageBytes.Length + 256);
-                images.Add(new SheetImage(imageBytes, extension, row, column, bottom - row, right - column));
+                int Span(string axis, int first, int last)
+                {
+                    if (last < first) throw new InvalidDataException($"图片锚点 {axis} 坐标反向：{first} → {last}。");
+                    // Excel anchors images smaller than a cell with to == from; the cell-snapped model keeps one cell.
+                    return Math.Max(1, last - first);
+                }
+                images.Add(new SheetImage(imageBytes, extension, row, column, Span("row", row, bottom), Span("column", column, right)));
             }
         }
         return images;

@@ -98,6 +98,52 @@ public sealed partial class TypedStorageTests : IDisposable
     }
 
     [Fact]
+    public void ImageAnchoredInsideASingleCellOpensAsOneCellSpan()
+    {
+        var sheet = new WorksheetSnapshot(SheetId.New(), "图片", images: [new SheetImage(Pixel, "png", 4, 5, 1, 1)]);
+        var path = PathFor("single-cell-anchor.xlsx");
+        _storage.Export(path, new WorkbookSnapshot(Guid.NewGuid(), 0, ExcelDateSystem.Windows1900, [sheet]));
+        var parts = ReadZip(File.ReadAllBytes(path));
+        XNamespace xdr = "http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing";
+        var drawing = XDocument.Parse(Encoding.UTF8.GetString(parts["xl/drawings/drawing1.xml"]));
+        var anchor = drawing.Descendants(xdr + "twoCellAnchor").Single();
+        anchor.SetAttributeValue("editAs", "oneCell");
+        anchor.Element(xdr + "from")!.Element(xdr + "row")!.Value = "4";
+        anchor.Element(xdr + "from")!.Element(xdr + "col")!.Value = "5";
+        anchor.Element(xdr + "from")!.Element(xdr + "rowOff")!.Value = "38101";
+        anchor.Element(xdr + "to")!.Element(xdr + "row")!.Value = "4";
+        anchor.Element(xdr + "to")!.Element(xdr + "col")!.Value = "5";
+        anchor.Element(xdr + "to")!.Element(xdr + "colOff")!.Value = "1021081";
+        parts["xl/drawings/drawing1.xml"] = Encoding.UTF8.GetBytes(drawing.ToString());
+        File.WriteAllBytes(path, Zip(parts));
+        var opened = _storage.Open(path);
+        var image = Assert.Single(opened.Sheets[0].Images);
+        Assert.Equal((4, 5, 1, 1), (image.RowIndex, image.ColumnIndex, image.RowSpan, image.ColumnSpan));
+        Assert.Equal(Pixel, image.Data.ToArray());
+        Assert.Contains(opened.FileState!.CompatibilityIssues, issue => issue.Contains("像素偏移"));
+        Assert.Contains(opened.FileState.CompatibilityIssues, issue => issue.Contains("非随单元格缩放"));
+    }
+
+    [Fact]
+    public void ReversedImageAnchorIsRejectedWithPartLocation()
+    {
+        var sheet = new WorksheetSnapshot(SheetId.New(), "图片", images: [new SheetImage(Pixel, "png", 4, 5, 1, 1)]);
+        var path = PathFor("reversed-anchor.xlsx");
+        _storage.Export(path, new WorkbookSnapshot(Guid.NewGuid(), 0, ExcelDateSystem.Windows1900, [sheet]));
+        var parts = ReadZip(File.ReadAllBytes(path));
+        XNamespace xdr = "http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing";
+        var drawing = XDocument.Parse(Encoding.UTF8.GetString(parts["xl/drawings/drawing1.xml"]));
+        drawing.Descendants(xdr + "twoCellAnchor").Single().Element(xdr + "to")!.Element(xdr + "row")!.Value = "3";
+        parts["xl/drawings/drawing1.xml"] = Encoding.UTF8.GetBytes(drawing.ToString());
+        File.WriteAllBytes(path, Zip(parts));
+        var error = Assert.Throws<InvalidDataException>(() => _storage.Open(path));
+        var diagnostic = Assert.IsType<CompatibilityDiagnostic>(TypedWorkbookStorage.DescribeRejection(error));
+        Assert.Equal(CompatibilityKind.Rejected, diagnostic.Kind);
+        Assert.Equal("xl/drawings/drawing1.xml", diagnostic.Part);
+        Assert.Contains("坐标反向", diagnostic.Message);
+    }
+
+    [Fact]
     public void RemoteCellsRemainSparseAndDoNotHitTheLegacyDenseBudget()
     {
         var cells = Enumerable.Range(0, 1100).Select(row => new KeyValuePair<CellPosition, CellSnapshot>(new(row, 1023), Literal(CellValue.FromNumber(row))))
