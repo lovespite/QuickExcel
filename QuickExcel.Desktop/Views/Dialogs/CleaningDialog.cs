@@ -11,6 +11,7 @@ internal enum CleaningOperation { Duplicates, Split, Numbers }
 internal sealed class CleaningDialog : Window
 {
     internal CheckBox Header { get; } = new() { Content = "首行是标题，保留首行", IsChecked = true };
+    internal CheckBox ExpandRows { get; } = new() { Content = "扩展列（同步删除整行：选区外相邻数据列一起压缩）" };
     internal TextBox Keys { get; } = new();
     internal ComboBox SplitKind { get; } = new() { ItemsSource = new[] { "分隔符", "固定宽度（中文双宽）" }, SelectedIndex = 0 };
     internal TextBox Delimiters { get; } = new() { Text = "," };
@@ -44,8 +45,8 @@ internal sealed class CleaningDialog : Window
         { panel.Children.Add(new TextBlock { Text = text, Margin = new(0, 6, 0, 2) }); panel.Children.Add(control); }
         if (operation == CleaningOperation.Duplicates)
         {
-            panel.Children.Add(Header); Field("判重列序号（相对选区，从 1 开始，逗号分隔）", Keys);
-            panel.Children.Add(new TextBlock { Text = "保留每组第一条记录，只压缩选区并清空尾部。文本 ID 与数值分开；按基础显示格式判重，不区分文本大小写。", TextWrapping = TextWrapping.Wrap });
+            panel.Children.Add(Header); Field("判重列序号（相对选区，从 1 开始，逗号分隔）", Keys); panel.Children.Add(ExpandRows);
+            panel.Children.Add(new TextBlock { Text = "保留每组第一条记录，只压缩选区并清空尾部。勾选“扩展列”时，重复记录会连同选区外相邻数据列一起按整行删除（判重仍只看所选列）。文本 ID 与数值分开；按基础显示格式判重，不区分文本大小写。", TextWrapping = TextWrapping.Wrap, Margin = new(0, 4, 0, 0) });
         }
         if (operation == CleaningOperation.Split)
         {
@@ -67,7 +68,7 @@ internal sealed class CleaningDialog : Window
         void Reset() { Preview = null; ApplyButton.IsEnabled = false; grid.ItemsSource = null; summary.Text = "设置已改变，请生成预览。"; error.Text = ""; Overwrite.IsEnabled = false; Overwrite.IsChecked = false; }
         foreach (var text in new[] { Keys, Delimiters, Breaks, Types, Destination, GroupSeparator }) text.TextChanged += (_, _) => Reset();
         foreach (var picker in new[] { SplitKind, Qualifier, Decimal }) picker.SelectionChanged += (_, _) => Reset();
-        foreach (var check in new[] { Header, Collapse, TrailingMinus }) { check.Checked += (_, _) => Reset(); check.Unchecked += (_, _) => Reset(); }
+        foreach (var check in new[] { Header, Collapse, TrailingMinus, ExpandRows }) { check.Checked += (_, _) => Reset(); check.Unchecked += (_, _) => Reset(); }
         void EnableApply() => ApplyButton.IsEnabled = Preview is { } p && (p.Overwrites.IsEmpty || AllowOverwrite);
         Overwrite.Checked += (_, _) => EnableApply(); Overwrite.Unchecked += (_, _) => EnableApply();
         PreviewButton.Click += (_, _) =>
@@ -79,7 +80,7 @@ internal sealed class CleaningDialog : Window
                 Preview = operation switch
                 {
                     CleaningOperation.Duplicates => DataCleaning.RemoveDuplicates(book, sheet, selection, Keys.Text.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
-                        .Select(s => selection.Left + int.Parse(s, System.Globalization.CultureInfo.InvariantCulture) - 1), Header.IsChecked == true),
+                        .Select(s => selection.Left + int.Parse(s, System.Globalization.CultureInfo.InvariantCulture) - 1), Header.IsChecked == true, ExpandRows.IsChecked == true),
                     CleaningOperation.Numbers => DataCleaning.ConvertTextNumbers(book, sheet, selection, numeric),
                     _ => Split()
                 };

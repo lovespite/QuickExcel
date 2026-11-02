@@ -30,6 +30,7 @@ public partial class MainWindow
             InstallDocument(WorkbookDocument.CreateBlank(_services), null, "数据清洗验收");
             ApplyValues([(0, 0, "Source"), (1, 0, "'001,2.50,2026-10-31"), (2, 0, "'002,3,2026-11-01"), (1, 3, "existing"),
                 (5, 0, "Key"), (5, 1, "Record"), (6, 0, "red"), (6, 1, "1"), (7, 0, "RED"), (7, 1, "2"), (8, 0, "blue"), (8, 1, "3"),
+                (6, 2, "c1"), (7, 2, "c2"), (8, 2, "c3"),
                 (0, 6, "Number"), (1, 6, "'001"), (2, 6, "'12-"), (3, 6, "=1+1"), (0, 7, "'1234567890123456")]);
             await RecalculateAsync(); await Idle();
             var id = _document.Snapshot.Sheets[0].Id; var before = _document.Snapshot;
@@ -64,6 +65,9 @@ public partial class MainWindow
             Check(_document.Snapshot.Sheets[0].GetCell(3, 6)!.Content.FormulaText == "=1+1", "Numeric conversion retains existing formulas");
             var duplicates = DataCleaning.RemoveDuplicates(_document.Snapshot, id, new(5, 0, 8, 1), [0]);
             Check(duplicates.RemovedRows.SequenceEqual([7]), "Duplicate preview identifies the original removed row");
+            var expanded = DataCleaning.RemoveDuplicates(_document.Snapshot, id, new(5, 0, 8, 1), [0], expandToWholeRows: true);
+            Check(expanded.Result.Sheets[0].GetCell(7, 2)!.Value == CellValue.FromText("c3") && expanded.Result.Sheets[0].GetCell(8, 2) is null,
+                "Expanded duplicate preview removes the whole row including adjacent columns outside the selection");
             await Commit(duplicates, CleaningOperation.Duplicates);
             Check(_document.GetCellValue(0, 7, 0) == "blue" && _document.GetCellValue(0, 7, 1) == "3" && _document.Snapshot.Sheets[0].GetCell(8, 0) is null,
                 "Duplicate handler compacts whole selected records and clears the tail");

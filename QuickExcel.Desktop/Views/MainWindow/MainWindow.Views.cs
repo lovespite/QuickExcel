@@ -54,10 +54,21 @@ public partial class MainWindow
             StatusText.Text = "视图超出当前网格显示范围；原视图仍保留，冻结显示上限为 10 行及可见列范围。";
     }
 
-    private void SetWorksheetZoom(int zoom)
+    private bool SetWorksheetZoom(int zoom, bool commitEditors = true)
     {
         var sheet = _document.Snapshot.Sheets[_sheetIndex];
-        ExecuteWorkbookCommand(new SetSheetViewCommand(sheet.Id, sheet.View with { Zoom = zoom, NormalZoom = zoom }));
+        var command = new SetSheetViewCommand(sheet.Id, sheet.View with { Zoom = zoom, NormalZoom = zoom });
+        if (commitEditors) return ExecuteWorkbookCommand(command);
+        // Ctrl+wheel changes only the view; keep an in-progress cell/formula draft uncommitted.
+        if (_busy) return false;
+        try
+        {
+            var result = _editor.Execute(command);
+            if (!result.Changed) return true;
+            RefreshSheet(); UpdateChrome();
+            return true;
+        }
+        catch (Exception ex) { ReportEditFailure(ex); return false; }
     }
 
     private void HideSheet_Click(object sender, RoutedEventArgs e)

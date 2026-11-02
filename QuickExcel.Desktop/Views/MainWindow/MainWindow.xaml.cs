@@ -62,6 +62,7 @@ public partial class MainWindow : Window
         _grid.SelectionChanged += Grid_CurrentCellChanged;
         _grid.EditingChanged += () => { if (_grid.IsEditing) _editState.BeginGrid(); else _editState.EndGrid(); };
         InstallInputHandlers();
+        InstallZoomHandlers();
         InstallWorkspaceHandlers();
         InstallCellTextHandlers();
         InstallFillHandlers();
@@ -245,6 +246,7 @@ public partial class MainWindow : Window
     private void UpdateFormulaBar()
     {
         UpdateRibbonState();
+        if (!_formulaPending && !_grid.IsEditing) _grid.ShowReference(null);
         if (_formulaPending) return; // A selection/refresh must not overwrite an unsubmitted edit.
         CellAddress.Text = ColumnName(_selectedColumn) + (_selectedRow + 1);
         _updatingFormula = true;

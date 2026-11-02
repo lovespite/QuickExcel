@@ -56,15 +56,19 @@ public partial class MainWindow
             await KeyAsync(Key.Escape); Check(!_grid.IsEditing && _document.Snapshot.Revision == revision, "Second Escape cancels the draft without history");
             GridSurface.Select(new(0, 2)); GridSurface.BeginEdit(); _grid.Editor.Text = "=SUM("; _grid.Editor.CaretIndex = 5;
             Check(BeginReferenceGesture(new(0, 0)), "Grid formula draft starts a reference gesture");
+            Check(_grid.ReferenceRange == new GridRange(0, 0, 0, 0), "Pointer picking highlights the initial referenced cell");
             UpdateReferenceGesture(new(2, 0)); EndReferenceGesture();
             Check(_grid.Editor.Text == "=SUM(A1:A3" && _grid.Current == new CellPosition(0, 2) && _document.Snapshot.Revision == revision,
                 "Reference dragging changes only the original cell draft and leaves model selection unchanged");
+            Check(_grid.ReferenceRange == new GridRange(0, 0, 2, 0), "The dragged A1:A3 reference remains visibly highlighted after release");
             _grid.Editor.Select(_grid.Editor.Text.Length, 0); _grid.Editor.SelectedText = ")"; await KeyAsync(Key.Enter);
             Check(_document.Snapshot.Sheets[0].GetCell(0, 2)!.Value.NumberValue == 6 && _document.Snapshot.Sheets[0].GetCell(0, 0)!.Value.NumberValue == 1,
                 "Pointed formula commits to C1, leaving the referenced cells unchanged");
             GridSurface.Select(new(1, 2)); FormulaBar.Focus(); FormulaBar.Text = "=SUM("; FormulaBar.CaretIndex = 5;
             revision = _document.Snapshot.Revision;
-            Check(BeginReferenceGesture(new(0, 0)), "Formula bar starts a reference gesture"); UpdateReferenceGesture(new(1, 0)); EndReferenceGesture();
+            Check(BeginReferenceGesture(new(0, 0)), "Formula bar starts a reference gesture"); UpdateReferenceGesture(new(1, 0)); EndReferenceGesture(); await Idle();
+            Check(ReferenceEquals(Keyboard.FocusedElement, FormulaBar), "Formula-bar reference picking returns focus to the formula bar instead of the hidden grid editor");
+            Check(_grid.ReferenceRange == new GridRange(0, 0, 1, 0), "Formula-bar reference picking keeps the A1:A2 highlight visible");
             FormulaBar.Select(FormulaBar.Text.Length, 0); FormulaBar.SelectedText = ")";
             Check(_formulaRow == 1 && _formulaColumn == 2 && _document.Snapshot.Revision == revision, "Formula-bar draft keeps its original address through reference picking");
             await ApplyFormulaBarAsync(); Check(_document.Snapshot.Sheets[0].GetCell(1, 2)!.Value.NumberValue == 3, "Formula-bar apply uses the ordinary undoable commit path");

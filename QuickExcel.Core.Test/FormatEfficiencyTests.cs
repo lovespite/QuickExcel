@@ -34,6 +34,35 @@ public sealed class FormatEfficiencyTests
     }
 
     [Fact]
+    public void ColorCommandsCanClearFillOrFontWithoutResettingOtherStyleFields()
+    {
+        var sheet = Sheet("S", (0, 0, N(1)));
+        using var session = new DocumentSession(Book(sheet));
+        var address = new CellAddress(sheet.Id, 0, 0);
+        session.Execute(new SetCellStyleCommand([address], new CellStylePatch(FillColor: "FFFF0000", FontColor: "FF0070C0", Bold: true)));
+        session.Execute(new SetCellStyleCommand([address], new CellStylePatch(ClearFillColor: true)));
+        var style = session.Snapshot.Styles[session.Snapshot.Sheets[0].GetStyleId(0, 0)];
+        Assert.Null(style.FillColor); Assert.Equal("FF0070C0", style.FontColor); Assert.True(style.Bold);
+        session.Execute(new SetCellStyleCommand([address], new CellStylePatch(ClearFontColor: true)));
+        style = session.Snapshot.Styles[session.Snapshot.Sheets[0].GetStyleId(0, 0)];
+        Assert.Null(style.FontColor); Assert.True(style.Bold);
+        session.Undo(); Assert.Equal("FF0070C0", session.Snapshot.Styles[session.Snapshot.Sheets[0].GetStyleId(0, 0)].FontColor);
+    }
+
+    [Fact]
+    public void ClearingFontColorAlsoRemovesExplicitRichTextRunColors()
+    {
+        var runs = new RichCellText([new TextRun("A", new TextRunFont(Color: "FFFF0000")), new TextRun("B")]);
+        var sheet = new WorksheetSnapshot(SheetId.New(), "Rich", [new(new(0, 0), new(CellContent.FromRichText(runs, 1)))]);
+        using var session = new DocumentSession(new WorkbookSnapshot(Guid.NewGuid(), 0, ExcelDateSystem.Windows1900, [sheet],
+            styles: [new(), new() { Bold = true, FontColor = "FF00FF00" }]));
+        session.Execute(new SetCellStyleCommand([new(sheet.Id, 0, 0)], new CellStylePatch(ClearFontColor: true)));
+        var cell = session.Snapshot.Sheets[0].GetCell(0, 0)!;
+        Assert.Equal("AB", cell.Value.TextValue); Assert.Null(cell.Content.RichText!.Runs[0].Font!.Color);
+        Assert.Null(cell.Content.RichText.Runs[0].Font!.RawRgb);
+    }
+
+    [Fact]
     public void PrecisionChangesAreAtomicUndoableAndKeepFreshFormulaValues()
     {
         var sheet = Sheet("S", (0, 0, N(1.234)), (1, 0, F("=A1*2")));

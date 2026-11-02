@@ -100,6 +100,47 @@ public sealed class DataCleaningTests
         Assert.Empty(unchanged.Changes);
     }
     [Fact]
+    public void ExpandToWholeRowsMovesAdjacentColumnsWhileKeysStayInTheSelectedColumns()
+    {
+        var sheet = Sheet("Data", (0, 0, T("Key")), (1, 0, T("a")), (2, 0, T("a")), (3, 0, T("b")),
+            (0, 1, T("Record")), (1, 1, N(1)), (2, 1, N(2)), (3, 1, N(3)),
+            (0, 2, T("Extra")), (1, 2, T("first")), (2, 2, T("duplicate")), (3, 2, T("third")));
+        var book = Book(sheet);
+        var compact = DataCleaning.RemoveDuplicates(book, sheet.Id, new(0, 0, 3, 1), [0]);
+        Assert.Equal("duplicate", compact.Result.Sheets[0].GetCell(2, 2)!.Value.TextValue);
+        var expanded = DataCleaning.RemoveDuplicates(book, sheet.Id, new(0, 0, 3, 1), [0], expandToWholeRows: true);
+        Assert.Equal(new[] { 2 }, expanded.RemovedRows);
+        Assert.Contains(expanded.Notices, notice => notice.Contains("扩展列"));
+        var result = expanded.Result.Sheets[0];
+        Assert.Equal(CellValue.FromText("b"), result.GetCell(2, 0)!.Value);
+        Assert.Equal(CellValue.FromNumber(3), result.GetCell(2, 1)!.Value);
+        Assert.Equal(CellValue.FromText("third"), result.GetCell(2, 2)!.Value);
+        Assert.Null(result.GetCell(3, 0)); Assert.Null(result.GetCell(3, 1)); Assert.Null(result.GetCell(3, 2));
+    }
+    [Fact]
+    public void ExpandToWholeRowsStopsAtBlankColumnsAndRejectsUnsafeAdjacentContent()
+    {
+        var sheet = Sheet("Data", (0, 0, T("Key")), (1, 0, T("a")), (2, 0, T("a")),
+            (0, 1, T("Record")), (1, 1, N(1)), (2, 1, N(2)), (0, 3, T("Gap")), (1, 3, T("keep")), (2, 3, T("keep")));
+        var book = Book(sheet);
+        var preview = DataCleaning.RemoveDuplicates(book, sheet.Id, new(0, 0, 2, 1), [0], expandToWholeRows: true);
+        Assert.Equal("keep", preview.Result.Sheets[0].GetCell(2, 3)!.Value.TextValue);
+        var rich = sheet.WithCells(sheet.Cells.SetItem(new(1, 2), new(CellContent.FromRichText(new([new("x")])))));
+        Assert.Throws<NotSupportedException>(() => DataCleaning.RemoveDuplicates(Book(rich), rich.Id, new(0, 0, 2, 1), [0], expandToWholeRows: true));
+    }
+    [Fact]
+    public void DuplicateCompactionAdjustsOnlyFormulaReferencesThatMoveWithTheRecord()
+    {
+        var sheet = Sheet("Data", (0, 0, T("Key")), (1, 0, T("a")), (2, 0, T("a")), (3, 0, T("b")),
+            (1, 1, F("=D2")), (3, 1, F("=A4+D4")), (1, 3, N(10)), (2, 3, N(20)), (3, 3, N(30)));
+        var preview = DataCleaning.RemoveDuplicates(Book(sheet), sheet.Id, new(0, 0, 3, 1), [0], expandToWholeRows: true);
+        var result = preview.Result.Sheets[0];
+        Assert.Equal("=D2", result.GetCell(1, 1)!.Content.FormulaText);
+        Assert.Equal("=(A3+D4)", result.GetCell(2, 1)!.Content.FormulaText);
+        var bad = Sheet("Bad", (0, 0, T("Key")), (1, 0, T("a")), (2, 0, T("a")), (3, 0, T("b")), (3, 1, F("=A3")));
+        Assert.Throws<NotSupportedException>(() => DataCleaning.RemoveDuplicates(Book(bad), bad.Id, new(0, 0, 3, 1), [0]));
+    }
+    [Fact]
     public void ValidationFailureRejectsTheWholeReviewedCandidateAndHiddenRowsCannotBeCompressed()
     {
         var sheet = Sheet("Data", (0, 0, T("1,9")));

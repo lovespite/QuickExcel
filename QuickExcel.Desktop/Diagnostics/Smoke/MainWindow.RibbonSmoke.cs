@@ -35,7 +35,23 @@ public partial class MainWindow
             {
                 tab.IsSelected = true; await Idle();
                 Check(((FrameworkElement)tab.Content).IsVisible, $"Tab {tab.Header} exposes its commands");
+                foreach (var group in ProductChildren<GroupBox>((FrameworkElement)tab.Content))
+                {
+                    var host = (ContentPresenter)group.Template.FindName("ContentHost", group);
+                    Check(host.ActualHeight >= 84 && host.ActualHeight + 0.5 >= host.DesiredSize.Height,
+                        $"Group {group.Header} shows all command rows without collapsing the last row");
+                    foreach (var button in ProductChildren<ButtonBase>(group))
+                    foreach (var label in ProductChildren<ContentPresenter>(button).Where(p => p.Content is string))
+                        Check(label.ActualWidth + 0.5 >= label.DesiredSize.Width,
+                            $"Ribbon label '{label.Content}' is not clipped horizontally");
+                }
             }
+            var zoomButtons = ProductChildren<Button>(HomeRibbonContent)
+                .Where(b => System.Windows.Automation.AutomationProperties.GetName(b) is "增加小数位" or "减少小数位").ToArray();
+            Check(zoomButtons.Length == 2 &&
+                Ribbon.GetIcon(zoomButtons.Single(b => System.Windows.Automation.AutomationProperties.GetName(b) == "增加小数位")) == FluentIcons.Common.Icon.DecimalArrowRight &&
+                Ribbon.GetIcon(zoomButtons.Single(b => System.Windows.Automation.AutomationProperties.GetName(b) == "减少小数位")) == FluentIcons.Common.Icon.DecimalArrowLeft,
+                "Decimal place buttons use the matching increase/decrease arrow icons");
             Check(_document.Snapshot.Revision == revision, "Switching ribbon tabs never changes the document");
             HomeRibbonTab.IsSelected = true; await Idle();
             GridSurface.Select(new(3, 1)); await Idle();

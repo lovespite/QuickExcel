@@ -63,7 +63,7 @@ public partial class MainWindow
         finally { _updatingRibbon = false; }
     }
 
-    private void ApplyRibbonStyle(CellStylePatch patch)
+    private bool ApplyRibbonStyle(CellStylePatch patch)
     {
         var snapshot = _document.Snapshot;
         CurrentView.RequireCurrentFilter(snapshot);
@@ -71,7 +71,7 @@ public partial class MainWindow
         var selection = GridSurface.Selection.Count == 0 ? [new CellPosition(_selectedRow, _selectedColumn)] : GridSurface.Selection;
         var addresses = selection.Where(p => !CurrentView.IsFilteredOut(snapshot, _sheetIndex, p.Row))
             .Select(p => new CellAddress(sheet.Id, p.Row, p.Column));
-        ExecuteWorkbookCommand(new SetCellStyleCommand(addresses, patch));
+        return ExecuteWorkbookCommand(new SetCellStyleCommand(addresses, patch));
     }
 
     private void RibbonFont_SelectionChanged(object sender, SelectionChangedEventArgs e)

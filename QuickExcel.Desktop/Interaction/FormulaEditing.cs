@@ -7,6 +7,7 @@ namespace QuickExcel.Desktop;
 internal readonly record struct FormulaTextEdit(int Start, int Length, string Text);
 internal sealed record FormulaCompletion(int Start, int Length, string[] Names);
 internal sealed record FormulaCallHint(string Name, int Argument, string Signature);
+internal sealed record FormulaReference(GridRange Range, string? Sheet);
 
 /// <summary>Bounded lexical assistance for incomplete drafts; never evaluates or commits a formula.</summary>
 internal static class FormulaEditing
@@ -46,7 +47,7 @@ internal static class FormulaEditing
                             if (FormulaSyntax.Parse("=" + match.Value) is ReferenceNode)
                             { i += match.Length; result.Add(new(start, match.Length, "reference", match.Value)); continue; }
                         }
-                        catch (FormatException) { }
+                        catch (Exception ex) when (ex is FormatException or OverflowException or ArgumentException) { }
                     }
                 }
                 if (c == '\'')
@@ -147,6 +148,20 @@ internal static class FormulaEditing
         if (length > 0) return null;
         var previous = start - 1; while (previous >= 0 && char.IsWhiteSpace(text[previous])) previous--;
         return previous >= 0 && "=+-*/^&(<>,:".Contains(text[previous]) ? new(start, 0, "") : null;
+    }
+    /// <summary>Resolves the reference token under/next to the caret for read-only cell highlighting.</summary>
+    public static FormulaReference? ReferenceAt(string text, int caret)
+    {
+        if (!text.StartsWith('=') || text.Length > 8192 || text.Contains('[') || text.Contains(']')) return null;
+        caret = Math.Clamp(caret, 0, text.Length);
+        try
+        {
+            var token = Tokens(text).FirstOrDefault(t => t.Kind == "reference" && t.Start <= caret && caret <= t.Start + t.Length);
+            if (token is null) return null;
+            if (FormulaSyntax.Parse("=" + token.Text) is not ReferenceNode reference) return null;
+            return new(new GridRange(reference.Row, reference.Column, reference.EndRow, reference.EndColumn), reference.Sheet);
+        }
+        catch (Exception ex) when (ex is FormatException or OverflowException or RegexMatchTimeoutException or ArgumentException) { return null; }
     }
     public static string Address(GridRange range) => FormulaSyntax.ColumnName(range.Left) + (range.Top + 1) +
         (range.Count == 1 ? "" : ":" + FormulaSyntax.ColumnName(range.Right) + (range.Bottom + 1));

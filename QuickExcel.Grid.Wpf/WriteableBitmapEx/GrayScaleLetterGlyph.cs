@@ -25,30 +25,33 @@ namespace System.Windows.Media.Imaging
         public Item[] Items;
 
 
-        public static GrayScaleLetterGlyph CreateSpaceGlyph(GlyphTypeface glyphTypeface, double size)
+        public static GrayScaleLetterGlyph CreateSpaceGlyph(GlyphTypeface glyphTypeface, double size, double scaleX, double scaleY)
         {
-            int spaceWidth = (int)Math.Ceiling(glyphTypeface.AdvanceWidths[glyphTypeface.CharacterToGlyphMap[' ']] * size);
+            int spaceWidth = (int)Math.Ceiling(glyphTypeface.AdvanceWidths[glyphTypeface.CharacterToGlyphMap[' ']] * size * scaleX);
             return new GrayScaleLetterGlyph
             {
                 Ch = ' ',
-                Height = (int)Math.Ceiling(glyphTypeface.Height * size),
+                Height = (int)Math.Ceiling(glyphTypeface.Height * size * scaleY),
                 Width = spaceWidth,
             };
         }
 
-        public static unsafe GrayScaleLetterGlyph CreateGlyph(Typeface typeface, GlyphTypeface glyphTypeface, double size, char ch)
+        public static unsafe GrayScaleLetterGlyph CreateGlyph(Typeface typeface, GlyphTypeface glyphTypeface, double size, char ch,
+            double scaleX = 0, double scaleY = 0)
         {
-            if (ch == ' ') return CreateSpaceGlyph(glyphTypeface, size);
+            if (scaleX <= 0) scaleX = DpiDetector.DpiXKoef;
+            if (scaleY <= 0) scaleY = DpiDetector.DpiYKoef;
+            if (ch == ' ') return CreateSpaceGlyph(glyphTypeface, size, scaleX, scaleY);
 
             FormattedText text = new FormattedText("" + ch,
                                                    CultureInfo.InvariantCulture,
                                                    FlowDirection.LeftToRight,
                                                    typeface,
                                                    size,
-                                                   Brushes.White, DpiDetector.DpiYKoef);
+                                                   Brushes.White, scaleY);
 
-            int width = (int)Math.Ceiling(DpiDetector.DpiXKoef * text.Width);
-            int height = (int)Math.Ceiling(DpiDetector.DpiYKoef * text.Height);
+            int width = (int)Math.Ceiling(scaleX * text.Width);
+            int height = (int)Math.Ceiling(scaleY * text.Height);
             if (width == 0 || height == 0) return null;
 
             DrawingVisual drawingVisual = new DrawingVisual();
@@ -57,7 +60,7 @@ namespace System.Windows.Media.Imaging
             drawingContext.DrawText(text, new Point(0, 0));
             drawingContext.Close();
 
-            RenderTargetBitmap bmp = new RenderTargetBitmap(width, height, DpiDetector.DpiXKoef * 96, DpiDetector.DpiYKoef * 96, PixelFormats.Pbgra32);
+            RenderTargetBitmap bmp = new RenderTargetBitmap(width, height, scaleX * 96, scaleY * 96, PixelFormats.Pbgra32);
             bmp.Render(drawingVisual);
 
             var res = new List<Item>();

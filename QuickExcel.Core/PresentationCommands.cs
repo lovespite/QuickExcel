@@ -112,7 +112,8 @@ public sealed class SortRangeCommand : DocumentCommand
 public sealed record CellStylePatch(bool? Bold = null, bool? Italic = null, string? FontColor = null,
     string? FillColor = null, int? Horizontal = null, int? NumberFormatId = null, string? NumberFormatCode = null,
     bool? Border = null, double? FontSize = null, bool Reset = false,
-    string? FontName = null, int? Vertical = null, bool? WrapText = null)
+    string? FontName = null, int? Vertical = null, bool? WrapText = null,
+    bool ClearFontColor = false, bool ClearFillColor = false)
 {
     internal StyleDefinition Apply(StyleDefinition style)
     {
@@ -132,7 +133,8 @@ public sealed record CellStylePatch(bool? Bold = null, bool? Italic = null, stri
         return style with
         {
             Bold = Bold ?? style.Bold, Italic = Italic ?? style.Italic,
-            FontColor = Color(FontColor) ?? style.FontColor, FillColor = Color(FillColor) ?? style.FillColor,
+            FontColor = ClearFontColor ? null : Color(FontColor) ?? style.FontColor,
+            FillColor = ClearFillColor ? null : Color(FillColor) ?? style.FillColor,
             FontSize = FontSize ?? style.FontSize, Horizontal = Horizontal ?? style.Horizontal,
             FontName = FontName ?? style.FontName, Vertical = Vertical ?? style.Vertical,
             FontScheme = FontName is null ? style.FontScheme : null,
@@ -174,7 +176,7 @@ public sealed class SetCellStyleCommand : DocumentCommand
                 id = styles.Count; styles.Add(style); styleIds.Add(style, id);
             }
             var content = sheet.GetCell(address.Row, address.Column)?.Content ?? CellContent.FromLiteral(CellValue.Blank);
-            if (content.RichText is { } rich && (_patch.Reset || _patch.Bold.HasValue || _patch.Italic.HasValue || _patch.FontName is not null || _patch.FontSize.HasValue || _patch.FontColor is not null))
+            if (content.RichText is { } rich && (_patch.Reset || _patch.Bold.HasValue || _patch.Italic.HasValue || _patch.FontName is not null || _patch.FontSize.HasValue || _patch.FontColor is not null || _patch.ClearFontColor))
             {
                 // Whole-cell font commands explicitly override every run, like Excel; other patches leave runs intact.
                 var runs = rich.Runs.Select(run =>
@@ -184,14 +186,17 @@ public sealed class SetCellStyleCommand : DocumentCommand
                     var font = run.Font ?? new TextRunFont(inherited.FontName, inherited.FontSize, inherited.Bold, inherited.Italic, inherited.FontColor,
                         Scheme: inherited.FontScheme, EastAsianName: inherited.EastAsianFontName, ResolvedName: inherited.FontName,
                         Underline: inherited.Underline, Strike: inherited.Strike);
+                    var clearColor = _patch.ClearFontColor;
                     return run with { Font = font with
                     {
                         Bold = _patch.Bold ?? font.Bold, Italic = _patch.Italic ?? font.Italic, Size = _patch.FontSize ?? font.Size,
                         Name = _patch.FontName ?? font.Name, ResolvedName = _patch.FontName ?? font.ResolvedName,
                         EastAsianName = _patch.FontName is null ? font.EastAsianName : null, Scheme = _patch.FontName is null ? font.Scheme : null,
-                        Color = _patch.FontColor ?? font.Color, RawRgb = _patch.FontColor ?? font.RawRgb,
-                        ThemeColor = _patch.FontColor is null ? font.ThemeColor : null, IndexedColor = _patch.FontColor is null ? font.IndexedColor : null,
-                        AutoColor = _patch.FontColor is null ? font.AutoColor : null, Tint = _patch.FontColor is null ? font.Tint : null
+                        Color = clearColor ? null : _patch.FontColor ?? font.Color, RawRgb = clearColor ? null : _patch.FontColor ?? font.RawRgb,
+                        ThemeColor = clearColor || _patch.FontColor is not null ? null : font.ThemeColor,
+                        IndexedColor = clearColor || _patch.FontColor is not null ? null : font.IndexedColor,
+                        AutoColor = clearColor || _patch.FontColor is not null ? null : font.AutoColor,
+                        Tint = clearColor || _patch.FontColor is not null ? null : font.Tint
                     } };
                 });
                 content = CellContent.FromRichText(new(runs), id);

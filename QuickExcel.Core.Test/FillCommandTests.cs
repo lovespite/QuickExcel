@@ -22,6 +22,46 @@ public sealed class FillCommandTests
     public void SeriesMatchesIndependentExcelValues(CellSeriesKind kind, ExcelDateSystem system, double start, double step, int index, double expected) =>
         Assert.Equal(expected, FillSeriesCommand.SeriesValue(start, step, index, kind, system));
 
+    [Theory]
+    [InlineData("XX1", 1, 1, "XX2")]
+    [InlineData("XX1", 1, 9, "XX10")]
+    [InlineData("XX1", 2, 2, "XX5")]
+    [InlineData("A001", 1, 1, "A002")]
+    [InlineData("A001", 1, 99, "A100")]
+    [InlineData("001", 1, 1, "002")]
+    [InlineData("编号9", -1, 1, "编号8")]
+    public void TextNumberSeriesKeepsPrefixAndLeadingZeroWidth(string text, double step, int index, string expected) =>
+        Assert.Equal(expected, FillSeriesCommand.TextSeriesValue(text, step, index));
+
+    [Fact]
+    public void TextNumberSeriesFillsSelectedCellsWithTheSourceStyleAndOneUndo()
+    {
+        var sheet = new WorksheetSnapshot(SheetId.New(), "TextSeries", [new(new(1, 1), new(CellContent.FromLiteral(CellValue.FromText("XX1"), 2)))]);
+        var book = new WorkbookSnapshot(Guid.NewGuid(), 0, ExcelDateSystem.Windows1900, [sheet], styles: [new(), new() { Bold = true }, new() { Italic = true }]);
+        using var session = new DocumentSession(book);
+        session.Execute(new FillSeriesCommand(sheet.Id, new(1, 1, 1, 4), CellSeriesKind.TextNumber, 1));
+        var result = session.Snapshot.Sheets[0];
+        Assert.Equal("XX1", result.GetCell(1, 1)!.Value.TextValue);
+        Assert.Equal("XX2", result.GetCell(1, 2)!.Value.TextValue);
+        Assert.Equal("XX4", result.GetCell(1, 4)!.Value.TextValue);
+        Assert.All(Enumerable.Range(1, 4), c => Assert.Equal(2, result.GetStyleId(1, c)));
+        session.Undo(); Assert.Equal("XX1", session.Snapshot.Sheets[0].GetCell(1, 1)!.Value.TextValue);
+        Assert.Null(session.Snapshot.Sheets[0].GetCell(1, 4));
+        session.Redo(); Assert.Equal("XX4", session.Snapshot.Sheets[0].GetCell(1, 4)!.Value.TextValue);
+    }
+
+    [Fact]
+    public void TextNumberSeriesRejectsMissingDigitsNegativeResultsAndFractionalSteps()
+    {
+        var sheet = new WorksheetSnapshot(SheetId.New(), "TextSeries", [new(new(0, 0), new(CellContent.FromLiteral(CellValue.FromText("XX")))),
+            new(new(1, 0), new(CellContent.FromLiteral(CellValue.FromText("X1"))))]);
+        var book = new WorkbookSnapshot(Guid.NewGuid(), 0, ExcelDateSystem.Windows1900, [sheet]); using var session = new DocumentSession(book);
+        Assert.Throws<ArgumentException>(() => session.Execute(new FillSeriesCommand(sheet.Id, new(0, 0, 3, 0), CellSeriesKind.TextNumber, 1)));
+        Assert.Throws<ArgumentException>(() => session.Execute(new FillSeriesCommand(sheet.Id, new(1, 0, 3, 0), CellSeriesKind.TextNumber, -5)));
+        Assert.Throws<ArgumentException>(() => session.Execute(new FillSeriesCommand(sheet.Id, new(1, 0, 3, 0), CellSeriesKind.TextNumber, .5)));
+        Assert.Same(book, session.Snapshot); Assert.False(session.CanUndo);
+    }
+
     private static WorkbookSnapshot Book()
     {
         var sheet = new WorksheetSnapshot(SheetId.New(), "Fill", [new(new(2, 2), new(CellContent.FromLiteral(CellValue.FromText("00123"), 1))),

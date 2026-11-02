@@ -66,16 +66,23 @@ public static class DataCleaning
         if (hidden.Any(r => r >= range.Top && r <= range.Bottom)) throw new InvalidOperationException("清洗区域含筛选隐藏行，请先清除筛选；不跨隐藏行映射记录。");
         return sheet;
     }
-    public static CleaningPreview RemoveDuplicates(WorkbookSnapshot book, SheetId sheetId, CellRectangle range, IEnumerable<int> keyColumns, bool hasHeader = true)
+    public static CleaningPreview RemoveDuplicates(WorkbookSnapshot book, SheetId sheetId, CellRectangle range, IEnumerable<int> keyColumns, bool hasHeader = true, bool expandToWholeRows = false)
     {
         var sheet = RequireRange(book, sheetId, range); var keys = keyColumns.Take(1025).ToArray();
         if (WorksheetOutline.HasGroups(sheet)) throw new NotSupportedException("删除重复项暂不压缩分组，请先取消分组。");
         if (keys.Length is 0 or > 1024 || keys.Any(c => c < range.Left || c > range.Right) || keys.Distinct().Count() != keys.Length)
             throw new ArgumentException("请选择不重复的区域内判重列。");
-        if (sheet.Data.Filter is { } filter && ValidationSafety.Overlaps(filter.Range, range) || sheet.Data.Tables.Any(t => ValidationSafety.Overlaps(t.Range, range)) ||
-            sheet.Data.ConditionalFormats.Any(r => r.Ranges.Any(a => ValidationSafety.Overlaps(a, range))) ||
-            sheet.Data.Validations.Any(r => r.Ranges.Any(a => ValidationSafety.Overlaps(a, range))))
-            throw new NotSupportedException("删除重复项暂不压缩筛选、Table、条件格式或验证区域；请先复制值到普通区域再清洗。");
+        // Excel's "expand the selection" keeps duplicate detection on the chosen columns,
+        // but removes the duplicate record from every adjacent data column as one whole row.
+        var work = expandToWholeRows ? ExpandRowColumns(sheet, range) : range;
+        if ((long)(work.Bottom - work.Top + 1) * (work.Right - work.Left + 1) > MaxCells)
+            throw new InvalidOperationException($"扩展列后范围超过 {MaxCells:N0} 格，请先缩小选区或关闭“扩展列”。");
+        if (work != range) RequireRange(book, sheetId, work);
+        if (sheet.Data.Filter is { } filter && ValidationSafety.Overlaps(filter.Range, work) || sheet.Data.Sort is { } sort && ValidationSafety.Overlaps(sort.Range, work) ||
+            sheet.Data.Tables.Any(t => ValidationSafety.Overlaps(t.Range, work)) ||
+            sheet.Data.ConditionalFormats.Any(r => r.Ranges.Any(a => ValidationSafety.Overlaps(a, work))) ||
+            sheet.Data.Validations.Any(r => r.Ranges.Any(a => ValidationSafety.Overlaps(a, work))))
+            throw new NotSupportedException("删除重复项暂不压缩筛选、排序、Table、条件格式或验证区域；请先复制值到普通区域再清洗。");
         StructureEdits.RequireTransformableFunctions(book);
         var first = range.Top + (hasHeader ? 1 : 0); var keep = new List<int>(); var removed = new List<int>();
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase); long characters = 0;
@@ -98,7 +105,7 @@ public static class DataCleaning
         var edits = new List<CellEdit>();
         if (removed.Count == 0) return new(book, new(book, [], false), [], [], ["没有找到重复项，数据保持不变。"]);
         for (var row = first; row <= range.Bottom; row++)
-        for (var col = range.Left; col <= range.Right; col++)
+        for (var col = work.Left; col <= work.Right; col++)
         {
             var index = row - first; CellContent content;
             if (index >= keep.Count) content = CellContent.FromLiteral(CellValue.Blank);
@@ -106,13 +113,67 @@ public static class DataCleaning
             {
                 var oldRow = keep[index]; content = sheet.GetCell(oldRow, col)?.Content ?? CellContent.FromLiteral(CellValue.Blank, sheet.GetStyleId(oldRow, col));
                 if (oldRow != row) content = content.WithStyle(sheet.GetStyleId(oldRow, col));
-                if (oldRow != row && content.Kind == CellContentKind.Formula)
-                    content = CellContent.FromFormula(PasteCellsCommand.CopyFormula(book, sheetId, sheetId, content.FormulaText, new(oldRow, col), new(row, col)), content.StyleId);
+                if (content.Kind == CellContentKind.Formula)
+                    content = CellContent.FromFormula(CompactFormula(book, sheetId, content.FormulaText, work, first, removed), content.StyleId);
             }
             edits.Add(new(new(sheetId, row, col), content));
         }
-        return new(book, new SetCellsCommand(edits).Prepare(book), [], removed,
-            ["保留首次出现的记录，仅在选区内向上压缩并清空尾部；整张工作表行数及区外单元格位置不变。", "按所选列的值类型和基础显示格式判重；不区分文本大小写，不自动合并文本 ID 与数值。"]);
+        var notices = new List<string>
+        {
+            "保留首次出现的记录，仅在选区内向上压缩并清空尾部；整张工作表行数及区外单元格位置不变。",
+            "按所选列的值类型和基础显示格式判重；不区分文本大小写，不自动合并文本 ID 与数值。"
+        };
+        if (work != range) notices.Add($"扩展列：重复记录同时压缩第 {FormulaSyntax.ColumnName(work.Left)}–{FormulaSyntax.ColumnName(work.Right)} 列，判重仍只使用所选列。");
+        return new(book, new SetCellsCommand(edits).Prepare(book), [], removed, notices);
+    }
+    private static CellRectangle ExpandRowColumns(WorksheetSnapshot sheet, CellRectangle range)
+    {
+        static bool HasContent(WorksheetSnapshot sheet, int row, int column)
+        {
+            var cell = sheet.GetCell(row, column);
+            return cell is not null && (cell.Content.Kind == CellContentKind.Formula || cell.Value.Kind != CellValueKind.Blank);
+        }
+        bool ColumnHasRecordData(int column) => column >= 0 && column < WorkbookLimits.MaxColumns &&
+            Enumerable.Range(range.Top, range.Bottom - range.Top + 1).Any(row => HasContent(sheet, row, column));
+        var left = range.Left; while (ColumnHasRecordData(left - 1)) left--;
+        var right = range.Right; while (ColumnHasRecordData(right + 1)) right++;
+        return range with { Left = left, Right = right };
+    }
+
+    /// <summary>
+    /// Row compaction is not a worksheet-wide row deletion: only columns inside <paramref name="work"/>
+    /// move. Shift references that point into that band by the number of removed records above the
+    /// target; leave references to untouched columns/rows exactly as written.
+    /// </summary>
+    private static string CompactFormula(WorkbookSnapshot book, SheetId sheetId, string formula, CellRectangle work, int first, IReadOnlyCollection<int> removed)
+    {
+        var sheetName = book.GetSheet(sheetId).Name;
+        var removedSet = removed as HashSet<int> ?? [.. removed];
+        var changed = false;
+        var expression = FormulaSyntax.Map(FormulaSyntax.Parse(formula), node =>
+        {
+            if (node is not ReferenceNode reference || reference.WholeColumns) return node;
+            if (reference.Sheet is not null && !string.Equals(reference.Sheet, sheetName, StringComparison.OrdinalIgnoreCase)) return node;
+            bool Inside(int column) => column >= work.Left && column <= work.Right;
+            var endColumn = reference.IsRange ? reference.EndColumn : reference.Column;
+            var startInside = Inside(reference.Column); var endInside = Inside(endColumn);
+            if (!startInside && !endInside) return node;
+            if (startInside != endInside)
+                throw new NotSupportedException("公式引用跨越扩展列边界，无法安全压缩重复记录；请先复制值到普通区域。");
+            int MapRow(int row)
+            {
+                if (row < first || row > work.Bottom) return row;
+                if (removedSet.Contains(row))
+                    throw new NotSupportedException($"公式引用了将被删除的重复行（第 {row + 1} 行），无法安全压缩；请先复制值到普通区域。");
+                return row - removedSet.Count(candidate => candidate >= first && candidate < row);
+            }
+            var startRow = MapRow(reference.Row);
+            var endRow = reference.IsRange ? MapRow(reference.EndRow) : reference.EndRow;
+            if (startRow == reference.Row && endRow == reference.EndRow) return node;
+            changed = true;
+            return reference with { Row = startRow, EndRow = endRow };
+        });
+        return changed ? "=" + FormulaSyntax.Print(expression) : formula;
     }
     public static CleaningPreview SplitText(WorkbookSnapshot book, SheetId sheetId, CellRectangle source, CellPosition destination,
         TextSplitOptions options, IEnumerable<CleaningColumnType>? columnTypes = null, NumericTextOptions? numbers = null)

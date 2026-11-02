@@ -19,6 +19,7 @@ public partial class MainWindow
     private sealed record ReferenceGesture(TextBox Editor, string Original, FormulaTextEdit Slot, CellPosition Start);
     private ReferenceGesture? _referenceGesture;
     private bool _endNavigation;
+    private bool _suppressGridEditorFocus;
 
     private void InstallFormulaEditing()
     {
@@ -39,6 +40,7 @@ public partial class MainWindow
             { if (Keyboard.FocusedElement is not TextBox focused || focused != FormulaBar && focused != _grid.Editor) CloseFormulaHelp(); }));
         }
         _grid.EditingChanged += () => { if (!_grid.IsEditing) CloseFormulaHelp(); };
+        _grid.BeforeFocusEditor = () => !_suppressGridEditorFocus;
         _formulaSuggestions.PreviewMouseDown += (_, e) =>
         {
             if (ItemsControl.ContainerFromElement(_formulaSuggestions, e.OriginalSource as DependencyObject) is ListBoxItem item)
@@ -67,9 +69,10 @@ public partial class MainWindow
 
     private bool IsFormulaDraft(TextBox editor) => !_busy && !_editState.IsComposing && !_grid.IsComposing && editor.Text.StartsWith('=') &&
         (editor == FormulaBar ? _formulaPending : _grid.IsEditing);
-    private void CloseFormulaHelp() { _formulaHelp.IsOpen = false; _completion = null; _assistEditor = null; }
+    private void CloseFormulaHelp() { _formulaHelp.IsOpen = false; _completion = null; _assistEditor = null; _grid.ShowReference(null); }
     private void UpdateFormulaHelp(TextBox editor)
     {
+        UpdateFormulaReference(editor);
         if (_suppressFormulaHelp || _referenceGesture is not null) return;
         if (!editor.IsKeyboardFocused || !IsFormulaDraft(editor)) { if (_assistEditor == editor) CloseFormulaHelp(); return; }
         _assistEditor = editor;
@@ -81,6 +84,19 @@ public partial class MainWindow
         _formulaHint.Text = hint is null ? (_completion is null ? "" : "↑↓ 选择 · Tab 补全 · F4 切换引用") : $"{hint.Signature}\n当前第 {hint.Argument} 个参数 · F4 切换引用";
         _formulaHelp.PlacementTarget = editor;
         _formulaHelp.IsOpen = _completion is not null || hint is not null;
+    }
+
+    private void UpdateFormulaReference(TextBox editor)
+    {
+        // An idle grid editor is focused/hidden after reference picking and must not clear the
+        // highlight owned by an active FormulaBar draft (and vice versa).
+        var ownsDraft = ReferenceEquals(editor, FormulaBar) ? _formulaPending : _grid.IsEditing;
+        if (!ownsDraft) return;
+        if (!IsFormulaDraft(editor) || FormulaEditing.ReferenceAt(editor.Text, editor.SelectionStart) is not { } reference)
+        { _grid.ShowReference(null); return; }
+        var sheetName = _document.Snapshot.Sheets[_sheetIndex].Name;
+        _grid.ShowReference(reference.Sheet is null || string.Equals(reference.Sheet, sheetName, StringComparison.OrdinalIgnoreCase)
+            ? reference.Range : null);
     }
     private void ReplaceDraft(TextBox editor, FormulaTextEdit edit, bool select)
     {
@@ -134,6 +150,7 @@ public partial class MainWindow
         if (_referenceGesture is not { } gesture) return;
         var range = GridRange.Between(gesture.Start, position);
         var text = FormulaEditing.Address(range);
+        _grid.ShowReference(range);
         _suppressFormulaHelp = true;
         try
         {
@@ -147,8 +164,12 @@ public partial class MainWindow
     {
         if (_referenceGesture is not { } gesture) return;
         _referenceGesture = null;
+        // Releasing capture queues the grid's normal selection presentation, which would focus
+        // the transparent in-cell editor and steal focus from the FormulaBar. Suppress that one turn.
+        _suppressGridEditorFocus = true;
         if (_grid.Control.IsMouseCaptured) _grid.Control.ReleaseMouseCapture();
         gesture.Editor.Focus(); UpdateFormulaHelp(gesture.Editor);
+        Dispatcher.BeginInvoke(DispatcherPriority.Input, new Action(() => _suppressGridEditorFocus = false));
     }
     private void AutoSum_Click(object sender, RoutedEventArgs e) => BeginAutoSum();
     private void BeginAutoSum()

@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using System.Globalization;
 using QuickExcel.Domain;
 
 namespace QuickExcel.Core;
@@ -37,9 +38,9 @@ public sealed class FillCellsCommand(SheetId sheetId, CellRectangle source, Cell
     }
 }
 
-public enum CellSeriesKind { Numbers, Days, Months, Years }
+public enum CellSeriesKind { Numbers, Days, Months, Years, TextNumber }
 
-/// <summary>Explicit linear/date series from the first numeric literal. Never infers numbers or dates from text IDs.</summary>
+/// <summary>Explicit linear/date/text-number series from the first literal. Never infers numbers or dates from text IDs.</summary>
 public sealed class FillSeriesCommand(SheetId sheetId, CellRectangle range, CellSeriesKind kind, double step) : DocumentCommand
 {
     internal override CommandDraft Prepare(WorkbookSnapshot snapshot)
@@ -48,29 +49,66 @@ public sealed class FillSeriesCommand(SheetId sheetId, CellRectangle range, Cell
         if (!Enum.IsDefined(kind) || !double.IsFinite(step)) throw new ArgumentException("序列类型或步长无效。");
         if (range.Top != range.Bottom && range.Left != range.Right) throw new ArgumentException("序列需要单行或单列选区。");
         if (kind != CellSeriesKind.Numbers && (step != Math.Truncate(step) || Math.Abs(step) > 100_000))
-            throw new ArgumentException("日期序列步长须为 -100,000 至 100,000 的整数。");
+            throw new ArgumentException("日期或文本编号序列步长须为 -100,000 至 100,000 的整数。");
         var sheet = snapshot.GetSheet(sheetId);
         WorkbookClipboard.RequirePlainGeometry(sheet, range); WorkbookClipboard.RequireVisibleDimensions(sheet, range);
         if (sheet.Data.ConditionalFormats.Any(r => r.Ranges.Any(a => ValidationSafety.Overlaps(a, range))))
             throw new NotSupportedException("序列填充涉及条件格式，尚不能复制或拆分规则；操作未应用。");
         var first = sheet.GetCell(range.Top, range.Left)?.Content;
-        if (first?.Kind != CellContentKind.Literal || first.LiteralValue.Kind != CellValueKind.Number)
+        if (kind == CellSeriesKind.TextNumber)
+        {
+            if (first?.Kind != CellContentKind.Literal || first.LiteralValue.Kind != CellValueKind.Text || !TryParseTextSeries(first.LiteralValue.TextValue, out _, out _, out _, out _))
+                throw new ArgumentException("文本编号序列首格必须是以数字结尾的文本，例如 XX1、A001。");
+        }
+        else if (first?.Kind != CellContentKind.Literal || first.LiteralValue.Kind != CellValueKind.Number)
             throw new ArgumentException("序列首格必须是数字或日期序号的字面值；文本 ID、公式和空白不会被自动转换。");
         var count = Math.Max(range.Bottom - range.Top, range.Right - range.Left) + 1;
-        var edits = new List<CellEdit>(); var start = first.LiteralValue.NumberValue;
+        var edits = new List<CellEdit>(); var start = kind == CellSeriesKind.TextNumber ? 0 : first.LiteralValue.NumberValue;
         for (var index = 1; index < count; index++)
         {
-            var value = SeriesValue(start, step, index, kind, snapshot.DateSystem);
-            edits.Add(new(new(sheetId, range.Top + (range.Top == range.Bottom ? 0 : index), range.Left + (range.Left == range.Right ? 0 : index)),
-                CellContent.FromLiteral(CellValue.FromNumber(value), sheet.GetStyleId(range.Top, range.Left))));
+            var position = new CellPosition(range.Top + (range.Top == range.Bottom ? 0 : index), range.Left + (range.Left == range.Right ? 0 : index));
+            CellValue value = kind == CellSeriesKind.TextNumber
+                ? CellValue.FromText(TextSeriesValue(first.LiteralValue.TextValue, step, index))
+                : CellValue.FromNumber(SeriesValue(start, step, index, kind, snapshot.DateSystem));
+            edits.Add(new(new(sheetId, position.Row, position.Column), CellContent.FromLiteral(value, sheet.GetStyleId(range.Top, range.Left))));
         }
         return new SetCellsCommand(edits).Prepare(snapshot);
+    }
+
+    internal static bool TryParseTextSeries(string text, out string prefix, out long number, out int width, out bool pad)
+    {
+        prefix = ""; number = 0; width = 0; pad = false;
+        var end = text.Length;
+        while (end > 0 && text[end - 1] is >= '0' and <= '9') end--;
+        if (end == text.Length || !long.TryParse(text.AsSpan(end), NumberStyles.None, CultureInfo.InvariantCulture, out number)) return false;
+        prefix = text[..end]; width = text.Length - end;
+        // Preserve zero padding only when the source actually used it (A001 -> A002, A1 -> A2, A10).
+        pad = width > 1 && text[end] == '0';
+        return true;
+    }
+
+    /// <summary>Continues a text ID ending in digits: XX1, XX2, ...; leading-zero width is preserved.</summary>
+    public static string TextSeriesValue(string text, double step, int index)
+    {
+        if (!double.IsFinite(step) || step != Math.Truncate(step) || Math.Abs(step) > 100_000)
+            throw new ArgumentException("文本编号序列步长须为 -100,000 至 100,000 的整数。");
+        if (index < 0 || index >= WorkbookClipboard.MaxCells)
+            throw new ArgumentException("文本编号序列位置无效。");
+        if (!TryParseTextSeries(text, out var prefix, out var number, out var width, out var pad))
+            throw new ArgumentException("文本编号序列首格必须是以数字结尾的文本，例如 XX1、A001。");
+        long value;
+        try { value = checked(number + checked((long)step * index)); }
+        catch (OverflowException) { throw new ArgumentException("文本编号超出可表示范围，整批操作未应用。"); }
+        if (value < 0) throw new ArgumentException("文本编号序列不能产生负数，整批操作未应用。");
+        var digits = value.ToString(CultureInfo.InvariantCulture);
+        return prefix + (pad ? digits.PadLeft(width, '0') : digits);
     }
 
     public static double SeriesValue(double start, double step, int index, CellSeriesKind kind, ExcelDateSystem system)
     {
         if (!Enum.IsDefined(kind) || !Enum.IsDefined(system) || !double.IsFinite(start) || !double.IsFinite(step) || index < 0 || index >= WorkbookClipboard.MaxCells)
             throw new ArgumentException("序列参数无效。");
+        if (kind == CellSeriesKind.TextNumber) throw new ArgumentException("文本编号序列请使用 TextSeriesValue。");
         if (kind == CellSeriesKind.Numbers)
         {
             var number = start + index * step;

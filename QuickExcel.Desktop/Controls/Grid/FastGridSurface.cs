@@ -28,6 +28,7 @@ internal sealed partial class FastGridSurface : IGridSurface
     internal bool HandlesKeyboard { get; init; } = true;
     internal Func<bool>? BeforeNavigate { get; set; }
     internal Func<bool>? BeforeBeginEdit { get; set; }
+    internal Func<bool>? BeforeFocusEditor { get; set; }
     internal Func<WorkbookSnapshot>? LatestSnapshot { get; set; }
     internal bool IsEditing => _editing;
     internal WorkbookSnapshot Snapshot => _snapshot;
@@ -75,6 +76,7 @@ internal sealed partial class FastGridSurface : IGridSurface
         Control.SetContentDecoration(Artwork);
         Element.Children.Add(Control); Element.Children.Add(_overlay); _overlay.Children.Add(Editor);
         InstallFillHandle();
+        InstallReferenceHighlight();
         Control.SelectedCellsChanged += (_, _) =>
         {
             _fillSelectionDirty = true;
@@ -85,8 +87,8 @@ internal sealed partial class FastGridSurface : IGridSurface
             QueueSelectionPresentation();
         };
         Control.LostMouseCapture += (_, _) => QueueSelectionPresentation();
-        Control.ViewportChanged += (_, _) => { PositionOverlay(); Artwork.InvalidateVisual(); };
-        Element.SizeChanged += (_, _) => PositionOverlay();
+        Control.ViewportChanged += (_, _) => { PositionOverlay(); Artwork.InvalidateVisual(); _referenceHighlight?.InvalidateVisual(); };
+        Element.SizeChanged += (_, _) => { PositionOverlay(); _referenceHighlight?.InvalidateVisual(); };
         Element.PreviewMouseDown += (_, e) =>
         {
             if (e.OriginalSource is DependencyObject target && (ReferenceEquals(target, Editor) || Editor.IsAncestorOf(target))) return;
@@ -156,6 +158,7 @@ internal sealed partial class FastGridSurface : IGridSurface
     public void Bind(WorkbookSnapshot snapshot, int sheetIndex, int rows, int columns)
     {
         CancelFillGesture();
+        ShowReference(null);
         _editing = false; IsComposing = false; EditingChanged?.Invoke();
         // Dimension notifications can lay out the editor before the new selection is installed.
         _anchor = _current = new(0, 0);
@@ -323,7 +326,7 @@ internal sealed partial class FastGridSurface : IGridSurface
         // Keep the native input focused, but hide theme-provided focus/hover chrome too.
         // Transparent brushes alone do not suppress the Windows TextBox template's border.
         Editor.Opacity = 0;
-        PositionOverlay(); if (focus && Editor.Visibility == Visibility.Visible) { Editor.Focus(); Editor.SelectAll(); }
+        PositionOverlay(); if (focus && Editor.Visibility == Visibility.Visible && BeforeFocusEditor?.Invoke() != false) { Editor.Focus(); Editor.SelectAll(); }
     }
     private void PositionOverlay()
     {

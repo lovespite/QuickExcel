@@ -55,6 +55,14 @@ public partial class MainWindow
             check(_document.IsDirty && ((ScaleTransform)SheetPageContent.LayoutTransform).ScaleX == 1.25, "Changing worksheet zoom is a persistent document edit");
             await UndoAsync(false); await Idle();
             check(((ScaleTransform)SheetPageContent.LayoutTransform).ScaleX == .9, "Undo restores the stored sheet zoom");
+            var fontBeforeWheel = _grid.Control.CellFontSize;
+            check(ZoomByWheel(true) && ((ScaleTransform)SheetPageContent.LayoutTransform).ScaleX == 1 &&
+                _grid.Control.CellFontSize == fontBeforeWheel, "Ctrl+wheel zoom uses worksheet zoom and never changes the grid cell font size");
+            check(ZoomByWheel(false) && ((ScaleTransform)SheetPageContent.LayoutTransform).ScaleX == .75,
+                "Ctrl+wheel down selects the next smaller worksheet zoom stop");
+            await UndoAsync(false); await UndoAsync(false); await Idle();
+            check(((ScaleTransform)SheetPageContent.LayoutTransform).ScaleX == .9 && _grid.Current.Row == _selectedRow,
+                "Undo returns Ctrl+wheel zoom without misplacing the current cell");
             SheetPicker.SelectedIndex = 1; await Idle();
             Freeze_Click(new Button { Tag = "clear" }, new()); await Idle();
             check(_grid.Control.FrozenRowCount == 0 && _grid.Control.FrozenColumnCount == 0, "Unfreeze command updates the grid and document");

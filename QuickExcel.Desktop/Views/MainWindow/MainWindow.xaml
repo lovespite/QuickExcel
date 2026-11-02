@@ -169,17 +169,21 @@
                         </ContextMenu>
                       </Button.ContextMenu>
                     </Button>
-                    <Button local:Ribbon.Icon="PaintBucket"
+                    <Button Content="▾"
+                            local:Ribbon.Icon="PaintBucket"
                             Style="{StaticResource RibbonButton}"
-                            Click="Style_Click"
+                            Click="ColorMenu_Click"
                             Tag="fill"
-                            ToolTip="填充颜色：浅黄"
+                            ToolTip="填充颜色：点击选择常用颜色或自定义颜色"
+                            AutomationProperties.Name="填充颜色"
                             Foreground="#BA8A16"/>
-                    <Button local:Ribbon.Icon="TextColor"
+                    <Button Content="▾"
+                            local:Ribbon.Icon="TextColor"
                             Style="{StaticResource RibbonButton}"
-                            Click="Style_Click"
+                            Click="ColorMenu_Click"
                             Tag="font"
-                            ToolTip="字体颜色：深绿"
+                            ToolTip="字体颜色：点击选择常用颜色或自定义颜色"
+                            AutomationProperties.Name="字体颜色"
                             Foreground="#187553"/>
                     <Button local:Ribbon.Icon="TextClearFormatting"
                             Style="{StaticResource RibbonButton}"
@@ -297,8 +301,8 @@
                             Click="Style_Click"
                             Tag="number"
                             ToolTip="两位小数"/>
-                    <Button local:Ribbon.Icon="DecimalArrowLeft" Style="{StaticResource RibbonButton}" Click="DecimalPlaces_Click" Tag="increase" ToolTip="增加小数位（只改变显示）" AutomationProperties.Name="增加小数位"/>
-                    <Button local:Ribbon.Icon="DecimalArrowRight" Style="{StaticResource RibbonButton}" Click="DecimalPlaces_Click" Tag="decrease" ToolTip="减少小数位（只改变显示）" AutomationProperties.Name="减少小数位"/>
+                    <Button local:Ribbon.Icon="DecimalArrowRight" Style="{StaticResource RibbonButton}" Click="DecimalPlaces_Click" Tag="increase" ToolTip="增加小数位（只改变显示）" AutomationProperties.Name="增加小数位"/>
+                    <Button local:Ribbon.Icon="DecimalArrowLeft" Style="{StaticResource RibbonButton}" Click="DecimalPlaces_Click" Tag="decrease" ToolTip="减少小数位（只改变显示）" AutomationProperties.Name="减少小数位"/>
                   </StackPanel>
                 </StackPanel>
               </GroupBox>
@@ -731,8 +735,8 @@
             <StackPanel x:Name="OutlinePanel" Orientation="Horizontal" Margin="10,0,10,4" Visibility="Collapsed">
               <TextBlock x:Name="OutlineHint" VerticalAlignment="Center" Margin="0,0,8,0"/>
               <ComboBox x:Name="OutlineGroups" Width="230" MaxDropDownHeight="260" DisplayMemberPath="Label" AutomationProperties.Name="工作表分组"/>
-              <Button Content="− 折叠" Click="CollapseOutline_Click" Padding="8,2" Margin="6,0,0,0"/>
-              <Button Content="+ 展开" Click="ExpandOutline_Click" Padding="8,2" Margin="6,0,0,0"/>
+              <Button Content="− 折叠" Click="CollapseOutline_Click" Padding="8,2" MinHeight="24" Margin="6,0,0,0"/>
+              <Button Content="+ 展开" Click="ExpandOutline_Click" Padding="8,2" MinHeight="24" Margin="6,0,0,0"/>
             </StackPanel>
             <TextBlock x:Name="ViewStatus"
                        Margin="10,0,10,4"

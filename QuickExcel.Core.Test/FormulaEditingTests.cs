@@ -99,6 +99,21 @@ public class FormulaEditingTests
     [InlineData("plain", false)]
     public void ReferencePickingRequiresAnOperandOrExistingReference(string text, bool valid) => Assert.Equal(valid, FormulaEditing.ReferenceSlot(text, text.Length, 0).HasValue);
     [Fact]
+    public void ReferenceAtCaretResolvesOnlyVisibleReferenceTokens()
+    {
+        Assert.Equal(new GridRange(0, 0, 0, 0), FormulaEditing.ReferenceAt("=A1+B2", 2)!.Range);
+        Assert.Equal(new GridRange(1, 1, 1, 1), FormulaEditing.ReferenceAt("=A1+B2", 5)!.Range);
+        Assert.Equal(new GridRange(0, 0, 2, 0), FormulaEditing.ReferenceAt("=SUM(A1:A3", 10)!.Range);
+        Assert.Null(FormulaEditing.ReferenceAt("=SUM(A1:A3", 4));
+        Assert.Null(FormulaEditing.ReferenceAt("=\"A1\"", 3));
+        Assert.Null(FormulaEditing.ReferenceAt("plain A1", 6));
+        var qualified = FormulaEditing.ReferenceAt("=Sheet1!A1", 4)!;
+        Assert.Equal("Sheet1", qualified.Sheet); Assert.Equal(new GridRange(0, 0, 0, 0), qualified.Range);
+        var whole = FormulaEditing.ReferenceAt("=SUM(A:A)", 6)!;
+        Assert.Equal(0, whole.Range.Left); Assert.Equal(0, whole.Range.Right);
+        Assert.Null(FormulaEditing.ReferenceAt("=A99999999999", 5));
+    }
+    [Fact]
     public void NavigationFollowsContentBlocksAndSkipsHiddenCells()
     {
         var sheet = new WorksheetSnapshot(SheetId.New(), "Data", [

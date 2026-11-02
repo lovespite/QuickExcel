@@ -48,6 +48,15 @@ public partial class MainWindow
             await UndoAsync(true); await RecalculateAsync(); await Idle();
             _editor.SetCell(0, 0, 6, "=SUBTOTAL(109,B2:B11)"); await RecalculateAsync(); await Idle();
             Check(OutlinePanel.Visibility == Visibility.Visible && OutlineGroups.Items.Count == 5, "Imported/generated outline levels have a visible group selector");
+            var collapseButton = OutlinePanel.Children.OfType<Button>().Single(b => (b.Content as string)?.Contains("折叠") == true);
+            var expandButton = OutlinePanel.Children.OfType<Button>().Single(b => (b.Content as string)?.Contains("展开") == true);
+            var panelHeight = OutlinePanel.ActualHeight; var collapseHeight = collapseButton.ActualHeight; var expandHeight = expandButton.ActualHeight;
+            collapseButton.Focus(); await Idle();
+            Check(Math.Abs(OutlinePanel.ActualHeight - panelHeight) < .1 && Math.Abs(collapseButton.ActualHeight - collapseHeight) < .1,
+                "Focusing Collapse draws its focus ring without changing the outline panel height");
+            expandButton.Focus(); await Idle();
+            Check(Math.Abs(OutlinePanel.ActualHeight - panelHeight) < .1 && Math.Abs(expandButton.ActualHeight - expandHeight) < .1,
+                "Focusing Expand keeps the outline panel height stable (no layout flicker)");
             Pick(SheetAxis.Row, 1, 2, 2); await Toggle(true);
             Check(!_grid.Control.GetVisibleModelRows().Contains(1) && _document.GetCellValue(0, 0, 6) == "25", "Collapsed detail rows disappear and SUBTOTAL 109 recalculates");
             Pick(SheetAxis.Row, 1, 11, 1); await Toggle(true);

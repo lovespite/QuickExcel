@@ -16,12 +16,16 @@
    <Setter Property="Cursor" Value="Hand"/>
    <Setter Property="Template">
     <Setter.Value><ControlTemplate TargetType="Button">
-     <Border x:Name="Chrome" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1" CornerRadius="3" Padding="{TemplateBinding Padding}">
-      <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-     </Border>
+     <Grid>
+      <Border x:Name="Chrome" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1" CornerRadius="3" Padding="{TemplateBinding Padding}">
+       <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+      </Border>
+      <!-- Focus ring is an overlay so the border never changes layout height/width. -->
+      <Border x:Name="FocusRing" BorderBrush="Transparent" BorderThickness="2" CornerRadius="3" Margin="-1" IsHitTestVisible="False"/>
+     </Grid>
      <ControlTemplate.Triggers>
       <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Chrome" Property="Opacity" Value="0.76"/></Trigger>
-     <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Chrome" Property="BorderBrush" Value="#147454"/><Setter TargetName="Chrome" Property="BorderThickness" Value="2"/></Trigger>
+     <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="FocusRing" Property="BorderBrush" Value="#147454"/></Trigger>
       <Trigger Property="IsEnabled" Value="False"><Setter TargetName="Chrome" Property="Opacity" Value="0.38"/></Trigger>
      </ControlTemplate.Triggers>
     </ControlTemplate></Setter.Value>

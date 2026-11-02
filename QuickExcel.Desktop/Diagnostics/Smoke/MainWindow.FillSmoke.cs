@@ -98,6 +98,16 @@ public partial class MainWindow
             Fill_Click(new MenuItem { Tag = "series" }, new()); await _gridInput; _smokeSeriesDriver = null;
             check(_document.Snapshot.Sheets[0].GetCell(9, 0)!.Value.NumberValue == 60 && _document.Snapshot.Sheets[0].GetCell(10, 0)!.Value.NumberValue == 91,
                 "The series dialog fills month ends including Excel's fictitious leap day");
+            _editor.SetCell(0, 12, 0, "XX1"); GridSurface.SelectRange(new(12, 0, 15, 0), new(12, 0));
+            _smokeSeriesDriver = dialog =>
+            {
+                dialog.KindPicker.SelectedIndex = (int)CellSeriesKind.TextNumber; dialog.StepInput.Text = "1";
+                dialog.ApplyButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            };
+            Fill_Click(new MenuItem { Tag = "series" }, new()); await _gridInput; _smokeSeriesDriver = null;
+            check(_document.Snapshot.Sheets[0].GetCell(12, 0)!.Value.TextValue == "XX1" && _document.Snapshot.Sheets[0].GetCell(15, 0)!.Value.TextValue == "XX4",
+                "The series dialog continues a text ID sequence (XX1, XX2, XX3, XX4)");
+            await UndoAsync(false);
             GridSurface.Select(new(0, 0)); Fill_Click(new MenuItem { Tag = "clear-formats" }, new()); await _gridInput;
             check(_document.Snapshot.Sheets[0].GetCell(0, 0)!.Value.NumberValue == 1 && _document.Snapshot.Sheets[0].GetCell(0, 0)!.Content.StyleId == 0,
                 "Clear Formats uses the workbook default while retaining cell content");

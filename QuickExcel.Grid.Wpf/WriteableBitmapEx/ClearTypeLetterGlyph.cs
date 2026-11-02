@@ -27,21 +27,24 @@ namespace System.Windows.Media.Imaging
 
         public Item[] Items;
 
-        public static ClearTypeLetterGlyph CreateSpaceGlyph(GlyphTypeface glyphTypeface, double size)
+        public static ClearTypeLetterGlyph CreateSpaceGlyph(GlyphTypeface glyphTypeface, double size, double scaleX, double scaleY)
         {
-            int spaceWidth = (int)Math.Ceiling(glyphTypeface.AdvanceWidths[glyphTypeface.CharacterToGlyphMap[' ']] * size);
+            int spaceWidth = (int)Math.Ceiling(glyphTypeface.AdvanceWidths[glyphTypeface.CharacterToGlyphMap[' ']] * size * scaleX);
             return new ClearTypeLetterGlyph
             {
                 Ch = ' ',
-                Height = (int)Math.Ceiling(glyphTypeface.Height * size),
+                Height = (int)Math.Ceiling(glyphTypeface.Height * size * scaleY),
                 Width = spaceWidth,
             };
         }
 
 
-        public static ClearTypeLetterGlyph CreateGlyph(GlyphTypeface glyphTypeface, System.Drawing.Font font, double size, char ch, Color fontColor, Color bgColor)
+        public static ClearTypeLetterGlyph CreateGlyph(GlyphTypeface glyphTypeface, System.Drawing.Font font, double size, char ch, Color fontColor, Color bgColor,
+            double scaleX = 0, double scaleY = 0)
         {
-            if (ch == ' ') return CreateSpaceGlyph(glyphTypeface, size);
+            if (scaleX <= 0) scaleX = DpiDetector.DpiXKoef;
+            if (scaleY <= 0) scaleY = DpiDetector.DpiYKoef;
+            if (ch == ' ') return CreateSpaceGlyph(glyphTypeface, size, scaleX, scaleY);
 
             int width;
             int height;
