@@ -35,7 +35,7 @@ public partial class MainWindow
             {
                 try
                 {
-                    var text = ((TextBox)dialog.Content).Text;
+                    var text = ((CompatibilityDialog)dialog).PlainText;
                     check(text.Contains("诊断 · A1 · xl/styles.xml") && text.Contains("诊断 · B2 · xl/styles.xml") && text.Contains("font/outline · cellXfs[0]"),
                         "Actual report expands shared style warnings to every affected cell while retaining the source index");
                     File.WriteAllText(Path.Combine(folder, "shared-style-report.txt"), text);
@@ -47,11 +47,11 @@ public partial class MainWindow
             _editor.SetCell(0, 0, 2, "changed"); RefreshSheet();
             _smokeCompatibilityDriver = dialog =>
             {
-                try { check(((TextBox)dialog.Content).Text.Contains("【潜在损失】"), "Editing promotes shared-feature warnings to potential loss in the actual report"); }
+                try { check(((CompatibilityDialog)dialog).PlainText.Contains("【潜在损失】"), "Editing promotes shared-feature warnings to potential loss in the actual report"); }
                 finally { dialog.Close(); }
             };
             await ShowCompatibilityAsync(); _smokeCompatibilityDriver = null;
-            _smokeCompatibilitySaveDecision = MessageBoxResult.No;
+            _smokeCompatibilitySaveDecision = _ => false;
             check(!await SaveAsync(false) && _document.IsDirty && File.ReadAllBytes(path).SequenceEqual(original), "Declining the explicit compatibility copy keeps the source and unsaved edit intact");
             await UndoAsync(false); await Idle();
             check(TypedWorkbookStorage.InspectCompatibility(_document.Snapshot).OriginalPackageUnchanged, "Undo restores shared-feature original-package preservation");

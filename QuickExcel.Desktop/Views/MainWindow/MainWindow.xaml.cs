@@ -630,7 +630,7 @@ public partial class MainWindow : Window
     private async void Save_Click(object sender, RoutedEventArgs e) => await SaveAsync(false);
     private async void SaveAs_Click(object sender, RoutedEventArgs e) => await SaveAsync(true);
     private Func<SaveFileDialog, bool?>? _smokeSaveDialog;
-    private MessageBoxResult? _smokeCompatibilitySaveDecision;
+    private Func<CompatibilityDialog, bool?>? _smokeCompatibilitySaveDecision;
     private async Task<bool> SaveAsync(bool saveAs)
     {
         if (_busy || !await FlushEditsAsync()) return false;
@@ -639,9 +639,11 @@ public partial class MainWindow : Window
         var discardUnsupported = false;
         if (issues.Count > 0)
         {
-            var choice = _smokeMode && _smokeCompatibilitySaveDecision is { } decision ? decision : MessageBox.Show(this, "以下内容不能在编辑后可靠保留：\n" + string.Join("\n", issues.Take(15)) +
-                "\n\n是否另存受支持副本？原文件将保留，副本会移除上述内容。选择“否”取消保存。", "另存兼容副本", MessageBoxButton.YesNo, MessageBoxImage.Warning);
-            if (choice != MessageBoxResult.Yes) return false;
+            var dialog = new CompatibilityDialog(this, SaveLossReport(snapshot, issues), saveMode: true);
+            var proceed = _smokeMode && _smokeCompatibilitySaveDecision is { } decide
+                ? decide(dialog) == true
+                : dialog.ShowDialog() == true;
+            if (!proceed) return false;
             discardUnsupported = true;
             saveAs = true;
         }
@@ -667,6 +669,19 @@ public partial class MainWindow : Window
         if (!await SaveToPathAsync(path, discardUnsupported, expected!)) return false;
         if (_viewModel.StaleCacheCount > 0) StatusText.Text = "已保存输入和上次缓存；部分公式结果仍待重算。";
         return true;
+    }
+
+    /// <summary>
+    /// Save blocking is driven by the imported file-state issues. Reuse the located diagnostics when
+    /// available so the prompt can explain each item; keep a message-only fallback for older states.
+    /// </summary>
+    private static WorkbookCompatibilityReport SaveLossReport(WorkbookSnapshot snapshot, IReadOnlyList<string> issues)
+    {
+        var diagnostics = snapshot.FileState?.CompatibilityDiagnostics ?? [];
+        if (diagnostics.Length > 0)
+            return new(false, diagnostics.Select(diagnostic => diagnostic with { Kind = CompatibilityKind.PotentialLoss }).ToArray());
+        return new(false, issues.Select(issue => new CompatibilityDiagnostic("xlsx.unmodeled",
+            CompatibilityKind.PotentialLoss, "未支持内容", issue)).ToArray());
     }
 
     private Task _portableExportTask = Task.CompletedTask;

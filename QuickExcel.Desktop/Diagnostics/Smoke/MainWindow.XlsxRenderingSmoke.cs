@@ -62,12 +62,12 @@ public partial class MainWindow
             {
                 try
                 {
-                    var report = (System.Windows.Controls.TextBox)dialog.Content;
-                    Check(report.IsReadOnly && report.Text.Contains("【内置不可计算／待验证】") && report.Text.Contains("Rendering · B4"),
+                    var report = ((CompatibilityDialog)dialog).PlainText;
+                    Check(report.Contains("【内置不可计算／待验证】") && report.Contains("Rendering · B4"),
                         "Actual compatibility dialog groups unsupported formulas with their current cell location");
-                    Check(report.Text.Contains("【可编辑（已支持子集）】") && report.Text.Contains("当前无缓存结果"),
+                    Check(report.Contains("【可编辑（已支持子集）】") && report.Contains("当前无缓存结果"),
                         "Actual compatibility dialog separates editable content from unavailable calculation results");
-                    File.WriteAllText(Path.Combine(folder, "compatibility-dialog.txt"), report.Text);
+                    File.WriteAllText(Path.Combine(folder, "compatibility-dialog.txt"), report);
                 }
                 finally { dialog.Close(); }
             };

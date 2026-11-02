@@ -321,12 +321,12 @@ public sealed partial class TypedStorageTests : IDisposable
         _storage.Export(path, Model([Literal(CellValue.FromNumber(5))]));
         var parts = ReadZip(File.ReadAllBytes(path));
         var sheet = XDocument.Parse(Encoding.UTF8.GetString(parts["xl/worksheets/sheet1.xml"]));
-        sheet.Root!.Add(new XElement(Ns + "dataValidations", new XAttribute("count", 1), new XElement(Ns + "dataValidation", new XAttribute("sqref", "A1"), new XElement(Ns + "formula1", "10"))));
+        sheet.Root!.Add(new XElement(Ns + "sheetProtection", new XAttribute("password", "CF7C"), new XAttribute("sheet", "1")));
         parts["xl/worksheets/sheet1.xml"] = Encoding.UTF8.GetBytes(sheet.ToString());
         File.WriteAllBytes(path, Zip(parts));
         var original = File.ReadAllBytes(path);
         var loaded = _storage.Open(path);
-        Assert.Contains(loaded.FileState!.CompatibilityIssues, issue => issue.Contains("dataValidations"));
+        Assert.Contains(loaded.FileState!.CompatibilityIssues, issue => issue.Contains("sheetProtection"));
         var saved = PathFor("preserved.xlsq");
         _storage.Save(saved, loaded.WithScriptSource("// source only"));
         Assert.Equal(original, ReadZip(File.ReadAllBytes(saved))["workbook.xlsx"]);

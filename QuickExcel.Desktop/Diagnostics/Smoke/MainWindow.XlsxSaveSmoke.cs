@@ -62,10 +62,16 @@ public partial class MainWindow
             }
             var protectedBytes = File.ReadAllBytes(protectedPath); await OpenPathAsync(protectedPath);
             _editor.SetCell(0, 0, 0, "17"); RefreshSheet();
-            _smokeCompatibilitySaveDecision = MessageBoxResult.No;
+            _smokeCompatibilitySaveDecision = dialog =>
+            {
+                check(dialog.View.Groups.Any(group => group.Kind == CompatibilityKind.PotentialLoss &&
+                        group.Items.Any(item => item.Impact.Contains("不会写入受支持副本"))),
+                    "Save prompt explains the per-item impact before discarding unsupported content");
+                return false;
+            };
             check(!await SaveAsync(false) && _document.IsDirty && protectedBytes.SequenceEqual(File.ReadAllBytes(protectedPath)), "Declining a compatibility copy keeps input and original XLSX");
             var supported = Path.Combine(folder, "ui-supported-copy.xlsx");
-            _smokeCompatibilitySaveDecision = MessageBoxResult.Yes;
+            _smokeCompatibilitySaveDecision = _ => true;
             _smokeSaveDialog = dialog => { dialog.FileName = supported; return true; };
             check(await SaveAsync(false) && _filePath == supported && protectedBytes.SequenceEqual(File.ReadAllBytes(protectedPath)), "Explicit compatibility Save writes a separate XLSX and preserves the original");
             check(storage.Open(supported).FileState!.CompatibilityIssues.Length == 0 && storage.Open(supported).Sheets[0].GetCell(0, 0)!.Value.NumberValue == 17, "Compatible XLSX copy contains the edited value and omits only reported unsupported content");

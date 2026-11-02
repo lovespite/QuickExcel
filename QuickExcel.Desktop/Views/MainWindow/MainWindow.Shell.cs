@@ -173,18 +173,15 @@ public partial class MainWindow
         var snapshot = _document.Snapshot;
         QuickExcel.Domain.WorkbookCompatibilityReport? report = null;
         if (!await WorkAsync("检查兼容性…", token => report = QuickExcel.Storage.TypedWorkbookStorage.InspectCompatibility(snapshot, token), cancellable: true)) return;
-        var lines = new List<string> { CompatibilityReportText.Format(report!) };
-        if (snapshot.FileState?.RequiresMigration == true) lines.Add("XLSQ v1 → v2：首次保存为新副本，原文件保留。");
+        var notices = new List<string>();
+        if (snapshot.FileState?.RequiresMigration == true) notices.Add("XLSQ v1 → v2：首次保存为新副本，原文件保留。");
         foreach (var sheet in snapshot.Sheets)
         {
-            if (sheet.UsedColumnCount > 256) lines.Add($"{sheet.Name}：IV 列之后的数据会保存，当前网格不显示。");
+            if (sheet.UsedColumnCount > 256) notices.Add($"{sheet.Name}：IV 列之后的数据会保存，当前网格不显示。");
             if (sheet.View.ActiveCell.Column >= 256 || sheet.View.FrozenRows > 10 || sheet.View.FrozenColumns >= 256)
-                lines.Add($"{sheet.Name}：原活动格/冻结设置会保存，但超出当前网格的 10 冻结行或 A–IV 显示范围；显示采用受限视图。");
+                notices.Add($"{sheet.Name}：原活动格/冻结设置会保存，但超出当前网格的 10 冻结行或 A–IV 显示范围；显示采用受限视图。");
         }
-        var text = new TextBox { Text = string.Join("\n\n", lines), IsReadOnly = true, TextWrapping = TextWrapping.Wrap,
-            VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Margin = new(20), BorderThickness = new(0) };
-        AutomationProperties.SetName(text, "兼容性报告");
-        var dialog = ToolDialog("兼容性报告", text, 620, 420);
+        var dialog = new CompatibilityDialog(this, report!, saveMode: false, notices);
         if (_smokeCompatibilityDriver is not null) dialog.Loaded += (_, _) => _smokeCompatibilityDriver?.Invoke(dialog);
         dialog.ShowDialog();
     }

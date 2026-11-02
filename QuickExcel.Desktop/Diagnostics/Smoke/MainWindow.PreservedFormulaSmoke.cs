@@ -48,9 +48,9 @@ public partial class MainWindow
             {
                 try
                 {
-                    var report = (TextBox)dialog.Content;
-                    check(report.Text.Contains("只读") && report.Text.Contains("B1:B2") && report.Text.Contains("来源"), "Compatibility dialog identifies read-only formula range and cache provenance");
-                    File.WriteAllText(Path.Combine(folder, "readonly-compatibility.txt"), report.Text);
+                    var report = ((CompatibilityDialog)dialog).PlainText;
+                    check(report.Contains("只读") && report.Contains("B1:B2") && report.Contains("来源"), "Compatibility dialog identifies read-only formula range and cache provenance");
+                    File.WriteAllText(Path.Combine(folder, "readonly-compatibility.txt"), report);
                 }
                 finally { dialog.Close(); }
             };

@@ -101,4 +101,58 @@ public sealed class CompatibilityReportTests
         Assert.Contains("未列出格式损失阻止项", supported);
         Assert.DoesNotContain("须明确另存受支持副本", supported);
     }
+
+    [Fact]
+    public void SavePromptPromotesPreservedContentAndExplainsPerItemImpact()
+    {
+        var report = new WorkbookCompatibilityReport(false, new[]
+        {
+            new CompatibilityDiagnostic("xlsx.unmodeled", CompatibilityKind.PreservedOnly, "part/xl/charts/chart1.xml",
+                "未建模部件：xl/charts/chart1.xml", "xl/charts/chart1.xml", "模板", "A1"),
+            new CompatibilityDiagnostic("xlsx.unmodeled", CompatibilityKind.PreservedOnly, "font/outline · cellXfs[0]",
+                "未建模属性 font/outline", "xl/styles.xml", "模板", "B2")
+        });
+        var view = CompatibilityReportPresentation.Create(report, saveMode: true);
+        Assert.Contains("2 处内容无法在编辑后保留", view.Headline);
+        Assert.Contains("原文件不会被修改", view.Summary);
+        var group = Assert.Single(view.Groups);
+        Assert.Equal(CompatibilityKind.PotentialLoss, group.Kind);
+        Assert.True(group.ExpandedByDefault);
+        Assert.All(group.Items, item => Assert.Contains("不会写入受支持副本", item.Impact));
+        Assert.Contains(group.Items, item => item.Impact.Contains("未建模部件"));
+        Assert.Contains(group.Items, item => item.Impact.Contains("字体"));
+        Assert.False(CompatibilityReportPresentation.Create(report, saveMode: false).HasLosses);
+    }
+
+    [Fact]
+    public void ReportMergesRepeatedDiagnosticsAndKeepsEveryLocation()
+    {
+        var diagnostics = Enumerable.Range(0, 2).Select(index => new CompatibilityDiagnostic(
+            "xlsx.affected-location", CompatibilityKind.PreservedOnly, "font/outline · cellXfs[0]",
+            "未建模属性 font/outline", "xl/styles.xml", "诊断", index == 0 ? "A1" : "B2")).ToArray();
+        var item = Assert.Single(Assert.Single(CompatibilityReportPresentation
+            .Create(new WorkbookCompatibilityReport(true, diagnostics), saveMode: false).Groups).Items);
+        Assert.Equal(2, item.Count);
+        Assert.Contains("诊断 · A1 · xl/styles.xml", item.Location);
+        Assert.Contains("诊断 · B2 · xl/styles.xml", item.Location);
+        Assert.Contains("不会按原样写入", item.Impact);
+    }
+
+    [Fact]
+    public void ImpactTextSeparatesCalculationRejectionAndEditableSubsets()
+    {
+        string Impact(CompatibilityKind kind, string feature) => CompatibilityReportPresentation.Impact(
+            new CompatibilityDiagnostic("test", kind, feature, "诊断说明", "xl/worksheets/sheet1.xml", "模板", "A2"), saveMode: false);
+        Assert.Contains("已有缓存", Impact(CompatibilityKind.CannotCalculate, "formula/function"));
+        Assert.Contains("只读", Impact(CompatibilityKind.CannotCalculate, "formula/preserved-readonly"));
+        Assert.Contains("阻止打开", Impact(CompatibilityKind.Rejected, "worksheet/pageSetup"));
+        Assert.Contains("可正常编辑", Impact(CompatibilityKind.Editable, "worksheet/data"));
+        var notice = "XLSQ v1 → v2：首次保存为新副本，原文件保留。";
+        var view = CompatibilityReportPresentation.Create(new WorkbookCompatibilityReport(true, []), saveMode: false, [notice]);
+        Assert.Equal(new[] { notice }, view.Notices);
+        Assert.Equal("工作簿与导入时一致，可原样保存", view.Headline);
+        Assert.Empty(view.Groups);
+        Assert.Contains("【其他提示】\n" + notice, CompatibilityReportPresentation.PlainText(
+            new WorkbookCompatibilityReport(true, []), view.Notices));
+    }
 }
