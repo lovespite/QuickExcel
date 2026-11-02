@@ -21,36 +21,102 @@ internal sealed class WorkbookPaginator : DocumentPaginator
     private readonly string _file;
     private readonly DateTime _timestamp = DateTime.Now;
     private readonly Dictionary<SheetImage, BitmapSource> _images = [];
+    private readonly Dictionary<WorksheetChart, DrawingGroup> _charts = [];
+    internal IReadOnlyList<string> Warnings { get; }
     internal PrintLayout Layout { get; }
     internal WorkbookPaginator(WorkbookSnapshot book, WorksheetSnapshot sheet, string file)
     {
-        if (book.FileState?.CompatibilityDiagnostics.Any(d => (d.SheetName is null || d.SheetName == sheet.Name) &&
-            (d.Feature.StartsWith("chart/", StringComparison.Ordinal) || d.Feature.StartsWith("drawing/", StringComparison.Ordinal))) == true)
-            throw new NotSupportedException("文件含未支持的图表或绘图设置，不能完整打印；请先查看兼容性报告并在 Excel 中处理。");
-        _book = book; _sheet = PrintingLayout.VisibleSheet(book, sheet); _file = Path.GetFileName(file); Layout = PrintingLayout.Create(_sheet);
-        foreach (var chart in sheet.Data.Charts) _ = ChartData.Read(book, chart);
-        foreach (var image in sheet.Images)
+        var warnings = new List<string>();
+        foreach (var diagnostic in book.FileState?.CompatibilityDiagnostics ?? [])
+            if ((diagnostic.SheetName is null || diagnostic.SheetName == sheet.Name) &&
+                (diagnostic.Feature.StartsWith("chart/", StringComparison.Ordinal) || diagnostic.Feature.StartsWith("drawing/", StringComparison.Ordinal)))
+                warnings.Add("图表/绘图仅输出已支持的部分：" + diagnostic.Message);
+        _book = book; _file = Path.GetFileName(file);
+        _sheet = PrintingLayout.VisibleSheet(book, sheet).WithPrinting(PreparePrinting(sheet.Printing, warnings));
+        for (var index = 0; index < sheet.Data.Charts.Length; index++)
         {
-            using var stream = new MemoryStream(image.Data.ToArray(), false);
-            var decoder = BitmapDecoder.Create(stream, BitmapCreateOptions.DelayCreation | BitmapCreateOptions.PreservePixelFormat, BitmapCacheOption.None);
-            var bitmap = decoder.Frames[0];
-            if ((long)bitmap.PixelWidth * bitmap.PixelHeight > 16_000_000) throw new NotSupportedException("图片解码超过 1600 万像素，不能完整打印。");
-            BitmapSource loaded = BitmapFrame.Create(bitmap);
-            if (sheet.Printing.Setup?.BlackAndWhite == true) loaded = new FormatConvertedBitmap(loaded, PixelFormats.Gray8, null, 0);
-            var pixels = new byte[checked(loaded.PixelHeight * ((loaded.PixelWidth * loaded.Format.BitsPerPixel + 7) / 8))];
-            var stride = (loaded.PixelWidth * loaded.Format.BitsPerPixel + 7) / 8; loaded.CopyPixels(pixels, stride, 0);
-            loaded = BitmapSource.Create(loaded.PixelWidth, loaded.PixelHeight, loaded.DpiX, loaded.DpiY, loaded.Format, loaded.Palette, pixels, stride);
-            loaded.Freeze(); _images.Add(image, loaded);
+            var chart = sheet.Data.Charts[index];
+            try
+            {
+                var drawing = new DrawingGroup(); var bounds = chart.Anchor.Bounds(_sheet);
+                using (var dc = drawing.Open())
+                    ChartDrawing.Paint(dc, new(bounds.X, bounds.Y, bounds.Width, bounds.Height), book, chart,
+                        failIfStale: true, monochrome: sheet.Printing.Setup?.BlackAndWhite == true);
+                drawing.Freeze(); _charts.Add(chart, drawing);
+            }
+            catch (Exception ex) when (ex is InvalidOperationException or NotSupportedException or ArgumentException or FormatException)
+            { warnings.Add($"图表 {index + 1}（{chart.Title}）无法绘制，本次跳过：{ex.Message}"); }
         }
-        // Validate all header variants before opening the preview or sending any page to a printer.
-        if (sheet.Printing.HeaderFooter is { } h)
-            foreach (var text in new[] { h.OddHeader, h.EvenHeader, h.FirstHeader, h.OddFooter, h.EvenFooter, h.FirstFooter })
-                _ = PrintingLayout.Header(text, sheet.Name, _file, 1, PageCount, _timestamp);
+        for (var index = 0; index < sheet.Images.Length; index++)
+        {
+            var image = sheet.Images[index];
+            try
+            {
+                using var stream = new MemoryStream(image.Data.ToArray(), false);
+                var decoder = BitmapDecoder.Create(stream, BitmapCreateOptions.DelayCreation | BitmapCreateOptions.PreservePixelFormat, BitmapCacheOption.None);
+                var bitmap = decoder.Frames[0];
+                if ((long)bitmap.PixelWidth * bitmap.PixelHeight > 16_000_000) throw new NotSupportedException("图片解码超过 1600 万像素。");
+                BitmapSource loaded = BitmapFrame.Create(bitmap);
+                if (sheet.Printing.Setup?.BlackAndWhite == true) loaded = new FormatConvertedBitmap(loaded, PixelFormats.Gray8, null, 0);
+                var pixels = new byte[checked(loaded.PixelHeight * ((loaded.PixelWidth * loaded.Format.BitsPerPixel + 7) / 8))];
+                var stride = (loaded.PixelWidth * loaded.Format.BitsPerPixel + 7) / 8; loaded.CopyPixels(pixels, stride, 0);
+                loaded = BitmapSource.Create(loaded.PixelWidth, loaded.PixelHeight, loaded.DpiX, loaded.DpiY, loaded.Format, loaded.Palette, pixels, stride);
+                loaded.Freeze(); _images.Add(image, loaded);
+            }
+            catch (Exception ex) when (ex is IOException or NotSupportedException or ArgumentException or FormatException or System.Runtime.InteropServices.COMException)
+            { warnings.Add($"图片 {index + 1} 无法解码或绘制，本次跳过：{ex.Message}"); }
+        }
+        _sheet = _sheet.WithImages(_images.Keys).WithData(_sheet.Data with { Charts = [.. _charts.Keys] });
+        Layout = PrintingLayout.Create(_sheet);
+        Warnings = warnings.Distinct().ToArray();
+    }
+
+    private WorksheetPrinting PreparePrinting(WorksheetPrinting printing, List<string> warnings)
+    {
+        if (printing.Setup?.CellComments is "asDisplayed" or "atEnd")
+        {
+            warnings.Add("批注打印暂未支持，本次不输出批注。");
+            printing = printing with { Setup = printing.Setup with { CellComments = "none" } };
+        }
+        string? Header(string? text, string label)
+        {
+            try { _ = PrintingLayout.Header(text, "", _file, 1, 1, _timestamp); return text; }
+            catch (NotSupportedException ex) { warnings.Add($"{label}包含未支持的内容，本次不输出该页眉或页脚：{ex.Message}"); return null; }
+        }
+        if (printing.HeaderFooter is { } h)
+            printing = printing with { HeaderFooter = h with
+            {
+                OddHeader = Header(h.OddHeader, "默认/奇数页页眉"), OddFooter = Header(h.OddFooter, "默认/奇数页页脚"),
+                EvenHeader = Header(h.EvenHeader, "偶数页页眉"), EvenFooter = Header(h.EvenFooter, "偶数页页脚"),
+                FirstHeader = Header(h.FirstHeader, "首页页眉"), FirstFooter = Header(h.FirstFooter, "首页页脚")
+            } };
+        return printing;
     }
     public override bool IsPageCountValid => true;
     public override int PageCount => Layout.Pages.Length;
     public override Size PageSize { get => new(Layout.PaperWidth, Layout.PaperHeight); set { if (value != PageSize) throw new NotSupportedException("请使用页面设置更改纸张，以保持预览和打印分页一致。"); } }
     public override IDocumentPaginatorSource Source => new ReportDocument(this);
+
+    internal FixedDocument CreatePreviewDocument()
+    {
+        // DocumentViewer accepts fixed documents only. Keep page drawing lazy and share
+        // the same immutable paginator and rendering path as printing/PDF export.
+        var document = new FixedDocument();
+        document.DocumentPaginator.PageSize = PageSize;
+        for (var index = 0; index < PageCount; index++)
+        {
+            var page = new FixedPage { Width = PageSize.Width, Height = PageSize.Height };
+            page.Children.Add(new PreviewPage(this, index) { Width = PageSize.Width, Height = PageSize.Height });
+            document.Pages.Add(new PageContent { Child = page });
+        }
+        return document;
+    }
+
+    private sealed class PreviewPage(WorkbookPaginator paginator, int pageNumber) : FrameworkElement
+    {
+        protected override void OnRender(DrawingContext drawingContext) => paginator.Paint(drawingContext, pageNumber);
+    }
+
     public override DocumentPage GetPage(int pageNumber)
     {
         if (pageNumber < 0 || pageNumber >= PageCount) return DocumentPage.Missing;
@@ -105,10 +171,7 @@ internal sealed class WorkbookPaginator : DocumentPaginator
                 var b = picture.Anchor.Bounds(_sheet);
                 dc.DrawImage(bitmap, new Rect(b.X, b.Y, b.Width, b.Height));
             }
-            foreach (var chart in _sheet.Data.Charts)
-            {
-                var b = chart.Anchor.Bounds(_sheet); ChartDrawing.Paint(dc, new(b.X, b.Y, b.Width, b.Height), _book, chart, failIfStale: true, monochrome: _sheet.Printing.Setup?.BlackAndWhite == true);
-            }
+            foreach (var drawing in _charts.Values) dc.DrawDrawing(drawing);
             dc.Pop(); dc.Pop();
         }
         dc.Pop(); dc.Pop(); dc.Pop(); dc.Pop();

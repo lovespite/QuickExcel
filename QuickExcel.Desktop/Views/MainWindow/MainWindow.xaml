@@ -342,7 +342,7 @@
                                   Click="Structure_Click"
                                   Tag="deleteColumn"/>
                         <Separator/>
-                        <MenuItem Header="删除工作表…"
+                        <MenuItem Header="删除工作表"
                                   Click="Structure_Click"
                                   Tag="deleteSheet"/>
                       </ContextMenu>
@@ -355,10 +355,10 @@
                           ToolTip="行高、列宽、隐藏及工作表名称">
                     <Button.ContextMenu>
                       <ContextMenu>
-                        <MenuItem Header="设置行高…"
+                        <MenuItem Header="设置行高"
                                   Click="Structure_Click"
                                   Tag="sizeRow"/>
-                        <MenuItem Header="设置列宽…"
+                        <MenuItem Header="设置列宽"
                                   Click="Structure_Click"
                                   Tag="sizeColumn"/>
                         <Separator/>
@@ -375,7 +375,7 @@
                                   Click="Structure_Click"
                                   Tag="showColumn"/>
                         <Separator/>
-                        <MenuItem Header="重命名工作表…"
+                        <MenuItem Header="重命名工作表"
                                   Click="Structure_Click"
                                   Tag="rename"/>
                       </ContextMenu>
@@ -391,7 +391,7 @@
                       <ContextMenu>
                         <MenuItem Header="向下填充 · Ctrl+D" Tag="down" Click="Fill_Click"/>
                         <MenuItem Header="向右填充 · Ctrl+R" Tag="right" Click="Fill_Click"/>
-                        <MenuItem Header="数字 / 日期序列…" Tag="series" Click="Fill_Click"/>
+                        <MenuItem Header="数字 / 日期序列" Tag="series" Click="Fill_Click"/>
                         <Separator/>
                         <MenuItem Header="清除内容 · Delete" Click="RibbonClear_Click"/>
                         <MenuItem Header="清除格式（保留内容）" Tag="clear-formats" Click="Fill_Click"/>
@@ -440,45 +440,52 @@
                         Style="{StaticResource RibbonGroup}">
                 <StackPanel>
                   <Button Content="新建工作表" local:Ribbon.Icon="TableAdd" Style="{StaticResource RibbonButton}" Click="AddSheet_Click"/>
-                  <Button Content="复制工作表…" local:Ribbon.Icon="Copy" Style="{StaticResource RibbonButton}" Click="SheetManage_Click" Tag="copy"/>
-                  <Button Content="名称管理…" local:Ribbon.Icon="TableSearch" Style="{StaticResource RibbonButton}" Click="NameManager_Click"/>
+                  <Button Content="复制工作表" local:Ribbon.Icon="Copy" Style="{StaticResource RibbonButton}" Click="SheetManage_Click" Tag="copy"/>
+                  <Button Content="名称管理" local:Ribbon.Icon="TableSearch" Style="{StaticResource RibbonButton}" Click="NameManager_Click"/>
                 </StackPanel>
               </GroupBox>
             </StackPanel>
           </TabItem>
           <TabItem Header="数据">
             <StackPanel Orientation="Horizontal">
+              <GroupBox Header="计算" Style="{StaticResource RibbonGroup}">
+                <StackPanel>
+                  <Button x:Name="RibbonRecalculateWorkbook" Content="重算工作簿"
+                          local:Ribbon.Icon="ArrowSync" Style="{StaticResource RibbonLargeButton}"
+                          Click="RecalculateWorkbook_Click" ToolTip="提交当前编辑并强制重算整个工作簿"/>
+                </StackPanel>
+              </GroupBox>
               <GroupBox Header="分组与汇总" Style="{StaticResource RibbonGroup}">
                 <StackPanel>
-                  <Button Content="分组…" local:Ribbon.Icon="TableSettings" Style="{StaticResource RibbonButton}" Click="GroupOutline_Click"/>
-                  <Button Content="取消分组…" local:Ribbon.Icon="TableSettings" Style="{StaticResource RibbonButton}" Click="UngroupOutline_Click"/>
-                  <Button Content="分类汇总…" local:Ribbon.Icon="TableSettings" Style="{StaticResource RibbonButton}" Click="Subtotal_Click"/>
+                  <Button Content="分组" local:Ribbon.Icon="TableSettings" Style="{StaticResource RibbonButton}" Click="GroupOutline_Click"/>
+                  <Button Content="取消分组" local:Ribbon.Icon="TableSettings" Style="{StaticResource RibbonButton}" Click="UngroupOutline_Click"/>
+                  <Button Content="分类汇总" local:Ribbon.Icon="TableSettings" Style="{StaticResource RibbonButton}" Click="Subtotal_Click"/>
                 </StackPanel>
               </GroupBox>
               <GroupBox Header="数据清洗" Style="{StaticResource RibbonGroup}">
                 <StackPanel>
-                  <Button Content="删除重复项…" local:Ribbon.Icon="TableSettings" Style="{StaticResource RibbonButton}" Click="RemoveDuplicates_Click"/>
-                  <Button Content="分列…" local:Ribbon.Icon="TableSettings" Style="{StaticResource RibbonButton}" Click="SplitText_Click"/>
-                  <Button Content="文本转数字…" local:Ribbon.Icon="TableSettings" Style="{StaticResource RibbonButton}" Click="ConvertNumbers_Click"/>
+                  <Button Content="删除重复项" local:Ribbon.Icon="TableSettings" Style="{StaticResource RibbonButton}" Click="RemoveDuplicates_Click"/>
+                  <Button Content="分列" local:Ribbon.Icon="TableSettings" Style="{StaticResource RibbonButton}" Click="SplitText_Click"/>
+                  <Button Content="文本转数字" local:Ribbon.Icon="TableSettings" Style="{StaticResource RibbonButton}" Click="ConvertNumbers_Click"/>
                 </StackPanel>
               </GroupBox>
               <GroupBox Header="验证与格式" Style="{StaticResource RibbonGroup}">
                 <StackPanel>
-                  <Button Content="数据验证…" local:Ribbon.Icon="TableSettings" Style="{StaticResource RibbonButton}" Click="Validation_Click" ToolTip="设置列表、数值、日期、长度或公式规则"/>
-                  <Button Content="清除验证…" local:Ribbon.Icon="TableSettings" Style="{StaticResource RibbonButton}" Click="RemoveValidation_Click"/>
-                  <Button Content="条件格式…" local:Ribbon.Icon="TableSettings" Style="{StaticResource RibbonButton}" Click="ConditionalFormatting_Click"/>
+                  <Button Content="数据验证" local:Ribbon.Icon="TableSettings" Style="{StaticResource RibbonButton}" Click="Validation_Click" ToolTip="设置列表、数值、日期、长度或公式规则"/>
+                  <Button Content="清除验证" local:Ribbon.Icon="TableSettings" Style="{StaticResource RibbonButton}" Click="RemoveValidation_Click"/>
+                  <Button Content="条件格式" local:Ribbon.Icon="TableSettings" Style="{StaticResource RibbonButton}" Click="ConditionalFormatting_Click"/>
                 </StackPanel>
               </GroupBox>
               <GroupBox Header="Excel 表" Style="{StaticResource RibbonGroup}">
                 <StackPanel Orientation="Horizontal">
                 <StackPanel>
-                  <Button Content="创建表…" local:Ribbon.Icon="TableAdd" Style="{StaticResource RibbonButton}" Click="CreateTable_Click" ToolTip="以选区首行为表头创建 Excel Table，保存名称、样式与筛选"/>
-                  <Button Content="调整表范围…" local:Ribbon.Icon="TableSettings" Style="{StaticResource RibbonButton}" Click="ResizeTable_Click" ToolTip="选择表内单元格，调整数据区末行；内容保留，可撤销"/>
-                  <Button Content="设置计算列…" local:Ribbon.Icon="TableSettings" Style="{StaticResource RibbonButton}" Click="CalculatedTableColumn_Click" ToolTip="明确替换当前表列的数据区公式，可一次撤销"/>
+                  <Button Content="创建表" local:Ribbon.Icon="TableAdd" Style="{StaticResource RibbonButton}" Click="CreateTable_Click" ToolTip="以选区首行为表头创建 Excel Table，保存名称、样式与筛选"/>
+                  <Button Content="调整表范围" local:Ribbon.Icon="TableSettings" Style="{StaticResource RibbonButton}" Click="ResizeTable_Click" ToolTip="选择表内单元格，调整数据区末行；内容保留，可撤销"/>
+                  <Button Content="设置计算列" local:Ribbon.Icon="TableSettings" Style="{StaticResource RibbonButton}" Click="CalculatedTableColumn_Click" ToolTip="明确替换当前表列的数据区公式，可一次撤销"/>
                 </StackPanel>
                 <StackPanel>
-                  <Button Content="重命名表…" local:Ribbon.Icon="TableSettings" Style="{StaticResource RibbonButton}" Click="RenameTable_Click"/>
-                  <Button Content="重命名列…" local:Ribbon.Icon="TableSettings" Style="{StaticResource RibbonButton}" Click="RenameTableColumn_Click"/>
+                  <Button Content="重命名表" local:Ribbon.Icon="TableSettings" Style="{StaticResource RibbonButton}" Click="RenameTable_Click"/>
+                  <Button Content="重命名列" local:Ribbon.Icon="TableSettings" Style="{StaticResource RibbonButton}" Click="RenameTableColumn_Click"/>
                 </StackPanel>
                 </StackPanel>
               </GroupBox>
@@ -521,13 +528,13 @@
               <GroupBox Header="调整结构"
                         Style="{StaticResource RibbonGroup}">
                 <StackPanel>
-                  <Button Content="移动行…"
+                  <Button Content="移动行"
                           local:Ribbon.Icon="TableMoveAbove"
                           Style="{StaticResource RibbonButton}"
                           Click="Structure_Click"
                           Tag="moveRow"
                           ToolTip="移动选区所在行"/>
-                  <Button Content="移动列…"
+                  <Button Content="移动列"
                           local:Ribbon.Icon="TableMoveLeft"
                           Style="{StaticResource RibbonButton}"
                           Click="Structure_Click"
@@ -554,7 +561,7 @@
                           Tag="clear"
                           ToolTip="取消冻结"/>
                   <Button Content="隐藏工作表" local:Ribbon.Icon="EyeOff" Style="{StaticResource RibbonButton}" Click="HideSheet_Click" ToolTip="隐藏当前工作表，至少保留一张可见表"/>
-                  <Button Content="取消隐藏…" local:Ribbon.Icon="Eye" Style="{StaticResource RibbonButton}" Click="UnhideSheet_Click" ToolTip="显示普通隐藏工作表；非常隐藏表不在此列表"/>
+                  <Button Content="取消隐藏" local:Ribbon.Icon="Eye" Style="{StaticResource RibbonButton}" Click="UnhideSheet_Click" ToolTip="显示普通隐藏工作表；非常隐藏表不在此列表"/>
                 </StackPanel>
               </GroupBox>
               <GroupBox Header="显示范围"
@@ -588,21 +595,21 @@
             <StackPanel Orientation="Horizontal">
               <GroupBox Header="打印与交付" Style="{StaticResource RibbonGroup}">
                 <StackPanel>
-                  <Button Content="页面设置…" Style="{StaticResource RibbonButton}" Click="PageSettings_Click"/>
-                  <Button Content="打印预览 / PDF…" Style="{StaticResource RibbonButton}" Click="PrintPreview_Click"/>
+                  <Button Content="页面设置" Style="{StaticResource RibbonButton}" Click="PageSettings_Click"/>
+                  <Button Content="打印预览 / PDF" Style="{StaticResource RibbonButton}" Click="PrintPreview_Click"/>
                 </StackPanel>
               </GroupBox>
               <GroupBox Header="图片" Style="{StaticResource RibbonGroup}">
-                <StackPanel><Button Content="插入 / 编辑图片…" Style="{StaticResource RibbonButton}" Click="ImageManage_Click"/></StackPanel>
+                <StackPanel><Button Content="插入 / 编辑图片" Style="{StaticResource RibbonButton}" Click="ImageManage_Click"/></StackPanel>
               </GroupBox>
               <GroupBox Header="图表" Style="{StaticResource RibbonGroup}">
-                <StackPanel><Button Content="插入 / 编辑图表…" Style="{StaticResource RibbonButton}" Click="ChartManage_Click"/></StackPanel>
+                <StackPanel><Button Content="插入 / 编辑图表" Style="{StaticResource RibbonButton}" Click="ChartManage_Click"/></StackPanel>
               </GroupBox>
               <GroupBox Header="保护与批注" Style="{StaticResource RibbonGroup}">
                 <StackPanel>
-                  <Button Content="工作表保护…" Style="{StaticResource RibbonButton}" Click="Protection_Click"/>
-                  <Button Content="单元格锁定属性…" Style="{StaticResource RibbonButton}" Click="CellProtection_Click"/>
-                  <Button Content="编辑 / 删除批注…" Style="{StaticResource RibbonButton}" Click="NoteEdit_Click"/>
+                  <Button Content="工作表保护" Style="{StaticResource RibbonButton}" Click="Protection_Click"/>
+                  <Button Content="单元格锁定属性" Style="{StaticResource RibbonButton}" Click="CellProtection_Click"/>
+                  <Button Content="编辑 / 删除批注" Style="{StaticResource RibbonButton}" Click="NoteEdit_Click"/>
                 </StackPanel>
               </GroupBox>
             </StackPanel>

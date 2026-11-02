@@ -2,6 +2,7 @@ using System.IO;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Automation;
+using System.Windows.Automation.Peers;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Media;
@@ -35,14 +36,17 @@ public partial class MainWindow
             {
                 tab.IsSelected = true; await Idle();
                 Check(((FrameworkElement)tab.Content).IsVisible, $"Tab {tab.Header} exposes its commands");
+                Check(ProductChildren<ButtonBase>((FrameworkElement)tab.Content).All(b =>
+                    b.Content is not string text || !text.Contains('…') && !text.Contains("...")),
+                    $"Tab {tab.Header} button labels contain no ellipses");
                 foreach (var group in ProductChildren<GroupBox>((FrameworkElement)tab.Content))
                 {
                     var host = (ContentPresenter)group.Template.FindName("ContentHost", group);
-                    Check(host.ActualHeight >= 84 && host.ActualHeight + 0.5 >= host.DesiredSize.Height,
+                    Check(((Grid)host.Parent).RowDefinitions[0].ActualHeight >= 84 && host.ActualHeight + 0.5 >= host.DesiredSize.Height,
                         $"Group {group.Header} shows all command rows without collapsing the last row");
                     foreach (var button in ProductChildren<ButtonBase>(group))
                     foreach (var label in ProductChildren<ContentPresenter>(button).Where(p => p.Content is string))
-                        Check(label.ActualWidth + 0.5 >= label.DesiredSize.Width,
+                        Check(label.ActualWidth + label.Margin.Left + label.Margin.Right + 0.5 >= label.DesiredSize.Width,
                             $"Ribbon label '{label.Content}' is not clipped horizontally");
                 }
             }
@@ -96,9 +100,10 @@ public partial class MainWindow
             WorkbookPage_Click(this, new()); await Idle();
             Check(RibbonTabs.IsEnabled, "Workbook ribbon reactivates when returning to the sheet");
             Check(ProductChildren<ButtonBase>(HomeRibbonContent).Where(b => b.ReadLocalValue(Ribbon.IconProperty) != DependencyProperty.UnsetValue)
-                .All(b => !string.IsNullOrWhiteSpace(AutomationProperties.GetName(b))),
+                .All(b => !string.IsNullOrWhiteSpace(UIElementAutomationPeer.CreatePeerForElement(b)?.GetName())),
                 "Every ribbon action has an accessible name");
-            InstallProductFixture(); await Idle();
+            await RunRecalculationCommandsSmokeAsync(Check);
+            InstallProductFixture(); HomeRibbonTab.IsSelected = true; await Idle();
             GridSurface.Select(new(3, 1)); await Idle();
             CaptureGridEvidence(Path.Combine(folder, "QuickExcel-ribbon.png"));
             Width = 900; await Idle();

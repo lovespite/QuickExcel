@@ -351,12 +351,18 @@ public partial class MainWindow : Window
         AppendLog(exception.Message);
     }
 
-    private async Task<bool> RecalculateAsync()
+    private async Task<bool> RecalculateWorkbookAsync()
+    {
+        if (_busy || !CommitEditors()) return false;
+        return await RecalculateAsync(forceFull: true);
+    }
+
+    private async Task<bool> RecalculateAsync(bool forceFull = false)
     {
         if (_busy) return false;
         _calculationPending = false;
         var committed = false;
-        var ok = await WorkAsync("重新计算…", token => committed = _document.Calculate(token), cancellable: true);
+        var ok = await WorkAsync("重新计算…", token => committed = _document.Calculate(token, forceFull), cancellable: true);
         ok &= committed;
         if (!ok) _calculationPending = true;
         ShowDiagnostics();

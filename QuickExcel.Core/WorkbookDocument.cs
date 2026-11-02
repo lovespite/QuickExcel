@@ -182,9 +182,10 @@ public sealed class WorkbookDocument : IDisposable
     }
     public void DisableScripts() => Session.SetScriptsEnabled(false);
     public void Calculate() => Calculate(CancellationToken.None);
-    public bool Calculate(CancellationToken cancellationToken)
+    public bool Calculate(CancellationToken cancellationToken) => Calculate(cancellationToken, forceFull: false);
+    public bool Calculate(CancellationToken cancellationToken, bool forceFull)
     {
-        var request = Session.BeginCalculation();
+        var request = Session.BeginCalculation() with { ForceFull = forceFull };
         using var lifetime = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, request.CancellationToken);
         try
         {

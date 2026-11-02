@@ -58,20 +58,28 @@ public partial class MainWindow
         dialog.ShowDialog();
     }
 
-    private async void PrintPreview_Click(object sender, RoutedEventArgs e)
+    private async void PrintPreview_Click(object sender, RoutedEventArgs e) =>
+        await (_workspaceInput = ShowPrintPreviewAsync());
+
+    private async Task ShowPrintPreviewAsync()
     {
-        if (_busy || !await FlushEditsAsync()) return;
+        if (!await RecalculateWorkbookAsync()) return;
         try
         {
             var snapshot = _document.Snapshot;
             if (snapshot.Sheets[_sheetIndex].Cells.Values.Any(c => c.Content.Kind == CellContentKind.Formula && c.Calculation?.State is not (CalculationState.Fresh or CalculationState.Error)))
-                throw new InvalidOperationException("当前表含未重算公式，请先完成重算再打印，避免将旧缓存作为最新结果。");
+                throw new InvalidOperationException("重算后当前表仍含无法计算的公式，打印已取消；请查看兼容性报告或脚本诊断。");
             var paginator = new WorkbookPaginator(snapshot, snapshot.Sheets[_sheetIndex], _filePath ?? _displayName);
+            if (paginator.Warnings.Count > 0)
+            {
+                AppendLog("打印内容提示：\n" + string.Join("\n", paginator.Warnings));
+                new PrintWarningsDialog(this, paginator.Warnings).ShowDialog();
+            }
             var preview = new Window { Owner = this, Title = $"打印预览 · {paginator.PageCount} 页", Width = 1000, Height = 760, WindowStartupLocation = WindowStartupLocation.CenterOwner };
             var root = new DockPanel(); var print = new Button { Content = "系统打印 / 保存为 PDF…", Padding = new(16, 8, 16, 8), Margin = new(8), HorizontalAlignment = HorizontalAlignment.Left };
             var pdf = new Button { Content = "导出 PDF…", Padding = new(16, 8, 16, 8), Margin = new(8) };
             var actions = new StackPanel { Orientation = Orientation.Horizontal }; actions.Children.Add(print); actions.Children.Add(pdf);
-            DockPanel.SetDock(actions, Dock.Top); root.Children.Add(actions); root.Children.Add(new DocumentViewer { Document = new ReportDocument(paginator) }); preview.Content = root;
+            DockPanel.SetDock(actions, Dock.Top); root.Children.Add(actions); root.Children.Add(new DocumentViewer { Document = paginator.CreatePreviewDocument() }); preview.Content = root;
             pdf.Click += async (_, _) =>
             {
                 var save = new SaveFileDialog { Filter = "PDF 文档|*.pdf", FileName = Path.GetFileNameWithoutExtension(_displayName) + ".pdf" };

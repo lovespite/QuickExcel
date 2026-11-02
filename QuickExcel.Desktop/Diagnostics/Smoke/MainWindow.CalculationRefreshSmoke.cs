@@ -120,17 +120,22 @@ public partial class MainWindow
         }
         private Gate? _next;
         public int Calls { get; private set; }
+        public bool LastForceFull { get; private set; }
+        public CalculationStatistics? LastStatistics { get; private set; }
         public Gate HoldNext() => _next = new();
         public CalculationResult Calculate(CalculationRequest request, CancellationToken cancellationToken = default)
         {
             Calls++;
+            LastForceFull = request.ForceFull;
             if (_next is { } gate)
             {
                 _next = null;
                 gate.Entered.TrySetResult();
                 gate.Release.Task.Wait(cancellationToken);
             }
-            return inner.Calculate(request, cancellationToken);
+            var result = inner.Calculate(request, cancellationToken);
+            LastStatistics = result.Statistics;
+            return result;
         }
     }
 }

@@ -113,6 +113,9 @@ public partial class MainWindow
         }
     }
 
+    private async void RecalculateWorkbook_Click(object sender, RoutedEventArgs e) =>
+        await (_workspaceInput = RecalculateWorkbookAsync());
+
     private void RibbonCopy_Click(object sender, RoutedEventArgs e)
     {
         if (_busy || !CanCommitComposition()) return;

@@ -56,7 +56,7 @@ public partial class MainWindow
         var clear = new Button { Content = kind == "fill" ? "无填充" : "自动颜色", MinHeight = 26, Padding = new Thickness(8, 3, 8, 3), Margin = new(0, 0, 0, 4) };
         clear.Click += (_, _) => { menu.IsOpen = false; ApplyRibbonColor(kind, null); };
         panel.Children.Add(clear);
-        var custom = new Button { Content = "自定义颜色…", MinHeight = 26, Padding = new Thickness(8, 3, 8, 3), Margin = new(0, 0, 0, 2) };
+        var custom = new Button { Content = "自定义颜色", MinHeight = 26, Padding = new Thickness(8, 3, 8, 3), Margin = new(0, 0, 0, 2) };
         custom.Click += (_, _) => { menu.IsOpen = false; ShowCustomColor(kind); };
         panel.Children.Add(custom);
         menu.Items.Add(panel);

@@ -82,11 +82,22 @@ public partial class MainWindow
                 var book = _document.Snapshot; var paginator = new WorkbookPaginator(book, book.Sheets[sheetIndex], prefix + ".xlsx");
                 if (prefix == "paged") Check(paginator.PageCount == 2 && paginator.Layout.Pages[1].Rows.Take(2).SequenceEqual([0, 20]), "Manual page starts at row 21 after repeated title, matching Excel");
                 Check(paginator.PageCount > 0, "Pagination produces pages: " + prefix);
+                var previewPage = paginator.CreatePreviewDocument().Pages[0].Child;
+                previewPage.Measure(paginator.PageSize); previewPage.Arrange(new Rect(paginator.PageSize)); previewPage.UpdateLayout();
                 foreach (var dpi in new[] { 96, 144, 192 })
                 {
                     var bitmap = new RenderTargetBitmap((int)Math.Ceiling(paginator.PageSize.Width * dpi / 96), (int)Math.Ceiling(paginator.PageSize.Height * dpi / 96), dpi, dpi, PixelFormats.Pbgra32);
                     bitmap.Render(paginator.GetPage(0).Visual); var encoder = new PngBitmapEncoder(); encoder.Frames.Add(BitmapFrame.Create(bitmap));
                     using var output = File.Create(Path.Combine(folder, $"{prefix}-{dpi}.png")); encoder.Save(output);
+                    var previewBitmap = new RenderTargetBitmap(bitmap.PixelWidth, bitmap.PixelHeight, dpi, dpi, PixelFormats.Pbgra32);
+                    previewBitmap.Render(previewPage);
+                    var previewEncoder = new PngBitmapEncoder(); previewEncoder.Frames.Add(BitmapFrame.Create(previewBitmap));
+                    using (var previewOutput = File.Create(Path.Combine(folder, $"{prefix}-preview-{dpi}.png"))) previewEncoder.Save(previewOutput);
+                    // FixedPage also paints a white background; omit only the fractional paper-edge pixels.
+                    var interior = new Int32Rect(0, 0, (int)Math.Floor(paginator.PageSize.Width * dpi / 96), (int)Math.Floor(paginator.PageSize.Height * dpi / 96));
+                    var stride = interior.Width * 4; var printed = new byte[stride * interior.Height]; var previewed = new byte[printed.Length];
+                    bitmap.CopyPixels(interior, printed, stride, 0); previewBitmap.CopyPixels(interior, previewed, stride, 0);
+                    Check(printed.SequenceEqual(previewed), $"Fixed-document preview matches printed page at {dpi} DPI: {prefix}");
                 }
                 for (var page = 1; page < paginator.PageCount; page++)
                 {
@@ -99,6 +110,7 @@ public partial class MainWindow
                 File.WriteAllText(Path.Combine(folder, prefix + "-layout.json"), JsonSerializer.Serialize(paginator.Layout, new JsonSerializerOptions { WriteIndented = true }));
             }
             await Render("quickexcel");
+            await RunPrintWarningsSmokeAsync(folder, Check);
             if (nativePath is not null)
             {
                 await OpenPathAsync(nativePath); await RecalculateAsync(); await Idle();
