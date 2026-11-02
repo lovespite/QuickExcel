@@ -56,13 +56,15 @@ public partial class MainWindow
             _document.Undo(); RefreshSheet(); await Idle();
             Check(Math.Abs(_grid.Control.GetModelCellBounds(0, 0)!.Value.Width - rect.Width) < 1, "Wide column resize remains undoable");
 
-            _editor.SetCell(0, 3, 1, "=_xlfn.XLOOKUP(1,A1:A2,B1:B2)"); RefreshSheet();
+            // XLOOKUP is now supported; keep this diagnostic fixture explicitly unsupported.
+            _editor.SetCell(0, 3, 1, "=CUBESET(\"Fixture\",\"Unsupported\")"); RefreshSheet();
             var inspectedSnapshot = _document.Snapshot;
             _smokeCompatibilityDriver = dialog =>
             {
                 try
                 {
                     var report = ((CompatibilityDialog)dialog).PlainText;
+                    File.WriteAllText(Path.Combine(folder, "compatibility-dialog.txt"), report);
                     Check(report.Contains("【内置不可计算／待验证】") && report.Contains("Rendering · B4"),
                         "Actual compatibility dialog groups unsupported formulas with their current cell location");
                     Check(report.Contains("【可编辑（已支持子集）】") && report.Contains("当前无缓存结果"),

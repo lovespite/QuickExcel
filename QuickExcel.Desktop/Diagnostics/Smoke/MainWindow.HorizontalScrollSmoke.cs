@@ -48,6 +48,22 @@ public partial class MainWindow
         try
         {
             host.Show(); surface.Bind(snapshot, 0, 100, 30); await Idle();
+            // A host-only content refresh must participate in the same completion
+            // fence even when the grid bitmap and selection did not change.
+            var hostPainted = false;
+            void ObserveHostPaint(string stage, long timestamp)
+            {
+                if (stage is "artwork-end" or "artwork-cached-end") hostPainted = true;
+            }
+            surface.Artwork.RenderingTrace += ObserveHostPaint;
+            try
+            {
+                surface.Artwork.Refresh();
+                Check(grid.IsRenderPending, "Host-only content invalidation is pending before its paint");
+                await Idle();
+                Check(hostPainted && !grid.IsRenderPending, "Render completion waits for host-only content painting");
+            }
+            finally { surface.Artwork.RenderingTrace -= ObserveHostPaint; }
             var dpi = VisualTreeHelper.GetDpi(grid);
             Check(horizontal.ViewportSize == grid.GridScrollAreaWidth, "Horizontal scrollbar extent uses device pixels");
             var initial = grid.GetModelCellBounds(5, 1)!.Value;

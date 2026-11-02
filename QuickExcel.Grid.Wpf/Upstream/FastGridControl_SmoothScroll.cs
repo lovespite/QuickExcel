@@ -64,6 +64,7 @@ partial class FastGridControl
         var time = ((RenderingEventArgs)e).RenderingTime;
         if (_lastHorizontalRenderingTime == time) return;
         _lastHorizontalRenderingTime = time;
+        TraceRender("composition-start");
         // We render synchronously below. Suppress the extra Render-priority
         // dispatcher callback that viewport invalidation would otherwise post.
         using var invalidation = CreateInvalidationContext();
@@ -71,6 +72,8 @@ partial class FastGridControl
         // Rendering is already in progress. Submit the content in this frame,
         // alongside the invalidated selection/artwork, rather than one frame later.
         if (_isInvalidated) RenderGrid();
+        TraceRender("composition-grid-end");
+        NotifyRenderCompleted();
     }
 
     private void ApplyPendingHorizontalScroll()
@@ -114,8 +117,9 @@ partial class FastGridControl
             CompositionTarget.Rendering += DragScrollRendering;
             _dragRenderingSubscribed = true;
         }
-        // Rendering is throttled by WPF when occluded/minimized. A timer is a
-        // fallback, not a second producer: both paths share the same time gate.
+        // Rendering is throttled by WPF when occluded/minimized. A 50 ms fallback
+        // must not race a 60 Hz composition callback and suppress the next frame.
+        _dragTimer.Interval = TimeSpan.FromMilliseconds(50);
         _dragTimer.Start();
     }
 

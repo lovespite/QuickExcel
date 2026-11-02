@@ -11,16 +11,21 @@ namespace QuickExcel.Desktop;
 
 public partial class MainWindow
 {
-    private static async Task WaitForFastGridPaintAsync(FastGridControl control)
+    private static async Task WaitForFastGridPaintAsync(FastGridControl control, Action<string>? observe = null)
     {
-        var timeout = System.Diagnostics.Stopwatch.StartNew();
-        do
+        var painted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        void Completed(object? sender, EventArgs args) => painted.TrySetResult();
+        control.RenderCompleted += Completed;
+        try
         {
-            await control.Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
+            await control.Dispatcher.InvokeAsync(() => observe?.Invoke("probe-observed"), DispatcherPriority.Render);
+            observe?.Invoke(control.IsRenderPending ? "probe-pending" : "probe-completed");
             if (!control.IsRenderPending) return;
-            if (timeout.Elapsed > TimeSpan.FromSeconds(5)) throw new TimeoutException("Candidate grid did not finish its pending bitmap repaint.");
-            await Task.Delay(16);
-        } while (true);
+            // Observe the completed render pass directly. Polling every 16 ms can
+            // add another timer interval after painting has already finished.
+            await painted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        }
+        finally { control.RenderCompleted -= Completed; }
     }
 
     // Invoke the same selection/hover path as mouse movement without moving the user's OS pointer.

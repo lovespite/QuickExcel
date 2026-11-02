@@ -29,7 +29,9 @@ public partial class MainWindow
             var snapshot = _document.Snapshot;
             var readOnly = snapshot.FileState?.FormulaReadOnly == true;
             ScriptEditor.IsReadOnly = readOnly;
-            FormulaBar.IsReadOnly = readOnly || snapshot.Sheets[_sheetIndex].GetCell(_selectedRow, _selectedColumn)?.Content.RichText is not null;
+            var selectedSheet = snapshot.Sheets[_sheetIndex];
+            FormulaBar.IsReadOnly = readOnly || selectedSheet.GetCell(_selectedRow, _selectedColumn)?.Content.RichText is not null ||
+                selectedSheet.Data.Protection?.Sheet == true && snapshot.Styles[selectedSheet.GetStyleId(_selectedRow, _selectedColumn)].Locked;
             AutoSumButton.IsEnabled = !_busy && !FormulaBar.IsReadOnly;
             RibbonPasteButton.IsEnabled = !readOnly;
             RibbonCutButton.IsEnabled = !readOnly;

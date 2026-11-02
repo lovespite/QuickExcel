@@ -26,6 +26,7 @@ $run = [DateTime]::UtcNow.ToString('yyyyMMdd-HHmmss') + '-' + [Guid]::NewGuid().
 $evidence = Join-Path $artifacts "validation\m5-grid\$run"
 New-Item -ItemType Directory -Path $evidence | Out-Null
 $modes = if ($Mode -eq 'All') { @('Interaction', 'Workspace', 'Product', 'Ribbon', 'Benchmark') } else { @($Mode) }
+$validationFailures = [Collections.Generic.List[string]]::new()
 foreach ($scenario in $modes) {
     $directory = Join-Path $evidence $scenario
     New-Item -ItemType Directory -Path $directory | Out-Null
@@ -43,9 +44,11 @@ foreach ($scenario in $modes) {
         $process.WaitForExit()
         if ($process.ExitCode -ne 0) { throw "M5 $scenario failed with exit code $($process.ExitCode). Evidence: $directory" }
         $resultPath = Join-Path $directory $result
-        if (-not (Test-Path -LiteralPath $resultPath) -or -not (Get-Content -LiteralPath $resultPath -Raw).StartsWith('PASS:')) {
+        if (-not (Test-Path -LiteralPath $resultPath)) {
             throw "Missing fresh M5 result: $directory"
         }
+        $summary = Get-Content -LiteralPath $resultPath -TotalCount 1
+        if (-not $summary.StartsWith('PASS:')) { $validationFailures.Add("M5 $scenario did not pass: $summary Evidence: $directory") }
         $rendering = Get-Content -LiteralPath (Join-Path $directory 'rendering.json') -Raw | ConvertFrom-Json
         $expectedMode = if ($SoftwareRendering) { 'SoftwareOnly' } else { 'Default' }
         $expectedSelection = if ($SoftwareRendering) { 'explicit-software' } elseif ($DefaultRendering) { 'explicit-default' } else { 'automatic-default' }
@@ -83,3 +86,4 @@ catch { $environmentNotes += 'CIM hardware inventory unavailable: ' + $_.Excepti
     evidence = $evidence
 } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $evidence 'run.json') -Encoding utf8
 Write-Host "M5 evidence: $evidence"
+if ($validationFailures.Count -gt 0) { throw ($validationFailures -join [Environment]::NewLine) }

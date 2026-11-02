@@ -32,7 +32,8 @@ namespace FastWpfGrid
 
         private int _headerHeight;
         private int _headerWidth;
-        private Dictionary<Tuple<bool, bool>, GlyphFont> _glyphFonts = new Dictionary<Tuple<bool, bool>, GlyphFont>();
+        private Dictionary<Tuple<bool, bool>, GridFont> _glyphFonts = new Dictionary<Tuple<bool, bool>, GridFont>();
+        private QuickExcel.Rendering.Skia.SkiaRenderer _textRenderer;
         private Dictionary<Color, Brush> _solidBrushes = new Dictionary<Color, Brush>();
         private int _rowHeightReserve = 5;
         //private Color _headerBackground = Color.FromRgb(0xDD, 0xDD, 0xDD);
@@ -59,7 +60,7 @@ namespace FastWpfGrid
             // A layout zoom can also reach us through an ancestor scale change
             // that resizes this control without a separate viewport event.
             SizeChanged += (_, _) => { if (UpdateRenderScale()) RebuildViewport(); };
-            Unloaded += (_, _) => { StopDragScrolling(); CancelPendingHorizontalScroll(); _contentTiles.Clear(); _tileCanvas?.Freeze(); _tileCanvas = null; };
+            Unloaded += (_, _) => { StopDragScrolling(); CancelPendingHorizontalScroll(); _contentTiles.Clear(); _tileCanvas?.Freeze(); _tileCanvas = null; ClearCaches(); _textRenderer?.Dispose(); _textRenderer = null; };
             AllowSelectAll = true;
         }
 
@@ -74,12 +75,12 @@ namespace FastWpfGrid
             set { _isReadOnly = value; }
         }
 
-        public GlyphFont GetFont(bool isBold, bool isItalic)
+        public GridFont GetFont(bool isBold, bool isItalic)
         {
             var key = Tuple.Create(isBold, isItalic);
             if (!_glyphFonts.ContainsKey(key))
             {
-                var font = LetterGlyphTool.GetFont(new PortableFontDesc(CellFontName, CellFontSize, isBold, isItalic, UseClearType,
+                var font = new GridFont(_textRenderer ??= new(), new PortableFontDesc(CellFontName, CellFontSize, isBold, isItalic, false,
                     RenderScaleX, RenderScaleY));
                 _glyphFonts[key] = font;
             }

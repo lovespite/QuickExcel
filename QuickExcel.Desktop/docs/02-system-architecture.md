@@ -13,6 +13,7 @@
 | `WorkbookCalculator` / `TypedEvaluator` | 跨表、名称、依赖和标准公式增量求值；JS 继续每轮重建上下文并保守完整重算 |
 | `ScriptWorkerRuntimeFactory` / `ScriptWorkerActionExecutor` | 公式与 actions 的强制 AppContainer worker 客户端、快照/patch 校验、取消与生命周期；无进程内或同权限回退 |
 | `QuickExcel.ScriptContracts` / `QuickExcel.ScriptWorker` / `QuickExcel.Scripting` | BCL-only IPC 契约、独立执行程序、托管 QuickJS 桥与固定来源的原生引擎；协议 4、16 MiB 帧上限 |
+| `QuickExcel.Rendering` / `QuickExcel.Rendering.Skia` | 纯 net10.0 显示契约、共享文字布局/图片/基础图表和直接 PNG/PDF；不引用 Infrastructure、WPF 或脚本，条件样式由组合根提供；版本、预算及待关闭性能门槛见 [60](60-skia-rendering-and-pdf-implementation.md) |
 | `QuickExcel.Grid.Wpf` / `FastGridSurface` | 主网格绘制、范围选区、命中与几何、冻结/尺寸视图；旧 DataGrid 与试验窗口已移除，不直接写文档 |
 | Desktop / `EditorController` / `DesktopComposition` | Ribbon、公式栏/原生 TextBox、脚本专页、文件与信任流程；组合根注入 typed storage、calculator 和 worker，全部文档写入经会话 |
 

@@ -73,7 +73,8 @@ internal sealed partial class FastGridSurface : IGridSurface
     {
         _commit = commit;
         Artwork = new(this);
-        Control.SetContentDecoration(Artwork);
+        Control.ExternalCellContent = true;
+        Control.SetContentDecoration(Artwork, () => Artwork.IsRenderPending);
         Element.Children.Add(Control); Element.Children.Add(_overlay); _overlay.Children.Add(Editor);
         InstallFillHandle();
         InstallReferenceHighlight();
@@ -87,7 +88,7 @@ internal sealed partial class FastGridSurface : IGridSurface
             QueueSelectionPresentation();
         };
         Control.LostMouseCapture += (_, _) => QueueSelectionPresentation();
-        Control.ViewportChanged += (_, _) => { PositionOverlay(); Artwork.InvalidateVisual(); _referenceHighlight?.InvalidateVisual(); };
+        Control.ViewportChanged += (_, _) => { PositionOverlay(); Artwork.InvalidateContent(); _referenceHighlight?.InvalidateVisual(); };
         Element.SizeChanged += (_, _) => { PositionOverlay(); _referenceHighlight?.InvalidateVisual(); };
         Element.PreviewMouseDown += (_, e) =>
         {
@@ -435,11 +436,7 @@ internal sealed partial class FastGridSurface : IGridSurface
             if (Snapshot is null) return new FastGridCellImpl();
             var sheet = Snapshot.Sheets[SheetIndex]; var style = ConditionalPresentation.GetStyle(Snapshot, sheet, row, column);
             var cell = new FastGridCellImpl { BackgroundColor = Color(style.FillColor) ?? Colors.White, VerticalAlignment = style.Vertical };
-            // Artwork owns the opaque styled cell, including text. Rasterizing
-            // the same text underneath it doubles formatting/glyph work and
-            // creates bitmaps that cannot be seen.
-            if (FastGridArtwork.PaintsStyle(style) || sheet.GetCell(row, column)?.Content.RichText is not null || sheet.Annotations.Notes.ContainsKey(new(row, column))) return cell;
-            var block = cell.AddTextBlock(GetCellText(row, column)); block.IsBold = style.Bold; block.IsItalic = style.Italic; block.FontColor = Color(style.FontColor);
+            // Artwork owns all cell content, including the ordinary-text path.
             return cell;
         }
         private static Color? Color(string? value) { try { return value is null ? null : (Color)ColorConverter.ConvertFromString("#" + value.TrimStart('#')); } catch (FormatException) { return null; } }

@@ -69,25 +69,31 @@ public partial class MainWindow
             var snapshot = _document.Snapshot;
             if (snapshot.Sheets[_sheetIndex].Cells.Values.Any(c => c.Content.Kind == CellContentKind.Formula && c.Calculation?.State is not (CalculationState.Fresh or CalculationState.Error)))
                 throw new InvalidOperationException("重算后当前表仍含无法计算的公式，打印已取消；请查看兼容性报告或脚本诊断。");
-            var paginator = new WorkbookPaginator(snapshot, snapshot.Sheets[_sheetIndex], _filePath ?? _displayName);
+            await using var paginator = new WorkbookPaginator(snapshot, snapshot.Sheets[_sheetIndex], _filePath ?? _displayName);
             if (paginator.Warnings.Count > 0)
             {
                 AppendLog("打印内容提示：\n" + string.Join("\n", paginator.Warnings));
                 new PrintWarningsDialog(this, paginator.Warnings).ShowDialog();
             }
             var preview = new Window { Owner = this, Title = $"打印预览 · {paginator.PageCount} 页", Width = 1000, Height = 760, WindowStartupLocation = WindowStartupLocation.CenterOwner };
-            var root = new DockPanel(); var print = new Button { Content = "系统打印 / 保存为 PDF…", Padding = new(16, 8, 16, 8), Margin = new(8), HorizontalAlignment = HorizontalAlignment.Left };
+            var root = new DockPanel(); var print = new Button { Content = "系统打印…", Padding = new(16, 8, 16, 8), Margin = new(8), HorizontalAlignment = HorizontalAlignment.Left };
             var pdf = new Button { Content = "导出 PDF…", Padding = new(16, 8, 16, 8), Margin = new(8) };
-            var actions = new StackPanel { Orientation = Orientation.Horizontal }; actions.Children.Add(print); actions.Children.Add(pdf);
-            DockPanel.SetDock(actions, Dock.Top); root.Children.Add(actions); root.Children.Add(new DocumentViewer { Document = paginator.CreatePreviewDocument() }); preview.Content = root;
+            var cancelPdf = new Button { Content = "取消导出", Padding = new(16, 8, 16, 8), Margin = new(8), Visibility = Visibility.Collapsed };
+            CancellationTokenSource? exporting = null; cancelPdf.Click += (_, _) => exporting?.Cancel();
+            var actions = new StackPanel { Orientation = Orientation.Horizontal }; actions.Children.Add(print); actions.Children.Add(pdf); actions.Children.Add(cancelPdf);
+            DockPanel.SetDock(actions, Dock.Top); root.Children.Add(actions);
+            var viewer = new DocumentViewer { Document = paginator.CreatePreviewDocument() };
+            var thumbnails = paginator.CreateThumbnails(viewer); DockPanel.SetDock(thumbnails, Dock.Left); root.Children.Add(thumbnails); root.Children.Add(viewer); preview.Content = root;
             pdf.Click += async (_, _) =>
             {
                 var save = new SaveFileDialog { Filter = "PDF 文档|*.pdf", FileName = Path.GetFileNameWithoutExtension(_displayName) + ".pdf" };
                 if (save.ShowDialog(preview) != true) return;
-                pdf.IsEnabled = false;
-                try { await PdfExport.WriteAsync(paginator, save.FileName); StatusText.Text = "PDF 已导出：" + save.FileName; }
-                catch (Exception ex) { MessageBox.Show(preview, ex.Message, "PDF 导出未完成", MessageBoxButton.OK, MessageBoxImage.Error); }
-                finally { pdf.IsEnabled = true; }
+                pdf.IsEnabled = false; cancelPdf.Visibility = Visibility.Visible;
+                using var cancellation = new CancellationTokenSource(); exporting = cancellation;
+                try { await PdfExport.WriteAsync(paginator, save.FileName, cancellation.Token); StatusText.Text = "PDF 已导出：" + save.FileName; }
+                catch (OperationCanceledException) { StatusText.Text = "PDF 导出已取消，原文件未替换。"; }
+                catch (Exception ex) { if (preview.IsVisible) MessageBox.Show(preview, ex.Message, "PDF 导出未完成", MessageBoxButton.OK, MessageBoxImage.Error); }
+                finally { exporting = null; pdf.IsEnabled = true; cancelPdf.Visibility = Visibility.Collapsed; }
             };
             print.Click += (_, _) =>
             {
@@ -98,7 +104,7 @@ public partial class MainWindow
                     dialog.PrintTicket.PageMediaSize = new PageMediaSize(paginator.PageSize.Width, paginator.PageSize.Height);
                     dialog.PrintTicket.PageOrientation = PageOrientation.Portrait;
                     if (snapshot.Sheets[_sheetIndex].Printing.Setup?.BlackAndWhite == true) dialog.PrintTicket.OutputColor = OutputColor.Monochrome;
-                    dialog.PrintDocument(paginator, _displayName);
+                    dialog.PrintDocument(paginator.CreatePrinterPaginator(), _displayName);
                 }
                 catch (Exception ex) { MessageBox.Show(preview, ex.Message, "打印未完成", MessageBoxButton.OK, MessageBoxImage.Error); }
             };

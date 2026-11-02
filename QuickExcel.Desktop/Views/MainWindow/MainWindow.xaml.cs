@@ -260,7 +260,6 @@ public partial class MainWindow : Window
         _updatingFormula = true;
         var sheet = _document.Snapshot.Sheets[_sheetIndex];
         var hide = ProtectionSafety.HidesFormula(_document.Snapshot, sheet, _selectedRow, _selectedColumn);
-        FormulaBar.IsReadOnly = sheet.Data.Protection?.Sheet == true && _document.Snapshot.Styles[sheet.GetStyleId(_selectedRow, _selectedColumn)].Locked;
         CellEditorText.InitializeText(FormulaBar, hide ? "" : _document.GetCellInput(_sheetIndex, _selectedRow, _selectedColumn));
         _updatingFormula = false;
         UpdateValidationHint();

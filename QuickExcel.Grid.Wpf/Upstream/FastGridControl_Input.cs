@@ -234,9 +234,11 @@ namespace FastWpfGrid
             {
                 var now = System.Diagnostics.Stopwatch.GetTimestamp();
                 var elapsed = _lastDragScrollTimestamp == 0 ? 0.016 : System.Diagnostics.Stopwatch.GetElapsedTime(_lastDragScrollTimestamp, now).TotalSeconds;
-                // Coalesce render events and the occlusion fallback timer into
-                // one bounded stream. Re-entrant render work must not flood WPF.
-                if (elapsed < 0.016 && (_dragRenderingSubscribed || _dragTimer.IsEnabled)) return;
+                // Composition is already deduplicated by RenderingTime. A second
+                // 16 ms wall-clock gate skips a valid frame when callbacks jitter.
+                // Only the occlusion timer needs a time gate against recent frames.
+                var frame = e is System.Windows.Media.RenderingEventArgs;
+                if (!frame && elapsed < (_dragRenderingSubscribed ? .05 : .016) && (_dragRenderingSubscribed || _dragTimer.IsEnabled)) return;
                 _lastDragScrollTimestamp = now;
                 AdvanceDragAutoScroll(elapsed);
                 return;

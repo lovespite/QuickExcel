@@ -1,5 +1,15 @@
 # QuickExcel.Grid.Wpf source provenance
 
+## Skia migration (2026-11-02)
+
+The historical source inventory below describes the original import. The unused WriteableBitmapEx drawing/filter/glyph implementations, GDI+ font/bitmap path and direct `msvcrt.dll` imports have now been deleted. Only `IntGeometry.cs` and `PortableFontDesc.cs` remain from that embedded directory; both upstream licenses and the original import hashes are retained.
+
+`HostRendering/SkiaBitmap.cs` is the WPF host pixel adapter: private locked Pbgra32 buffers, shared Skia text layout, bounded per-control metrics, overlap-safe managed span copies and WPF DPI discovery. `UseWindowsForms` is removed. The project references `QuickExcel.Rendering.Skia` (and transitively Core), but no Infrastructure or scripting code. Main workbook cells use `ExternalCellContent`, so the host's shared Skia cell pictures/rasters are the single content path; this control continues to paint headers and own geometry/input/selection. `CropBuffer` now copies source to destination in the correct direction. Fonts and shapers are released when the control unloads.
+
+CPU completion observes grid, selection and host-content pending state at Render priority; it does not wait for Dispatcher idle or represent physical presentation. Optional timestamps support the benchmark evidence. Composition-driven drag scrolling deduplicates by frame, with a 50 ms occlusion fallback; the historical shared 16 ms wall-clock gate below has been replaced so the fallback cannot suppress a valid composition frame.
+
+## Original import and earlier modifications
+
 Imported on 2026-10-29 from [janproch/fastwpfgrid](https://github.com/janproch/fastwpfgrid/tree/8bcfaf37df343e0b7ccffb3718d9a973a1f58b40), commit `8bcfaf37df343e0b7ccffb3718d9a973a1f58b40`. `Upstream/` contains that tree's FastWpfGrid top-level C# and XAML sources. The MIT notice is retained verbatim in `FASTWPFGRID-LICENSE.txt` and copied to build/publish output.
 
 `WriteableBitmapEx/` contains the **embedded, already modified** WriteableBitmapEx sources from the same FastWpfGrid commit, not a NuGet package or the current WriteableBitmapEx master. The embedded project does not declare a package release version; the immutable tree commit and per-file hashes are its version identity. Do not replace these sources with a nominally similar package without checking the added glyph, scrolling and geometry APIs.

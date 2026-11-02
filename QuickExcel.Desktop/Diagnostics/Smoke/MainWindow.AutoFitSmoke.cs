@@ -77,6 +77,7 @@ public partial class MainWindow
             surface.Bind(new(Guid.NewGuid(), 0, ExcelDateSystem.Windows1900, [sheet], styles: _document.Snapshot.Styles), 0, 10, 10);
             check(Math.Abs(surface.MeasureAutoFit(SheetAxis.Column, 0) - surface.MeasureAutoFit(SheetAxis.Column, 1)) < 1,
                 "Auto-fit measures formatted numbers, dates and formula results instead of raw inputs");
+            surface.Artwork.Dispose(); // This measurement-only surface was never loaded/unloaded.
         }
         await RecalculateAsync(); await Idle();
         SetSmokeFreeze(1, 1);

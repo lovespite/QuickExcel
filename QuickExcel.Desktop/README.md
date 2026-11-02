@@ -1,5 +1,7 @@
 # QuickExcel 0.6 交互预览版
 
+2026-11-02 Skia 候选版：59 号计划 P0–P4 声明范围完成。主网格、自动尺寸与报表使用共享文字/图片/图表渲染；打印预览可直接导出带文字和矢量的 PDF，无需安装 PDF 打印驱动。Windows/Linux 无界面输出、功能专项及原有滚动预算通过。当前候选包在 `artifacts/QuickExcel`，完整证据、测量修正与外部门禁见 [实施记录](docs/60-skia-rendering-and-pdf-implementation.md)。
+
 XC-0201 已接入工作簿内复制/剪切及选择性粘贴，Ctrl+C/X/V 保留类型、格式并调整公式引用，可整批撤销；开始菜单提供只贴值/公式/格式和转置。真实 Excel 对照与限制见 [内部剪贴板](docs/40-internal-clipboard.md)。XC-0202 已补齐 Ctrl+D/R、填充柄复制、数字/日期序列和清除格式，真实 Excel 对照及限制见 [填充记录](docs/41-fill-and-series.md)。XC-0203 已补齐自动求和、函数补全/提示、同表点选引用、F4 和数据边界导航，见 [录入记录](docs/42-formula-entry-and-navigation.md)。XC-0204 工作表复制/重排、名称创建/改名/修改/删除已完成，见 [名称管理记录](docs/43-sheet-and-name-management.md)。XC-0205 七个条件统计函数及统一条件匹配已完成，见 [条件统计记录](docs/44-conditional-functions.md)。XC-0206 查找公式标量模式已完成，见 [查找记录](docs/45-lookup-functions.md)。XC-0207 日期/数学及工作日完成，见 [日期与数学记录](docs/46-date-and-math-functions.md)。XC-0208 文本和类型公式完成，含 Unicode 兼容版本和 #CALC! 富值读写，见 [文本与类型记录](docs/47-text-and-type-functions.md)。下一项为公式边界一致性。
 
 XC-0107 已完成常见富文本、超链接和传统批注的读显写；右键显式转换富文本后可普通编辑，支持撤销。真实 Excel 对照及限制见 [内容记录](docs/36-xlsx-rich-text-links-and-notes.md)。[E0 证据及诊断收尾](docs/39-xlsx-diagnostic-closure.md) 已完成。
@@ -14,7 +16,7 @@ XC-0106 已完成受控公式保留：数组/结构化引用等以整簿只读�
 
 主工作区直接使用 `QuickExcel.Grid.Wpf`，旧 DataGrid 与“试验网格”窗口已移除；编辑、尺寸调整、筛选冻结、字体格式、合并和图片均在主界面操作。**横向拖动导致整桌面停顿已由用户于 2026-10-30 确认解决并关闭。** 默认 WPF 自动渲染；软件渲染仅作显式诊断选项。具体行为、既有证据和剩余真实 IME / 跨屏 DPI / 辅助功能边界见 [主网格迁移记录](docs/24-main-grid-migration.md)。
 
-使用当前源码：Release 构建后运行 `artifacts/build/bin/QuickExcel.Desktop/release/QuickExcel.exe`。`Start-QuickExcel.cmd` 当前从源码运行，未指定配置时为 Debug，需要 SDK。`artifacts/QuickExcel` 是独立发布快照，不会自动更新；身份以其 `BUILD-METADATA.json` 为准，本次文档同步未生成新包。
+使用当前源码：Release 构建后运行 `artifacts/build/bin/QuickExcel.Desktop/release/QuickExcel.exe`。`Start-QuickExcel.cmd` 当前从源码运行，未指定配置时为 Debug，需要 SDK。`artifacts/QuickExcel` 是独立发布快照，不会自动更新；身份以其 `BUILD-METADATA.json` 为准。
 
 脚本页现支持数字签名：导入 PFX/P12 或创建自签证书，保存后随 XLSQ 保留。有效且受信任的证书默认自动启用脚本；首次遇到自签证书会询问信任，可选仅本次或始终信任，也可撤销信任。修改脚本会移除签名。使用及边界见 [脚本数字签名](docs/20-script-signatures.md)；此策略更新下文及历史记录中“打开一律不启用脚本”的描述。
 

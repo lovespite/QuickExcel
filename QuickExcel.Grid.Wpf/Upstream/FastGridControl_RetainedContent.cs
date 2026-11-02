@@ -10,6 +10,8 @@ namespace FastWpfGrid;
 
 partial class FastGridControl
 {
+    /// <summary>The host paints all workbook cell content in the decoration layer.</summary>
+    public bool ExternalCellContent { get; set; }
     private readonly record struct ContentTileKey(FastGridCellAddress Address, int Width, int Height, int CropX, int CropY, int PixelWidth, int PixelHeight);
     private readonly Dictionary<ContentTileKey, BitmapSource> _contentTiles = new();
     private WriteableBitmap _tileCanvas;
@@ -39,6 +41,7 @@ partial class FastGridControl
             drawing.DrawRectangle(Brushes.White, null, new Rect(0, 0, width / dx, height / dy));
             void Tile(FastGridCellAddress address, IntRect cell, Rect clip)
             {
+                if (ExternalCellContent && address.IsCell) return;
                 if (clip.IsEmpty || clip.Width <= 0 || clip.Height <= 0) return;
                 var rect = new Rect(cell.Left, cell.Top, cell.Width, cell.Height);
                 if (!rect.IntersectsWith(clip)) return;

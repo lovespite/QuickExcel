@@ -1,6 +1,6 @@
 # SkiaSharp 引入方案：跨平台渲染、PDF 生成与预览
 
-2026-11-02。状态：**目标设计，尚未实施**。本文依据当前源码和官方资料提出迁移方案；未引入 NuGet 包、修改运行路径或完成新的性能/跨平台验证。现有实现和证据仍以 [主网格迁移](24-main-grid-migration.md)、[XLSX 渲染](25-xlsx-rendering.md) 与 [E4 报表、打印与容量](57-e4-reporting-and-capacity.md) 为准。
+2026-11-02。本文保留**原始迁移方案**身份，下文“当前/尚未实施”均描述方案编写时基线。**P0–P4 声明范围现已完成**；实际实现、固定依赖、Windows/Linux 证据、性能测量修正与外部门禁见 [60 号实施记录](60-skia-rendering-and-pdf-implementation.md)。原始依赖表中已删除的文件名仅用于定位历史实现。
 
 ## 1. 目标与决策
 
@@ -23,12 +23,12 @@
 | 部分 | 当前实现 | 迁移要求 |
 | --- | --- | --- |
 | 网格项目 | [QuickExcel.Grid.Wpf.csproj](../../QuickExcel.Grid.Wpf/QuickExcel.Grid.Wpf.csproj) 使用 `net10.0-windows`、WPF、Windows Forms | WPF 控件继续作为宿主；可复用绘制与几何逐步脱离此程序集 |
-| 字体/GDI+ | [LetterGlyphTool](../../QuickExcel.Grid.Wpf/WriteableBitmapEx/LetterGlyphTool.cs) 创建 `System.Drawing.Font`；ClearType 字形使用 GDI+；DpiDetector 使用 `Graphics.FromHwnd` | 替换字体解析、测量、字形生成；DPI 由宿主传入 |
-| 默认普通文字 | [FastGridSurface](../Controls/Grid/FastGridSurface.cs) 设置 `UseClearType = false`；[GrayScaleLetterGlyph](../../QuickExcel.Grid.Wpf/WriteableBitmapEx/GrayScaleLetterGlyph.cs) 使用 `FormattedText` 和 `RenderTargetBitmap` | 同时替换 WPF 字形栅格化；仅替换 ClearType 路径无法迁走当前主要文字绘制 |
+| 字体/GDI+ | `WriteableBitmapEx/LetterGlyphTool.cs` 创建 `System.Drawing.Font`；ClearType 字形使用 GDI+；DpiDetector 使用 `Graphics.FromHwnd` | 替换字体解析、测量、字形生成；DPI 由宿主传入 |
+| 默认普通文字 | [FastGridSurface](../Controls/Grid/FastGridSurface.cs) 设置 `UseClearType = false`；`WriteableBitmapEx/GrayScaleLetterGlyph.cs` 使用 `FormattedText` 和 `RenderTargetBitmap` | 同时替换 WPF 字形栅格化；仅替换 ClearType 路径无法迁走当前主要文字绘制 |
 | 位图与缓存 | [RetainedContent](../../QuickExcel.Grid.Wpf/Upstream/FastGridControl_RetainedContent.cs) 使用 WriteableBitmapEx、可见单元格位图和冻结 DrawingImage；NativeMethods 含 `msvcrt.dll` 调用 | 保留可见范围、局部失效和容量约束，迁移底层像素/绘制资源及内存操作 |
 | 样式与图片 | [FastGridArtwork](../Controls/Grid/FastGridArtwork.cs) 使用 WPF DrawingGroup、FormattedText、BitmapDecoder | 提取样式绘制、富文本布局与解码接口，保留图片限制及诊断 |
 | 自动尺寸 | [FastGridSurface.AutoFit](../Controls/Grid/FastGridSurface.AutoFit.cs) 分别使用普通字形和样式文字度量 | 与实际绘制使用同一布局结果，保留稀疏遍历和合并/隐藏处理 |
-| 图表 | [ChartDrawing](../Controls/Grid/ChartDrawing.cs) 共用于网格和打印，依赖 WPF DrawingContext | 将已有基础图表绘制迁至共享模块，不新增图表语义 |
+| 图表 | `Controls/Grid/ChartDrawing.cs` 共用于网格和打印，依赖 WPF DrawingContext | 将已有基础图表绘制迁至共享模块，不新增图表语义 |
 | 分页 | [PrintingLayout](../../QuickExcel.Core/PrintingLayout.cs) 已在 Core，以 1/96 英寸单位分页 | 直接复用；继续遵守纸张、区域、标题、隐藏和输出预算 |
 | 页面与 PDF | [WorkbookPaginator](../Printing/WorkbookPaginator.cs)、[PdfExport](../Printing/PdfExport.cs) 使用 WPF、XPS、XpsPrint 和 Microsoft Print to PDF | 提取页面绘制；直接 PDF 生成；系统打印留在 Windows 适配层 |
 
@@ -152,7 +152,7 @@ PDFium 可作为文件预览候选，官方提供读取、解析和页面栅格�
 
 ## 7. 阶段与退出条件
 
-所有阶段当前均为待实施；依赖版本和质量门槛应在开始对应阶段时写入实施记录。
+下表是原定退出条件；实际状态以 [60 号实施记录](60-skia-rendering-and-pdf-implementation.md) 为准。
 
 | 阶段 | 工作 | 退出条件 |
 | --- | --- | --- |

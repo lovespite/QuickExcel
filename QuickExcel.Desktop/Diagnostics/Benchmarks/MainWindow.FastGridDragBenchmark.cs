@@ -130,6 +130,6 @@ public partial class MainWindow
             endpoint = "16 ms paced selection/hover and scroll handler to content/overlay repaint completion; cell-step controls have equal cell travel, pixel movement is time-based; two 2.2-second actual scheduler runs (legacy timer / coalesced WPF Rendering plus fallback timer) record update cadence, not physical presentation latency",
             os = Environment.OSVersion.ToString(), runtime = Environment.Version.ToString()
         }, new JsonSerializerOptions { WriteIndented = true }));
-        File.WriteAllText(Path.Combine(folder, "fast-grid-drag-benchmark-result.txt"), $"PASS: drag benchmark completed; performance budget {(passed ? "met" : "NOT met")}.");
+        File.WriteAllText(Path.Combine(folder, "fast-grid-drag-benchmark-result.txt"), $"{(passed ? "PASS" : "FAIL")}: drag benchmark completed; performance budget {(passed ? "met" : "NOT met")}.");
     }
 }

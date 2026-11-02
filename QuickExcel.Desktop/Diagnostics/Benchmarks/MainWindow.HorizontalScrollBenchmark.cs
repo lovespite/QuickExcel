@@ -15,6 +15,7 @@ public partial class MainWindow
         const double paintBudgetP95Ms = 16.67;
         var results = new Dictionary<string, object>();
         var raw = new Dictionary<string, object>();
+        var passed = true;
         var surface = new FastGridSurface((_, _) => false);
         var grid = surface.Control;
         var host = new Window { Owner = this, Width = 1400, Height = 850, ShowInTaskbar = false, Content = surface.Element };
@@ -43,9 +44,17 @@ public partial class MainWindow
                     }
                     Scroll(0); await WaitForFastGridPaintAsync(grid);
                     var input = new List<double>(); var paint = new List<double>(); var travel = new List<double>();
+                    var queue = new List<double>(); var afterApply = new List<double>();
+                    long sampleStart = 0; double applied = 0;
+                    var phases = new List<Dictionary<string, double>>();
+                    var phase = new Dictionary<string, double>();
+                    void Trace(string stage, long timestamp) { if (sampleStart != 0) phase[stage] = Stopwatch.GetElapsedTime(sampleStart, timestamp).TotalMilliseconds; }
+                    grid.RenderTrace += Trace; surface.Artwork.RenderingTrace += Trace;
                     var allocations = GC.GetTotalAllocatedBytes(); var reads = surface.ReadCount; var notifications = 0;
                     var cellDrawings = surface.Artwork.CellDrawingCount;
-                    void Changed(object? sender, EventArgs e) => notifications++;
+                    var recording = surface.Artwork.RecordMilliseconds; var rasterizing = surface.Artwork.RasterMilliseconds; var rendering = surface.Artwork.RenderMilliseconds;
+                    var privateBytes = System.Diagnostics.Process.GetCurrentProcess().PrivateMemorySize64;
+                    void Changed(object? sender, EventArgs e) { notifications++; if (sampleStart != 0) applied = Stopwatch.GetElapsedTime(sampleStart).TotalMilliseconds; }
                     grid.ViewportChanged += Changed;
                     // Equal cell travel for item- and pixel-based scrollbar implementations.
                     var pixelBased = bar.ViewportSize == grid.GridScrollAreaWidth;
@@ -57,25 +66,35 @@ public partial class MainWindow
                             await Task.Delay(16);
                             var step = i + 5;
                             var timer = Stopwatch.StartNew();
+                            sampleStart = Stopwatch.GetTimestamp(); applied = 0;
+                            phase = new();
                             Scroll((8 + (step % 40) * .125) * unit);
                             var inputMs = timer.Elapsed.TotalMilliseconds;
-                            await WaitForFastGridPaintAsync(grid);
+                            await WaitForFastGridPaintAsync(grid, stage => Trace(stage, Stopwatch.GetTimestamp()));
+                            Trace("await-returned", Stopwatch.GetTimestamp()); sampleStart = 0;
                             if (i >= 0)
                             {
                                 input.Add(inputMs); paint.Add(timer.Elapsed.TotalMilliseconds);
+                                queue.Add(applied); afterApply.Add(timer.Elapsed.TotalMilliseconds - applied);
                                 travel.Add(grid.GetModelCellBounds(0, 14)?.X ?? double.NaN);
+                                phases.Add(phase);
                             }
                         }
                     }
-                    finally { grid.ViewportChanged -= Changed; }
+                    finally { grid.ViewportChanged -= Changed; grid.RenderTrace -= Trace; surface.Artwork.RenderingTrace -= Trace; }
                     // Hidden removes composition, but WPF can still invoke OnRender.
                     var name = styled ? artwork ? "styled" : "styledHiddenArtwork" : "plain";
                     var p95 = paint.Order().ElementAt((int)Math.Ceiling(paint.Count * .95) - 1);
+                    passed &= p95 <= paintBudgetP95Ms;
                     results[name] = new { inputP95Ms = input.Order().ElementAt(56), paintP50Ms = paint.Order().ElementAt(30),
+                        queueP95Ms = queue.Order().ElementAt(56), applyToPaintP95Ms = afterApply.Order().ElementAt(56),
                         paintP95Ms = p95, withinBudget = p95 <= paintBudgetP95Ms, modelReads = surface.ReadCount - reads,
                         allocatedBytes = GC.GetTotalAllocatedBytes() - allocations, viewportNotifications = notifications, pixelBased,
-                        newStyledDrawings = surface.Artwork.CellDrawingCount - cellDrawings, cachedStyledDrawings = surface.Artwork.CachedCellDrawingCount };
-                    raw[name] = new { inputMs = input, paintMs = paint, column14PositionDip = travel };
+                        newStyledDrawings = surface.Artwork.CellDrawingCount - cellDrawings, cachedStyledDrawings = surface.Artwork.CachedCellDrawingCount,
+                        recordMs = surface.Artwork.RecordMilliseconds - recording, rasterMs = surface.Artwork.RasterMilliseconds - rasterizing,
+                        artworkMs = surface.Artwork.RenderMilliseconds - rendering, cachedNativeBytes = surface.Artwork.CachedNativeBytes,
+                        privateBytesStart = privateBytes, privateBytesEnd = System.Diagnostics.Process.GetCurrentProcess().PrivateMemorySize64 };
+                    raw[name] = new { inputMs = input, paintMs = paint, queueMs = queue, applyToPaintMs = afterApply, phases, column14PositionDip = travel };
                 }
                 surface.Artwork.Visibility = Visibility.Visible;
             }
@@ -83,12 +102,13 @@ public partial class MainWindow
         finally { host.Close(); }
         File.WriteAllText(Path.Combine(folder, "horizontal-scroll-benchmark.json"), JsonSerializer.Serialize(new
         {
-            paintBudgetP95Ms, results, raw, samples = 60, warmup = 5,
+            paintBudgetP95Ms, passed, results, raw, samples = 60, warmup = 5,
             endpoint = "16 ms paced real WPF ThumbTrack handler to content/artwork/selection paint completion; not physical display latency",
             processRenderMode = System.Windows.Media.RenderOptions.ProcessRenderMode.ToString(),
             renderCapabilityTier = System.Windows.Media.RenderCapability.Tier >> 16,
             viewport = "1400x850 DIP window", runtime = Environment.Version.ToString(), os = Environment.OSVersion.ToString()
         }, new JsonSerializerOptions { WriteIndented = true }));
-        File.WriteAllText(Path.Combine(folder, "horizontal-scroll-benchmark-result.txt"), "PASS: horizontal scroll benchmark completed; inspect per-scenario performance budgets in JSON.");
+        File.WriteAllText(Path.Combine(folder, "horizontal-scroll-benchmark-result.txt"),
+            $"{(passed ? "PASS" : "FAIL")}: horizontal scroll benchmark completed; performance budget {(passed ? "met" : "NOT met")}; inspect per-scenario JSON.");
     }
 }

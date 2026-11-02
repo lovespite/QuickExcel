@@ -76,6 +76,8 @@ public partial class MainWindow
             "Clearing the filter restores the original scroll range and thumb state");
         Scroll(bar.Maximum); await Idle();
         Check(grid.GetVisibleModelRows().Contains(_grid.RowCount - 1), "The restored scrollbar reaches the unfiltered bottom");
-        Check(_document.Snapshot.Revision == revision, "Filtering and scrolling do not write document history");
+        // Filters are now persisted commands (three applies and one clear).
+        // Scrolling/rendering must add no revisions beyond those explicit changes.
+        Check(_document.Snapshot.Revision == revision + 4, "Only the four explicit filter commands write history; scrolling and rendering do not");
     }
 }

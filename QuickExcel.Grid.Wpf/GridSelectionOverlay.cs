@@ -19,7 +19,10 @@ public sealed class GridSelectionOverlay : FrameworkElement
     protected override void OnRender(DrawingContext drawingContext)
     {
         base.OnRender(drawingContext);
+        Grid?.TraceRender("selection-start");
         Grid?.RenderSelectionOverlay(drawingContext);
         _pending = false;
+        Grid?.TraceRender("selection-end");
+        Grid?.NotifyRenderCompleted();
     }
 }

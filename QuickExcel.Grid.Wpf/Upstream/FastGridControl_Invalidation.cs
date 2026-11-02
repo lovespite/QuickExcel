@@ -38,7 +38,28 @@ namespace FastWpfGrid
         private int _invalidationCount;
         private bool _renderQueued;
         /// <summary>True until queued bitmap changes are painted; this is not a physical presentation fence.</summary>
-        public bool IsRenderPending => _isInvalidated || _renderQueued || selectionOverlay.IsPending || _pendingHorizontalScroll.HasValue;
+        public bool IsRenderPending => _isInvalidated || _renderQueued || selectionOverlay.IsPending || _pendingHorizontalScroll.HasValue || _contentRenderPending?.Invoke() == true;
+
+        /// <summary>CPU render completion observed after WPF layout/render; not a display fence.</summary>
+        public event EventHandler RenderCompleted;
+        /// <summary>Optional diagnostic timestamps, using Stopwatch ticks on the UI thread.</summary>
+        public event Action<string, long> RenderTrace;
+        internal void TraceRender(string stage) => RenderTrace?.Invoke(stage, System.Diagnostics.Stopwatch.GetTimestamp());
+        private bool _completionQueued;
+        internal void NotifyRenderCompleted()
+        {
+            if (RenderCompleted == null || _completionQueued) return;
+            TraceRender("completion-queued");
+            _completionQueued = true;
+            // Observe painting after the current render pass, without waiting for
+            // unrelated Win32 input to let the Dispatcher enter an idle priority.
+            Dispatcher.BeginInvoke(DispatcherPriority.Render, (Action)(() =>
+            {
+                _completionQueued = false;
+                TraceRender(IsRenderPending ? "completion-still-pending" : "completion-observed");
+                if (!IsRenderPending) RenderCompleted?.Invoke(this, EventArgs.Empty);
+            }));
+        }
 
         private void LeaveInvalidation()
         {
@@ -72,9 +93,11 @@ namespace FastWpfGrid
 
         private void RenderInvoked()
         {
+            TraceRender("grid-render-start");
             _renderQueued = false;
-            if (!_isInvalidated) return;
-            RenderGrid();
+            if (_isInvalidated) RenderGrid();
+            TraceRender("grid-render-end");
+            NotifyRenderCompleted();
         }
 
         public void InvalidateAll()

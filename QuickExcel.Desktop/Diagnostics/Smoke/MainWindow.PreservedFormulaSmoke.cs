@@ -56,7 +56,8 @@ public partial class MainWindow
             };
             await ShowCompatibilityAsync(); _smokeCompatibilityDriver = null;
             GridSurface.Select(new(4, 4));
-            check(await SaveAsync(false) && original.SequenceEqual(File.ReadAllBytes(path)), "Saving after navigation retains the exact original XLSX package");
+            var saved = await SaveAsync(false);
+            check(saved && original.SequenceEqual(File.ReadAllBytes(path)), $"Saving after navigation retains the exact original XLSX package (saved={saved}, status={StatusText.Text})");
             var copy = Path.Combine(folder, "ui-readonly-copy.xlsq");
             _smokeSaveDialog = dialog => { dialog.FileName = copy; return true; };
             check(await SaveAsync(true), "Read-only workbook can be saved as an XLSQ container");

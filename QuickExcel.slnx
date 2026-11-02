@@ -9,4 +9,9 @@
   <Project Path="QuickExcel.Core.Test/SandboxHostFixture/SandboxHostFixture.csproj" />
   <Project Path="QuickExcel.Desktop/QuickExcel.Desktop.csproj" />
   <Project Path="QuickExcel.Grid.Wpf/QuickExcel.Grid.Wpf.csproj" />
+  <Project Path="QuickExcel.Rendering/QuickExcel.Rendering.csproj" />
+  <Project Path="QuickExcel.Rendering.Skia/QuickExcel.Rendering.Skia.csproj" />
+  <Project Path="QuickExcel.Rendering.Test/QuickExcel.Rendering.Test.csproj" />
+  <Project Path="QuickExcel.Rendering.Smoke/QuickExcel.Rendering.Smoke.csproj" />
+  <Project Path="third_party/RichTextKit/QuickExcel.RichTextKit.csproj" />
 </Solution>

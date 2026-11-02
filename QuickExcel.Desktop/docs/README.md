@@ -1,6 +1,6 @@
 # QuickExcel 架构与实施文档
 
-新增 [SkiaSharp 引入方案](59-skia-rendering-and-pdf-plan.md)（2026-11-02，目标设计，尚未实施）：共享文字布局与渲染、跨平台边界、直接 PDF 生成、页面预览及主网格分阶段迁移；包含依赖清理和定向验收条件。
+2026-11-02：[SkiaSharp 方案](59-skia-rendering-and-pdf-plan.md) **P0–P4 声明范围完成**，包括共享文字/图片/图表渲染、直接 PDF、按需页面预览、主网格和旧依赖清理。Windows/Linux 实际输出、功能定向验证和原有滚动预算通过，完整状态、测量修正与外部门禁见 [60 号实施记录](60-skia-rendering-and-pdf-implementation.md)。
 
 2026-11-02 当前状态：XLSX / Excel 对齐计划 E0–E4 已逐项完成声明范围；[E4 报表、打印与容量](57-e4-reporting-and-capacity.md) 的五项实现、289 项相关回归、最终 117 项专项、81 项 Excel、23 项 WPF、PDF/DPI 和容量分级验收完成。以下较早的阶段描述为历史；E5、M4/M6 剩余门禁未完成，本轮未发布新包。
 
@@ -40,7 +40,8 @@ E1 七项实现及各自真实 Excel 对照已完成；[行列样式优先级](2
 
 | 文档 | 解决的问题 |
 | --- | --- |
-| [SkiaSharp 引入方案](59-skia-rendering-and-pdf-plan.md) | 跨平台渲染边界、共享排版、PDF 生成/预览、分阶段迁移与验收；尚未实施 |
+| [SkiaSharp 引入方案](59-skia-rendering-and-pdf-plan.md) | 原始跨平台渲染、PDF 生成/预览、分阶段迁移方案；P0–P4 已实施 |
+| [Skia 实施记录](60-skia-rendering-and-pdf-implementation.md) | 实际架构/预算/依赖、Windows/Linux 输出、原有性能预算、候选包证据与外部门禁 |
 | [分组与分类汇总](56-outline-and-subtotals.md) | E3 收尾：outline、SUBTOTAL、预览生成、真实 Excel 验收及混合状态边界 |
 | [XLSX / Excel 对齐专项](26-excel-compatibility-roadmap.md) | 当前重点工程的阶段、优先级、支持维度及完成清单 |
 | [XLSX 兼容基线](27-xlsx-compatibility-baseline.md) | 当前特性矩阵、样本台账、独立比较工具、首轮缺陷与证据 |

@@ -77,7 +77,11 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'QuickExcel publish failed.' }
 
     foreach ($required in @('QuickExcel.exe', 'QuickExcel.dll', 'QuickExcel.runtimeconfig.json', 'quickexcel-js.dll', 'QUICKJS-LICENSE.txt',
-        'QuickExcel.Grid.Wpf.dll', 'FASTWPFGRID-LICENSE.txt', 'WRITEABLEBITMAPEX-LICENSE.txt')) {
+        'QuickExcel.Grid.Wpf.dll', 'FASTWPFGRID-LICENSE.txt', 'WRITEABLEBITMAPEX-LICENSE.txt',
+        'QuickExcel.Rendering.dll', 'QuickExcel.Rendering.Skia.dll', 'QuickExcel.RichTextKit.dll', 'SkiaSharp.dll',
+        'libSkiaSharp.dll', 'HarfBuzzSharp.dll', 'libHarfBuzzSharp.dll', 'BitMiracle.LibTiff.NET.dll', 'UglyToad.PdfPig.dll',
+        'RICH-TEXT-KIT-LICENSE.txt', 'SKIASHARP-LICENSE.txt', 'HARFBUZZSHARP-LICENSE.txt',
+        'SKIA-THIRD-PARTY-NOTICES.txt', 'HARFBUZZ-THIRD-PARTY-NOTICES.txt', 'LIBTIFF-LICENSE.txt', 'PDFPIG-LICENSE.txt')) {
         if (-not (Test-Path -LiteralPath (Join-Path $publishPath $required) -PathType Leaf)) { throw "Published application is missing $required" }
     }
 
@@ -86,6 +90,8 @@ try {
         if (-not (Test-Path -LiteralPath (Join-Path $publishPath "ScriptWorker\$required") -PathType Leaf)) { throw "Published script worker is missing $required" }
     }
     if (Test-Path -LiteralPath (Join-Path $publishPath 'WorkerFixture')) { throw 'Test worker fixture must not be published.' }
+    if (Get-ChildItem -LiteralPath (Join-Path $publishPath 'ScriptWorker') -Recurse -File | Where-Object {
+        $_.Name -match 'Skia|HarfBuzz|RichTextKit|LibTiff|PdfPig|Rendering' }) { throw 'Rendering dependencies must not enter the script worker payload.' }
     if (Get-ChildItem -LiteralPath $publishPath -Recurse -File | Where-Object { $_.Name -like '*HostFixture*' -or $_.Name -like 'WorkerFixture*' }) {
         throw 'Test fixtures must not be published.'
     }
@@ -153,7 +159,19 @@ try {
         gridSource = [ordered]@{
             upstreamCommit = (Get-Content -LiteralPath (Join-Path $projectRoot 'QuickExcel.Grid.Wpf\UPSTREAM-SOURCES.json') -Raw | ConvertFrom-Json).commit
             publishedDllSha256 = (Get-FileHash -LiteralPath (Join-Path $publishPath 'QuickExcel.Grid.Wpf.dll') -Algorithm SHA256).Hash
-            defaultSurface = 'DataGrid'
+            defaultSurface = 'FastGridSurface'
+        }
+        rendering = [ordered]@{
+            backend = 'SkiaSharp CPU'
+            pdf = 'Direct Skia text/vector PDF'
+            packages = @((Get-Content -LiteralPath (Join-Path $projectRoot 'QuickExcel.Rendering.Skia\packages.lock.json') -Raw | ConvertFrom-Json).dependencies.'net10.0'.PSObject.Properties |
+                Where-Object { $_.Value.type -in @('Direct', 'Transitive') } | ForEach-Object {
+                    [ordered]@{ name = $_.Name; version = $_.Value.resolved; contentHash = $_.Value.contentHash }
+                })
+            nativeLibraries = @('libSkiaSharp.dll', 'libHarfBuzzSharp.dll') | ForEach-Object {
+                [ordered]@{ name = $_; sha256 = (Get-FileHash -LiteralPath (Join-Path $publishPath $_) -Algorithm SHA256).Hash }
+            }
+            richTextKitSource = '0.6.170 / 6362fcdc33ea43b359ada2da946bf025a6d14630 (local adaptations; see third_party/RichTextKit/SOURCES.md)'
         }
         sdkVersion = $sdkVersion
         installedRuntimesOnBuildMachine = $runtimes
@@ -185,6 +203,10 @@ try {
     Copy-Item -LiteralPath (Join-Path $projectRoot 'QuickExcel.Desktop\docs\21-excel-ribbon.md') -Destination (Join-Path $supportDocsPath '21-excel-ribbon.md')
     Copy-Item -LiteralPath (Join-Path $projectRoot 'QuickExcel.Desktop\docs\22-fastwpfgrid-and-data-operations.md') -Destination (Join-Path $supportDocsPath '22-fastwpfgrid-and-data-operations.md')
     Copy-Item -LiteralPath (Join-Path $projectRoot 'QuickExcel.Desktop\docs\23-fast-grid-implementation.md') -Destination (Join-Path $supportDocsPath '23-fast-grid-implementation.md')
+    Copy-Item -LiteralPath (Join-Path $projectRoot 'QuickExcel.Desktop\docs\59-skia-rendering-and-pdf-plan.md') -Destination (Join-Path $supportDocsPath '59-skia-rendering-and-pdf-plan.md')
+    Copy-Item -LiteralPath (Join-Path $projectRoot 'QuickExcel.Desktop\docs\60-skia-rendering-and-pdf-implementation.md') -Destination (Join-Path $supportDocsPath '60-skia-rendering-and-pdf-implementation.md')
+    Copy-Item -LiteralPath (Join-Path $projectRoot 'QuickExcel.Rendering.Skia\SOURCES.md') -Destination (Join-Path $publishPath 'SKIA-RENDERING-SOURCES.md')
+    Copy-Item -LiteralPath (Join-Path $projectRoot 'third_party\RichTextKit\SOURCES.md') -Destination (Join-Path $publishPath 'RICH-TEXT-KIT-SOURCES.md')
     Copy-Item -LiteralPath (Join-Path $projectRoot 'QuickExcel.Grid.Wpf\SOURCES.md') -Destination (Join-Path $publishPath 'FASTWPFGRID-SOURCES.md')
     Copy-Item -LiteralPath (Join-Path $projectRoot 'QuickExcel.Grid.Wpf\UPSTREAM-SOURCES.json') -Destination (Join-Path $publishPath 'FASTWPFGRID-UPSTREAM-SOURCES.json')
     Copy-Item -LiteralPath (Join-Path $projectRoot 'QuickExcel.Scripting\native\SOURCES.md') -Destination (Join-Path $publishPath 'QUICKJS-SOURCES.md')
@@ -205,6 +227,16 @@ QuickJS-NG $($nativeVersionMatch.Groups[1].Value)
 Source: https://github.com/quickjs-ng/quickjs
 Declared license: MIT. Complete copyright and license text: QUICKJS-LICENSE.txt.
 Source archive pin and build procedure: QUICKJS-SOURCES.md.
+
+Shared rendering: SkiaSharp 4.154.0 / HarfBuzzSharp 14.2.1.400,
+RichTextKit 0.6.170 (locally adapted source), LibTiff.NET 2.4.660, PdfPig 0.1.16.
+Pinned sources, local modifications and native packaging: SKIA-RENDERING-SOURCES.md,
+RICH-TEXT-KIT-SOURCES.md, and BUILD-METADATA.json.
+Declared licenses: MIT (SkiaSharp/HarfBuzzSharp bindings), Apache-2.0 (RichTextKit/PdfPig),
+BSD-style with upstream notices (LibTiff.NET). Complete texts: SKIASHARP-LICENSE.txt,
+HARFBUZZSHARP-LICENSE.txt, RICH-TEXT-KIT-LICENSE.txt, LIBTIFF-LICENSE.txt, PDFPIG-LICENSE.txt.
+Native third-party licenses: SKIA-THIRD-PARTY-NOTICES.txt, HARFBUZZ-THIRD-PARTY-NOTICES.txt.
+Test fonts and independent PDF verification tools are not included in this package.
 
 "@
     Set-Content -LiteralPath (Join-Path $publishPath 'THIRD-PARTY-NOTICES.txt') -Value $notices -Encoding UTF8

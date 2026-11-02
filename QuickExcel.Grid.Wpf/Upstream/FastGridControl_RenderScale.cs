@@ -102,7 +102,7 @@ partial class FastGridControl
         unsafe
         {
             for (var y = 0; y < copyHeight; y++)
-                Buffer.MemoryCopy(dst.Pixels + (long)y * destinationStride, src.Pixels + (long)y * sourceStride,
+                Buffer.MemoryCopy(src.Pixels + (long)y * sourceStride, dst.Pixels + (long)y * destinationStride,
                     (long)copyWidth * 4, (long)copyWidth * 4);
         }
         return result;

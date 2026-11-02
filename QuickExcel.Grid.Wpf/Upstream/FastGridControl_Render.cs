@@ -180,6 +180,7 @@ namespace FastWpfGrid
 
         private void RenderCell(int row, int col)
         {
+            if (ExternalCellContent) return;
             var rect = GetCellRect(row, col);
             var cell = GetCell(row, col);
             Color? selectedBgColor = null;

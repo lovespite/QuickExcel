@@ -30,6 +30,9 @@ public partial class MainWindow
     {
         var modules = _document.Snapshot.ScriptModules;
         if (!modules.Modules.ContainsKey(_selectedModule)) _selectedModule = modules.EntryModules[0];
+        // Saving/navigation also flushes editors. An unchanged source is not an edit,
+        // including in a read-only workbook whose session rejects every command.
+        if (modules.Modules[_selectedModule].Source == ScriptEditor.Text) return;
         if (_selectedModule == modules.EntryModules[0]) _editor.UpdateScriptSource(ScriptEditor.Text);
         else _editor.Execute(new UpdateScriptModulesCommand(new ScriptModuleSet(
             modules.Modules.SetItem(_selectedModule, modules.Modules[_selectedModule] with { Source = ScriptEditor.Text }),

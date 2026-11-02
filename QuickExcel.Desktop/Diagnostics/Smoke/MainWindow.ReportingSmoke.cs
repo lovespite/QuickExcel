@@ -52,7 +52,7 @@ public partial class MainWindow
             try { _editor.SetCell(0, 0, 0, "blocked"); throw new InvalidOperationException("Locked write accepted"); } catch (InvalidOperationException) { Check(ReferenceEquals(before, _document.Snapshot), "Locked write is atomic"); }
             _editor.SetCell(0, 1, 1, "123.5"); Check(_document.Snapshot.Sheets[0].GetCell(1, 1)!.Value.NumberValue == 123.5, "Unlocked write succeeds");
             await Dialog(() => Protection_Click(this, new()), d => ((CheckBox)d.Fields["启用工作表保护（不设置密码）"]).IsChecked = false);
-            _editor.SetCell(0, 0, 4, "Merged report title"); _editor.Execute(new MergeCellsCommand(sheet.Id, new(0, 4, 1, 6)));
+            _editor.SetCell(0, 0, 4, "Merged report title 中文报表"); _editor.Execute(new MergeCellsCommand(sheet.Id, new(0, 4, 1, 6)));
             _editor.Execute(new SetCellStyleCommand([new(sheet.Id, 0, 4)], new(Bold: true, FillColor: "FFDDEBF7")));
             var pixels = Enumerable.Range(0, 16 * 16).SelectMany(i => i % 16 < 8 ? new byte[] { 180, 70, 25, 255 } : new byte[] { 30, 160, 240, 255 }).ToArray();
             var fixtureBitmap = BitmapSource.Create(16, 16, 96, 96, PixelFormats.Bgra32, null, pixels, 64);
@@ -79,9 +79,21 @@ public partial class MainWindow
             CaptureGridEvidence(Path.Combine(folder, "report-grid.png"));
             async Task Render(string prefix, int sheetIndex = 0)
             {
-                var book = _document.Snapshot; var paginator = new WorkbookPaginator(book, book.Sheets[sheetIndex], prefix + ".xlsx");
+                var book = _document.Snapshot; await using var paginator = new WorkbookPaginator(book, book.Sheets[sheetIndex], prefix + ".xlsx");
                 if (prefix == "paged") Check(paginator.PageCount == 2 && paginator.Layout.Pages[1].Rows.Take(2).SequenceEqual([0, 20]), "Manual page starts at row 21 after repeated title, matching Excel");
                 Check(paginator.PageCount > 0, "Pagination produces pages: " + prefix);
+                foreach (var requestedDpi in new[] { 24, 96, 144, 192, 288, 384, 96, 24, 192 })
+                {
+                    var frame = await paginator.GetPreviewAsync(0, requestedDpi, CancellationToken.None);
+                    Check(frame.IsFrozen && paginator.CachedPageCount <= 8 && paginator.CachedPageBytes <= 64L * 1024 * 1024,
+                        $"Preview frame is immutable and page cache bounded at {requestedDpi} DPI: {prefix}");
+                }
+                using (var canceled = new CancellationTokenSource())
+                {
+                    canceled.Cancel(); var count = paginator.CachedPageCount;
+                    try { await paginator.GetPreviewAsync(0, 600, canceled.Token); throw new InvalidOperationException("Canceled preview rendered."); }
+                    catch (OperationCanceledException) { Check(count == paginator.CachedPageCount, "Canceled preview request cannot replace a cached frame"); }
+                }
                 var previewPage = paginator.CreatePreviewDocument().Pages[0].Child;
                 previewPage.Measure(paginator.PageSize); previewPage.Arrange(new Rect(paginator.PageSize)); previewPage.UpdateLayout();
                 foreach (var dpi in new[] { 96, 144, 192 })
@@ -106,10 +118,23 @@ public partial class MainWindow
                     using var output = File.Create(Path.Combine(folder, $"{prefix}-page{page + 1}.png")); encoder.Save(output);
                 }
                 await PdfExport.WriteAsync(paginator, Path.Combine(folder, prefix + ".pdf"));
-                Check(new FileInfo(Path.Combine(folder, prefix + ".pdf")).Length > 1000, "Windows PDF export succeeds: " + prefix);
+                Check(new FileInfo(Path.Combine(folder, prefix + ".pdf")).Length > 1000, "Direct Skia PDF export succeeds: " + prefix);
                 File.WriteAllText(Path.Combine(folder, prefix + "-layout.json"), JsonSerializer.Serialize(paginator.Layout, new JsonSerializerOptions { WriteIndented = true }));
             }
             await Render("quickexcel");
+            await using (var closing = new WorkbookPaginator(_document.Snapshot, _document.Snapshot.Sheets[0], "close-preview.xlsx"))
+            {
+                var target = Path.Combine(folder, "close-preview-existing.pdf"); var original = new byte[] { 1, 3, 5, 7 };
+                File.WriteAllBytes(target, original);
+                var pending = Enumerable.Range(0, 12).Select(i => (Task)closing.GetPreviewAsync(0, 300 + i * 12, CancellationToken.None)).ToList();
+                pending.Add(PdfExport.WriteAsync(closing, target));
+                await closing.DisposeAsync();
+                try { await Task.WhenAll(pending); } catch (OperationCanceledException) { }
+                Check(pending.All(task => task.IsCompleted) && closing.CachedPageCount == 0 && closing.CachedPageBytes == 0,
+                    "Closing preview drains queued render/export requests and releases its cache");
+                Check(File.ReadAllBytes(target).SequenceEqual(original) && !Directory.EnumerateFiles(folder, "close-preview-existing.pdf.*.tmp").Any(),
+                    "Closing preview cancels queued PDF export without replacing the existing file");
+            }
             await RunPrintWarningsSmokeAsync(folder, Check);
             if (nativePath is not null)
             {

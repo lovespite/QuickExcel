@@ -22,6 +22,8 @@ public partial class MainWindow
             new(){FontName="Arial",FontSize=16,Indent=2},new(){FontName="Arial",FontSize=16,ShrinkToFit=true}]);
         InstallDocument(new WorkbookDocument(snapshot,_services),null,"扩展样式验收"); GridSurface.Select(new(8,5));
         await Dispatcher.InvokeAsync(UpdateLayout,DispatcherPriority.ApplicationIdle); await WaitForFastGridPaintAsync(_grid.Control);
+        _grid.Control.ScrollModelIntoView(new(0,0));
+        await Dispatcher.InvokeAsync(UpdateLayout,DispatcherPriority.ApplicationIdle); await WaitForFastGridPaintAsync(_grid.Control);
         var bitmap=new RenderTargetBitmap((int)Math.Ceiling(_grid.Artwork.ActualWidth),(int)Math.Ceiling(_grid.Artwork.ActualHeight),96,96,PixelFormats.Pbgra32);
         bitmap.Render(_grid.Artwork);var pixels=new byte[bitmap.PixelWidth*bitmap.PixelHeight*4];bitmap.CopyPixels(pixels,bitmap.PixelWidth*4,0);
         Rect Ink(int row)
@@ -37,9 +39,9 @@ public partial class MainWindow
         check(Ink(0).Height>40,"Rotated text paints an angled line with a taller glyph bounding box");
         check(Ink(1).Left>20,"Indent moves actual glyphs away from the cell edge");
         check(Ink(2).Width>100 && Ink(2).Height<18,"Shrink-to-fit renders the full long line at a smaller glyph size");
-        var fitted=FastGridArtwork.CreateText(sheet.GetCell(2,0)!.Value.TextValue,snapshot.Styles[3],VisualTreeHelper.GetDpi(_grid.Artwork).PixelsPerDip);
-        var available=_grid.Control.GetModelCellBounds(2,0)!.Value.Width-4; FastGridArtwork.FitText(fitted,snapshot.Styles[3],available);
-        check(fitted.WidthIncludingTrailingWhitespace<=available,"Shrink-to-fit remeasures hinted glyphs so the complete line fits without ellipsis");
+        var available=_grid.Control.GetModelCellBounds(2,0)!.Value.Width-4;
+        using var fitted=_grid.Artwork.Renderer.Layout(new(sheet.GetCell(2,0)!.Value.TextValue,snapshot.Styles[3],available));
+        check(fitted.Metrics.Width<=available + .01,"Shrink-to-fit uses the same shaped metrics as the painted full line");
         check(_grid.MeasureAutoFit(SheetAxis.Row,0)>50,"Auto-fit row height includes rotated text bounds");
         CaptureGridEvidence(Path.Combine(folder,"extended-styles.png"));
     }

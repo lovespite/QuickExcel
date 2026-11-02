@@ -14,11 +14,15 @@ namespace FastWpfGrid
         private IReadOnlyDictionary<int, double> _modelColumnDips;
         private double? _modelDefaultRowDip;
         public event EventHandler ViewportChanged;
-        public void SetContentDecoration(FrameworkElement decoration)
+        private Func<bool> _contentRenderPending;
+        public void SetContentDecoration(FrameworkElement decoration, Func<bool> renderPending = null)
         {
+            _contentRenderPending = renderPending;
             decoration.IsHitTestVisible = false;
             imageGrid.Children.Insert(imageGrid.Children.IndexOf(selectionOverlay), decoration);
         }
+        /// <summary>The host calls this after its view-only content has painted.</summary>
+        public void NotifyContentRendered() => NotifyRenderCompleted();
         public Rect? GetModelCellBounds(int row, int column)
         {
             var real = ModelToReal(new FastGridCellAddress(row, column));

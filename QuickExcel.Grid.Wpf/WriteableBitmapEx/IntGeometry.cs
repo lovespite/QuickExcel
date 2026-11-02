@@ -122,14 +122,12 @@ namespace System.Windows.Media.Imaging
     {
         public static void FillRectangle(this WriteableBitmap bmp, IntRect rect, Color color)
         {
-            var col = ConvertColor(color);
-            bmp.FillRectangle(rect.Left, rect.Top, rect.Right + 1, rect.Bottom + 1, col);
+            bmp.FillRectangle(rect.Left, rect.Top, rect.Right + 1, rect.Bottom + 1, color);
         }
 
         public static void DrawRectangle(this WriteableBitmap bmp, IntRect rect, Color color)
         {
-            var col = ConvertColor(color);
-            bmp.DrawRectangle(rect.Left, rect.Top, rect.Right, rect.Bottom, col);
+            bmp.DrawRectangle(rect.Left, rect.Top, rect.Right, rect.Bottom, color);
         }
     }
 }

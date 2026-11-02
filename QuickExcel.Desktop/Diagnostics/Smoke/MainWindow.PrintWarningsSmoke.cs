@@ -11,7 +11,8 @@ public partial class MainWindow
     private async Task RunPrintWarningsSmokeAsync(string folder, Action<bool, string> check)
     {
         var original = _document.Snapshot; var sheet = original.Sheets[0];
-        check(new WorkbookPaginator(original, sheet, "supported.xlsx").Warnings.Count == 0,
+        await using var supported = new WorkbookPaginator(original, sheet, "supported.xlsx");
+        check(supported.Warnings.Count == 0,
             "Supported report prints without compatibility warnings");
         var brokenChart = sheet.Data.Charts[0].MapReferences(r => "'Missing'" + r[r.IndexOf('!')..]) with { Title = "缺少数据源" };
         var modified = sheet.WithPrinting(sheet.Printing with
@@ -29,7 +30,7 @@ public partial class MainWindow
         var state = new WorkbookFileState(Path.Combine(folder, "print-warnings.xlsx"), 2, [], original, [], [], compatibilityDiagnostics: diagnostics);
         var book = new WorkbookSnapshot(original.DocumentId, original.Revision, original.DateSystem, [modified],
             styles: original.Styles, fileState: state);
-        var paginator = new WorkbookPaginator(book, modified, "print-warnings.xlsx");
+        await using var paginator = new WorkbookPaginator(book, modified, "print-warnings.xlsx");
         var warnings = string.Join("\n", paginator.Warnings);
         check(paginator.Warnings.Count == 7 && warnings.Contains("3D 图表") && warnings.Contains("图片旋转") &&
             warnings.Contains("图片 2") && warnings.Contains("图表 2") && warnings.Contains("批注") &&
@@ -39,7 +40,7 @@ public partial class MainWindow
             modified.Printing.HeaderFooter!.OddHeader == "&G" && modified.Images.Length == 2 && modified.Data.Charts.Length == 2,
             "Omissions affect the print projection only, retaining all original content and metadata");
         var safe = sheet.WithPrinting(sheet.Printing with { HeaderFooter = sheet.Printing.HeaderFooter! with { OddHeader = null, OddFooter = "保留页脚 &P/&N" } });
-        var expected = new WorkbookPaginator(original.WithSheets([safe]), safe, "print-warnings.xlsx");
+        await using var expected = new WorkbookPaginator(original.WithSheets([safe]), safe, "print-warnings.xlsx");
         byte[] Pixels(WorkbookPaginator source)
         {
             var bitmap = new System.Windows.Media.Imaging.RenderTargetBitmap((int)Math.Ceiling(source.PageSize.Width),
