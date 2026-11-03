@@ -4,4 +4,12 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="../artifacts/jsc/compiler/identity.txt" LogicalName="QuickExcel.Compiler.Identity" />
+  </ItemGroup>
+  <Target Name="PrepareCompilerIdentity" BeforeTargets="PrepareForBuild"
+          Inputs="$(MSBuildProjectDirectory)/../tools/QuickExcel.JscProbe/prepare_compiler.py;$(MSBuildProjectDirectory)/../tools/QuickExcel.JscProbe/sources.json;$(MSBuildProjectDirectory)/../QuickExcel.Scripting/TypeScript/frontend.js;$(MSBuildProjectDirectory)/../QuickExcel.Web/src/quickexcel.d.ts"
+          Outputs="$(MSBuildProjectDirectory)/../artifacts/jsc/compiler/identity.txt;$(MSBuildProjectDirectory)/../artifacts/jsc/compiler/typescript.bundle.json">
+    <Exec Command="$(QuickExcelPython) &quot;$(MSBuildProjectDirectory)/../tools/QuickExcel.JscProbe/prepare_compiler.py&quot;" />
+  </Target>
 </Project>

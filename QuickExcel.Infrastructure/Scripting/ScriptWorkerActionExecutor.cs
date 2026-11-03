@@ -22,6 +22,7 @@ public sealed class ScriptWorkerActionExecutor(string? executablePath = null) : 
     public ScriptActionResult Run(ScriptActionRequest request, CancellationToken cancellationToken)
     {
         using var linked = CancellationTokenSource.CreateLinkedTokenSource(request.CancellationToken, cancellationToken);
+        ScriptCompilation.PrepareAsync(request.Snapshot.ScriptModules, request.Stamp, linked.Token).GetAwaiter().GetResult();
         linked.CancelAfter(TimeSpan.FromSeconds(5));
         linked.Token.ThrowIfCancellationRequested();
         if (request.Name is null) throw new InvalidOperationException("Missing action name.");

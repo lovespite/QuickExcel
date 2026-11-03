@@ -117,7 +117,8 @@ static void read_path(int rules, const char *path, int executable, int optional)
 }
 
 int main(int argc, char **argv) {
-    if (argc != 3 || getuid() == 0 || getuid() != geteuid() || getgid() != getegid()) return 2;
+    if ((argc != 3 && (argc != 4 || strcmp(argv[3],"compile"))) || getuid() == 0 || getuid() != geteuid() || getgid() != getegid()) return 2;
+    const int compilation = argc == 4;
     const pid_t parent = (pid_t)strtol(argv[2], NULL, 10);
     require(prctl(PR_SET_PDEATHSIG, SIGKILL), "parent death");
     if (parent <= 1 || getppid() != parent) return 125;
@@ -152,8 +153,8 @@ int main(int argc, char **argv) {
     for(int i=0;proc[i];i++) read_path(rules,proc[i],0,0);
     require(syscall(SYS_landlock_restrict_self,rules,0),"Landlock enforcement"); close(rules);
     require(filter(0),"seccomp launch filter");
-    char *arguments[] = {"QuickExcel.ScriptWorker",NULL};
-    char *environment[] = {"DOTNET_EnableDiagnostics=0","COMPlus_EnableDiagnostics=0","DOTNET_GCHeapHardLimit=4000000","DOTNET_GCConserveMemory=9","DOTNET_PROCESSOR_COUNT=2","LANG=C.UTF-8","LC_ALL=C.UTF-8",NULL};
+    char *arguments[] = {"QuickExcel.ScriptWorker",compilation ? "--compile" : NULL,NULL};
+    char *environment[] = {"DOTNET_EnableDiagnostics=0","COMPlus_EnableDiagnostics=0",compilation ? "DOTNET_GCHeapHardLimit=10000000" : "DOTNET_GCHeapHardLimit=4000000","DOTNET_GCConserveMemory=9","DOTNET_PROCESSOR_COUNT=2","LANG=C.UTF-8","LC_ALL=C.UTF-8",NULL};
     execve("./QuickExcel.ScriptWorker",arguments,environment); fail("exec worker");
 }
 #else

@@ -1,6 +1,7 @@
 import * as monaco from 'monaco-editor/editor/editor.api';
 import * as typescript from 'monaco-editor/language/typescript/monaco.contribution';
 import 'monaco-editor/languages/definitions/javascript/register';
+import 'monaco-editor/languages/definitions/typescript/register';
 import declarations from './quickexcel.d.ts';
 import { start, post, request, fail, fromBase64, toBase64, hash, Message } from './bridge';
 
@@ -22,11 +23,13 @@ declare const __QUICKEXCEL_WEB_TEST__: boolean;
   const worker = new Worker(new URL(label === 'typescript' || label === 'javascript' ? 'ts.worker.js' : 'editor.worker.js', location.href), { type: 'module' });
   workers.add(worker); return worker;
 } };
-typescript.javascriptDefaults.setEagerModelSync(true);
-typescript.javascriptDefaults.setDiagnosticsOptions({ noSemanticValidation: false, noSyntaxValidation: false });
-const extraLib = typescript.javascriptDefaults.addExtraLib(declarations, baseUri + 'quickexcel.d.ts');
+for (const defaults of [typescript.javascriptDefaults, typescript.typescriptDefaults]) {
+  defaults.setEagerModelSync(true);
+  defaults.setDiagnosticsOptions({ noSemanticValidation: false, noSyntaxValidation: false });
+}
+const extraLibs = [typescript.javascriptDefaults, typescript.typescriptDefaults].map(d => d.addExtraLib(declarations, baseUri + 'quickexcel.d.ts'));
 editor = monaco.editor.create(document.getElementById('editor')!, { model: null, automaticLayout: true, readOnly: true,
-  minimap: { enabled: false }, fontSize: 14, scrollBeyondLastLine: false, accessibilitySupport: 'auto', ariaLabel: 'QuickExcel JavaScript 脚本编辑器',
+  minimap: { enabled: false }, fontSize: 14, scrollBeyondLastLine: false, accessibilitySupport: 'auto', ariaLabel: 'QuickExcel JavaScript / TypeScript 脚本编辑器',
   links: false, unicodeHighlight: { ambiguousCharacters: false }, stickyScroll: { enabled: false } });
 editor.onDidCompositionStart(() => { composing = true; });
 editor.onDidCompositionEnd(() => { composing = false; schedule(); });
@@ -34,6 +37,7 @@ editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => post('save'
 editor.addCommand(monaco.KeyCode.F6, () => post('focusHost', {}));
 
 function setLocked(value: boolean) { locked = value; editor.updateOptions({ readOnly: readOnly || locked }); }
+function languageWorker() { return editor.getModel()!.getLanguageId() === 'typescript' ? typescript.getTypeScriptWorker() : typescript.getJavaScriptWorker(); }
 function select(id: string) {
   const next = models.get(id); if (!next) throw new Error('Unknown module');
   if (selected) models.get(selected)!.state = editor.saveViewState();
@@ -89,7 +93,7 @@ async function handle(message: Message) {
       post('testResult', { elapsedMs: performance.now() - started }, message.requestId); return;
     }
     if (p.action === 'completionSample') {
-      const started = performance.now(); const getWorker = await typescript.getJavaScriptWorker(); const worker = await getWorker(editor.getModel()!.uri);
+      const started = performance.now(); const getWorker = await languageWorker(); const worker = await getWorker(editor.getModel()!.uri);
       const completion = await worker.getCompletionsAtPosition(editor.getModel()!.uri.toString(), editor.getValue().indexOf('quickExcel.functions.') + 'quickExcel.functions.'.length);
       post('testResult', { elapsedMs: performance.now() - started, registered: completion?.entries.some(e => e.name === 'register') }, message.requestId); return;
     }
@@ -100,10 +104,10 @@ async function handle(message: Message) {
     if (p.action === 'undo') { editor.trigger('smoke', 'undo', null); post('testResult', {}, message.requestId); return; }
     if (p.action === 'crash') { models.get(selected!)!.version++; post('draftChanged', { module: selected, version: models.get(selected!)!.version }); fail('Injected page failure before final source acknowledgment'); post('testResult', {}, message.requestId); return; }
     if (p.action === 'inspect') {
-      const getWorker = await typescript.getJavaScriptWorker(); const worker = await getWorker(editor.getModel()!.uri);
+      const getWorker = await languageWorker(); const worker = await getWorker(editor.getModel()!.uri);
       const diagnostics = await worker.getSemanticDiagnostics(editor.getModel()!.uri.toString());
       const completion = await worker.getCompletionsAtPosition(editor.getModel()!.uri.toString(), p.offset ?? editor.getModel()!.getValueLength());
-      post('testResult', { selected, source: editor.getValue(), workers: workers.size, readOnly: editor.getOption(monaco.editor.EditorOption.readOnly),
+      post('testResult', { selected, language: editor.getModel()!.getLanguageId(), source: editor.getValue(), workers: workers.size, readOnly: editor.getOption(monaco.editor.EditorOption.readOnly),
         diagnostics: diagnostics.map(d => ({ code: d.code, text: typeof d.messageText === 'string' ? d.messageText : d.messageText.messageText })), completions: completion?.entries.map(e => e.name).slice(0, 500) ?? [] }, message.requestId); return;
     }
     throw new Error('Unknown test operation');
@@ -112,15 +116,26 @@ async function handle(message: Message) {
     case 'initialize': {
       if (models.size || !Array.isArray(p.modules) || p.modules.length < 1 || p.modules.length > 64) throw new Error('Invalid model initialization');
       readOnly = p.readOnly === true;
-      const paths: Record<string, string[]> = {};
+      const paths: Record<string, string[]> = Object.create(null);
+      let hasTypeScript = false;
       for (const id of p.modules) {
         if (typeof id !== 'string' || !/^[A-Za-z0-9_.-]{1,128}$/.test(id) || id === '.' || id === '..' || models.has(id)) throw new Error('Invalid module ID');
-        const uri = monaco.Uri.parse(baseUri + 'modules/' + id + '.js');
-        models.set(id, { model: monaco.editor.createModel('', 'javascript', uri), version: 1, accepted: 1, state: null });
-        paths[id] = ['modules/' + id + '.js'];
+        const language = p.languages?.[id] ?? 'javascript';
+        if (language !== 'javascript' && language !== 'typescript') throw new Error('Invalid module language');
+        hasTypeScript ||= language === 'typescript';
+        const extension = language === 'typescript' ? '.ts' : '.js';
+        const uri = monaco.Uri.parse(baseUri + 'modules/' + id + extension);
+        models.set(id, { model: monaco.editor.createModel('', language, uri), version: 1, accepted: 1, state: null });
+        paths[id] = ['modules/' + id + extension];
       }
-      typescript.javascriptDefaults.setCompilerOptions({ allowJs: true, checkJs: true, allowNonTsExtensions: true, target: typescript.ScriptTarget.ES2022,
-        module: typescript.ModuleKind.ESNext, moduleResolution: typescript.ModuleResolutionKind.NodeJs, lib: ['es2023'], baseUrl: baseUri, paths });
+      // Monaco's public enum lags its pinned TS 5.9.3 worker. These frozen
+      // numeric values are ES2022=9, Bundler=100 and Force module detection=3.
+      const options = { allowJs: true, checkJs: !hasTypeScript, allowNonTsExtensions: true, target: 9,
+        module: typescript.ModuleKind.ESNext, moduleResolution: 100, moduleDetection: 3, lib: ['es2022'], types: [],
+        strict: hasTypeScript, isolatedModules: true, verbatimModuleSyntax: true, useDefineForClassFields: true,
+        baseUrl: baseUri, paths };
+      typescript.javascriptDefaults.setCompilerOptions(options);
+      typescript.typescriptDefaults.setCompilerOptions(options);
       post('initialized', {}, message.requestId); return;
     }
     case 'loadChunk': await loadChunk(p); post('loadAck', { transfer: p.transfer, index: p.index }, message.requestId); return;
@@ -133,7 +148,7 @@ async function handle(message: Message) {
       });
       select(p.module);
       // A real language worker must be ready before the host enables the page.
-      const getWorker = await typescript.getJavaScriptWorker(); const worker = await getWorker(editor.getModel()!.uri);
+      const getWorker = await languageWorker(); const worker = await getWorker(editor.getModel()!.uri);
       await worker.getSyntacticDiagnostics(editor.getModel()!.uri.toString());
       setLocked(false); post('loaded', { modules: models.size, workers: workers.size }, message.requestId); return;
     }
@@ -156,7 +171,7 @@ async function handle(message: Message) {
 }
 async function dispose() {
   if (disposed) return; disposed = true; if (scheduled !== undefined) clearTimeout(scheduled);
-  editor.dispose(); for (const item of models.values()) item.model.dispose(); models.clear(); extraLib.dispose();
+  editor.dispose(); for (const item of models.values()) item.model.dispose(); models.clear(); for (const lib of extraLibs) lib.dispose();
   for (const worker of workers) worker.terminate(); workers.clear();
 }
 start(handle, dispose);

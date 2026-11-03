@@ -15,7 +15,7 @@ public sealed class M4MessageBudgetTests
     public async Task ProtocolAcceptsPayloadAboveOldLimitAndKeepsNewByteBoundary()
     {
         Assert.Equal(16 * 1024 * 1024, WorkerProtocol.MaxFrameBytes);
-        Assert.Equal(WorkerProtocol.MaxFrameBytes, QuickJsSession.MaxMessageBytes);
+        Assert.Equal(WorkerProtocol.MaxFrameBytes, JscSession.MaxMessageBytes);
         var text = new string('中', 800_000); // Default JSON escaping exceeds 4 MiB.
         var message = WorkerProtocol.Message(M4ProtocolTests.Identity(), "invokeBatch",
             new InvokeBatch([new("F", [WireValue.FromObject(text)])]));
@@ -32,7 +32,7 @@ public sealed class M4MessageBudgetTests
     {
         const string source = "quickExcel.functions.register('SIZE',s=>s.length); quickExcel.functions.register('LARGE',()=> 'x'.repeat(5*1024*1024));";
         var input = new string('x', 5 * 1024 * 1024);
-        using (var native = new QuickJsSession(source))
+        using (var native = new JscSession(source))
         {
             Assert.Equal((double)input.Length, native.Invoke("SIZE", [input]));
             Assert.Equal(input, native.Invoke("LARGE", []));

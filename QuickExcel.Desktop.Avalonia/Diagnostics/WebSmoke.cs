@@ -93,6 +93,31 @@ public sealed partial class MainWindow
             await CloseScriptWindowAsync();
             }
             _workspace.New();
+            _files = new SmokeFiles { NextSave = Path.Combine(directory, "typescript-roundtrip.xlsq") };
+            _workspace.Editor.Execute(new UpdateScriptModulesCommand(new(new Dictionary<string, ScriptModule>
+            {
+                ["main"] = new("scripts/main.ts", "import {twice} from 'helpers'; quickExcel.functions.register('DOUBLE',()=>twice(5));", ScriptLanguage.TypeScript),
+                ["helpers"] = new("scripts/helpers.ts", "export const twice=(n:number):number=>n*2;", ScriptLanguage.TypeScript)
+            }, ["main"], scriptApiVersion: 2)));
+            _workspace.Editor.Execute(new SetCellsCommand([new(new(Document.Snapshot.ActiveSheetId, 0, 0), CellInput.Parse("=DOUBLE()"))]));
+            await OpenScriptsAsync();
+            inspected = await Test(new { action = "inspect" });
+            Check(inspected.GetProperty("language").GetString() == "typescript", "Monaco creates a TypeScript model with the actual TS language worker");
+            var beforeCompile = Document.Snapshot.ScriptModules;
+            await Test(new { action = "edit", module = "main", text = "export const value:number='类型错误';" });
+            Check(!await CommitScriptsAsync(validateTypeScript: true) && ReferenceEquals(beforeCompile, Document.Snapshot.ScriptModules) && _scriptPage!.Drafts.IsDirty,
+                "Failed isolated TS checking preserves the draft and does not replace applied source");
+            _scriptDiagnostics!.SelectedIndex = 0; await ActivateScriptDiagnosticAsync();
+            Check(_scriptPage!.Drafts.IsDirty, "Compiler diagnostic navigation retains failed draft text");
+            await Test(new { action = "edit", module = "main", text = "import {twice} from 'helpers'; enum E { A=6 }; quickExcel.functions.register('DOUBLE',()=>twice(E.A));" });
+            await ApplyScriptsAsync();
+            Check(Document.ScriptsEnabled && Document.GetCellValue(0, 0, 0) == "12", "Apply automatically checks TS then runs emitted ESM in a fresh isolated execution worker");
+            Check(await SaveAsync(false), "TS original sources save without an external toolchain");
+            var tsSaved = new QuickExcel.Storage.TypedWorkbookStorage().Open(Path.Combine(directory, "typescript-roundtrip.xlsq"));
+            Check(tsSaved.ScriptModules.Modules["main"].Language == ScriptLanguage.TypeScript && tsSaved.ScriptModules.PrimarySource.Contains("enum E"),
+                "Saved TS reopens with its original language and source, not emitted JavaScript");
+            await CloseScriptWindowAsync();
+            _workspace.New();
             _workspace.Editor.Execute(new SetCellsCommand([new(new(Document.Snapshot.ActiveSheetId, 0, 0), CellInput.Parse("QuickExcel 中文打印预览")), new(new(Document.Snapshot.ActiveSheetId, 110, 2), CellInput.Parse("Frozen PDF content"))]));
             await OpenPrintPreviewAsync();
             Check(_pdfPage!.Browser.IsReady && _printSession!.Job.Layout.Pages.Length >= 2, "PDF.js loads a fully generated and independently verified multi-page PDF through its private resource lease");

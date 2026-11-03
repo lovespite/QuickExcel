@@ -21,6 +21,10 @@ public sealed class WorkbookCalculator(IScriptRuntimeFactory runtimeFactory) : I
     {
         using var lifetime = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, request.CancellationToken);
         cancellationToken = lifetime.Token;
+        // Compilation has its own bounded isolated role. The execution round's
+        // existing five-second clock starts after accepted artifacts exist.
+        if (request.ScriptsEnabled && request.Snapshot.ScriptModules.HasTypeScript)
+            QuickExcel.Runtime.ScriptCompilation.PrepareAsync(request.Snapshot.ScriptModules, request.Stamp, cancellationToken).GetAwaiter().GetResult();
         var timer = Stopwatch.StartNew();
         void Check()
         {

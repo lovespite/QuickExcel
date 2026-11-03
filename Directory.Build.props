@@ -1,4 +1,12 @@
 <Project>
+  <PropertyGroup>
+    <QuickExcelScriptEngine Condition="'$(QuickExcelScriptEngine)' == ''">Jsc</QuickExcelScriptEngine>
+    <QuickExcelPython Condition="'$(QuickExcelPython)' == '' and $([MSBuild]::IsOSPlatform('Windows'))">python</QuickExcelPython>
+    <QuickExcelPython Condition="'$(QuickExcelPython)' == ''">python3</QuickExcelPython>
+  </PropertyGroup>
+  <Target Name="RequireJscEngine" BeforeTargets="PrepareForBuild">
+    <Error Condition="'$(QuickExcelScriptEngine)' != 'Jsc'" Text="JSC is the only production engine. Rollback uses a retained complete package, not an alternate source build." />
+  </Target>
   <!-- Release RID restores have their own recorded locks under artifacts, while
        ordinary builds keep the checked-in platform-neutral locks unchanged. -->
   <PropertyGroup Condition="'$(QuickExcelReleaseLockDirectory)' != ''">

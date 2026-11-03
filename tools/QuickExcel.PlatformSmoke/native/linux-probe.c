@@ -21,7 +21,10 @@ static void denied(long result, int expected, const char *name) {
     count++;
 }
 static void *wait_thread(void *unused) { (void)unused; for(;;) sleep(1); return NULL; }
-int main(void) {
+int main(int argc, char **argv) {
+    int compilation=argc==2 && !strcmp(argv[1],"--compile");
+    const char *managed_limit=getenv("DOTNET_GCHeapHardLimit");
+    if(!managed_limit || strcmp(managed_limit,compilation ? "10000000" : "4000000")) return 3;
     if(qx_linux_lock_worker() != 0) return 125;
     char mode[32]={0},canary[4096]={0};
     FILE *configuration=fopen("probe.mode","r"); if(!configuration) return 2;
@@ -31,8 +34,9 @@ int main(void) {
     printf("READY %s\n",mode); fflush(stdout);
     if(getchar()!='P') return 2;
     if(!strcmp(mode,"memory")) {
-        volatile char *memory=malloc(320UL*1024*1024); if(!memory) return 3;
-        for(size_t i=0;i<320UL*1024*1024;i+=4096) memory[i]=42;
+        size_t bytes=(compilation ? 1088UL : 320UL)*1024*1024;
+        volatile char *memory=malloc(bytes); if(!memory) return 3;
+        for(size_t i=0;i<bytes;i+=4096) memory[i]=42;
         return 4; // Surviving this allocation is a failed memory-containment test.
     }
     if(!strcmp(mode,"timeout") || !strcmp(mode,"parent")) {

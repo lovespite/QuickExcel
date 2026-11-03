@@ -10,7 +10,16 @@ namespace QuickExcel.Runtime;
 internal sealed class LinuxWorkerLease : IDisposable
 {
     private const UnixFileMode PrivateDirectory = UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute;
-    internal static string Root => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "QuickExcel.LinuxWorkers.v1");
+    internal static string Root
+    {
+        get
+        {
+            var parent = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData, Environment.SpecialFolderOption.DoNotVerify);
+            if (string.IsNullOrWhiteSpace(parent) || !Path.IsPathFullyQualified(parent))
+                throw new IOException("Linux worker records require an absolute per-user data directory.");
+            return Path.Combine(parent, "QuickExcel.LinuxWorkers.v1");
+        }
+    }
     internal string DirectoryPath { get; }
     internal string PayloadDirectory => Path.Combine(DirectoryPath, "payload");
     internal string ScopeName { get; }
@@ -50,7 +59,9 @@ internal sealed class LinuxWorkerLease : IDisposable
                 instance._record.Files.Add(name, Convert.ToHexString(SHA256.HashData(copied)));
                 File.SetUnixFileMode(destination, UnixFileMode.UserRead | (name is "QuickExcel.ScriptWorker" or "quickexcel-sandbox" ? UnixFileMode.UserExecute : 0));
             }
-            foreach (var name in new[] { "QuickExcel.ScriptWorker", "quickexcel-sandbox", "libquickexcel-sandbox.so", "libquickexcel-js.so", "libcoreclr.so" })
+            foreach (var name in new[] { "QuickExcel.ScriptWorker", "quickexcel-sandbox", "libquickexcel-sandbox.so", "libcoreclr.so",
+                "libJavaScriptCore.so", "libicudata.so.77", "libicuuc.so.77", "libicui18n.so.77", "typescript.bundle.json", "JSC-BUILD-IDENTITY.txt"
+            })
                 if (!instance._record.Files.ContainsKey(name)) throw new IOException("Linux self-contained worker payload missing: " + name);
             instance.Save(); File.SetUnixFileMode(instance.PayloadDirectory, UnixFileMode.UserRead | UnixFileMode.UserExecute);
             return instance;

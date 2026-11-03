@@ -36,7 +36,7 @@ public sealed class M4ModuleTests
             .Concat(helpers.Select(h => new KeyValuePair<string, ScriptModule>(h.Id, new($"scripts/lib/{h.Id}.js", h.Source)))),
         ["main"], scriptApiVersion: 2);
     private static IScriptRuntime Create(ScriptModuleSet modules, bool worker = true, CancellationToken token = default) =>
-        (worker ? (IScriptRuntimeFactory)new ScriptWorkerRuntimeFactory() : new QuickJsRuntimeFactory())
+        (worker ? (IScriptRuntimeFactory)new ScriptWorkerRuntimeFactory() : new JscRuntimeFactory())
             .Create(new ScriptRuntimeRequest(modules, new(Guid.NewGuid(), 1, 2, 3), TimeSpan.FromSeconds(5), token));
 
     [Theory]

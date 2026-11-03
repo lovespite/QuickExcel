@@ -5,6 +5,7 @@ using System.Security.Principal;
 using System.Text.Json;
 using Microsoft.Win32.SafeHandles;
 using QuickExcel.Runtime;
+using QuickExcel.ScriptContracts;
 
 namespace QuickExcel.Core.Test;
 
@@ -34,8 +35,10 @@ public sealed class M4IsolationTests
         Assert.False(Directory.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Packages", profile)));
     }
 
-    [Fact]
-    public void ProductionLauncherDeniesPrivateFilesPayloadWritesChildProcessesAndUnlistedHandles()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void ProductionLauncherDeniesPrivateFilesPayloadWritesChildProcessesAndUnlistedHandles(bool compilation)
     {
         var folder = Path.Combine(Path.GetTempPath(), "QuickExcel.IsolationTest." + Guid.NewGuid().ToString("N"));
         var acl = new DirectorySecurity();
@@ -55,8 +58,32 @@ public sealed class M4IsolationTests
             Assert.True(ReadFile(canary, buffer, buffer.Length, out var count, IntPtr.Zero));
             Assert.True(count > 0);
             Assert.True(SetFilePointerEx(canary, 0, out _, 0));
-            using var runtime = new ScriptWorkerRuntimeFactory(Path.Combine(AppContext.BaseDirectory, "WorkerFixture", "WorkerFixture.exe")).Create("isolation");
-            var json = Assert.IsType<string>(runtime.Invoke("F", [path, canary.DangerousGetHandle().ToInt64().ToString()]));
+            var executable = Path.Combine(AppContext.BaseDirectory, "WorkerFixture", "WorkerFixture.exe");
+            string json;
+            if (compilation)
+            {
+                // Fault fixture deliberately speaks the test protocol. Exercise
+                // the real compile launch policy without adding OS APIs to JSC.
+                using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+                using var worker = WorkerProcess.Start(executable, deadline.Token, compilation: true);
+                var identity = M4ProtocolTests.Identity();
+                WorkerEnvelope Exchange<T>(string kind, T payload)
+                {
+                    identity = identity with { RequestId = Guid.NewGuid() };
+                    WorkerProtocol.WriteAsync(worker.Input, WorkerProtocol.Message(identity, kind, payload), deadline.Token).GetAwaiter().GetResult();
+                    var reply = WorkerProtocol.ReadAsync(worker.Output, deadline.Token).GetAwaiter().GetResult();
+                    WorkerProtocol.ValidateReply(reply, identity, kind); return reply;
+                }
+                Exchange("hello", new WorkerHello(WorkerProtocol.Engine, WorkerProtocol.Policy, [1,2], WorkerProtocol.MaxFrameBytes));
+                Exchange("load", new LoadScript("isolation", "fixture"));
+                var reply = WorkerProtocol.Payload<BatchResult>(Exchange("invokeBatch", new InvokeBatch([new("F", [WireValue.FromObject(path), WireValue.FromObject(canary.DangerousGetHandle().ToInt64().ToString())])])));
+                json = Assert.IsType<string>(Assert.Single(reply.Results).Value!.ToObject());
+            }
+            else
+            {
+                using var runtime = new ScriptWorkerRuntimeFactory(executable).Create("isolation");
+                json = Assert.IsType<string>(runtime.Invoke("F", [path, canary.DangerousGetHandle().ToInt64().ToString()]));
+            }
             var results = JsonSerializer.Deserialize<Dictionary<string, bool>>(json)!;
             Assert.All(results, result => Assert.True(result.Value, result.Key));
             Assert.Equal(8, results.Count);

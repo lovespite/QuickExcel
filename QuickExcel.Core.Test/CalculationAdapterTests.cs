@@ -379,7 +379,7 @@ public sealed class CalculationAdapterTests
     {
         var snapshot = Snapshot((0, 0, Formula("=NEXT()"))).WithScriptSource(
             "let count = 0; quickExcel.functions.register('NEXT', () => ++count);");
-        var calculator = new WorkbookCalculator(new QuickJsRuntimeFactory());
+        var calculator = new WorkbookCalculator(new JscRuntimeFactory());
 
         Assert.Equal(CellValue.FromNumber(1), Value(calculator.Calculate(Request(snapshot, true)), snapshot, 0, 0));
         Assert.Equal(CellValue.FromNumber(1), Value(calculator.Calculate(Request(snapshot, true)), snapshot, 0, 0));

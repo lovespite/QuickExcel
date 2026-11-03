@@ -77,13 +77,14 @@ try {
     $vswherePath = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'
 
     $nativeFiles = @(
-        'QuickExcel.Scripting/native/vendor/quickjs-ng-v0.17.0.zip',
-        'QuickExcel.Scripting/native/bin/quickexcel-js.dll',
-        'QuickExcel.Scripting/native/quickexcel-js.c',
-        'QuickExcel.Scripting/native/CMakeLists.txt',
-        'QuickExcel.Scripting/native/build.ps1',
-        'QuickExcel.Scripting/native/QUICKJS-LICENSE.txt',
-        'artifacts/QuickExcel/quickexcel-js.dll'
+        'artifacts/jsc/downloads/webkitgtk-2.54.2.tar.xz',
+        'artifacts/jsc/build/win-x64/bin/JavaScriptCore.dll',
+        'artifacts/jsc/build/win-x64/identity.json',
+        'artifacts/jsc/compiler/identity.txt',
+        'QuickExcel.Scripting/native/jsc/bridge.cpp',
+        'QuickExcel.Scripting/native/jsc/SOURCES.md',
+        'tools/QuickExcel.JscProbe/sources.json',
+        'tools/QuickExcel.JscProbe/source-adjustments.json'
     ) | ForEach-Object { Get-FileRecord (Join-Path $projectRoot $_) $projectRoot }
     $evidenceFiles = @(Get-ChildItem -LiteralPath $evidenceRoot -File -Recurse | Where-Object {
         $_.FullName.Substring($evidenceRoot.Length + 1) -notmatch '(^|[\\/])baseline-capture-[^\\/]+([\\/]|$)'
@@ -108,13 +109,13 @@ try {
             visualStudio = Invoke-CapturedCommand $vswherePath @('-latest', '-products', '*', '-requires', 'Microsoft.VisualStudio.Component.VC.Tools.x86.x64', '-property', 'installationVersion')
         }
         native = [ordered]@{
-            engine = 'QuickJS-NG 0.17.0'
-            expectedArchiveSha256 = '9DE1BF573606D2AEBBBAB6217E616A66E09E3613518489B37B9B3157CF398DCC'
+            engine = 'JavaScriptCore/2.54.2/b95c91b1/qx-sync-1'
+            expectedArchiveSha256 = 'A76345B391BEF6211FB5AB6CFAB2E86B285D18CDA17CBB9ADE595F1252B86065'
             interpretation = 'Existing binaries are hashed, not rebuilt by this script. Matching archive hashes do not prove that an observed DLL was rebuilt during this validation run.'
-            buildContract = 'CMake Visual Studio generator, x64, Release, target quickexcel-js; C11 bridge; static MSVC CRT; QJS_ENABLE_INSTALL=OFF; QJS_BUILD_EXAMPLES=OFF; core qjs without quickjs-libc.'
+            buildContract = 'Pinned JSCOnly/ICU source build; JIT/DFG/mimalloc; no FTL/Wasm/inspector. Full compiler, options and binary hashes are in native identity. JSC-MEM-001 open.'
             files = @($nativeFiles)
         }
-        publish = [ordered]@{ configuration = 'Release'; architecture = 'x64'; selfContained = $false; requiredRuntime = '.NET 10 Windows Desktop Runtime' }
+        publish = [ordered]@{ configuration = 'Release'; architecture = 'x64'; selfContained = $true; requiredRuntime = 'WebView2 Evergreen (Windows); .NET included' }
         evidence = [ordered]@{ directory = $evidenceRoot; manifest = 'evidence-files.json'; count = $evidenceFiles.Count }
     })
     Write-Host "Baseline capture: $captureRoot"

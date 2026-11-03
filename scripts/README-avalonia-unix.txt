@@ -27,3 +27,16 @@ Physical IME, DPI/multi-screen, accessibility, printer and clean-device acceptan
 are deferred, not passed. Linux Chinese IME had no candidate window in the prior
 VM experiment. See repository docs/67-avalonia-platforms.md for current evidence.
 Keep release.json, metadata and license files with the package.
+
+JavaScriptCore is the only script engine. JS API v1 remains compatible; API v2
+modules can use JavaScript or TypeScript. TypeScript is fully checked by the
+isolated compiler before Apply/Run; failed checks keep the draft and previous
+applied source. Files save the original source. Older packages reject the
+required typescript-sources feature: keep an original file backup before migration.
+Compilation uses a separate 1 GiB / 5-second native / 6-second host budget;
+execution retains 256 MiB process / 256 KiB JS stack / 1-second operation / 5-second round.
+OPEN JSC-MEM-001: the 64 MiB total engine allocation hard limit is not implemented.
+It is explicitly deferred and is not a progression gate. A process limit or GC
+threshold is not an equivalent engine limit. JSC-Licenses contains the upstream
+notices, corresponding sources and instructions for rebuilding/replacing libraries.
+Rollback replaces the whole host/worker package; never mix engine or IPC versions.

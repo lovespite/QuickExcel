@@ -39,7 +39,7 @@ if (args.FirstOrDefault() == "--child")
     results["restricted"] = Native.TokenFlag(21).ToString();
     Probe("nativeRuntime", () =>
     {
-        using var session = new QuickJsSession(new Dictionary<string, string>
+        using var session = new JscSession(new Dictionary<string, string>
         {
             ["main"] = "import {x} from 'helper';quickExcel.functions.register('F',()=>x+1);",
             ["helper"] = "export const x=41;"

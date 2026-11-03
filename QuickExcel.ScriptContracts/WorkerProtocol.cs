@@ -18,7 +18,7 @@ public sealed record RequestIdentity(Guid SessionId, Guid WorkerInstanceId, Guid
 }
 
 public sealed record WorkerEnvelope(int ProtocolVersion, RequestIdentity Identity, string Kind, JsonElement Payload);
-public sealed record WorkerHello(string Engine, string Policy, int[] ApiVersions, int MaxFrameBytes);
+public sealed record WorkerHello(string Engine, string Policy, int[] ApiVersions, int MaxFrameBytes, string Role = "execute", string? Compiler = null);
 public sealed record LoadScript(string Source, string Sha256);
 public sealed record FunctionInfo(string Name, int ApiVersion, int MinArguments, int MaxArguments, string ReturnType, string Profile);
 public sealed record LoadedScript(string Sha256, FunctionInfo[] Functions);
@@ -33,9 +33,9 @@ public sealed class ProtocolException(string message, Exception? inner = null) :
 
 public static class WorkerProtocol
 {
-    public const int Version = 5;
-    public const string Engine = "QuickJS-NG/0.17.0";
-    public const string Policy = "conservative-worker-v1";
+    public const int Version = 6;
+    public const string Engine = "JavaScriptCore/2.54.2/b95c91b1/qx-sync-1";
+    public const string Policy = "conservative-jsc-v1-memory-issue-open";
     public const int MaxFrameBytes = 16 * 1024 * 1024;
     public const int MaxBatchCalls = 256;
     public const int MaxCellTextLength = 32767;
@@ -115,7 +115,9 @@ public static class WorkerProtocol
     private static void Validate(WorkerEnvelope message)
     {
         if (message.ProtocolVersion != Version || message.Identity is null ||
-            message.Kind is not ("hello" or "load" or "loadModules" or "loadActions" or "runAction" or "invokeBatch" or "logs" or "shutdown" or "failure") ||
+            message.Kind is not ("hello" or "load" or "loadModules" or "loadActions" or "runAction" or "invokeBatch" or "logs" or "shutdown" or "failure"
+                or "compile"
+                ) ||
             message.Payload.ValueKind != JsonValueKind.Object)
             throw new ProtocolException("Unsupported protocol message.");
         message.Identity.Validate();

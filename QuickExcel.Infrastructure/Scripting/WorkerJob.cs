@@ -12,7 +12,7 @@ internal sealed class WorkerJob : IDisposable
 {
     private readonly SafeFileHandle _handle;
     internal IntPtr Handle => _handle.DangerousGetHandle();
-    public WorkerJob(string name)
+    public WorkerJob(string name, bool compilation = false)
     {
 #pragma warning disable CA1416
         using var identity = WindowsIdentity.GetCurrent();
@@ -35,7 +35,7 @@ internal sealed class WorkerJob : IDisposable
             var limits = new ExtendedLimits
             {
                 Basic = new BasicLimits { Flags = 0x2000 | 0x100 | 0x8 | 0x400, ActiveProcesses = 1 },
-                ProcessMemory = 256 * 1024 * 1024
+                ProcessMemory = (nuint)(compilation ? 1024 : 256) * 1024 * 1024
             };
             if (!SetInformationJobObject(_handle, 9, ref limits, (uint)Marshal.SizeOf<ExtendedLimits>()))
                 throw new Win32Exception(Marshal.GetLastWin32Error());

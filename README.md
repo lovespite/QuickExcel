@@ -1,5 +1,7 @@
 # QuickExcel 0.6 交互预览版
 
+2026-11-03：JSC / TypeScript 已完成 70 号方案 J0–J6，Windows 默认包已切换为 `0.6.0-preview.8`，Linux 已独立验证；实现、发布与回退证据见 [71 号记录](QuickExcel.Desktop/docs/71-jsc-typescript-implementation-log.md)。64 MiB 引擎硬限额 `JSC-MEM-001` 保持开放，按用户要求延期且不阻止后续工作。
+
 Avalonia 迁移：Windows A0–A5 工程切换完成，A7 已移除 WPF 生产入口。Linux 有受测 Ubuntu 候选包；macOS worker 未实现，脚本保持关闭。实机验证按用户要求延期，详见 [平台状态](QuickExcel.Desktop/docs/67-avalonia-platforms.md) 与 [收尾记录](QuickExcel.Desktop/docs/68-avalonia-retirement.md)。
 
 2026-10-30 进度同步：M1–M3 受支持子集已交付，当前处于 **M5 桌面交互收敛**；M4 严格策略/部署与 M6 恢复/发布验收仍未完成。当前状态与后续顺序统一见 [实施计划](QuickExcel.Desktop/docs/05-implementation-plan.md)。
@@ -10,7 +12,7 @@ Avalonia 迁移：Windows A0–A5 工程切换完成，A7 已移除 WPF 生产�
 
 Avalonia 版本为 `0.6.0-preview.7`（旧 WPF 为 `0.6.0-preview.3`），已增加正式工作区、脚本专页、模块编辑、查找替换、Ribbon、脚本数字签名、兼容/导出入口及 XLSX 渲染修复；范围见 [正式界面](QuickExcel.Desktop/docs/19-m5-product-workspace.md)、[签名信任](QuickExcel.Desktop/docs/20-script-signatures.md)及[渲染记录](QuickExcel.Desktop/docs/25-xlsx-rendering.md)。版本号相同不代表旧发布目录包含最新源码。
 
-默认 Windows x64 桌面表格，Linux 候选范围见平台日志；基于 Avalonia、自有类型化存储/计算引擎与 QuickJS-NG。M4 宿主崩溃后的 profile/payload 回收已实现，本机部署验证五项通过、直接长路径 EXE 启动一项失败；后续环境见 [回收与部署验证](QuickExcel.Desktop/docs/16-m4-recovery-and-deployment.md)。工作簿恢复目前仅支持手动打开副本，自动恢复后端仍属 M6。
+默认 Windows x64 桌面表格，Linux 候选范围见平台日志；基于 Avalonia、自有类型化存储/计算引擎与 JavaScriptCore。M4 宿主崩溃后的 profile/payload 回收已实现，本机部署验证五项通过、直接长路径 EXE 启动一项失败；后续环境见 [回收与部署验证](QuickExcel.Desktop/docs/16-m4-recovery-and-deployment.md)。工作簿恢复目前仅支持手动打开副本，自动恢复后端仍属 M6。
 
 ## 试用
 
@@ -35,7 +37,7 @@ QuickExcel 与同级 `../ExcelIO` 是独立 Git 仓库。QuickExcel 已移除 Ex
 | --- | --- |
 | `QuickExcel.Core` | 纯 .NET 领域快照、会话、命令、历史和端口 |
 | `QuickExcel.Infrastructure` | 类型化 XLSX/XLSQ v2、v1 导入迁移、计算与运行时适配 |
-| `QuickExcel.Scripting` | QuickJS 托管桥和固定来源的原生引擎 |
+| `QuickExcel.Scripting` | JSC 托管桥、隔离 TypeScript 编译和固定来源原生引擎 |
 | `QuickExcel.ScriptContracts` / `QuickExcel.ScriptWorker` | 有界 IPC 协议与独立脚本执行进程 |
 | `QuickExcel.Desktop.Avalonia` / `Grid.Avalonia` | 默认桌面、原生网格、Monaco/PDF.js 与平台组合根 |
 | `QuickExcel.Presentation` / `Grid.Shared` | 无 UI 的共享编辑、工作区和几何规则 |

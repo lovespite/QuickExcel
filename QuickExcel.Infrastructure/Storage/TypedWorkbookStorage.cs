@@ -73,7 +73,7 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage, IW
                     declaredViews = features.Contains("workbook-views");
                     declaredTextVersion = features.Contains("text-compatibility-v2");
                     declaredExtendedErrors = features.Contains("extended-cell-errors");
-                    if (features.Distinct().Count() != features.Length || Features.Except(features).Any() || features.Except(Features.Concat(["virtual-files", "script-actions", "script-signatures", "workbook-views", "worksheet-printing", "preserved-formulas", "cell-text-annotations", "worksheet-data", "worksheet-tables", "worksheet-validation", "worksheet-conditional-formatting", "worksheet-outline", "text-compatibility-v2", "extended-cell-errors", "drawing-anchors", "worksheet-protection", "worksheet-charts", "worksheet-default-width", "extended-capacity"])).Any() ||
+                    if (features.Distinct().Count() != features.Length || Features.Except(features).Any() || features.Except(Features.Concat(["typescript-sources", "virtual-files", "script-actions", "script-signatures", "workbook-views", "worksheet-printing", "preserved-formulas", "cell-text-annotations", "worksheet-data", "worksheet-tables", "worksheet-validation", "worksheet-conditional-formatting", "worksheet-outline", "text-compatibility-v2", "extended-cell-errors", "drawing-anchors", "worksheet-protection", "worksheet-charts", "worksheet-default-width", "extended-capacity"])).Any() ||
                         features.Contains("script-actions") && scriptApiVersion != 2)
                         throw new InvalidDataException("XLSQ 缺少必要能力或包含未知必需能力。");
                     var referenced = new HashSet<string>(StringComparer.Ordinal) { "manifest.json" };
@@ -99,7 +99,10 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage, IW
                         if (moduleList.Count >= 64) throw new InvalidDataException("模块数量超过限制。");
                         var content = Reference(module.Value);
                         if ((sourceBytes += content.Length) > 1024 * 1024) throw new InvalidDataException("脚本总量超过 1 MiB。");
-                        moduleList.Add(new(module.Name, new ScriptModule(String(module.Value, "path"), Utf8.GetString(content))));
+                        var language = module.Value.TryGetProperty("language", out var lang) ? ReadScriptLanguage(lang.GetString()) : ScriptLanguage.JavaScript;
+                        if (features.Contains("typescript-sources") && !module.Value.TryGetProperty("language", out _))
+                            throw new InvalidDataException("TS 包必须明确全部模块的语言。");
+                        moduleList.Add(new(module.Name, new ScriptModule(String(module.Value, "path"), Utf8.GetString(content), language)));
                     }
                     var bindings = Array(state.RootElement, "scriptBindings").ToArray();
                     if (bindings.Any(b => String(b, "scope") != "workbook")) throw new InvalidDataException("脚本绑定作用域无效。");
@@ -107,6 +110,10 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage, IW
                         Integer(state.RootElement, "scriptRevision"), Integer(state.RootElement, "bindingRevision"), scriptApiVersion,
                         bindings.Select(b => new ScriptBinding(String(b, "module"), String(b, "kind"))));
                     if (modules.HasActions != features.Contains("script-actions")) throw new InvalidDataException("动作绑定与必需能力不一致。");
+                    if (modules.HasTypeScript != features.Contains("typescript-sources") ||
+                        modules.HasTypeScript && String(scripts, "compilerOptions") != ScriptModuleSet.TypeScriptOptions ||
+                        !modules.HasTypeScript && scripts.TryGetProperty("compilerOptions", out _))
+                        throw new InvalidDataException("模块语言、编译选项与必需能力不一致。");
                     if (root.TryGetProperty("scriptSignature", out var signatureReference))
                     {
                         if (!features.Contains("script-signatures")) throw new InvalidDataException("脚本签名缺少必需能力声明。");
@@ -303,6 +310,7 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage, IW
             .Concat(snapshot.TextCompatibilityVersion >= 2 ? ["text-compatibility-v2"] : [])
             .Concat(HasExtendedErrors(snapshot) ? ["extended-cell-errors"] : [])
             .Concat(snapshot.ScriptModules.HasActions ? ["script-actions"] : [])
+            .Concat(snapshot.ScriptModules.HasTypeScript ? ["typescript-sources"] : [])
             .Concat(snapshot.ScriptModules.Signature is not null ? ["script-signatures"] : []));
         JsonNode Reference(string name) => JsonSerializer.SerializeToNode(new { path = name, sha256 = Hash(parts[name]) })!;
         if (snapshot.ScriptModules.Signature is { } signature)
@@ -315,9 +323,17 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage, IW
         manifest["workbook"] = Merge(manifest["workbook"], Reference("workbook.xlsx")); manifest["state"] = Merge(manifest["state"], Reference("state/document.json"));
         var modules = new JsonObject();
         foreach (var (id, module) in snapshot.ScriptModules.Modules.OrderBy(m => m.Key, StringComparer.Ordinal))
-        { parts.Add(module.Path, Utf8.GetBytes(module.Source)); modules.Add(id, Merge(manifest["scripts"]?["modules"]?[id], Reference(module.Path))); }
+        {
+            parts.Add(module.Path, Utf8.GetBytes(module.Source));
+            var item = Merge(manifest["scripts"]?["modules"]?[id], Reference(module.Path));
+            if (snapshot.ScriptModules.HasTypeScript) item["language"] = module.Language == ScriptLanguage.TypeScript ? "typescript" : "javascript";
+            else item.AsObject().Remove("language");
+            modules.Add(id, item);
+        }
         manifest["scripts"] = Merge(manifest["scripts"], new JsonObject { ["entryModules"] = JsonSerializer.SerializeToNode(snapshot.ScriptModules.EntryModules), ["modules"] = modules });
         manifest["scripts"]!["modules"] = modules.DeepClone();
+        if (snapshot.ScriptModules.HasTypeScript) manifest["scripts"]!["compilerOptions"] = ScriptModuleSet.TypeScriptOptions;
+        else manifest["scripts"]!.AsObject().Remove("compilerOptions");
         if (snapshot.PackageFiles.Entries.Count > 0)
         {
             manifest["requiredFeatures"]!.AsArray().Add("virtual-files");
@@ -451,6 +467,13 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage, IW
     private static string Hash(byte[] content) => Convert.ToHexStringLower(SHA256.HashData(content));
     private static string ScriptHash(ScriptModuleSet modules)
     {
+        if (modules.HasTypeScript) return Hash(JsonSerializer.SerializeToUtf8Bytes(new
+        {
+            scriptApiVersion = 2, compilerOptions = ScriptModuleSet.TypeScriptOptions, entries = modules.EntryModules,
+            modules = modules.Modules.OrderBy(m => m.Key, StringComparer.Ordinal).Select(m => new { id = m.Key, path = m.Value.Path,
+                language = m.Value.Language == ScriptLanguage.TypeScript ? "typescript" : "javascript", sha256 = Hash(Utf8.GetBytes(m.Value.Source)) }),
+            bindings = modules.Bindings.OrderBy(b => b.Module, StringComparer.Ordinal).ThenBy(b => b.Kind, StringComparer.Ordinal)
+        }));
         var sources = modules.Modules.OrderBy(m => m.Key, StringComparer.Ordinal).Select(m => new { id = m.Key, path = m.Value.Path, sha256 = Hash(Utf8.GetBytes(m.Value.Source)) });
         if (modules.HasActions) return Hash(JsonSerializer.SerializeToUtf8Bytes(new { scriptApiVersion = 2, entries = modules.EntryModules, modules = sources,
             bindings = modules.Bindings.OrderBy(b => b.Module, StringComparer.Ordinal).ThenBy(b => b.Kind, StringComparer.Ordinal).Select(b => new { module = b.Module, kind = b.Kind }) }));
@@ -459,6 +482,11 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage, IW
             ? Hash(JsonSerializer.SerializeToUtf8Bytes(new { entries = modules.EntryModules, modules = sources }))
             : Hash(JsonSerializer.SerializeToUtf8Bytes(new { scriptApiVersion = 2, entries = modules.EntryModules, modules = sources }));
     }
+    private static ScriptLanguage ReadScriptLanguage(string? value) => value switch
+    {
+        "javascript" => ScriptLanguage.JavaScript, "typescript" => ScriptLanguage.TypeScript,
+        _ => throw new InvalidDataException("未知脚本语言。")
+    };
     private static JsonElement Property(JsonElement parent, string name) => parent.ValueKind == JsonValueKind.Object && parent.TryGetProperty(name, out var value)
         ? value : throw new InvalidDataException($"缺少字段 {name}。");
     private static string String(JsonElement parent, string name) => Property(parent, name).ValueKind == JsonValueKind.String

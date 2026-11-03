@@ -228,7 +228,7 @@ public sealed partial class MainWindow : Window
     {
         var task = CommitEditorsAsync(); return task.IsCompletedSuccessfully && task.Result;
     }
-    private async Task<bool> CommitEditorsAsync() => !_workspace.IsBusy && await _grid.CommitAsync() && await CommitFormulaAsync() && await CommitScriptsAsync();
+    private async Task<bool> CommitEditorsAsync(bool validateTypeScript = false) => !_workspace.IsBusy && await _grid.CommitAsync() && await CommitFormulaAsync() && await CommitScriptsAsync(validateTypeScript);
     private bool TryEdit(Func<CommandResult> edit)
     {
         if (_workspace.IsBusy) return false;
@@ -277,7 +277,10 @@ public sealed partial class MainWindow : Window
             try
             {
                 var trust = await Task.Run(() => ScriptTrust.Verify(modules));
-                if (ReferenceEquals(modules, Document.Snapshot.ScriptModules) && trust.CanAutoEnable) await ApplyScriptsAsync();
+                // Source signatures remain verifiable, but existing certificate
+                // pins do not silently consent to a new engine policy.
+                if (ReferenceEquals(modules, Document.Snapshot.ScriptModules) && trust.CanAutoEnable)
+                    _status.Text = "脚本签名有效；引擎策略已更新，请在脚本页显式应用一次。";
             }
             catch (QuickExcel.Security.UserProtectionUnavailableException ex) { _status.Text = "文件已打开；无法读取持久信任，脚本保持停用：" + ex.Message; }
         }

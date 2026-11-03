@@ -1,0 +1,26 @@
+[
+  {
+    "path": "webkitgtk-2.54.2/Source/JavaScriptCore/bytecode/InlineCacheCompiler.h",
+    "before": "#include \"AccessCase.h\"\n",
+    "after": "#include \"AccessCase.h\"\n#include \"CCallHelpers.h\"\n",
+    "reason": "The JIT header names nested CCallHelpers types but only forward-declares the class. Include its definition explicitly for the JSCOnly LLIntOffsetsExtractor build. No executable logic changes."
+  },
+  {
+    "path": "webkitgtk-2.54.2/Source/JavaScriptCore/runtime/ScriptExecutable.cpp",
+    "before": "#include \"CodeBlock.h\"\n",
+    "after": "#include \"CodeBlock.h\"\n#include \"CompilationResult.h\"\n",
+    "reason": "setupJIT compares a CompilationResult enumerator, so the translation unit must include its definition rather than depending on a different file in a unified bundle. No executable logic changes."
+  },
+  {
+    "path": "webkitgtk-2.54.2/Source/JavaScriptCore/parser/NodesAnalyzeModule.cpp",
+    "before": "    // https://tc39.es/proposal-import-attributes/#sec-AllImportAttributesSupported\n",
+    "after": "    // QuickExcel policy: reject even an empty attributes clause before it is erased.\n    return makeUnexpected(std::tuple { ErrorType::TypeError, \"Import attributes are not supported by QuickExcel\"_s });\n\n    // https://tc39.es/proposal-import-attributes/#sec-AllImportAttributesSupported\n",
+    "reason": "The analyzed ModuleRequest loses the distinction between absent attributes and an empty with {} clause. Reject any present clause at the native module-analyzer boundary. This is an explicit QuickExcel syntax policy adjustment, not an import rewrite."
+  },
+  {
+    "path": "webkitgtk-2.54.2/Source/cmake/OptionsJSCOnly.cmake",
+    "before": "if (WIN32)\n    set(ENABLE_API_TESTS OFF)\nelse ()\n    set(ENABLE_API_TESTS ON)\nendif ()\n",
+    "after": "if (NOT DEFINED ENABLE_API_TESTS)\n    if (WIN32)\n        set(ENABLE_API_TESTS OFF)\n    else ()\n        set(ENABLE_API_TESTS ON)\n    endif ()\nendif ()\n",
+    "reason": "Respect the explicitly frozen ENABLE_API_TESTS=OFF build setting on Linux as on Windows. The upstream JSCOnly unconditional assignment otherwise overrides the cache flag and requires the excluded development test tree. No engine behavior changes."
+  }
+]

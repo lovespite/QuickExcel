@@ -1,0 +1,141 @@
+{
+  "commit": "b95c91b1c0ee43cc86d25ff7af73038f67a88e04",
+  "reason": "Windows files omitted from the GTK source archive; unchanged upstream files at the same release commit",
+  "files": [
+    {
+      "path": "Source/WTF/wtf/win/CONTRIBUTORS.pthreads-win32",
+      "sha256": "e6f3cc574073f8af401d7205d24308dc1ce6127010797b463f92047cdc27afa9",
+      "gitBlob": "24fac006c3083e2cd73773d438a36147d09f4e02"
+    },
+    {
+      "path": "Source/WTF/wtf/win/CPUTimeWin.cpp",
+      "sha256": "20cf6dff16a6c1ee8ca1bd2abdb745e1a1be4532766877d2a4513630058b4ec7",
+      "gitBlob": "9c687b66cfd32377f95d111e464a7ccab4f1daf8"
+    },
+    {
+      "path": "Source/WTF/wtf/win/DbgHelperWin.cpp",
+      "sha256": "92f90768612ef325cdac77d704b2460d47d36c05bda876baef4758f1227d6ec6",
+      "gitBlob": "5a1ab4cbdc7b341e844f65fd73c95d7d1c7e25c2"
+    },
+    {
+      "path": "Source/WTF/wtf/win/DbgHelperWin.h",
+      "sha256": "f8f8568fba905786580de37b0b2789ec45f0c53477768d20751065c7e4848b0a",
+      "gitBlob": "d951a0b07fb3b4f857364643c47b855f3a56e285"
+    },
+    {
+      "path": "Source/WTF/wtf/win/FileHandleWin.cpp",
+      "sha256": "cff5e741a4be08c3138b47cdd4020cbffac29d7be3cae3e60e8ec9801e873732",
+      "gitBlob": "d6bc1def4cf9f9479d523870dfd16deb05b130c7"
+    },
+    {
+      "path": "Source/WTF/wtf/win/FileSystemWin.cpp",
+      "sha256": "d2cdd3e171dacf26627ed68c2b251427a9cc3e1e8989304c79633dac8461175a",
+      "gitBlob": "5c1332dbb0b4ec0f57be68ec131876fda852eb9f"
+    },
+    {
+      "path": "Source/WTF/wtf/win/GDIObject.h",
+      "sha256": "8e19994a9add93ceef72db31cd26513b7fe813e89cc142ac6ad612495321850e",
+      "gitBlob": "772aab73a63f4e438fdf8ae690fd0e95018012be"
+    },
+    {
+      "path": "Source/WTF/wtf/win/LanguageWin.cpp",
+      "sha256": "d3df90c13777bedb5b5fd7a490b1bc7ce5263cacab3a740ab9601fff0ad8c4a9",
+      "gitBlob": "66fa6d7215fc94177019fab730b8cd296dc93095"
+    },
+    {
+      "path": "Source/WTF/wtf/win/LoggingWin.cpp",
+      "sha256": "f40b998ab65184b696fcf105ec7be647fe4bce0ee670c49740120d4465f28b86",
+      "gitBlob": "9a26f07145dccdc57be77e6157ee4e914b2d9f1f"
+    },
+    {
+      "path": "Source/WTF/wtf/win/MainThreadWin.cpp",
+      "sha256": "2ac5e8e0c953c5a525a0a463d47c0fbc2864cf954de6ca355b9e2ed0de861c62",
+      "gitBlob": "e233c8044dd438248010811839af483cfa7e8182"
+    },
+    {
+      "path": "Source/WTF/wtf/win/MappedFileDataWin.cpp",
+      "sha256": "d53b5e06a4c6520f0bfeb3b825a0e73c3c75f666525677e2036feb4301b07c8e",
+      "gitBlob": "b33758902044265ff022726b65da858af132eed6"
+    },
+    {
+      "path": "Source/WTF/wtf/win/MemoryFootprintWin.cpp",
+      "sha256": "d441abe1a7600228cf848553a8c927522a7d1a2a96738997f1d7562f7907c83a",
+      "gitBlob": "3fcbe1c8f8f3bc765e4886c689e40d4e1a680215"
+    },
+    {
+      "path": "Source/WTF/wtf/win/MemoryPressureHandlerWin.cpp",
+      "sha256": "c098b95ee3c80fac365cda8809007aa1c910fa8dfa57f2a5030661196d5e6d86",
+      "gitBlob": "3e22c2c414ecf2b93a1ddf833e224b198a46a14a"
+    },
+    {
+      "path": "Source/WTF/wtf/win/OSAllocatorWin.cpp",
+      "sha256": "4061caf5ed5b6d656e133775ca3c5f4911a8a66db1be2bdfb9a0894307c91b30",
+      "gitBlob": "f2d3df3a91258432b24994d1f74f2b9d8985e915"
+    },
+    {
+      "path": "Source/WTF/wtf/win/PathWalker.cpp",
+      "sha256": "e4cde362aae3eabec115169aef7427b870cccbacd69844c40aac1bfac92fe7fd",
+      "gitBlob": "212d54cdede33de29cb6ec85b5b5b43675510bdd"
+    },
+    {
+      "path": "Source/WTF/wtf/win/PathWalker.h",
+      "sha256": "03cbfab2be6b6d456884433debe0bc2ab69ed374d875c64e24b9bac566ba646d",
+      "gitBlob": "4641828bf6c930a6b54d4ea7d8de513753724cf1"
+    },
+    {
+      "path": "Source/WTF/wtf/win/RunLoopWin.cpp",
+      "sha256": "05a54453b904666b363590370f9c7e97898cc449a921712f41ca9ced116d5c79",
+      "gitBlob": "ef92d7281f85adaa971546ea1eae53f87ba38c0d"
+    },
+    {
+      "path": "Source/WTF/wtf/win/SignalsWin.cpp",
+      "sha256": "1b894227beb6dc3fcb22f3fcbf6367c7d19e6fb3b3c17fd60702a3389c5ff607",
+      "gitBlob": "28be55d82141ef78fed2f9f626ca7dc0ad309a05"
+    },
+    {
+      "path": "Source/WTF/wtf/win/SoftLinking.h",
+      "sha256": "9769fcab26c10301942803286b9432e4ec899ecf66fd471d1d31b9bd02c380fb",
+      "gitBlob": "dd4a64ce5bebbb75d4c0f9efaa2e645b157ff1f6"
+    },
+    {
+      "path": "Source/WTF/wtf/win/ThreadingWin.cpp",
+      "sha256": "ebe2d0bafcf9845284b4fce73d0cabb496a7b30106901565edbbca069da302fd",
+      "gitBlob": "e4a291276fb76cd3d9e454b9cb12aa1baa7044f3"
+    },
+    {
+      "path": "Source/WTF/wtf/win/WTFCRTDebug.cpp",
+      "sha256": "5a592fe7f6afa82e26445cb3468d88b0242ce11b76cb252821aa5ba8a5904354",
+      "gitBlob": "1188009224dcd932423d69b236d62fb94e37c98e"
+    },
+    {
+      "path": "Source/WTF/wtf/win/WTFCRTDebug.h",
+      "sha256": "ae2bcddf3c5318a3c3dab3a7e951543b4ea42387d250a25ace59fe82dfa15147",
+      "gitBlob": "998b75df7dacedcb138d7c75bc7245420300deae"
+    },
+    {
+      "path": "Source/WTF/wtf/win/Win32Handle.cpp",
+      "sha256": "2480c345af310a5a90e40a853edb5ee05c928b16197bb2e2e4e83fcea3dc9a77",
+      "gitBlob": "096a117d340433ac65f7a82e066b9296760e171b"
+    },
+    {
+      "path": "Source/WTF/wtf/win/Win32Handle.h",
+      "sha256": "27dce4238ceda8b96dc849c2eb66686ee8fc66047d0946b01b14bc66003d5eaf",
+      "gitBlob": "5783b01fba537bd3b7a450a539cdcba973c19965"
+    },
+    {
+      "path": "Source/WTF/wtf/text/win/StringWin.cpp",
+      "sha256": "3bf44470853eab411f3a48935ad1ba518512496768f1e3466d3d19643c358d9e",
+      "gitBlob": "b20231c1ad15f11b8f4d8c5fd1bbf423dd56947b"
+    },
+    {
+      "path": "Source/WTF/wtf/text/win/TextBreakIteratorInternalICUWin.cpp",
+      "sha256": "86edf008db99499d5647dabdb77b407794a2ffdaf20194efb607d133fbf44b04",
+      "gitBlob": "0ae3499782d961cb29f0421173a33b7ffb82feab"
+    },
+    {
+      "path": "Source/WTF/wtf/text/win/WCharStringExtras.h",
+      "sha256": "bff326bfe400a93b2e7260394cd31494200f13023d3ac01c82d803e1b996c212",
+      "gitBlob": "3412ae20246000ce52e9b64abc30834d5c81938f"
+    }
+  ]
+}

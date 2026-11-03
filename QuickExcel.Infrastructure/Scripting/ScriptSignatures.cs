@@ -42,7 +42,7 @@ public static class ScriptSignatures
             value = ec.SignData(Payload(modules, algorithm, certificate), HashAlgorithmName.SHA256, DSASignatureFormat.IeeeP1363FixedFieldConcatenation);
         }
         if (certificate.RawData.Length > 16 * 1024 || value.Length > 2048) throw new CryptographicException("证书或签名超过容量限制。");
-        return new(1, algorithm, encoded, Convert.ToBase64String(value));
+        return new(modules.HasTypeScript ? 2 : 1, algorithm, encoded, Convert.ToBase64String(value));
     }
 
     public static ScriptSignatureVerification Verify(ScriptModuleSet modules, IEnumerable<string>? trustedFingerprints = null) =>
@@ -54,7 +54,7 @@ public static class ScriptSignatures
         if (modules.Signature is not { } signature) return new(ScriptSignatureStatus.Unsigned, "脚本未签名；需要手动运行。");
         try
         {
-            if (signature.Version != 1 || signature.Algorithm is not (RsaAlgorithm or EcAlgorithm) ||
+            if (signature.Version != (modules.HasTypeScript ? 2 : 1) || signature.Algorithm is not (RsaAlgorithm or EcAlgorithm) ||
                 signature.Certificate is null || signature.Certificate.Length > 24 * 1024 || signature.Value is null || signature.Value.Length > 4096)
                 throw new CryptographicException("不支持的签名格式或签名超过容量限制。");
             var der = Convert.FromBase64String(signature.Certificate);
@@ -127,12 +127,13 @@ public static class ScriptSignatures
         using var buffer = new MemoryStream();
         using (var writer = new BinaryWriter(buffer, new UTF8Encoding(false, true), true))
         {
-            writer.Write("QuickExcel.ScriptSignature"); writer.Write(1); writer.Write(algorithm);
+            writer.Write("QuickExcel.ScriptSignature"); writer.Write(modules.HasTypeScript ? 2 : 1); writer.Write(algorithm);
             writer.Write(Convert.ToHexString(SHA256.HashData(certificate.RawData)));
             writer.Write(modules.ScriptApiVersion);
+            if (modules.HasTypeScript) writer.Write(ScriptModuleSet.TypeScriptOptions);
             writer.Write(modules.Modules.Count);
             foreach (var (id, module) in modules.Modules.OrderBy(m => m.Key, StringComparer.Ordinal))
-            { writer.Write(id); writer.Write(module.Path); writer.Write(module.Source); }
+            { writer.Write(id); writer.Write(module.Path); writer.Write(module.Source); if (modules.HasTypeScript) writer.Write(module.Language == ScriptLanguage.TypeScript ? "typescript" : "javascript"); }
             writer.Write(modules.EntryModules.Length);
             foreach (var entry in modules.EntryModules) writer.Write(entry);
             writer.Write(modules.Bindings.Length);

@@ -46,7 +46,7 @@ public sealed class M4BatchTests
             (9, 0, F("=NEXT()")), (10, 0, F("=IFERROR(NEXT(1/0),NEXT())")));
         var b = Sheet("B", (0, 0, F("=NEXT()")), (1, 0, F("=NEXT()")));
         var book = Book(a, b).WithScriptSource("let n=0; quickExcel.functions.register('NEXT',()=>++n); quickExcel.functions.register('BAD',()=>{n++;throw Error('bad');});");
-        var serial = new WorkbookCalculator(new QuickJsRuntimeFactory()).Calculate(Request(book));
+        var serial = new WorkbookCalculator(new JscRuntimeFactory()).Calculate(Request(book));
         var factory = new ObservedFactory();
         var batched = new WorkbookCalculator(factory).Calculate(Request(book));
         foreach (var (address, cell) in serial.Cells)
@@ -70,7 +70,7 @@ public sealed class M4BatchTests
             quickExcel.functions.register({name:'JS.WRONG',apiVersion:2,returns:'number'},()=>true);
             quickExcel.functions.register({name:'JS.LONG',apiVersion:2},()=>'x'.repeat(32768));
             """);
-        var serial = new WorkbookCalculator(new QuickJsRuntimeFactory()).Calculate(Request(book));
+        var serial = new WorkbookCalculator(new JscRuntimeFactory()).Calculate(Request(book));
         var batched = new WorkbookCalculator(new ScriptWorkerRuntimeFactory()).Calculate(Request(book));
         foreach (var (address, cell) in serial.Cells)
         {
@@ -135,8 +135,8 @@ public sealed class M4BatchTests
     [Fact]
     public void WorstCaseValidTextRepliesFitAndOversizedTextRemainsACellError()
     {
-        var sheet = Sheet("S", Enumerable.Range(0, 45).Select(i => (i, 0, F($"=TEXT({i})"))).ToArray());
-        var book = Book(sheet).WithScriptSource("quickExcel.functions.register('TEXT',n=>'中'.repeat(n===22?32768:32767));");
+        var sheet = Sheet("S", Enumerable.Range(0, 45).Select(i => (i, 0, F($"=PAYLOAD({i})"))).ToArray());
+        var book = Book(sheet).WithScriptSource("quickExcel.functions.register('PAYLOAD',n=>'中'.repeat(n===22?32768:32767));");
         var factory = new ObservedFactory();
         var result = new WorkbookCalculator(factory).Calculate(Request(book));
         Assert.Equal(1, factory.Runtime!.InvocationBatchCount);

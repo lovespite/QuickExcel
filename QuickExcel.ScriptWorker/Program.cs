@@ -5,13 +5,14 @@ using QuickExcel.ScriptContracts;
 using QuickExcel.Scripting;
 
 // stdout is exclusively a binary protocol pipe. No workbook data is written to stderr.
+if (args.SequenceEqual(["--compile"])) return await CompilerWorker.Run();
 if (args.Length != 0 || !Console.IsInputRedirected || !Console.IsOutputRedirected) return 2;
 // No request, source, or native JavaScript is accepted before the mandatory
 // Linux OS guard verifies launch restrictions and synchronizes the final filter.
 try { LinuxWorkerGuard.Enter(); } catch { return 125; }
 using var input = Console.OpenStandardInput();
 using var output = Console.OpenStandardOutput();
-QuickJsSession? runtime = null;
+JscSession? runtime = null;
 var actionsMode = false;
 var actionRan = false;
 RequestIdentity? round = null;
@@ -30,6 +31,7 @@ try
             if (request.Kind != "hello") throw new ProtocolException("Handshake required.");
             var hello = WorkerProtocol.Payload<WorkerHello>(request);
             if (hello.Engine != WorkerProtocol.Engine || hello.Policy != WorkerProtocol.Policy ||
+                hello.Role != "execute" || hello.Compiler is not null ||
                 !hello.ApiVersions.SequenceEqual([1, 2]) || hello.MaxFrameBytes != WorkerProtocol.MaxFrameBytes)
                 throw new ProtocolException("Incompatible engine, API or execution policy.");
             round = request.Identity;
@@ -41,13 +43,13 @@ try
             actionsMode = request.Kind == "loadActions";
             if (actionsMode != (request.Identity.CalculationGeneration is null)) throw new ProtocolException("Context identity disagrees with load kind.");
             string digest;
-            Func<QuickJsSession> create;
+            Func<JscSession> create;
             if (request.Kind is "loadModules" or "loadActions")
             {
                 var bundle = WorkerProtocol.Payload<LoadModules>(request);
                 bundle.Validate();
                 digest = bundle.Sha256;
-                create = () => new QuickJsSession(bundle.Modules.ToDictionary(m => m.Id, m => m.Source, StringComparer.Ordinal), bundle.EntryModules, actionsMode);
+                create = () => new JscSession(bundle.Modules.ToDictionary(m => m.Id, m => m.Source, StringComparer.Ordinal), bundle.EntryModules, actionsMode);
             }
             else
             {
@@ -56,7 +58,7 @@ try
                     Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(load.Source))) != load.Sha256)
                     throw new ProtocolException("Invalid source digest or source budget.");
                 digest = load.Sha256;
-                create = () => new QuickJsSession(load.Source);
+                create = () => new JscSession(load.Source);
             }
             try { runtime = create(); }
             catch (Exception error)
@@ -104,10 +106,10 @@ try
                             new WorkerFailure("Timeout", "脚本达到单次执行时间限制。")));
                         return 5;
                     }
-                    if (e.Message.Contains("out of memory", StringComparison.OrdinalIgnoreCase) || e.Message.Contains("call stack size", StringComparison.OrdinalIgnoreCase))
+                    if (runtime.LastOperationInvalidated)
                     {
                         await WorkerProtocol.WriteAsync(output, WorkerProtocol.Message(request.Identity, "failure",
-                            new WorkerFailure("ResourceLimit", "脚本超过引擎内存或栈限制。")));
+                            new WorkerFailure("Invalidated", "脚本运行时已失效，本轮结果未提交。")));
                         return 6;
                     }
                     results.Add(new(null, Bounded(e.Message)));

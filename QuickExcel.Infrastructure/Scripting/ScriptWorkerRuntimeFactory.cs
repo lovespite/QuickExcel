@@ -38,6 +38,14 @@ public sealed class ScriptWorkerRuntime : IScriptBatchRuntime
     private bool _stopped, _disposed;
     private readonly RequestIdentity _identity;
     private readonly bool _actionsMode;
+    private readonly Dictionary<string, LogicalSourceMap> _sourceMaps = new(StringComparer.Ordinal);
+    private string OriginalDiagnostic(string message) => System.Text.RegularExpressions.Regex.Replace(message,
+        @"(?<=\n at )([A-Za-z0-9_.-]{1,128}):([1-9][0-9]{0,8}):([1-9][0-9]{0,8})", match =>
+        {
+            if (!_sourceMaps.TryGetValue(match.Groups[1].Value, out var map)) return match.Value;
+            var position = map.OriginalPosition(int.Parse(match.Groups[2].Value), int.Parse(match.Groups[3].Value));
+            return position is { } p ? $"{match.Groups[1].Value}:{p.Line}:{p.Column}" : match.Value + " (生成 JS 位置)";
+        });
 
     private ScriptWorkerRuntime(ScriptRuntimeRequest request, bool actionsMode)
     {
@@ -69,7 +77,16 @@ public sealed class ScriptWorkerRuntime : IScriptBatchRuntime
         if (request.Modules.Modules.Sum(m => (long)Encoding.UTF8.GetByteCount(m.Value.Source)) > 1024 * 1024)
             throw new ScriptRuntimeFailureException("SourceLimit", "脚本源码超过 1 MiB UTF-8 限额。");
         if (actionsMode && !request.Modules.HasActions) throw new InvalidOperationException("没有 actions 绑定。");
+        var compiled = ScriptCompilation.PrepareAsync(request.Modules, request.Stamp, request.CancellationToken).GetAwaiter().GetResult();
+        var executableSources = compiled?.Result.Outputs.ToDictionary(o => o.Id, o => o.Javascript, StringComparer.Ordinal);
         var runtime = new ScriptWorkerRuntime(request, actionsMode);
+        if (compiled is not null)
+            foreach (var item in compiled.Result.Outputs)
+            {
+                using var map = System.Text.Json.JsonDocument.Parse(item.SourceMap);
+                runtime._sourceMaps.Add(item.Id, new LogicalSourceMap(map.RootElement.GetProperty("mappings").GetString()!,
+                    request.Modules.Modules[item.Id].Source, map.RootElement.GetProperty("names").GetArrayLength()));
+            }
         try
         {
             runtime._identity.Validate();
@@ -81,6 +98,7 @@ public sealed class ScriptWorkerRuntime : IScriptBatchRuntime
             var hello = new WorkerHello(WorkerProtocol.Engine, WorkerProtocol.Policy, [1, 2], WorkerProtocol.MaxFrameBytes);
             var accepted = runtime.Exchange<WorkerHello, WorkerHello>("hello", hello);
             if (accepted.Engine != hello.Engine || accepted.Policy != hello.Policy ||
+                accepted.Role != "execute" || accepted.Compiler is not null ||
                 !accepted.ApiVersions.SequenceEqual(hello.ApiVersions) || accepted.MaxFrameBytes != hello.MaxFrameBytes)
                 throw new ProtocolException("Worker handshake is incompatible.");
             if (OperatingSystem.IsLinux() && runtime._process is LinuxWorkerProcess linux) linux.VerifyBeforeSource();
@@ -88,7 +106,9 @@ public sealed class ScriptWorkerRuntime : IScriptBatchRuntime
             LoadedScript loaded;
             if (request.Modules.ScriptApiVersion == 2)
             {
-                var bundle = new LoadModules(request.Modules.Modules.Select(m => new ModuleSource(m.Key, m.Value.Path, m.Value.Source)).ToArray(),
+                var bundle = new LoadModules(request.Modules.Modules.Select(m => new ModuleSource(m.Key, m.Value.Path,
+                    executableSources is null ? m.Value.Source : executableSources[m.Key]
+                    )).ToArray(),
                     request.Modules.EntriesFor(actionsMode ? "actions" : "formula-functions").ToArray(), "");
                 digest = bundle.ComputeDigest();
                 if (actionsMode)
@@ -206,7 +226,7 @@ public sealed class ScriptWorkerRuntime : IScriptBatchRuntime
             }
             InvocationBatchCount++;
             InvocationCount += calls.Count;
-            return Array.AsReadOnly(result.Results);
+            return Array.AsReadOnly(result.Results.Select(item => item.Error is null ? item : item with { Error = OriginalDiagnostic(item.Error) }).ToArray());
         }
         catch (ProtocolException e) { Abort(); throw new ScriptRuntimeFailureException("Protocol", "脚本 worker 返回无效结果，本轮未提交。", e); }
     }
@@ -245,11 +265,13 @@ public sealed class ScriptWorkerRuntime : IScriptBatchRuntime
             if (reply.Kind == "failure")
             {
                 var error = WorkerProtocol.Payload<WorkerFailure>(reply);
-                if (error.Code is not ("Load" or "Timeout" or "ResourceLimit" or "Action") || Encoding.UTF8.GetByteCount(error.Message) > 4000)
+                if (error.Code is not ("Load" or "Timeout" or "ResourceLimit" or "Action"
+                    or "Invalidated"
+                    ) || Encoding.UTF8.GetByteCount(error.Message) > 4000)
                     throw new ProtocolException("Invalid worker failure.");
                 Abort();
                 if (error.Code == "Timeout") throw new TimeoutException("脚本达到时间限制，本轮结果未提交。");
-                throw new ScriptRuntimeFailureException(error.Code, error.Message.Length <= 4000 ? error.Message : "脚本 worker 执行失败。");
+                throw new ScriptRuntimeFailureException(error.Code, OriginalDiagnostic(error.Message.Length <= 4000 ? error.Message : "脚本 worker 执行失败。"));
             }
             return WorkerProtocol.Payload<TReply>(reply);
         }

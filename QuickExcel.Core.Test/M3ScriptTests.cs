@@ -18,7 +18,7 @@ public sealed class M3ScriptTests
             """;
         var data = Sheet("Data", (0, 0, N(2)), (0, 1, T("")), (1, 1, new(CellContent.FromLiteral(CellValue.FromBoolean(true)))));
         var output = Sheet("S", (0, 0, F("=JS.SHAPE(Data!A1:B2)")));
-        var result = new WorkbookCalculator(new QuickJsRuntimeFactory()).Calculate(Request(Book(output, data).WithScriptSource(source), true));
+        var result = new WorkbookCalculator(new JscRuntimeFactory()).Calculate(Request(Book(output, data).WithScriptSource(source), true));
         Assert.Equal(CellValue.FromText("2|2|2|true|true|true|true"), C(result, output).Value);
     }
 
@@ -30,7 +30,7 @@ public sealed class M3ScriptTests
             """;
         var data = Sheet("Data", (0, 0, N(2)), (1, 1, T("end")));
         var output = Sheet("S", (0, 0, F("=CHECK(Data!A1:B2,Data!C1)")));
-        var result = new WorkbookCalculator(new QuickJsRuntimeFactory()).Calculate(Request(Book(data, output).WithScriptSource(source), true));
+        var result = new WorkbookCalculator(new JscRuntimeFactory()).Calculate(Request(Book(data, output).WithScriptSource(source), true));
         Assert.Equal(CellValue.FromBoolean(true), C(result, output).Value);
     }
 
@@ -42,7 +42,7 @@ public sealed class M3ScriptTests
         var second = Sheet("B", (0, 0, F("=NEXT()+A!A1")), (0, 1, F("=42")));
         using var session = new DocumentSession(Book(first, second).WithScriptSource(source));
         session.SetScriptsEnabled(true);
-        var calculator = new WorkbookCalculator(new QuickJsRuntimeFactory());
+        var calculator = new WorkbookCalculator(new JscRuntimeFactory());
         for (var i = 0; i < 3; i++)
         {
             var result = calculator.Calculate(session.BeginCalculation());
@@ -64,7 +64,7 @@ public sealed class M3ScriptTests
     {
         var sheet = Sheet("S", (0, 0, F("=SUM(1)", 3)));
         var book = Book(sheet).WithScriptSource("quickExcel.functions.register('SUM',()=>99)");
-        Assert.Throws<InvalidOperationException>(() => new WorkbookCalculator(new QuickJsRuntimeFactory()).Calculate(Request(book, true)));
+        Assert.Throws<InvalidOperationException>(() => new WorkbookCalculator(new JscRuntimeFactory()).Calculate(Request(book, true)));
         Assert.Equal(CellValue.FromNumber(3), sheet.GetCell(0, 0)!.Value);
     }
 
@@ -74,7 +74,7 @@ public sealed class M3ScriptTests
     [InlineData("quickExcel.functions.register('F',()=>1);quickExcel.functions.register('f',()=>2);")]
     public void InvalidDescriptorOrDuplicateRegistrationFailsLoading(string source)
     {
-        Assert.Throws<InvalidOperationException>(() => new QuickJsSession(source));
+        Assert.Throws<InvalidOperationException>(() => new JscSession(source));
     }
 
     [Fact]
@@ -83,7 +83,7 @@ public sealed class M3ScriptTests
         var source = "quickExcel.functions.register('FAIL', () => {throw new Error('failed');});";
         var sheet = Sheet("S", (0, 0, F("=IF(FALSE,FAIL(),7)")), (1, 0, F("=IFERROR(FAIL(),8)")),
             (2, 0, F("=FAIL()")), (3, 0, F("=A3+1")), (4, 0, F("=IFERROR(\"#SCRIPT!\",FAIL())")));
-        var result = new WorkbookCalculator(new QuickJsRuntimeFactory()).Calculate(Request(Book(sheet).WithScriptSource(source), true));
+        var result = new WorkbookCalculator(new JscRuntimeFactory()).Calculate(Request(Book(sheet).WithScriptSource(source), true));
         Assert.Equal(CellValue.FromNumber(7), C(result, sheet).Value);
         Assert.Equal(CellValue.FromNumber(8), C(result, sheet, 1).Value);
         Assert.Equal(CellValue.FromError(CellErrorCode.Script), C(result, sheet, 2).Value);
@@ -98,7 +98,7 @@ public sealed class M3ScriptTests
             quickExcel.functions.register({name:"JS.NUM", apiVersion:2, parameters:[{name:"n",type:"number"}], returns:"number"}, n=>n);
             """;
         var sheet = Sheet("S", (0, 0, F("=JS.NUM(#DIV/0!)")), (1, 0, F("=JS.NUM(\"00123\")")), (2, 0, F("=JS.NUM(4)")));
-        var result = new WorkbookCalculator(new QuickJsRuntimeFactory()).Calculate(Request(Book(sheet).WithScriptSource(source), true));
+        var result = new WorkbookCalculator(new JscRuntimeFactory()).Calculate(Request(Book(sheet).WithScriptSource(source), true));
         Assert.Equal(CellValue.FromError(CellErrorCode.DivisionByZero), C(result, sheet).Value);
         Assert.Equal(CellValue.FromError(CellErrorCode.Script), C(result, sheet, 1).Value);
         Assert.Equal(CellValue.FromNumber(4), C(result, sheet, 2).Value);

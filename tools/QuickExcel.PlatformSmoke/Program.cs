@@ -6,6 +6,8 @@ using QuickExcel.Domain;
 using QuickExcel.Calculation;
 using QuickExcel.Storage;
 
+if(args.Length==2 && args[0]=="--performance")return await JscPerformance.Run(args[1]);
+
 if(args.Length==2 && args[0] is "--trust" or "--trust-unavailable")return TrustChecks.Run(args[1],args[0]=="--trust-unavailable");
 if(args.Length==2 && args[0]=="--cups")return await CupsChecks.Run(args[1]);
 
@@ -16,8 +18,8 @@ if(args.Length==2 && args[0]=="--recover" && OperatingSystem.IsLinux())
     return 0;
 }
 
-if(args.Length==2 && args[0] is "--sandbox" or "--hold" && OperatingSystem.IsLinux())
-    return await LinuxSandboxChecks.Run(args[1],args[0]=="--hold");
+if(args.Length==2 && args[0] is "--sandbox" or "--hold" or "--hold-compile" && OperatingSystem.IsLinux())
+    return await LinuxSandboxChecks.Run(args[1],args[0]!="--sandbox",args[0]=="--hold-compile");
 
 if (args.Length == 2 && args[0] == "--bootstrap" && OperatingSystem.IsLinux())
 {
@@ -81,14 +83,27 @@ try
         document.DisableScripts(); if(!document.Redo() || document.ScriptsEnabled)throw new Exception("Redo renewed script authorization.");
     }
     checks.Add("Frozen action snapshot, validated single transaction, undo and data-only redo");
-    foreach(var source in new[]{"while(true){}","const a=new ArrayBuffer(80*1024*1024);"})
+    foreach(var source in new[]{"while(true){}",
+        "const a=new Uint8Array(300*1024*1024);a.fill(7);"
+        })
     {
         var failed=false;
         try { using var invalid=new ScriptWorkerRuntimeFactory().Create(source); }
         catch(Exception ex) when(ex is ScriptRuntimeFailureException or TimeoutException){failed=true;}
         if(!failed)throw new Exception("Native source limit was not enforced.");
     }
-    checks.Add("Native one-second interrupt and 64 MiB engine allocation limit");
+    checks.Add("Native one-second interrupt and mandatory process memory ceiling; JSC-MEM-001 engine cap remains open");
+    var typescript = new ScriptModuleSet(new Dictionary<string, ScriptModule>
+    {
+        ["main"] = new("scripts/main.ts", "import {twice} from 'math'; quickExcel.functions.register('DOUBLE',()=>twice(21));", ScriptLanguage.TypeScript),
+        ["math"] = new("scripts/math.ts", "export const twice=(n:number):number=>n*2;", ScriptLanguage.TypeScript)
+    }, ["main"], scriptApiVersion: 2);
+    using (var runtime = new ScriptWorkerRuntimeFactory().Create(new ScriptRuntimeRequest(typescript, new(Guid.NewGuid(),1,1,1),TimeSpan.FromSeconds(5),default)))
+        if (!Equals(runtime.Invoke("DOUBLE", []), 42d)) throw new Exception("Isolated TypeScript output mismatch.");
+    checks.Add("Independent isolated TypeScript role checks declared module types and executes verified ESM");
+    var badTypescript=typescript.WithPrimarySource("export const n:number='wrong';");
+    try { using var bad = new ScriptWorkerRuntimeFactory().Create(new ScriptRuntimeRequest(badTypescript,new(Guid.NewGuid(),1,1,1),TimeSpan.FromSeconds(5),default)); throw new Exception("Invalid TS was accepted."); }
+    catch (ScriptCompilationException) { checks.Add("TypeScript errors produce no executable artifacts"); }
     using(var runtime=new ScriptWorkerRuntimeFactory().Create("quickExcel.functions.register('IDENTITY', x=>x);"))
         if(!Equals(runtime.Invoke("IDENTITY",["中文 🧮"]),"中文 🧮"))throw new Exception("Recovery/UTF-8 mismatch.");
     checks.Add("Fresh round remains usable after failed workers");

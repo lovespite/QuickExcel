@@ -1,0 +1,37 @@
+{
+  "status": "jsc-production-pins",
+  "webkit": {
+    "version": "2.54.2",
+    "tag": "webkitgtk-2.54.2",
+    "commit": "b95c91b1c0ee43cc86d25ff7af73038f67a88e04",
+    "url": "https://webkitgtk.org/releases/webkitgtk-2.54.2.tar.xz",
+    "sha256": "a76345b391bef6211fb5ab6cfab2e86b285d18cda17cbb9ade595f1252b86065",
+    "checksums": "https://webkitgtk.org/releases/webkitgtk-2.54.2.tar.xz.sums"
+  },
+  "icu": {
+    "version": "77.1",
+    "url": "https://github.com/unicode-org/icu/releases/download/release-77-1/icu4c-77_1-src.zip",
+    "sha256": "d5cf533cf70cd49044d89eda3e74880328eb9426e6fd2b3cc8f9a963d2ad480e"
+  },
+  "ruby": {
+    "version": "4.0.9-1",
+    "url": "https://github.com/oneclick/rubyinstaller2/releases/download/RubyInstaller-4.0.9-1/rubyinstaller-4.0.9-1-x64.7z",
+    "sha256": "1dc0715916251a13c4f6a550a3da1f2c726bff869371fd573a65234c008f47b4"
+  },
+  "ruby_source": {
+    "version": "4.0.9",
+    "url": "https://cache.ruby-lang.org/pub/ruby/4.0/ruby-4.0.9.tar.gz",
+    "sha256": "c35350682ff050b79702d57ade4516e7336063f510155d19fb2fb5b3f3909511",
+    "checksums": "https://www.ruby-lang.org/en/news/2026/10/23/ruby-4-0-9-released/"
+  },
+  "llvm": {
+    "version": "20.1.8",
+    "url": "https://github.com/llvm/llvm-project/releases/download/llvmorg-20.1.8/LLVM-20.1.8-win64.exe",
+    "sha256": "3197846a2b19063687dd56e93e34cd941e3548d907f23a6131571321bdf9fe7b"
+  },
+  "typescript": {
+    "version": "5.9.3",
+    "url": "https://registry.npmjs.org/typescript/-/typescript-5.9.3.tgz",
+    "sha512": "8e5d6f6733c38a72ebf5e52ddc9feded5e8580d130f508ef04f772b33f4a7d00c3e357d0ac2d98e2f290762694a454f86d795bd511e12e9a7cc2d9ba3394e04b"
+  }
+}

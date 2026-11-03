@@ -4,10 +4,11 @@ using System.Text.Json;
 
 namespace QuickExcel.Scripting;
 
-/// <summary>A serialized, memory-limited QuickJS session for workbook functions.</summary>
-public sealed partial class QuickJsSession : IDisposable
+/// <summary>A serialized JSC context. Production callers must run in the isolated worker.</summary>
+public sealed partial class JscSession : IDisposable
 {
-    private const string NativeLibrary = "quickexcel-js";
+    private const string NativeLibrary = "JavaScriptCore";
+    public const string EngineIdentity = "JavaScriptCore/2.54.2/b95c91b1/qx-sync-1";
     public const int MaxMessageBytes = 16 * 1024 * 1024;
     private readonly object _gate = new();
     private IntPtr _session;
@@ -239,12 +240,24 @@ public sealed partial class QuickJsSession : IDisposable
         get { lock (_gate) { ObjectDisposedException.ThrowIf(_session == IntPtr.Zero, this); return NativeWasInterrupted(_session) != 0; } }
     }
 
-    public QuickJsSession(string source) : this(source, null, null, false) { }
+    public bool LastOperationInvalidated
+    {
+        get
+        {
+            lock (_gate)
+            {
+                ObjectDisposedException.ThrowIf(_session == IntPtr.Zero, this);
+                return NativeIsUsable(_session) == 0;
+            }
+        }
+    }
 
-    public QuickJsSession(IReadOnlyDictionary<string, string> modules, IReadOnlyList<string> entries, bool actions = false)
+    public JscSession(string source) : this(source, null, null, false) { }
+
+    public JscSession(IReadOnlyDictionary<string, string> modules, IReadOnlyList<string> entries, bool actions = false)
         : this(null, modules, entries, actions) { }
 
-    private QuickJsSession(string? source, IReadOnlyDictionary<string, string>? modules, IReadOnlyList<string>? entries, bool actions)
+    private JscSession(string? source, IReadOnlyDictionary<string, string>? modules, IReadOnlyList<string>? entries, bool actions)
     {
         if (modules is null) ArgumentNullException.ThrowIfNull(source);
         else
@@ -256,8 +269,10 @@ public sealed partial class QuickJsSession : IDisposable
                 modules.Sum(m => (long)Encoding.UTF8.GetByteCount(m.Value)) > 1024 * 1024)
                 throw new ArgumentException("Invalid package module mapping or source budget.");
         }
-        if (!Environment.Is64BitProcess || !(OperatingSystem.IsWindows() || OperatingSystem.IsLinux() || OperatingSystem.IsMacOS()))
-            throw new PlatformNotSupportedException("QuickExcel requires a supported 64-bit native QuickJS runtime.");
+        if (!Environment.Is64BitProcess || !(OperatingSystem.IsWindows() || OperatingSystem.IsLinux()))
+            throw new PlatformNotSupportedException("QuickExcel scripting requires Windows x64 or qualified Linux x64 isolation.");
+        if (Marshal.PtrToStringUTF8(NativeEngineIdentity()) != EngineIdentity)
+            throw new InvalidOperationException("Native JSC build identity does not match this worker.");
         _session = NativeCreate(Bootstrap, out var error);
         if (_session == IntPtr.Zero) throw ReadException(error);
         try
@@ -336,7 +351,7 @@ public sealed partial class QuickJsSession : IDisposable
 
     private static InvalidOperationException ReadException(IntPtr error)
     {
-        try { return new InvalidOperationException(Marshal.PtrToStringUTF8(error) ?? "QuickJS execution failed."); }
+        try { return new InvalidOperationException(Marshal.PtrToStringUTF8(error) ?? "JavaScript execution failed."); }
         finally { if (error != IntPtr.Zero) NativeFreeString(error); }
     }
 
@@ -351,7 +366,7 @@ public sealed partial class QuickJsSession : IDisposable
         GC.SuppressFinalize(this);
     }
 
-    ~QuickJsSession() => Dispose();
+    ~JscSession() => Dispose();
 
     [DllImport(NativeLibrary, EntryPoint = "qx_create", CallingConvention = CallingConvention.Cdecl)]
     private static extern IntPtr NativeCreate([MarshalAs(UnmanagedType.LPUTF8Str)] string bootstrap, out IntPtr error);
@@ -365,4 +380,8 @@ public sealed partial class QuickJsSession : IDisposable
     private static extern void NativeFreeString(IntPtr text);
     [DllImport(NativeLibrary, EntryPoint = "qx_was_interrupted", CallingConvention = CallingConvention.Cdecl)]
     private static extern int NativeWasInterrupted(IntPtr session);
+    [DllImport(NativeLibrary, EntryPoint = "qx_is_usable", CallingConvention = CallingConvention.Cdecl)]
+    private static extern int NativeIsUsable(IntPtr session);
+    [DllImport(NativeLibrary, EntryPoint = "qx_engine_identity", CallingConvention = CallingConvention.Cdecl)]
+    private static extern IntPtr NativeEngineIdentity();
 }

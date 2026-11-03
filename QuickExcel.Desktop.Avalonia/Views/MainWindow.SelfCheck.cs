@@ -34,6 +34,10 @@ public sealed partial class MainWindow
             {
                 using var runtime = await Task.Run(() => new ScriptWorkerRuntimeFactory().Create("quickExcel.functions.register('INSTALLCHECK', value => value + 1);"));
                 Check(Convert.ToDouble(await Task.Run(() => runtime.Invoke("INSTALLCHECK", [41d]))) == 42, "Published native bridge in platform-isolated worker");
+                var modules = new ScriptModuleSet(new Dictionary<string, ScriptModule>
+                { ["main"] = new("scripts/main.ts", "const value:number=42; quickExcel.functions.register('TSCHECK',()=>value);", ScriptLanguage.TypeScript) }, ["main"], scriptApiVersion: 2);
+                using var compiled = await Task.Run(() => new ScriptWorkerRuntimeFactory().Create(new ScriptRuntimeRequest(modules, new(Guid.NewGuid(), 0, 0, 0), TimeSpan.FromSeconds(5), default)));
+                Check(Convert.ToDouble(await Task.Run(() => compiled.Invoke("TSCHECK", []))) == 42, "Published isolated TypeScript compiler and verified emitted ESM");
             }
             await OpenPrintPreviewAsync(); Check(_pdfPage!.Browser.IsReady && _printSession!.Job.Layout.Pages.Length > 0, "Production PDF.js worker and complete print-session PDF");
             await _printSession!.ExportAsync(Path.Combine(directory, "installation.pdf"));

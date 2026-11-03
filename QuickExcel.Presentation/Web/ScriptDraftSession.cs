@@ -5,7 +5,7 @@ using QuickExcel.Domain;
 namespace QuickExcel.Presentation.Web;
 
 public sealed record DraftChunk(string Module, long BaseVersion, long Version, string Transfer, int Index, int Count, int TotalBytes, string Sha256, string Data);
-public sealed record ScriptDraft(string Path, string Committed, string Text, long Version = 1, long ObservedVersion = 1);
+public sealed record ScriptDraft(string Path, string Committed, string Text, long Version = 1, long ObservedVersion = 1, ScriptLanguage Language = ScriptLanguage.JavaScript);
 
 /// <summary>Confirmed editor drafts survive a page failure. Only a matching flush barrier permits a document command.</summary>
 public sealed class ScriptDraftSession
@@ -32,7 +32,7 @@ public sealed class ScriptDraftSession
     public ScriptDraftSession(ScriptModuleSet modules, bool readOnly = false, TimeProvider? clock = null)
     {
         IsReadOnly = readOnly; _clock = clock ?? TimeProvider.System;
-        _models = modules.Modules.ToDictionary(p => p.Key, p => new ScriptDraft(p.Value.Path, p.Value.Source, p.Value.Source), StringComparer.Ordinal);
+        _models = modules.Modules.ToDictionary(p => p.Key, p => new ScriptDraft(p.Value.Path, p.Value.Source, p.Value.Source, Language: p.Value.Language), StringComparer.Ordinal);
         if (_models.Values.Sum(m => (long)Utf8.GetByteCount(m.Text)) > MaximumSourceBytes) throw new InvalidDataException("脚本总量不能超过 1 MiB。");
     }
     private ScriptDraft Require(string module)
@@ -91,9 +91,10 @@ public sealed class ScriptDraftSession
     public ScriptModuleSet BuildModules(ScriptModuleSet current)
     {
         if (Failed || HasPending || !_flushConfirmed) throw new InvalidOperationException("草稿尚未完成版本确认。");
-        if (current.Modules.Count != _models.Count || current.Modules.Any(p => !_models.TryGetValue(p.Key, out var m) || m.Path != p.Value.Path || m.Committed != p.Value.Source))
+        if (current.Modules.Count != _models.Count || current.Modules.Any(p => !_models.TryGetValue(p.Key, out var m) || m.Path != p.Value.Path || m.Language != p.Value.Language || m.Committed != p.Value.Source))
             throw new InvalidOperationException("模块在同步期间已改变，请重新加载已确认草稿后重试。");
         _flushConfirmed = false;
+        if (current.Modules.All(p => p.Value.Source == _models[p.Key].Text)) return current;
         return new(current.Modules.Select(p => KeyValuePair.Create(p.Key, p.Value with { Source = _models[p.Key].Text })), current.EntryModules,
             current.Revision, current.BindingRevision, current.ScriptApiVersion, current.Bindings, current.Signature);
     }

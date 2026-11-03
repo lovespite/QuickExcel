@@ -3,7 +3,8 @@ using System.Text;
 
 namespace QuickExcel.Domain;
 
-public sealed record ScriptModule(string Path, string Source);
+public enum ScriptLanguage { JavaScript, TypeScript }
+public sealed record ScriptModule(string Path, string Source, ScriptLanguage Language = ScriptLanguage.JavaScript);
 public sealed record ScriptBinding(string Module, string Kind);
 // Public certificate and signature only; private keys and trust decisions never enter a workbook.
 public sealed record ScriptSignature(int Version, string Algorithm, string Certificate, string Value);
@@ -11,6 +12,7 @@ public sealed record ScriptSignature(int Version, string Algorithm, string Certi
 /// <summary>Source metadata only. It never carries execution authorization.</summary>
 public sealed class ScriptModuleSet
 {
+    public const string TypeScriptOptions = "ts5.9.3-es2022-esnext-strict-isolated-verbatim-define-v1";
     public ScriptModuleSet(IEnumerable<KeyValuePair<string, ScriptModule>> modules, IEnumerable<string> entryModules,
         long revision = 0, long bindingRevision = 0, int scriptApiVersion = 1, IEnumerable<ScriptBinding>? bindings = null,
         ScriptSignature? signature = null)
@@ -33,7 +35,8 @@ public sealed class ScriptModuleSet
         foreach (var (id, module) in Modules)
         {
             if (string.IsNullOrEmpty(id) || id.Length > 128 || id is "." or ".." || id.Any(c => !char.IsAsciiLetterOrDigit(c) && c is not ('_' or '-' or '.')) ||
-                module is null || module.Source is null || module.Path is null || module.Path.Length > 512 || module.Path.Any(char.IsControl) || !module.Path.StartsWith("scripts/", StringComparison.Ordinal) ||
+                module is null || !Enum.IsDefined(module.Language) || module.Language == ScriptLanguage.TypeScript && scriptApiVersion != 2 ||
+                module.Source is null || module.Path is null || module.Path.Length > 512 || module.Path.Any(char.IsControl) || !module.Path.StartsWith("scripts/", StringComparison.Ordinal) ||
                 module.Path.Split('/').Any(s => s.Length == 0 || s is "." or "..") ||
                 module.Path.IndexOfAny(['\\', ':', '%', '?', '#']) >= 0 || !paths.Add(module.Path))
                 throw new ArgumentException("Invalid script module identity or path.");
@@ -53,6 +56,7 @@ public sealed class ScriptModuleSet
     public ScriptModuleSet WithSignature(ScriptSignature? signature) => Signature == signature ? this : new(
         Modules, EntryModules, Revision, BindingRevision, ScriptApiVersion, Bindings, signature);
     public bool HasActions => Bindings.Any(b => b.Kind == "actions");
+    public bool HasTypeScript => Modules.Values.Any(m => m.Language == ScriptLanguage.TypeScript);
     public ImmutableArray<string> EntriesFor(string kind) => EntryModules.Where(id => Bindings.Any(b => b.Module == id && b.Kind == kind)).ToImmutableArray();
     public string PrimarySource => Modules[EntryModules[0]].Source;
     public bool CanExecuteLegacy => ScriptApiVersion == 1 && Modules.Count == 1 && EntryModules.Length == 1;

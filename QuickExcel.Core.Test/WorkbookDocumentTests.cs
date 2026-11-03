@@ -18,7 +18,7 @@ public sealed class WorkbookDocumentTests : IDisposable
 
     public WorkbookDocumentTests() => Directory.CreateDirectory(_folder);
     private string FilePath(string name) => Path.Combine(_folder, name);
-    private static WorkbookServices Services() => new(new TypedWorkbookStorage(), new WorkbookCalculator(new QuickJsRuntimeFactory()));
+    private static WorkbookServices Services() => new(new TypedWorkbookStorage(), new WorkbookCalculator(new JscRuntimeFactory()));
 
     [Fact]
     public void BlankDocumentSupportsLiteralsAndFormulaEditing()

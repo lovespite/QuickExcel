@@ -38,7 +38,8 @@ public sealed partial class TypedWorkbookStorage
         // Metadata and script sources are interpreted by the same strict importer used for opening files.
         var scriptMap = manifest["scripts"]!["modules"]!.AsObject();
         var modules = new ScriptModuleSet(scriptMap.Select(p => new KeyValuePair<string, ScriptModule>(p.Key,
-            new(p.Value!["path"]!.GetValue<string>(), Utf8.GetString(Required(parts, p.Value["path"]!.GetValue<string>(), 1024 * 1024))))),
+            new(p.Value!["path"]!.GetValue<string>(), Utf8.GetString(Required(parts, p.Value["path"]!.GetValue<string>(), 1024 * 1024)),
+                p.Value["language"] is { } language ? ReadScriptLanguage(language.GetValue<string>()) : ScriptLanguage.JavaScript))),
             manifest["scripts"]!["entryModules"]!.AsArray().Select(n => n!.GetValue<string>()),
             snapshot.ScriptModules.Revision, snapshot.ScriptModules.BindingRevision, manifest["scriptApiVersion"]!.GetValue<int>(),
             state["scriptBindings"]!.AsArray().Select(n => new ScriptBinding(n!["module"]!.GetValue<string>(), n["kind"]!.GetValue<string>())));

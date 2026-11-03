@@ -1,9 +1,18 @@
-# QuickJS runtime provenance
+# Native runtime provenance
 
-QuickExcel embeds **QuickJS-NG 0.17.0**, a maintained fork of Fabrice Bellard and
+Current production engine: fixed JavaScriptCore / ICU / TypeScript, built with
+`jsc/build.ps1` or `jsc/build-linux.sh`. Sources, hashes, licenses, resource
+contracts and reproduction are in [jsc/SOURCES.md](jsc/SOURCES.md).
+QuickJS production bridge and build targets were removed in J6. Rollback uses
+a retained complete package. The following provenance is historical, including
+retired commands; the original MIT notice remains in this repository.
+
+## Historical QuickJS runtime provenance
+
+The preceding QuickExcel package embedded **QuickJS-NG 0.17.0**, a maintained fork of Fabrice Bellard and
 Charlie Gordon's QuickJS JavaScript engine. It does not use V8 or a managed JS
 interpreter. The source is MIT licensed; the complete upstream license is in
-`QUICKJS-LICENSE.txt` and is copied with the application.
+`QUICKJS-LICENSE.txt` and remains in historical packages.
 
 - Upstream: https://github.com/quickjs-ng/quickjs
 - Pinned release: https://github.com/quickjs-ng/quickjs/releases/tag/v0.17.0

@@ -1,6 +1,6 @@
 namespace QuickExcel.Scripting;
 
-public sealed partial class QuickJsSession
+public sealed partial class JscSession
 {
     private const string VirtualFileBootstrap = """
         function createFs(input, checkActive, reject) {

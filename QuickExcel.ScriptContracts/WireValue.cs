@@ -63,7 +63,7 @@ public sealed record WireValue(string Kind, JsonElement Value)
         return Kind switch
         {
             "blank" => null, "text" => Value.GetString(), "number" => Value.GetDouble(), "boolean" => Value.GetBoolean(),
-            // JsonElement preserves the exact existing v1 array / v2 range bridge shape in QuickJsSession.
+            // JsonElement preserves the exact existing v1 array / v2 range bridge shape in JscSession.
             _ => Value
         };
     }

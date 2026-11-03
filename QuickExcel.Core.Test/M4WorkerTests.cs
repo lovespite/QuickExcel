@@ -44,7 +44,7 @@ public sealed class M4WorkerTests
         var output = Sheet("Out", (0, 0, F("=FLAT(Data!A1:B2)")), (1, 0, F("=JS.SHAPE(Data!A1:B2)")),
             (2, 0, F("=IF(FALSE,FAIL(),7)")), (3, 0, F("=IFERROR(FAIL(),8)")), (4, 0, F("=FAIL()")), (5, 0, F("=\"#SCRIPT!\"")));
         var request = Request(Book(data, output).WithScriptSource(source), true);
-        var native = new WorkbookCalculator(new QuickJsRuntimeFactory()).Calculate(request);
+        var native = new WorkbookCalculator(new JscRuntimeFactory()).Calculate(request);
         var worker = new WorkbookCalculator(new ScriptWorkerRuntimeFactory()).Calculate(request);
         Assert.Equal(native.Cells.OrderBy(p => p.Key.Row).Select(p => p.Value.Value), worker.Cells.OrderBy(p => p.Key.Row).Select(p => p.Value.Value));
         Assert.Equal(CellValue.FromText("2|2|true|true|true"), C(worker, output, 1).Value);
@@ -146,18 +146,8 @@ public sealed class M4WorkerTests
         AssertExited(runtime.ProcessId);
     }
 
-    [Theory]
-    [InlineData("throw {toString(){while(true){}}};", true)]
-    [InlineData("return new ArrayBuffer(80*1024*1024);", false)]
-    [InlineData("function f(){return f()} return f();", false)]
-    public void ExceptionFormattingMemoryAndStackLimitsDiscardRuntime(string body, bool timeout)
-    {
-        using var runtime = Create("quickExcel.functions.register('BAD',()=>{" + body + "});");
-        var error = Record.Exception(() => runtime.Invoke("BAD", []));
-        if (timeout) Assert.IsType<TimeoutException>(error);
-        else Assert.IsType<ScriptRuntimeFailureException>(error);
-        AssertExited(runtime.ProcessId);
-    }
+    // JSC deliberately does not invoke exception accessors; its corresponding
+    // tests also distinguish proper tail calls from actual stack growth.
 
     [Fact]
     public async Task HostDeadlineKillsIdleWorkerWithoutAnotherInvocation()

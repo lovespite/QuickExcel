@@ -12,6 +12,7 @@ internal sealed class LinuxWorkerProcess : IWorkerProcess
 {
     private LinuxWorkerLease? _lease;
     private Process? _process;
+    private bool _compilation;
     public Stream Input => _process!.StandardInput.BaseStream;
     public Stream Output => _process!.StandardOutput.BaseStream;
     public Stream Error => _process!.StandardError.BaseStream;
@@ -22,10 +23,10 @@ internal sealed class LinuxWorkerProcess : IWorkerProcess
     internal int ExitCode => _process!.ExitCode;
     [DllImport("libc")] private static extern uint geteuid();
 
-    internal static LinuxWorkerProcess Start(string executable, CancellationToken cancellation)
+    internal static LinuxWorkerProcess Start(string executable, CancellationToken cancellation, bool compilation = false)
     {
         if (geteuid() == 0) throw new PlatformNotSupportedException("Linux worker 必须在普通用户会话中运行。");
-        var child = new LinuxWorkerProcess();
+        var child = new LinuxWorkerProcess { _compilation = compilation };
         try
         {
             cancellation.ThrowIfCancellationRequested();
@@ -34,6 +35,7 @@ internal sealed class LinuxWorkerProcess : IWorkerProcess
             { UseShellExecute = false, RedirectStandardInput = true, RedirectStandardOutput = true, RedirectStandardError = true, WorkingDirectory = child.PayloadDirectory };
             start.Environment.Clear();
             start.ArgumentList.Add(child.PayloadDirectory); start.ArgumentList.Add(Environment.ProcessId.ToString(CultureInfo.InvariantCulture));
+            if (compilation) start.ArgumentList.Add("compile");
             child._process = Process.Start(start) ?? throw new IOException("Cannot start Linux sandbox launcher.");
             child._lease.Attach(child._process);
             using var registration = cancellation.Register(child.Kill);
@@ -52,8 +54,8 @@ internal sealed class LinuxWorkerProcess : IWorkerProcess
         var start = new ProcessStartInfo("/usr/bin/busctl") { UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true };
         start.Environment.Clear(); start.Environment["LANG"] = "C.UTF-8";
         string[] arguments = [$"--address=unix:path={bus}", "--timeout=3s", "call", "org.freedesktop.systemd1", "/org/freedesktop/systemd1", "org.freedesktop.systemd1.Manager", "StartTransientUnit", "ssa(sv)a(sa(sv))",
-            ProfileName, "fail", "8", "PIDs", "au", "1", Id.ToString(CultureInfo.InvariantCulture), "MemoryMax", "t", "268435456", "MemorySwapMax", "t", "0", "TasksMax", "t", "32",
-            "RuntimeMaxUSec", "t", "5000000", "TimeoutStopUSec", "t", "100000", "KillMode", "s", "control-group", "CollectMode", "s", "inactive-or-failed", "0"];
+            ProfileName, "fail", "8", "PIDs", "au", "1", Id.ToString(CultureInfo.InvariantCulture), "MemoryMax", "t", _compilation ? "1073741824" : "268435456", "MemorySwapMax", "t", "0", "TasksMax", "t", "32",
+            "RuntimeMaxUSec", "t", _compilation ? "6000000" : "5000000", "TimeoutStopUSec", "t", "100000", "KillMode", "s", "control-group", "CollectMode", "s", "inactive-or-failed", "0"];
         foreach (var argument in arguments) start.ArgumentList.Add(argument);
         using var busctl = Process.Start(start) ?? throw new IOException("Cannot contact systemd user manager.");
         var error = busctl.StandardError.ReadToEndAsync(cancellation);
@@ -77,7 +79,7 @@ internal sealed class LinuxWorkerProcess : IWorkerProcess
         if (membership is null || !membership.EndsWith("/" + ProfileName, StringComparison.Ordinal)) throw new IOException("Worker cgroup membership mismatch.");
         var group = Path.GetFullPath("/sys/fs/cgroup" + membership[3..]);
         if (!group.StartsWith("/sys/fs/cgroup/", StringComparison.Ordinal)) throw new IOException("Invalid worker cgroup path.");
-        foreach (var (name, expected) in new[] { ("memory.max", "268435456"), ("memory.swap.max", "0"), ("pids.max", "32") })
+        foreach (var (name, expected) in new[] { ("memory.max", _compilation ? "1073741824" : "268435456"), ("memory.swap.max", "0"), ("pids.max", "32") })
             if (File.ReadAllText(Path.Combine(group, name)).Trim() != expected) throw new IOException("Worker cgroup limit not enforced: " + name);
         if (File.ReadAllLines(Path.Combine(group, "cgroup.procs")).Any(pid => pid != Id.ToString(CultureInfo.InvariantCulture))) throw new IOException("Unexpected process in private worker cgroup.");
     }

@@ -57,7 +57,8 @@ internal sealed class ScriptEditorPage : IAsyncDisposable
     internal async Task LoadAsync(string module)
     {
         await Browser.Ready;
-        await Browser.RequestAsync("initialize", "initialized", new { modules = Drafts.Models.Keys.ToArray(), readOnly = Drafts.IsReadOnly });
+        await Browser.RequestAsync("initialize", "initialized", new { modules = Drafts.Models.Keys.ToArray(), readOnly = Drafts.IsReadOnly,
+            languages = Drafts.Models.ToDictionary(p => p.Key, p => p.Value.Language == ScriptLanguage.TypeScript ? "typescript" : "javascript") });
         foreach (var (id, draft) in Drafts.Models)
         foreach (var chunk in ScriptDraftSession.Split(id, draft.Text, 0, 1))
             await Browser.RequestAsync("loadChunk", "loadAck", chunk);

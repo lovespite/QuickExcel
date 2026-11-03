@@ -1,5 +1,7 @@
 # M4 首切片：独立脚本 worker
 
+> 2026-11-03 引擎迁移更新：当前生产路径为固定 JSC、IPC 6，隔离 TS 编译与同步模块/中断契约见 [71 号实施记录](71-jsc-typescript-implementation-log.md)。执行仍为 256 MiB 进程 / 256 KiB 栈 / 1 秒操作 / 5 秒整轮；64 MiB 引擎硬限额 `JSC-MEM-001` 未实现，用户明确延期且不作为推进门禁。下文 QuickJS、旧协议、预算及构建入口均为当时版本的历史证据，不代表当前实现。
+
 > 2026-10-28 最新更新：公式与 actions 的实际 worker 已接入无能力 AppContainer、创建时加入 Job、挂起启动与令牌核验、最小继承句柄、只读私有 payload、环境白名单和 profile 清理；宿主崩溃后由下次启动回收资源，详见 [回收与部署验证](16-m4-recovery-and-deployment.md)。IPv4/IPv6 回环及 DNS 的本机 WFP 拒绝证据见 [隔离 ADR](15-m4-os-isolation-adr.md)。以下 Job-only 安全边界与 250 ms 清理说明为首切片历史；当前等待退出 1 秒，文件删除占用重试最多再 1 秒。M6 最终门禁仍未完成。
 
 > 最新更新：UDF 有界合批和 16 MiB 消息预算已实现，IPC 当前协议 4；见 [合批记录](14-m4-batching.md)与 [OS 原型 ADR](15-m4-os-isolation-adr.md)。下文保留历次切片的版本、预算及验收证据。

@@ -1,6 +1,6 @@
 # QuickExcel 架构与实施文档
 
-2026-11-03：新增 [JSC 单引擎替换与 TypeScript 接入方案](70-jsc-typescript-migration-plan.md)，覆盖引擎嵌入、自动编译、文件与授权、隔离、分阶段迁移及验收。状态为目标方案，尚未实施；当前生产引擎仍为 QuickJS-NG。
+2026-11-03：[JSC 单引擎替换与 TypeScript 接入方案](70-jsc-typescript-migration-plan.md) 已完成 J0–J6，JSC 已是唯一生产引擎，Windows 默认包已激活为 `0.6.0-preview.8`；同步模块、中断、隔离编译、TS 原文/签名、Source Map 和桌面流程已有实测。**64 MiB 引擎硬限额以 `JSC-MEM-001` 保持开放，用户延期，不阻止后续推进。** 来源、预算和原始证据见 [实施记录](71-jsc-typescript-implementation-log.md)。两平台隔离、恢复、发布和独立性能证据已记录，完整回退包和回退验证见 71 号记录。
 
 2026-11-03：[Avalonia 迁移](61-avalonia-migration-plan.md) **A0–A5 工程完成，A6 实施中**。默认入口已切换 Avalonia，Windows 发布与 WPF 回退见 [66 号记录](66-avalonia-windows-release.md)。实机项目按用户要求延期；Linux 中文输入无候选框仍未解决，非 Windows 完整支持尚未完成。
 
@@ -18,7 +18,7 @@ XC-0106 已完成受控公式保留：数组/结构化引用等以整簿只读�
 
 **当前重点工程：[XLSX 兼容性与 Excel 功能对齐计划](26-excel-compatibility-roadmap.md)。** 2026-10-30 按用户要求提升为当前优先工作，提供 E0–E5 阶段、已交付基线和待完成清单，逐项标记重要性、常用程度、复杂度及验收条件。
 
-阅读时先看实施计划的当前状态和下一轮切片，再查专题契约与证据。日期早于当前状态的“下一步”“默认网格”“尚未交付”属于当时记录，不覆盖新状态。Avalonia 源码版本为 `0.6.0-preview.5`；旧发布目录不会随构建自动更新，身份以包内 `release.json` 为准，旧 WPF 包保留 `BUILD-METADATA.json`。
+阅读时先看实施计划的当前状态和下一轮切片，再查专题契约与证据。日期早于当前状态的“下一步”“默认网格”“尚未交付”属于当时记录，不覆盖新状态。Avalonia 源码版本为 `0.6.0-preview.8`；旧发布目录不会随构建自动更新，身份以包内 `release.json` 为准，旧 WPF 包保留 `BUILD-METADATA.json`。
 
 E0 的 [兼容基线](27-xlsx-compatibility-baseline.md) 包含当前 R/D/C/E/W 矩阵、12 个合成样本和独立校验；[真实 Excel 样本台账](37-excel-business-baseline.md) 已补齐。编辑后预期差异和诊断定位已分别按 38/39 号记录完成，E0 声明范围关闭。
 
@@ -44,7 +44,8 @@ E1 七项实现及各自真实 Excel 对照已完成；[行列样式优先级](2
 
 | 文档 | 解决的问题 |
 | --- | --- |
-| [JSC 单引擎替换与 TypeScript 接入方案](70-jsc-typescript-migration-plan.md) | JSC 原生桥、TS 自动处理、缓存/签名/IPC、平台隔离、J0–J6 迁移与定向验收；尚未实施 |
+| [JSC 单引擎替换与 TypeScript 接入方案](70-jsc-typescript-migration-plan.md) | JSC 原生桥、TS 自动处理、缓存/签名/IPC、平台隔离、J0–J6 迁移与定向验收 |
+| [JSC / TypeScript 实施记录](71-jsc-typescript-implementation-log.md) | 固定来源、同步桥、Worker/TS/桌面候选证据、JSC-MEM-001 延期及独立平台进度；尚未正式切换 |
 | [Avalonia 迁移方案与实施计划](61-avalonia-migration-plan.md) | MIT 依赖准入、模块边界、主网格迁移、PDF.js/Monaco、A0–A7 工作项、平台隔离与发布回退；A0–A5 工程完成 |
 | [Avalonia 实施日志](63-avalonia-implementation-log.md) | 分阶段实现、验证与延期事项 |
 | [Avalonia 网格与工作区](64-avalonia-grid-and-workspace.md) | 功能入口矩阵、交互及滚动性能 |

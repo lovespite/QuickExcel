@@ -1,5 +1,7 @@
 # M4 合批与消息容量
 
+> 2026-11-03 引擎迁移更新：当前生产路径为固定 JSC、IPC 6，隔离 TS 编译与同步模块/中断契约见 [71 号实施记录](71-jsc-typescript-implementation-log.md)。执行仍为 256 MiB 进程 / 256 KiB 栈 / 1 秒操作 / 5 秒整轮；64 MiB 引擎硬限额 `JSC-MEM-001` 未实现，用户明确延期且不作为推进门禁。下文 QuickJS、旧协议、预算及构建入口均为当时版本的历史证据，不代表当前实现。
+
 > 2026-11-03：当前 IPC 为 5，事件与虚拟文件扩展见 [69](69-script-events-and-virtual-files.md)。本页协议 4 的证据保持为历史记录；16 MiB 与 UDF 批次预算不变。
 
 2026-10-28，基于 `27f8264`（M4 stage3）。本切片接通计算计划到 worker 的有界 UDF 合批，将 IPC 与托管/原生桥消息上限从 4 MiB 提高到 16 MiB，并新增 Windows 隔离开发探测。后续同日切片已接入实际 AppContainer worker 并完成回环/DNS 的本机 WFP 取证；严格执行策略、部署矩阵及 M6 最终 OS 门禁仍未完成。OS 结果和部署选择见 [隔离 ADR](15-m4-os-isolation-adr.md)。

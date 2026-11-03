@@ -44,7 +44,7 @@ public sealed class M3StorageTests : IDisposable
         var c = Sheet("C", (0, 0, F("=B!A1+1")), (0, 1, F("=SUM(Independent)")));
         var book = Book(c, b, a).WithScriptSource("quickExcel.functions.register('DOUBLE', n => n*2);")
             .WithDefinedNames([new("Independent", "='A'!$B$1:$C$1")]);
-        using var doc = new WorkbookDocument(book, new(new TypedWorkbookStorage(), new WorkbookCalculator(new QuickJsRuntimeFactory())));
+        using var doc = new WorkbookDocument(book, new(new TypedWorkbookStorage(), new WorkbookCalculator(new JscRuntimeFactory())));
         doc.EnableScriptsAndCalculate();
         var report = doc.InspectPortableExport();
         Assert.Equal(4, report.FrozenFormulas); Assert.Equal(3, report.RetainedFormulas);
@@ -96,7 +96,7 @@ public sealed class M3StorageTests : IDisposable
         var sheet = Sheet("S", (0, 0, F("=Rate+1")), (0, 1, F("=A1*2")));
         var book = Book(sheet).WithScriptSource("quickExcel.functions.register('NUMBER', ()=>9)")
             .WithDefinedNames([new("Rate", "=NUMBER()")]);
-        using var doc = new WorkbookDocument(book, new(new TypedWorkbookStorage(), new WorkbookCalculator(new QuickJsRuntimeFactory())));
+        using var doc = new WorkbookDocument(book, new(new TypedWorkbookStorage(), new WorkbookCalculator(new JscRuntimeFactory())));
         doc.EnableScriptsAndCalculate();
         Assert.Equal(2, doc.InspectPortableExport().FrozenFormulas);
         var path = PathFor("name-script.xlsx"); doc.ExportPortableXlsx(path);

@@ -20,7 +20,7 @@ internal sealed class WorkerProcess : IWorkerProcess
     public string ProfileName => _sandbox!.ProfileName;
     public string PayloadDirectory => _sandbox!.PayloadDirectory;
 
-    internal static WorkerProcess Start(string executable, CancellationToken cancellation, string? ownershipRoot = null)
+    internal static WorkerProcess Start(string executable, CancellationToken cancellation, string? ownershipRoot = null, bool compilation = false)
     {
         var child = new WorkerProcess();
         var allocated = new List<IntPtr>();
@@ -29,7 +29,7 @@ internal sealed class WorkerProcess : IWorkerProcess
         try
         {
             child._sandbox = WorkerSandbox.Create(executable, cancellation, ownershipRoot);
-            child._job = new WorkerJob(child._sandbox.JobName);
+            child._job = new WorkerJob(child._sandbox.JobName, compilation);
             var security = new SecurityAttributes { Length = Marshal.SizeOf<SecurityAttributes>(), Inherit = true };
             Check(CreatePipe(out var stdinRead, out var stdinWrite, ref security, 0));
             using (stdinRead) using (stdinWrite)
@@ -66,7 +66,7 @@ internal sealed class WorkerProcess : IWorkerProcess
                         };
                         var environment = Marshal.StringToHGlobalUni(child._sandbox.EnvironmentBlock()); allocated.Add(environment);
                         cancellation.ThrowIfCancellationRequested();
-                        Check(CreateProcess(child._sandbox.Executable, new StringBuilder('"' + child._sandbox.Executable + '"'),
+                        Check(CreateProcess(child._sandbox.Executable, new StringBuilder('"' + child._sandbox.Executable + '"' + (compilation ? " --compile" : "")),
                             IntPtr.Zero, IntPtr.Zero, true, 0x80000 | 0x4 | 0x8000000 | 0x400, environment,
                             child._sandbox.PayloadDirectory, ref startup, out var info));
                         child._nativeProcess = new SafeProcessHandle(info.Process, ownsHandle: true);

@@ -137,7 +137,7 @@ public sealed class PreservedFormulaTests : IDisposable
         var sheet = Sheet("Data", (0, 0, N(9)), (0, 1, F("=SQRT(A1)", 3)), (0, 2, F("=B1+1", 4)),
             (0, 3, F("=DOUBLE(A1)", 0)), (0, 4, F("=D1+1", 0)));
         var book = Book(sheet).WithScriptSource(source);
-        var result = new WorkbookCalculator(new QuickJsRuntimeFactory()).Calculate(Request(book, true));
+        var result = new WorkbookCalculator(new JscRuntimeFactory()).Calculate(Request(book, true));
         Assert.Equal(CalculationState.Blocked, result.Cells[new(sheet.Id, 0, 1)].State);
         Assert.Equal(CellValue.FromNumber(3), result.Cells[new(sheet.Id, 0, 1)].Value);
         Assert.Equal(CalculationState.Blocked, result.Cells[new(sheet.Id, 0, 2)].State);

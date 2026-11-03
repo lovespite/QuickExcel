@@ -11,6 +11,7 @@ using QuickExcel.Grid.Avalonia;
 using QuickExcel.Desktop.Avalonia.Web;
 using QuickExcel.Infrastructure.Web;
 using QuickExcel.Presentation.Web;
+using QuickExcel.Runtime;
 
 namespace QuickExcel.Desktop.Avalonia;
 
@@ -30,7 +31,7 @@ public sealed partial class MainWindow
     private string _selectedModule = "main";
     private bool _scriptClosing, _scriptPicking;
     private CancellationTokenSource? _scriptCancellation;
-    private sealed record ScriptDiagnostic(string Label, long Revision, string? Module = null, int Line = 1, SheetId? Sheet = null, CellPosition? Cell = null);
+    private sealed record ScriptDiagnostic(string Label, long Revision, string? Module = null, int Line = 1, SheetId? Sheet = null, CellPosition? Cell = null, int Column = 1, long? DraftVersion = null);
     private WebAssetCatalog WebAssets => _webAssets ??= new(Path.Combine(AppContext.BaseDirectory, "Web"), allowTestResources: Program.WebTestMode);
     private void InstallScriptCommands()
     {
@@ -55,6 +56,7 @@ public sealed partial class MainWindow
         void Button(string text, Func<Task> action)
         { var button = new Button { Content = text, Margin = new(4) }; button.Click += async (_, _) => await PerformAsync(action); toolbar.Children.Add(button); }
         Button("添加模块", AddScriptModuleAsync); Button("模块角色", ScriptModuleRoleAsync); Button("应用并重算", ApplyScriptsAsync);
+        Button("JS / TS", ChangeScriptLanguageAsync);
         Button("停用", () => { DisableScripts(); return Task.CompletedTask; }); Button("保存", async () => await SaveAsync(false));
         _actionPicker = new ComboBox { MinWidth = 140, Margin = new(4), ItemTemplate = new FuncDataTemplate<ScriptActionDescriptor>((item, _) => new TextBlock { Text = item?.Name }) };
         AutomationProperties.SetName(_actionPicker, "脚本操作"); toolbar.Children.Add(_actionPicker); Button("运行操作", RunScriptActionAsync);
@@ -124,26 +126,52 @@ public sealed partial class MainWindow
         drafts.RecoverConfirmed(); _scriptPage = null; _scriptContent!.IsEnabled = true; _scriptRecovery!.IsVisible = false;
         try { await CreateScriptPageAsync(drafts); } catch (Exception ex) { ScriptPageFailed(ex); }
     }
-    private async Task<bool> CommitScriptsAsync()
+    private async Task<bool> CommitScriptsAsync(bool validateTypeScript = false)
     {
         if (_scriptWindow is null) return true;
         try
         {
             if (_scriptPage is null || _scriptDocument != Document.Session.SessionId) throw new InvalidOperationException("脚本页面未加载或所属文档已变化。");
-            await _scriptPage.FlushAsync(() => Document.Snapshot.ScriptModules, modules =>
+            await _scriptPage.FlushAsync(() => Document.Snapshot.ScriptModules, async modules =>
             {
+                var document = Document;
                 var current = Document.Snapshot.ScriptModules;
+                if (validateTypeScript && modules.HasTypeScript)
+                {
+                    if (_scriptCancellation is not null) throw new InvalidOperationException("已有脚本工作正在进行。");
+                    using var cancellation = new CancellationTokenSource(); _scriptCancellation = cancellation;
+                    var revision = document.Snapshot.Revision;
+                    if (_scriptStatus is not null) _scriptStatus.Text = "正在检查 TypeScript；可点击“停止”取消…";
+                    try
+                    {
+                        await ScriptCompilation.PrepareAsync(modules, new(document.Session.SessionId, revision, 0, modules.Revision), cancellation.Token);
+                        cancellation.Token.ThrowIfCancellationRequested();
+                        if (!ReferenceEquals(document, Document) || document.Snapshot.Revision != revision || !ReferenceEquals(current, document.Snapshot.ScriptModules))
+                            throw new InvalidOperationException("编译期间文档已变化，未应用过期产物。");
+                    }
+                    finally { _scriptCancellation = null; }
+                }
                 if (modules.Modules.Any(p => current.Modules[p.Key].Source != p.Value.Source))
                     _workspace.Editor.Execute(new UpdateScriptModulesCommand(modules));
-                Synchronize(); return Task.CompletedTask;
+                Synchronize(); await Task.CompletedTask;
             });
             RefreshScriptChrome(); return true;
         }
+        catch (ScriptCompilationException ex)
+        {
+            if (_scriptStatus is not null) _scriptStatus.Text = ex.Message;
+            if (_scriptDiagnostics is not null) _scriptDiagnostics.ItemsSource = ex.Diagnostics.Select(d => new ScriptDiagnostic(
+                $"{d.Module}:{d.Line}:{d.Column} · {d.Message}", Document.Snapshot.ScriptModules.Revision, d.Module, d.Line ?? 1,
+                Column: d.Column ?? 1, DraftVersion: d.Module is { } id && _scriptPage!.Drafts.Models.TryGetValue(id, out var model) ? model.Version : null)).ToArray();
+            return false;
+        }
+        catch (OperationCanceledException) { if (_scriptStatus is not null) _scriptStatus.Text = "编译已取消，草稿未应用。"; return false; }
         catch (Exception ex) { Error(ex); if (_scriptStatus is not null) _scriptStatus.Text = ex.Message; return false; }
     }
     private async Task CloseScriptWindowAsync()
     {
         if (_scriptWindow is null) return;
+        _scriptCancellation?.Cancel();
         var window = _scriptWindow; _scriptClosing = true;
         try { if (_scriptPage is not null) await _scriptPage.DisposeAsync(); window.Close(); }
         finally { _scriptWindow = null; _scriptPage = null; _scriptContent = null; _modulePicker = null; _actionPicker = null; _scriptStatus = null; _scriptDiagnostics = null; _scriptRecovery = null; _scriptClosing = false; }
@@ -153,7 +181,7 @@ public sealed partial class MainWindow
         if (_scriptPage is not { } page || _scriptWindow is null) return;
         var modules = Document.Snapshot.ScriptModules;
         if (page.Drafts.Models.Count == modules.Modules.Count && modules.Modules.All(p => page.Drafts.Models.TryGetValue(p.Key, out var draft) &&
-            draft.Path == p.Value.Path && draft.Committed == p.Value.Source)) return;
+            draft.Path == p.Value.Path && draft.Language == p.Value.Language && draft.Committed == p.Value.Source)) return;
         if (page.Drafts.IsDirty || page.Drafts.Failed)
             throw new InvalidOperationException("包内源码与编辑器草稿冲突；已保留草稿，不能覆盖新的包源码。");
         await page.DisposeAsync(); _scriptPage = null;
@@ -206,7 +234,7 @@ public sealed partial class MainWindow
     private async Task ApplyScriptsAsync()
     {
         await using var hold = _scriptPage?.HoldEdits();
-        if (!await CommitEditorsAsync()) return;
+        if (!await CommitEditorsAsync(validateTypeScript: true)) return;
         if (!DesktopServices.SupportsScripts) throw new PlatformNotSupportedException("此平台的脚本隔离尚未开放，不能执行脚本。");
         ClearScriptActions(); RefreshScriptActions();
         if (!await CheckScriptTrustAsync()) return;
@@ -224,7 +252,7 @@ public sealed partial class MainWindow
     private async Task RunScriptActionAsync(ScriptActionDescriptor? action)
     {
         await using var hold = _scriptPage?.HoldEdits();
-        if (!await CommitEditorsAsync()) return;
+        if (!await CommitEditorsAsync(validateTypeScript: true)) return;
         if (!ScriptActionsCurrent || action is null || !_availableScriptActions.Contains(action)) throw new InvalidOperationException("请先加载脚本并选择操作。");
         var document = Document;
         _status.Text = "正在执行：" + action.Name;
@@ -254,8 +282,9 @@ public sealed partial class MainWindow
         {
             var module = modules.Modules.FirstOrDefault(m => error.Contains(m.Value.Path, StringComparison.Ordinal) || error.Contains(m.Key + ":", StringComparison.Ordinal));
             var names = module.Key is not null ? "(?:" + Regex.Escape(module.Value.Path) + "|" + Regex.Escape(module.Key) + ")" : "(?:<quickexcel>|quickexcel|<eval>|script)";
-            var match = Regex.Match(error, names + @":(\d+)(?::\d+)?(?:\)|\s|$)");
-            entries.Add(new(error, modules.Revision, module.Key ?? modules.EntryModules[0], match.Success && int.TryParse(match.Groups[1].Value, out var line) ? line : 1));
+            var match = Regex.Match(error, names + @":(\d+)(?::(\d+))?(?:\)|\s|$)");
+            entries.Add(new(error, modules.Revision, module.Key ?? modules.EntryModules[0], match.Success && int.TryParse(match.Groups[1].Value, out var line) ? line : 1,
+                Column: match.Success && int.TryParse(match.Groups[2].Value, out var column) ? column : 1));
         }
         foreach (var sheet in Document.Snapshot.Sheets)
         foreach (var (position, cell) in sheet.Cells.Where(p => p.Value.Value.Kind == CellValueKind.Error).Take(200 - entries.Count))
@@ -264,9 +293,32 @@ public sealed partial class MainWindow
     }
     private async Task ActivateScriptDiagnosticAsync()
     {
-        if (_scriptDiagnostics?.SelectedItem is not ScriptDiagnostic entry || !await CommitEditorsAsync()) return;
+        if (_scriptDiagnostics?.SelectedItem is not ScriptDiagnostic entry) return;
+        if (entry.DraftVersion is { } version)
+        {
+            if (entry.Module is not { } id || _scriptPage is null || !_scriptPage.Drafts.Models.TryGetValue(id, out var model) || model.Version != version || model.ObservedVersion != version)
+                throw new InvalidOperationException("此编译诊断属于旧草稿，请重新检查。");
+            await _scriptPage.LocateAsync(id, entry.Line, entry.Column); return;
+        }
+        if (!await CommitEditorsAsync()) return;
         if (entry.Revision != Document.Snapshot.ScriptModules.Revision) throw new InvalidOperationException("此运行诊断属于旧源码，请重新运行后定位。");
         if (entry.Sheet is { } sheet && entry.Cell is { } cell) { Document.Session.UpdateNavigation(sheet, cell); Synchronize(); ShowBook(); Activate(); _grid.Select(cell); }
-        else if (entry.Module is { } module && _scriptPage is not null) { await _scriptPage.LocateAsync(module, entry.Line, 1); _selectedModule = module; RefreshScriptChrome(); }
+        else if (entry.Module is { } module && _scriptPage is not null) { await _scriptPage.LocateAsync(module, entry.Line, entry.Column); _selectedModule = module; RefreshScriptChrome(); }
+    }
+    private async Task ChangeScriptLanguageAsync()
+    {
+        if (!await CommitEditorsAsync()) return;
+        var current = Document.Snapshot.ScriptModules;
+        if (current.ScriptApiVersion != 2) throw new InvalidOperationException("TypeScript 仅支持 API v2 模块；API v1 保持原有 JavaScript 语义。");
+        var module = current.Modules[_selectedModule];
+        var dialog = new FieldsDialog("模块语言").Choice("language", _selectedModule, ["JavaScript", "TypeScript"], (int)module.Language);
+        if (!await dialog.ShowAsync(this) || !await CommitScriptsAsync()) return;
+        current = Document.Snapshot.ScriptModules; module = current.Modules[_selectedModule];
+        var language = (ScriptLanguage)dialog.Index("language");
+        if (language == module.Language) return;
+        var path = System.IO.Path.ChangeExtension(module.Path, language == ScriptLanguage.TypeScript ? ".ts" : ".js").Replace('\\', '/');
+        _workspace.Editor.Execute(new UpdateScriptModulesCommand(new(current.Modules.SetItem(_selectedModule, module with { Language = language, Path = path }),
+            current.EntryModules, current.Revision, current.BindingRevision, 2, current.Bindings)));
+        DisableScripts(); await RefreshScriptPageAfterMutationAsync(); Synchronize();
     }
 }
