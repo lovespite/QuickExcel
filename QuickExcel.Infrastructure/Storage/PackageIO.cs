@@ -63,7 +63,8 @@ internal static class PackageIO
         foreach (var entry in zip.Entries)
         {
             budget.Check();
-            PathName(entry.FullName);
+            PathName(xlsq && entry.FullName.EndsWith('/') ? entry.FullName[..^1] : entry.FullName);
+            if (entry.FullName.EndsWith('/') && entry.Length != 0) throw new InvalidDataException("目录不能有内容。");
             if (!names.Add(entry.FullName)) throw new InvalidDataException($"重复或大小写歧义条目：{entry.FullName}");
             var limit = !xlsq ? FileReadBudget.MaxFileBytes : entry.FullName switch
             { "manifest.json" or "security/script-signature.json" => 64 * 1024, "state/document.json" => 1024 * 1024, _ when entry.FullName.StartsWith("scripts/", StringComparison.Ordinal) => 1024 * 1024, _ => FileReadBudget.MaxFileBytes };
@@ -187,7 +188,8 @@ internal static class PackageIO
         using (var zip = new ZipArchive(output, ZipArchiveMode.Create, true))
             foreach (var (name, content) in parts)
             {
-                using var stream = zip.CreateEntry(PathName(name), CompressionLevel.Optimal).Open();
+                PathName(name.EndsWith('/') && content.Length == 0 ? name[..^1] : name);
+                using var stream = zip.CreateEntry(name, CompressionLevel.Optimal).Open();
                 stream.Write(content);
             }
         return output.ToArray();

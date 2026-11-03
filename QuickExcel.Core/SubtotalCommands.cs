@@ -26,7 +26,7 @@ public sealed class ApplySubtotalsCommand(SubtotalPreview preview) : DocumentCom
         var result = preview.Result;
         // Keep navigation that may have changed during the preview dialog.
         result = new(result.DocumentId, result.Revision, result.DateSystem, result.Sheets.Select(s => s.WithView(snapshot.GetSheet(s.Id).View)),
-            result.ScriptSource, result.Styles, result.ScriptModules, result.FileState, result.DefinedNames, snapshot.ActiveSheetId, snapshot.Window, result.TextCompatibilityVersion);
+            result.ScriptSource, result.Styles, result.ScriptModules, result.FileState, result.DefinedNames, snapshot.ActiveSheetId, snapshot.Window, result.TextCompatibilityVersion, result.PackageFiles);
         return StructureEdits.Draft(snapshot, result);
     }
 }
@@ -95,7 +95,7 @@ public static class SubtotalCommands
         Summary(grand, range.Top + 1, lastDetail, function is 2 or 3 ? "总计数" : function == 9 ? "总计" : "总计" + Labels[function], range.Bottom);
         transformed = WorksheetOutline.Replace(transformed, output, rows.ToImmutable(), output.Columns, new());
         transformed = new(transformed.DocumentId, transformed.Revision, transformed.DateSystem, transformed.Sheets, transformed.ScriptSource, styles,
-            transformed.ScriptModules, transformed.FileState, transformed.DefinedNames, transformed.ActiveSheetId, transformed.Window, transformed.TextCompatibilityVersion);
+            transformed.ScriptModules, transformed.FileState, transformed.DefinedNames, transformed.ActiveSheetId, transformed.Window, transformed.TextCompatibilityVersion, transformed.PackageFiles);
         transformed = new SetCellsCommand(edits).Prepare(transformed).Snapshot;
         return new(book, StructureEdits.Draft(book, transformed), previews, grand);
     }

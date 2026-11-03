@@ -17,7 +17,7 @@ public sealed partial class TypedWorkbookStorage
     public static bool RequiresScriptContainer(WorkbookSnapshot snapshot)
     {
         var scripts = snapshot.ScriptModules;
-        return scripts.ScriptApiVersion != 1 || scripts.Signature is not null || scripts.Modules.Count != 1 ||
+        return snapshot.PackageFiles.Entries.Count != 0 || scripts.ScriptApiVersion != 1 || scripts.Signature is not null || scripts.Modules.Count != 1 ||
             !scripts.Modules.TryGetValue("main", out var main) || main != new ScriptModule("scripts/main.js", "") ||
             !scripts.EntryModules.SequenceEqual(["main"]) || !scripts.Bindings.SequenceEqual([new ScriptBinding("main", "formula-functions")]);
     }

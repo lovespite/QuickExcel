@@ -15,7 +15,7 @@ public sealed class WorkbookCompatibilityException(IEnumerable<string> issues) :
 }
 
 /// <summary>Typed XLSX and XLSQ v2 storage, with read-only import and migration of XLSQ v1 packages.</summary>
-public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage
+public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage, IWorkbookVirtualFiles
 {
     private static readonly string[] Features = ["typed-workbook", "stable-sheet-ids", "script-modules"];
     private static bool HasExtendedErrors(WorkbookSnapshot snapshot) => snapshot.Sheets.Any(s => s.Cells.Values.Any(c => c.Value is { Kind: CellValueKind.Error, ErrorCode: CellErrorCode.Calculation }));
@@ -40,6 +40,7 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage
         byte[] workbookBytes = bytes;
         var version = 0;
         var modules = ScriptModuleSet.Single("");
+        var packageFiles = VirtualFileSet.Empty;
         var declaredViews = false;
         var declaredTextVersion = false;
         var declaredExtendedErrors = false;
@@ -48,7 +49,7 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage
         {
             if (isPackage)
             {
-                var parts = Unzip(bytes, budget, 72, xlsq: true);
+                var parts = Unzip(bytes, budget, VirtualFileSet.MaxEntries + 72, xlsq: true);
                 manifest = Json(Required(parts, "manifest.json", 64 * 1024), budget, 64 * 1024);
                 var root = manifest.RootElement;
                 version = checked((int)Integer(root, "formatVersion", 2));
@@ -72,7 +73,7 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage
                     declaredViews = features.Contains("workbook-views");
                     declaredTextVersion = features.Contains("text-compatibility-v2");
                     declaredExtendedErrors = features.Contains("extended-cell-errors");
-                    if (features.Distinct().Count() != features.Length || Features.Except(features).Any() || features.Except(Features.Concat(["script-actions", "script-signatures", "workbook-views", "worksheet-printing", "preserved-formulas", "cell-text-annotations", "worksheet-data", "worksheet-tables", "worksheet-validation", "worksheet-conditional-formatting", "worksheet-outline", "text-compatibility-v2", "extended-cell-errors", "drawing-anchors", "worksheet-protection", "worksheet-charts", "worksheet-default-width", "extended-capacity"])).Any() ||
+                    if (features.Distinct().Count() != features.Length || Features.Except(features).Any() || features.Except(Features.Concat(["virtual-files", "script-actions", "script-signatures", "workbook-views", "worksheet-printing", "preserved-formulas", "cell-text-annotations", "worksheet-data", "worksheet-tables", "worksheet-validation", "worksheet-conditional-formatting", "worksheet-outline", "text-compatibility-v2", "extended-cell-errors", "drawing-anchors", "worksheet-protection", "worksheet-charts", "worksheet-default-width", "extended-capacity"])).Any() ||
                         features.Contains("script-actions") && scriptApiVersion != 2)
                         throw new InvalidDataException("XLSQ 缺少必要能力或包含未知必需能力。");
                     var referenced = new HashSet<string>(StringComparer.Ordinal) { "manifest.json" };
@@ -115,6 +116,23 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage
                             String(signature, "certificate"), String(signature, "value")));
                     }
                     else if (features.Contains("script-signatures")) throw new InvalidDataException("缺少脚本签名。");
+                    if (features.Contains("virtual-files"))
+                    {
+                        var files = new List<VirtualFileEntry>();
+                        foreach (var item in Array(root, "files"))
+                        {
+                            var path = PathName(String(item, "path"));
+                            var directory = Property(item, "directory").GetBoolean();
+                            if (directory)
+                            {
+                                if (!referenced.Add(path + "/") || Required(parts, path + "/").Length != 0) throw new InvalidDataException("无效目录。");
+                                files.Add(new("//xlsq/" + path, [], true));
+                            }
+                            else files.Add(new("//xlsq/" + path, Reference(item).ToImmutableArray()));
+                        }
+                        packageFiles = new(files);
+                        _ = new VirtualFileSet(parts.Select(p => new VirtualFileEntry("//xlsq/" + p.Key.TrimEnd('/'), p.Value.ToImmutableArray(), p.Key.EndsWith('/'))));
+                    }
                     if (referenced.Count != parts.Count) throw new InvalidDataException("XLSQ 包含未声明条目。");
                     var calculation = Property(state.RootElement, "calculation");
                     _ = String(calculation, "engineVersion");
@@ -201,7 +219,7 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage
             // An original package can be retained byte-for-byte even for unsupported workbook features.
             var fileState = new WorkbookFileState(sourcePath, version, workbookBytes, originalModel, read.Bindings, issues,
                 version == 2 ? manifest!.RootElement.GetRawText() : null, state?.RootElement.GetRawText(), read.Diagnostics, read.PreservedFormulas);
-            return new(documentId, revision, model.DateSystem, sheets, modules.PrimarySource, model.Styles, modules, fileState, names, activeSheet, model.Window, model.TextCompatibilityVersion);
+            return new(documentId, revision, model.DateSystem, sheets, modules.PrimarySource, model.Styles, modules, fileState, names, activeSheet, model.Window, model.TextCompatibilityVersion, packageFiles);
         }
         catch (Exception exception) when (exception is JsonException or System.Xml.XmlException or FormatException or OverflowException or ArgumentException or InvalidOperationException && exception is not WorkbookCompatibilityException)
         { throw new InvalidDataException("工作簿结构或字段无效：" + exception.Message, exception); }
@@ -224,6 +242,11 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage
         GuardOriginal(path, snapshot, discardUnsupported);
         if (Path.GetExtension(path).Equals(".xlsx", StringComparison.OrdinalIgnoreCase))
             return SaveXlsx(path, snapshot, discardUnsupported, cancellationToken, expected);
+        return WritePackage(path, snapshot, discardUnsupported, cancellationToken, expected);
+    }
+
+    private static Dictionary<string, byte[]> BuildPackage(WorkbookSnapshot snapshot, bool discardUnsupported, CancellationToken cancellationToken)
+    {
         if (snapshot.ScriptModules.Modules.Sum(m => (long)Utf8.GetByteCount(m.Value.Source)) > 1024 * 1024) throw new InvalidOperationException("Combined script source exceeds 1 MiB.");
         var unchanged = snapshot.FileState is { } state && ContentEquals(snapshot, state.OriginalModel);
         var issues = SaveIssues(snapshot);
@@ -295,13 +318,35 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage
         { parts.Add(module.Path, Utf8.GetBytes(module.Source)); modules.Add(id, Merge(manifest["scripts"]?["modules"]?[id], Reference(module.Path))); }
         manifest["scripts"] = Merge(manifest["scripts"], new JsonObject { ["entryModules"] = JsonSerializer.SerializeToNode(snapshot.ScriptModules.EntryModules), ["modules"] = modules });
         manifest["scripts"]!["modules"] = modules.DeepClone();
+        if (snapshot.PackageFiles.Entries.Count > 0)
+        {
+            manifest["requiredFeatures"]!.AsArray().Add("virtual-files");
+            var files = new JsonArray();
+            foreach (var entry in snapshot.PackageFiles.Entries.Values.OrderBy(e => e.Path, StringComparer.Ordinal))
+            {
+                var name = PathName(entry.Path[7..]);
+                var zipName = name + (entry.IsDirectory ? "/" : "");
+                if (name == "manifest.json" || parts.ContainsKey(name) || !parts.TryAdd(zipName, entry.Data.ToArray())) throw new InvalidDataException("虚拟文件覆盖了系统条目。");
+                var reference = entry.IsDirectory ? new JsonObject { ["path"] = name } : Reference(name).AsObject();
+                reference["directory"] = entry.IsDirectory; files.Add(reference);
+            }
+            manifest["files"] = files;
+        }
+        else manifest.Remove("files");
         parts["manifest.json"] = JsonSerializer.SerializeToUtf8Bytes(manifest);
-        var bytes = Zip(parts);
+        return parts;
+    }
+
+    private static byte[] SerializePackage(WorkbookSnapshot snapshot, bool discardUnsupported, CancellationToken cancellationToken) => Zip(BuildPackage(snapshot, discardUnsupported, cancellationToken));
+
+    private static FileVersion WritePackage(string path, WorkbookSnapshot snapshot, bool discardUnsupported, CancellationToken cancellationToken, FileVersion? expected)
+    {
+        var bytes = SerializePackage(snapshot, discardUnsupported, cancellationToken);
         PackageIO.AtomicWrite(path, bytes, temp =>
         {
             var checkedSnapshot = OpenBytes(ReadFile(temp, new(cancellationToken)), path, true, new(cancellationToken));
             if (!ContentEquals(snapshot, checkedSnapshot, allowRowHeightRounding: true) || snapshot.DocumentId != checkedSnapshot.DocumentId || snapshot.Revision != checkedSnapshot.Revision ||
-                !snapshot.Sheets.Select(s => s.Id).SequenceEqual(checkedSnapshot.Sheets.Select(s => s.Id)) || snapshot.ScriptModules.Signature != checkedSnapshot.ScriptModules.Signature || snapshot.ScriptModules.ScriptApiVersion != checkedSnapshot.ScriptModules.ScriptApiVersion || ScriptHash(snapshot.ScriptModules) != ScriptHash(checkedSnapshot.ScriptModules))
+                !snapshot.Sheets.Select(s => s.Id).SequenceEqual(checkedSnapshot.Sheets.Select(s => s.Id)) || snapshot.ScriptModules.Signature != checkedSnapshot.ScriptModules.Signature || snapshot.ScriptModules.ScriptApiVersion != checkedSnapshot.ScriptModules.ScriptApiVersion || ScriptHash(snapshot.ScriptModules) != ScriptHash(checkedSnapshot.ScriptModules) || !snapshot.PackageFiles.ContentEquals(checkedSnapshot.PackageFiles))
                 throw new InvalidDataException("保存后重开校验未能还原完整快照。");
         }, cancellationToken, expected);
         return new(Convert.ToHexString(SHA256.HashData(bytes)));

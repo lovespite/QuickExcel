@@ -1,6 +1,6 @@
 # M4 actions 操作脚本
 
-> 后续更新：有界 UDF 合批已接入；IPC 当前协议 4，消息上限统一为 16 MiB。见 [合批与容量](14-m4-batching.md)及 [OS 原型 ADR](15-m4-os-isolation-adr.md)。下文协议 3 和 583 项结果为 actions 切片历史证据。
+> 后续更新：有界 UDF 合批已接入；IPC 当前协议 5（事件与文件扩展见 [事件与虚拟文件](69-script-events-and-virtual-files.md)），消息上限统一为 16 MiB。见 [合批与容量](14-m4-batching.md)及 [OS 原型 ADR](15-m4-os-isolation-adr.md)。下文协议 3 和 583 项结果为 actions 切片历史证据。
 
 2026-10-28，基于 `abf5883`（M4 stage2）的下一切片。FMT-008 的动作能力元数据与绑定、JS-009 的工作簿快照、patch 二次校验、原子提交及一次撤销已实现。M4 仍在进行中：计算计划合批、严格运行策略和 OS 文件/网络访问隔离尚未完成。只运行可信源码。
 

@@ -121,6 +121,9 @@ try
             var action = WorkerProtocol.Payload<RunAction>(request);
             ActionProtocol.Name(action.Name);
             ActionProtocol.ValidateSnapshot(action.Snapshot);
+            VirtualFileProtocol.Validate(action.Files);
+            if (action.Event is { } ev && (action.Name != "@event/" + ev.Name || ev.SessionId != request.Identity.SessionId || ev.Revision > request.Identity.Revision || ev.Sequence <= 0 || ev.Ranges is null || ev.Ranges.Length > 64) ||
+                action.Event is null && action.Name.StartsWith("@event/", StringComparison.Ordinal)) throw new ProtocolException("Invalid event identity.");
             if (action.OperationId == Guid.Empty || action.Snapshot.BaseRevision != request.Identity.Revision) throw new ProtocolException("Action revision mismatch.");
             try
             {

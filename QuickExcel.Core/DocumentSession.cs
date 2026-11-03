@@ -7,7 +7,7 @@ namespace QuickExcel.Core;
 /// Owns a document's immutable state. Short commands and result commits share one serialized write gate;
 /// calculation and storage run outside that gate against captured snapshots.
 /// </summary>
-public sealed class DocumentSession : IDisposable
+public sealed partial class DocumentSession : IDisposable
 {
     private readonly object _gate = new();
     private WorkbookSnapshot _snapshot;
@@ -26,7 +26,8 @@ public sealed class DocumentSession : IDisposable
     private bool _publishing;
 
     private readonly IWorkbookValidation? _validation;
-    public DocumentSession(WorkbookSnapshot snapshot, long historyBudgetBytes = 32 * 1024 * 1024, IWorkbookValidation? validation = null)
+    private readonly IWorkbookVirtualFiles? _virtualFiles;
+    public DocumentSession(WorkbookSnapshot snapshot, long historyBudgetBytes = 32 * 1024 * 1024, IWorkbookValidation? validation = null, IWorkbookVirtualFiles? virtualFiles = null)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(historyBudgetBytes);
@@ -34,6 +35,7 @@ public sealed class DocumentSession : IDisposable
         _savedRevision = snapshot.FileState?.RequiresMigration == true ? -1 : snapshot.Revision;
         HistoryBudgetBytes = historyBudgetBytes;
         _validation = validation;
+        _virtualFiles = virtualFiles;
     }
 
     public Guid SessionId { get; } = Guid.NewGuid();
@@ -72,11 +74,16 @@ public sealed class DocumentSession : IDisposable
             }
             if (view != sheet.View)
                 _snapshot = _snapshot.WithSheets(_snapshot.Sheets.Select(s => s.Id == sheetId ? s.WithView(view) : s));
-            if (_snapshot.ActiveSheetId != sheetId) _snapshot = _snapshot.WithActiveSheet(sheetId);
+            if (_snapshot.ActiveSheetId != sheetId)
+            {
+                EnqueueScriptEvent("sheet.deactivate", _snapshot.GetSheet(_snapshot.ActiveSheetId));
+                _snapshot = _snapshot.WithActiveSheet(sheetId);
+                EnqueueScriptEvent("sheet.activate", sheet);
+            }
         }
     }
 
-    private CommandResult ExecuteCore(DocumentCommand command, long? expectedRevision, ScriptActionRequest? action = null, CancellationToken cancellationToken = default, ImmutableArray<string> diagnostics = default, bool acceptValidationWarnings = false)
+    private CommandResult ExecuteCore(DocumentCommand command, long? expectedRevision, ScriptActionRequest? action = null, CancellationToken cancellationToken = default, ImmutableArray<string> diagnostics = default, bool acceptValidationWarnings = false, VirtualFileSet? transientFiles = null)
     {
         ArgumentNullException.ThrowIfNull(command);
         DocumentChange? change = null;
@@ -117,10 +124,10 @@ public sealed class DocumentSession : IDisposable
             cancellationToken.ThrowIfCancellationRequested();
             if (ReferenceEquals(draft.Snapshot, before))
             {
-                if (action is not null) { AdvanceCalculationGeneration(); _diagnostics = diagnostics; }
+                if (action is not null) { AdvanceCalculationGeneration(); _diagnostics = diagnostics; if (transientFiles is not null) _transientFiles = transientFiles; }
                 return new(false, before.Revision);
             }
-            var sourceChanged = command is UpdateScriptSourceCommand or UpdateScriptModulesCommand or UpdateScriptSignatureCommand;
+            var sourceChanged = command is UpdateScriptSourceCommand or UpdateScriptModulesCommand or UpdateScriptSignatureCommand || !ReferenceEquals(before.ScriptModules, draft.Snapshot.ScriptModules);
             var revised = draft.Snapshot.WithRevision(checked(before.Revision + 1));
             var after = draft.CalculationUnchanged ? CarryCalculationRevision(revised, before.Revision) : Invalidate(revised);
             var entry = sourceChanged ? null : new HistoryEntry(before, after, draft.Changes, draft.StructureChanged, draft.CalculationUnchanged);
@@ -141,10 +148,13 @@ public sealed class DocumentSession : IDisposable
             if (sourceChanged)
             {
                 _scriptsEnabled = false;
+                _scriptEvents.Clear();
                 _scriptGeneration = checked(_scriptGeneration + 1);
             }
             AdvanceCalculationGeneration();
             _snapshot = after;
+            if (transientFiles is not null) _transientFiles = transientFiles;
+            if (action is null) QueueChangeEvents(before, after, draft.Changes);
             if (!draft.CalculationUnchanged) _diagnostics = diagnostics.IsDefault ? [] : diagnostics;
             change = new(after.Revision, ActualChanges(before, after, draft.Changes), draft.StructureChanged)
             { CalculationUnchanged = draft.CalculationUnchanged };
@@ -161,17 +171,37 @@ public sealed class DocumentSession : IDisposable
         return Task.FromResult(Execute(command, expectedRevision));
     }
 
-    public ScriptActionRequest BeginAction(string? name)
+    public ScriptActionRequest BeginAction(string? name, ScriptEvent? scriptEvent = null)
     {
+        ScriptActionRequest request;
         lock (_gate)
         {
             ThrowIfClosed();
             if (!_scriptsEnabled || !_snapshot.ScriptModules.HasActions) throw new InvalidOperationException("请先启用包含 actions 绑定的脚本。");
             if (name is not null && (string.IsNullOrWhiteSpace(name) || name.Length > 128 || name.Any(char.IsControl))) throw new ArgumentException("动作名称无效。");
+            if (scriptEvent is not null && (scriptEvent.SessionId != SessionId || !ScriptEventNames.All.Contains(scriptEvent.Name) || name != ScriptEventNames.Prefix + scriptEvent.Name) ||
+                scriptEvent is null && name?.StartsWith(ScriptEventNames.Prefix, StringComparison.Ordinal) == true) throw new ArgumentException("事件调用身份无效。");
             AdvanceCalculationGeneration();
             _activeCalculation = new CancellationTokenSource();
             _activeActionId = Guid.NewGuid();
-            return new(new(SessionId, _snapshot.Revision, _calculationGeneration, _scriptGeneration), _activeActionId, name, _snapshot, _activeCalculation.Token);
+            request = new(new(SessionId, _snapshot.Revision, _calculationGeneration, _scriptGeneration), _activeActionId, name, _snapshot, _activeCalculation.Token)
+            { Files = _transientFiles, Event = scriptEvent };
+        }
+        try
+        {
+            if (_virtualFiles is not null && name is not null)
+            {
+                request.CancellationToken.ThrowIfCancellationRequested();
+                request = request with { Files = new VirtualFileSet(_virtualFiles.Capture(request.Snapshot).Entries.Values.Concat(request.Files.Entries.Values)) };
+                request.CancellationToken.ThrowIfCancellationRequested();
+            }
+            return request;
+        }
+        catch (Exception error)
+        {
+            TryFailCalculation(request.Stamp, "文件快照失败：" + error.Message, disableScripts: false);
+            if (error is NotSupportedException) throw new InvalidOperationException("当前工作簿不能构建安全的脚本文件快照：" + error.Message, error);
+            throw;
         }
     }
 
@@ -190,7 +220,13 @@ public sealed class DocumentSession : IDisposable
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(result);
         if (request.Name is null) throw new InvalidOperationException("动作发现请求不能提交变更。");
-        try { return ExecuteCore(new ApplyActionPatchCommand(request, result), request.Stamp.InputRevision, request, cancellationToken, result.Logs); }
+        try
+        {
+            if (result.FileEdits.IsDefault) throw new InvalidOperationException("缺少文件变更。");
+            var files = request.Files.Apply(result.FileEdits);
+            var transient = new VirtualFileSet(files.Entries.Values.Where(e => !e.Path.StartsWith("//xlsq/", StringComparison.Ordinal)));
+            return ExecuteCore(new ApplyActionPatchCommand(request, result, _virtualFiles), request.Stamp.InputRevision, request, cancellationToken, result.Logs, transientFiles: transient);
+        }
         catch (Exception error)
         {
             lock (_gate)
@@ -235,6 +271,7 @@ public sealed class DocumentSession : IDisposable
             if (!entry.CalculationUnchanged) _diagnostics = [];
             change = new(_snapshot.Revision, ActualChanges(before, _snapshot, entry.Changes), entry.StructureChanged, IsUndoOrRedo: true)
             { CalculationUnchanged = entry.CalculationUnchanged };
+            QueueChangeEvents(before, _snapshot, change.Cells, history: true);
             QueueNotification(change);
             result = new(true, _snapshot.Revision) { CalculationUnchanged = entry.CalculationUnchanged };
         }
@@ -252,6 +289,9 @@ public sealed class DocumentSession : IDisposable
             if (enabled && !_snapshot.ScriptModules.CanExecute) throw new NotSupportedException("多模块执行需要显式声明脚本 API v2。");
             // Reapply also invalidates an in-flight compile of the same source.
             _scriptsEnabled = enabled;
+            _registeredEvents = null;
+            _scriptEvents.Clear();
+            if (enabled && _snapshot.ScriptModules.HasActions && !_openedEvent) { _openedEvent = true; EnqueueScriptEvent("workbook.open"); EnqueueScriptEvent("sheet.activate", _snapshot.GetSheet(_snapshot.ActiveSheetId)); }
             _scriptGeneration = checked(_scriptGeneration + 1);
             AdvanceCalculationGeneration();
             _snapshot = Invalidate(_snapshot);
@@ -315,6 +355,7 @@ public sealed class DocumentSession : IDisposable
                 _historyBytes += last.Value.Bytes;
                 TrimHistory();
             }
+            EnqueueScriptEvent("workbook.calculated");
             change = new(_snapshot.Revision, changes.ToImmutable(), false, CalculationOnly: true);
             QueueNotification(change);
         }
@@ -332,6 +373,7 @@ public sealed class DocumentSession : IDisposable
             if (disableScripts)
             {
                 _scriptsEnabled = false;
+                _scriptEvents.Clear();
                 _scriptGeneration = checked(_scriptGeneration + 1);
             }
             AdvanceCalculationGeneration();
@@ -349,6 +391,7 @@ public sealed class DocumentSession : IDisposable
         {
             if (_closed || sessionId != SessionId || capturedRevision > _snapshot.Revision || capturedRevision < _savedRevision) return false;
             _savedRevision = capturedRevision;
+            EnqueueScriptEvent("workbook.saved");
             QueueNotification(new(_snapshot.Revision, [], false, CalculationOnly: true));
         }
         PublishNotifications();
@@ -485,6 +528,7 @@ public sealed class DocumentSession : IDisposable
             _undo.Clear(); _redo.Clear(); _historyBytes = 0;
             _notifications.Clear();
             Changed = null;
+            _scriptEvents.Clear(); _transientFiles = VirtualFileSet.Empty;
         }
     }
 
@@ -493,6 +537,8 @@ public sealed class DocumentSession : IDisposable
         // Unchanged immutable input and metadata are shared. Count changed payloads and copied formula caches.
         public long Bytes => 1024L + Changes.Sum(change => Estimate(change.Before) + Estimate(change.After) + 256L)
             + FormulaCaches(Before) + FormulaCaches(After)
+            + (ReferenceEquals(Before.PackageFiles, After.PackageFiles) ? 0 : Before.PackageFiles.Bytes + After.PackageFiles.Bytes)
+            + (ReferenceEquals(Before.FileState, After.FileState) ? 0 : (Before.FileState?.OriginalWorkbook.Length ?? 0L) + (After.FileState?.OriginalWorkbook.Length ?? 0L))
             + Before.DefinedNames.Sum(n => 128L + 2L * (n.Name.Length + n.Formula.Length))
             + After.DefinedNames.Sum(n => 128L + 2L * (n.Name.Length + n.Formula.Length))
             + RemovedSheetMetadata(Before, After) + RemovedSheetMetadata(After, Before)

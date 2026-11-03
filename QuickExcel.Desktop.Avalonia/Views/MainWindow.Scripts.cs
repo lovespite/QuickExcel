@@ -148,6 +148,19 @@ public sealed partial class MainWindow
         try { if (_scriptPage is not null) await _scriptPage.DisposeAsync(); window.Close(); }
         finally { _scriptWindow = null; _scriptPage = null; _scriptContent = null; _modulePicker = null; _actionPicker = null; _scriptStatus = null; _scriptDiagnostics = null; _scriptRecovery = null; _scriptClosing = false; }
     }
+    private async Task RefreshScriptPageAfterMutationAsync()
+    {
+        if (_scriptPage is not { } page || _scriptWindow is null) return;
+        var modules = Document.Snapshot.ScriptModules;
+        if (page.Drafts.Models.Count == modules.Modules.Count && modules.Modules.All(p => page.Drafts.Models.TryGetValue(p.Key, out var draft) &&
+            draft.Path == p.Value.Path && draft.Committed == p.Value.Source)) return;
+        if (page.Drafts.IsDirty || page.Drafts.Failed)
+            throw new InvalidOperationException("包内源码与编辑器草稿冲突；已保留草稿，不能覆盖新的包源码。");
+        await page.DisposeAsync(); _scriptPage = null;
+        if (!modules.Modules.ContainsKey(_selectedModule)) _selectedModule = modules.EntryModules[0];
+        try { await CreateScriptPageAsync(new(modules, Document.Snapshot.FileState?.FormulaReadOnly == true)); }
+        catch (Exception error) { ScriptPageFailed(error); throw; }
+    }
     private void RefreshScriptChrome()
     {
         if (_scriptWindow is null) return;
@@ -179,7 +192,7 @@ public sealed partial class MainWindow
         var old = Document.Snapshot.ScriptModules;
         if (old.ScriptApiVersion != 2) throw new InvalidOperationException("API v1 不支持更改模块角色。");
         var role = (old.Bindings.Any(b => b.Module == _selectedModule && b.Kind == "formula-functions") ? 1 : 0) + (old.Bindings.Any(b => b.Module == _selectedModule && b.Kind == "actions") ? 2 : 0);
-        var dialog = new FieldsDialog("模块角色").Choice("role", _selectedModule, ["辅助模块", "公式函数入口", "操作入口", "公式和操作入口"], role);
+        var dialog = new FieldsDialog("模块角色").Choice("role", _selectedModule, ["辅助模块", "公式函数入口", "操作与事件入口", "公式、操作与事件入口"], role);
         if (!await dialog.ShowAsync(this) || !await CommitScriptsAsync()) return;
         old = Document.Snapshot.ScriptModules; role = dialog.Index("role");
         var bindings = old.Bindings.Where(b => b.Module != _selectedModule).ToList();
@@ -205,6 +218,7 @@ public sealed partial class MainWindow
             SetScriptActions(document, modules, actions);
             _status.Text = $"已加载 {actions.Count} 个脚本操作。";
         });
+        await DispatchEventsAsync();
     }
     private Task RunScriptActionAsync() => RunScriptActionAsync(_actionPicker?.SelectedItem as ScriptActionDescriptor);
     private async Task RunScriptActionAsync(ScriptActionDescriptor? action)
@@ -225,7 +239,12 @@ public sealed partial class MainWindow
         _calculationTimer.Stop(); using var cancellation = new CancellationTokenSource(); _scriptCancellation = cancellation;
         _book.IsEnabled = false; RefreshScriptActionButtons();
         try { await work(cancellation.Token); _calculationPending = false; }
-        finally { _scriptCancellation = null; _book.IsEnabled = true; Synchronize(); RefreshScriptChrome(); RefreshScriptDiagnostics(); }
+        finally
+        {
+            _scriptCancellation = null; _book.IsEnabled = true;
+            await RefreshScriptPageAfterMutationAsync();
+            Synchronize(); RefreshScriptChrome(); RefreshScriptDiagnostics();
+        }
     }
     private void RefreshScriptDiagnostics()
     {

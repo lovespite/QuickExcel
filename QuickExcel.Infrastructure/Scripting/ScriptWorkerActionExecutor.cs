@@ -34,12 +34,21 @@ public sealed class ScriptWorkerActionExecutor(string? executablePath = null) : 
                 c.Value.Content.Kind == CellContentKind.Literal || c.Value.Calculation?.Value is not null)).ToArray())).ToArray());
         ActionProtocol.ValidateSnapshot(snapshot);
         using var runtime = Create(request, linked.Token);
-        if (!runtime.ActionDescriptors.Any(a => a.Name == request.Name)) throw new InvalidOperationException("找不到已绑定的操作脚本。");
-        var patch = runtime.RunAction(new(request.OperationId, request.Name, snapshot));
+        if (!runtime.ActionDescriptors.Any(a => a.Name == request.Name))
+        {
+            if (request.Event is not null) return new(request.OperationId, request.Stamp.InputRevision, request.Name, [], []);
+            throw new InvalidOperationException("找不到已绑定的操作脚本。");
+        }
+        var patch = runtime.RunAction(new(request.OperationId, request.Name, snapshot)
+        {
+            Files = request.Files.Entries.Values.Select(e => new VirtualEntry(e.Path, e.IsDirectory ? null : Convert.ToBase64String(e.Data.AsSpan()), e.IsDirectory)).ToArray(),
+            Event = request.Event is { } ev ? new(ev.Name, ev.SessionId, ev.Sequence, ev.Revision, ev.SheetId, ev.SheetName, ev.Ranges.ToArray(), ev.IsUndoOrRedo) : null
+        });
         var logs = runtime.GetLogs().ToImmutableArray();
         linked.Token.ThrowIfCancellationRequested();
         return new(patch.OperationId, patch.BaseRevision, patch.Name, patch.Edits.Select(e => new ScriptActionEdit(
-            new(new SheetId(Guid.Parse(e.SheetId)), e.Row, e.Column), e.Value is null ? null : FromWire(e.Value), e.Formula)).ToImmutableArray(), logs);
+            new(new SheetId(Guid.Parse(e.SheetId)), e.Row, e.Column), e.Value is null ? null : FromWire(e.Value), e.Formula)).ToImmutableArray(), logs)
+        { FileEdits = patch.FileEdits.Select(e => new VirtualFileEdit(e.Operation, e.Path, e.Base64 is null ? [] : VirtualFileProtocol.Bytes(e.Base64).ToImmutableArray())).ToImmutableArray() };
     }
 
     private static WireValue ToWire(CellValue value) => value.Kind switch

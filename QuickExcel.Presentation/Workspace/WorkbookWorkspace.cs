@@ -48,7 +48,7 @@ public sealed class WorkbookWorkspace : IDisposable
     {
         var previous = Document;
         Document = document; Editor = new(document); FilePath = path; Version = version;
-        previous.Dispose(); Changed?.Invoke();
+        previous.NotifyClosed(); previous.Dispose(); Changed?.Invoke();
     }
     public async Task OpenAsync(LocalFileSelection selected)
     {
@@ -112,6 +112,6 @@ public sealed class WorkbookWorkspace : IDisposable
     public void Dispose()
     {
         if (_disposed) return;
-        RequireIdle(); _disposed = true; Document.Dispose();
+        RequireIdle(); _disposed = true; Document.NotifyClosed(); Document.Dispose();
     }
 }

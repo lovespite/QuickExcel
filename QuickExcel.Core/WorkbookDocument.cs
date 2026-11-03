@@ -34,7 +34,7 @@ public sealed class WorkbookDocument : IDisposable
         ArgumentNullException.ThrowIfNull(services.Storage);
         ArgumentNullException.ThrowIfNull(services.Calculator);
         _services = services;
-        Session = new(snapshot, historyBudgetBytes, services.Calculator as IWorkbookValidation);
+        Session = new(snapshot, historyBudgetBytes, services.Calculator as IWorkbookValidation, services.Storage as IWorkbookVirtualFiles);
     }
 
     public DocumentSession Session { get; }
@@ -218,7 +218,10 @@ public sealed class WorkbookDocument : IDisposable
             var actions = executor.List(request, lifetime.Token);
             lifetime.Token.ThrowIfCancellationRequested();
             if (!Session.CompleteActionDiscovery(request)) throw new InvalidOperationException("动作列表已过期，请重新应用脚本。");
-            return actions;
+            _eventModules = request.Snapshot.ScriptModules;
+            _eventNames = actions.Where(a => a.Name.StartsWith(ScriptEventNames.Prefix, StringComparison.Ordinal)).Select(a => a.Name).ToHashSet(StringComparer.Ordinal);
+            Session.ConfigureScriptEvents(_eventModules, _eventNames.Select(n => n[ScriptEventNames.Prefix.Length..]));
+            return actions.Where(a => !a.Name.StartsWith(ScriptEventNames.Prefix, StringComparison.Ordinal)).ToArray();
         }
         catch (Exception e) { Session.TryFailCalculation(request.Stamp, e.Message, disableScripts: false); throw; }
     }
@@ -237,5 +240,48 @@ public sealed class WorkbookDocument : IDisposable
         catch (Exception e) { Session.TryFailCalculation(request.Stamp, e.Message, disableScripts: false); throw; }
     }
 
+    private int _dispatchingEvents;
+    private ScriptModuleSet? _eventModules;
+    private HashSet<string> _eventNames = [];
+    public int DispatchScriptEvents(CancellationToken cancellationToken = default)
+    {
+        if (Interlocked.Exchange(ref _dispatchingEvents, 1) != 0) return 0;
+        var count = 0;
+        try
+        {
+            if (Session.ScriptsEnabled && Session.HasScriptEvents)
+            {
+                if (!ReferenceEquals(_eventModules, Snapshot.ScriptModules)) _ = ListActions(cancellationToken);
+                else Session.ConfigureScriptEvents(_eventModules!, _eventNames.Select(n => n[ScriptEventNames.Prefix.Length..]));
+            }
+            while (count < 256 && Session.ScriptsEnabled && Session.TakeScriptEvent() is { } item)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (!ReferenceEquals(_eventModules, Snapshot.ScriptModules)) _ = ListActions(cancellationToken);
+                if (!_eventNames.Contains(ScriptEventNames.Prefix + item.Name)) { count++; continue; }
+                var request = Session.BeginAction(ScriptEventNames.Prefix + item.Name, item);
+                try
+                {
+                    var result = (_services.Actions ?? throw new NotSupportedException("未配置事件执行器。")).Run(request, cancellationToken);
+                    Session.CommitAction(request, result, cancellationToken);
+                }
+                catch (Exception error)
+                {
+                    Session.TryFailCalculation(request.Stamp, $"事件 {item.Name} 失败：{error.Message}", disableScripts: false);
+                    throw;
+                }
+                count++;
+            }
+            return count;
+        }
+        finally { Volatile.Write(ref _dispatchingEvents, 0); }
+    }
+
+    public void NotifyClosed()
+    {
+        if (Session.IsClosed || !ScriptsEnabled) return;
+        Session.QueueCloseEvent();
+        try { DispatchScriptEvents(); } catch { /* Closing is final; diagnostics stay on the retiring session. */ }
+    }
     public void Dispose() => Session.Dispose();
 }

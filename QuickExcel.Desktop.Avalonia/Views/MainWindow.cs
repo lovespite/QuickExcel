@@ -53,7 +53,7 @@ public sealed partial class MainWindow : Window
         _settings = new(Path.Combine(userDataDirectory, "settings.json")); _settings.Load();
         _userDataDirectory = userDataDirectory;
         BuildView(); InstallEditingCommands(); InstallFormulaEditing(); InstallRibbon(); InstallCalculation(); InstallSheetCommands(); InstallSearch(); InstallDataCommands(); InstallValidation(); InstallCleaning(); InstallObjects(); InstallFileCommands(); InstallScriptCommands(); InstallPrintCommands();
-        ArrangeRibbonTabs();
+        ArrangeRibbonTabs(); InstallScriptEvents();
         _grid.ResolveStyle = ConditionalPresentation.GetStyle;
         _grid.RenderingFailed += Error;
         _grid.CommitCellAsync = CommitCellAsync;
@@ -63,10 +63,10 @@ public sealed partial class MainWindow : Window
         _grid.SelectionChanged += () =>
         {
             if (_synchronizing) return;
-            Document.Session.UpdateNavigation(Document.Snapshot.ActiveSheetId, _grid.Current); UpdateFormula(); UpdateTitle(); UpdateRibbon(); UpdateValidation(); QueueStatistics();
+            Document.Session.UpdateNavigation(Document.Snapshot.ActiveSheetId, _grid.Current); QueueCellEvent("selection.changed"); UpdateFormula(); UpdateTitle(); UpdateRibbon(); UpdateValidation(); QueueStatistics();
         };
         _formula.GotFocus += (_, _) => _formulaOwner ??= new(Document.Snapshot.ActiveSheetId, _grid.Current.Row, _grid.Current.Column);
-        _formula.PropertyChanged += (_, e) => { if (e.Property == TextBox.TextProperty && !_synchronizing) _formulaDirty = true; };
+        _formula.PropertyChanged += (_, e) => { if (e.Property == TextBox.TextProperty && !_synchronizing) { if (!_formulaDirty) QueueCellEvent("cell.edit"); _formulaDirty = true; } };
         _formula.AddHandler(KeyDownEvent, async (_, e) =>
         {
             if (_formula.IsComposing) return;
@@ -136,6 +136,7 @@ public sealed partial class MainWindow : Window
     }
     private void ShowHome()
     {
+        if (_book.IsVisible) Document.Session.RaiseScriptEvent("workbook.deactivate");
         _book.IsVisible = false; ((Control)_start.Parent!).IsVisible = true; _recent.Children.Clear();
         foreach (var path in _recentFiles.Paths)
         {
@@ -143,7 +144,7 @@ public sealed partial class MainWindow : Window
             button.Click += async (_, _) => await PerformAsync(async () => { if (await ConfirmDiscardAsync()) await OpenPathAsync(path); }); _recent.Children.Add(button);
         }
     }
-    private void ShowBook() { ((Control)_start.Parent!).IsVisible = false; _book.IsVisible = true; }
+    private void ShowBook() { if (!_book.IsVisible) Document.Session.RaiseScriptEvent("workbook.activate"); ((Control)_start.Parent!).IsVisible = false; _book.IsVisible = true; }
     private void Synchronize()
     {
         if (_synchronizing) return;
@@ -152,7 +153,7 @@ public sealed partial class MainWindow : Window
         _synchronizing = true;
         try
         {
-            _book.IsEnabled = !_workspace.IsBusy && _scriptCancellation is null; _menu.IsEnabled = !_workspace.IsBusy;
+            _book.IsEnabled = !_workspace.IsBusy && (_scriptCancellation is null || _dispatchingUiEvents); _menu.IsEnabled = !_workspace.IsBusy;
             if (_boundSession != Document.Session.SessionId || _boundSheet != Document.Snapshot.ActiveSheetId)
             {
                 _formulaDirty = false; _formulaOwner = null;
@@ -218,6 +219,7 @@ public sealed partial class MainWindow : Window
             var snapshot = Document.Snapshot; var sheet = snapshot.Sheets[index];
             var command = new SetCellsCommand([new(new(sheet.Id, owner.Row, owner.Column), CellInput.ParseForCell(text, snapshot, sheet, owner.Row, owner.Column))]);
             await _workspace.Editor.ExecuteAsync(command, ConfirmValidationAsync, snapshot.Revision);
+            QueueCellEvent("cell.commit", sheet.Id, owner);
             Synchronize(); _status.Text = "已修改"; return true;
         }
         catch (Exception ex) { Error(ex); return false; }
@@ -245,6 +247,8 @@ public sealed partial class MainWindow : Window
     private async Task<bool> ConfirmDiscardAsync()
     {
         if (!await CommitEditorsAsync()) return false;
+        Document.Session.RaiseScriptEvent("workbook.beforeClose");
+        try { await DispatchEventsAsync(); } catch (Exception error) { Error(error); }
         var accepted = !Document.IsDirty;
         if (!accepted)
         {
@@ -282,6 +286,8 @@ public sealed partial class MainWindow : Window
     {
         await using var hold = _scriptPage?.HoldEdits();
         if (!await FlushEditsAsync()) return false;
+        Document.Session.RaiseScriptEvent("workbook.beforeSave"); await DispatchEventsAsync();
+        await CalculatePendingAsync();
         var snapshot = Document.Snapshot;
         var issues = TypedWorkbookStorage.SaveIssues(snapshot); var discard = false;
         if (issues.Count > 0)

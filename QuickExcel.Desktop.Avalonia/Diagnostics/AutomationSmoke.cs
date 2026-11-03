@@ -191,6 +191,7 @@ public sealed partial class MainWindow
             Check(_automationActions.ItemCount == 0 && _automationEmpty.Text!.Contains("没有可用") && !_automationRun.IsEnabled, "An action entry with no registrations displays an empty state after discovery");
             await OpenPathAsync(path); await Click(_automationLoad!); _workspace.New();
             Check(_automationActions.ItemCount == 0 && !_automationRun.IsEnabled && !Document.ScriptsEnabled, "Replacing the workbook clears actions from the previous session");
+            await CheckEventFilesAsync(directory, Check);
         }
         catch (Exception ex) { failure = ex; }
         await File.WriteAllTextAsync(Path.Combine(directory, "result.json"), JsonSerializer.Serialize(new { passed = failure is null, checks, error = failure?.ToString() }, new JsonSerializerOptions { WriteIndented = true }));

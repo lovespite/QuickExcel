@@ -46,6 +46,8 @@ public sealed partial class WorkbookGrid : UserControl, IGridSurface, IDisposabl
     public Func<WorkbookSnapshot, WorksheetSnapshot, int, int, StyleDefinition>? ResolveStyle { get; set; }
     public event Action? SelectionChanged;
     public event Action? DraftEnded;
+    public event Action? DraftStarted;
+    public event Action? CellClicked;
     public event Action<int>? ZoomRequested;
     public event Action<Exception>? RenderingFailed;
     public event Action? ViewportChanged;
@@ -86,8 +88,8 @@ public sealed partial class WorkbookGrid : UserControl, IGridSurface, IDisposabl
             Scroll(_columns.Offset - (e.KeyModifiers.HasFlag(KeyModifiers.Shift) ? e.Delta.Y : e.Delta.X) * 60, _rows.Offset - (e.KeyModifiers.HasFlag(KeyModifiers.Shift) ? 0 : e.Delta.Y) * 60);
             e.Handled = true;
         };
-        CellEditor.PropertyChanged += (_, e) => { if (e.Property == TextBox.TextProperty && !_settingText) { _editing = true; CellEditor.Opacity = 1; CellEditor.IsHitTestVisible = true; } };
-        CellEditor.CompositionChanged += () => { if (IsComposing) { _editing = true; CellEditor.Opacity = 1; CellEditor.IsHitTestVisible = true; } };
+        CellEditor.PropertyChanged += (_, e) => { if (e.Property == TextBox.TextProperty && !_settingText) { if (!_editing) DraftStarted?.Invoke(); _editing = true; CellEditor.Opacity = 1; CellEditor.IsHitTestVisible = true; } };
+        CellEditor.CompositionChanged += () => { if (IsComposing) { if (!_editing) DraftStarted?.Invoke(); _editing = true; CellEditor.Opacity = 1; CellEditor.IsHitTestVisible = true; } };
         AddHandler(KeyDownEvent, HandleKey, RoutingStrategies.Tunnel);
         DetachedFromVisualTree += (_, _) => { CancelGesture(); ReleaseRendering(); };
     }
@@ -189,6 +191,7 @@ public sealed partial class WorkbookGrid : UserControl, IGridSurface, IDisposabl
     public bool BeginEdit()
     {
         if (_snapshot is null || IsComposing || IsCommitPending || IsCellReadOnly(_current)) return false;
+        if (!_editing) DraftStarted?.Invoke();
         _editing = true; _draftOwner = _current; CellEditor.Opacity = 1; CellEditor.IsHitTestVisible = true; CellEditor.Focus(); CellEditor.CaretIndex = CellEditor.Text?.Length ?? 0; return true;
     }
     private void PrepareEditor(bool focus)

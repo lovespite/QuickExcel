@@ -33,7 +33,7 @@ public sealed class ProtocolException(string message, Exception? inner = null) :
 
 public static class WorkerProtocol
 {
-    public const int Version = 4;
+    public const int Version = 5;
     public const string Engine = "QuickJS-NG/0.17.0";
     public const string Policy = "conservative-worker-v1";
     public const int MaxFrameBytes = 16 * 1024 * 1024;

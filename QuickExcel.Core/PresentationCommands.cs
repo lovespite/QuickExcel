@@ -236,7 +236,7 @@ public sealed class SetCellStyleCommand : DocumentCommand
             edits.Add(new(address, content.WithStyle(id)));
         }
         var styled = new WorkbookSnapshot(snapshot.DocumentId, snapshot.Revision, snapshot.DateSystem, snapshot.Sheets,
-            snapshot.ScriptSource, styles, snapshot.ScriptModules, snapshot.FileState, snapshot.DefinedNames, snapshot.ActiveSheetId, snapshot.Window, snapshot.TextCompatibilityVersion);
+            snapshot.ScriptSource, styles, snapshot.ScriptModules, snapshot.FileState, snapshot.DefinedNames, snapshot.ActiveSheetId, snapshot.Window, snapshot.TextCompatibilityVersion, snapshot.PackageFiles);
         var draft = new SetCellsCommand(edits).Prepare(styled);
         return draft.Changes.IsEmpty ? new(snapshot, [], false) : draft with { CalculationUnchanged = true };
     }

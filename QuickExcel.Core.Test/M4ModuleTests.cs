@@ -92,7 +92,7 @@ public sealed class M4ModuleTests
     [Theory]
     [InlineData("this is not valid JavaScript !!!")]
     [InlineData("throw new Error('failure');")]
-    [InlineData("quickExcel.functions.register('VALUE',()=>2);")]
+    [InlineData("quickExcel.functions.register('MODULEVALUE',()=>2);")]
     [InlineData("while(true){}")]
     [InlineData("await Promise.resolve(3);")]
     [InlineData("await new Promise(()=>{});")]
@@ -102,16 +102,16 @@ public sealed class M4ModuleTests
     [InlineData("import 'main' with { type: 'json' };")]
     public void FailedEntryDiscardsWholeRegistryAndCachedCalculation(string badEntry)
     {
-        var package = Package("quickExcel.functions.register('VALUE',()=>7);", ("bad", badEntry));
+        var package = Package("quickExcel.functions.register('MODULEVALUE',()=>7);", ("bad", badEntry));
         package = new(package.Modules, ["main", "bad"], scriptApiVersion: 2);
-        var sheet = Sheet("S", (0, 0, F("=VALUE()", 42)), (0, 1, F("=3", 9)));
+        var sheet = Sheet("S", (0, 0, F("=MODULEVALUE()", 42)), (0, 1, F("=3", 9)));
         using var document = new WorkbookDocument(Book(sheet).WithScriptModules(package),
             new(new TypedWorkbookStorage(), new WorkbookCalculator(new ScriptWorkerRuntimeFactory())));
         Assert.Throws<ScriptRuntimeFailureException>(document.EnableScriptsAndCalculate);
         Assert.False(document.ScriptsEnabled);
         Assert.Equal("42", document.GetCellValue(0, 0, 0));
         Assert.Equal("9", document.GetCellValue(0, 0, 1));
-        document.Session.Execute(new UpdateScriptModulesCommand(Package("quickExcel.functions.register('VALUE',()=>8);")));
+        document.Session.Execute(new UpdateScriptModulesCommand(Package("quickExcel.functions.register('MODULEVALUE',()=>8);")));
         document.EnableScriptsAndCalculate();
         Assert.Equal("8", document.GetCellValue(0, 0, 0));
     }

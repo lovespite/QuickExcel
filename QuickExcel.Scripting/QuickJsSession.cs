@@ -5,7 +5,7 @@ using System.Text.Json;
 namespace QuickExcel.Scripting;
 
 /// <summary>A serialized, memory-limited QuickJS session for workbook functions.</summary>
-public sealed class QuickJsSession : IDisposable
+public sealed partial class QuickJsSession : IDisposable
 {
     private const string NativeLibrary = "quickexcel-js";
     public const int MaxMessageBytes = 16 * 1024 * 1024;
@@ -14,8 +14,9 @@ public sealed class QuickJsSession : IDisposable
 
     // The bridge object is held by native code, not exposed on globalThis. Workbook
     // code receives only registration and console APIs, with no host CLR objects.
-    private const string Bootstrap = """
+    private static readonly string Bootstrap = """
         (() => {
+            /*VIRTUAL_FILES*/
             const registry = Object.create(null);
             const descriptors = Object.create(null);
             const ownKeys = Object.keys;
@@ -36,6 +37,10 @@ public sealed class QuickJsSession : IDisposable
             let actionInvoked = false;
             const actions = Object.create(null);
             const actionInfo = Object.create(null);
+            const eventHandlers = Object.create(null);
+            const eventNames = ['workbook.open','workbook.beforeClose','workbook.close','workbook.activate','workbook.deactivate',
+                'workbook.beforeSave','workbook.saved','workbook.calculated','sheet.added','sheet.deleted','sheet.renamed',
+                'sheet.activate','sheet.deactivate','selection.changed','cell.click','cell.edit','cell.commit','cells.changed'];
             const logs = [];
             const logger = (...values) => {
                 if (logs.length < 100) logs.push(values.map(String).join(' ').slice(0, 4000));
@@ -80,10 +85,27 @@ public sealed class QuickJsSession : IDisposable
                     const name = typeof input === 'string' ? input : input?.name;
                     const description = typeof input === 'string' ? '' : (input?.description ?? '');
                     if (typeof name !== 'string' || !name.trim() || name.length > 128 || /[\x00-\x1f\x7f-\x9f]/.test(name) ||
-                        typeof description !== 'string' || description.length > 1000 || typeof fn !== 'function' || actions[name] || ownKeys(actions).length >= 256)
+                        name.startsWith('@event/') || typeof description !== 'string' || description.length > 1000 || typeof fn !== 'function' || actions[name] || ownKeys(actions).length >= 256)
                         throw new TypeErrorCtor('Invalid or duplicate action registration.');
                     actions[name] = fn;
                     actionInfo[name] = freeze({ name, description });
+                }
+            }), events: freeze({
+                on(name, handler) {
+                    if (!actionMode) return;
+                    if (loaded || !eventNames.includes(name) || typeof handler !== 'function') throw new TypeErrorCtor('Invalid event registration.');
+                    const key='@event/'+name;
+                    if (!eventHandlers[name]) {
+                        if (ownKeys(actions).length>=256) throw new TypeErrorCtor('Too many registrations.');
+                        eventHandlers[name]=[];
+                        actions[key]=context=>{ for(const fn of eventHandlers[name]) {
+                            const result=fn(context);
+                            if(result!==undefined && result!==null) throw new TypeErrorCtor('Event handlers must complete synchronously.');
+                        }};
+                        actionInfo[key]=freeze({name:key,description:'Event: '+name});
+                    }
+                    if(eventHandlers[name].length>=32) throw new TypeErrorCtor('Too many handlers.');
+                    eventHandlers[name].push(handler);
                 }
             }) });
             function runAction(name, request) {
@@ -98,6 +120,7 @@ public sealed class QuickJsSession : IDisposable
                 }
                 let reads = 0, active = true, invalidPatch = false;
                 const edits = [], targets = new Set();
+                const files=createFs(request.files ?? [], ()=>{if(!active) throw new TypeErrorCtor('Expired file context.');}, ()=>{invalidPatch=true;});
                 function range(id, address) {
                     if (!active || !sheets.has(id) || typeof address !== 'string' || address.length > 40) throw new TypeErrorCtor('Invalid sheet or range.');
                     const parts = address.split(':');
@@ -155,10 +178,10 @@ public sealed class QuickJsSession : IDisposable
                 const patch=freeze({setValues:(id,r,v)=>write(id,r,v,false),setFormulas:(id,r,v)=>write(id,r,v,true),
                     setValue:(id,a,v)=>write(id,a,[[v]],false),setFormula:(id,a,v)=>write(id,a,[[v]],true)});
                 try {
-                    const returned=actions[name](freeze({snapshot,patch}));
+                    const returned=actions[name](freeze({snapshot,patch,fs:files.fs,event:request.event ? deepFreeze(request.event) : null}));
                     if(invalidPatch) throw new TypeErrorCtor('An invalid write rejected the entire patch.');
                     if(returned!==undefined && returned!==null) throw new TypeErrorCtor('Actions must complete synchronously without a return value.');
-                    return {operationId:request.operationId,baseRevision:data.baseRevision,name,edits};
+                    return {operationId:request.operationId,baseRevision:data.baseRevision,name,edits,fileEdits:files.edits};
                 } finally { active=false; }
             }
             return freeze({
@@ -205,7 +228,7 @@ public sealed class QuickJsSession : IDisposable
                 logs() { return logs.slice(); }
             });
         })()
-        """;
+        """.Replace("/*VIRTUAL_FILES*/", VirtualFileBootstrap, StringComparison.Ordinal);
 
     public IReadOnlyList<string> FunctionNames { get; }
     public IReadOnlyList<JsFunctionDescriptor> FunctionDescriptors { get; }

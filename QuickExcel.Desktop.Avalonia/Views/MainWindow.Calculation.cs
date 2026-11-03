@@ -19,7 +19,7 @@ public sealed partial class MainWindow
         _cancelCalculation.Click += (_, _) => _calculationCancellation?.Cancel();
         _calculationTimer.Tick += async (_, _) =>
         {
-            if (_working || _workspace.IsBusy || _grid.IsEditing || _formulaDirty || _grid.IsComposing || _formula.IsComposing || _grid.IsSelectionDragging) return;
+            if (_working || _workspace.IsBusy || _scriptCancellation is not null || _closePending || _grid.IsEditing || _formulaDirty || _grid.IsComposing || _formula.IsComposing || _grid.IsSelectionDragging) return;
             _calculationTimer.Stop();
             if (_calculationPending && !_windowClosed) await PerformAsync(CalculatePendingAsync);
         };

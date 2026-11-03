@@ -121,6 +121,7 @@ public sealed partial class WorkbookGrid
         if (!e.KeyModifiers.HasFlag(KeyModifiers.Shift)) _anchor = position;
         _current = position; _dragPoint = point;
         UpdateDragSelection(position, initial: true);
+        CellClicked?.Invoke();
         if (e.ClickCount == 2 && _dragAxis is null) { BeginEdit(); e.Handled = true; return; }
         _dragging = true; CellEditor.IsVisible = false; e.Pointer.Capture(_canvas); e.Handled = true; RequestDragFrame();
     }

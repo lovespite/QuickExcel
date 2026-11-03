@@ -7,9 +7,16 @@ public sealed record LoadedActions(string Sha256, ActionInfo[] Actions);
 public sealed record ActionCell(int Row, int Column, WireValue Value, string? Formula, string State, bool HasValue);
 public sealed record ActionSheet(string Id, string Name, ActionCell[] Cells);
 public sealed record ActionSnapshot(long BaseRevision, string DateSystem, ActionSheet[] Sheets);
-public sealed record RunAction(Guid OperationId, string Name, ActionSnapshot Snapshot);
+public sealed record RunAction(Guid OperationId, string Name, ActionSnapshot Snapshot)
+{
+    public VirtualEntry[] Files { get; init; } = [];
+    public ActionEvent? Event { get; init; }
+}
 public sealed record ActionWrite(string SheetId, int Row, int Column, WireValue? Value, string? Formula);
-public sealed record ActionPatch(Guid OperationId, long BaseRevision, string Name, ActionWrite[] Edits);
+public sealed record ActionPatch(Guid OperationId, long BaseRevision, string Name, ActionWrite[] Edits)
+{
+    public VirtualEdit[] FileEdits { get; init; } = [];
+}
 
 public static class ActionProtocol
 {
@@ -57,6 +64,7 @@ public static class ActionProtocol
     {
         if (patch is null || patch.OperationId != request.OperationId || patch.BaseRevision != request.Snapshot.BaseRevision || patch.Name != request.Name ||
             patch.Edits is null || patch.Edits.Length > MaxEdits) throw new ProtocolException("Action patch identity or capacity mismatch.");
+        VirtualFileProtocol.ValidateEdits(patch.FileEdits);
         var ids = request.Snapshot.Sheets.Select(s => s.Id).ToHashSet(StringComparer.Ordinal);
         var positions = new HashSet<(string, int, int)>();
         foreach (var edit in patch.Edits)
