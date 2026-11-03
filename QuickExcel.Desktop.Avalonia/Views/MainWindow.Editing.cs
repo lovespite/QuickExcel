@@ -150,6 +150,7 @@ public sealed partial class MainWindow
         var menu = new ContextMenu();
         foreach (var (title, action) in new (string, Func<Task>)[] { ("复制", () => CopyAsync(false)), ("剪切", () => CopyAsync(true)), ("粘贴", () => PasteAsync("all")), ("只贴值", () => PasteAsync("values")), ("清除内容", ClearAsync) })
             menu.Items.Add(CommandMenu(title, action));
+        InstallPageBreakMenu(menu);
         _grid.ContextMenu = menu;
     }
     private MenuItem CommandMenu(string title, Func<Task> action)

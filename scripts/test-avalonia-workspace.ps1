@@ -1,5 +1,5 @@
 [CmdletBinding()]
-param([switch]$SkipBuild, [ValidateSet('Workspace', 'Grid', 'RibbonFilter', 'Automation', 'Execution')][string]$Mode = 'Workspace')
+param([switch]$SkipBuild, [ValidateSet('Workspace', 'Grid', 'PageBreak', 'Compatibility', 'RibbonFilter', 'Automation', 'Execution')][string]$Mode = 'Workspace')
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 $root = [IO.Path]::GetFullPath((Split-Path $PSScriptRoot -Parent))
@@ -12,7 +12,7 @@ try {
         if ($LASTEXITCODE -ne 0) { throw 'Avalonia workspace build failed.' }
     }
     $exe = Join-Path $root 'artifacts/build/bin/QuickExcel.Desktop.Avalonia/release/QuickExcel.Avalonia.exe'
-    $argument = switch ($Mode) { 'Grid' { '--grid-smoke' }; 'RibbonFilter' { '--ribbon-filter-smoke' }; 'Automation' { '--automation-smoke' }; 'Execution' { '--execution-smoke' }; default { '--workspace-smoke' } }
+    $argument = switch ($Mode) { 'Grid' { '--grid-smoke' }; 'PageBreak' { '--page-break-smoke' }; 'Compatibility' { '--compatibility-smoke' }; 'RibbonFilter' { '--ribbon-filter-smoke' }; 'Automation' { '--automation-smoke' }; 'Execution' { '--execution-smoke' }; default { '--workspace-smoke' } }
     $process = Start-Process -FilePath $exe -ArgumentList @($argument, ('"{0}"' -f $run)) -WorkingDirectory $root -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $run 'stdout.log') -RedirectStandardError (Join-Path $run 'stderr.log')
     try {
         if (-not $process.WaitForExit(60000)) { throw "Avalonia workspace exceeded 60 seconds: $run" }

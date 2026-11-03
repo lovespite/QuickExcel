@@ -8,13 +8,22 @@ namespace QuickExcel.Grid.Avalonia;
 
 public sealed partial class WorkbookGrid
 {
-    private CellPosition? _hoverCell;
+    private string? _hoverText;
     private static readonly Cursor ResizeRowCursor = new(StandardCursorType.SizeNorthSouth), ResizeColumnCursor = new(StandardCursorType.SizeWestEast);
     private void UpdateHover(Point point)
     {
         _canvas.Cursor = ResizeHit(point) is { } hit ? hit.Axis == SheetAxis.Row ? ResizeRowCursor : ResizeColumnCursor : Cursor.Default;
-        var cell = Hit(point); if (cell == _hoverCell) return; _hoverCell = cell;
-        ToolTip.SetTip(_canvas, cell is { } position ? CellAnnotation(position) : null);
+        var text = HeaderAnnotation(point) ?? (Hit(point) is { } position ? CellAnnotation(position) : null);
+        if (text == _hoverText) return; _hoverText = text;
+        ToolTip.SetTip(_canvas, text);
+    }
+    internal string? HeaderAnnotation(Point point)
+    {
+        if (HeaderHit(point) is not { } header) return null;
+        var row = header.Axis == SheetAxis.Row;
+        if (!(row ? Sheet.Printing.RowBreaks : Sheet.Printing.ColumnBreaks).Any(b => b.Manual && b.Id == header.Index)) return null;
+        return row ? $"第 {header.Index + 1} 行前有手动分页符；右键行标可删除行分页符。"
+            : $"{ColumnName(header.Index)} 列前有手动分页符；右键列标可删除列分页符。";
     }
     internal string? CellAnnotation(CellPosition position)
     {

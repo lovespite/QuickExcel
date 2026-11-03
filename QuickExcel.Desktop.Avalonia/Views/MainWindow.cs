@@ -94,6 +94,8 @@ public sealed partial class MainWindow : Window
             if (Program.SmokeDirectory is { } executionDirectory && Program.SmokeMode == "execution") { await RunExecutionSmokeAsync(executionDirectory); return; }
             if (Program.SmokeDirectory is { } automationDirectory && Program.SmokeMode == "automation") { await RunAutomationSmokeAsync(automationDirectory); return; }
             if (Program.SmokeDirectory is { } featureDirectory && Program.SmokeMode == "ribbon-filter") { await RunRibbonFilterSmokeAsync(featureDirectory); return; }
+            if (Program.SmokeDirectory is { } pageBreakDirectory && Program.SmokeMode == "page-break") { await RunPageBreakSmokeAsync(pageBreakDirectory); return; }
+            if (Program.SmokeDirectory is { } compatibilityDirectory && Program.SmokeMode == "compatibility") { await RunCompatibilitySmokeAsync(compatibilityDirectory); return; }
             if (Program.SmokeDirectory is { } smoke && Program.SmokeMode != "manual") { if (Program.SmokeMode == "grid") await RunGridSmokeAsync(smoke); else if (Program.SmokeMode == "benchmark") await RunGridBenchmarkAsync(smoke); else if (Program.SmokeMode == "web") await RunWebSmokeAsync(smoke); else if (Program.SmokeMode == "web-benchmark") await RunWebBenchmarkAsync(smoke); else await RunWorkspaceSmokeAsync(smoke); return; }
 #endif
             if (Program.InitialFile is { } path) await PerformAsync(() => OpenPathAsync(path));
@@ -297,7 +299,8 @@ public sealed partial class MainWindow : Window
         var issues = TypedWorkbookStorage.SaveIssues(snapshot); var discard = false;
         if (issues.Count > 0)
         {
-            if (!await Dialogs.Confirm(this, "保存受支持副本", "以下内容不能原样保存，确定放弃这些内容并另存副本？\n\n" + string.Join("\n", issues))) return false;
+            var report = await _workspace.InspectAsync(snapshot => TypedWorkbookStorage.InspectCompatibility(snapshot));
+            if (!await ShowCompatibilityReportAsync(report, saveMode: true)) return false;
             discard = true; saveAs = true;
         }
         var migration = snapshot.FileState?.RequiresMigration == true;

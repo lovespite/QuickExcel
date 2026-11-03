@@ -45,29 +45,24 @@ public static class CompatibilityReportPresentation
     public static CompatibilityReportView Create(WorkbookCompatibilityReport report, bool saveMode,
         IEnumerable<string>? notices = null)
     {
-        var effective = report.Diagnostics
-            .Select(diagnostic => saveMode && diagnostic.Kind == CompatibilityKind.PreservedOnly
-                ? diagnostic with { Kind = CompatibilityKind.PotentialLoss }
-                : diagnostic)
-            .ToArray();
-        var groups = effective.GroupBy(diagnostic => diagnostic.Kind)
+        // Inspection already classifies actual save losses. Preserved rich text,
+        // links and notes must not become losses just because this is a save dialog.
+        var groups = report.Diagnostics.GroupBy(diagnostic => diagnostic.Kind)
             .OrderBy(group => Array.IndexOf(Order, group.Key))
             .Select(group => BuildGroup(group.Key, group, saveMode))
             .Where(group => group.Items.Count > 0)
             .ToArray();
-        var total = groups.Where(group => group.Kind != CompatibilityKind.Editable)
-            .Sum(group => group.Items.Sum(item => item.Count));
         var losses = groups.Where(group => group.Kind == CompatibilityKind.PotentialLoss)
             .Sum(group => group.Items.Sum(item => item.Count));
-        var title = saveMode ? "另存受支持副本" : "兼容性报告";
+        var title = saveMode ? "保存兼容性报告" : "兼容性报告";
         var headline = saveMode
-            ? Count(total, "处内容无法在编辑后保留")
+            ? Count(losses, "处内容无法在编辑后保留")
             : report.OriginalPackageUnchanged
                 ? "工作簿与导入时一致，可原样保存"
                 : losses > 0 ? "当前编辑后，" + Count(losses, "处内容无法写入普通保存")
                 : "未发现会阻止保存的格式损失";
         var summary = saveMode
-            ? "原文件不会被修改。继续会另存为受支持副本，副本不包含下列内容；取消则保留当前未保存的修改。"
+            ? "原文件不会被修改。继续会另存为受支持副本，副本不包含下方“潜在损失”中的内容；取消则保留当前未保存的修改。"
             : report.OriginalPackageUnchanged
                 ? "原 XLSX 包可原样保留；普通保存不会重建未支持的部件。"
                 : losses > 0
@@ -85,6 +80,8 @@ public static class CompatibilityReportPresentation
             return "整个工作簿以只读的来源缓存打开，不能编辑、重算或做结构变换；原包与来源缓存保持完整。";
         if (diagnostic.Code == "formula.cache-summary")
             return "公式源码与缓存会保存；缺少当前有效结果的公式仍显示已有缓存，Excel 重算后结果可能不同。";
+        if (diagnostic.Code is "text.rich-preserved" or "text.display-partial" or "text.attachments-preserved")
+            return "数据可保留并保存；显示或编辑能力的限制见上述说明。";
         var specific = FeatureImpact(diagnostic.Feature);
         return diagnostic.Kind switch
         {
@@ -137,7 +134,7 @@ public static class CompatibilityReportPresentation
             : "以下内容在修改后无法可靠保留，普通保存会被阻止。",
         CompatibilityKind.Rejected => "以下位置未通过导入检查，相关文件无法打开。",
         CompatibilityKind.CannotCalculate => "公式源码会保留，但本机不重算，显示与保存的是已有缓存。",
-        CompatibilityKind.PreservedOnly => "原文件可原样保留此项，但 QuickExcel 不能编辑；另存编辑后的副本不会写入。",
+        CompatibilityKind.PreservedOnly => "以下内容仅支持保留或有限编辑；具体保存行为见各项说明。",
         CompatibilityKind.Editable => "已建模、可编辑并保存的子集。",
         _ => ""
     };

@@ -27,6 +27,7 @@ public sealed partial class WorkbookGrid
     public event Action<int>? FilterRequested;
     public Func<GridRange, bool>? ReferenceRequested { get; set; }
     public bool IsSelectionDragging => _dragging;
+    public bool IsContextSelectionBlocked { get; private set; }
     public (double X, double Y) ScrollOffset => (_columns.Offset, _rows.Offset);
     public CellPosition? ScrollingCell
     {
@@ -68,6 +69,16 @@ public sealed partial class WorkbookGrid
                 if (Math.Abs(y - HeaderHeight - cell.Start - cell.Size) <= 4 / _zoom) return (SheetAxis.Row, cell.ModelIndex, cell.Size);
         return null;
     }
+    private (SheetAxis Axis, int Index)? HeaderHit(Point point)
+    {
+        if (_snapshot is null) return null;
+        var x = point.X / _zoom; var y = point.Y / _zoom;
+        if (x >= 0 && x < HeaderWidth && y >= HeaderHeight && _rows.HitTest(y - HeaderHeight, ViewHeight) is var row && row >= 0)
+            return (SheetAxis.Row, row);
+        if (y >= 0 && y < HeaderHeight && x >= HeaderWidth && _columns.HitTest(x - HeaderWidth, ViewWidth) is var column && column >= 0)
+            return (SheetAxis.Column, column);
+        return null;
+    }
     private Rect? FillHandle()
     {
         if (_selection.Ranges.Count != 1) return null;
@@ -79,11 +90,21 @@ public sealed partial class WorkbookGrid
     }
     private void PointerDown(object? sender, PointerPressedEventArgs e)
     {
+        IsContextSelectionBlocked = false;
         if (_snapshot is null || IsComposing || _editing && CellEditor.IsPointerOver) return;
         var point = e.GetPosition(_canvas); var properties = e.GetCurrentPoint(_canvas).Properties;
         if (properties.IsRightButtonPressed)
         {
-            if (Hit(point) is { } target && !_selection.Contains(new(target.Row, target.Column))) Select(target);
+            if (!Commit() || !(BeforeSelection?.Invoke() ?? true)) { IsContextSelectionBlocked = true; return; }
+            if (HeaderHit(point) is { } header)
+            {
+                // Keep the clicked boundary even when the row/column intersects a merged cell.
+                if (header.Axis == SheetAxis.Row)
+                    SelectRange(new(header.Index, 0, header.Index, _columns.Count - 1), new(header.Index, _current.Column));
+                else SelectRange(new(0, header.Index, _rows.Count - 1, header.Index), new(_current.Row, header.Index));
+                IsContextSelectionBlocked = (header.Axis == SheetAxis.Row ? _current.Row : _current.Column) != header.Index;
+            }
+            else if (Hit(point) is { } target && !_selection.Contains(new(target.Row, target.Column))) Select(target);
             return;
         }
         if (!properties.IsLeftButtonPressed) return;
@@ -213,6 +234,7 @@ public sealed partial class WorkbookGrid
     }
     private async void HandleKey(object? sender, KeyEventArgs e)
     {
+        if (e.Key == Key.Apps || e.Key == Key.F10 && e.KeyModifiers.HasFlag(KeyModifiers.Shift)) IsContextSelectionBlocked = false;
         if (_snapshot is null || IsComposing) return;
         if (e.Key == Key.Escape && (_dragging || _resizeAxis is not null)) { CancelGesture(); e.Handled = true; return; }
         if (e.Key == Key.F2) { e.Handled = BeginEdit(); return; }

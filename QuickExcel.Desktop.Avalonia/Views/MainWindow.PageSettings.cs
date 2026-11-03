@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using System.Globalization;
+using Avalonia.Controls;
 using QuickExcel.Core;
 using QuickExcel.Domain;
 
@@ -7,6 +8,48 @@ namespace QuickExcel.Desktop.Avalonia;
 
 public sealed partial class MainWindow
 {
+    private static WorksheetPrinting ChangePageBreak(WorksheetPrinting printing, SheetAxis axis, int index, bool remove)
+    {
+        if (index == 0 && !remove) throw new ArgumentException("首行或首列前无需分页。");
+        var row = axis == SheetAxis.Row;
+        var breaks = (row ? printing.RowBreaks : printing.ColumnBreaks).Where(b => b.Id != index).ToList();
+        if (!remove) breaks.Add(new(index, 0, (row ? PrintRange.MaxColumns : PrintRange.MaxRows) - 1, Manual: true));
+        return row ? printing with { RowBreaks = breaks.OrderBy(b => b.Id).ToImmutableArray() }
+            : printing with { ColumnBreaks = breaks.OrderBy(b => b.Id).ToImmutableArray() };
+    }
+    private void InstallPageBreakMenu(ContextMenu menu)
+    {
+        menu.Items.Add(new Separator());
+        var items = new List<(MenuItem Item, SheetAxis Axis, bool Remove)>();
+        WorkbookSnapshot? snapshot = null; var session = Guid.Empty; var cell = new CellPosition(0, 0);
+        foreach (var axis in new[] { SheetAxis.Row, SheetAxis.Column })
+        foreach (var remove in new[] { false, true })
+        {
+            var name = axis == SheetAxis.Row ? "行" : "列";
+            var item = CommandMenu(remove ? $"删除{name}分页符" : $"在当前{name}前插入分页符", async () =>
+            {
+                if (snapshot is null || session != Document.Session.SessionId || snapshot.ActiveSheetId != Document.Snapshot.ActiveSheetId)
+                    throw new InvalidOperationException("工作表已切换，请重新打开右键菜单。");
+                var sheet = snapshot.GetSheet(snapshot.ActiveSheetId);
+                var printing = ChangePageBreak(sheet.Printing, axis, axis == SheetAxis.Row ? cell.Row : cell.Column, remove);
+                await ExecuteAsync(new SetPrintingCommand(sheet.Id, printing), snapshot.Revision);
+            });
+            menu.Items.Add(item); items.Add((item, axis, remove));
+        }
+        menu.Opening += (_, e) =>
+        {
+            if (_grid.IsContextSelectionBlocked) { e.Cancel = true; return; }
+            snapshot = Document.Snapshot; session = Document.Session.SessionId; cell = _grid.Current;
+            var printing = snapshot.GetSheet(snapshot.ActiveSheetId).Printing;
+            var editable = snapshot.FileState?.FormulaReadOnly != true && !_grid.IsComposing && !_grid.IsCommitPending && !_formula.IsComposing && !_workspace.IsBusy && !_execution.IsRunning;
+            foreach (var (item, axis, remove) in items)
+            {
+                var row = axis == SheetAxis.Row; var index = row ? cell.Row : cell.Column;
+                var existing = (row ? printing.RowBreaks : printing.ColumnBreaks).FirstOrDefault(b => b.Id == index);
+                item.IsEnabled = editable && (remove ? existing is not null : index > 0 && existing?.Manual != true);
+            }
+        };
+    }
     private async Task PageSettingsAsync()
     {
         if (!await FlushEditsAsync()) return;
@@ -57,17 +100,14 @@ public sealed partial class MainWindow
         if (!await CommitEditorsAsync()) return;
         var snapshot = Document.Snapshot; var sheet = snapshot.Sheets[SheetIndex]; var cell = _grid.Current;
         var dialog = new FieldsDialog("分页").Choice("axis", "方向", ["当前行前", "当前列前"]).Choice("action", "操作", ["插入手动分页", "删除当前位置分页", "清除全部手动分页"])
-            .Note($"当前有 {sheet.Printing.RowBreaks.Length} 个行分页、{sheet.Printing.ColumnBreaks.Length} 个列分页。");
+            .Note($"当前有 {sheet.Printing.RowBreaks.Length} 个行分页、{sheet.Printing.ColumnBreaks.Length} 个列分页。手动分页在行标 / 列标上显示蓝色标记，可右键删除。");
         if (!await dialog.ShowAsync(this)) return;
         var printing = sheet.Printing;
         if (dialog.Index("action") == 2) printing = printing with { RowBreaks = printing.RowBreaks.Where(b => !b.Manual).ToImmutableArray(), ColumnBreaks = printing.ColumnBreaks.Where(b => !b.Manual).ToImmutableArray() };
         else
         {
             var row = dialog.Index("axis") == 0; var index = row ? cell.Row : cell.Column;
-            if (index == 0) throw new ArgumentException("首行或首列前无需分页。");
-            var breaks = (row ? printing.RowBreaks : printing.ColumnBreaks).Where(b => b.Id != index).ToList();
-            if (dialog.Index("action") == 0) breaks.Add(new(index, 0, (row ? PrintRange.MaxColumns : PrintRange.MaxRows) - 1, Manual: true));
-            printing = row ? printing with { RowBreaks = breaks.OrderBy(b => b.Id).ToImmutableArray() } : printing with { ColumnBreaks = breaks.OrderBy(b => b.Id).ToImmutableArray() };
+            printing = ChangePageBreak(printing, row ? SheetAxis.Row : SheetAxis.Column, index, dialog.Index("action") == 1);
         }
         await ExecuteAsync(new SetPrintingCommand(sheet.Id, printing), snapshot.Revision);
     }

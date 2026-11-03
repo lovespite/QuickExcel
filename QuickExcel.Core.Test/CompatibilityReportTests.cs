@@ -102,13 +102,13 @@ public sealed class CompatibilityReportTests
     }
 
     [Fact]
-    public void SavePromptPromotesPreservedContentAndExplainsPerItemImpact()
+    public void SavePromptExplainsInspectedLossesAndPerItemImpact()
     {
         var report = new WorkbookCompatibilityReport(false, new[]
         {
-            new CompatibilityDiagnostic("xlsx.unmodeled", CompatibilityKind.PreservedOnly, "part/xl/charts/chart1.xml",
+            new CompatibilityDiagnostic("xlsx.unmodeled", CompatibilityKind.PotentialLoss, "part/xl/charts/chart1.xml",
                 "未建模部件：xl/charts/chart1.xml", "xl/charts/chart1.xml", "模板", "A1"),
-            new CompatibilityDiagnostic("xlsx.unmodeled", CompatibilityKind.PreservedOnly, "font/outline · cellXfs[0]",
+            new CompatibilityDiagnostic("xlsx.unmodeled", CompatibilityKind.PotentialLoss, "font/outline · cellXfs[0]",
                 "未建模属性 font/outline", "xl/styles.xml", "模板", "B2")
         });
         var view = CompatibilityReportPresentation.Create(report, saveMode: true);
@@ -120,7 +120,25 @@ public sealed class CompatibilityReportTests
         Assert.All(group.Items, item => Assert.Contains("不会写入受支持副本", item.Impact));
         Assert.Contains(group.Items, item => item.Impact.Contains("未建模部件"));
         Assert.Contains(group.Items, item => item.Impact.Contains("字体"));
-        Assert.False(CompatibilityReportPresentation.Create(report, saveMode: false).HasLosses);
+        Assert.True(CompatibilityReportPresentation.Create(report, saveMode: false).HasLosses);
+    }
+
+    [Fact]
+    public void SaveReportDoesNotCountCalculationWarningsOrPreservedAttachmentsAsLosses()
+    {
+        var report = new WorkbookCompatibilityReport(false, [
+            new("xlsx.unmodeled", CompatibilityKind.PotentialLoss, "worksheet/sheetProtection", "未建模保护"),
+            new("formula.unsupported-function", CompatibilityKind.CannotCalculate, "formula/function", "不支持的函数"),
+            new("text.rich-preserved", CompatibilityKind.PreservedOnly, "富文本", "分段数据可保存"),
+            new("text.attachments-preserved", CompatibilityKind.PreservedOnly, "超链接和传统批注", "附件可保存")]);
+        var view = CompatibilityReportPresentation.Create(report, saveMode: true);
+        Assert.Equal(1, view.LossCount);
+        Assert.Contains("1 处内容无法在编辑后保留", view.Headline);
+        Assert.Contains("“潜在损失”", view.Summary);
+        var preserved = Assert.Single(view.Groups, group => group.Kind == CompatibilityKind.PreservedOnly);
+        Assert.Equal(2, preserved.Items.Count);
+        Assert.All(preserved.Items, item => Assert.Contains("可保留并保存", item.Impact));
+        Assert.Single(view.Groups, group => group.Kind == CompatibilityKind.CannotCalculate);
     }
 
     [Fact]

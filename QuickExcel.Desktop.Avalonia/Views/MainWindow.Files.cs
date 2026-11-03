@@ -29,13 +29,25 @@ public sealed partial class MainWindow
     {
         if (!await CommitEditorsAsync()) return;
         var report = await _workspace.InspectAsync(snapshot => TypedWorkbookStorage.InspectCompatibility(snapshot));
-        var view = CompatibilityReportPresentation.Create(report, false, Document.Snapshot.FileState?.RequiresMigration == true ? ["XLSQ v1 首次保存需要另存 v2 副本。"] : []);
-        var window = new Window { Title = view.Title, Width = 820, Height = 620, MinWidth = 540, MinHeight = 400, WindowStartupLocation = WindowStartupLocation.CenterOwner, ShowInTaskbar = false };
+        await ShowCompatibilityReportAsync(report, saveMode: false);
+    }
+    private Task<bool> ShowCompatibilityReportAsync(WorkbookCompatibilityReport report, bool saveMode)
+    {
+        var view = CompatibilityReportPresentation.Create(report, saveMode, Document.Snapshot.FileState?.RequiresMigration == true ? ["XLSQ v1 首次保存需要另存 v2 副本。"] : []);
+        var window = new Window { Name = "CompatibilityReportDialog", Title = view.Title, Width = 820, Height = 620, MinWidth = 540, MinHeight = 400, WindowStartupLocation = WindowStartupLocation.CenterOwner, ShowInTaskbar = false };
         var root = new DockPanel { Margin = new(20) }; var header = new StackPanel { Spacing = 10 }; header.Children.Add(new TextBlock { Text = view.Headline, FontSize = 20, TextWrapping = TextWrapping.Wrap });
         header.Children.Add(new TextBlock { Text = view.Summary + "\n" + string.Join("\n", view.Notices), TextWrapping = TextWrapping.Wrap }); DockPanel.SetDock(header, Dock.Top); root.Children.Add(header);
         var buttons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10, Margin = new(0, 10, 0, 0) };
-        var copy = new Button { Content = "复制报告" }; copy.Click += async (_, _) => { try { await _clipboard.WriteAsync(new(CompatibilityReportText.Format(report))); } catch (Exception ex) { Error(ex); } };
-        var close = new Button { Content = "关闭", IsCancel = true }; close.Click += (_, _) => window.Close(); buttons.Children.Add(copy); buttons.Children.Add(close); DockPanel.SetDock(buttons, Dock.Bottom); root.Children.Add(buttons);
+        var copy = new Button { Content = "复制报告" }; copy.Click += async (_, _) => { try { await _clipboard.WriteAsync(new(CompatibilityReportPresentation.PlainText(report, view.Notices))); } catch (Exception ex) { Error(ex); } };
+        buttons.Children.Add(copy);
+        if (saveMode)
+        {
+            var save = new Button { Content = "另存受支持副本" };
+            save.Click += (_, _) => window.Close(true); buttons.Children.Add(save);
+        }
+        var close = new Button { Content = saveMode ? "取消" : "关闭", IsCancel = true, IsDefault = true };
+        close.Click += (_, _) => window.Close(false); buttons.Children.Add(close); DockPanel.SetDock(buttons, Dock.Bottom); root.Children.Add(buttons);
+        window.Opened += (_, _) => close.Focus();
         var groups = new StackPanel { Spacing = 10 };
         foreach (var group in view.Groups)
         {
@@ -43,9 +55,9 @@ public sealed partial class MainWindow
             content.Children.Add(new ListBox { MaxHeight = 260, ItemsSource = group.Items,
                 ItemTemplate = new FuncDataTemplate<CompatibilityIssueView>((item, _) => new TextBlock
                 { Text = item is null ? "" : $"{item.Feature} · {item.Location}\n{item.Detail}\n{item.Impact} · {item.Count} 处", TextWrapping = TextWrapping.Wrap, Margin = new(0, 4) }) });
-            groups.Children.Add(new Expander { Header = group.Label, IsExpanded = group.ExpandedByDefault, Content = content });
+            groups.Children.Add(new Expander { Header = $"{group.Label}（{group.Items.Sum(item => item.Count)} 处）", IsExpanded = group.ExpandedByDefault, Content = content });
         }
-        root.Children.Add(new ScrollViewer { Content = groups }); window.Content = root; await ShowOwnedAsync<object?>(window);
+        root.Children.Add(new ScrollViewer { Content = groups }); window.Content = root; return ShowOwnedAsync<bool>(window);
     }
     private async Task ExportAsync(bool portable)
     {

@@ -95,14 +95,34 @@ public sealed partial class WorkbookGrid
         foreach (var col in columns) Picture(CellRange(new(row.ModelIndex, col.ModelIndex)));
         PaintAttachments(canvas);
         var header = new StyleDefinition { FillColor = "FFF2F5F4", FontColor = "FF42534E", Horizontal = 2, Vertical = 1 };
+        var rowBreaks = Sheet.Printing.RowBreaks.Where(b => b.Manual).Select(b => b.Id).ToHashSet();
+        var columnBreaks = Sheet.Printing.ColumnBreaks.Where(b => b.Manual).Select(b => b.Id).ToHashSet();
         void Header(int row, int column, Rect bounds, Rect clip, string text)
         {
             var key = new PictureKey(new(row, column, row, column), bounds.Width, bounds.Height, true);
             if (!_pictures.TryGetValue(key, out var picture))
             {
                 using var recorder = new SKPictureRecorder();
-                Renderer.DrawCell(recorder.BeginRecording(SKRect.Create((float)bounds.Width + 1, (float)bounds.Height + 1)),
+                var target = recorder.BeginRecording(SKRect.Create((float)bounds.Width + 1, (float)bounds.Height + 1));
+                Renderer.DrawCell(target,
                     new(new(0, 0, bounds.Width, bounds.Height), new(text, header, DefaultFontSize: 12), true), RenderOutput.Screen);
+                if (column == -1 && rowBreaks.Contains(row) || row == -1 && columnBreaks.Contains(column))
+                {
+                    target.Save(); target.ClipRect(SKRect.Create((float)bounds.Width, (float)bounds.Height));
+                    using var paint = new SKPaint { Color = new(37, 99, 235), IsAntialias = true, StrokeWidth = 2 };
+                    using var marker = new SKPathBuilder();
+                    if (column == -1)
+                    {
+                        target.DrawLine(3, 3, 17, 3, paint);
+                        marker.MoveTo(6, 3); marker.LineTo(14, 3); marker.LineTo(10, 9);
+                    }
+                    else
+                    {
+                        target.DrawLine(3, 3, 3, 17, paint);
+                        marker.MoveTo(3, 6); marker.LineTo(3, 14); marker.LineTo(9, 10);
+                    }
+                    marker.Close(); using var path = marker.Detach(); target.DrawPath(path, paint); target.Restore();
+                }
                 picture = recorder.EndRecording(); AdmitPicture(picture); _pictures[key] = picture;
             }
             canvas.Save(); canvas.ClipRect(SkiaRect(clip)); canvas.Translate((float)bounds.X, (float)bounds.Y); canvas.DrawPicture(picture); canvas.Restore();
