@@ -49,6 +49,20 @@
 
 可运行命令：`scripts/test-avalonia-workspace.ps1 -Mode Grid`、`-Mode Workspace` 与独立的 `scripts/test-avalonia-grid-benchmark.ps1`；均可显式 `-SkipBuild`，产物在本仓库 artifacts 内。失败样本不覆盖：早期基准发现未绑定网格先布局时编辑框定位越界，现已加空状态门禁；滚动条查找误包含 TextBox 内部滚动条，改为驱动明确的主网格滚动条。导出测试最初误将带脚本默认簿普通保存为 XLSX，修正前置条件为 XLSQ，保留产品拒绝规则。
 
+## 执行加载提示（2026-11-03）
+
+重算、脚本操作/控制台、事件处理和 TypeScript 检查共用延迟加载提示。执行开始时保留按钮和工作区的启用外观，命令互斥与输入保护立即生效；持续至少 100 ms 才显示覆盖窗口的半透明遮罩、旋转加载图标、从执行开始计量的毫秒计时和“取消 Esc”。完成、异常、取消均停止计时并恢复输入与焦点，短任务不会留下延迟弹出的遮罩。主状态栏不再添加/移除停止按钮，高度保持不变；脚本工具栏和控制台的重复停止按钮也合并到遮罩。
+
+主窗口与脚本窗口共享本轮取消源。原生 WebView 在显示遮罩后临时隐藏以避免其独立原生表面盖住提示，结束后恢复；100 ms 延迟内不隐藏。Esc 保留组合输入门禁。取消仍使用既有 worker/calculation token，不改变原子提交、隔离或截止时间。
+
+本次只运行相关检查：
+
+- Release 桌面构建通过，0 警告、0 错误。
+- `scripts/test-avalonia-workspace.ps1 -Mode Execution`：**29** 项通过，涵盖真实重算、短任务连续执行、计时更新、重复提交/并发写入保护、完成/异常/取消清理、双窗口与状态栏高度。证据：`artifacts/avalonia/workspace/20261103-115207-08a7eccc`，包含 `execution-overlay.png`。
+- `-Mode Automation`：**72** 项通过，证据：`artifacts/avalonia/workspace/20261103-115217-b0e89090`。
+- `scripts/test-avalonia-web.ps1 -ScriptsOnly`：**93** 项通过，验证真实 WebView2 编辑器、编译及控制台执行/取消/草稿恢复，证据：`artifacts/avalonia/web-tests/20261103-115300-5b7e7381`。未运行 PDF 或全量回归；这些程序化检查不代替物理输入验证。
+- 验证期间工作区另有脚本面板布局修改写入；合并后的加载提示专项仍 **29** 项通过（`artifacts/avalonia/workspace/20261103-115615-f15ac21d`）。脚本专项补跑在新增的最小窗口编辑器/控制台布局断言失败，证据：`artifacts/avalonia/web-tests/20261103-115456-249a19da`；前述 93 项通过记录属于布局修改前，不作为最新布局的全通过声明。
+
 ## 未关闭事项
 
 - 实际 OS IME、跨屏 DPI、屏幕阅读器、真实指针/剪贴板、设备性能按用户要求延期；Linux 中文候选窗问题仍未解决。

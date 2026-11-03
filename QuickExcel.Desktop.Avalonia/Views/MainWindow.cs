@@ -91,6 +91,7 @@ public sealed partial class MainWindow : Window
             await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Background);
             if (Program.SelfCheckDirectory is { } evidence) { await RunSelfCheckAsync(evidence); return; }
 #if QUICKEXCEL_DIAGNOSTICS
+            if (Program.SmokeDirectory is { } executionDirectory && Program.SmokeMode == "execution") { await RunExecutionSmokeAsync(executionDirectory); return; }
             if (Program.SmokeDirectory is { } automationDirectory && Program.SmokeMode == "automation") { await RunAutomationSmokeAsync(automationDirectory); return; }
             if (Program.SmokeDirectory is { } featureDirectory && Program.SmokeMode == "ribbon-filter") { await RunRibbonFilterSmokeAsync(featureDirectory); return; }
             if (Program.SmokeDirectory is { } smoke && Program.SmokeMode != "manual") { if (Program.SmokeMode == "grid") await RunGridSmokeAsync(smoke); else if (Program.SmokeMode == "benchmark") await RunGridBenchmarkAsync(smoke); else if (Program.SmokeMode == "web") await RunWebSmokeAsync(smoke); else if (Program.SmokeMode == "web-benchmark") await RunWebBenchmarkAsync(smoke); else await RunWorkspaceSmokeAsync(smoke); return; }
@@ -131,8 +132,9 @@ public sealed partial class MainWindow : Window
         _start.Children.Add(new TextBlock { Text = "最近文件", FontSize = 18 }); _start.Children.Add(_recent);
         var content = new global::Avalonia.Controls.Grid(); content.Children.Add(_book); content.Children.Add(new ScrollViewer { Content = _start });
         var root = new DockPanel(); DockPanel.SetDock(_menu, Dock.Top);
-        var footer = new DockPanel(); DockPanel.SetDock(_cancelCalculation, Dock.Right); footer.Children.Add(_cancelCalculation); DockPanel.SetDock(_selectionStatistics, Dock.Right); footer.Children.Add(_selectionStatistics); footer.Children.Add(_status);
-        DockPanel.SetDock(footer, Dock.Bottom); root.Children.Add(_menu); root.Children.Add(footer); root.Children.Add(content); Content = root;
+        var footer = new DockPanel(); DockPanel.SetDock(_selectionStatistics, Dock.Right); footer.Children.Add(_selectionStatistics); footer.Children.Add(_status);
+        DockPanel.SetDock(footer, Dock.Bottom); root.Children.Add(_menu); root.Children.Add(footer); root.Children.Add(content);
+        Content = _execution = new ExecutionOverlay(this, root, () => _grid.IsComposing || _formula.IsComposing);
     }
     private void ShowHome()
     {
@@ -153,7 +155,7 @@ public sealed partial class MainWindow : Window
         _synchronizing = true;
         try
         {
-            _book.IsEnabled = !_workspace.IsBusy && (_scriptCancellation is null || _dispatchingUiEvents); _menu.IsEnabled = !_workspace.IsBusy;
+            _book.IsEnabled = !NonExecutionBusy; _menu.IsEnabled = !NonExecutionBusy;
             if (_boundSession != Document.Session.SessionId || _boundSheet != Document.Snapshot.ActiveSheetId)
             {
                 _formulaDirty = false; _formulaOwner = null;
@@ -213,7 +215,7 @@ public sealed partial class MainWindow : Window
     }
     private async Task<bool> CommitCellAsync(int index, CellPosition owner, string text)
     {
-        if (_workspace.IsBusy) return false;
+        if (_workspace.IsBusy || _execution.IsRunning) return false;
         try
         {
             var snapshot = Document.Snapshot; var sheet = snapshot.Sheets[index];
@@ -228,17 +230,17 @@ public sealed partial class MainWindow : Window
     {
         var task = CommitEditorsAsync(); return task.IsCompletedSuccessfully && task.Result;
     }
-    private async Task<bool> CommitEditorsAsync(bool validateTypeScript = false) => !_workspace.IsBusy && await _grid.CommitAsync() && await CommitFormulaAsync() && await CommitScriptsAsync(validateTypeScript);
+    private async Task<bool> CommitEditorsAsync(bool validateTypeScript = false) => !_workspace.IsBusy && !_execution.IsRunning && await _grid.CommitAsync() && await CommitFormulaAsync() && await CommitScriptsAsync(validateTypeScript);
     private bool TryEdit(Func<CommandResult> edit)
     {
-        if (_workspace.IsBusy) return false;
+        if (_workspace.IsBusy || _execution.IsRunning) return false;
         try { edit(); Synchronize(); _status.Text = "已修改"; return true; }
         catch (Exception ex) { Error(ex); return false; }
     }
     private void Error(Exception ex) => _status.Text = ex.Message;
     private async Task PerformAsync(Func<Task> action)
     {
-        if (_working) return;
+        if (_working || _execution.IsRunning) return;
         _working = true;
         try { await using var hold = _scriptPage?.HoldEdits(); _operation = action(); await _operation; }
         catch (Exception ex) { Error(ex); }

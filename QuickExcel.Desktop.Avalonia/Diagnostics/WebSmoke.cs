@@ -20,6 +20,12 @@ public sealed partial class MainWindow
         Directory.CreateDirectory(directory); var checks = new List<string>(); Exception? error = null; var watch = Stopwatch.StartNew();
         void Check(bool value, string description) { if (!value) throw new InvalidOperationException(description); checks.Add(description); File.AppendAllText(Path.Combine(directory, "progress.log"), description + "\n"); }
         async Task<JsonElement> Test(object payload) => (await _scriptPage!.Browser.RequestAsync("test", "testResult", payload, TimeSpan.FromSeconds(30))).Payload;
+        async Task SelectModule(string module)
+        {
+            _modulePicker!.SelectedItem = module; await _operation;
+            for (var retry = 0; retry < 100 && _working; retry++) await Task.Delay(10);
+            if (_working) throw new TimeoutException("Module navigation did not release its editor hold.");
+        }
         try
         {
             ShowBook(); _workspace.New(); _files = new SmokeFiles { NextSave = Path.Combine(directory, "script-roundtrip.xlsq") };
@@ -33,10 +39,14 @@ public sealed partial class MainWindow
             const string changed = "import { twice } from 'helpers';\nquickExcel.functions.register('DOUBLE', value => twice(value) + 1);\n";
             await Test(new { action = "edit", module = "main", text = changed });
             Check(Document.Snapshot.Revision == revision, "Browser editing does not create per-keystroke workbook history");
+            await SelectModule("helpers"); inspected = await Test(new { action = "inspect" });
+            Check(inspected.GetProperty("selected").GetString() == "helpers" && Document.Snapshot.ScriptModules.Modules["main"].Source == changed,
+                "Left file navigation flushes the current draft before switching the actual editor model");
+            await SelectModule("main");
             Check(await SaveAsync(false) && Document.Snapshot.ScriptModules.Modules["main"].Source == changed, "Save waits for complete draft versions and commits current source");
             var reopened = _services.Storage.Open(Path.Combine(directory, "script-roundtrip.xlsq"));
             Check(reopened.ScriptModules.Modules["main"].Source == changed, "Saved XLSQ contains the acknowledged source, not the previous source");
-            await _scriptPage.SelectAsync("helpers"); await _scriptPage.SelectAsync("main"); await Test(new { action = "undo" });
+            await SelectModule("helpers"); await SelectModule("main"); await Test(new { action = "undo" });
             Check(await CommitScriptsAsync() && Document.Snapshot.ScriptModules.Modules["main"].Source.Contains("'DOUBLE', twice"), "Switching Monaco models preserves each model's undo history");
             await Test(new { action = "edit", module = "main", text = "/** @type {number} */\nlet value = '中文';\ndocument.querySelector('body');\nprocess.exit(0);\n" });
             inspected = await Test(new { action = "inspect" });
@@ -117,6 +127,7 @@ public sealed partial class MainWindow
             await Test(new { action = "edit", module = "main", text = "export const value:number='类型错误';" });
             Check(!await CommitScriptsAsync(validateTypeScript: true) && ReferenceEquals(beforeCompile, Document.Snapshot.ScriptModules) && _scriptPage!.Drafts.IsDirty,
                 "Failed isolated TS checking preserves the draft and does not replace applied source");
+            Check(_scriptOutputTabs!.IsVisible && _scriptOutputTabs.SelectedIndex == 1, "Compiler failures expand runtime diagnostics even when the output pane was collapsed");
             _scriptDiagnostics!.SelectedIndex = 0; await ActivateScriptDiagnosticAsync();
             Check(_scriptPage!.Drafts.IsDirty, "Compiler diagnostic navigation retains failed draft text");
             await Test(new { action = "edit", module = "main", text = "import {twice} from 'helpers'; enum E { A=6 }; quickExcel.functions.register('DOUBLE',()=>twice(E.A));" });

@@ -6,7 +6,6 @@ namespace QuickExcel.Desktop.Avalonia;
 
 public sealed partial class MainWindow
 {
-    private bool _dispatchingUiEvents;
     private readonly DispatcherTimer _eventTimer = new() { Interval = TimeSpan.FromMilliseconds(100) };
     private void InstallScriptEvents()
     {
@@ -16,7 +15,7 @@ public sealed partial class MainWindow
         Deactivated += (_, _) => { if (!_windowClosed && _book.IsVisible) Document.Session.RaiseScriptEvent("workbook.deactivate"); };
         _eventTimer.Tick += async (_, _) =>
         {
-            if (_working || _workspace.IsBusy || _scriptCancellation is not null || _windowClosed || _closePending ||
+            if (_working || _execution.IsRunning || _workspace.IsBusy || _scriptCancellation is not null || _windowClosed || _closePending ||
                 _grid.IsEditing || _formulaDirty || _grid.IsComposing || _formula.IsComposing || _grid.IsSelectionDragging || !Document.Session.HasScriptEvents) return;
             await PerformAsync(DispatchEventsAsync);
         };
@@ -37,12 +36,13 @@ public sealed partial class MainWindow
         if (!await CommitScriptsAsync() || !Document.Session.HasScriptEvents) return;
         var document = Document;
         _calculationTimer.Stop();
-        using var cancellation = new CancellationTokenSource(); _scriptCancellation = cancellation;
-        _dispatchingUiEvents = true;
+        using var cancellation = new CancellationTokenSource();
+        using var feedback = BeginExecution("正在执行事件代码…", cancellation);
+        _scriptCancellation = cancellation;
         try { await Task.Run(() => document.DispatchScriptEvents(cancellation.Token), cancellation.Token); }
         finally
         {
-            _scriptCancellation = null; _dispatchingUiEvents = false;
+            _scriptCancellation = null;
             await RefreshScriptPageAfterMutationAsync();
             Synchronize(); RefreshScriptDiagnostics();
             if (_calculationPending) _calculationTimer.Start();

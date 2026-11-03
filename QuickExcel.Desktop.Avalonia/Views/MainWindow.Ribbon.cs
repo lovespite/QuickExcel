@@ -110,7 +110,7 @@ public sealed partial class MainWindow
         _updatingRibbon = true;
         try
         {
-            _ribbon.IsEnabled = !_workspace.IsBusy;
+            _ribbon.IsEnabled = !NonExecutionBusy;
             foreach (var control in _mutationControls) control.IsEnabled = Document.Snapshot.FileState?.FormulaReadOnly != true;
             var style = CurrentStyle; var name = style.FontName ?? "Microsoft YaHei UI"; var size = style.FontSize ?? 11;
             if (!_font.Items.Cast<string>().Contains(name)) _font.ItemsSource = _font.Items.Cast<string>().Append(name).Order().ToArray();

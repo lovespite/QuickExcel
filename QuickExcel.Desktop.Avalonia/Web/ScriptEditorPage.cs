@@ -10,7 +10,7 @@ internal sealed class ScriptEditorPage : IAsyncDisposable
     internal LocalWebView Browser { get; }
     internal ScriptDraftSession Drafts { get; }
     internal event Action<Exception>? Failed;
-    internal event Action? SaveRequested, FocusRequested, DraftChanged;
+    internal event Action? SaveRequested, FocusRequested, ConsoleRequested, DraftChanged;
     private Task? _flush;
     private bool _closed;
     private int _holds;
@@ -29,7 +29,7 @@ internal sealed class ScriptEditorPage : IAsyncDisposable
     internal ScriptEditorPage(WebAssetCatalog assets, ScriptDraftSession drafts, string document, long generation, string profileRoot)
     {
         Drafts = drafts;
-        string[] capabilities = ["draftChanged", "draftChunk", "draftAck", "initialized", "loadAck", "loaded", "released", "selected", "located", "save", "focusHost"];
+        string[] capabilities = ["draftChanged", "draftChunk", "draftAck", "initialized", "loadAck", "loaded", "released", "selected", "located", "save", "focusHost", "console"];
         Browser = new(assets, "script.html", document, generation, profileRoot, Program.WebTestMode ? capabilities.Append("testResult") : capabilities);
         Browser.Message += OnMessage;
         Browser.Failed += ex => { Drafts.MarkFailed(); Failed?.Invoke(ex); };
@@ -49,6 +49,7 @@ internal sealed class ScriptEditorPage : IAsyncDisposable
                     await Browser.SendAsync("chunkAck", new { chunk.Transfer, chunk.Index, chunk.Version }, message.RequestId); break;
                 case "save": SaveRequested?.Invoke(); break;
                 case "focusHost": FocusRequested?.Invoke(); break;
+                case "console": ConsoleRequested?.Invoke(); break;
                 default: throw new InvalidDataException("脚本页发送了未请求的响应。");
             }
         }

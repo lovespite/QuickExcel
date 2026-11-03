@@ -4,6 +4,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Controls.Templates;
 using Avalonia.Input;
+using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Styling;
@@ -21,7 +22,7 @@ public sealed partial class MainWindow
     private TextBox? _consoleFilter;
     private ComboBox? _consoleLevel;
     private TextBlock? _consoleCount, _consoleEmpty;
-    private Button? _consoleRun, _consoleStop, _consoleCopy;
+    private Button? _consoleRun, _consoleCopy;
     private ScriptConsoleEntry[] _consoleVisibleEntries = [];
     private TabControl? _scriptOutputTabs;
     private readonly List<string> _consoleHistory = [];
@@ -40,8 +41,7 @@ public sealed partial class MainWindow
     private async Task OpenScriptConsoleAsync()
     {
         await OpenScriptsAsync();
-        if (_scriptOutputTabs is not null) _scriptOutputTabs.SelectedIndex = 0;
-        _consoleInput?.Focus();
+        SetScriptOutputVisible(true, focusInput: true);
     }
 
     private Control CreateScriptOutput()
@@ -50,7 +50,7 @@ public sealed partial class MainWindow
         { _consoleSession = Document.Session.SessionId; _consoleHistory.Clear(); _consolePendingInput = ""; }
         _consoleHistoryIndex = _consoleHistory.Count; _consoleLastSequence = -1;
         var panel = new LayoutGrid { RowDefinitions = new("Auto,*,Auto,Auto"), Background = Brushes.White };
-        var tools = new LayoutGrid { ColumnDefinitions = new("Auto,*,Auto,Auto,Auto"), Margin = new(6, 3) };
+        var tools = new LayoutGrid { ColumnDefinitions = new("Auto,*,Auto,Auto"), Margin = new(6, 3) };
         var clear = ConsoleButton("⊘", "清空输出");
         clear.Click += (_, _) => { Document.Session.ClearConsole(); RefreshScriptConsole(true); }; tools.Children.Add(clear);
         _consoleFilter = new TextBox { Height = 26, MinHeight = 0, Padding = new(7, 3), Margin = new(6, 0), FontSize = 12,
@@ -67,8 +67,8 @@ public sealed partial class MainWindow
         _consoleCopy.Click += async (_, _) => await PerformAsync(() => _clipboard.WriteAsync(new(ConsoleVisibleText)));
         LayoutGrid.SetColumn(_consoleCopy, 3); tools.Children.Add(_consoleCopy);
         _consoleCount = new TextBlock { FontSize = 11, Foreground = ConsoleMuted, VerticalAlignment = VerticalAlignment.Center, Margin = new(8, 0) };
-        LayoutGrid.SetColumn(_consoleCount, 4); tools.Children.Add(_consoleCount);
-        panel.Children.Add(new Border { Background = Brush.Parse("#F3F3F3"), BorderBrush = ConsoleLine, BorderThickness = new(0, 1, 0, 1), Child = tools });
+        var consoleToolbar = new StackPanel(); consoleToolbar.Children.Add(tools); consoleToolbar.Children.Add(_consoleCount);
+        panel.Children.Add(new Border { Background = Brush.Parse("#F3F3F3"), BorderBrush = ConsoleLine, BorderThickness = new(0, 1, 0, 1), Child = consoleToolbar });
 
         _consoleOutput = new ListBox { BorderThickness = new(0), Padding = new(0), Background = Brushes.White,
             ItemTemplate = new FuncDataTemplate<ScriptConsoleEntry>((entry, _) => entry is null ? null : CreateConsoleRow(entry)) };
@@ -87,33 +87,26 @@ public sealed partial class MainWindow
         _consoleInput = new CompositionTextBox { AcceptsReturn = true, Height = 54, MinHeight = 0, FontFamily = new("Consolas"), FontSize = 13,
             Padding = new(2, 5), BorderThickness = new(0), Background = Brushes.White, Foreground = ConsoleInk,
             PlaceholderText = "输入 JavaScript 表达式或代码…", MaxLength = DocumentSession.MaxConsoleSourceBytes };
-        ToolTip.SetTip(_consoleInput, "可用 snapshot / patch / fs；每次执行的变量独立，工作簿修改可撤销。");
+        ToolTip.SetTip(_consoleInput, "Enter 执行，Ctrl+Enter 换行，↑↓ 浏览历史。可用 snapshot / patch / fs；工作簿修改可撤销。");
         AutomationProperties.SetName(_consoleInput, "调试控制台 JavaScript 输入");
         _consoleInput.CompositionChanged += () => RefreshScriptConsole();
-        _consoleInput.KeyDown += async (_, e) =>
-        {
-            if (_consoleInput.IsComposing) return;
-            if (e.Key == Key.Enter && (e.KeyModifiers & (KeyModifiers.Control | KeyModifiers.Meta)) != 0)
-            { e.Handled = true; await PerformAsync(RunConsoleAsync); }
-            else if ((e.KeyModifiers & KeyModifiers.Alt) != 0 && e.Key is Key.Up or Key.Down)
-            { e.Handled = true; NavigateConsoleHistory(e.Key == Key.Up ? -1 : 1); }
-        };
+        // TextBox consumes Enter/arrow keys during bubbling. Handle console keys before its editor does.
+        _consoleInput.AddHandler(KeyDownEvent, HandleConsoleKey, RoutingStrategies.Tunnel);
         LayoutGrid.SetColumn(_consoleInput, 1); inputArea.Children.Add(_consoleInput);
         var inputBorder = new Border { BorderBrush = ConsoleLine, BorderThickness = new(0, 1, 0, 0), Child = inputArea };
         LayoutGrid.SetRow(inputBorder, 2); panel.Children.Add(inputBorder);
         var footer = new DockPanel { Background = Brush.Parse("#F8F9FA"), LastChildFill = true };
         var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 2, Margin = new(4, 0) };
-        _consoleRun = ConsoleButton("▶ 执行", "执行控制台代码（Ctrl+Enter）");
+        _consoleRun = ConsoleButton("▶ 执行", "执行控制台代码（Enter）");
         _consoleRun.Foreground = ConsoleBlue; _consoleRun.Click += async (_, _) => await PerformAsync(RunConsoleAsync); actions.Children.Add(_consoleRun);
-        _consoleStop = ConsoleButton("■ 停止", "停止执行（Esc）");
-        _consoleStop.Click += (_, _) => _scriptCancellation?.Cancel(); actions.Children.Add(_consoleStop);
         DockPanel.SetDock(actions, Dock.Right); footer.Children.Add(actions);
-        footer.Children.Add(new TextBlock { Text = "JavaScript  ·  Ctrl+Enter 执行  ·  Alt+↑↓ 历史", FontSize = 11, Foreground = ConsoleMuted,
-            VerticalAlignment = VerticalAlignment.Center, Margin = new(9, 0) });
+        footer.Children.Add(new TextBlock { Text = "JavaScript  ·  Enter 执行  ·  Ctrl+Enter 换行  ·  ↑↓ 历史", FontSize = 11, Foreground = ConsoleMuted,
+            VerticalAlignment = VerticalAlignment.Center, Margin = new(9, 0), TextWrapping = TextWrapping.Wrap });
         LayoutGrid.SetRow(footer, 3); panel.Children.Add(footer);
-        _scriptOutputTabs = new TabControl { Height = 290, Background = Brushes.White, Foreground = ConsoleInk, ItemsSource = new[] {
+        _scriptOutputTabs = new TabControl { Background = Brushes.White, Foreground = ConsoleInk, ItemsSource = new[] {
             new TabItem { Header = "控制台", FontSize = 13, MinHeight = 30, Padding = new(10, 6), Content = panel },
             new TabItem { Header = "运行诊断", FontSize = 13, MinHeight = 30, Padding = new(10, 6), Content = _scriptDiagnostics } } };
+        _scriptOutputTabs.SelectionChanged += (_, _) => UpdateScriptConsoleToggle(_scriptOutputTabs.IsVisible && _scriptOutputTabs.SelectedIndex == 0);
         RefreshScriptConsole(); return _scriptOutputTabs;
     }
     private static Button ConsoleButton(string text, string description)
@@ -144,13 +137,29 @@ public sealed partial class MainWindow
         LayoutGrid.SetColumn(time, 2); line.Children.Add(time);
         return new Border { Tag = entry, Background = background, BorderBrush = ConsoleLine, BorderThickness = new(0, 0, 0, 1), Child = line };
     }
+    private async void HandleConsoleKey(object? sender, KeyEventArgs e)
+    {
+        if (e.Handled || sender is not CompositionTextBox input || input.IsComposing) return;
+        if (e.Key == Key.Enter && e.KeyModifiers == KeyModifiers.None)
+        { e.Handled = true; await PerformAsync(RunConsoleAsync); }
+        else if (e.Key == Key.Enter && e.KeyModifiers is KeyModifiers.Control or KeyModifiers.Meta)
+        { e.Handled = true; input.SelectedText = input.NewLine; }
+        else if (e.KeyModifiers == KeyModifiers.None && e.Key is Key.Up or Key.Down)
+        { e.Handled = true; NavigateConsoleHistory(e.Key == Key.Up ? -1 : 1); }
+    }
+    private static void SetConsoleCaret(CompositionTextBox input, int position)
+    { input.CaretIndex = input.SelectionStart = input.SelectionEnd = position; }
     private void NavigateConsoleHistory(int direction)
     {
-        if (_consoleInput is null || _consoleInput.IsComposing || _consoleHistory.Count == 0) return;
-        if (_consoleHistoryIndex == _consoleHistory.Count) _consolePendingInput = _consoleInput.Text ?? "";
+        if (_consoleInput is not { } input || input.IsComposing) return;
+        var boundary = direction < 0 ? 0 : input.Text?.Length ?? 0;
+        if (input.CaretIndex != boundary || input.SelectionStart != input.SelectionEnd)
+        { SetConsoleCaret(input, boundary); return; }
+        if (_consoleHistory.Count == 0) return;
+        if (_consoleHistoryIndex == _consoleHistory.Count) _consolePendingInput = input.Text ?? "";
         _consoleHistoryIndex = Math.Clamp(_consoleHistoryIndex + direction, 0, _consoleHistory.Count);
-        _consoleInput.Text = _consoleHistoryIndex == _consoleHistory.Count ? _consolePendingInput : _consoleHistory[_consoleHistoryIndex];
-        _consoleInput.CaretIndex = _consoleInput.Text.Length;
+        input.Text = _consoleHistoryIndex == _consoleHistory.Count ? _consolePendingInput : _consoleHistory[_consoleHistoryIndex];
+        SetConsoleCaret(input, direction < 0 ? 0 : input.Text.Length);
     }
     private void RefreshScriptConsole(bool force = false)
     {
@@ -160,8 +169,7 @@ public sealed partial class MainWindow
             _consoleSession = Document.Session.SessionId; _consoleHistory.Clear(); _consoleHistoryIndex = 0;
             _consolePendingInput = ""; _consoleLastSequence = -1; if (_consoleInput is not null) _consoleInput.Text = "";
         }
-        if (_consoleRun is not null) _consoleRun.IsEnabled = DesktopServices.SupportsScripts && _scriptCancellation is null && _consoleInput?.IsComposing != true;
-        if (_consoleStop is not null) _consoleStop.IsEnabled = _scriptCancellation is not null;
+        if (_consoleRun is not null) _consoleRun.IsEnabled = DesktopServices.SupportsScripts && _consoleInput?.IsComposing != true;
         var entries = Document.Session.ConsoleEntries;
         var last = entries.IsEmpty ? 0 : entries[^1].Sequence;
         if (!force && last == _consoleLastSequence) return;
@@ -193,16 +201,20 @@ public sealed partial class MainWindow
     }
     private async Task RunConsoleAsync()
     {
-        if (_consoleInput is null || _consoleInput.IsComposing || _consoleInput.Text is not { } source || string.IsNullOrWhiteSpace(source)) return;
+        if (_consoleInput is not { } input || input.IsComposing || input.Text is not { } source || string.IsNullOrWhiteSpace(source)) return;
         if (!DesktopServices.SupportsScripts) throw new PlatformNotSupportedException("此平台的隔离脚本执行尚不可用。");
         if (_scriptCancellation is not null) return;
         await using var hold = _scriptPage?.HoldEdits();
         if (!await CommitEditorsAsync()) return;
+        if (!ReferenceEquals(input, _consoleInput) || _scriptCancellation is not null) return;
         var document = Document;
         if (_consoleHistory.Count == 0 || _consoleHistory[^1] != source) _consoleHistory.Add(source);
         if (_consoleHistory.Count > 50) _consoleHistory.RemoveAt(0);
         _consoleHistoryIndex = _consoleHistory.Count; _consolePendingInput = "";
-        if (_scriptOutputTabs is not null) _scriptOutputTabs.SelectedIndex = 0;
+        SetScriptOutputVisible(true);
+        // Clear only the accepted command, before execution; never erase a newer draft on completion.
+        if (input.Text == source && !input.IsComposing) { input.Text = ""; SetConsoleCaret(input, 0); }
+        input.Focus();
         try
         {
             CommandResult? result = null;

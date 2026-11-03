@@ -115,7 +115,7 @@ public sealed partial class MainWindow
 
     private void RefreshScriptActionButtons()
     {
-        var enabled = DesktopServices.SupportsScripts && !_workspace.IsBusy && _scriptCancellation is null && Document.Snapshot.FileState?.FormulaReadOnly != true;
+        var enabled = DesktopServices.SupportsScripts && !NonExecutionBusy && Document.Snapshot.FileState?.FormulaReadOnly != true;
         if (_automationLoad is not null) _automationLoad.IsEnabled = enabled;
         if (_automationRun is not null) _automationRun.IsEnabled = enabled && ScriptActionsCurrent && _automationActions.SelectedItem is ScriptActionDescriptor;
     }

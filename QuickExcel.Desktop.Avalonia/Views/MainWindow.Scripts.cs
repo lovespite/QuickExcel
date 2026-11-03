@@ -3,6 +3,7 @@ using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Controls.Templates;
 using Avalonia.Input;
+using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Media;
 using QuickExcel.Core;
@@ -22,7 +23,8 @@ public sealed partial class MainWindow
     private ScriptEditorPage? _scriptPage;
     private Window? _scriptWindow;
     private ContentControl? _scriptContent;
-    private ComboBox? _modulePicker, _actionPicker;
+    private ListBox? _modulePicker;
+    private ComboBox? _actionPicker;
     private ListBox? _scriptDiagnostics;
     private TextBlock? _scriptStatus;
     private Button? _scriptRecovery;
@@ -53,7 +55,6 @@ public sealed partial class MainWindow
         _scriptDocument = Document.Session.SessionId; _selectedModule = Document.Snapshot.ScriptModules.EntryModules[0];
         var window = _scriptWindow = new Window { Title = "脚本工作区 · QuickExcel", Width = 1080, Height = 760, MinWidth = 760, MinHeight = 500, WindowStartupLocation = WindowStartupLocation.CenterOwner };
         var root = new DockPanel(); var toolbar = new WrapPanel { Margin = new(8), Orientation = Orientation.Horizontal };
-        _modulePicker = new ComboBox { MinWidth = 170, Margin = new(4) }; AutomationProperties.SetName(_modulePicker, "脚本模块"); toolbar.Children.Add(_modulePicker);
         void Button(string text, Func<Task> action)
         { var button = new Button { Content = text, Margin = new(4) }; button.Click += async (_, _) => await PerformAsync(action); toolbar.Children.Add(button); }
         Button("添加模块", AddScriptModuleAsync); Button("模块角色", ScriptModuleRoleAsync); Button("应用并重算", ApplyScriptsAsync);
@@ -62,20 +63,25 @@ public sealed partial class MainWindow
         _actionPicker = new ComboBox { MinWidth = 140, Margin = new(4), ItemTemplate = new FuncDataTemplate<ScriptActionDescriptor>((item, _) => new TextBlock { Text = item?.Name }) };
         AutomationProperties.SetName(_actionPicker, "脚本操作"); toolbar.Children.Add(_actionPicker); Button("运行操作", RunScriptActionAsync);
         RefreshScriptActions(); _actionPicker.ItemsSource = _availableScriptActions; _actionPicker.SelectedIndex = _availableScriptActions.Count > 0 ? 0 : -1;
-        var stop = new Button { Content = "停止", Margin = new(4) }; stop.Click += (_, _) => _scriptCancellation?.Cancel(); toolbar.Children.Add(stop);
         Button("签名", ScriptSignatureDetailsAsync);
+        _scriptConsoleToggle = new Button { Margin = new(4) };
+        _scriptConsoleToggle.Click += (_, _) => ToggleScriptConsole(); toolbar.Children.Add(_scriptConsoleToggle);
         _scriptRecovery = new Button { Content = "恢复已确认草稿", IsVisible = false, Margin = new(4) };
         _scriptRecovery.Click += async (_, _) => await PerformAsync(RecoverScriptPageAsync); toolbar.Children.Add(_scriptRecovery);
         DockPanel.SetDock(toolbar, Dock.Top); root.Children.Add(toolbar);
         _scriptStatus = new TextBlock { Margin = new(12, 5), TextWrapping = TextWrapping.Wrap };
         DockPanel.SetDock(_scriptStatus, Dock.Bottom); root.Children.Add(_scriptStatus);
-        _scriptDiagnostics = new ListBox { MaxHeight = 150, MinHeight = 32, ItemTemplate = new FuncDataTemplate<ScriptDiagnostic>((item, _) => new TextBlock { Text = item?.Label, TextWrapping = TextWrapping.Wrap }) };
+        _scriptDiagnostics = new ListBox { ItemTemplate = new FuncDataTemplate<ScriptDiagnostic>((item, _) => new TextBlock { Text = item?.Label, TextWrapping = TextWrapping.Wrap }) };
         AutomationProperties.SetName(_scriptDiagnostics, "运行日志与错误；静态错误在编辑器内显示");
         _scriptDiagnostics.DoubleTapped += async (_, _) => await PerformAsync(ActivateScriptDiagnosticAsync);
         _scriptDiagnostics.KeyDown += async (_, e) => { if (e.Key == Key.Enter) { e.Handled = true; await PerformAsync(ActivateScriptDiagnosticAsync); } };
-        var output = CreateScriptOutput(); DockPanel.SetDock(output, Dock.Bottom); root.Children.Add(output);
-        _scriptContent = new ContentControl(); root.Children.Add(_scriptContent); window.Content = root;
-        _modulePicker.SelectionChanged += async (_, _) =>
+        root.Children.Add(CreateScriptWorkspace(CreateScriptOutput()));
+        var scriptContent = _scriptContent!;
+        window.Content = _scriptExecution = new ExecutionOverlay(window, root, () => _consoleInput?.IsComposing == true,
+            // Native WebViews occupy their own surface, above Avalonia overlays. Hide only after the delay.
+            visible => scriptContent.IsVisible = !visible);
+        window.AddHandler(KeyDownEvent, HandleScriptWorkspaceKey, RoutingStrategies.Tunnel);
+        _modulePicker!.SelectionChanged += async (_, _) =>
         {
             if (_scriptPicking || _modulePicker.SelectedItem is not string id || id == _selectedModule) return;
             await PerformAsync(async () =>
@@ -97,7 +103,6 @@ public sealed partial class MainWindow
                 else if (await CommitScriptsAsync()) await CloseScriptWindowAsync();
             });
         };
-        window.KeyDown += (_, e) => { if (e.Key == Key.Escape && _scriptCancellation is not null) { _scriptCancellation.Cancel(); e.Handled = true; } };
         window.Show(this);
         try { await CreateScriptPageAsync(new(Document.Snapshot.ScriptModules, Document.Snapshot.FileState?.FormulaReadOnly == true)); }
         catch (Exception ex) { ScriptPageFailed(ex); throw; }
@@ -109,6 +114,7 @@ public sealed partial class MainWindow
         page.DraftChanged += () => { DisableScripts(); UpdateTitle(); if (_scriptWindow is not null) _scriptWindow.Title = "* 脚本工作区 · QuickExcel"; if (_scriptStatus is not null) _scriptStatus.Text = "源码草稿已修改，脚本授权已撤销。"; };
         page.SaveRequested += () => _ = PerformAsync(async () => await SaveAsync(false));
         page.FocusRequested += () => _modulePicker?.Focus();
+        page.ConsoleRequested += ToggleScriptConsole;
         _scriptContent!.Content = page.Browser.View; RefreshScriptChrome();
         await page.LoadAsync(_selectedModule); RefreshScriptChrome();
     }
@@ -140,9 +146,11 @@ public sealed partial class MainWindow
                 if (validateTypeScript && modules.HasTypeScript)
                 {
                     if (_scriptCancellation is not null) throw new InvalidOperationException("已有脚本工作正在进行。");
-                    using var cancellation = new CancellationTokenSource(); _scriptCancellation = cancellation;
+                    using var cancellation = new CancellationTokenSource();
+                    using var feedback = BeginExecution("正在检查 TypeScript…", cancellation);
+                    _scriptCancellation = cancellation;
                     var revision = document.Snapshot.Revision;
-                    if (_scriptStatus is not null) _scriptStatus.Text = "正在检查 TypeScript；可点击“停止”取消…";
+                    if (_scriptStatus is not null) _scriptStatus.Text = "正在检查 TypeScript；按 Esc 取消…";
                     try
                     {
                         await ScriptCompilation.PrepareAsync(modules, new(document.Session.SessionId, revision, 0, modules.Revision), cancellation.Token);
@@ -160,7 +168,7 @@ public sealed partial class MainWindow
         }
         catch (ScriptCompilationException ex)
         {
-            if (_scriptOutputTabs is not null) _scriptOutputTabs.SelectedIndex = 1;
+            SetScriptOutputVisible(true, tab: 1);
             if (_scriptStatus is not null) _scriptStatus.Text = ex.Message;
             if (_scriptDiagnostics is not null) _scriptDiagnostics.ItemsSource = ex.Diagnostics.Select(d => new ScriptDiagnostic(
                 $"{d.Module}:{d.Line}:{d.Column} · {d.Message}", Document.Snapshot.ScriptModules.Revision, d.Module, d.Line ?? 1,
@@ -177,7 +185,9 @@ public sealed partial class MainWindow
         var window = _scriptWindow; _scriptClosing = true;
         try { if (_scriptPage is not null) await _scriptPage.DisposeAsync(); window.Close(); }
         finally { _scriptWindow = null; _scriptPage = null; _scriptContent = null; _modulePicker = null; _actionPicker = null; _scriptStatus = null; _scriptDiagnostics = null; _scriptRecovery = null; _scriptClosing = false;
-            _consoleInput = null; _consoleOutput = null; _consoleRun = null; _consoleStop = null; _consoleCopy = null;
+            _scriptExecution = null;
+            _scriptEditorPane = null; _scriptOutputSplitter = null; _scriptConsoleToggle = null;
+            _consoleInput = null; _consoleOutput = null; _consoleRun = null; _consoleCopy = null;
             _consoleFilter = null; _consoleLevel = null; _consoleCount = null; _consoleEmpty = null;
             _consoleVisibleEntries = []; _scriptOutputTabs = null; }
     }
@@ -269,12 +279,14 @@ public sealed partial class MainWindow
     }
     private async Task ScriptWorkAsync(Func<CancellationToken, Task> work)
     {
-        _calculationTimer.Stop(); using var cancellation = new CancellationTokenSource(); _scriptCancellation = cancellation;
-        _book.IsEnabled = false; RefreshScriptActionButtons(); RefreshScriptConsole();
+        _calculationTimer.Stop(); using var cancellation = new CancellationTokenSource();
+        using var feedback = BeginExecution("正在执行代码…", cancellation);
+        _scriptCancellation = cancellation;
+        RefreshScriptActionButtons(); RefreshScriptConsole();
         try { await work(cancellation.Token); _calculationPending = false; }
         finally
         {
-            _scriptCancellation = null; _book.IsEnabled = true;
+            _scriptCancellation = null;
             await RefreshScriptPageAfterMutationAsync();
             Synchronize(); RefreshScriptChrome(); RefreshScriptDiagnostics();
         }

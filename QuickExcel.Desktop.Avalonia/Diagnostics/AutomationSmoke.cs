@@ -117,7 +117,7 @@ public sealed partial class MainWindow
             Check(Document.GetCellValue(0, 0, 0) == "1" && Document.GetCellValue(0, 0, 1) == "10", "Redo restores recorded action results");
             _automationRun.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
             _automationRun.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
-            Check(!_automationRun.IsEffectivelyEnabled, "Execute is disabled while an action is running");
+            Check(_automationRun.IsEffectivelyEnabled, "Execute keeps its enabled appearance while duplicate submissions are guarded");
             await _operation; await Layout();
             Check(Document.GetCellValue(0, 0, 0) == "2", "Repeated execution requests during a run do not submit a second action");
             var textAction = _availableScriptActions.Single(a => a.Name == "写入文本");

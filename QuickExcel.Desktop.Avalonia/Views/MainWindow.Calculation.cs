@@ -13,13 +13,11 @@ public sealed partial class MainWindow
     private string? _calculationFailure;
     private CancellationTokenSource? _calculationCancellation, _statisticsCancellation;
     private readonly TextBlock _selectionStatistics = new() { Margin = new(12, 5) };
-    private readonly Button _cancelCalculation = new() { Content = "停止计算  Esc", IsVisible = false, Margin = new(8, 0) };
     private void InstallCalculation()
     {
-        _cancelCalculation.Click += (_, _) => _calculationCancellation?.Cancel();
         _calculationTimer.Tick += async (_, _) =>
         {
-            if (_working || _workspace.IsBusy || _scriptCancellation is not null || _closePending || _grid.IsEditing || _formulaDirty || _grid.IsComposing || _formula.IsComposing || _grid.IsSelectionDragging) return;
+            if (_working || _execution.IsRunning || _workspace.IsBusy || _scriptCancellation is not null || _closePending || _grid.IsEditing || _formulaDirty || _grid.IsComposing || _formula.IsComposing || _grid.IsSelectionDragging) return;
             _calculationTimer.Stop();
             if (_calculationPending && !_windowClosed) await PerformAsync(CalculatePendingAsync);
         };
@@ -51,13 +49,15 @@ public sealed partial class MainWindow
     {
         if (!_calculationPending) return;
         _calculationTimer.Stop();
-        using var cancellation = new CancellationTokenSource(); _calculationCancellation = cancellation; _cancelCalculation.IsVisible = true;
+        using var cancellation = new CancellationTokenSource();
+        using var feedback = BeginExecution("正在重新计算…", cancellation);
+        _calculationCancellation = cancellation;
         try
         {
             if (await _workspace.CalculateAsync(cancellation.Token, forceFull)) { _calculationPending = false; _calculationFailure = null; _status.Text = "重算完成"; }
         }
         catch (Exception ex) { _calculationFailure = ex.Message; _status.Text = "计算未完成，保留输入及上次结果：" + ex.Message; }
-        finally { _calculationCancellation = null; _cancelCalculation.IsVisible = false; QueueStatistics(); }
+        finally { _calculationCancellation = null; QueueStatistics(); }
     }
     private async Task<bool> FlushEditsAsync()
     {
