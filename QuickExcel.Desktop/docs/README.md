@@ -1,5 +1,7 @@
 # QuickExcel 架构与实施文档
 
+2026-11-03：新增 [JSC 单引擎替换与 TypeScript 接入方案](70-jsc-typescript-migration-plan.md)，覆盖引擎嵌入、自动编译、文件与授权、隔离、分阶段迁移及验收。状态为目标方案，尚未实施；当前生产引擎仍为 QuickJS-NG。
+
 2026-11-03：[Avalonia 迁移](61-avalonia-migration-plan.md) **A0–A5 工程完成，A6 实施中**。默认入口已切换 Avalonia，Windows 发布与 WPF 回退见 [66 号记录](66-avalonia-windows-release.md)。实机项目按用户要求延期；Linux 中文输入无候选框仍未解决，非 Windows 完整支持尚未完成。
 
 2026-11-02：[SkiaSharp 方案](59-skia-rendering-and-pdf-plan.md) **P0–P4 声明范围完成**，包括共享文字/图片/图表渲染、直接 PDF、按需页面预览、主网格和旧依赖清理。Windows/Linux 实际输出、功能定向验证和原有滚动预算通过，完整状态、测量修正与外部门禁见 [60 号实施记录](60-skia-rendering-and-pdf-implementation.md)。
@@ -42,6 +44,7 @@ E1 七项实现及各自真实 Excel 对照已完成；[行列样式优先级](2
 
 | 文档 | 解决的问题 |
 | --- | --- |
+| [JSC 单引擎替换与 TypeScript 接入方案](70-jsc-typescript-migration-plan.md) | JSC 原生桥、TS 自动处理、缓存/签名/IPC、平台隔离、J0–J6 迁移与定向验收；尚未实施 |
 | [Avalonia 迁移方案与实施计划](61-avalonia-migration-plan.md) | MIT 依赖准入、模块边界、主网格迁移、PDF.js/Monaco、A0–A7 工作项、平台隔离与发布回退；A0–A5 工程完成 |
 | [Avalonia 实施日志](63-avalonia-implementation-log.md) | 分阶段实现、验证与延期事项 |
 | [Avalonia 网格与工作区](64-avalonia-grid-and-workspace.md) | 功能入口矩阵、交互及滚动性能 |
