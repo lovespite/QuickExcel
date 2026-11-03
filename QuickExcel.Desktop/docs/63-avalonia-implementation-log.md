@@ -1,6 +1,6 @@
 # Avalonia 迁移实施日志
 
-2026-11-03。计划见 [61 号文档](61-avalonia-migration-plan.md)，A0 的依赖、运行与性能基线见 [62 号记录](62-avalonia-a0-validation.md)。每阶段独立本地提交，用户验收后才推送远程。
+2026-11-03。计划见 [61 号文档](61-avalonia-migration-plan.md)，A0 的依赖、运行与性能基线见 [62 号记录](62-avalonia-a0-validation.md)。阶段提交已在 `codex/avalonia-migration` 分支推送，用户已同意按 Windows 预览版范围并入 main。当前默认入口为 Avalonia，A7 已移除 WPF 生产项目；平台限制及合并前核验见 [68 号记录](68-avalonia-retirement.md)。以下阶段结果描述各自受测源码，保留历史证据。
 
 ## 验收顺序调整
 
@@ -53,7 +53,7 @@ Windows 组合根保持原 ScriptWorker 路径，非 Windows 明确关闭脚本�
 
 前期失败与修正保留：公式标准化括号断言、普通文本隐藏目标拒绝、函数补全排序、误用未建模 ROW 的测试、未绑定网格布局、主滚动条识别和导出测试前置格式。没有改变公式语义或扩大已支持格式。共享 SetAxisMetadataCommand 增加稀疏“显示全部”处理，避免生成默认行元数据；原 WPF 回归通过。
 
-实机项按用户要求延期，Linux 中文输入仍未解决；CPU 绘制提交/合成事件不冒充真实显示或输入法证据。A4 接入 PDF.js、Monaco 与脚本授权/签名/日志；A5–A7 尚未开始。当前设置使用独立 LocalApplicationData/QuickExcel/Avalonia 目录，默认启动器仍是 WPF。
+实机项按用户要求延期，Linux 中文输入仍未解决；CPU 绘制提交/合成事件不冒充真实显示或输入法证据。A3 完成时，A4 的 Web/脚本接入和 A5–A7 尚待后续实施，默认启动器仍是 WPF；后续工程状态以本日志 A4/A5 及 67、68 号记录为准。Avalonia 设置使用独立 LocalApplicationData/QuickExcel/Avalonia 目录。
 
 ## A4 Web 组件（工程完成）
 

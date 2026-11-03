@@ -1,6 +1,6 @@
 # QuickExcel Avalonia 迁移方案与实施计划
 
-2026-11-02 制定，2026-11-03 更新。状态：**A0 工程验证完成，实机验收按用户要求延期，A1–A5 工程完成，A6 开始实施**，实际实现与证据见 [62 号 A0 记录](62-avalonia-a0-validation.md)。本方案采用 MIT 许可的开源 Avalonia，将现有 WPF 桌面迁移到 Avalonia，再在新宿主中接入 PDF.js 打印预览和 Monaco 脚本编辑器。WebView 的小规模可行性验证放在迁移开始时，正式功能接入安排在核心工作区稳定之后。
+2026-11-02 制定，2026-11-03 更新。状态：**A0–A5 Windows 工程验证与切换完成，A7 WPF 收尾完成；A6 Linux 有受测 Ubuntu 候选，macOS worker 未实现；实机验收按用户要求延期**。当前默认入口为 Avalonia，实际实现与证据见 [63 号实施日志](63-avalonia-implementation-log.md)、[67 号平台记录](67-avalonia-platforms.md)及 [68 号收尾记录](68-avalonia-retirement.md)。以下保留迁移方案、阶段顺序与验收要求；各阶段当时的状态不代表当前版本仍有相同缺项。
 
 迁移分为两个独立交付目标：**Windows 上的 Avalonia 功能对齐**，以及 **macOS/Linux 的完整平台支持**。前者不得降低当前功能和脚本隔离；后者必须完成原生库、打印、用户数据保护和脚本沙箱适配，不能以窗口能够打开作为完成依据。
 
@@ -44,11 +44,11 @@ A0 必须同时验证 Avalonia 自身文字/控件、共享单元格绘制、PDF
 
 新增依赖需满足：公开包源可还原、无授权服务或试用要求、许可证随包、传递依赖有清单、release 不含设计器和测试载荷。Avalonia 框架包尽量统一版本，WebView 按实际声明的依赖范围匹配，不按包名猜测版本一致性。原生库和 npm 资源都进入发布身份清单；不使用浮动版本或运行时 CDN。
 
-## 3 当前架构与迁移清单
+## 3 迁移起点与模块清单
 
-当前基线是 [60 号 Skia 实施记录](60-skia-rendering-and-pdf-implementation.md)，而不是 59 号方案中的旧实现描述。
+迁移起点是 [60 号 Skia 实施记录](60-skia-rendering-and-pdf-implementation.md)，而不是 59 号方案中的旧实现描述。下表保留迁移时的模块状态与动作；旧 WPF 源码现已移除，由 `avalonia-wpf-baseline-20261102` 标签保留，当前生产结构见仓库 README 与 68 号记录。
 
-| 当前模块或入口 | 当前状态 | 迁移动作 |
+| 迁移时的模块或入口 | 迁移时状态 | 迁移动作 |
 | --- | --- | --- |
 | `QuickExcel.Core` | 纯 .NET 领域、会话、命令、历史和端口 | 直接复用，保持无 UI 和 native 引用 |
 | `QuickExcel.Infrastructure` | `net10.0`；存储/计算可复用，但脚本启动和信任存储含 Windows 实现 | 分离平台能力选择；不能因 TFM 是 net10.0 就宣称整项目可跨平台执行 |
@@ -57,10 +57,10 @@ A0 必须同时验证 Avalonia 自身文字/控件、共享单元格绘制、PDF
 | [Interaction](../../QuickExcel.Presentation/Interaction/GridInteraction.cs) 与相关规则 | WPF-free，A1 已提取至 Presentation，Core.Test 使用项目引用 | 迁入正式共享程序集，测试改为项目引用，避免两份源文件漂移 |
 | [IGridSurface](../../QuickExcel.Presentation/Grid/IGridSurface.cs) | 已有视图边界，接口本身无 WPF 控件类型 | 复用契约，按实际需要扩展异步编辑协调；具体控件生命周期留在宿主 |
 | `QuickExcel.Grid.Wpf` | 仍有 WriteableBitmap、Dispatcher、WPF 输入及控件依赖 | 提取可复用几何和行为，新增 Avalonia 控件；不能直接改项目名称后作为跨平台网格 |
-| [FastGridArtwork](../Controls/Grid/FastGridArtwork.cs) | Skia picture 内容加 WPF DrawingGroup/BitmapSource 上屏 | 保留内容构建与缓存失效规则，重写上屏和资源所有权 |
-| [MainWindow](../Views/MainWindow/MainWindow.xaml.cs) 与各 partial | 工作区、菜单、事件协调和 UI 状态混合 | 分切片迁移命令/状态与视图，保留功能对照清单 |
-| [WorkbookPaginator](../Printing/WorkbookPaginator.cs) | WPF 文档、预览缓存、系统打印适配 | 抽出与 UI 无关的打印会话；Avalonia 预览直接接 PDF.js |
-| [脚本页](../Views/MainWindow/MainWindow.Scripts.cs) | TextBox、模块切换、同步草稿提交和错误定位 | 在 Avalonia 内直接接 Monaco，重做有确认的异步草稿同步 |
+| 旧 WPF `FastGridArtwork`（见基线标签） | Skia picture 内容加 WPF DrawingGroup/BitmapSource 上屏 | 保留内容构建与缓存失效规则，重写上屏和资源所有权 |
+| 旧 WPF `MainWindow` 与各 partial（见基线标签） | 工作区、菜单、事件协调和 UI 状态混合 | 分切片迁移命令/状态与视图，保留功能对照清单 |
+| 旧 WPF `WorkbookPaginator`（见基线标签） | WPF 文档、预览缓存、系统打印适配 | 抽出与 UI 无关的打印会话；Avalonia 预览直接接 PDF.js |
+| 旧 WPF 脚本页（见基线标签） | TextBox、模块切换、同步草稿提交和错误定位 | 在 Avalonia 内直接接 Monaco，重做有确认的异步草稿同步 |
 | [QuickJsSession](../../QuickExcel.Scripting/QuickJsSession.cs) | 当前显式限制 Windows x64，项目复制 quickexcel-js.dll | 按 RID 构建/加载原生桥，保持 QuickJS 源版本、SHA-256 和许可证 |
 | [WorkerProcess](../../QuickExcel.Infrastructure/Scripting/WorkerProcess.cs) | Windows AppContainer、Job、显式句柄和恢复记录 | Windows 完整复用；其他平台单独实现等效能力约束 |
 | [证书信任存储](../../QuickExcel.Infrastructure/Scripting/ScriptCertificateTrustStore.cs) | DPAPI CurrentUser 保护 | 新增平台保护端口；不把 Windows 信任数据解密迁成明文 |
@@ -330,9 +330,9 @@ dotnet test .\QuickExcel.Core.Test\QuickExcel.Core.Test.csproj -c Release --arti
 dotnet test .\QuickExcel.Rendering.Test\QuickExcel.Rendering.Test.csproj -c Release --artifacts-path .\artifacts\build -v minimal
 ```
 
-只选择本次修改对应的命令；上述列表不是每个提交都执行的固定套件。现有 `scripts/test-m5-grid.ps1` 用于 WPF 基线，按显式 Mode 运行，不用默认 All 代替定向选择。
+只选择本次修改对应的命令；上述列表不是每个提交都执行的固定套件。`scripts/test-avalonia-workspace.ps1 -Mode Workspace|Grid|RibbonFilter|Automation` 用于当前 Avalonia 入口，性能基准单独运行 `scripts/test-avalonia-grid-benchmark.ps1`。`scripts/test-m5-grid.ps1` 仅用于 WPF 归档基线，必须提供显式归档包路径并按 Mode 定向运行。
 
-实施时新增 Avalonia 专项脚本/测试项目，并在文档登记实际名称；在其存在前不将计划命令描述为可运行工具。跨平台 CI 只构建可移植项目和对应宿主/测试集合，不在 Linux/macOS 上构建包含旧 WPF、Windows fixture 和 Excel COM 工具的整个解决方案。原生构建、Node 缓存和 Web 输出同样定位到仓库 ignored artifacts，测试数据和用户配置路径必须隔离。
+Avalonia Web 专项入口为 `scripts/test-avalonia-web.ps1`，各脚本证据见对应阶段日志。跨平台 CI 只构建可移植项目和对应宿主/测试集合，不在 Linux/macOS 上运行 Windows fixture 或 Excel COM 工具；当前解决方案已不含 WPF 生产项目。原生构建、Node 缓存和 Web 输出同样定位到仓库 ignored artifacts，测试数据和用户配置路径必须隔离。
 
 ## 13 发布与回退
 

@@ -51,4 +51,3 @@ try {
     }
     Write-Host "PASS: $package (target self-check and device gates are separate)"
 } finally {Pop-Location}
-

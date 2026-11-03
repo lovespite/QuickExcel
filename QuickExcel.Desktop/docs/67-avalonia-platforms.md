@@ -4,7 +4,7 @@
 
 ## Linux worker 决策
 
-Ubuntu 24.04.5 x64 / Linux 6.8.0-147 / systemd 用户会话 / cgroup v2 / Landlock ABI 4 是当前受测环境。原生桥仍为 QuickJS-NG 0.17.0、原 SHA-256，C ABI、1 秒中断、64 MiB 引擎预算、16 MiB 桥接与 IPC 4 均保持。Unix 使用单调时钟及 PIC；Linux 编译使用 Clang 18。GCC 13 在未修改的 QuickJS 优化阶段发生内部编译器错误，失败日志保留，未修改引擎规避。macOS arm64 原生构建入口已准备，尚无实际构建证据。
+Ubuntu 24.04.5 x64 / Linux 6.8.0-147 / systemd 用户会话 / cgroup v2 / Landlock ABI 4 是 A6 受测环境。原生桥仍为 QuickJS-NG 0.17.0、原 SHA-256，C ABI、1 秒中断、64 MiB 引擎预算与 16 MiB 桥接均保持。A6 原始证据使用 IPC 4；当前事件/虚拟文件功能已升级到 IPC 5，契约及新增 Windows 验证见 [69 号记录](69-script-events-and-virtual-files.md)，不能将历史 Linux 包当作最新源码的验证。Unix 使用单调时钟及 PIC；Linux 编译使用 Clang 18。GCC 13 在未修改的 QuickJS 优化阶段发生内部编译器错误，失败日志保留，未修改引擎规避。macOS arm64 原生构建入口已准备，尚无实际构建证据。
 
 Bubblewrap 在当前普通用户环境受到 Ubuntu AppArmor 的 user namespace / network capability 策略限制，不能启动隔离网络；没有禁用该策略。最终 Linux 路径采用独立的 Landlock + seccomp + cgroup 组合，不依赖 Bubblewrap，也不提供同权限执行后备。
 
@@ -78,4 +78,4 @@ Linux 依赖、普通用户启动、自检与失败条件在 `scripts/README-ava
 
 macOS worker **尚未实现和验证**，因此桌面执行能力保持关闭、包不包含 worker；旧缓存保持 blocked/stale。公开 App Sandbox/XPC 是后续候选，但仅列 entitlement、使用普通子进程或 sandbox-exec 不能满足隔离证据。需要在 Mac 上实现与验证服务身份、无文件/网络/外部 IPC、进程/线程限制、实际内存限额、宿主退出绑定和登记恢复。依据：[Apple App Sandbox](https://developer.apple.com/library/archive/documentation/Miscellaneous/Reference/EntitlementKeyReference/Chapters/EnablingAppSandbox.html)、[XPC](https://developer.apple.com/documentation/xpc)。没有足够证据时不开放执行；不把 Mac 完整支持标为完成。
 
-用户延期的是实机验证，不是降低隔离标准。当前工程包默认交付目标仍为 Windows，Linux 为受测 Ubuntu 候选；macOS 不在默认交付支持范围。A7 可以清理已归档的 WPF 入口，Mac 设备/隔离工程和各平台实机门禁继续独立跟踪。Windows 原 M4/M5/M6 未关闭门槛保持原状态。
+用户延期的是实机验证，不是降低隔离标准。当前工程包默认交付目标仍为 Windows，Linux 为受测 Ubuntu 候选；macOS 不在默认交付支持范围。A7 已清理 WPF 生产入口并保留归档回退，见 [68 号记录](68-avalonia-retirement.md)；Mac 设备/隔离工程和各平台实机门禁继续独立跟踪。Windows 原 M4/M5/M6 未关闭门槛保持原状态。

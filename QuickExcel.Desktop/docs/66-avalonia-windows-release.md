@@ -4,7 +4,7 @@
 
 ## 发布形态
 
-`build-avalonia-release.ps1` 生成全新 Windows x64 自包含目录，版本 `0.6.0-preview.5`。主程序和 AppContainer worker 各自包含 .NET 10；worker 不依赖开发机全局 .NET，目录扫描拒绝 UI/WebView/Skia/PDF 载荷。正式构建 `QuickExcelDiagnostics=false`，不编译 Diagnostics 目录、对话框/验证/关闭决策注入，也拒绝测试命令行。运行时依赖清单与文件均排除 Avalonia.DesignerSupport；不使用裁剪、忽略依赖错误或删除必要 BCL 来减小包。
+`build-avalonia-release.ps1` 生成全新 Windows x64 自包含目录。A5 候选版本为 `0.6.0-preview.5`；当前版本由 Avalonia 项目统一提供，为 `0.6.0-preview.7`。主程序和 AppContainer worker 各自包含 .NET 10；worker 不依赖开发机全局 .NET，目录扫描拒绝 UI/WebView/Skia/PDF 载荷。正式构建 `QuickExcelDiagnostics=false`，不编译 Diagnostics 目录、对话框/验证/关闭决策注入，也拒绝测试命令行。运行时依赖清单与文件均排除 Avalonia.DesignerSupport；不使用裁剪、忽略依赖错误或删除必要 BCL 来减小包。
 
 构建先生成正式离线 Web 资源，再还原并锁定 RID 依赖。`Directory.Build.props` 仅在显式传入 `QuickExcelReleaseLockDirectory` 时把 RID 锁放在 artifacts；正式包保存这些完整锁与 npm 锁，普通源码锁不被发布重写。逐文件大小/SHA-256、Git HEAD/dirty、SDK、Web 清单与安装自检进入 `release.json`；ZIP 另有 SHA-256。每次新目录，旧包不覆盖。无 Node、测试密钥、probe、fixture、PDB、source map 或 PDF scripting 引擎随包发布。
 
@@ -16,7 +16,7 @@ WebView 选择开源控件的 WebView2 adapter，要求注册的 **Evergreen sta
 
 普通首次启动仅复制旧 `settings.json`、`recent-files.json` 到独立 `LocalAppData/QuickExcel/Avalonia`；先备份原始字节，flush 后原子发布，`migration-v1.json` 记录版本及哈希。现有 Avalonia 文件不覆盖，独占迁移锁避免并发；失败保留旧文件并显示状态。信任 pin、证书、恢复状态、WebView profile 均不迁移。单次用户授权和持久信任仍由原 DPAPI 合同管理。
 
-`Start-QuickExcel.cmd` 调用 `start-quickexcel.ps1`：优先读取 artifacts 下经过核验的活动包；没有活动包才构建正式 Web 并从 Avalonia 源码启动。`build-quickexcel.ps1` 默认发布并在正式自检通过后更新活动指针。WPF 专用旧脚本暂留 `build-quickexcel-wpf.ps1`，后续 A7 整理。
+`Start-QuickExcel.cmd` 调用 `start-quickexcel.ps1`：优先读取 artifacts 下经过核验的活动包；没有活动包才构建正式 Web 并从 Avalonia 源码启动。`build-quickexcel.ps1` 默认发布并在正式自检通过后更新活动指针。A7 已移除 WPF 专用旧脚本 `build-quickexcel-wpf.ps1`；回退仅选择已归档且通过哈希核验的 WPF 包，见 [68 号记录](68-avalonia-retirement.md)。
 
 旧受测基线由 A0 冻结清单逐项核验后另存到 `artifacts/avalonia/rollback/20261102-202406-c6898eb0/application`，同层有 ZIP/SHA-256。保留原 metadata 的旧 HEAD/dirty，未伪造为新的干净构建。回退只切换程序与原设置，工作簿不搬移、不覆盖。
 
@@ -45,7 +45,7 @@ WebView 选择开源控件的 WebView2 adapter，要求注册的 **Evergreen sta
 | 最终包部署复核 | `artifacts/avalonia/deployment/20261102-203754-55a66331`，四种副本场景再次通过；正式 EXE 拒绝四种 smoke/benchmark 命令，退出码 2 |
 | 最终 Release 解决方案 | 19 项目，0 警告、0 错误；`artifacts/build` |
 
-最终 A5 包为 `artifacts/avalonia/releases/20261102-203655-64921c89/application`，安装自检 7 项通过，含独立 RID 锁及正式资源；源码锁未被重写。ZIP SHA-256：`12B29484F68891CB3A739BA6D2C8922FA86D67B454EC514362E7DD9FAE79539F`。版本源码及发布包均只保存在本机，未推送远程。本地 WPF 源码标签 `avalonia-wpf-baseline-20261102` 指向 `37911cb04374b3dabd4413f8b7993c1c523c2eb0`。
+最终 A5 包为 `artifacts/avalonia/releases/20261102-203655-64921c89/application`，安装自检 7 项通过，含独立 RID 锁及正式资源；源码锁未被重写。ZIP SHA-256：`12B29484F68891CB3A739BA6D2C8922FA86D67B454EC514362E7DD9FAE79539F`。这是 A5 历史候选，生成包仅保存在本机；阶段源码现已在迁移分支推送。当前活动包由 `artifacts/avalonia/active-windows.json` 指向，不能用 A5 旧包代表最新源码。本地 WPF 源码标签 `avalonia-wpf-baseline-20261102` 指向 `37911cb04374b3dabd4413f8b7993c1c523c2eb0`。
 
 性能复核中 Monaco 输入/补全 p95 为 13.3/3.8 ms，十次开关后增长 22,638,592 bytes；5 页 E4 最大进程树 private commit 为 791,056,384 bytes，低于原 768 MiB 限额但余量有限。100 页 PDF 十次开关并空闲 30 秒后较基线减少 14,016,512 bytes，浏览器进程全部退出；并发补全/PDF 缩放 p95 为 2.2/42.4 ms。没有上调预算或过滤失败样本，CPU 完成观测不代表物理显示延迟。
 

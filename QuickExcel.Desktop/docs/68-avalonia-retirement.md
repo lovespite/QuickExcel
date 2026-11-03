@@ -1,6 +1,6 @@
 # A7 旧 WPF 宿主收尾与验收索引
 
-2026-11-03。默认 Windows 交付范围完成工程切换和收尾；实机验收仍延期。A6 Linux 有受测 Ubuntu 候选，macOS worker 未实现且执行保持关闭，不将其计为完整支持。阶段提交互相独立，所有提交仅在本机，等待用户验收后才可推送。
+2026-11-03。默认 Windows 交付范围完成工程切换和收尾；实机验收仍延期。A6 Linux 有受测 Ubuntu 候选，macOS worker 未实现且执行保持关闭，不将其计为完整支持。阶段提交已在 `codex/avalonia-migration` 分支推送；用户已同意按 Windows 预览版范围并入 main，并从干净提交重新打包自检。合并不关闭下文延期验收及原 M4/M5/M6 门槛。
 
 ## 收尾范围
 
@@ -30,7 +30,13 @@
 
 没有重复执行全量 Core 或整套性能基准。A7 不改变默认绘制路径、Web 模型或 PDF 缓存；A5 的固定负载、预算及完整原始样本继续见 [66 号日志](66-avalonia-windows-release.md)。软件渲染检查仅验证显式诊断入口，不作为默认性能数字。A6 Linux 的最终安全/信任/虚拟打印/包验证见 [67 号日志](67-avalonia-platforms.md)。
 
-收尾候选 `artifacts/avalonia/releases/20261102-215213-6e40b24e/application`，ZIP SHA-256：`3959FB3504F2E639607985EC38AC4489E651217930A0C884F6A055E55F00966C`。阶段提交后将从干净 HEAD 再生成正式验收包；最终活动目录由 `artifacts/avalonia/active-windows.json` 指向，包内 release.json 记录源提交、dirty 状态、版本、逐文件哈希和自检，旁边 evidence 保存结果。该指针与生成包均在 Git 之外，不用文档中的旧目录冒充最新源码。
+A7 历史收尾候选 `artifacts/avalonia/releases/20261102-215213-6e40b24e/application`，ZIP SHA-256：`3959FB3504F2E639607985EC38AC4489E651217930A0C884F6A055E55F00966C`。后续交付从干净 HEAD 重新打包自检；当前活动目录由 `artifacts/avalonia/active-windows.json` 指向，包内 release.json 记录源提交、dirty 状态、版本、逐文件哈希和自检，旁边 evidence 保存结果。该指针与生成包均在 Git 之外，不用文档中的旧目录冒充最新源码。
+
+## 2026-11-03 合并前核验
+
+对迁移分支 `8aca363`（含事件/虚拟文件、功能区与筛选修正）重新验证：Release 解决方案构建 0 警告、0 错误；定向回归 **359/359**，结果 `artifacts/avalonia/merge-readiness/20261103/merge-readiness.trx`。未运行全量 Core 回归。
+
+Avalonia 入口合计 **248** 项通过：Automation **72**（`artifacts/avalonia/workspace/20261103-035546-76dbe867`）、Workspace **32**（`20261103-035612-b43de98d`）、Grid **77**（`20261103-035614-248d956b`）、RibbonFilter **67**（`20261103-035619-52a516f6`）；后三个目录均在 `artifacts/avalonia/workspace/` 下。Web 资源由当前源码重新生成。以上为程序化检查，不替代实机验收，也不扩展 Linux/macOS 支持声明。
 
 ## 回退与待验收
 

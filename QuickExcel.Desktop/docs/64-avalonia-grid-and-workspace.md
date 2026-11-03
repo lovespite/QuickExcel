@@ -1,6 +1,6 @@
 # Avalonia 网格与工作区对齐（A3）
 
-2026-11-03。对应 [61 号方案](61-avalonia-migration-plan.md) AV-021–AV-024。A3 工程实现与自动验证完成，实机输入、辅助技术和跨屏验证按用户要求统一延期。PDF.js、打印适配和脚本页在 A4 实施，当前默认入口仍为 WPF。
+2026-11-03。对应 [61 号方案](61-avalonia-migration-plan.md) AV-021–AV-024。A3 工程实现与自动验证完成，实机输入、辅助技术和跨屏验证按用户要求统一延期。本文保留 A3 阶段证据；后续 A4 已接入 PDF.js、打印适配和脚本页，A5 已将默认入口切换为 Avalonia，A7 已移除 WPF 生产项目，见 [68 号收尾记录](68-avalonia-retirement.md)。
 
 ## 功能入口对照
 
@@ -40,7 +40,7 @@
 | A3 相关共享规则 | **105/105**；`artifacts/avalonia/tests/a3-shared-final.trx`，M5/Presentation/WorkbookWorkspace/ViewportAxis/GridScrollRange/OversizedGridCell；未运行全量 Core |
 | Avalonia 网格与原生功能入口 | **77** 项；`artifacts/avalonia/workspace/20261102-182706-8fd93292`；`result.json`、`process.json` 与截图 |
 | Avalonia 工作区 | **32** 项；`artifacts/avalonia/workspace/20261102-182746-9ebc35c9` |
-| WPF 共享层回归 | **157** 项；`artifacts/validation/m5-grid/20261102-182748-d708c162`，当前源码构建产物 |
+| WPF 共享层回归 | **157** 项；`artifacts/validation/m5-grid/20261102-182748-d708c162`，A3 当时源码构建产物 |
 | 网格独立基准 | `artifacts/avalonia/benchmarks/20261102-182202-4ff5b925`，原始 60 次数据、5 次预热、身份哈希和退出码；普通 **11.5642 ms**、带样式 **9.9682 ms** p95，预算 ≤16.67 ms；拖选 **19.0615 ms** p95，预算 ≤33.34 ms |
 | 最终候选基准 | 绘制失败处理及生命周期收尾后重跑：`artifacts/avalonia/benchmarks/20261102-183104-dfaf9a8c`；普通 **16.1515 ms**、带样式 **9.1766 ms**、拖选 **19.2976 ms**，均通过；普通场景余量较小，两次全量原始数据均保留，未选最好结果替代最终候选 |
 | 大负载 | 同次基准含 25,000/100,000/250,000 格各加一个远端格，8,192 样式；远端视口各新绘 312 格，原生缓存 319,268 bytes；250,001 格场景进程 private bytes 277,233,664；这不是整个进程树峰值声明 |
@@ -52,5 +52,5 @@
 ## 未关闭事项
 
 - 实际 OS IME、跨屏 DPI、屏幕阅读器、真实指针/剪贴板、设备性能按用户要求延期；Linux 中文候选窗问题仍未解决。
-- A4 的脚本模块/授权/签名/日志、Monaco 草稿确认、PDF.js/打印服务尚未接入；当前不会替代正式 WPF 入口。
-- A5 发布、A6 平台隔离/保护/打印/包、A7 WPF 清理均需各自后续工作。原 M4/M5/M6/E5 未关闭门禁不因 A3 工程检查通过而关闭。
+- A3 当时尚未接入的脚本模块/授权/签名/日志、Monaco 草稿确认、PDF.js/打印服务已在 A4 工程完成，见 [65 号记录](65-avalonia-web-components.md)。
+- A5 发布与 A7 WPF 清理已完成；A6 Linux 候选与 macOS 未完成项见 [67 号记录](67-avalonia-platforms.md)。原 M4/M5/M6/E5 未关闭门禁保持原状态。
