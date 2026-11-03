@@ -121,6 +121,9 @@ public sealed class TypeScriptCompilerTests
 
     [Theory]
     [InlineData("export const n:number='bad';")]
+    [InlineData("$.actions.register('write', context => context.patch.setValue('sheet', 'A1', {}));")]
+    [InlineData("$.events.on('missing.event', context => {});")]
+    [InlineData("$.functions.register(42, () => 1);")]
     [InlineData("export const n = document.title;")]
     [InlineData("export const n = process.env.PATH;")]
     [InlineData("import {n} from './external'; export {n};")]
@@ -132,6 +135,23 @@ public sealed class TypeScriptCompilerTests
         Assert.False(result.Result.Success);
         Assert.NotEmpty(result.Result.Diagnostics);
         Assert.Empty(result.Result.Outputs);
+    }
+
+    [Fact]
+    public async Task ImplicitModulesKeepTheirOwnScopeAndCanShadowApiGlobals()
+    {
+        var compiler = new ScriptCompiler();
+        var valid = await compiler.CompileAsync(Request(
+            new("helpers", "typescript", "const $ = 7; const value = 1;"),
+            new("main", "typescript", "const $ = 42; const value = 2; quickExcel.functions.register('LOCAL', () => $ + value);")), Stamp);
+        Assert.True(valid.Result.Success, string.Join("\n", valid.Result.Diagnostics.Select(d => d.Message)));
+        Assert.Equal(2, valid.Result.Outputs.Length);
+        var invalid = await compiler.CompileAsync(Request(
+            new("helpers", "typescript", "const privateValue = 7;"),
+            new("main", "typescript", "$.functions.register('LOCAL', () => privateValue);")), Stamp);
+        Assert.False(invalid.Result.Success);
+        Assert.Contains(invalid.Result.Diagnostics, d => d.Module == "main" && d.Message.Contains("privateValue"));
+        Assert.Empty(invalid.Result.Outputs);
     }
 
     [Fact]

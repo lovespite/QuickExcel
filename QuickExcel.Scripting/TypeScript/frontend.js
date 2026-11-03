@@ -74,7 +74,11 @@ globalThis.qxCompile = function qxCompile(request) {
     const parsed = new Map();
     for (const [name, source] of files) {
         if (!originalIds.has(name)) continue;
-        const file = ts.createSourceFile(name, source, options.target, true,
+        // Pre-parsed source files must receive the same module detection as the
+        // program host. Otherwise files without import/export leak declarations
+        // into the global scope and cannot shadow API globals such as `$`.
+        const file = ts.createSourceFile(name, source, { languageVersion: options.target,
+            setExternalModuleIndicator: ts.getSetExternalModuleIndicator(options) }, true,
             name.endsWith('.ts') ? ts.ScriptKind.TS : ts.ScriptKind.JS);
         parsed.set(name, file);
         if (file.referencedFiles.length || file.typeReferenceDirectives.length || file.libReferenceDirectives.length)

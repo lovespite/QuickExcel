@@ -8,8 +8,8 @@ namespace QuickExcel.Core.Test;
 public sealed class M4ProtocolTests
 {
     [Theory]
-    [InlineData(1)] [InlineData(2)] [InlineData(3)]
-    public void PreviousWorkersCannotBeMixedWithProtocolFour(int oldVersion)
+    [InlineData(1)] [InlineData(2)] [InlineData(3)] [InlineData(4)] [InlineData(5)] [InlineData(6)]
+    public void PreviousWorkersCannotBeMixedWithCurrentProtocol(int oldVersion)
     {
         var identity = Identity();
         var reply = WorkerProtocol.Message(identity, "logs", new WorkerLogs([])) with { ProtocolVersion = oldVersion };

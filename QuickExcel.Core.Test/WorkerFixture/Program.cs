@@ -15,6 +15,12 @@ if (loadEnvelope.Kind == "loadActions")
     await WorkerProtocol.WriteAsync(output, WorkerProtocol.Message(loadEnvelope.Identity, "loadActions", new LoadedActions(modules.Sha256, [new("A", "")])));
     var envelope = await WorkerProtocol.ReadAsync(input);
     var action = WorkerProtocol.Payload<RunAction>(envelope);
+    if (fault is "failure-log-count" or "failure-log-bytes")
+    {
+        var logs = fault == "failure-log-count" ? Enumerable.Repeat("line", 101).ToArray() : [new string('中', 2000)];
+        await WorkerProtocol.WriteAsync(output, WorkerProtocol.Message(envelope.Identity, "failure", new WorkerFailure("Action", "injected") { Logs = logs }));
+        return;
+    }
     var good = new ActionWrite(action.Snapshot.Sheets[0].Id, 0, 0, WireValue.FromObject(1d), null);
     var bad = good with { Row = 1 };
     bad = fault switch

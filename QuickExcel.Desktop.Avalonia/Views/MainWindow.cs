@@ -165,7 +165,7 @@ public sealed partial class MainWindow : Window
             _sheets.ItemsSource = items; _sheets.SelectedItem = items.FirstOrDefault(s => s.Id == Document.Snapshot.ActiveSheetId);
         }
         finally { _synchronizing = false; }
-        UpdateFormula(); UpdateTitle(); UpdateRibbon(); UpdateValidation(); UpdateOutline(); QueueStatistics(); RefreshPrintStatus();
+        UpdateFormula(); UpdateTitle(); UpdateRibbon(); UpdateValidation(); UpdateOutline(); QueueStatistics(); RefreshPrintStatus(); RefreshScriptConsole();
     }
     private void UpdateTitle()
     {

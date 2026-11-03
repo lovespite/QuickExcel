@@ -39,14 +39,31 @@ public sealed partial class JscSession : IDisposable
             const actions = Object.create(null);
             const actionInfo = Object.create(null);
             const eventHandlers = Object.create(null);
-            const eventNames = ['workbook.open','workbook.beforeClose','workbook.close','workbook.activate','workbook.deactivate',
-                'workbook.beforeSave','workbook.saved','workbook.calculated','sheet.added','sheet.deleted','sheet.renamed',
-                'sheet.activate','sheet.deactivate','selection.changed','cell.click','cell.edit','cell.commit','cells.changed'];
+            /*EVENT_API*/
             const logs = [];
-            const logger = (...values) => {
-                if (logs.length < 100) logs.push(values.map(String).join(' ').slice(0, 4000));
+            function display(value, depth = 0, seen = new Set()) {
+                if (typeof value === 'string') return value.slice(0, 4000);
+                if (typeof value === 'bigint') return String(value) + 'n';
+                if (value === null || typeof value !== 'object') return String(value);
+                if (seen.has(value)) return '[Circular]';
+                if (depth >= 3) return isArray(value) ? '[Array]' : '[Object]';
+                seen.add(value);
+                try {
+                    if (value instanceof Error) return String(value.stack || value);
+                    const parts = ownKeys(value).slice(0, 30).map(key => {
+                        const descriptor = Object.getOwnPropertyDescriptor(value, key);
+                        const text = descriptor && 'value' in descriptor ? display(descriptor.value, depth + 1, seen) : '[Getter]';
+                        return isArray(value) ? text : key + ': ' + text;
+                    });
+                    return ((isArray(value) ? '[' : '{') + parts.join(', ') + (ownKeys(value).length > 30 ? ', …' : '') + (isArray(value) ? ']' : '}')).slice(0, 4000);
+                } catch { return '[Uninspectable]'; }
+                finally { seen.delete(value); }
+            }
+            const logger = (prefix, values) => {
+                if (logs.length < 100) logs.push((prefix + values.slice(0, 30).map(value => display(value)).join(' ')).slice(0, 4000));
             };
-            const console = freeze({ log: logger, info: logger, warn: logger, error: logger });
+            const console = freeze({ log: (...v) => logger('', v), info: (...v) => logger('[info] ', v),
+                warn: (...v) => logger('[warn] ', v), error: (...v) => logger('[error] ', v), debug: (...v) => logger('[debug] ', v) });
             const quickExcel = freeze({ functions: freeze({
                 register(name, fn) {
                     if (actionMode) return;
@@ -91,24 +108,10 @@ public sealed partial class JscSession : IDisposable
                     actions[name] = fn;
                     actionInfo[name] = freeze({ name, description });
                 }
-            }), events: freeze({
-                on(name, handler) {
-                    if (!actionMode) return;
-                    if (loaded || !eventNames.includes(name) || typeof handler !== 'function') throw new TypeErrorCtor('Invalid event registration.');
-                    const key='@event/'+name;
-                    if (!eventHandlers[name]) {
-                        if (ownKeys(actions).length>=256) throw new TypeErrorCtor('Too many registrations.');
-                        eventHandlers[name]=[];
-                        actions[key]=context=>{ for(const fn of eventHandlers[name]) {
-                            const result=fn(context);
-                            if(result!==undefined && result!==null) throw new TypeErrorCtor('Event handlers must complete synchronously.');
-                        }};
-                        actionInfo[key]=freeze({name:key,description:'Event: '+name});
-                    }
-                    if(eventHandlers[name].length>=32) throw new TypeErrorCtor('Too many handlers.');
-                    eventHandlers[name].push(handler);
-                }
-            }) });
+            }), events: createEvents() });
+            // One frozen API object and one registry. A global alias also lets
+            // legacy function bodies keep their own local `const $` bindings.
+            Object.defineProperty(globalThis, '$', { value: quickExcel });
             function runAction(name, request) {
                 if (!actionMode || !loaded || actionInvoked || !actions[name]) throw new TypeErrorCtor('Action is unavailable.');
                 actionInvoked = true;
@@ -229,7 +232,8 @@ public sealed partial class JscSession : IDisposable
                 logs() { return logs.slice(); }
             });
         })()
-        """.Replace("/*VIRTUAL_FILES*/", VirtualFileBootstrap, StringComparison.Ordinal);
+        """.Replace("/*VIRTUAL_FILES*/", VirtualFileBootstrap, StringComparison.Ordinal)
+            .Replace("/*EVENT_API*/", EventApiBootstrap, StringComparison.Ordinal);
 
     public IReadOnlyList<string> FunctionNames { get; }
     public IReadOnlyList<JsFunctionDescriptor> FunctionDescriptors { get; }

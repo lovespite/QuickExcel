@@ -37,6 +37,7 @@ public sealed partial class MainWindow
     {
         var menu = new MenuItem { Header = "脚本" };
         menu.Items.Add(CommandMenu("脚本编辑器", OpenScriptsAsync));
+        menu.Items.Add(CommandMenu("调试控制台", OpenScriptConsoleAsync));
         menu.Items.Add(CommandMenu("应用脚本并重算", ApplyScriptsAsync));
         menu.Items.Add(CommandMenu("停用脚本", () => { DisableScripts(); return Task.CompletedTask; }));
         menu.Items.Add(CommandMenu("签名详情", ScriptSignatureDetailsAsync));
@@ -72,7 +73,7 @@ public sealed partial class MainWindow
         AutomationProperties.SetName(_scriptDiagnostics, "运行日志与错误；静态错误在编辑器内显示");
         _scriptDiagnostics.DoubleTapped += async (_, _) => await PerformAsync(ActivateScriptDiagnosticAsync);
         _scriptDiagnostics.KeyDown += async (_, e) => { if (e.Key == Key.Enter) { e.Handled = true; await PerformAsync(ActivateScriptDiagnosticAsync); } };
-        DockPanel.SetDock(_scriptDiagnostics, Dock.Bottom); root.Children.Add(_scriptDiagnostics);
+        var output = CreateScriptOutput(); DockPanel.SetDock(output, Dock.Bottom); root.Children.Add(output);
         _scriptContent = new ContentControl(); root.Children.Add(_scriptContent); window.Content = root;
         _modulePicker.SelectionChanged += async (_, _) =>
         {
@@ -159,6 +160,7 @@ public sealed partial class MainWindow
         }
         catch (ScriptCompilationException ex)
         {
+            if (_scriptOutputTabs is not null) _scriptOutputTabs.SelectedIndex = 1;
             if (_scriptStatus is not null) _scriptStatus.Text = ex.Message;
             if (_scriptDiagnostics is not null) _scriptDiagnostics.ItemsSource = ex.Diagnostics.Select(d => new ScriptDiagnostic(
                 $"{d.Module}:{d.Line}:{d.Column} · {d.Message}", Document.Snapshot.ScriptModules.Revision, d.Module, d.Line ?? 1,
@@ -174,7 +176,10 @@ public sealed partial class MainWindow
         _scriptCancellation?.Cancel();
         var window = _scriptWindow; _scriptClosing = true;
         try { if (_scriptPage is not null) await _scriptPage.DisposeAsync(); window.Close(); }
-        finally { _scriptWindow = null; _scriptPage = null; _scriptContent = null; _modulePicker = null; _actionPicker = null; _scriptStatus = null; _scriptDiagnostics = null; _scriptRecovery = null; _scriptClosing = false; }
+        finally { _scriptWindow = null; _scriptPage = null; _scriptContent = null; _modulePicker = null; _actionPicker = null; _scriptStatus = null; _scriptDiagnostics = null; _scriptRecovery = null; _scriptClosing = false;
+            _consoleInput = null; _consoleOutput = null; _consoleRun = null; _consoleStop = null; _consoleCopy = null;
+            _consoleFilter = null; _consoleLevel = null; _consoleCount = null; _consoleEmpty = null;
+            _consoleVisibleEntries = []; _scriptOutputTabs = null; }
     }
     private async Task RefreshScriptPageAfterMutationAsync()
     {
@@ -265,7 +270,7 @@ public sealed partial class MainWindow
     private async Task ScriptWorkAsync(Func<CancellationToken, Task> work)
     {
         _calculationTimer.Stop(); using var cancellation = new CancellationTokenSource(); _scriptCancellation = cancellation;
-        _book.IsEnabled = false; RefreshScriptActionButtons();
+        _book.IsEnabled = false; RefreshScriptActionButtons(); RefreshScriptConsole();
         try { await work(cancellation.Token); _calculationPending = false; }
         finally
         {
@@ -276,6 +281,7 @@ public sealed partial class MainWindow
     }
     private void RefreshScriptDiagnostics()
     {
+        RefreshScriptConsole();
         if (_scriptDiagnostics is null) return;
         var modules = Document.Snapshot.ScriptModules; var entries = new List<ScriptDiagnostic>();
         foreach (var error in Document.ScriptErrors.Take(100))

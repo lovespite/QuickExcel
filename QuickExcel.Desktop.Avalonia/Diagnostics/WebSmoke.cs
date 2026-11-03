@@ -46,6 +46,15 @@ public sealed partial class MainWindow
             await Test(new { action = "edit", module = "main", text = "quickExcel.functions." });
             inspected = await Test(new { action = "inspect" });
             Check(inspected.GetProperty("completions").EnumerateArray().Any(v => v.GetString() == "register"), "QuickExcel completion is provided by the language worker");
+            await Test(new { action = "edit", module = "main", text = "$.functions" });
+            await Test(new { action = "assistance", offset = "$.functions".Length, typeText = "." });
+            for (var retry = 0; retry < 100; retry++)
+            {
+                inspected = await Test(new { action = "assistance" });
+                if (inspected.GetProperty("suggestions").GetString()!.Contains("register")) break;
+                await Task.Delay(50);
+            }
+            Check(inspected.GetProperty("suggestions").GetString()!.Contains("register"), "JavaScript dollar alias opens the actual completion list on typing a dot");
             // Each host message remains below 256 KiB; drive the native editor with bounded test edits.
             // A smaller multi-chunk Unicode draft exercises the same checksum and total-source budget path.
             var large = "//" + string.Concat(Enumerable.Repeat("中文😀", 6_000));
@@ -103,6 +112,7 @@ public sealed partial class MainWindow
             await OpenScriptsAsync();
             inspected = await Test(new { action = "inspect" });
             Check(inspected.GetProperty("language").GetString() == "typescript", "Monaco creates a TypeScript model with the actual TS language worker");
+            await CheckScriptIntelligenceAsync(Test, Check, directory);
             var beforeCompile = Document.Snapshot.ScriptModules;
             await Test(new { action = "edit", module = "main", text = "export const value:number='类型错误';" });
             Check(!await CommitScriptsAsync(validateTypeScript: true) && ReferenceEquals(beforeCompile, Document.Snapshot.ScriptModules) && _scriptPage!.Drafts.IsDirty,
@@ -117,6 +127,9 @@ public sealed partial class MainWindow
             Check(tsSaved.ScriptModules.Modules["main"].Language == ScriptLanguage.TypeScript && tsSaved.ScriptModules.PrimarySource.Contains("enum E"),
                 "Saved TS reopens with its original language and source, not emitted JavaScript");
             await CloseScriptWindowAsync();
+            if (DesktopServices.SupportsScripts) await CheckScriptConsoleAsync(Check, directory);
+            if (!Program.WebScriptsOnly)
+            {
             _workspace.New();
             _workspace.Editor.Execute(new SetCellsCommand([new(new(Document.Snapshot.ActiveSheetId, 0, 0), CellInput.Parse("QuickExcel 中文打印预览")), new(new(Document.Snapshot.ActiveSheetId, 110, 2), CellInput.Parse("Frozen PDF content"))]));
             await OpenPrintPreviewAsync();
@@ -165,6 +178,7 @@ public sealed partial class MainWindow
             try { await OpenPrintPreviewAsync(); } catch (InvalidOperationException ex) when (ex.Message.Contains("受阻")) { rejected = true; }
             Check(rejected && _printSession is null && _pdfPage is null, "Blocked formulas cannot be printed from their old or missing caches");
             await ClosePrintPreviewAsync();
+            }
             _workspace.New();
             var boundary = Enumerable.Range(0, 64).ToDictionary(i => "m" + i, i => new ScriptModule($"scripts/m{i}.js", ("export const value = " + i + ";\n//").PadRight(16 * 1024, ' ')));
             _workspace.Editor.Execute(new UpdateScriptModulesCommand(new(boundary, ["m0"], scriptApiVersion: 2)));
@@ -189,6 +203,17 @@ public sealed partial class MainWindow
             inspected = await Test(new { action = "inspect" }); revision = Document.Snapshot.Revision;
             Check(Document.Snapshot.FileState!.FormulaReadOnly && inspected.GetProperty("readOnly").GetBoolean() && await CommitScriptsAsync() && Document.Snapshot.Revision == revision,
                 "Preserved-formula workbooks open Monaco read-only and unchanged flush creates no mutation");
+            inspected = await Test(new { action = "assistance" });
+            Check(inspected.GetProperty("suggestDisabled").GetBoolean(), "Read-only workbooks disable the completion insertion control");
+            if (DesktopServices.SupportsScripts)
+            {
+                _consoleInput!.Text = "snapshot.sheets.length"; await RunConsoleAsync();
+                Check(ConsoleVisibleText.Contains("=> 1") && Document.Snapshot.Revision == revision,
+                    "Read-only preserved workbooks allow console snapshot inspection without mutation");
+                _consoleInput.Text = "patch.setValue(snapshot.sheets[0].id,'C1',42)"; await RunConsoleAsync();
+                Check(Document.Snapshot.Revision == revision && Document.GetCellInput(0, 0, 2) == "" && _scriptStatus!.Text!.Contains("只读"),
+                    "Read-only console rejects writes and keeps original workbook contents");
+            }
             await CloseScriptWindowAsync();
         }
         catch (Exception ex) { error = ex; }

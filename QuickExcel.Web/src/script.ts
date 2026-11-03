@@ -1,4 +1,12 @@
 import * as monaco from 'monaco-editor/editor/editor.api';
+// editor.api is deliberately minimal: language providers alone do not install
+// their UI. Keep these registrations explicit for the pinned Monaco package.
+// In 0.57 features/suggest/register installs only inline suggestions.
+import 'monaco-editor/editor/contrib/suggest/browser/suggestController';
+import 'monaco-editor/features/codicon/register';
+import 'monaco-editor/features/hover/register';
+import 'monaco-editor/features/parameterHints/register';
+import 'monaco-editor/features/gotoError/register';
 import * as typescript from 'monaco-editor/language/typescript/monaco.contribution';
 import 'monaco-editor/languages/definitions/javascript/register';
 import 'monaco-editor/languages/definitions/typescript/register';
@@ -17,6 +25,7 @@ let sync: Promise<void> = Promise.resolve();
 let receive: { module: string; count: number; totalBytes: number; sha256: string; transfer: string; next: number; written: number; bytes: Uint8Array } | undefined;
 let totalSourceBytes = 0;
 const status = document.getElementById('status')!;
+const assistanceButtons = [...document.querySelectorAll<HTMLButtonElement>('button[data-action]')];
 const baseUri = `file:///quickexcel/${new URLSearchParams(location.hash.slice(1)).get('document')}/`;
 declare const __QUICKEXCEL_WEB_TEST__: boolean;
 (window as any).MonacoEnvironment = { getWorker(_id: string, label: string) {
@@ -25,24 +34,55 @@ declare const __QUICKEXCEL_WEB_TEST__: boolean;
 } };
 for (const defaults of [typescript.javascriptDefaults, typescript.typescriptDefaults]) {
   defaults.setEagerModelSync(true);
-  defaults.setDiagnosticsOptions({ noSemanticValidation: false, noSyntaxValidation: false });
+  // Revalidate on attachment as well as edits, so a dependency draft change is
+  // reflected when returning to its importer. Do not check 64 hidden editors.
+  defaults.setDiagnosticsOptions({ noSemanticValidation: false, noSyntaxValidation: false, onlyVisible: true });
 }
 const extraLibs = [typescript.javascriptDefaults, typescript.typescriptDefaults].map(d => d.addExtraLib(declarations, baseUri + 'quickexcel.d.ts'));
 editor = monaco.editor.create(document.getElementById('editor')!, { model: null, automaticLayout: true, readOnly: true,
   minimap: { enabled: false }, fontSize: 14, scrollBeyondLastLine: false, accessibilitySupport: 'auto', ariaLabel: 'QuickExcel JavaScript / TypeScript 脚本编辑器',
+  quickSuggestions: { other: true, comments: false, strings: false }, suggestOnTriggerCharacters: true,
+  parameterHints: { enabled: true }, hover: { enabled: true }, renderValidationDecorations: 'on',
+  wordBasedSuggestions: 'off',
   links: false, unicodeHighlight: { ambiguousCharacters: false }, stickyScroll: { enabled: false } });
-editor.onDidCompositionStart(() => { composing = true; });
-editor.onDidCompositionEnd(() => { composing = false; schedule(); });
+editor.onDidCompositionStart(() => { composing = true; updateAssistance(); });
+editor.onDidCompositionEnd(() => { composing = false; updateAssistance(); schedule(); });
 editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => post('save', {}));
 editor.addCommand(monaco.KeyCode.F6, () => post('focusHost', {}));
+// Stay in the current module: model switching is owned by the host and must
+// preserve the original cell/module's composition and draft acknowledgement.
+editor.addCommand(monaco.KeyCode.F8, () => { if (!composing) void editor.getAction('editor.action.marker.next')?.run(); });
+editor.addCommand(monaco.KeyMod.Shift | monaco.KeyCode.F8, () => { if (!composing) void editor.getAction('editor.action.marker.prev')?.run(); });
+for (const button of assistanceButtons) {
+  button.addEventListener('mousedown', event => event.preventDefault()); // Preserve the caret/selection.
+  button.addEventListener('click', () => {
+    if (button.disabled || disposed) return;
+    editor.focus(); void editor.getAction(button.dataset.action!)?.run().catch(fail);
+  });
+}
+function updateAssistance() {
+  for (const button of assistanceButtons)
+    button.disabled = disposed || !initialized || composing || locked || (readOnly && button.dataset.action === 'editor.action.triggerSuggest');
+}
+function updateStatus() {
+  if (disposed || !selected || document.body.hasAttribute('data-failed')) return;
+  const model = models.get(selected)!.model;
+  const markers = monaco.editor.getModelMarkers({ resource: model.uri });
+  const errors = markers.filter(m => m.severity === monaco.MarkerSeverity.Error).length;
+  const warnings = markers.filter(m => m.severity === monaco.MarkerSeverity.Warning).length;
+  status.textContent = `${selected} · ${model.getLanguageId() === 'typescript' ? 'TypeScript' : 'JavaScript'} · 当前模块 ${errors} 个错误，${warnings} 个警告`;
+}
+const markerListener = monaco.editor.onDidChangeMarkers(resources => {
+  if (selected && resources.some(uri => uri.toString() === models.get(selected)!.model.uri.toString())) updateStatus();
+});
 
-function setLocked(value: boolean) { locked = value; editor.updateOptions({ readOnly: readOnly || locked }); }
+function setLocked(value: boolean) { locked = value; editor.updateOptions({ readOnly: readOnly || locked }); updateAssistance(); }
 function languageWorker() { return editor.getModel()!.getLanguageId() === 'typescript' ? typescript.getTypeScriptWorker() : typescript.getJavaScriptWorker(); }
 function select(id: string) {
   const next = models.get(id); if (!next) throw new Error('Unknown module');
   if (selected) models.get(selected)!.state = editor.saveViewState();
   selected = id; editor.setModel(next.model); if (next.state) editor.restoreViewState(next.state); editor.focus();
-  status.textContent = `${id} · 静态检查使用 QuickExcel API；运行结果由独立脚本进程提供`;
+  updateStatus();
 }
 function schedule() {
   if (scheduled !== undefined || composing || locked || disposed) return;
@@ -110,6 +150,29 @@ async function handle(message: Message) {
       post('testResult', { selected, language: editor.getModel()!.getLanguageId(), source: editor.getValue(), workers: workers.size, readOnly: editor.getOption(monaco.editor.EditorOption.readOnly),
         diagnostics: diagnostics.map(d => ({ code: d.code, text: typeof d.messageText === 'string' ? d.messageText : d.messageText.messageText })), completions: completion?.entries.map(e => e.name).slice(0, 500) ?? [] }, message.requestId); return;
     }
+    if (p.action === 'assistance') {
+      // Exercise the actual editor actions/widgets, not just language-worker RPC.
+      if (p.offset !== undefined) {
+        // Test fixtures use LF; the editor may preserve CRLF on Windows.
+        const lines = editor.getValue({ lineEnding: '\n', preserveBOM: false }).slice(0, p.offset).split('\n');
+        editor.setPosition({ lineNumber: lines.length, column: lines[lines.length - 1].length + 1 }); editor.focus();
+      }
+      if (p.typeText !== undefined) editor.trigger('keyboard', 'type', { text: p.typeText });
+      if (p.button) {
+        const button = assistanceButtons.find(b => b.dataset.action === p.button);
+        if (!button) throw new Error('Unknown assistance button'); button.click();
+      }
+      if (p.command) editor.trigger('smoke', p.command, {});
+      const visibleText = (selector: string) => [...document.querySelectorAll<HTMLElement>(selector)]
+        .filter(e => e.getClientRects().length > 0 && getComputedStyle(e).visibility !== 'hidden' && getComputedStyle(e).display !== 'none')
+        .map(e => e.textContent).join('\n');
+      post('testResult', { source: editor.getValue(), position: editor.getPosition(), status: status.textContent,
+        actions: ['editor.action.triggerSuggest', 'editor.action.triggerParameterHints', 'editor.action.showHover', 'editor.action.marker.next'].filter(id => editor.getAction(id)),
+        suggestions: visibleText('.suggest-widget .monaco-list-row'), hover: visibleText('.monaco-hover'),
+        parameters: visibleText('.parameter-hints-widget'), problems: visibleText('.monaco-editor .zone-widget'),
+        markers: monaco.editor.getModelMarkers({ resource: editor.getModel()!.uri }).map(m => ({ code: m.code, line: m.startLineNumber, column: m.startColumn, message: m.message })),
+        suggestDisabled: assistanceButtons.find(b => b.dataset.action === 'editor.action.triggerSuggest')!.disabled }, message.requestId); return;
+    }
     throw new Error('Unknown test operation');
   }
   switch (message.type) {
@@ -171,6 +234,7 @@ async function handle(message: Message) {
 }
 async function dispose() {
   if (disposed) return; disposed = true; if (scheduled !== undefined) clearTimeout(scheduled);
+  markerListener.dispose(); updateAssistance();
   editor.dispose(); for (const item of models.values()) item.model.dispose(); models.clear(); for (const lib of extraLibs) lib.dispose();
   for (const worker of workers) worker.terminate(); workers.clear();
 }

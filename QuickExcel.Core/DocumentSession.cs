@@ -95,12 +95,14 @@ public sealed partial class DocumentSession : IDisposable
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 action.CancellationToken.ThrowIfCancellationRequested();
-                if (!_scriptsEnabled || !Matches(action.Stamp) || _activeActionId != action.OperationId || !_snapshot.ScriptModules.HasActions)
+                if (!Matches(action.Stamp) || _activeActionId != action.OperationId ||
+                    (action.ConsoleSource is null ? !_scriptsEnabled || !_snapshot.ScriptModules.HasActions || _activeConsoleSource is not null
+                        : action.ConsoleSource != _activeConsoleSource))
                     throw new InvalidOperationException("动作已过期或未授权，请重新运行。");
             }
             CheckRevision(expectedRevision);
             var before = _snapshot;
-            if (before.FileState?.FormulaReadOnly == true) throw new InvalidOperationException(WorkbookFileState.FormulaReadOnlyMessage);
+            if (before.FileState?.FormulaReadOnly == true && action?.ConsoleSource is null) throw new InvalidOperationException(WorkbookFileState.FormulaReadOnlyMessage);
             var draft = command.Prepare(before); // No session state is changed until every check succeeds.
             ProtectionSafety.Validate(before, draft.Snapshot, command);
             if (draft.Snapshot.Sheets.Any(s => WorksheetOutline.HasGroups(s) && s.Data.AllFilters.Any(f => f.Columns.Count > 0)))
@@ -124,7 +126,7 @@ public sealed partial class DocumentSession : IDisposable
             cancellationToken.ThrowIfCancellationRequested();
             if (ReferenceEquals(draft.Snapshot, before))
             {
-                if (action is not null) { AdvanceCalculationGeneration(); _diagnostics = diagnostics; if (transientFiles is not null) _transientFiles = transientFiles; }
+                if (action is not null) { AdvanceCalculationGeneration(); _diagnostics = diagnostics; AppendConsole(diagnostics); if (transientFiles is not null) _transientFiles = transientFiles; }
                 return new(false, before.Revision);
             }
             var sourceChanged = command is UpdateScriptSourceCommand or UpdateScriptModulesCommand or UpdateScriptSignatureCommand || !ReferenceEquals(before.ScriptModules, draft.Snapshot.ScriptModules);
@@ -155,7 +157,7 @@ public sealed partial class DocumentSession : IDisposable
             _snapshot = after;
             if (transientFiles is not null) _transientFiles = transientFiles;
             if (action is null) QueueChangeEvents(before, after, draft.Changes);
-            if (!draft.CalculationUnchanged) _diagnostics = diagnostics.IsDefault ? [] : diagnostics;
+            if (!draft.CalculationUnchanged) { _diagnostics = diagnostics.IsDefault ? [] : diagnostics; AppendConsole(_diagnostics); }
             change = new(after.Revision, ActualChanges(before, after, draft.Changes), draft.StructureChanged)
             { CalculationUnchanged = draft.CalculationUnchanged };
             QueueNotification(change);
@@ -171,21 +173,24 @@ public sealed partial class DocumentSession : IDisposable
         return Task.FromResult(Execute(command, expectedRevision));
     }
 
-    public ScriptActionRequest BeginAction(string? name, ScriptEvent? scriptEvent = null)
+    public ScriptActionRequest BeginAction(string? name, ScriptEvent? scriptEvent = null) => BeginActionCore(name, scriptEvent, null);
+    private ScriptActionRequest BeginActionCore(string? name, ScriptEvent? scriptEvent, string? consoleSource)
     {
         ScriptActionRequest request;
         lock (_gate)
         {
             ThrowIfClosed();
-            if (!_scriptsEnabled || !_snapshot.ScriptModules.HasActions) throw new InvalidOperationException("请先启用包含 actions 绑定的脚本。");
+            if (consoleSource is null && (!_scriptsEnabled || !_snapshot.ScriptModules.HasActions)) throw new InvalidOperationException("请先启用包含 actions 绑定的脚本。");
             if (name is not null && (string.IsNullOrWhiteSpace(name) || name.Length > 128 || name.Any(char.IsControl))) throw new ArgumentException("动作名称无效。");
             if (scriptEvent is not null && (scriptEvent.SessionId != SessionId || !ScriptEventNames.All.Contains(scriptEvent.Name) || name != ScriptEventNames.Prefix + scriptEvent.Name) ||
                 scriptEvent is null && name?.StartsWith(ScriptEventNames.Prefix, StringComparison.Ordinal) == true) throw new ArgumentException("事件调用身份无效。");
             AdvanceCalculationGeneration();
             _activeCalculation = new CancellationTokenSource();
             _activeActionId = Guid.NewGuid();
+            _activeConsoleSource = consoleSource;
+            if (consoleSource is not null) AppendConsole([consoleSource], "input");
             request = new(new(SessionId, _snapshot.Revision, _calculationGeneration, _scriptGeneration), _activeActionId, name, _snapshot, _activeCalculation.Token)
-            { Files = _transientFiles, Event = scriptEvent };
+            { Files = _transientFiles, Event = scriptEvent, ConsoleSource = consoleSource };
         }
         try
         {
@@ -223,6 +228,8 @@ public sealed partial class DocumentSession : IDisposable
         try
         {
             if (result.FileEdits.IsDefault) throw new InvalidOperationException("缺少文件变更。");
+            if (request.ConsoleSource is not null && request.Snapshot.FileState?.FormulaReadOnly == true && (!result.Edits.IsEmpty || !result.FileEdits.IsEmpty))
+                throw new InvalidOperationException(WorkbookFileState.FormulaReadOnlyMessage);
             var files = request.Files.Apply(result.FileEdits);
             var transient = new VirtualFileSet(files.Entries.Values.Where(e => !e.Path.StartsWith("//xlsq/", StringComparison.Ordinal)));
             return ExecuteCore(new ApplyActionPatchCommand(request, result, _virtualFiles), request.Stamp.InputRevision, request, cancellationToken, result.Logs, transientFiles: transient);
@@ -235,6 +242,8 @@ public sealed partial class DocumentSession : IDisposable
                 {
                     AdvanceCalculationGeneration();
                     _diagnostics = [error.Message];
+                    if (!result.Logs.IsDefault) AppendConsole(result.Logs);
+                    AppendConsole([error.Message], level: ScriptConsoleLevel.Error);
                 }
             }
             throw;
@@ -346,6 +355,7 @@ public sealed partial class DocumentSession : IDisposable
                 if (builders.TryGetValue(sheets[index].Id, out var builder)) sheets[index] = sheets[index].WithCells(builder.ToImmutable());
             _snapshot = _snapshot.WithSheets(sheets);
             _diagnostics = result.Diagnostics;
+            AppendConsole(_diagnostics);
             AdvanceCalculationGeneration(); // A completed request is single-use.
             // Keep the latest result for redo, without changing any input revision or execution permission.
             if (_undo.Last is { } last && last.Value.After.Revision == _snapshot.Revision)
@@ -363,13 +373,15 @@ public sealed partial class DocumentSession : IDisposable
         return true;
     }
 
-    public bool TryFailCalculation(CalculationStamp stamp, string message, bool disableScripts)
+    public bool TryFailCalculation(CalculationStamp stamp, string message, bool disableScripts, IEnumerable<string>? logs = null)
     {
         DocumentChange change;
         lock (_gate)
         {
             if (!Matches(stamp)) return false;
             _diagnostics = [message.Length > 4000 ? message[..4000] : message];
+            if (logs is not null) AppendConsole(logs.Take(100));
+            AppendConsole(_diagnostics, level: ScriptConsoleLevel.Error);
             if (disableScripts)
             {
                 _scriptsEnabled = false;
@@ -475,6 +487,7 @@ public sealed partial class DocumentSession : IDisposable
     private void AdvanceCalculationGeneration()
     {
         _activeActionId = Guid.Empty;
+        _activeConsoleSource = null;
         _calculationGeneration = checked(_calculationGeneration + 1);
         CancelActiveCalculation();
     }

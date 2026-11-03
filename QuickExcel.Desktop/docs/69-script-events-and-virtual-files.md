@@ -1,5 +1,7 @@
 # 脚本事件与会话虚拟文件
 
+> 2026-11-03 API 补充：已有 18 个事件增加 `QxEventNames` 枚举和属性式处理器，脚本编辑器增加独立调试控制台；异常日志载荷使当前 IPC 升至 7。使用方法与范围见 [72 号记录](72-event-api-and-console.md)。下文保留原事件实现证据。
+
 > 2026-11-03 引擎迁移更新：当前生产路径为固定 JSC、IPC 6，隔离 TS 编译与同步模块/中断契约见 [71 号实施记录](71-jsc-typescript-implementation-log.md)。执行仍为 256 MiB 进程 / 256 KiB 栈 / 1 秒操作 / 5 秒整轮；64 MiB 引擎硬限额 `JSC-MEM-001` 未实现，用户明确延期且不作为推进门禁。下文 QuickJS、旧协议、预算及构建入口均为当时版本的历史证据，不代表当前实现。
 
 2026-11-03。文件仍使用 XLSQ v2 / scriptApiVersion 2；宿主与 ScriptWorker 必须同时升级到 IPC **5**。API v1 公式语义保持不变。编辑器的「操作与事件入口」对应现有 `workbook/actions` 绑定与 `script-actions` 能力。

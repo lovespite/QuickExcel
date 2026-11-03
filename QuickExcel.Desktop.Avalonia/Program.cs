@@ -19,6 +19,7 @@ internal static class Program
     internal static string? SelfCheckDirectory, UserDataDirectory;
     internal static string? SettingsMigrationError;
     internal static string WebBenchmarkKind = "all";
+    internal static bool WebScriptsOnly;
     [STAThread]
     public static int Main(string[] args)
     {
@@ -32,6 +33,7 @@ internal static class Program
         { SmokeDirectory = Path.GetFullPath(args[1]); SmokeMode = args[0] switch { "--automation-smoke" => "automation", "--ribbon-filter-smoke" => "ribbon-filter", "--grid-smoke" => "grid", "--grid-benchmark" => "benchmark", "--web-smoke" => "web", "--web-benchmark" => "web-benchmark", "--manual-check" => "manual", _ => "workspace" }; if (SmokeMode == "manual") InitialFile = args.ElementAtOrDefault(2); }
         else InitialFile = args.FirstOrDefault(a => !a.StartsWith("--", StringComparison.Ordinal));
         if (SmokeMode == "web-benchmark") WebBenchmarkKind = args.ElementAtOrDefault(2) ?? "all";
+        if (SmokeMode == "web") WebScriptsOnly = args.ElementAtOrDefault(2) == "--scripts-only";
 #else
         InitialFile = args.FirstOrDefault(a => !a.StartsWith("--", StringComparison.Ordinal));
 #endif

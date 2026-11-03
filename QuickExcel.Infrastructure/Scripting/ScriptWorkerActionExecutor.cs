@@ -9,8 +9,18 @@ namespace QuickExcel.Runtime;
 public sealed class ScriptWorkerActionExecutor(string? executablePath = null) : IScriptActionExecutor
 {
     private readonly string _executable = Path.GetFullPath(executablePath ?? Path.Combine(AppContext.BaseDirectory, "ScriptWorker", OperatingSystem.IsWindows() ? "QuickExcel.ScriptWorker.exe" : "QuickExcel.ScriptWorker"));
+    private static ScriptModuleSet ExecutionModules(ScriptActionRequest request)
+    {
+        if (request.ConsoleSource is not { } source) return request.Snapshot.ScriptModules;
+        // Serialize the code as data. Direct eval runs only inside the normal
+        // zero-capability action worker, with this immutable transaction context.
+        var text = "$.actions.register('__console__', ({snapshot,patch,fs,event}) => { const result = eval(" +
+            JsonSerializer.Serialize(source) + "); console.log('=>', result); });";
+        return new(new Dictionary<string, ScriptModule> { ["console"] = new("scripts/console.js", text) }, ["console"],
+            scriptApiVersion: 2, bindings: [new("console", "actions")]);
+    }
     private ScriptWorkerRuntime Create(ScriptActionRequest request, CancellationToken token) => ScriptWorkerRuntime.Start(_executable,
-        new ScriptRuntimeRequest(request.Snapshot.ScriptModules, request.Stamp, TimeSpan.FromSeconds(5), token), actionsMode: true);
+        new ScriptRuntimeRequest(ExecutionModules(request), request.Stamp, TimeSpan.FromSeconds(5), token), actionsMode: true);
 
     public IReadOnlyList<ScriptActionDescriptor> List(ScriptActionRequest request, CancellationToken cancellationToken)
     {
@@ -22,7 +32,7 @@ public sealed class ScriptWorkerActionExecutor(string? executablePath = null) : 
     public ScriptActionResult Run(ScriptActionRequest request, CancellationToken cancellationToken)
     {
         using var linked = CancellationTokenSource.CreateLinkedTokenSource(request.CancellationToken, cancellationToken);
-        ScriptCompilation.PrepareAsync(request.Snapshot.ScriptModules, request.Stamp, linked.Token).GetAwaiter().GetResult();
+        ScriptCompilation.PrepareAsync(ExecutionModules(request), request.Stamp, linked.Token).GetAwaiter().GetResult();
         linked.CancelAfter(TimeSpan.FromSeconds(5));
         linked.Token.ThrowIfCancellationRequested();
         if (request.Name is null) throw new InvalidOperationException("Missing action name.");

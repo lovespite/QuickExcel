@@ -9,6 +9,8 @@ public sealed record ScriptActionRequest(CalculationStamp Stamp, Guid OperationI
 {
     public VirtualFileSet Files { get; init; } = VirtualFileSet.Empty;
     public ScriptEvent? Event { get; init; }
+    /// <summary>Only an explicit session console request sets this; workbook modules are never loaded for it.</summary>
+    public string? ConsoleSource { get; internal init; }
 }
 public sealed record ScriptActionEdit(CellAddress Address, CellValue? Value, string? Formula);
 public sealed record ScriptActionResult(Guid OperationId, long BaseRevision, string Name, ImmutableArray<ScriptActionEdit> Edits, ImmutableArray<string> Logs)
@@ -40,6 +42,8 @@ internal sealed class ApplyActionPatchCommand(ScriptActionRequest request, Scrip
         var package = packageEdits.Length == 0 ? snapshot : (files ?? throw new NotSupportedException("未配置包文件适配器。")).Apply(snapshot, packageEdits);
         if (!ReferenceEquals(package.ScriptModules, snapshot.ScriptModules))
         {
+            if (request.ConsoleSource is not null)
+                throw new InvalidOperationException("控制台不能改写脚本源码、绑定或签名；请使用脚本编辑器。控制台的数据修改须保持可撤销。");
             var sourcePaths = snapshot.ScriptModules.Modules.Values.Concat(package.ScriptModules.Modules.Values)
                 .Select(m => "//xlsq/" + m.Path).Concat(["//xlsq/manifest.json", "//xlsq/state/document.json", "//xlsq/security/script-signature.json"])
                 .ToHashSet(StringComparer.Ordinal);

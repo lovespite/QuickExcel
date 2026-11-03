@@ -47,6 +47,7 @@ public sealed record ScriptRuntimeRequest(ScriptModuleSet Modules, CalculationSt
 public sealed class ScriptRuntimeFailureException(string code, string message, Exception? inner = null) : Exception(message, inner)
 {
     public string Code { get; } = code;
+    public IReadOnlyList<string> Logs { get; init; } = [];
 }
 
 public interface IScriptRuntime : IDisposable

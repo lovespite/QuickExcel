@@ -26,14 +26,17 @@ public sealed record FunctionCall(string Name, WireValue[] Arguments);
 public sealed record InvokeBatch(FunctionCall[] Calls);
 public sealed record InvocationResult(WireValue? Value, string? Error, bool ValueTooLong = false);
 public sealed record BatchResult(InvocationResult[] Results);
-public sealed record WorkerFailure(string Code, string Message);
+public sealed record WorkerFailure(string Code, string Message)
+{
+    public string[] Logs { get; init; } = [];
+}
 public sealed record WorkerLogs(string[] Messages);
 public sealed record EmptyPayload;
 public sealed class ProtocolException(string message, Exception? inner = null) : IOException(message, inner);
 
 public static class WorkerProtocol
 {
-    public const int Version = 6;
+    public const int Version = 7;
     public const string Engine = "JavaScriptCore/2.54.2/b95c91b1/qx-sync-1";
     public const string Policy = "conservative-jsc-v1-memory-issue-open";
     public const int MaxFrameBytes = 16 * 1024 * 1024;

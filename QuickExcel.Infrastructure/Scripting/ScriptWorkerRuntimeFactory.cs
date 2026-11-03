@@ -267,11 +267,13 @@ public sealed class ScriptWorkerRuntime : IScriptBatchRuntime
                 var error = WorkerProtocol.Payload<WorkerFailure>(reply);
                 if (error.Code is not ("Load" or "Timeout" or "ResourceLimit" or "Action"
                     or "Invalidated"
-                    ) || Encoding.UTF8.GetByteCount(error.Message) > 4000)
+                    ) || Encoding.UTF8.GetByteCount(error.Message) > 4000 || error.Logs is null || error.Logs.Length > WorkerProtocol.MaxLogs ||
+                    error.Logs.Any(log => log is null || Encoding.UTF8.GetByteCount(log) > WorkerProtocol.MaxLogBytes))
                     throw new ProtocolException("Invalid worker failure.");
                 Abort();
                 if (error.Code == "Timeout") throw new TimeoutException("脚本达到时间限制，本轮结果未提交。");
-                throw new ScriptRuntimeFailureException(error.Code, OriginalDiagnostic(error.Message.Length <= 4000 ? error.Message : "脚本 worker 执行失败。"));
+                throw new ScriptRuntimeFailureException(error.Code, OriginalDiagnostic(error.Message.Length <= 4000 ? error.Message : "脚本 worker 执行失败。"))
+                { Logs = Array.AsReadOnly(error.Logs) };
             }
             return WorkerProtocol.Payload<TReply>(reply);
         }

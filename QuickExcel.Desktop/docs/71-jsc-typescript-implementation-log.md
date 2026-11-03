@@ -244,3 +244,40 @@ Windows 当前默认目录：`artifacts/avalonia/releases/20261103-084654-7b4f83
 回退验证的首个测试驱动错误地要求旧异常消息含新特性名；旧版实际明确报告未知必需能力，未打开或丢失 TS。修正驱动并加入旧版可打开纯 JS 的对照后通过，初始日志保留。未修改旧包来制造兼容结果。
 
 **完成边界：** 70 号文档的 J0–J6 按用户调整后的门禁完成；`JSC-MEM-001` 仍为 **OPEN / deferred / non-blocking**。其余既有 M4 严格策略、M6、安全/部署、真实 IME/DPI/辅助功能/打印/干净设备门禁保持独立；未因引擎迁移自动关闭。Linux VM 性能与 Windows 本机数据按各自条件报告，macOS 脚本继续禁用。所有失败记录、历史来源/许可证、旧完整回退包和 WPF 归档/tag 保留。
+
+## 12 脚本编辑辅助与 API 别名
+
+2026-11-03。编辑器现提供实时 TypeScript 语法/语义错误标记、当前模块错误/警告计数、API 和变量补全、悬浮类型与文档、函数参数提示。工作区的“JS / TS”切换模块语言；JavaScript 保留原有 JSDoc 检查，含 TS 的模块集沿用固定的严格编译选项。底部提供“补全”“参数提示”“类型提示”“下一问题”按钮，保留当前光标位置。
+
+| Windows 快捷键 | 功能 |
+| --- | --- |
+| `Ctrl+Space`，或输入成员访问的 `.` | 补全列表；可接受所选项写入草稿 |
+| `Ctrl+Shift+Space` | 函数参数提示 |
+| 悬停，或 `Ctrl+K` 后 `Ctrl+I` | 类型与 API 文档 |
+| `F8` / `Shift+F8` | 当前模块下一处 / 上一处问题 |
+
+此前 `editor.api` 只安装基础编辑器，语言 worker 已能返回诊断与补全，却没有对应的界面组件。本次显式注册 suggest controller、hover、parameter hints、goto error 和图标。Monaco 固定为 0.57.0；该版 `features/suggest/register` 只注册 inline suggestions，因此补全框直接引入随包的 controller。升级必须复验实际弹窗和插入行为；不以 worker 返回候选词代替 UI 验证。参考 [Monaco ESM 集成](https://github.com/microsoft/monaco-editor/blob/main/docs/integrate-esm.md)与[编辑器选项](https://microsoft.github.io/monaco-editor/typedoc/interfaces/editor_editor_api.editor.IEditorOptions.html)。
+
+语言服务仍只同步本工作簿的逻辑模块与 ES2022 / QuickExcel 声明，没有 DOM/Node 类型。诊断仅针对附着于编辑器的当前模块，并在切回模块时重新检查，使依赖模块草稿变化生效；模型继续保留独立撤销历史。状态栏计数不是全包检查结果，执行前仍由隔离编译 worker 完整检查。编辑辅助不执行脚本、不逐键提交工作簿；只读禁用补全插入按钮，组合输入期间禁用辅助按钮及 F8 跳转。
+
+`$` 是 `quickExcel` 的同一冻结对象别名，JS API v1、API v2 模块和 TypeScript 均可使用：
+
+```typescript
+$.functions.register('DOUBLE', (value: number) => value * 2);
+$.actions.register('写入', ({snapshot, patch}) => {
+  patch.setValue(snapshot.sheets[0].id, 'A1', 42);
+});
+$.events.on('cell.click', ({event}) => console.log(event.name));
+```
+
+动作与事件仍要求 API v2 的 actions 绑定及用户授权；函数、动作、事件使用原注册表、执行隔离与原子补丁规则。全局 `$` 不可重写/配置，原 `quickExcel` 写法继续有效，模块或 v1 函数体内已有的局部 `$` 可以正常遮蔽别名。声明使用 `declare const $: typeof quickExcel`，供 Monaco 与隔离编译器共用，不复制两套 API 类型。
+
+别名兼容性测试发现预解析源码没有使用编译器的 `moduleDetection: Force` 回调，无 import/export 的 TS 文件误成为全局脚本。内存 compiler host 现将 `getSetExternalModuleIndicator(options)` 传入 `createSourceFile`，使本来就约定为 ESM 的源码保持模块局部作用域，避免局部 `$` 与全局声明冲突，也拒绝未导入的其他模块局部变量。未修改源文本，源码映射和诊断坐标继续按原文生成；编译器身份随 frontend/声明自动更新。语义依据：[TypeScript moduleDetection](https://www.typescriptlang.org/tsconfig/#moduleDetection)。
+
+验证范围：
+
+- `scripts/test-avalonia-web.ps1 -ScriptsOnly`：真实 Windows WebView2 **56 项通过**，`artifacts/avalonia/web-tests/20261103-103057-d08305d3/result.json`。覆盖实际补全显示/插入、JS/TS `$`、错误与修正、参数/悬浮文档、跨模块类型、DOM/Node 缺失、草稿/保存/恢复、只读、64 模块以及隔离编译/应用。新增 `-ScriptsOnly` 跳过无关 PDF 检查。
+- Core 定向 46 项：编译器、别名与草稿契约首轮 **44 项通过**，两个新注册限制测试因断言的异常类型与现有 worker 行为不同失败；修正断言后这 **2 项通过**。证据分别为 `artifacts/script-editor-tests/script-editor-final.trx`、`script-alias-guards.trx`。含 JS v1/v2 与 TS 对象身份、局部变量遮蔽、注册限制、动作/事件原子提交和撤销、类型错误拒绝、模块作用域、取消与源映射。不运行全仓回归或性能基准。
+- 首轮 UI 检查暴露精简 suggest 注册入口不安装控制器；后续夹具修正了合成输入事件来源和 LF/CRLF 光标偏移。失败证据保留于同一 `artifacts/avalonia/web-tests/` 下，未改动旧发布包。测试辅助分支仍由正式 Web 构建裁去。
+
+这些是自动工程检查，不新增物理 IME、辅助技术或独立 Linux/macOS 实机结论。默认发布指针与 §11 历史包未因本次源码更新而切换；重新发布需使用仓库既有完整包流程。

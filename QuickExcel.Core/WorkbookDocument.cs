@@ -227,9 +227,15 @@ public sealed class WorkbookDocument : IDisposable
     }
 
     public CommandResult RunAction(string name, CancellationToken cancellationToken = default)
+        => RunActionRequest(Session.BeginAction(name), cancellationToken);
+
+    /// <summary>Explicit console execution does not load or authorize stored workbook modules.</summary>
+    public CommandResult RunConsole(string source, CancellationToken cancellationToken = default)
+        => RunActionRequest(Session.BeginConsole(source), cancellationToken);
+
+    private CommandResult RunActionRequest(ScriptActionRequest request, CancellationToken cancellationToken)
     {
         var executor = _services.Actions ?? throw new NotSupportedException("未配置动作执行器。");
-        var request = Session.BeginAction(name);
         using var lifetime = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, request.CancellationToken);
         try
         {
@@ -237,7 +243,7 @@ public sealed class WorkbookDocument : IDisposable
             lifetime.Token.ThrowIfCancellationRequested();
             return Session.CommitAction(request, result, lifetime.Token);
         }
-        catch (Exception e) { Session.TryFailCalculation(request.Stamp, e.Message, disableScripts: false); throw; }
+        catch (Exception e) { Session.TryFailCalculation(request.Stamp, e.Message, disableScripts: false, logs: (e as ScriptRuntimeFailureException)?.Logs); throw; }
     }
 
     private int _dispatchingEvents;
@@ -267,7 +273,7 @@ public sealed class WorkbookDocument : IDisposable
                 }
                 catch (Exception error)
                 {
-                    Session.TryFailCalculation(request.Stamp, $"事件 {item.Name} 失败：{error.Message}", disableScripts: false);
+                    Session.TryFailCalculation(request.Stamp, $"事件 {item.Name} 失败：{error.Message}", disableScripts: false, logs: (error as ScriptRuntimeFailureException)?.Logs);
                     throw;
                 }
                 count++;

@@ -1,5 +1,5 @@
 [CmdletBinding()]
-param([switch]$SkipBuild)
+param([switch]$SkipBuild, [switch]$ScriptsOnly)
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 $root = [IO.Path]::GetFullPath((Split-Path $PSScriptRoot -Parent))
@@ -14,7 +14,8 @@ try {
         if ($LASTEXITCODE -ne 0) { throw 'Avalonia Web host build failed.' }
     }
     $exe = Join-Path $root 'artifacts/build/bin/QuickExcel.Desktop.Avalonia/release/QuickExcel.Avalonia.exe'
-    $process = Start-Process -FilePath $exe -ArgumentList @('--web-smoke', ('"{0}"' -f $run)) -WorkingDirectory $root -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $run 'stdout.log') -RedirectStandardError (Join-Path $run 'stderr.log')
+    $arguments = @('--web-smoke', ('"{0}"' -f $run)); if ($ScriptsOnly) { $arguments += '--scripts-only' }
+    $process = Start-Process -FilePath $exe -ArgumentList $arguments -WorkingDirectory $root -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $run 'stdout.log') -RedirectStandardError (Join-Path $run 'stderr.log')
     try {
         if (-not $process.WaitForExit(180000)) { throw "Avalonia Web smoke exceeded 180 seconds: $run" }
         $process.WaitForExit()

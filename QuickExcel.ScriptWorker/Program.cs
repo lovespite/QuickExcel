@@ -136,8 +136,13 @@ try
             }
             catch (InvalidOperationException error)
             {
+                // Interrupted/invalidated contexts cannot be called again. Ordinary
+                // script errors still expose the bounded output printed before failure.
+                string[] failureLogs = [];
+                if (!runtime.LastOperationInvalidated)
+                    try { failureLogs = runtime.GetLogs().Take(WorkerProtocol.MaxLogs).Select(Bounded).ToArray(); } catch { }
                 await WorkerProtocol.WriteAsync(output, WorkerProtocol.Message(request.Identity, "failure",
-                    new WorkerFailure(runtime.LastOperationInterrupted ? "Timeout" : "Action", Bounded("操作脚本失败，本次变更未提交：" + error.Message))));
+                    new WorkerFailure(runtime.LastOperationInterrupted ? "Timeout" : "Action", Bounded("操作脚本失败，本次变更未提交：" + error.Message)) { Logs = failureLogs }));
                 return 7;
             }
         }
