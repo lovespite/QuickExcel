@@ -365,6 +365,8 @@ public sealed partial class MainWindow : Window
             }
             return;
         }
+        // Search editing and dropdown navigation own their keys; they must not clear or paste into worksheet cells.
+        if (AutomationPickerOwnsKeyboard) return;
         if (e.Key == Key.Escape && _formatBrush is not null) { _formatBrush = null; _status.Text = "已取消格式刷。"; e.Handled = true; return; }
         if (e.Key == Key.Escape && _clipboardCells?.IsCut == true && !_grid.IsEditing)
         { _clipboardCells = null; _status.Text = "已取消剪切。"; e.Handled = true; return; }

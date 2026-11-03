@@ -30,7 +30,9 @@ public sealed partial class MainWindow
             RibbonButton("重命名表列", () => EditTableAsync(1)), RibbonButton("设置计算列", () => EditTableAsync(2)));
         _grid.FilterRequested += column => _ = PerformAsync(() => FilterAsync(column));
         AddHandler(KeyDownEvent, async (_, e) =>
-        { if (!e.Handled && e.Key == Key.Down && e.KeyModifiers == KeyModifiers.Alt && !_grid.IsEditing && !_formula.IsComposing) { e.Handled = true; await PerformAsync(() => FilterAsync(_grid.Current.Column)); } }, RoutingStrategies.Tunnel);
+        { if (!e.Handled && e.Key == Key.Down && e.KeyModifiers == KeyModifiers.Alt && !_grid.IsEditing && !_formula.IsComposing &&
+              !AutomationPickerOwnsKeyboard)
+            { e.Handled = true; await PerformAsync(() => FilterAsync(_grid.Current.Column)); } }, RoutingStrategies.Tunnel);
     }
     private WorksheetTable? CurrentTable => Document.Snapshot.Sheets[SheetIndex].Data.Tables.FirstOrDefault(t => t.Range.Contains(_grid.Current.Row, _grid.Current.Column));
     private async Task SortAsync(bool? descending)
