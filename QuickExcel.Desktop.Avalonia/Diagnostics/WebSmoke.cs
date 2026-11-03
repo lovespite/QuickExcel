@@ -127,7 +127,7 @@ public sealed partial class MainWindow
             _workspace.Editor.Execute(new SetCellsCommand([new(new(Document.Snapshot.ActiveSheetId, 0, 0), CellInput.Parse("New workbook content"))])); Synchronize();
             Check(ReferenceEquals(job, _printSession.Job) && _printStatus!.Text!.Contains("工作簿已变化"), "Workbook edits leave the old preview frozen and visibly marked until explicit rebuild");
             try { await _pdfPage.Browser.RequestAsync("test", "testResult", new { action = "crash" }); } catch (InvalidDataException) { }
-            Check(!_pdfPage.Browser.IsReady && File.Exists(previewFile) && _printWindow!.GetVisualDescendants().OfType<Button>().Any(b => Equals(b.Content, "导出 PDF…")), "Failed preview retains its completed PDF and an independent native export control");
+            Check(!_pdfPage.Browser.IsReady && File.Exists(previewFile) && _printWindow!.GetVisualDescendants().OfType<Button>().Any(b => Equals(b.Content, "导出 PDF")), "Failed preview retains its completed PDF and an independent native export control");
             ((SmokeFiles)_files).NextSave = Path.Combine(directory, "preview-export.pdf"); await ExportPreviewPdfAsync();
             Check(File.Exists(((SmokeFiles)_files).NextSave), "Native PDF export uses the same frozen print session");
             await RebuildPrintPreviewAsync(); Check(_pdfPage!.Browser.IsReady && !File.Exists(previewFile), "Explicit rebuild replaces a failed PDF page and retires the previous file");

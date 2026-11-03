@@ -33,9 +33,19 @@ public sealed class LocalWebOriginTests : IDisposable
     public void CatalogRejectsChangedOrEscapingAssetsBeforeStartingBrowser()
     {
         File.AppendAllText(Path.Combine(_directory, "script.html"), "tamper");
-        Assert.Throws<InvalidDataException>(() => new WebAssetCatalog(_directory));
+        var error = Assert.Throws<InvalidDataException>(() => new WebAssetCatalog(_directory));
+        Assert.Contains("script.html", error.Message);
+        Assert.Contains("大小与清单不匹配", error.Message);
         var manifest = File.ReadAllText(Path.Combine(_directory, "manifest.json")).Replace("script.html", "../script.html"); File.WriteAllText(Path.Combine(_directory, "manifest.json"), manifest);
         Assert.Throws<InvalidDataException>(() => new WebAssetCatalog(_directory));
+    }
+    [Fact]
+    public void CatalogRejectsSameLengthAssetChangesByHash()
+    {
+        var path = Path.Combine(_directory, "script.html");
+        var bytes = File.ReadAllBytes(path); bytes[0] ^= 1; File.WriteAllBytes(path, bytes);
+        var error = Assert.Throws<InvalidDataException>(() => new WebAssetCatalog(_directory));
+        Assert.Contains("SHA-256 不匹配：script.html", error.Message);
     }
     [Fact]
     public async Task OriginRequiresExactHostTokenPathAndSameOriginRequests()

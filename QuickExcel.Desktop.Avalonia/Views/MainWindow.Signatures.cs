@@ -48,7 +48,7 @@ public sealed partial class MainWindow
         try { result = await Task.Run(() => ScriptTrust.Verify(modules)); }
         catch (UserProtectionUnavailableException) { result = await Task.Run(() => ScriptSignatures.Verify(modules)); }
         var dialog = new FieldsDialog("脚本签名详情").Note(CertificateDetails(result)).Note("签名保护全部源码与用途绑定，不包含单元格数据。")
-            .Choice("action", "操作", modules.Signature is null ? ["关闭", "签署脚本…"] : ["关闭", "签署脚本…", "移除签名并停用"]);
+            .Choice("action", "操作", modules.Signature is null ? ["关闭", "签署脚本"] : ["关闭", "签署脚本", "移除签名并停用"]);
         if (!await dialog.ShowAsync(this)) return;
         if (dialog.Index("action") == 1) await SignScriptsAsync();
         else if (dialog.Index("action") == 2)

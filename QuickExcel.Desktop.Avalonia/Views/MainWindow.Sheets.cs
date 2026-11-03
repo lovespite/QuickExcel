@@ -13,21 +13,21 @@ public sealed partial class MainWindow
         var sheet = (MenuItem)_menu.Items[2]!;
         foreach (var (name, action) in new (string, Func<Task>)[]
         {
-            ("复制工作表…", CopySheetAsync), ("向前移动", () => MoveSheetAsync(-1)), ("向后移动", () => MoveSheetAsync(1)),
-            ("隐藏工作表", HideSheetAsync), ("取消隐藏…", UnhideSheetAsync), ("保护工作表…", ProtectSheetAsync)
+            ("复制工作表", CopySheetAsync), ("向前移动", () => MoveSheetAsync(-1)), ("向后移动", () => MoveSheetAsync(1)),
+            ("隐藏工作表", HideSheetAsync), ("取消隐藏", UnhideSheetAsync), ("保护工作表", ProtectSheetAsync)
         }) sheet.Items.Add(CommandMenu(name, action));
         var context = new ContextMenu();
-        foreach (var (name, action) in new (string, Func<Task>)[] { ("重命名…", RenameSheetAsync), ("复制…", CopySheetAsync), ("向前移动", () => MoveSheetAsync(-1)), ("向后移动", () => MoveSheetAsync(1)), ("隐藏", HideSheetAsync), ("取消隐藏…", UnhideSheetAsync), ("删除…", DeleteSheetAsync) })
+        foreach (var (name, action) in new (string, Func<Task>)[] { ("重命名", RenameSheetAsync), ("复制", CopySheetAsync), ("向前移动", () => MoveSheetAsync(-1)), ("向后移动", () => MoveSheetAsync(1)), ("隐藏", HideSheetAsync), ("取消隐藏", UnhideSheetAsync), ("删除", DeleteSheetAsync) })
             context.Items.Add(CommandMenu(name, action));
         _sheets.ContextMenu = context;
         RibbonGroup("视图", "窗口", RibbonButton("冻结至当前格", () => FreezeAsync(_grid.Current.Row, _grid.Current.Column)),
             RibbonButton("冻结首行", () => FreezeAsync(1, 0)), RibbonButton("冻结首列", () => FreezeAsync(0, 1)), RibbonButton("取消冻结", () => FreezeAsync(0, 0)),
-            RibbonButton("缩放…", ZoomDialogAsync));
-        RibbonGroup("开始", "行列", RibbonButton("插入行", () => ShiftAxisAsync(SheetAxis.Row, false)), RibbonButton("删除行…", () => ShiftAxisAsync(SheetAxis.Row, true)),
-            RibbonButton("插入列", () => ShiftAxisAsync(SheetAxis.Column, false)), RibbonButton("删除列…", () => ShiftAxisAsync(SheetAxis.Column, true)),
-            RibbonButton("隐藏/显示行列…", AxisVisibilityAsync), RibbonButton("移动行列…", MoveAxisAsync));
-        RibbonGroup("公式", "名称", RibbonButton("名称管理…", NamesAsync));
-        RibbonGroup("审阅", "保护", RibbonButton("工作表保护…", ProtectSheetAsync), RibbonButton("单元格保护…", ProtectCellsAsync));
+            RibbonButton("缩放", ZoomDialogAsync));
+        RibbonGroup("开始", "行列", RibbonButton("插入行", () => ShiftAxisAsync(SheetAxis.Row, false)), RibbonButton("删除行", () => ShiftAxisAsync(SheetAxis.Row, true)),
+            RibbonButton("插入列", () => ShiftAxisAsync(SheetAxis.Column, false)), RibbonButton("删除列", () => ShiftAxisAsync(SheetAxis.Column, true)),
+            RibbonButton("隐藏/显示行列", AxisVisibilityAsync), RibbonButton("移动行列", MoveAxisAsync));
+        RibbonGroup("公式", "名称", RibbonButton("名称管理", NamesAsync));
+        RibbonGroup("审阅", "保护", RibbonButton("工作表保护", ProtectSheetAsync), RibbonButton("单元格保护", ProtectCellsAsync));
         _grid.ViewportChanged += () =>
         {
             if (!_synchronizing && !_workspace.IsBusy && _grid.ScrollingCell is { } cell)

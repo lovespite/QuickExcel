@@ -22,6 +22,6 @@ public sealed partial class WorkbookGrid
         var notes = new List<string>();
         if (Sheet.Annotations.Notes.TryGetValue(position, out var note)) notes.Add(note.Author + "：" + note.Text.Text);
         if (Sheet.Annotations.Links.TryGetValue(position, out var link)) notes.Add("链接（不会自动打开）：" + (link.Tooltip ?? link.Display ?? "") + "\n" + (link.Target ?? "") + (link.Location is null ? "" : "#" + link.Location));
-        if (notes.Count == 0) return null; var text = string.Join("\n", notes); return text.Length <= 2048 ? text : text[..2048] + "…";
+        if (notes.Count == 0) return null; var text = string.Join("\n", notes); return text.Length <= 2048 ? text : text[..2048] + "";
     }
 }

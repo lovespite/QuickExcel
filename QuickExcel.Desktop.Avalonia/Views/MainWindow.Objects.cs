@@ -9,9 +9,9 @@ public sealed partial class MainWindow
 {
     private void InstallObjects()
     {
-        RibbonGroup("插入", "对象", RibbonButton("图片管理…", ImagesAsync), RibbonButton("图表管理…", ChartsAsync), RibbonButton("批注…", NoteAsync));
-        RibbonGroup("页面布局", "页面设置", RibbonButton("页面设置…", PageSettingsAsync), RibbonButton("设为打印区域", () => PrintAreaAsync(false)),
-            RibbonButton("清除打印区域", () => PrintAreaAsync(true)), RibbonButton("分页…", PageBreaksAsync));
+        RibbonGroup("插入", "对象", RibbonButton("图片管理", ImagesAsync), RibbonButton("图表管理", ChartsAsync), RibbonButton("批注", NoteAsync));
+        RibbonGroup("页面布局", "页面设置", RibbonButton("页面设置", PageSettingsAsync), RibbonButton("设为打印区域", () => PrintAreaAsync(false)),
+            RibbonButton("清除打印区域", () => PrintAreaAsync(true)), RibbonButton("分页", PageBreaksAsync));
     }
     private async Task NoteAsync()
     {
@@ -26,7 +26,7 @@ public sealed partial class MainWindow
     {
         if (!await FlushEditsAsync()) return;
         var snapshot = Document.Snapshot; var sheet = snapshot.Sheets[SheetIndex]; var current = _grid.Current;
-        var choose = new FieldsDialog("图片管理").Choice("image", "图片", new[] { "插入新图片…" }.Concat(sheet.Images.Select((_, i) => $"图片 {i + 1}")).ToArray()).Check("remove", "删除所选图片");
+        var choose = new FieldsDialog("图片管理").Choice("image", "图片", new[] { "插入新图片" }.Concat(sheet.Images.Select((_, i) => $"图片 {i + 1}")).ToArray()).Check("remove", "删除所选图片");
         if (!await choose.ShowAsync(this)) return; var index = choose.Index("image") - 1;
         if (choose.Boolean("remove")) { if (index < 0) throw new ArgumentException("请先选择已有图片。"); await ExecuteAsync(new SetImageCommand(sheet.Id, index, null), snapshot.Revision); return; }
         SheetImage image;
@@ -65,7 +65,7 @@ public sealed partial class MainWindow
         var snapshot = Document.Snapshot; var sheet = snapshot.Sheets[SheetIndex]; var selection = Rectangle(SelectedRange());
         var dialog = new FieldsDialog("图表管理").Choice("chart", "图表", new[] { "插入新图表" }.Concat(sheet.Data.Charts.Select((c, i) => $"{i + 1} · {c.Title}")).ToArray())
             .Choice("kind", "类型", ["簇状柱形图", "折线图", "饼图"]).Text("title", "标题").Text("range", "数据范围（首行标题，首列分类；编辑时留空保持）", selection.ToString())
-            .Choice("legend", "图例", ["右侧", "底部", "左侧", "顶部", "隐藏"]).Check("position", "调整位置和尺寸…").Check("remove", "删除所选图表");
+            .Choice("legend", "图例", ["右侧", "底部", "左侧", "顶部", "隐藏"]).Check("position", "调整位置和尺寸").Check("remove", "删除所选图表");
         ((ComboBox)dialog.Input("chart")).SelectionChanged += (_, _) =>
         {
             if (dialog.Index("chart") == 0) return;

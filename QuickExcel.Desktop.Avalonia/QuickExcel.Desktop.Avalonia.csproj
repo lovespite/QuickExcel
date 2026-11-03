@@ -21,7 +21,9 @@
     <ProjectReference Include="../QuickExcel.Grid.Avalonia/QuickExcel.Grid.Avalonia.csproj" />
     <ProjectReference Include="../QuickExcel.Infrastructure/QuickExcel.Infrastructure.csproj" />
     <None Include="Licenses/*.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
-    <None Include="../artifacts/avalonia/web/**/*" Link="Web/%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <!-- The manifest and assets are one verified bundle. A newer destination may
+         be stale or modified; it must not win over the generated source bundle. -->
+    <None Include="../artifacts/avalonia/web/**/*" Link="Web/%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="IfDifferent" CopyToPublishDirectory="IfDifferent" />
   </ItemGroup>
   <!-- macOS remains a no-script preview until its separate sandbox is qualified. -->
   <Import Project="../scripts/ScriptWorker.targets" Condition="'$(RuntimeIdentifier)' != 'osx-arm64' and '$(RuntimeIdentifier)' != 'osx-x64'" />

@@ -1,5 +1,6 @@
 using Avalonia.Automation;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
@@ -28,13 +29,14 @@ public sealed partial class MainWindow
         await History(false); check(Document.GetCellValue(0, 1, 0) == "甲", "Native sort has one undo entry");
         await History(true); await CalculateAsync();
         await EstablishFilterAsync(); _grid.Select(new(0, 1));
-        _dialogDriver = async window =>
+        _filterDriver = async panel =>
         {
             await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Background);
-            check(window is FilterDialog, "Header filtering opens native candidates and conditions");
-            Named<ComboBox>(window, "筛选方式").SelectedIndex = 1;
-            Named<ComboBox>(window, "第一个条件").SelectedIndex = (int)FilterOperator.Greater;
-            Named<TextBox>(window, "第一个条件值").Text = "1"; Click(window, "应用");
+            check(_filterPopup?.IsOpen == true, "Header filtering opens an anchored floating panel");
+            panel.GetVisualDescendants().OfType<ToggleButton>().Single(b => b.Name == "FilterCustom").IsChecked = true;
+            panel.GetVisualDescendants().OfType<ComboBox>().Single(b => b.Name == "FilterFirstOperator").SelectedIndex = (int)FilterOperator.Greater;
+            panel.GetVisualDescendants().OfType<TextBox>().Single(b => b.Name == "FilterFirstValue").Text = "1";
+            panel.GetVisualDescendants().OfType<Button>().Single(b => b.Name == "FilterApply").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
         };
         await FilterAsync(1);
         check(CurrentView.IsFilteredOut(Document.Snapshot, 0, 1) && !CurrentView.IsFilteredOut(Document.Snapshot, 0, 2), "Native custom filter persists conditions and applies row projection");

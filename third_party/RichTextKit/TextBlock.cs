@@ -1931,7 +1931,7 @@ namespace Topten.RichTextKit
         /// <summary>
         /// Re-usable buffer holding just the ellipsis character
         /// </summary>
-        static Utf32Buffer ellipsis = new Utf32Buffer("…");
+        static Utf32Buffer ellipsis = new Utf32Buffer("");
 
         /// <summary>
         /// Create a special font run containing the ellipsis character

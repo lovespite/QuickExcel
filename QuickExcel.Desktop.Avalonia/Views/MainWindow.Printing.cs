@@ -23,8 +23,8 @@ public sealed partial class MainWindow
     private Guid _printDocument;
     private void InstallPrintCommands()
     {
-        ((MenuItem)_menu.Items[0]!).Items.Insert(9, CommandMenu("打印预览 / PDF…", OpenPrintPreviewAsync));
-        RibbonGroup("页面布局", "打印输出", RibbonButton("打印预览 / PDF…", OpenPrintPreviewAsync, false));
+        ((MenuItem)_menu.Items[0]!).Items.Insert(9, CommandMenu("打印预览 / PDF", OpenPrintPreviewAsync));
+        RibbonGroup("页面布局", "打印输出", RibbonButton("打印预览 / PDF", OpenPrintPreviewAsync, false));
     }
     private async Task OpenPrintPreviewAsync()
     {
@@ -33,9 +33,9 @@ public sealed partial class MainWindow
         _printClose = null;
         var root = new DockPanel(); var tools = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10, Margin = new(12, 8) };
         _printRebuild = new Button { Content = "从当前工作表重新生成" }; _printRebuild.Click += async (_, _) => await PerformAsync(RebuildPrintPreviewAsync); tools.Children.Add(_printRebuild);
-        var settings = new Button { Content = "页面设置…" }; settings.Click += async (_, _) => await PerformAsync(async () => { await PageSettingsAsync(); await RebuildPrintPreviewAsync(); }); tools.Children.Add(settings);
-        var export = new Button { Content = "导出 PDF…" }; export.Click += async (_, _) => await PerformAsync(ExportPreviewPdfAsync); tools.Children.Add(export);
-        var print = new Button { Content = "系统打印…" }; print.Click += async (_, _) => await PerformAsync(PrintPreviewAsync); tools.Children.Add(print);
+        var settings = new Button { Content = "页面设置" }; settings.Click += async (_, _) => await PerformAsync(async () => { await PageSettingsAsync(); await RebuildPrintPreviewAsync(); }); tools.Children.Add(settings);
+        var export = new Button { Content = "导出 PDF" }; export.Click += async (_, _) => await PerformAsync(ExportPreviewPdfAsync); tools.Children.Add(export);
+        var print = new Button { Content = "系统打印" }; print.Click += async (_, _) => await PerformAsync(PrintPreviewAsync); tools.Children.Add(print);
         var cancel = new Button { Content = "取消生成 / 导出" }; cancel.Click += (_, _) => { _printCancellation?.Cancel(); _calculationCancellation?.Cancel(); }; tools.Children.Add(cancel);
         DockPanel.SetDock(tools, Dock.Top); root.Children.Add(tools);
         _printStatus = new TextBlock { Margin = new(12, 6), TextWrapping = TextWrapping.Wrap }; DockPanel.SetDock(_printStatus, Dock.Bottom); root.Children.Add(_printStatus);
@@ -61,7 +61,7 @@ public sealed partial class MainWindow
             throw new InvalidOperationException("当前工作表含受阻或尚未完成重算的公式，请完成计算后再打印。");
         _printCancellation?.Cancel(); using var cancellation = new CancellationTokenSource(); _printCancellation = cancellation;
         var window = _printWindow; var identity = Document.Session.SessionId; var generation = ++_webGeneration;
-        _printStatus!.Text = "正在生成并验证完整 PDF…完成后显示预览。";
+        _printStatus!.Text = "正在生成并验证完整 PDF完成后显示预览。";
         PrintSession? generated = null;
         try
         {

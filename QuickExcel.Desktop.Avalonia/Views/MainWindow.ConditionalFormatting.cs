@@ -34,7 +34,7 @@ public sealed partial class MainWindow
             if (!await dialog.ShowAsync(window)) return;
             if (add) { rules.Insert(0, read()); index = 0; } else rules[index] = read(); Refresh(index);
         }
-        Button("新增…", () => Edit(true)); Button("编辑…", () => Edit(false));
+        Button("新增", () => Edit(true)); Button("编辑", () => Edit(false));
         Button("删除", () => { var i = list.SelectedIndex; if (i >= 0) { rules.RemoveAt(i); Refresh(Math.Min(i, rules.Count - 1)); } return Task.CompletedTask; });
         Task Move(int delta) { var i = list.SelectedIndex; if (i >= 0 && i + delta >= 0 && i + delta < rules.Count) { (rules[i], rules[i + delta]) = (rules[i + delta], rules[i]); Refresh(i + delta); } return Task.CompletedTask; }
         Button("上移", () => Move(-1)); Button("下移", () => Move(1));

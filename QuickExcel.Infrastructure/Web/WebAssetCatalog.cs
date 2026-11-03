@@ -31,8 +31,11 @@ public sealed class WebAssetCatalog
             foreach (var part in name.Split('/'))
             { path = Path.Combine(path, part); if ((File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0) throw new IOException("Web 资源不能经过重解析点。"); }
             var expected = item.GetProperty("size").GetInt32();
-            if (expected is < 0 or > 32 * 1024 * 1024 || new FileInfo(path).Length != expected || (total += expected) > 256L * 1024 * 1024)
-                throw new InvalidDataException("Web 资源容量不匹配或超限。");
+            if (expected is < 0 or > 32 * 1024 * 1024 || (total += expected) > 256L * 1024 * 1024)
+                throw new InvalidDataException("Web 资源容量超限：" + name);
+            var actual = new FileInfo(path).Length;
+            if (actual != expected)
+                throw new InvalidDataException($"Web 资源大小与清单不匹配：{name}（预期 {expected} 字节，实际 {actual} 字节）。请重新构建或安装完整应用包。");
             var bytes = ReadBounded(path, expected);
             if (bytes.Length != expected || !Convert.ToHexString(SHA256.HashData(bytes)).Equals(item.GetProperty("sha256").GetString(), StringComparison.OrdinalIgnoreCase))
                 throw new InvalidDataException("Web 资源 SHA-256 不匹配：" + name);

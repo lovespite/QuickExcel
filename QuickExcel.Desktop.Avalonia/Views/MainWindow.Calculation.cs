@@ -41,6 +41,7 @@ public sealed partial class MainWindow
         void Apply()
         {
             if (_windowClosed || !ReferenceEquals(sender, Document.Session)) return;
+            RefreshScriptActions();
             if (!change.CalculationOnly && !change.CalculationUnchanged) { _calculationPending = true; _calculationTimer.Stop(); _calculationTimer.Start(); }
         }
         if (Dispatcher.UIThread.CheckAccess()) Apply(); else Dispatcher.UIThread.Post(Apply);

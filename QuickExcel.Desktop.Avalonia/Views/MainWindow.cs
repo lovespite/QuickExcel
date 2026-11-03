@@ -53,6 +53,7 @@ public sealed partial class MainWindow : Window
         _settings = new(Path.Combine(userDataDirectory, "settings.json")); _settings.Load();
         _userDataDirectory = userDataDirectory;
         BuildView(); InstallEditingCommands(); InstallFormulaEditing(); InstallRibbon(); InstallCalculation(); InstallSheetCommands(); InstallSearch(); InstallDataCommands(); InstallValidation(); InstallCleaning(); InstallObjects(); InstallFileCommands(); InstallScriptCommands(); InstallPrintCommands();
+        ArrangeRibbonTabs();
         _grid.ResolveStyle = ConditionalPresentation.GetStyle;
         _grid.RenderingFailed += Error;
         _grid.CommitCellAsync = CommitCellAsync;
@@ -90,6 +91,8 @@ public sealed partial class MainWindow : Window
             await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Background);
             if (Program.SelfCheckDirectory is { } evidence) { await RunSelfCheckAsync(evidence); return; }
 #if QUICKEXCEL_DIAGNOSTICS
+            if (Program.SmokeDirectory is { } automationDirectory && Program.SmokeMode == "automation") { await RunAutomationSmokeAsync(automationDirectory); return; }
+            if (Program.SmokeDirectory is { } featureDirectory && Program.SmokeMode == "ribbon-filter") { await RunRibbonFilterSmokeAsync(featureDirectory); return; }
             if (Program.SmokeDirectory is { } smoke && Program.SmokeMode != "manual") { if (Program.SmokeMode == "grid") await RunGridSmokeAsync(smoke); else if (Program.SmokeMode == "benchmark") await RunGridBenchmarkAsync(smoke); else if (Program.SmokeMode == "web") await RunWebSmokeAsync(smoke); else if (Program.SmokeMode == "web-benchmark") await RunWebBenchmarkAsync(smoke); else await RunWorkspaceSmokeAsync(smoke); return; }
 #endif
             if (Program.InitialFile is { } path) await PerformAsync(() => OpenPathAsync(path));
@@ -104,14 +107,14 @@ public sealed partial class MainWindow : Window
         _menu.Items.Add(new MenuItem { Header = "文件", Items =
         {
             Item("新建  Ctrl+N", async () => { if (await ConfirmDiscardAsync()) { _workspace.New(); ShowBook(); } }),
-            Item("打开…  Ctrl+O", OpenAsync), Item("保存  Ctrl+S", async () => await SaveAsync(false)),
-            Item("另存为…", async () => await SaveAsync(true)), Item("最近文件", async () => { if (await ConfirmDiscardAsync()) ShowHome(); }),
+            Item("打开  Ctrl+O", OpenAsync), Item("保存  Ctrl+S", async () => await SaveAsync(false)),
+            Item("另存为", async () => await SaveAsync(true)), Item("最近文件", async () => { if (await ConfirmDiscardAsync()) ShowHome(); }),
             Item("关闭工作簿", async () => { if (await ConfirmDiscardAsync()) { _workspace.New(); ShowHome(); } }), Item("退出", () => { Close(); return Task.CompletedTask; })
         } });
         _menu.Items.Add(new MenuItem { Header = "编辑", Items =
         { Item("撤销  Ctrl+Z", () => History(false)), Item("重做  Ctrl+Y", () => History(true)), Item("清除内容", ClearAsync) } });
         _menu.Items.Add(new MenuItem { Header = "工作表", Items =
-        { Item("添加工作表", AddSheetAsync), Item("重命名…", RenameSheetAsync), Item("删除工作表…", DeleteSheetAsync) } });
+        { Item("添加工作表", AddSheetAsync), Item("重命名", RenameSheetAsync), Item("删除工作表", DeleteSheetAsync) } });
         _menu.Items.Add(new MenuItem { Header = "视图", Items =
         { Item("100%", () => ZoomAsync(100)), Item("125%", () => ZoomAsync(125)), Item("150%", () => ZoomAsync(150)),
           Item("标签在底部", () => PlaceSheets(SheetNavigationPlacement.Bottom)), Item("标签在左侧", () => PlaceSheets(SheetNavigationPlacement.Left)), Item("标签在右侧", () => PlaceSheets(SheetNavigationPlacement.Right)) } });
@@ -122,7 +125,7 @@ public sealed partial class MainWindow : Window
         _start.Children.Add(new TextBlock { Text = "工作簿与脚本", FontSize = 18, Foreground = Brushes.Gray });
         void StartButton(string text, Func<Task> action) { var button = new Button { Content = text, MinWidth = 220 }; button.Click += async (_, _) => await PerformAsync(action); _start.Children.Add(button); }
         StartButton("新建工作簿", async () => { if (await ConfirmDiscardAsync()) { _workspace.New(); ShowBook(); } });
-        StartButton("打开工作簿…", OpenAsync);
+        StartButton("打开工作簿", OpenAsync);
         StartButton("打开示例", async () => { if (await ConfirmDiscardAsync()) { _workspace.New(true); ShowBook(); } });
         StartButton("返回当前工作簿", () => { ShowBook(); return Task.CompletedTask; });
         _start.Children.Add(new TextBlock { Text = "最近文件", FontSize = 18 }); _start.Children.Add(_recent);
@@ -144,11 +147,12 @@ public sealed partial class MainWindow : Window
     private void Synchronize()
     {
         if (_synchronizing) return;
+        if (_filterContextCurrent?.Invoke() == false) CloseFilterPanel();
         ObserveDocument();
         _synchronizing = true;
         try
         {
-            _book.IsEnabled = !_workspace.IsBusy; _menu.IsEnabled = !_workspace.IsBusy;
+            _book.IsEnabled = !_workspace.IsBusy && _scriptCancellation is null; _menu.IsEnabled = !_workspace.IsBusy;
             if (_boundSession != Document.Session.SessionId || _boundSheet != Document.Snapshot.ActiveSheetId)
             {
                 _formulaDirty = false; _formulaOwner = null;
@@ -347,6 +351,7 @@ public sealed partial class MainWindow : Window
     }
     private async void Shortcuts(object? sender, KeyEventArgs e)
     {
+        if (_filterPopup?.IsOpen == true) return;
         if (e.Handled || _grid.IsComposing || _formula.IsComposing) return;
         if (e.Key == Key.Escape && _calculationCancellation is not null) { _calculationCancellation.Cancel(); e.Handled = true; return; }
         if (e.Key == Key.F6)
@@ -379,6 +384,7 @@ public sealed partial class MainWindow : Window
     private async void OnClosing(object? sender, WindowClosingEventArgs e)
     {
         if (_allowClose) return;
+        CloseFilterPanel();
         e.Cancel = true; if (_closePending) return; _closePending = true;
         try
         {

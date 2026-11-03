@@ -35,13 +35,14 @@ public sealed partial class MainWindow
     private void InstallScriptCommands()
     {
         var menu = new MenuItem { Header = "脚本" };
-        menu.Items.Add(CommandMenu("脚本编辑器…", OpenScriptsAsync));
+        menu.Items.Add(CommandMenu("脚本编辑器", OpenScriptsAsync));
         menu.Items.Add(CommandMenu("应用脚本并重算", ApplyScriptsAsync));
         menu.Items.Add(CommandMenu("停用脚本", () => { DisableScripts(); return Task.CompletedTask; }));
-        menu.Items.Add(CommandMenu("签名详情…", ScriptSignatureDetailsAsync));
-        menu.Items.Add(CommandMenu("签署脚本…", SignScriptsAsync));
-        menu.Items.Add(CommandMenu("受信任证书…", TrustedCertificatesAsync)); _menu.Items.Add(menu);
-        RibbonGroup("公式", "脚本", RibbonButton("脚本编辑器…", OpenScriptsAsync, false), RibbonButton("应用并重算", ApplyScriptsAsync, false));
+        menu.Items.Add(CommandMenu("签名详情", ScriptSignatureDetailsAsync));
+        menu.Items.Add(CommandMenu("签署脚本", SignScriptsAsync));
+        menu.Items.Add(CommandMenu("受信任证书", TrustedCertificatesAsync)); _menu.Items.Add(menu);
+        RibbonGroup("公式", "脚本", RibbonButton("脚本编辑器", OpenScriptsAsync, false), RibbonButton("应用并重算", ApplyScriptsAsync, false));
+        InstallAutomationRibbon();
     }
     private async Task OpenScriptsAsync()
     {
@@ -53,13 +54,14 @@ public sealed partial class MainWindow
         _modulePicker = new ComboBox { MinWidth = 170, Margin = new(4) }; AutomationProperties.SetName(_modulePicker, "脚本模块"); toolbar.Children.Add(_modulePicker);
         void Button(string text, Func<Task> action)
         { var button = new Button { Content = text, Margin = new(4) }; button.Click += async (_, _) => await PerformAsync(action); toolbar.Children.Add(button); }
-        Button("添加模块…", AddScriptModuleAsync); Button("模块角色…", ScriptModuleRoleAsync); Button("应用并重算", ApplyScriptsAsync);
+        Button("添加模块", AddScriptModuleAsync); Button("模块角色", ScriptModuleRoleAsync); Button("应用并重算", ApplyScriptsAsync);
         Button("停用", () => { DisableScripts(); return Task.CompletedTask; }); Button("保存", async () => await SaveAsync(false));
         _actionPicker = new ComboBox { MinWidth = 140, Margin = new(4), ItemTemplate = new FuncDataTemplate<ScriptActionDescriptor>((item, _) => new TextBlock { Text = item?.Name }) };
         AutomationProperties.SetName(_actionPicker, "脚本操作"); toolbar.Children.Add(_actionPicker); Button("运行操作", RunScriptActionAsync);
+        RefreshScriptActions(); _actionPicker.ItemsSource = _availableScriptActions; _actionPicker.SelectedIndex = _availableScriptActions.Count > 0 ? 0 : -1;
         var stop = new Button { Content = "停止", Margin = new(4) }; stop.Click += (_, _) => _scriptCancellation?.Cancel(); toolbar.Children.Add(stop);
-        Button("签名…", ScriptSignatureDetailsAsync);
-        _scriptRecovery = new Button { Content = "恢复已确认草稿…", IsVisible = false, Margin = new(4) };
+        Button("签名", ScriptSignatureDetailsAsync);
+        _scriptRecovery = new Button { Content = "恢复已确认草稿", IsVisible = false, Margin = new(4) };
         _scriptRecovery.Click += async (_, _) => await PerformAsync(RecoverScriptPageAsync); toolbar.Children.Add(_scriptRecovery);
         DockPanel.SetDock(toolbar, Dock.Top); root.Children.Add(toolbar);
         _scriptStatus = new TextBlock { Margin = new(12, 5), TextWrapping = TextWrapping.Wrap };
@@ -158,7 +160,7 @@ public sealed partial class MainWindow
             _scriptStatus.Text = $"{modules.Modules[_selectedModule].Path} · API v{modules.ScriptApiVersion} · {(Document.ScriptsEnabled ? "已授权" : "未授权")} · {(modules.Signature is null ? "未签名" : "已签名")} · " + (DesktopServices.SupportsScripts ? "独立隔离进程执行" : "此平台尚未开放脚本执行");
     }
     private void DisableScripts()
-    { _scriptCancellation?.Cancel(); Document.DisableScripts(); if (_actionPicker is not null) _actionPicker.ItemsSource = null; RefreshScriptChrome(); }
+    { _scriptCancellation?.Cancel(); Document.DisableScripts(); ClearScriptActions(); RefreshScriptActions(); RefreshScriptChrome(); }
     private async Task AddScriptModuleAsync()
     {
         if (!await CommitEditorsAsync()) return;
@@ -193,25 +195,35 @@ public sealed partial class MainWindow
         await using var hold = _scriptPage?.HoldEdits();
         if (!await CommitEditorsAsync()) return;
         if (!DesktopServices.SupportsScripts) throw new PlatformNotSupportedException("此平台的脚本隔离尚未开放，不能执行脚本。");
+        ClearScriptActions(); RefreshScriptActions();
         if (!await CheckScriptTrustAsync()) return;
         await ScriptWorkAsync(async token =>
         {
-            var document = Document; await Task.Run(() => document.EnableScriptsAndCalculate(token), token);
+            var document = Document; var modules = document.Snapshot.ScriptModules;
+            await Task.Run(() => document.EnableScriptsAndCalculate(token), token);
             var actions = document.Snapshot.ScriptModules.HasActions ? await Task.Run(() => document.ListActions(token), token) : [];
-            if (_actionPicker is not null) { _actionPicker.ItemsSource = actions; _actionPicker.SelectedIndex = actions.Count > 0 ? 0 : -1; }
+            SetScriptActions(document, modules, actions);
+            _status.Text = $"已加载 {actions.Count} 个脚本操作。";
         });
     }
-    private async Task RunScriptActionAsync()
+    private Task RunScriptActionAsync() => RunScriptActionAsync(_actionPicker?.SelectedItem as ScriptActionDescriptor);
+    private async Task RunScriptActionAsync(ScriptActionDescriptor? action)
     {
         await using var hold = _scriptPage?.HoldEdits();
         if (!await CommitEditorsAsync()) return;
-        if (!Document.ScriptsEnabled || _actionPicker?.SelectedItem is not ScriptActionDescriptor action) throw new InvalidOperationException("请先应用脚本并选择操作。");
-        await ScriptWorkAsync(token => Task.Run(() => Document.RunAction(action.Name, token), token));
+        if (!ScriptActionsCurrent || action is null || !_availableScriptActions.Contains(action)) throw new InvalidOperationException("请先加载脚本并选择操作。");
+        var document = Document;
+        _status.Text = "正在执行：" + action.Name;
+        await ScriptWorkAsync(async token =>
+        {
+            var result = await Task.Run(() => document.RunAction(action.Name, token), token);
+            _status.Text = $"已执行：{action.Name}" + (result.Changed ? "（可撤销）" : "（无变更）");
+        });
     }
     private async Task ScriptWorkAsync(Func<CancellationToken, Task> work)
     {
         _calculationTimer.Stop(); using var cancellation = new CancellationTokenSource(); _scriptCancellation = cancellation;
-        _book.IsEnabled = false;
+        _book.IsEnabled = false; RefreshScriptActionButtons();
         try { await work(cancellation.Token); _calculationPending = false; }
         finally { _scriptCancellation = null; _book.IsEnabled = true; Synchronize(); RefreshScriptChrome(); RefreshScriptDiagnostics(); }
     }

@@ -1,7 +1,10 @@
 using System.Collections.Immutable;
+using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Controls.Primitives.PopupPositioning;
 using QuickExcel.Core;
 using QuickExcel.Domain;
 using QuickExcel.Grid.Avalonia;
@@ -12,13 +15,19 @@ namespace QuickExcel.Desktop.Avalonia;
 
 public sealed partial class MainWindow
 {
+    private Popup? _filterPopup;
+    private Func<bool>? _filterContextCurrent;
+#if QUICKEXCEL_DIAGNOSTICS
+    private Func<FilterPanel, Task>? _filterDriver;
+#endif
+    private void CloseFilterPanel() { if (_filterPopup is { } popup) popup.IsOpen = false; }
     private void InstallDataCommands()
     {
         RibbonGroup("数据", "排序和筛选", RibbonButton("升序", () => SortAsync(false)), RibbonButton("降序", () => SortAsync(true)),
-            RibbonButton("多级排序…", () => SortAsync(null)), RibbonButton("筛选区域", EstablishFilterAsync), RibbonButton("当前列筛选…", () => FilterAsync(_grid.Current.Column)),
+            RibbonButton("多级排序", () => SortAsync(null)), RibbonButton("筛选区域", EstablishFilterAsync), RibbonButton("当前列筛选", () => FilterAsync(_grid.Current.Column)),
             RibbonButton("清除全部筛选条件", ClearFiltersAsync), RibbonButton("取消筛选区域", RemoveFilterAsync), RibbonButton("清除排序标记", ClearSortAsync));
-        RibbonGroup("插入", "表格", RibbonButton("创建表…", CreateTableAsync), RibbonButton("调整表范围…", ResizeTableAsync), RibbonButton("重命名表…", () => EditTableAsync(0)),
-            RibbonButton("重命名表列…", () => EditTableAsync(1)), RibbonButton("设置计算列…", () => EditTableAsync(2)));
+        RibbonGroup("插入", "表格", RibbonButton("创建表", CreateTableAsync), RibbonButton("调整表范围", ResizeTableAsync), RibbonButton("重命名表", () => EditTableAsync(0)),
+            RibbonButton("重命名表列", () => EditTableAsync(1)), RibbonButton("设置计算列", () => EditTableAsync(2)));
         _grid.FilterRequested += column => _ = PerformAsync(() => FilterAsync(column));
         AddHandler(KeyDownEvent, async (_, e) =>
         { if (!e.Handled && e.Key == Key.Down && e.KeyModifiers == KeyModifiers.Alt && !_grid.IsEditing && !_formula.IsComposing) { e.Handled = true; await PerformAsync(() => FilterAsync(_grid.Current.Column)); } }, RoutingStrategies.Tunnel);
@@ -27,9 +36,19 @@ public sealed partial class MainWindow
     private async Task SortAsync(bool? descending)
     {
         if (!await FlushEditsAsync()) return;
-        var snapshot = Document.Snapshot; var sheet = snapshot.Sheets[SheetIndex]; var table = CurrentTable; var filter = table?.Filter ?? (table is null ? sheet.Data.Filter : null);
+        var snapshot = Document.Snapshot; var sheet = snapshot.Sheets[SheetIndex]; var table = CurrentTable;
+        var filter = table?.Filter ?? (table is null && sheet.Data.Filter?.Range.Contains(_grid.Current.Row, _grid.Current.Column) == true ? sheet.Data.Filter : null);
+        var selected = Rectangle(SelectedRange());
+        if (table is null && filter is null && (SelectionPlanning.IsWholeColumn(selected) || SelectionPlanning.IsWholeRow(selected)))
+        {
+            var records = SortPlanning.WholeAxisRegion(sheet, selected, _grid.Current);
+            // A sheet-header selection may keep its active cell above the table. Recover its explicit
+            // header/total-row contract only when the entire inferred block belongs to that table/filter.
+            table = sheet.Data.Tables.FirstOrDefault(t => t.Range == records);
+            filter = table?.Filter ?? (sheet.Data.Filter?.Range == records ? sheet.Data.Filter : null);
+        }
         var block = table is not null ? new SortBlock(table.Range with { Bottom = table.Range.Bottom - (table.TotalsRow ? 1 : 0) }, table.HeaderRow) :
-            filter is not null ? new SortBlock(filter.Range, true) : SortPlanning.Resolve(sheet, Rectangle(SelectedRange()), _grid.Current);
+            filter is not null ? new SortBlock(filter.Range, true) : SortPlanning.Resolve(sheet, selected, _grid.Current);
         if (block.Range.Rows < 2) throw new ArgumentException("请选择包含多行记录的数据区域。");
         SortDescriptor descriptor;
         if (descending is { } order) descriptor = new(sheet.Id, new(block.Range.Top, block.Range.Left), new(block.Range.Bottom, block.Range.Right),
@@ -45,24 +64,60 @@ public sealed partial class MainWindow
     {
         if (!await FlushEditsAsync()) return;
         if (CurrentTable is not null) throw new InvalidOperationException("表格已有独立筛选；请使用当前列筛选。");
-        var range = SelectedRange(); if (range.Count == 1) { var block = SortPlanning.CurrentRegion(Document.Snapshot.Sheets[SheetIndex], range.Top, range.Left); range = new(block.Top, block.Left, block.Bottom, block.Right); }
+        var range = SelectedRange(); var sheet = Document.Snapshot.Sheets[SheetIndex]; var selected = Rectangle(range);
+        if (range.Count == 1 || SelectionPlanning.IsWholeColumn(selected) || SelectionPlanning.IsWholeRow(selected))
+        {
+            var block = range.Count == 1 ? SortPlanning.CurrentRegion(sheet, range.Top, range.Left) : SortPlanning.WholeAxisRegion(sheet, selected, _grid.Current);
+            range = new(block.Top, block.Left, block.Bottom, block.Right);
+        }
         new DataRegion(Guid.NewGuid(), Document.Snapshot.ActiveSheetId, range).Validate();
         await ExecuteAsync(new SetAutoFilterCommand(Document.Snapshot.ActiveSheetId, new(Rectangle(range))));
     }
     private async Task FilterAsync(int column)
     {
         if (!await FlushEditsAsync()) return;
-        var snapshot = Document.Snapshot; var sheet = snapshot.Sheets[SheetIndex]; var table = CurrentTable;
+        var snapshot = Document.Snapshot; var session = Document.Session.SessionId; var sheet = snapshot.Sheets[SheetIndex]; var table = CurrentTable;
         var filter = table is null ? sheet.Data.Filter : table.Filter;
         if (filter is null || column < filter.Range.Left || column > filter.Range.Right) throw new InvalidOperationException("请先建立筛选区域，并选择区域内的一列。");
-        var candidates = await Task.Run(() => PersistentFiltering.Candidates(snapshot, sheet, column, table?.Id));
-        var dialog = new FilterDialog(WorkbookGrid.ColumnName(column) + " 列筛选", candidates, filter.Columns.TryGetValue(column, out var current) ? PersistentFiltering.Restore(current) : null);
-        var result = await ShowOwnedAsync<FilterChoice?>(dialog); if (result is null) return;
-        if (snapshot.Revision != Document.Snapshot.Revision) throw new InvalidOperationException("筛选面板打开期间文档已改变，请重新打开。");
+        bool ContextCurrent() => session == Document.Session.SessionId && sheet.Id == Document.Snapshot.ActiveSheetId && snapshot.Revision == Document.Snapshot.Revision;
+        IReadOnlyList<FilterCandidate> candidates = []; string? candidateError = null;
+        try { candidates = await Task.Run(() => PersistentFiltering.Candidates(snapshot, sheet, column, table?.Id)); }
+        catch (Exception ex) { candidateError = ex.Message; }
+        if (!ContextCurrent() || _windowClosed) return;
+        var panel = new FilterPanel(WorkbookGrid.ColumnName(column) + " 列筛选", candidates,
+            filter.Columns.TryGetValue(column, out var current) ? PersistentFiltering.Restore(current) : null, candidateError);
+        var completion = new TaskCompletionSource<FilterChoice?>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var anchor = _grid.GetCellBounds(new(filter.Range.Top, column)) ?? _grid.GetCellBounds(_grid.Current) ?? new Rect(50, 0, 100, 28);
+        var popup = new Popup { Child = panel, PlacementTarget = _grid, Placement = PlacementMode.AnchorAndGravity,
+            PlacementRect = anchor, PlacementAnchor = PopupAnchor.BottomRight, PlacementGravity = PopupGravity.BottomLeft,
+            IsLightDismissEnabled = true, MaxHeight = Math.Max(280, Math.Min(640, ClientSize.Height - 40)) };
+        panel.MaxHeight = popup.MaxHeight;
+        panel.Completed += choice =>
+        {
+            // Conversion can reject unsupported combinations too; keep those errors inside the menu.
+            if (choice?.Filter is { } value) _ = PersistentFiltering.Convert(value, snapshot.DateSystem);
+            completion.TrySetResult(choice); popup.IsOpen = false;
+        };
+        popup.Closed += (_, _) => completion.TrySetResult(null);
+        _filterPopup = popup; _filterContextCurrent = ContextCurrent;
+        // Keep the popup in the logical tree so Fluent templates, resources and input routing apply.
+        _book.Children.Insert(0, popup);
+        FilterChoice? result;
+        try
+        {
+            popup.IsOpen = true; panel.FocusSearch();
+#if QUICKEXCEL_DIAGNOSTICS
+            if (Program.SmokeDirectory is not null && _filterDriver is { } driver) { _filterDriver = null; await driver(panel); }
+#endif
+            result = await completion.Task;
+        }
+        finally { popup.IsOpen = false; popup.Child = null; _book.Children.Remove(popup); _filterPopup = null; _filterContextCurrent = null; }
+        if (result is null) return;
+        if (!ContextCurrent()) throw new InvalidOperationException("筛选面板打开期间文档已改变，请重新打开。");
         if (result.Action is "ascending" or "descending")
         {
-            var range = filter.Range;
-            if (await ExecuteAsync(new SortRangeCommand(new(sheet.Id, new(range.Top, range.Left), new(range.Bottom, range.Right), [new(column, result.Action == "descending")], true, table is null)), snapshot.Revision)) await CalculateAsync();
+            var range = table is null ? filter.Range : table.Range with { Bottom = table.Range.Bottom - (table.TotalsRow ? 1 : 0) };
+            if (await ExecuteAsync(new SortRangeCommand(new(sheet.Id, new(range.Top, range.Left), new(range.Bottom, range.Right), [new(column, result.Action == "descending")], table?.HeaderRow ?? true, table is null)), snapshot.Revision)) await CalculateAsync();
             return;
         }
         var columns = result.Action == "clear-all" ? filter.Columns.Clear() : result.Action == "clear" ? filter.Columns.Remove(column) :

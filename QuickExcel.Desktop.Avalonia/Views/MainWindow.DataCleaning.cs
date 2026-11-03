@@ -13,9 +13,9 @@ public sealed partial class MainWindow
     private void InstallCleaning()
     {
         InstallOutline();
-        RibbonGroup("数据", "数据清理", RibbonButton("删除重复记录…", RemoveDuplicatesAsync), RibbonButton("文本分列…", SplitTextAsync), RibbonButton("文本转数字…", ConvertNumbersAsync));
-        RibbonGroup("数据", "条件格式", RibbonButton("条件格式管理…", ConditionalFormatsAsync));
-        RibbonGroup("数据", "分组与汇总", RibbonButton("分组…", () => GroupAsync(false)), RibbonButton("取消分组…", () => GroupAsync(true)), RibbonButton("展开/折叠…", OutlineAsync), RibbonButton("分类汇总…", SubtotalsAsync));
+        RibbonGroup("数据", "数据清理", RibbonButton("删除重复记录", RemoveDuplicatesAsync), RibbonButton("文本分列", SplitTextAsync), RibbonButton("文本转数字", ConvertNumbersAsync));
+        RibbonGroup("数据", "条件格式", RibbonButton("条件格式管理", ConditionalFormatsAsync));
+        RibbonGroup("数据", "分组与汇总", RibbonButton("分组", () => GroupAsync(false)), RibbonButton("取消分组", () => GroupAsync(true)), RibbonButton("展开/折叠", OutlineAsync), RibbonButton("分类汇总", SubtotalsAsync));
     }
     private static int[] ColumnNumbers(string text) => text.Split([',', '，', ' '], StringSplitOptions.RemoveEmptyEntries).Select(v => CellRectangle.Parse(v.Trim() + "1").Left).ToArray();
     private async Task RemoveDuplicatesAsync()
@@ -79,7 +79,7 @@ public sealed partial class MainWindow
         overwrite.IsCheckedChanged += (_, _) => apply.IsEnabled = preview.Overwrites.IsEmpty || overwrite.IsChecked == true;
         apply.Click += (_, _) => window.Close(true); cancel.Click += (_, _) => window.Close(false); buttons.Children.Add(apply); buttons.Children.Add(cancel);
         DockPanel.SetDock(footer, Dock.Bottom); root.Children.Add(footer);
-        string Preview(CellContent? cell) { var text = cell is null ? "" : CellInput.EditText(cell); return text.Length <= 200 ? text : text[..200] + "…"; }
+        string Preview(CellContent? cell) { var text = cell is null ? "" : CellInput.EditText(cell); return text.Length <= 200 ? text : text[..200] + ""; }
         root.Children.Add(new ListBox { ItemsSource = preview.Changes, ItemTemplate = new FuncDataTemplate<CleaningCellPreview>((change, _) => new TextBlock
         { Text = $"{QuickExcel.Formulas.FormulaSyntax.ColumnName(change!.Address.Column)}{change.Address.Row + 1}   {Preview(change.Before)}  →  {Preview(change.After)}", TextTrimming = TextTrimming.CharacterEllipsis }) });
         window.Content = root;

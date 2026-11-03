@@ -91,3 +91,14 @@ Linux Xvfb 不是物理桌面、真实辅助技术或中文 IME 证据。此前�
 
 最终 GC 配置下并发 `20261102-201254-ea03b14d` 通过，网格普通/样式/拖选 **9.4139 / 9.8408 / 18.0095 ms**，补全 **2.4 ms**、PDF 缩放 **48.8 ms**；Monaco `20261102-201306-067d6b3e` 输入、补全、开关保留与进程树上限通过。Linux 两轮证据对应此前相同 Web 补丁版本，最后的缓存释放/GC 配置尚未在 Linux 重跑，留给平台阶段复验。
 最终 Windows 功能复验 `20261102-201442-14a442b6`：42 项通过，随后全解决方案构建 0 警告/0 错误。最终 Monaco 输入 p95 13.5 ms、补全 6.5 ms、打开 1137.16 ms，峰值 629,530,624 字节，十轮后增长 25,456,640 字节。
+
+## 2026-11-03：修复离线资源副本不一致
+
+PDF 预览报“Web 资源容量不匹配或超限”、脚本编辑器报“页面已停止”的本地复现来自同一资源目录：构建输出 `preview.html` 为 2745 字节，清单要求 2751 字节；`script.html` 为 677 字节，清单要求 680 字节。两个输出文件删过省略号，时间戳比正确的生成资源新，`PreserveNewest` 因而跳过覆盖；重新构建后错误仍然存在。
+
+Avalonia 项目的 Web 资源在 build/publish 中改用 `IfDifferent`，修复更新但大小或时间戳不同的目标副本。运行时仍严格检查容量与 SHA-256；大小不匹配现在报告资源名、预期/实际字节数和重新构建/安装提示，不再与容量超限混为一谈。应修改 `QuickExcel.Web/src` 后生成完整资源与清单，不应直接修改输出目录中的 Web 文件。
+
+- `scripts/test-avalonia-web-assets.ps1` 在独立 artifacts 目录实际构建/发布，改写两份 HTML、等长 JavaScript 和清单并设置未来时间戳，再增量构建/发布；两项修复检查通过，证据 `artifacts/avalonia/web-asset-tests/20261103-014908-6327a2b4`。
+- 本地资源/草稿协议 **18 项通过**（包含等长修改仍被 SHA-256 拒绝），`artifacts/avalonia/web-resource-fix/6b208bda62f04bb38e18fd2435d4bd4a/web-resource-fix.trx`；修复前的真实宿主失败保留在同目录 `before/result.json`。
+- 真实 WebView2 页面 **42 项通过**，覆盖 Monaco worker/编辑/保存/恢复和 PDF.js 预览/搜索/导出，证据 `artifacts/avalonia/web-tests/20261103-014946-27126167`。只运行相关专项，未运行全量回归或性能基准。
+- 正式包 `artifacts/avalonia/releases/20261103-015012-6f4cdc85/application` 已通过生产自检并激活；开发输出已恢复正式资源。实机输入/打印等延期范围不变。

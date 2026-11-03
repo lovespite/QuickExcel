@@ -32,9 +32,11 @@ public sealed partial class MainWindow
     private static CellRectangle Rectangle(GridRange range) => new(range.Top, range.Left, range.Bottom, range.Right);
     private CellAddress[] SelectedAddresses(int limit = 20_000)
     {
-        if (_grid.SelectionRanges.Sum(r => r.Count) > limit) throw new ArgumentException($"单次操作上限为 {limit:N0} 格。");
-        var sheet = Document.Snapshot.ActiveSheetId;
-        return _grid.Selection.Select(p => new CellAddress(sheet, p.Row, p.Column)).ToArray();
+        var sheet = Document.Snapshot.Sheets[SheetIndex];
+        var ranges = _grid.SelectionRanges.Select(r => SelectionPlanning.BoundToUsedCells(sheet, Rectangle(r))).ToArray();
+        if (ranges.Sum(r => r.Count) > limit) throw new ArgumentException($"实际操作区域超过 {limit:N0} 格，请缩小选区。");
+        return ranges.SelectMany(r => Enumerable.Range(r.Top, r.Rows).SelectMany(row =>
+            Enumerable.Range(r.Left, r.Columns).Select(column => new CellAddress(sheet.Id, row, column)))).Distinct().ToArray();
     }
     private async Task<bool> ExecuteAsync(DocumentCommand command, long? revision = null)
     {
@@ -144,7 +146,7 @@ public sealed partial class MainWindow
         foreach (var (title, mode) in new[] { ("粘贴  Ctrl+V", "all"), ("只贴值", "values"), ("粘贴公式", "formulas"), ("只贴格式", "formats"), ("转置粘贴", "transpose") })
             edit.Items.Add(CommandMenu(title, () => PasteAsync(mode)));
         edit.Items.Add(CommandMenu("向下填充  Ctrl+D", () => FillDirectionAsync(false)));
-        edit.Items.Add(CommandMenu("向右填充  Ctrl+R", () => FillDirectionAsync(true))); edit.Items.Add(CommandMenu("填充序列…", SeriesAsync));
+        edit.Items.Add(CommandMenu("向右填充  Ctrl+R", () => FillDirectionAsync(true))); edit.Items.Add(CommandMenu("填充序列", SeriesAsync));
         var menu = new ContextMenu();
         foreach (var (title, action) in new (string, Func<Task>)[] { ("复制", () => CopyAsync(false)), ("剪切", () => CopyAsync(true)), ("粘贴", () => PasteAsync("all")), ("只贴值", () => PasteAsync("values")), ("清除内容", ClearAsync) })
             menu.Items.Add(CommandMenu(title, action));

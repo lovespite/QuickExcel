@@ -100,9 +100,64 @@ public sealed class SortExpansionTests
     }
 
     [Fact]
+    public void SingleNumericColumnRecognizesItsTextHeader()
+    {
+        var sheet = Sheet("P", (0, 0, T("金额")), (1, 0, N(2)), (2, 0, N(1)));
+        Assert.True(SortPlanning.Resolve(sheet, new(0, 0, WorkbookLimits.MaxRows - 1, 0), new(0, 0)).HasHeader);
+    }
+
+    [Fact]
     public void BlankActiveCellDoesNotInventARange()
     {
         var sheet = Sheet("P", (0, 0, T("甲")), (0, 1, N(1)));
         Assert.Equal(new CellRectangle(5, 0, 5, 0), SortPlanning.Resolve(sheet, null, new(5, 0)).Range);
+    }
+
+    [Fact]
+    public void WholeColumnSortFindsOffsetHeadersAndIncludesRecordsBeyondBlankRows()
+    {
+        var sheet = Sheet("Offset", (4, 1, T("名称")), (4, 2, T("金额")),
+            (5, 1, T("甲")), (5, 2, N(2)), (7, 1, T("乙")), (7, 2, N(1)));
+        var block = SortPlanning.Resolve(sheet, new(0, 2, WorkbookLimits.MaxRows - 1, 2), new(0, 2));
+        Assert.Equal(new CellRectangle(4, 1, 7, 2), block.Range); Assert.True(block.HasHeader);
+        using var doc = new WorkbookDocument(Book(sheet), Services);
+        doc.Session.Execute(new SortRangeCommand(new(sheet.Id, new(block.Range.Top, block.Range.Left), new(block.Range.Bottom, block.Range.Right), [new(2)], block.HasHeader)));
+        Assert.Equal("金额", doc.GetCellInput(0, 4, 2)); Assert.Equal("乙", doc.GetCellInput(0, 5, 1)); Assert.Equal("甲", doc.GetCellInput(0, 6, 1));
+        doc.Session.Undo(); Assert.Equal("乙", doc.GetCellInput(0, 7, 1));
+    }
+
+    [Fact]
+    public void OversizedExplicitSelectionIsRejectedInsteadOfSilentlySortingASmallerBlock()
+    {
+        var sheet = Sheet("P", (0, 0, N(2)), (1, 0, N(1)));
+        Assert.Throws<InvalidOperationException>(() => SortPlanning.Resolve(sheet, new(0, 0, 20_000, 0), new(0, 0)));
+    }
+
+    [Fact]
+    public void WholeColumnSortIncludesTrailingBlankKeysInConnectedRecords()
+    {
+        var sheet = Sheet("BlankKey", (4, 0, T("名称")), (4, 1, T("金额")), (5, 0, T("甲")), (5, 1, N(2)), (6, 0, T("乙")), (7, 0, T("丙")));
+        var block = SortPlanning.Resolve(sheet, new(0, 1, WorkbookLimits.MaxRows - 1, 1), new(0, 1));
+        Assert.Equal(new CellRectangle(4, 0, 7, 1), block.Range);
+        Assert.True(block.HasHeader);
+    }
+
+    [Fact]
+    public void WholeColumnFilterRangeDoesNotInheritTheSortCellLimit()
+    {
+        var sheet = Sheet("Filter", (0, 0, T("标题")), (25_000, 0, N(1)));
+        var selection = new CellRectangle(0, 0, WorkbookLimits.MaxRows - 1, 0);
+        Assert.Equal(new CellRectangle(0, 0, 25_000, 0), SortPlanning.WholeAxisRegion(sheet, selection, new(0, 0)));
+        Assert.Throws<InvalidOperationException>(() => SortPlanning.Resolve(sheet, selection, new(0, 0)));
+    }
+
+    [Fact]
+    public void WholeColumnCellCommandsBoundBeforeEnumerationAndIgnoreOtherColumns()
+    {
+        var sheet = Sheet("P", (0, 0, T("头")), (12, 0, N(1)), (WorkbookLimits.MaxRows - 1, 4, N(2)));
+        Assert.Equal(new CellRectangle(0, 0, 12, 0), SelectionPlanning.BoundToUsedCells(sheet, new(0, 0, WorkbookLimits.MaxRows - 1, 0)));
+        Assert.Equal(new CellRectangle(0, 1, 0, 1), SelectionPlanning.BoundToUsedCells(sheet, new(0, 1, WorkbookLimits.MaxRows - 1, 1)));
+        Assert.Equal(new CellRectangle(12, 0, 12, 0), SelectionPlanning.BoundToUsedCells(sheet, new(12, 0, 12, WorkbookLimits.MaxColumns - 1)));
+        Assert.Equal(new CellRectangle(0, 0, 99, 0), SelectionPlanning.BoundToUsedCells(sheet, new(0, 0, 99, 0)));
     }
 }

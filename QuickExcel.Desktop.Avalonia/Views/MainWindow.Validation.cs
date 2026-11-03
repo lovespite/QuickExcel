@@ -9,14 +9,14 @@ namespace QuickExcel.Desktop.Avalonia;
 public sealed partial class MainWindow
 {
     private readonly StackPanel _validationPanel = new() { Orientation = Orientation.Horizontal, Spacing = 10, Margin = new(8, 0, 8, 4), IsVisible = false };
-    private readonly ComboBox _validationValues = new() { MinWidth = 170, PlaceholderText = "选择列表值…" };
+    private readonly ComboBox _validationValues = new() { MinWidth = 170, PlaceholderText = "选择列表值" };
     private readonly TextBlock _validationHint = new() { VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis };
     private bool _updatingValidation;
     private sealed record ValidationValue(CellValue Value) { public override string ToString() => CellInput.DisplayText(Value); }
     private void InstallValidation()
     {
         DockPanel.SetDock(_validationPanel, Dock.Top); _validationPanel.Children.Add(_validationValues); _validationPanel.Children.Add(_validationHint); _book.Children.Insert(_book.Children.Count - 1, _validationPanel);
-        RibbonGroup("数据", "数据验证", RibbonButton("数据验证…", EditValidationAsync), RibbonButton("清除验证…", RemoveValidationAsync));
+        RibbonGroup("数据", "数据验证", RibbonButton("数据验证", EditValidationAsync), RibbonButton("清除验证", RemoveValidationAsync));
         _validationValues.DropDownOpened += (_, _) =>
         {
             try
