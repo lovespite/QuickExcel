@@ -40,11 +40,27 @@ internal static class XlsxDrawingAnchors
             anchor = DrawingGeometry.FromBounds(geometry, anchor.Bounds(geometry), behavior switch { "oneCell" => DrawingAnchorKind.OneCell, "absolute" => DrawingAnchorKind.Absolute, _ => throw new NotSupportedException("图片跟随单元格规则尚未支持。") });
         if (anchor.Bounds(geometry) is { Width: > 0, Height: > 0 } bounds)
             _ = DrawingGeometry.FromBounds(geometry, bounds, DrawingAnchorKind.TwoCell);
+        var transform = element.Element(Drawing + "pic")?.Element(Drawing + "spPr")?.Element(Art + "xfrm") ?? element.Element(Drawing + "graphicFrame")?.Element(Drawing + "xfrm");
+        if (transform?.Attributes().Any(a => !a.IsNamespaceDeclaration && a.Name.LocalName != "rot") == true) throw new NotSupportedException("绘图翻转或未知变换尚未支持。");
+        if ((string?)transform?.Attribute("rot") is { } rotation)
+        {
+            if (!int.TryParse(rotation, NumberStyles.Integer, CultureInfo.InvariantCulture, out var angle)) throw new InvalidDataException("绘图旋转角度无效。");
+            anchor = anchor with { Rotation = DrawingGeometry.NormalizeRotation(angle / 60000d) };
+        }
         return anchor;
     }
 
     internal static XElement Write(DrawingAnchor anchor, XElement content)
     {
+        if (anchor.Rotation != 0)
+        {
+            var transform = content.Name == Drawing + "pic" ? content.Element(Drawing + "spPr")?.Element(Art + "xfrm") : content.Element(Drawing + "xfrm");
+            if (transform is null && content.Name == Drawing + "pic")
+            {
+                transform = new XElement(Art + "xfrm"); content.Element(Drawing + "spPr")!.AddFirst(transform);
+            }
+            transform?.SetAttributeValue("rot", (int)Math.Round(anchor.Rotation * 60000));
+        }
         XElement Marker(string name, int row, int col, long rowOff, long colOff) => new(Drawing + name,
             new XElement(Drawing + "col", col), new XElement(Drawing + "colOff", colOff), new XElement(Drawing + "row", row), new XElement(Drawing + "rowOff", rowOff));
         var result = new XElement(Drawing + (anchor.Kind switch { DrawingAnchorKind.TwoCell => "twoCellAnchor", DrawingAnchorKind.OneCell => "oneCellAnchor", _ => "absoluteAnchor" }));

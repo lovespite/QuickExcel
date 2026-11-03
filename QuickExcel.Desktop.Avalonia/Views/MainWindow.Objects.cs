@@ -9,6 +9,16 @@ public sealed partial class MainWindow
 {
     private void InstallObjects()
     {
+        _grid.DrawingObjectChanged += change => _ = PerformAsync(async () =>
+        {
+            if (Document.Snapshot.DocumentId != change.DocumentId || Document.Snapshot.ActiveSheetId != change.SheetId) return;
+            await ExecuteAsync(new TransformDrawingObjectCommand(change.SheetId, change.Target, change.Original, change.Placement), change.Revision);
+        });
+        _grid.DrawingObjectSelectionChanged += () =>
+        {
+            UpdateFormula();
+            if (_grid.SelectedDrawingObject is { } target) _status.Text = $"已选择{(target.Kind == DrawingObjectKind.Image ? "图片" : "图表")} {target.Index + 1}：拖动移动，边框控制点缩放，顶部圆点旋转；Shift 保持比例或按 15° 旋转，Esc 取消。";
+        };
         RibbonGroup("插入", "对象", RibbonButton("图片管理", ImagesAsync), RibbonButton("图表管理", ChartsAsync), RibbonButton("批注", NoteAsync));
         RibbonGroup("页面布局", "页面设置", RibbonButton("页面设置", PageSettingsAsync), RibbonButton("设为打印区域", () => PrintAreaAsync(false)),
             RibbonButton("清除打印区域", () => PrintAreaAsync(true)), RibbonButton("分页", PageBreaksAsync));
@@ -27,6 +37,7 @@ public sealed partial class MainWindow
         if (!await FlushEditsAsync()) return;
         var snapshot = Document.Snapshot; var sheet = snapshot.Sheets[SheetIndex]; var current = _grid.Current;
         var choose = new FieldsDialog("图片管理").Choice("image", "图片", new[] { "插入新图片" }.Concat(sheet.Images.Select((_, i) => $"图片 {i + 1}")).ToArray()).Check("remove", "删除所选图片");
+        if (_grid.SelectedDrawingObject is { Kind: DrawingObjectKind.Image } selected) ((ComboBox)choose.Input("image")).SelectedIndex = selected.Index + 1;
         if (!await choose.ShowAsync(this)) return; var index = choose.Index("image") - 1;
         if (choose.Boolean("remove")) { if (index < 0) throw new ArgumentException("请先选择已有图片。"); await ExecuteAsync(new SetImageCommand(sheet.Id, index, null), snapshot.Revision); return; }
         SheetImage image;
@@ -46,42 +57,54 @@ public sealed partial class MainWindow
         }
         else image = sheet.Images[index];
         var bounds = image.Anchor.Bounds(sheet);
-        var dialog = DrawingFields("图片位置和尺寸", bounds, image.Anchor.Kind);
+        var dialog = DrawingFields("图片位置和尺寸", bounds, image.Anchor.Kind, image.Anchor.Rotation);
         if (await dialog.ShowAsync(this)) await ExecuteAsync(new SetImageCommand(sheet.Id, index, image.WithAnchor(ReadAnchor(dialog, sheet))), snapshot.Revision);
     }
-    private static FieldsDialog DrawingFields(string title, DrawingBounds bounds, DrawingAnchorKind kind)
+    private static FieldsDialog DrawingFields(string title, DrawingBounds bounds, DrawingAnchorKind kind, double rotation = 0)
     {
         var dialog = new FieldsDialog(title).Note("位置和尺寸使用 96 DPI 像素。")
             .Text("left", "距工作表左边", bounds.X.ToString()).Text("top", "距工作表顶部", bounds.Y.ToString())
             .Text("width", "宽度", bounds.Width.ToString()).Text("height", "高度", bounds.Height.ToString())
+            .Text("rotation", "旋转角度（度）", rotation.ToString())
             .Choice("behavior", "随单元格变化", ["移动并缩放", "移动但不缩放", "固定位置和尺寸"], (int)kind);
-        dialog.Validate = () => ReadBounds(dialog); return dialog;
+        dialog.Validate = () => { ReadBounds(dialog); dialog.Number("rotation", -36000, 36000); }; return dialog;
     }
     private static DrawingBounds ReadBounds(FieldsDialog dialog) => new(dialog.Number("left", 0, 2_000_000_000), dialog.Number("top", 0, 2_000_000_000), dialog.Number("width", 1, 100000), dialog.Number("height", 1, 100000));
-    private static DrawingAnchor ReadAnchor(FieldsDialog dialog, WorksheetSnapshot sheet) => DrawingGeometry.FromBounds(sheet, ReadBounds(dialog), (DrawingAnchorKind)dialog.Index("behavior"));
+    private static DrawingAnchor ReadAnchor(FieldsDialog dialog, WorksheetSnapshot sheet) => DrawingGeometry.FromBounds(sheet, ReadBounds(dialog), (DrawingAnchorKind)dialog.Index("behavior"), DrawingGeometry.NormalizeRotation(Math.Round(dialog.Number("rotation", -36000, 36000) * 60000) / 60000));
     private async Task ChartsAsync()
     {
         if (!await FlushEditsAsync()) return;
-        var snapshot = Document.Snapshot; var sheet = snapshot.Sheets[SheetIndex]; var selection = Rectangle(SelectedRange());
+        var snapshot = Document.Snapshot; var sheet = snapshot.Sheets[SheetIndex]; var selection = Rectangle(SelectedRange(allowObject: true));
         var dialog = new FieldsDialog("图表管理").Choice("chart", "图表", new[] { "插入新图表" }.Concat(sheet.Data.Charts.Select((c, i) => $"{i + 1} · {c.Title}")).ToArray())
-            .Choice("kind", "类型", ["簇状柱形图", "折线图", "饼图"]).Text("title", "标题").Text("range", "数据范围（首行标题，首列分类；编辑时留空保持）", selection.ToString())
+            .Choice("kind", "类型", ["簇状柱形图", "折线图", "饼图", "散点图", "平滑曲线图", "瀑布图", "漏斗图"]).Text("title", "标题").Text("range", "数据范围（首行标题，首列分类；编辑时留空保持）", selection.ToString())
+            .Note("散点图首列为数值 X，其余列为 Y。饼图、瀑布图和漏斗图使用两列。")
+            .Text("totals", "瀑布图总计点（从 1 开始，用逗号分隔）")
             .Choice("legend", "图例", ["右侧", "底部", "左侧", "顶部", "隐藏"]).Check("position", "调整位置和尺寸").Check("remove", "删除所选图表");
         ((ComboBox)dialog.Input("chart")).SelectionChanged += (_, _) =>
         {
             if (dialog.Index("chart") == 0) return;
             var chart = sheet.Data.Charts[dialog.Index("chart") - 1]; ((TextBox)dialog.Input("title")).Text = chart.Title; ((TextBox)dialog.Input("range")).Text = "";
+            ((TextBox)dialog.Input("totals")).Text = string.Join(",", chart.Series[0].TotalPoints.Select(i => i + 1));
             ((ComboBox)dialog.Input("kind")).SelectedIndex = (int)chart.Kind; ((ComboBox)dialog.Input("legend")).SelectedIndex = chart.Legend switch { "r" => 0, "b" => 1, "l" => 2, "t" => 3, _ => 4 };
         };
+        if (_grid.SelectedDrawingObject is { Kind: DrawingObjectKind.Chart } selected) ((ComboBox)dialog.Input("chart")).SelectedIndex = selected.Index + 1;
         if (!await dialog.ShowAsync(this)) return;
         var index = dialog.Index("chart") == 0 ? sheet.Data.Charts.Length : dialog.Index("chart") - 1;
         if (dialog.Boolean("remove")) { await ExecuteAsync(new SetChartCommand(sheet.Id, index, null), snapshot.Revision); return; }
         var old = index < sheet.Data.Charts.Length ? sheet.Data.Charts[index] : null;
         var anchor = old?.Anchor ?? DrawingGeometry.FromBounds(sheet, new(DrawingGeometry.ColumnStart(sheet, selection.Left), DrawingGeometry.RowStart(sheet, Math.Min(WorkbookLimits.MaxRows - 1, selection.Bottom + 2)), 560, 320), DrawingAnchorKind.OneCell);
-        var chart = string.IsNullOrWhiteSpace(dialog.String("range")) && old is not null ? old with { Kind = (WorksheetChartKind)dialog.Index("kind"), Title = dialog.String("title") } :
+        var chart = string.IsNullOrWhiteSpace(dialog.String("range")) && old is not null ? SetChartCommand.ChangeKind(old, (WorksheetChartKind)dialog.Index("kind")) with { Title = dialog.String("title") } :
             SetChartCommand.FromRange(sheet, CellRectangle.Parse(dialog.String("range")), (WorksheetChartKind)dialog.Index("kind"), anchor, dialog.String("title"));
+        if (old is not null && !string.IsNullOrWhiteSpace(dialog.String("range")) && old.Kind == chart.Kind)
+            chart = old with { Title = chart.Title, Series = [.. chart.Series.Select((s, i) => i >= old.Series.Length ? s : old.Series[i] with {
+                Name = s.Name, NameReference = s.NameReference, Categories = s.Categories, Values = s.Values,
+                TotalPoints = [.. old.Series[i].TotalPoints.Where(p => p < WorksheetChart.Count(WorksheetChart.ParseReference(s.Values)))],
+                PointColors = old.Series[i].PointColors.IsEmpty ? [] : [.. Enumerable.Range(0, WorksheetChart.Count(WorksheetChart.ParseReference(s.Values))).Select(p => p < old.Series[i].PointColors.Length ? old.Series[i].PointColors[p] : old.Kind == WorksheetChartKind.Waterfall ? "" : old.Series[i].Color)] })] };
+        if (chart.Kind == WorksheetChartKind.Waterfall)
+            chart = chart with { Series = [chart.Series[0] with { TotalPoints = [.. dialog.String("totals").Split([',', '，'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Select(s => int.Parse(s) - 1)] }] };
         chart = chart with { Legend = dialog.Index("legend") switch { 0 => "r", 1 => "b", 2 => "l", 3 => "t", _ => null } };
         if (dialog.Boolean("position"))
-        { var position = DrawingFields("图表位置和尺寸", chart.Anchor.Bounds(sheet), chart.Anchor.Kind); if (!await position.ShowAsync(this)) return; chart = chart with { Anchor = ReadAnchor(position, sheet) }; }
+        { var position = DrawingFields("图表位置和尺寸", chart.Anchor.Bounds(sheet), chart.Anchor.Kind, chart.Anchor.Rotation); if (!await position.ShowAsync(this)) return; chart = chart with { Anchor = ReadAnchor(position, sheet) }; }
         await ExecuteAsync(new SetChartCommand(sheet.Id, index, chart), snapshot.Revision);
     }
 }

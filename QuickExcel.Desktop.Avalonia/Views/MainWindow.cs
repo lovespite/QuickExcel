@@ -94,6 +94,7 @@ public sealed partial class MainWindow : Window
             if (Program.SmokeDirectory is { } executionDirectory && Program.SmokeMode == "execution") { await RunExecutionSmokeAsync(executionDirectory); return; }
             if (Program.SmokeDirectory is { } automationDirectory && Program.SmokeMode == "automation") { await RunAutomationSmokeAsync(automationDirectory); return; }
             if (Program.SmokeDirectory is { } featureDirectory && Program.SmokeMode == "ribbon-filter") { await RunRibbonFilterSmokeAsync(featureDirectory); return; }
+            if (Program.SmokeDirectory is { } drawingDirectory && Program.SmokeMode == "drawing") { await RunDrawingSmokeAsync(drawingDirectory); return; }
             if (Program.SmokeDirectory is { } pageBreakDirectory && Program.SmokeMode == "page-break") { await RunPageBreakSmokeAsync(pageBreakDirectory); return; }
             if (Program.SmokeDirectory is { } compatibilityDirectory && Program.SmokeMode == "compatibility") { await RunCompatibilitySmokeAsync(compatibilityDirectory); return; }
             if (Program.SmokeDirectory is { } smoke && Program.SmokeMode != "manual") { if (Program.SmokeMode == "grid") await RunGridSmokeAsync(smoke); else if (Program.SmokeMode == "benchmark") await RunGridBenchmarkAsync(smoke); else if (Program.SmokeMode == "web") await RunWebSmokeAsync(smoke); else if (Program.SmokeMode == "web-benchmark") await RunWebBenchmarkAsync(smoke); else await RunWorkspaceSmokeAsync(smoke); return; }
@@ -187,7 +188,7 @@ public sealed partial class MainWindow : Window
         if (_formulaDirty || _formula.IsComposing) return;
         var sheet = Document.Snapshot.Sheets[SheetIndex];
         _synchronizing = true; _formula.Text = ProtectionSafety.HidesFormula(Document.Snapshot, sheet, _grid.Current.Row, _grid.Current.Column) ? "" : Document.GetCellInput(SheetIndex, _grid.Current.Row, _grid.Current.Column); _synchronizing = false;
-        _formulaOwner = null; _formula.IsReadOnly = _grid.IsCellReadOnly(_grid.Current);
+        _formulaOwner = null; _formula.IsReadOnly = _grid.SelectedDrawingObject is not null || _grid.IsCellReadOnly(_grid.Current);
     }
     private Task<bool>? _formulaCommit;
     private bool CommitFormula()
@@ -325,6 +326,12 @@ public sealed partial class MainWindow : Window
     private async Task History(bool redo) { if (await CommitEditorsAsync()) TryEdit(() => redo ? _workspace.Editor.Redo() : _workspace.Editor.Undo()); }
     private async Task ClearAsync()
     {
+        if (_grid.SelectedDrawingObject is { } target)
+        {
+            var snapshot = Document.Snapshot;
+            if (await ExecuteAsync(target.Kind == DrawingObjectKind.Image ? new SetImageCommand(snapshot.ActiveSheetId, target.Index, null) : new SetChartCommand(snapshot.ActiveSheetId, target.Index, null), snapshot.Revision)) _grid.ClearDrawingObjectSelection();
+            return;
+        }
         if (await CommitEditorsAsync())
         {
             var view = CurrentView; view.RequireCurrentFilter(Document.Snapshot);

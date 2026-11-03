@@ -29,8 +29,8 @@ internal static class Program
 #endif
         if (args.Length >= 2 && args[0] == "--self-check" && Directory.Exists(args[1])) return 2;
 #if QUICKEXCEL_DIAGNOSTICS
-        if (args.Length >= 2 && args[0] is "--workspace-smoke" or "--execution-smoke" or "--automation-smoke" or "--ribbon-filter-smoke" or "--page-break-smoke" or "--compatibility-smoke" or "--grid-smoke" or "--grid-benchmark" or "--web-smoke" or "--web-benchmark" or "--manual-check")
-        { SmokeDirectory = Path.GetFullPath(args[1]); SmokeMode = args[0] switch { "--execution-smoke" => "execution", "--automation-smoke" => "automation", "--ribbon-filter-smoke" => "ribbon-filter", "--page-break-smoke" => "page-break", "--compatibility-smoke" => "compatibility", "--grid-smoke" => "grid", "--grid-benchmark" => "benchmark", "--web-smoke" => "web", "--web-benchmark" => "web-benchmark", "--manual-check" => "manual", _ => "workspace" }; if (SmokeMode == "manual") InitialFile = args.ElementAtOrDefault(2); }
+        if (args.Length >= 2 && args[0] is "--drawing-smoke" or "--workspace-smoke" or "--execution-smoke" or "--automation-smoke" or "--ribbon-filter-smoke" or "--page-break-smoke" or "--compatibility-smoke" or "--grid-smoke" or "--grid-benchmark" or "--web-smoke" or "--web-benchmark" or "--manual-check")
+        { SmokeDirectory = Path.GetFullPath(args[1]); SmokeMode = args[0] switch { "--drawing-smoke" => "drawing", "--execution-smoke" => "execution", "--automation-smoke" => "automation", "--ribbon-filter-smoke" => "ribbon-filter", "--page-break-smoke" => "page-break", "--compatibility-smoke" => "compatibility", "--grid-smoke" => "grid", "--grid-benchmark" => "benchmark", "--web-smoke" => "web", "--web-benchmark" => "web-benchmark", "--manual-check" => "manual", _ => "workspace" }; if (SmokeMode == "manual") InitialFile = args.ElementAtOrDefault(2); }
         else InitialFile = args.FirstOrDefault(a => !a.StartsWith("--", StringComparison.Ordinal));
         if (SmokeMode == "web-benchmark") WebBenchmarkKind = args.ElementAtOrDefault(2) ?? "all";
         if (SmokeMode == "web") WebScriptsOnly = args.ElementAtOrDefault(2) == "--scripts-only";

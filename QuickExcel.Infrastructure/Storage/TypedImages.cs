@@ -34,9 +34,8 @@ internal static class TypedImages
                 var imagePath = package.Related(path, Attr(blip, Rel + "embed"), "image");
                 var extension = imagePath[(imagePath.LastIndexOf('.') + 1)..].ToLowerInvariant();
                 package.RequireType(imagePath, Mime(extension));
-                if (pic.Element(Drawing + "blipFill")?.Element(Art + "srcRect") is not null ||
-                    pic.Element(Drawing + "spPr")?.Element(Art + "xfrm")?.HasAttributes == true)
-                    package.Loss($"{path}: 图片裁剪或旋转未建模", "drawing/transform", path);
+                if (pic.Element(Drawing + "blipFill")?.Element(Art + "srcRect") is not null)
+                    package.Loss($"{path}: 图片裁剪未建模", "drawing/transform", path);
                 var imageBytes = package.BinaryPart(imagePath);
                 package.Budget.Parse(imageBytes.Length + 256);
                 images.Add(new SheetImage(imageBytes, extension, placement.Row, placement.Column,
@@ -56,6 +55,7 @@ internal static class TypedImages
         for (var index = 0; index < sheet.Images.Length; index++)
         {
             var image = sheet.Images[index];
+            var bounds = image.Anchor.Bounds(sheet);
             var filename = $"image{sheetNumber}-{index + 1}.{image.Extension}";
             var mediaPath = "xl/media/" + filename;
             parts.Add(mediaPath, image.Data.ToArray());
@@ -65,7 +65,10 @@ internal static class TypedImages
                 new XElement(Drawing + "pic", new XElement(Drawing + "nvPicPr",
                     new XElement(Drawing + "cNvPr", new XAttribute("id", index + 1), new XAttribute("name", $"Image {index + 1}")), new XElement(Drawing + "cNvPicPr")),
                     new XElement(Drawing + "blipFill", new XElement(Art + "blip", new XAttribute(Rel + "embed", $"image{index + 1}")), new XElement(Art + "stretch", new XElement(Art + "fillRect"))),
-                    new XElement(Drawing + "spPr", new XElement(Art + "prstGeom", new XAttribute("prst", "rect"), new XElement(Art + "avLst"))))));
+                    new XElement(Drawing + "spPr", new XElement(Art + "xfrm",
+                        new XElement(Art + "off", new XAttribute("x", DrawingGeometry.Emus(bounds.X)), new XAttribute("y", DrawingGeometry.Emus(bounds.Y))),
+                        new XElement(Art + "ext", new XAttribute("cx", DrawingGeometry.Emus(bounds.Width)), new XAttribute("cy", DrawingGeometry.Emus(bounds.Height)))),
+                        new XElement(Art + "prstGeom", new XAttribute("prst", "rect"), new XElement(Art + "avLst"))))));
         }
         root.Add(new XElement(Main + "drawing", new XAttribute(Rel + "id", "drawing")));
         parts[RelationshipPart($"xl/worksheets/sheet{sheetNumber}.xml")] = XmlBytes(new XDocument(new XElement(PackageRel + "Relationships", Relationship("drawing", "drawing", $"../drawings/drawing{sheetNumber}.xml"))));

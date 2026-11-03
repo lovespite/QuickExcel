@@ -5,6 +5,28 @@ namespace QuickExcel.Core;
 
 public sealed class SetChartCommand(SheetId sheetId, int index, WorksheetChart? chart) : DocumentCommand
 {
+    public static WorksheetChart ChangeKind(WorksheetChart chart, WorksheetChartKind kind)
+    {
+        if (chart.Kind == kind) return chart;
+        if (kind is WorksheetChartKind.Pie or WorksheetChartKind.Waterfall or WorksheetChartKind.Funnel && chart.Series.Length != 1)
+            throw new ArgumentException("饼图、瀑布图和漏斗图需要单个系列，请选择两列数据范围。");
+        string[] palette = ["FF4472C4", "FFED7D31", "FFA5A5A5", "FFFFC000", "FF5B9BD5", "FF70AD47"];
+        var axes = kind is not (WorksheetChartKind.Pie or WorksheetChartKind.Funnel);
+        return chart with
+        {
+            Kind = kind, OriginalXml = [], StyleParts = [], VisibleOnly = kind is WorksheetChartKind.Waterfall or WorksheetChartKind.Funnel || chart.VisibleOnly,
+            Minimum = axes ? chart.Minimum : null, Maximum = axes ? chart.Maximum : null, NumberFormat = axes ? chart.NumberFormat : "General",
+            XMinimum = null, XMaximum = null, XNumberFormat = "General", GapWidth = kind is WorksheetChartKind.Column or WorksheetChartKind.Waterfall ? chart.GapWidth : 150, Overlap = 0,
+            ShowConnectors = true, IncreaseColor = "FF4472C4", DecreaseColor = "FFED7D31", TotalColor = "FFA5A5A5",
+            Appearance = chart.Appearance with { Title = chart.Title.Length == 0 ? new(Size: 12) : chart.Appearance.Title,
+                Axis = axes ? chart.Appearance.Axis : new(), GridColor = axes ? chart.Appearance.GridColor : "FFD3D3D3", Legend = chart.Legend is null ? new() : chart.Appearance.Legend },
+            Series = [.. chart.Series.Select(s => s with { NumericCategories = kind == WorksheetChartKind.Scatter, Smooth = kind == WorksheetChartKind.SmoothLine,
+                ConnectPoints = kind != WorksheetChartKind.Scatter, Marker = kind == WorksheetChartKind.Scatter ? "circle" : "none", MarkerSize = 5,
+                LineWidth = 2, TotalPoints = [], ShowValues = kind is WorksheetChartKind.Waterfall or WorksheetChartKind.Funnel,
+                PointColors = kind is WorksheetChartKind.Pie or WorksheetChartKind.Funnel ? [.. Enumerable.Range(0, WorksheetChart.Count(WorksheetChart.ParseReference(s.Values))).Select(i => palette[i % palette.Length])] : [] })]
+        };
+    }
+
     internal override CommandDraft Prepare(WorkbookSnapshot snapshot)
     {
         var sheet = snapshot.GetSheet(sheetId);
@@ -20,17 +42,24 @@ public sealed class SetChartCommand(SheetId sheetId, int index, WorksheetChart? 
 
     public static WorksheetChart FromRange(WorksheetSnapshot sheet, CellRectangle range, WorksheetChartKind kind, DrawingAnchor anchor, string title = "")
     {
-        if (range.Rows < 2 || range.Columns < 2 || range.Columns > 17 || kind == WorksheetChartKind.Pie && range.Columns != 2)
-            throw new ArgumentException("首行为系列标题，首列为分类；需要 2–17 列，饼图需要 2 列。");
+        if (range.Rows < 2 || range.Columns < 2 || range.Columns > 17 || kind is WorksheetChartKind.Pie or WorksheetChartKind.Waterfall or WorksheetChartKind.Funnel && range.Columns != 2)
+            throw new ArgumentException("首行为系列标题，首列为分类（散点图为 X 值）；需要 2–17 列，饼图、瀑布图和漏斗图需要 2 列。");
         string Ref(int top, int left, int bottom, int right) => FormulaSyntax.Print(new ReferenceNode(sheet.Name, top, left, bottom, right, true, true, true, true, IsRange: top != bottom || left != right));
         string[] palette = ["FF4472C4", "FFED7D31", "FFA5A5A5", "FFFFC000", "FF5B9BD5", "FF70AD47"];
         return new() { Kind = kind, Title = title, Anchor = anchor, Series = [.. Enumerable.Range(range.Left + 1, range.Columns - 1).Select((c, i) =>
             new ChartSeries("", Ref(range.Top, c, range.Top, c), Ref(range.Top + 1, range.Left, range.Bottom, range.Left), Ref(range.Top + 1, c, range.Bottom, c), palette[i % palette.Length])
-            { PointColors = kind == WorksheetChartKind.Pie ? [.. Enumerable.Range(0, range.Rows - 1).Select(p => palette[p % palette.Length])] : [] })] };
+            { NumericCategories = kind == WorksheetChartKind.Scatter, ConnectPoints = kind != WorksheetChartKind.Scatter,
+                Smooth = kind == WorksheetChartKind.SmoothLine, Marker = kind == WorksheetChartKind.Scatter ? "circle" : "none",
+                ShowValues = kind is WorksheetChartKind.Waterfall or WorksheetChartKind.Funnel,
+                PointColors = kind is WorksheetChartKind.Pie or WorksheetChartKind.Funnel ? [.. Enumerable.Range(0, range.Rows - 1).Select(p => palette[p % palette.Length])] : [] })] };
     }
 }
 
-public sealed record ChartSeriesData(string Name, string[] Categories, double?[] Values, string Color, string[] PointColors);
+public sealed record ChartSeriesData(string Name, string[] Categories, double?[] Values, string Color, string[] PointColors)
+{
+    public double?[] XValues { get; init; } = [];
+    public bool[] Totals { get; init; } = [];
+}
 public static class ChartData
 {
     public static IReadOnlyList<ChartSeriesData> Read(WorkbookSnapshot book, WorksheetChart chart)
@@ -56,13 +85,33 @@ public static class ChartData
         {
             var values = Read(series.Values, out var valueSheet, out var vr); var categories = Read(series.Categories, out var categorySheet, out var cr);
             var hidden = chart.VisibleOnly ? WorksheetFilterEngine.Evaluate(book, valueSheet.Id) : [];
-            var selected = Enumerable.Range(0, values.Length).Where(i => !chart.VisibleOnly || !hidden.Contains(vr.Row + (vr.EndRow > vr.Row ? i : 0)) && valueSheet.Rows.GetValueOrDefault(vr.Row + (vr.EndRow > vr.Row ? i : 0))?.Hidden != true && valueSheet.Columns.GetValueOrDefault(vr.Column + (vr.EndColumn > vr.Column ? i : 0))?.Hidden != true).ToArray();
+            var categoryHidden = chart.VisibleOnly ? WorksheetFilterEngine.Evaluate(book, categorySheet.Id) : [];
+            bool Visible(WorksheetSnapshot sheet, ReferenceNode r, int i, IReadOnlySet<int> excluded) =>
+                !excluded.Contains(r.Row + (r.EndRow > r.Row ? i : 0)) && sheet.Rows.GetValueOrDefault(r.Row + (r.EndRow > r.Row ? i : 0))?.Hidden != true && sheet.Columns.GetValueOrDefault(r.Column + (r.EndColumn > r.Column ? i : 0))?.Hidden != true;
+            var selected = Enumerable.Range(0, values.Length).Where(i => !chart.VisibleOnly || Visible(valueSheet, vr, i, hidden) && Visible(categorySheet, cr, i, categoryHidden)).ToArray();
             var name = series.Name;
             if (series.NameReference is { } title) { var cell = Read(title, out var s, out var r)[0]; name = Display(cell, s, r.Row, r.Column); }
             output.Add(new(name, selected.Select(i => Display(categories[i], categorySheet, cr.Row + (cr.EndRow > cr.Row ? i : 0), cr.Column + (cr.EndColumn > cr.Column ? i : 0))).ToArray(),
                 selected.Select(i => values[i]?.Value.Kind == CellValueKind.Number ? (double?)values[i]!.Value.NumberValue : null).ToArray(), series.Color,
-                selected.Select(i => series.PointColors.IsEmpty ? series.Color : series.PointColors[i]).ToArray()));
+                selected.Select(i => series.PointColors.IsEmpty ? series.Color : series.PointColors[i]).ToArray())
+            {
+                XValues = selected.Select(i => categories[i]?.Value.Kind == CellValueKind.Number ? (double?)categories[i]!.Value.NumberValue : null).ToArray(),
+                Totals = selected.Select(i => series.TotalPoints.Contains(i)).ToArray()
+            });
         }
         return output;
+    }
+
+    public static (double Start, double End)[] Waterfall(ChartSeriesData series)
+    {
+        var total = 0d;
+        return series.Values.Select((value, i) =>
+        {
+            if (value is null) return (total, total);
+            var start = i < series.Totals.Length && series.Totals[i] ? 0 : total;
+            var end = start + (value ?? 0);
+            if (!double.IsFinite(end)) throw new InvalidOperationException("瀑布图累计值超出数值范围。");
+            total = end; return (start, end);
+        }).ToArray();
     }
 }

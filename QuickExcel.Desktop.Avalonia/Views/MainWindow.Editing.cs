@@ -22,8 +22,9 @@ public sealed partial class MainWindow
             view.RefreshFilter(Document.Snapshot); return view;
         }
     }
-    private GridRange SelectedRange()
+    private GridRange SelectedRange(bool allowObject = false)
     {
+        if (!allowObject && _grid.SelectedDrawingObject is not null) throw new InvalidOperationException("此操作需要单元格选区；请先点击单元格或按 Esc 取消对象选择。");
         var ranges = _grid.SelectionRanges;
         if (ranges.Count == 0) return new(_grid.Current.Row, _grid.Current.Column, _grid.Current.Row, _grid.Current.Column);
         if (ranges.Count != 1) throw new ArgumentException("此操作需要一个连续矩形选区。");
@@ -32,6 +33,7 @@ public sealed partial class MainWindow
     private static CellRectangle Rectangle(GridRange range) => new(range.Top, range.Left, range.Bottom, range.Right);
     private CellAddress[] SelectedAddresses(int limit = 20_000)
     {
+        if (_grid.SelectedDrawingObject is not null) throw new InvalidOperationException("此操作需要单元格选区；请先取消对象选择。");
         var sheet = Document.Snapshot.Sheets[SheetIndex];
         var ranges = _grid.SelectionRanges.Select(r => SelectionPlanning.BoundToUsedCells(sheet, Rectangle(r))).ToArray();
         if (ranges.Sum(r => r.Count) > limit) throw new ArgumentException($"实际操作区域超过 {limit:N0} 格，请缩小选区。");

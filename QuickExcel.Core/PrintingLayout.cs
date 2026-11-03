@@ -41,7 +41,8 @@ public static class PrintingLayout
         foreach (var merge in sheet.MergedCells.Select(CellRectangle.Parse)) { extentRows = Math.Max(extentRows, merge.Bottom + 1); extentColumns = Math.Max(extentColumns, merge.Right + 1); }
         foreach (var anchor in sheet.Images.Select(i => i.Anchor).Concat(sheet.Data.Charts.Select(c => c.Anchor)))
         {
-            var bounds = anchor.Bounds(sheet); if (bounds.Width <= 0 || bounds.Height <= 0) continue;
+            var bounds = DrawingGeometry.RotatedBounds(anchor.Bounds(sheet), anchor.Rotation); if (bounds.Width <= 0 || bounds.Height <= 0) continue;
+            bounds = new(Math.Max(0, bounds.X), Math.Max(0, bounds.Y), bounds.Width + Math.Min(0, bounds.X), bounds.Height + Math.Min(0, bounds.Y));
             var end = DrawingGeometry.FromBounds(sheet, bounds, DrawingAnchorKind.TwoCell);
             extentRows = Math.Max(extentRows, end.EndRow + (end.EndRowOffset > 0 ? 1 : 0)); extentColumns = Math.Max(extentColumns, end.EndColumn + (end.EndColumnOffset > 0 ? 1 : 0));
         }

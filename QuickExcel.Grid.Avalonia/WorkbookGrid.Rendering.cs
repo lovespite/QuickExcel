@@ -143,21 +143,8 @@ public sealed partial class WorkbookGrid
     }
     private void PaintAttachments(SKCanvas canvas)
     {
-        IEnumerable<Fragment> Attachment(DrawingAnchor anchor)
-        {
-            var bounds = anchor.Bounds(Sheet);
-            if (bounds.Width <= 0 || bounds.Height <= 0) yield break;
-            var cells = DrawingGeometry.FromBounds(Sheet, bounds, DrawingAnchorKind.TwoCell);
-            var range = new GridCellRange(cells.Row, cells.Column, Math.Min(_rows.Count - 1, cells.EndRow), Math.Min(_columns.Count - 1, cells.EndColumn));
-            foreach (var fragment in Fragments(range))
-            {
-                var rect = new Rect(fragment.Bounds.X + bounds.X - DrawingGeometry.ColumnStart(Sheet, range.Left),
-                    fragment.Bounds.Y + bounds.Y - DrawingGeometry.RowStart(Sheet, range.Top), bounds.Width, bounds.Height);
-                if (rect.Intersects(fragment.Clip)) yield return new(rect, fragment.Clip);
-            }
-        }
-        foreach (var image in Sheet.Images)
-        foreach (var fragment in Attachment(image.Anchor))
+        foreach (var (image, index) in Sheet.Images.Select((image, index) => (image, index)))
+        foreach (var fragment in ObjectFragments(DisplayAnchor(new(DrawingObjectKind.Image, index), image.Anchor)))
         {
             if (!_images.TryGetValue(image, out var pixels))
             {
@@ -169,28 +156,32 @@ public sealed partial class WorkbookGrid
                 _images[image] = pixels; _imageBytes += bytes;
             }
             canvas.Save(); canvas.ClipRect(SkiaRect(fragment.Clip));
-            if (pixels is not null) SkiaRenderer.DrawImage(canvas, pixels, SkiaRect(fragment.Bounds), false);
+            if (pixels is not null) SkiaRenderer.DrawImage(canvas, pixels, SkiaRect(fragment.Bounds), false, DisplayAnchor(new(DrawingObjectKind.Image, index), image.Anchor).Rotation);
             else Renderer.DrawText(canvas, new("图片无法预览", new()), SkiaRect(fragment.Bounds));
             canvas.Restore();
         }
-        foreach (var chart in Sheet.Data.Charts)
-        foreach (var fragment in Attachment(chart.Anchor))
+        foreach (var (originalChart, index) in Sheet.Data.Charts.Select((chart, index) => (chart, index)))
         {
-            if (!_charts.TryGetValue(chart, out var picture))
+            var chart = originalChart with { Anchor = DisplayAnchor(new(DrawingObjectKind.Chart, index), originalChart.Anchor) };
+            foreach (var fragment in ObjectFragments(chart.Anchor))
             {
-                using var recorder = new SKPictureRecorder(); var target = recorder.BeginRecording(SKRect.Create((float)fragment.Bounds.Width, (float)fragment.Bounds.Height));
-                try { Renderer.DrawChart(target, new(0, 0, fragment.Bounds.Width, fragment.Bounds.Height), _snapshot!, chart); }
-                catch (Exception ex) when (ex is InvalidOperationException or NotSupportedException or ArgumentException or FormatException)
-                { Renderer.DrawText(target, new("图表无法预览：" + ex.Message, new()), SKRect.Create((float)fragment.Bounds.Width, (float)fragment.Bounds.Height)); }
-                picture = recorder.EndRecording(); AdmitPicture(picture); _charts[chart] = picture;
+                if (!_charts.TryGetValue(chart, out var picture))
+                {
+                    using var recorder = new SKPictureRecorder(); var target = recorder.BeginRecording(SKRect.Create((float)fragment.Bounds.Width, (float)fragment.Bounds.Height));
+                    try { Renderer.DrawChart(target, new(0, 0, fragment.Bounds.Width, fragment.Bounds.Height), _snapshot!, chart with { Anchor = chart.Anchor with { Rotation = 0 } }); }
+                    catch (Exception ex) when (ex is InvalidOperationException or NotSupportedException or ArgumentException or FormatException)
+                    { Renderer.DrawText(target, new("图表无法预览：" + ex.Message, new()), SKRect.Create((float)fragment.Bounds.Width, (float)fragment.Bounds.Height)); }
+                    picture = recorder.EndRecording(); AdmitPicture(picture); _charts[chart] = picture;
+                }
+                canvas.Save(); canvas.ClipRect(SkiaRect(fragment.Clip)); canvas.RotateDegrees((float)chart.Anchor.Rotation, (float)fragment.Bounds.Center.X, (float)fragment.Bounds.Center.Y); canvas.Translate((float)fragment.Bounds.X, (float)fragment.Bounds.Y); canvas.DrawPicture(picture); canvas.Restore();
             }
-            canvas.Save(); canvas.ClipRect(SkiaRect(fragment.Clip)); canvas.Translate((float)fragment.Bounds.X, (float)fragment.Bounds.Y); canvas.DrawPicture(picture); canvas.Restore();
         }
     }
     private void PaintOverlay(DrawingContext context)
     {
         if (_snapshot is null) return;
         using var transform = context.PushTransform(Matrix.CreateScale(_zoom, _zoom));
+        if (_selectedObject is not null) { PaintDrawingSelection(context); return; }
         foreach (var range in _selection.Ranges)
         foreach (var fragment in Fragments(range))
         {

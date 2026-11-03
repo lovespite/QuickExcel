@@ -78,6 +78,7 @@ public sealed partial class WorkbookGrid : UserControl, IGridSurface, IDisposabl
         _canvas.PointerCaptureLost += (_, _) => CancelGesture();
         _canvas.PointerWheelChanged += (_, e) =>
         {
+            if (IsDrawingObjectDragging) { e.Handled = true; return; }
             if (e.KeyModifiers.HasFlag(KeyModifiers.Control) || e.KeyModifiers.HasFlag(KeyModifiers.Meta))
             {
                 e.Handled = true; if (IsComposing || e.Delta.Y == 0) return;
@@ -95,6 +96,7 @@ public sealed partial class WorkbookGrid : UserControl, IGridSurface, IDisposabl
     }
     public void Bind(WorkbookSnapshot snapshot, int sheetIndex, int rows, int columns)
     {
+        ClearDrawingObjectSelection();
         Cancel(); ReleaseRendering(); _snapshot = snapshot; _sheetIndex = sheetIndex; _zoom = Sheet.View.Zoom / 100d;
         Configure(rows, columns); _rows.ScrollTo(0, ViewHeight); _columns.ScrollTo(0, ViewWidth);
         SelectCore(Sheet.View.ActiveCell, false, false);
@@ -107,12 +109,14 @@ public sealed partial class WorkbookGrid : UserControl, IGridSurface, IDisposabl
     }
     public void Refresh(WorkbookSnapshot snapshot)
     {
+        if (IsDrawingObjectDragging && snapshot.Revision != _objectRevision) CancelObjectGesture();
         if (_snapshot is { } previous && previous.Revision == snapshot.Revision &&
             ReferenceEquals(previous.Sheets[_sheetIndex].Cells, snapshot.Sheets[_sheetIndex].Cells) &&
             previous.Sheets[_sheetIndex].View.Zoom == snapshot.Sheets[_sheetIndex].View.Zoom)
         { _snapshot = snapshot; if (!_editing) PrepareEditor(false); return; }
         if (!ReferenceEquals(_snapshot, snapshot)) ClearScene();
         _snapshot = snapshot; _zoom = Sheet.View.Zoom / 100d; Configure(_rows.Count, _columns.Count);
+        if (_selectedObject is { } selected && ObjectAnchor(selected) is null) ClearDrawingObjectSelection();
         UpdateScrollbars(); InvalidateContent(); if (!_editing) PrepareEditor(false); else PositionEditor();
     }
     private void Configure(int rows, int columns)
@@ -133,6 +137,7 @@ public sealed partial class WorkbookGrid : UserControl, IGridSurface, IDisposabl
     { if (Commit() && (BeforeSelection?.Invoke() ?? true)) SelectCore(position, extend, true); }
     private void SelectCore(CellPosition position, bool extend, bool focus)
     {
+        ClearDrawingObjectSelection();
         var row = _rows.NearestVisible(position.Row); var col = _columns.NearestVisible(position.Column);
         if (row < 0 || col < 0) return;
         if (!ProtectionSafety.CanSelect(_snapshot!, Sheet, row, col)) return;
@@ -151,6 +156,7 @@ public sealed partial class WorkbookGrid : UserControl, IGridSurface, IDisposabl
     {
         if (!CanSelectRanges([range], current)) return;
         if (!Commit() || !(BeforeSelection?.Invoke() ?? true)) return;
+        ClearDrawingObjectSelection();
         _selection.Set(GridMergedSelection.Expand(new(range.Top, range.Left, range.Bottom, range.Right), _merges));
         _current = current; _anchor = new(range.Top, range.Left); _overlay.InvalidateVisual(); PrepareEditor(false); SelectionChanged?.Invoke();
     }
@@ -190,13 +196,14 @@ public sealed partial class WorkbookGrid : UserControl, IGridSurface, IDisposabl
         Sheet.GetCell(position.Row, position.Column)?.Content.RichText is not null || !ProtectionSafety.CanEdit(_snapshot, Sheet, position.Row, position.Column);
     public bool BeginEdit()
     {
+        if (_selectedObject is not null) return false;
         if (_snapshot is null || IsComposing || IsCommitPending || IsCellReadOnly(_current)) return false;
         if (!_editing) DraftStarted?.Invoke();
         _editing = true; _draftOwner = _current; CellEditor.Opacity = 1; CellEditor.IsHitTestVisible = true; CellEditor.Focus(); CellEditor.CaretIndex = CellEditor.Text?.Length ?? 0; return true;
     }
     private void PrepareEditor(bool focus)
     {
-        if (_snapshot is null || _editing || IsComposing) return;
+        if (_snapshot is null || _editing || IsComposing || _selectedObject is not null) return;
         _draftOwner = _current; _settingText = true;
         CellEditor.Text = ProtectionSafety.HidesFormula(_snapshot, Sheet, _current.Row, _current.Column) ? "" :
             Sheet.GetCell(_current.Row, _current.Column) is { } cell ? CellInput.EditText(cell.Content) : "";
@@ -217,7 +224,7 @@ public sealed partial class WorkbookGrid : UserControl, IGridSurface, IDisposabl
     {
         if (_snapshot is null || _rows.Count == 0 || _columns.Count == 0) { CellEditor.IsVisible = false; return; }
         if (CellBounds(_draftOwner) is not { } rect || !rect.Intersects(new Rect(_canvas.Bounds.Size))) { CellEditor.IsVisible = false; return; }
-        CellEditor.IsVisible = !_dragging;
+        CellEditor.IsVisible = !_dragging && _selectedObject is null;
         Canvas.SetLeft(CellEditor, rect.X); Canvas.SetTop(CellEditor, rect.Y);
         CellEditor.Width = Math.Max(1, Math.Min(rect.Width, _canvas.Bounds.Width - rect.X)); CellEditor.Height = Math.Max(1, Math.Min(rect.Height, _canvas.Bounds.Height - rect.Y));
         CellEditor.FontSize = 14 * _zoom;

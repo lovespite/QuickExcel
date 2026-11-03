@@ -20,10 +20,12 @@ public sealed record DrawingAnchor
     public long Y { get; init; }
     public long Width { get; init; }
     public long Height { get; init; }
+    public double Rotation { get; init; }
 
     public void Validate()
     {
         if (!Enum.IsDefined(Kind)) throw new ArgumentException("图片锚点类型无效。");
+        if (!double.IsFinite(Rotation) || Rotation is < 0 or >= 360) throw new ArgumentException("绘图旋转角度必须在 0 到 360 度之间。");
         WorkbookLimits.ValidatePosition(Row, Column);
         if (new[] { RowOffset, ColumnOffset, EndRowOffset, EndColumnOffset, X, Y, Width, Height }.Any(v => v < 0 || v > 10_000_000_000_000L))
             throw new ArgumentException("绘图坐标超出预算。");
@@ -44,6 +46,13 @@ public sealed record DrawingAnchor
 
 public static class DrawingGeometry
 {
+    public static double NormalizeRotation(double degrees) => (degrees % 360 + 360) % 360;
+    public static DrawingBounds RotatedBounds(DrawingBounds bounds, double rotation)
+    {
+        var angle = rotation * Math.PI / 180; var c = Math.Abs(Math.Cos(angle)); var s = Math.Abs(Math.Sin(angle));
+        var width = bounds.Width * c + bounds.Height * s; var height = bounds.Width * s + bounds.Height * c;
+        return new(bounds.X + (bounds.Width - width) / 2, bounds.Y + (bounds.Height - height) / 2, width, height);
+    }
     public static double RowSize(WorksheetSnapshot s, int r) => s.Rows.GetValueOrDefault(r)?.Hidden == true ? 0 : s.Rows.GetValueOrDefault(r)?.Height ?? s.DefaultRowHeight ?? 31;
     public static double ColumnSize(WorksheetSnapshot s, int c) => s.Columns.GetValueOrDefault(c)?.Hidden == true ? 0 : Math.Floor((s.Columns.GetValueOrDefault(c)?.Width ?? s.Data.DefaultColumnWidth ?? WorkbookLimits.DefaultColumnWidth(c)) * 7 + 5);
     public static double RowStart(WorksheetSnapshot s, int r) => r * (s.DefaultRowHeight ?? 31) + s.Rows.Where(p => p.Key < r).Sum(p => RowSize(s, p.Key) - (s.DefaultRowHeight ?? 31));
@@ -54,21 +63,20 @@ public static class DrawingGeometry
     }
     public static long Emus(double pixels) => checked((long)Math.Round(pixels * DrawingAnchor.EmusPerPixel));
 
-    public static DrawingAnchor FromBounds(WorksheetSnapshot sheet, DrawingBounds bounds, DrawingAnchorKind kind)
+    public static DrawingAnchor FromBounds(WorksheetSnapshot sheet, DrawingBounds bounds, DrawingAnchorKind kind, double rotation = 0)
     {
         if (!new[] { bounds.X, bounds.Y, bounds.Width, bounds.Height }.All(double.IsFinite) || bounds.X < 0 || bounds.Y < 0 || bounds.Width <= 0 || bounds.Height <= 0)
             throw new ArgumentException("绘图位置和尺寸无效。");
         (int Index, long Offset) Locate(double value, bool row)
         {
             var limit = row ? WorkbookLimits.MaxRows : WorkbookLimits.MaxColumns;
-            for (var i = 0; i < limit; i++)
-            {
-                var size = row ? RowSize(sheet, i) : ColumnSize(sheet, i);
-                if (size > value) return (i, Emus(value));
-                value -= size;
-            }
-            if (value == 0) return (limit, 0);
-            throw new ArgumentException("绘图超出工作表坐标边界。");
+            double Start(int index) => row ? RowStart(sheet, index) : ColumnStart(sheet, index);
+            var end = Start(limit);
+            if (value > end) throw new ArgumentException("绘图超出工作表坐标边界。");
+            if (value == end) return (limit, 0);
+            var low = 0; var high = limit - 1;
+            while (low < high) { var mid = low + (high - low) / 2; if (Start(mid + 1) <= value) low = mid + 1; else high = mid; }
+            return (low, Emus(value - Start(low)));
         }
         DrawingAnchor anchor;
         if (kind == DrawingAnchorKind.Absolute) anchor = new() { Kind = kind, X = Emus(bounds.X), Y = Emus(bounds.Y), Width = Emus(bounds.Width), Height = Emus(bounds.Height) };
@@ -83,6 +91,6 @@ public static class DrawingGeometry
                 anchor = anchor with { EndRow = endRow.Index, EndColumn = endColumn.Index, EndRowOffset = endRow.Offset, EndColumnOffset = endColumn.Offset };
             }
         }
-        anchor.Validate(); return anchor;
+        anchor = anchor with { Rotation = rotation }; anchor.Validate(); return anchor;
     }
 }

@@ -115,13 +115,15 @@ public sealed partial class SkiaRenderer : IDisposable
         if (status != SKCodecResult.Success) { result.Dispose(); throw new InvalidDataException($"图片解码失败：{status}"); }
         return result;
     }
-    public static void DrawImage(SKCanvas canvas, SKBitmap bitmap, SKRect bounds, bool monochrome)
+    public static void DrawImage(SKCanvas canvas, SKBitmap bitmap, SKRect bounds, bool monochrome, double rotation = 0)
     {
         using var paint = new SKPaint();
         using var filter = monochrome ? SKColorFilter.CreateColorMatrix([.299f, .587f, .114f, 0, 0, .299f, .587f, .114f, 0, 0, .299f, .587f, .114f, 0, 0, 0, 0, 0, 1, 0]) : null;
         paint.ColorFilter = filter;
         using var image = SKImage.FromBitmap(bitmap);
-        canvas.DrawImage(image, bounds, new SKSamplingOptions(SKFilterMode.Linear), paint);
+        canvas.Save();
+        try { canvas.RotateDegrees((float)rotation, bounds.MidX, bounds.MidY); canvas.DrawImage(image, bounds, new SKSamplingOptions(SKFilterMode.Linear), paint); }
+        finally { canvas.Restore(); }
     }
     public void Dispose() => Fonts.Dispose();
 }

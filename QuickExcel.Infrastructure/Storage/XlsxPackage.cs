@@ -99,7 +99,7 @@ internal sealed class XlsxPackage
         _used.Add(RelationshipPart(source)); _usedRelationships.Add((source, id));
         return relation.Target; // Opaque address only; never access the target.
     }
-    private string RelatedUri(string source, string id, string type)
+    public string RelatedUri(string source, string id, string type)
     {
         _used.Add(RelationshipPart(source));
         if (!Relationships(source).TryGetValue(id, out var relation) || relation.External || relation.Type != type)

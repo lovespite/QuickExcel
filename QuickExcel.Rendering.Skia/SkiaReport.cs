@@ -126,20 +126,22 @@ public sealed class SkiaReport : IDisposable
                     foreach (var image in sheet.Images)
                     {
                         token.ThrowIfCancellationRequested(); var b = image.Anchor.Bounds(sheet); var rect = SKRect.Create((float)b.X, (float)b.Y, (float)b.Width, (float)b.Height);
-                        if (!rect.IntersectsWith(band)) continue;
+                        var rotated = DrawingGeometry.RotatedBounds(b, image.Anchor.Rotation);
+                        if (!SKRect.Create((float)rotated.X, (float)rotated.Y, (float)rotated.Width, (float)rotated.Height).IntersectsWith(band)) continue;
                         if (!_images.TryGetValue(image, out var bitmap))
                         {
                             bitmap = Renderer.DecodeImage(image); var bytes = (long)bitmap.RowBytes * bitmap.Height;
                             if (_imageBytes + bytes > Renderer.Budget.MaxImageCacheBytes) ClearImages();
-                            if (bytes > Renderer.Budget.MaxImageCacheBytes) { using (bitmap) SkiaRenderer.DrawImage(canvas, bitmap, rect, monochrome); continue; }
+                            if (bytes > Renderer.Budget.MaxImageCacheBytes) { using (bitmap) SkiaRenderer.DrawImage(canvas, bitmap, rect, monochrome, image.Anchor.Rotation); continue; }
                             _images.Add(image, bitmap); _imageBytes += bytes;
                         }
-                        SkiaRenderer.DrawImage(canvas, bitmap, rect, monochrome);
+                        SkiaRenderer.DrawImage(canvas, bitmap, rect, monochrome, image.Anchor.Rotation);
                     }
                     foreach (var chart in sheet.Data.Charts)
                     {
                         token.ThrowIfCancellationRequested(); var b = chart.Anchor.Bounds(sheet);
-                        if (SKRect.Create((float)b.X, (float)b.Y, (float)b.Width, (float)b.Height).IntersectsWith(band)) Renderer.DrawChart(canvas, new(b.X, b.Y, b.Width, b.Height), Job.Book, chart, monochrome);
+                        var rotated = DrawingGeometry.RotatedBounds(b, chart.Anchor.Rotation);
+                        if (SKRect.Create((float)rotated.X, (float)rotated.Y, (float)rotated.Width, (float)rotated.Height).IntersectsWith(band)) Renderer.DrawChart(canvas, new(b.X, b.Y, b.Width, b.Height), Job.Book, chart, monochrome);
                     }
                 }
                 finally { canvas.Restore(); }

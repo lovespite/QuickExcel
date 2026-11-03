@@ -48,6 +48,7 @@ public sealed partial class WorkbookGrid
         var captured = ranges.Take(65).ToArray();
         if (!CanSelectRanges(captured, current)) return;
         if (!Commit() || !(BeforeSelection?.Invoke() ?? true)) return;
+        ClearDrawingObjectSelection();
         _selection.Set(captured.Select(r => GridMergedSelection.Expand(new(r.Top, r.Left, r.Bottom, r.Right), _merges)));
         _current = current; _anchor = current; _overlay.InvalidateVisual(); PrepareEditor(false); SelectionChanged?.Invoke();
     }
@@ -96,6 +97,7 @@ public sealed partial class WorkbookGrid
         if (properties.IsRightButtonPressed)
         {
             if (!Commit() || !(BeforeSelection?.Invoke() ?? true)) { IsContextSelectionBlocked = true; return; }
+            if (ObjectPointerDown(e, point)) return;
             if (HeaderHit(point) is { } header)
             {
                 // Keep the clicked boundary even when the row/column intersects a merged cell.
@@ -114,6 +116,7 @@ public sealed partial class WorkbookGrid
             e.Pointer.Capture(_canvas); e.Handled = true; RequestDragFrame(); return;
         }
         if (!Commit() || !(BeforeSelection?.Invoke() ?? true)) return;
+        if (ObjectPointerDown(e, point)) return;
         _gestureRevision = _snapshot.Revision;
         if (Hit(point) is { } filterCell && FilterHeader(filterCell.Row, filterCell.Column) is not null &&
             CellBounds(filterCell) is { } filterBounds && point.X >= filterBounds.Right - 22 * _zoom)
@@ -172,6 +175,7 @@ public sealed partial class WorkbookGrid
     }
     private void PointerMove(object? sender, PointerEventArgs e)
     {
+        if (ObjectPointerMove(e)) return;
         _dragPoint = e.GetPosition(_canvas);
         if (_resizeAxis is { } axis)
         {
@@ -211,6 +215,7 @@ public sealed partial class WorkbookGrid
     }
     private void PointerUp(object? sender, PointerReleasedEventArgs e)
     {
+        if (ObjectPointerUp(e)) return;
         if (_resizeAxis is { } axis)
         {
             _resizeAxis = null;
@@ -226,6 +231,7 @@ public sealed partial class WorkbookGrid
     }
     private void CancelGesture()
     {
+        CancelObjectGesture();
         var reference = _referenceGesture;
         _dragging = _referenceGesture = false; _fillSource = _fillPreview = null; _lastDragFrame = null;
         if (reference) ReferenceGestureEnded?.Invoke();
@@ -236,6 +242,7 @@ public sealed partial class WorkbookGrid
     {
         if (e.Key == Key.Apps || e.Key == Key.F10 && e.KeyModifiers.HasFlag(KeyModifiers.Shift)) IsContextSelectionBlocked = false;
         if (_snapshot is null || IsComposing) return;
+        if (ObjectKey(e)) return;
         if (e.Key == Key.Escape && (_dragging || _resizeAxis is not null)) { CancelGesture(); e.Handled = true; return; }
         if (e.Key == Key.F2) { e.Handled = BeginEdit(); return; }
         if (e.Key == Key.Escape && _editing) { Cancel(); e.Handled = true; return; }
