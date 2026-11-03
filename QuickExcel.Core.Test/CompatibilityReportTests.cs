@@ -142,6 +142,19 @@ public sealed class CompatibilityReportTests
     }
 
     [Fact]
+    public void OverwriteReportExplainsLossesWithoutPromisingToPreserveTheOriginal()
+    {
+        var report = new WorkbookCompatibilityReport(false, [new("xlsx.unmodeled", CompatibilityKind.PotentialLoss,
+            "worksheet/customSheetViews", "未建模视图")]);
+        var view = CompatibilityReportPresentation.Create(report, saveMode: true, canOverwrite: true);
+        Assert.Contains("覆盖会直接替换当前文件", view.Summary);
+        var group = Assert.Single(view.Groups);
+        Assert.Contains("覆盖", group.Summary);
+        Assert.Contains("覆盖也会移除原文件", Assert.Single(group.Items).Impact);
+        Assert.DoesNotContain("原文件保持不变", group.Summary + group.Items[0].Impact);
+    }
+
+    [Fact]
     public void ReportMergesRepeatedDiagnosticsAndKeepsEveryLocation()
     {
         var diagnostics = Enumerable.Range(0, 2).Select(index => new CompatibilityDiagnostic(

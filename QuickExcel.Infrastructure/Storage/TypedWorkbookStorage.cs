@@ -239,14 +239,19 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage, IW
         SaveCore(path, snapshot, discardUnsupported, cancellationToken, null);
     public FileVersion SaveChecked(string path, WorkbookSnapshot snapshot, bool discardUnsupported, FileVersion expected) =>
         SaveCore(path, snapshot, discardUnsupported, CancellationToken.None, expected);
-    private FileVersion SaveCore(string path, WorkbookSnapshot snapshot, bool discardUnsupported, CancellationToken cancellationToken, FileVersion? expected)
+    public FileVersion OverwriteChecked(string path, WorkbookSnapshot snapshot, FileVersion expected)
+    {
+        if (expected.Sha256 is null) throw new InvalidOperationException("覆盖原文件需要已打开文件的版本记录。");
+        return SaveCore(path, snapshot, true, CancellationToken.None, expected, overwriteOriginal: true);
+    }
+    private FileVersion SaveCore(string path, WorkbookSnapshot snapshot, bool discardUnsupported, CancellationToken cancellationToken, FileVersion? expected, bool overwriteOriginal = false)
     {
         RequireExtension(path, ".xlsq", ".xlsx");
         ArgumentNullException.ThrowIfNull(snapshot);
         cancellationToken.ThrowIfCancellationRequested();
         snapshot = PrepareReadOnlyFormulaSave(snapshot, discardUnsupported);
         if (expected is not null) FileVersions.Require(path, expected);
-        GuardOriginal(path, snapshot, discardUnsupported);
+        GuardOriginal(path, snapshot, discardUnsupported, overwriteOriginal);
         if (Path.GetExtension(path).Equals(".xlsx", StringComparison.OrdinalIgnoreCase))
             return SaveXlsx(path, snapshot, discardUnsupported, cancellationToken, expected);
         return WritePackage(path, snapshot, discardUnsupported, cancellationToken, expected);
@@ -399,10 +404,10 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage, IW
         snapshot = PrepareReadOnlyFormulaSave(snapshot, false);
         return snapshot.FileState is { } state && !ContentEquals(snapshot, state.OriginalModel) ? state.CompatibilityIssues : [];
     }
-    private static void GuardOriginal(string path, WorkbookSnapshot snapshot, bool discardUnsupported)
+    private static void GuardOriginal(string path, WorkbookSnapshot snapshot, bool discardUnsupported, bool overwriteOriginal = false)
     {
         if (snapshot.FileState is not { } state) return;
-        if ((state.RequiresMigration || discardUnsupported) && string.Equals(Path.GetFullPath(path), state.SourcePath, StringComparison.OrdinalIgnoreCase))
+        if ((state.RequiresMigration || discardUnsupported && !overwriteOriginal) && string.Equals(Path.GetFullPath(path), state.SourcePath, StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException("迁移或移除不支持内容时必须另存为新文件，原文件不会覆盖。");
     }
 

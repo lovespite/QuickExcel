@@ -5,6 +5,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Interactivity;
+using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
@@ -66,6 +67,11 @@ public sealed partial class MainWindow
             {
                 await Layout();
                 Check(window.Name == "CompatibilityReportDialog" && window.Title == "保存兼容性报告", "Save opens the detailed compatibility report");
+                var overwrite = window.GetVisualDescendants().OfType<Button>().Single(button => button.Content as string == "覆盖");
+                Check(overwrite.IsEnabled && !overwrite.IsDefault &&
+                    (overwrite.Background as ISolidColorBrush)?.Color == Color.Parse("#FDE7E7") &&
+                    (overwrite.Foreground as ISolidColorBrush)?.Color == Color.Parse("#C62828"), "Overwrite button uses a pale red background and red text without becoming the default action");
+                Check(window.GetVisualDescendants().OfType<TextBlock>().Any(text => text.Text?.Contains("覆盖会直接替换当前文件") == true), "Save report explains that overwrite replaces the current file");
                 var groups = window.GetVisualDescendants().OfType<Expander>().ToArray();
                 var loss = groups.Single(group => group.Header!.ToString()!.StartsWith("潜在损失"));
                 Check(loss.IsExpanded && groups.Length >= 3, "Save report expands losses and separates calculation and preservation notices");
@@ -103,10 +109,30 @@ public sealed partial class MainWindow
             {
                 await Layout();
                 Check(window.Name == "CompatibilityReportDialog" && window.Title == "兼容性报告" &&
-                    !window.GetVisualDescendants().OfType<Button>().Any(button => button.Content as string == "另存受支持副本"), "Menu report shares the detailed view without save actions");
+                    !window.GetVisualDescendants().OfType<Button>().Any(button => button.Content as string is "另存受支持副本" or "覆盖"), "Menu report shares the detailed view without save actions");
                 Click(window, "关闭");
             };
             await CompatibilityAsync();
+            await OpenPathAsync(source); _workspace.Editor.SetCell(0, 0, 0, "覆盖后的值"); Synchronize();
+            var openedVersion = _workspace.Version;
+            _dialogDriver = async window =>
+            {
+                await Layout(); await File.AppendAllTextAsync(source, "external change"); Click(window, "覆盖");
+            };
+            Check(!await SaveAsync(false) && Document.IsDirty && files.SaveCalls == pickerCalls,
+                "Overwrite detects changes made while the report is open and retains edits without a picker");
+            Check(File.ReadAllText(source).EndsWith("external change") && _workspace.Version == openedVersion,
+                "Rejected overwrite keeps externally modified bytes and the opened version");
+            await File.WriteAllBytesAsync(source, original); await OpenPathAsync(source);
+            _workspace.Editor.SetCell(0, 0, 0, "覆盖后的值"); Synchronize();
+            _dialogDriver = async window => { await Layout(); Click(window, "覆盖"); };
+            Check(await SaveAsync(true) && !Document.IsDirty && _workspace.FilePath == source && files.SaveCalls == pickerCalls,
+                "Overwrite from Save As directly saves the opened file without a picker");
+            var overwritten = new TypedWorkbookStorage().Open(source);
+            Check(overwritten.Sheets[0].GetCell(0, 0)!.Value.TextValue == "覆盖后的值" && overwritten.FileState!.CompatibilityIssues.IsEmpty,
+                "Overwrite replaces original bytes with current edits and removes reported unsupported content");
+            Check(overwritten.Sheets[0].GetCell(2, 2)!.Content.RichText?.Text == "保留富文本" && _workspace.Version == FileVersions.Read(source),
+                "Overwrite preserves rich text and updates the checked file fingerprint");
         }
         catch (Exception ex) { failure = ex; }
         finally { _dialogDriver = null; }

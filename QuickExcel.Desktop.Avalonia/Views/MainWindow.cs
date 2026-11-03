@@ -296,17 +296,21 @@ public sealed partial class MainWindow : Window
         Document.Session.RaiseScriptEvent("workbook.beforeSave"); await DispatchEventsAsync();
         await CalculatePendingAsync();
         var snapshot = Document.Snapshot;
-        var issues = TypedWorkbookStorage.SaveIssues(snapshot); var discard = false;
-        if (issues.Count > 0)
-        {
-            var report = await _workspace.InspectAsync(snapshot => TypedWorkbookStorage.InspectCompatibility(snapshot));
-            if (!await ShowCompatibilityReportAsync(report, saveMode: true)) return false;
-            discard = true; saveAs = true;
-        }
         var migration = snapshot.FileState?.RequiresMigration == true;
         var needsScripts = TypedWorkbookStorage.RequiresScriptContainer(snapshot);
         var current = _workspace.FilePath;
-        if (migration || needsScripts && current is not null && Path.GetExtension(current).Equals(".xlsx", StringComparison.OrdinalIgnoreCase)) saveAs = true;
+        var requiresNewContainer = needsScripts && current is not null && Path.GetExtension(current).Equals(".xlsx", StringComparison.OrdinalIgnoreCase);
+        var issues = TypedWorkbookStorage.SaveIssues(snapshot); var discard = false; var overwrite = false;
+        if (issues.Count > 0)
+        {
+            var report = await _workspace.InspectAsync(snapshot => TypedWorkbookStorage.InspectCompatibility(snapshot));
+            var choice = await ShowCompatibilityReportAsync(report, saveMode: true,
+                canOverwrite: current is not null && _workspace.Version?.Sha256 is not null && !migration && !requiresNewContainer);
+            if (choice == CompatibilitySaveDecision.Cancel) return false;
+            overwrite = choice == CompatibilitySaveDecision.Overwrite;
+            discard = true; saveAs = !overwrite;
+        }
+        if (migration || requiresNewContainer) saveAs = true;
         LocalFileSelection? selected = !saveAs && current is not null ? new(current) : null;
         if (selected is null)
         {
@@ -315,7 +319,7 @@ public sealed partial class MainWindow : Window
             selected = await _files.SaveAsync(new("保存工作簿", types, Path.GetFileNameWithoutExtension(current ?? "未命名") + (migration ? "-v2" : discard ? "-受支持副本" : "") + extension, extension));
         }
         if (selected is null) return false;
-        try { await _workspace.SaveAsync(selected, discard); _recentFiles.Remember(selected.Path); _status.Text = "已保存 " + Path.GetFileName(selected.Path) + (_calculationFailure is null ? "" : " · 部分结果待重算：" + _calculationFailure); return true; }
+        try { await _workspace.SaveAsync(selected, discard, overwrite); _recentFiles.Remember(selected.Path); _status.Text = "已保存 " + Path.GetFileName(selected.Path) + (_calculationFailure is null ? "" : " · 部分结果待重算：" + _calculationFailure); return true; }
         catch (Exception ex) { Error(ex); return false; }
     }
     private async Task History(bool redo) { if (await CommitEditorsAsync()) TryEdit(() => redo ? _workspace.Editor.Redo() : _workspace.Editor.Undo()); }

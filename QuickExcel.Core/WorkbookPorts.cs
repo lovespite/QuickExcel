@@ -22,6 +22,9 @@ public sealed class WorkbookFileConflictException() : IOException("文件已被�
 public interface IVersionedWorkbookStorage : IWorkbookStorageOptions
 {
     FileVersion SaveChecked(string path, WorkbookSnapshot snapshot, bool discardUnsupported, FileVersion expected);
+    /// <summary>Explicitly replace an existing file, accepting compatibility losses while checking its opened version.</summary>
+    FileVersion OverwriteChecked(string path, WorkbookSnapshot snapshot, FileVersion expected) =>
+        throw new NotSupportedException("存储不支持明确覆盖原文件。");
 }
 
 public interface IWorkbookCalculator

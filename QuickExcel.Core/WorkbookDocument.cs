@@ -110,7 +110,7 @@ public sealed class WorkbookDocument : IDisposable
         }
     }
 
-    public FileVersion SaveChecked(string path, FileVersion expected, bool discardUnsupported = false)
+    public FileVersion SaveChecked(string path, FileVersion expected, bool discardUnsupported = false, bool overwriteOriginal = false)
     {
         WorkbookSnapshot captured;
         FileVersion version;
@@ -118,7 +118,9 @@ public sealed class WorkbookDocument : IDisposable
         {
             captured = Snapshot;
             if (_services.Storage is not IVersionedWorkbookStorage storage) throw new NotSupportedException("存储不支持外部文件冲突检查。");
-            version = storage.SaveChecked(path, captured, discardUnsupported, expected);
+            if (overwriteOriginal && !discardUnsupported) throw new ArgumentException("覆盖必须明确接受兼容性损失。", nameof(discardUnsupported));
+            version = overwriteOriginal ? storage.OverwriteChecked(path, captured, expected)
+                : storage.SaveChecked(path, captured, discardUnsupported, expected);
         }
         Session.MarkSaved(Session.SessionId, captured.Revision);
         return version;

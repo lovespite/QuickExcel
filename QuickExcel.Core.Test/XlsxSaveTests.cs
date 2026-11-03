@@ -147,6 +147,72 @@ public sealed class XlsxSaveTests : IDisposable
         Assert.Equal(bytes, File.Exists(path) ? File.ReadAllBytes(path) : null);
     }
 
+    private string LossySource(string extension)
+    {
+        var xlsx = Source(false);
+        Edit(xlsx, "xl/worksheets/sheet1.xml", doc => { doc!.Root!.Add(new XElement(Main + "customSheetViews")); return doc; });
+        if (extension == ".xlsx") return xlsx;
+        var container = PathFor("source.xlsq"); _storage.Save(container, _storage.Open(xlsx)); return container;
+    }
+
+    [Theory]
+    [InlineData(".xlsx")]
+    [InlineData(".xlsq")]
+    public void ExplicitCheckedOverwriteAcceptsLossesAndSavesCurrentEdits(string extension)
+    {
+        var path = LossySource(extension); var original = File.ReadAllBytes(path); var version = FileVersions.Read(path);
+        using var doc = new WorkbookDocument(_storage.Open(path), new(_storage, new UnusedCalculator()));
+        doc.SetCell(0, 0, 0, "99");
+        Assert.NotEmpty(TypedWorkbookStorage.SaveIssues(doc.Snapshot));
+        Assert.Throws<InvalidOperationException>(() => doc.SaveChecked(path, version, discardUnsupported: true));
+        Assert.Throws<ArgumentException>(() => doc.SaveChecked(path, version, overwriteOriginal: true));
+        Assert.True(doc.IsDirty); Assert.Equal(original, File.ReadAllBytes(path));
+        var saved = doc.SaveChecked(path, version, discardUnsupported: true, overwriteOriginal: true);
+        Assert.Equal(FileVersions.Read(path), saved); Assert.NotEqual(version, saved); Assert.False(doc.IsDirty);
+        var reopened = _storage.Open(path);
+        Assert.Equal(99, reopened.Sheets[0].GetCell(0, 0)!.Value.NumberValue);
+        Assert.Equal("=_xlfn.NOTYET(A1)", reopened.Sheets[0].GetCell(0, 1)!.Content.FormulaText);
+        Assert.Empty(reopened.FileState!.CompatibilityIssues);
+    }
+
+    [Theory]
+    [InlineData(".xlsx", false)]
+    [InlineData(".xlsx", true)]
+    [InlineData(".xlsq", false)]
+    [InlineData(".xlsq", true)]
+    public void ExplicitOverwriteStillRejectsExternalChangesAndDeletion(string extension, bool deleted)
+    {
+        var path = LossySource(extension); var version = FileVersions.Read(path);
+        using var doc = new WorkbookDocument(_storage.Open(path), new(_storage, new UnusedCalculator()));
+        doc.SetCell(0, 0, 0, "99");
+        if (deleted) File.Delete(path); else File.WriteAllText(path, "external change");
+        Assert.Throws<WorkbookFileConflictException>(() => doc.SaveChecked(path, version, discardUnsupported: true, overwriteOriginal: true));
+        Assert.True(doc.IsDirty);
+        if (deleted) Assert.False(File.Exists(path)); else Assert.Equal("external change", File.ReadAllText(path));
+    }
+
+    [Fact]
+    public void ExplicitOverwriteRequiresKnownVersionAndStillValidatesBeforeReplacement()
+    {
+        var path = LossySource(".xlsx"); var original = File.ReadAllBytes(path); var book = _storage.Open(path);
+        Assert.Throws<InvalidOperationException>(() => _storage.OverwriteChecked(path, Edited(book), new(null)));
+        var badStyle = new WorkbookSnapshot(book.DocumentId, 0, book.DateSystem, book.Sheets,
+            styles: [new() { NumberFormatId = 14, NumberFormatCode = "0.000" }]);
+        Assert.Throws<InvalidDataException>(() => _storage.OverwriteChecked(path, badStyle, FileVersions.Read(path)));
+        Assert.Equal(original, File.ReadAllBytes(path));
+    }
+
+    [Fact]
+    public void ExplicitOverwriteDoesNotBypassV1MigrationCopyRequirement()
+    {
+        var xlsx = LossySource(".xlsx"); var path = PathFor("legacy.xlsq");
+        Fixtures.WorkbookPackageFixture.WriteV1(path, File.ReadAllBytes(xlsx));
+        var original = File.ReadAllBytes(path); var book = _storage.Open(path);
+        Assert.True(book.FileState!.RequiresMigration);
+        Assert.Throws<InvalidOperationException>(() => _storage.OverwriteChecked(path, Edited(book), FileVersions.Read(path)));
+        Assert.Equal(original, File.ReadAllBytes(path));
+    }
+
     [Theory]
     [InlineData("// comment")]
     [InlineData(WorkbookDocument.DefaultScript)]

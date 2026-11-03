@@ -11,7 +11,7 @@ public static class CompatibilityReportText
             report.OriginalPackageUnchanged
                 ? "工作簿内容与导入时一致，普通保存 XLSX/XLSQ 可保留原 XLSX 包；仅保留不代表可编辑写回。"
                 : report.Diagnostics.Any(d => d.Kind == CompatibilityKind.PotentialLoss)
-                    ? "当前内容未走原包不变保留路径。潜在损失会阻止普通保存，须明确另存受支持副本。"
+                    ? "当前内容未走原包不变保留路径。潜在损失会阻止普通保存，须明确另存受支持副本，或在保存报告允许时确认覆盖原文件。"
                     : "当前报告未列出格式损失阻止项；保存时仍会执行完整校验。",
             "文件特性定位对应导入时的部件/工作表/范围；公式诊断对应当前单元格。内置不可计算与保存损失分别报告。"
         };

@@ -71,6 +71,24 @@
 
 专项验证：Release 桌面构建 0 警告、0 错误；`WorksheetPrintingTests` **8/8** 通过。新增 `scripts/test-avalonia-workspace.ps1 -Mode PageBreak` **24 项通过**，证据为 `artifacts/avalonia/workspace/20261103-122322-7e8f3283`，专门检查表头像素、悬停说明、右键目标、删除/撤销/重做、XLSX/XLSQ 保存重开、无分页/首行禁用、旧修订拒绝、清除手动分页保留自动分页及编辑拒绝保护。程序化输入与渲染检查不代替实机鼠标验收。
 
+## 保存兼容性报告（2026-11-03）
+
+保存与另存为遇到 `SaveIssues` 时，改为复用“文件 → 兼容性报告”的详细窗口，标题为“保存兼容性报告”。默认展开潜在损失，按分类显示数量、特性、工作表/部件/范围、原始说明和具体影响；可复制完整报告（含迁移提示），显式选择“另存受支持副本”或取消。关闭窗口等同取消，保留已提交的单元格草稿和未保存修改；后续文件选择、原文件禁止覆盖及版本指纹校验保持既有规则。
+
+报告直接使用检查器给出的分类，损失数量只统计潜在损失；公式不可计算和可保存的富文本/链接/批注不再因保存模式被计入损失。查看与保存共用报告布局，查看模式不显示保存操作。
+
+验证：Release 桌面构建 0 警告、0 错误；`CompatibilityReportTests` **12/12**；新增 `scripts/test-avalonia-workspace.ps1 -Mode Compatibility` **21 项通过**。覆盖保存实际入口、最新草稿、分组与定位、复制、取消/关闭、文件选择取消、原文件保护、受支持副本及富文本保留、重开副本保存和菜单入口。证据与已复核截图：`artifacts/avalonia/workspace/20261103-122419-c622dfcf`。首轮检查在成功另存后，测试错误假设当前会话会自动替换原文件兼容性来源，等待下一次报告导致超时；已改为重开副本验证其可直接保存，原始证据保留在 `artifacts/avalonia/workspace/20261103-122317-efc1db63`。未运行全量回归，程序化界面检查不替代物理输入验收。
+
+本地 Windows 包已通过 **8 项生产自检**并由 `build-quickexcel.ps1 -SkipTests -RunSmoke` 激活：`artifacts/avalonia/releases/20261103-122519-a3243821/application`，既有包保留。生产构建仍有诊断关闭配置下既有的 `Program.WebScriptsOnly` 未赋值警告。
+
+### 显式覆盖（2026-11-03）
+
+按用户要求，保存报告新增淡红底（`#FDE7E7`）、红字（`#C62828`）的“覆盖”按钮。点击直接保存到当前打开文件，无需另存对话框；报告同时说明覆盖将移除列出的潜在损失，不再承诺原文件保持不变。取消仍为默认操作，菜单查看报告不包含写入按钮。无绑定文件、v1 迁移或 XLSX 必须改存脚本容器时禁用覆盖，仍按原规则另存。
+
+覆盖通过独立的 `IVersionedWorkbookStorage.OverwriteChecked` 能力显式接受损失，要求当前打开文件的已有指纹；原有普通保存、另存副本及导出不因此获得覆盖原始来源的权限。覆盖继续检查外部修改/删除，先写临时文件并验证，再原子替换；成功后更新版本并标记已保存，失败保留编辑。相关 `CompatibilityReportTests|XlsxSaveTests|WorkbookWorkspaceTests` **47/47**，覆盖 XLSX/XLSQ、外部修改/删除、写后校验失败和 v1 迁移保护；`-Mode Compatibility` **28 项通过**，含配色、文案、真实按钮覆盖、无需文件选择、外部冲突和富文本保留。证据与已复核截图：`artifacts/avalonia/workspace/20261103-123024-9496ccb8`。Release 桌面构建 0 警告、0 错误，未运行全量回归。
+
+覆盖版本已通过 **8 项生产自检**并激活：`artifacts/avalonia/releases/20261103-123120-a8c251d4/application`；发布使用 `build-quickexcel.ps1 -SkipTests -RunSmoke`，旧包保留。
+
 ## 未关闭事项
 
 - 实际 OS IME、跨屏 DPI、屏幕阅读器、真实指针/剪贴板、设备性能按用户要求延期；Linux 中文候选窗问题仍未解决。

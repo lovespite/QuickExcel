@@ -43,13 +43,13 @@ public static class CompatibilityReportPresentation
          CompatibilityKind.PreservedOnly, CompatibilityKind.Editable];
 
     public static CompatibilityReportView Create(WorkbookCompatibilityReport report, bool saveMode,
-        IEnumerable<string>? notices = null)
+        IEnumerable<string>? notices = null, bool canOverwrite = false)
     {
         // Inspection already classifies actual save losses. Preserved rich text,
         // links and notes must not become losses just because this is a save dialog.
         var groups = report.Diagnostics.GroupBy(diagnostic => diagnostic.Kind)
             .OrderBy(group => Array.IndexOf(Order, group.Key))
-            .Select(group => BuildGroup(group.Key, group, saveMode))
+            .Select(group => BuildGroup(group.Key, group, saveMode, canOverwrite))
             .Where(group => group.Items.Count > 0)
             .ToArray();
         var losses = groups.Where(group => group.Kind == CompatibilityKind.PotentialLoss)
@@ -62,17 +62,19 @@ public static class CompatibilityReportPresentation
                 : losses > 0 ? "当前编辑后，" + Count(losses, "处内容无法写入普通保存")
                 : "未发现会阻止保存的格式损失";
         var summary = saveMode
-            ? "原文件不会被修改。继续会另存为受支持副本，副本不包含下方“潜在损失”中的内容；取消则保留当前未保存的修改。"
+            ? canOverwrite
+                ? "另存受支持副本会保留原文件；覆盖会直接替换当前文件。两种保存都不包含下方“潜在损失”中的内容；取消则保留当前未保存的修改。"
+                : "原文件不会被修改。继续会另存为受支持副本，副本不包含下方“潜在损失”中的内容；取消则保留当前未保存的修改。"
             : report.OriginalPackageUnchanged
                 ? "原 XLSX 包可原样保留；普通保存不会重建未支持的部件。"
                 : losses > 0
-                    ? "保存时只会另存受支持副本；原文件保持不变，可随时重新打开找回这些内容。"
+                    ? "保存时需明确选择如何处理损失；另存受支持副本可保留原文件中的内容。"
                     : "保存时仍会执行完整校验；下方同时列出仅保留、不可计算和已支持的内容。";
         var extra = (notices ?? []).Where(notice => !string.IsNullOrWhiteSpace(notice)).ToArray();
         return new(title, headline, summary, groups, extra);
     }
 
-    public static string Impact(CompatibilityDiagnostic diagnostic, bool saveMode)
+    public static string Impact(CompatibilityDiagnostic diagnostic, bool saveMode, bool canOverwrite = false)
     {
         if (diagnostic.Code.StartsWith("report.", StringComparison.Ordinal))
             return "这是报告容量提示：未逐项列出的内容仍受相同限制，保存保护覆盖全部内容。";
@@ -86,7 +88,10 @@ public static class CompatibilityReportPresentation
         return diagnostic.Kind switch
         {
             CompatibilityKind.PotentialLoss => (specific ?? "该内容不属于已建模子集") +
-                (saveMode ? "；不会写入受支持副本，原文件保持不变。" : "；修改后普通保存会被阻止，只能另存受支持副本。"),
+                (saveMode ? canOverwrite
+                    ? "；不会写入受支持副本，选择覆盖也会移除原文件中的该内容。"
+                    : "；不会写入受支持副本，原文件保持不变。"
+                    : "；修改后普通保存会被阻止，须明确另存副本或选择覆盖。"),
             CompatibilityKind.Rejected =>
                 "该位置未通过导入检查，文件已阻止打开；请先在 Excel 中修复或删除该内容。",
             CompatibilityKind.CannotCalculate => (specific ?? "该公式不能在本机重新计算") +
@@ -108,7 +113,7 @@ public static class CompatibilityReportPresentation
     }
 
     private static CompatibilityIssueGroup BuildGroup(CompatibilityKind kind,
-        IEnumerable<CompatibilityDiagnostic> diagnostics, bool saveMode)
+        IEnumerable<CompatibilityDiagnostic> diagnostics, bool saveMode, bool canOverwrite)
     {
         var items = diagnostics
             .GroupBy(diagnostic => (diagnostic.Code, diagnostic.Feature, diagnostic.Message))
@@ -118,19 +123,19 @@ public static class CompatibilityReportPresentation
                 var locations = group.Select(Location).Where(location => location.Length > 0)
                     .Distinct(StringComparer.Ordinal).ToArray();
                 return new CompatibilityIssueView(first.Feature, Locations(locations), first.Message,
-                    Impact(first, saveMode), group.Count(), first.Code);
+                    Impact(first, saveMode, canOverwrite), group.Count(), first.Code);
             })
             .OrderByDescending(item => item.Count)
             .ThenBy(item => item.Feature, StringComparer.CurrentCulture)
             .ToArray();
-        return new(kind, CompatibilityReportText.Label(kind), Summary(kind, saveMode),
+        return new(kind, CompatibilityReportText.Label(kind), Summary(kind, saveMode, canOverwrite),
             kind is CompatibilityKind.PotentialLoss or CompatibilityKind.Rejected, items);
     }
 
-    private static string Summary(CompatibilityKind kind, bool saveMode) => kind switch
+    private static string Summary(CompatibilityKind kind, bool saveMode, bool canOverwrite) => kind switch
     {
         CompatibilityKind.PotentialLoss => saveMode
-            ? "以下内容不会写入副本。原文件保持不变。"
+            ? canOverwrite ? "以下内容不会写入副本；选择覆盖时，也会从原文件中移除。" : "以下内容不会写入副本。原文件保持不变。"
             : "以下内容在修改后无法可靠保留，普通保存会被阻止。",
         CompatibilityKind.Rejected => "以下位置未通过导入检查，相关文件无法打开。",
         CompatibilityKind.CannotCalculate => "公式源码会保留，但本机不重算，显示与保存的是已有缓存。",

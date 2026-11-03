@@ -60,14 +60,16 @@ public sealed class WorkbookWorkspace : IDisposable
         }
         finally { IsBusy = false; Changed?.Invoke(); }
     }
-    public async Task SaveAsync(LocalFileSelection selected, bool discardUnsupported = false)
+    public async Task SaveAsync(LocalFileSelection selected, bool discardUnsupported = false, bool overwriteOriginal = false)
     {
         RequireIdle(); IsBusy = true; Changed?.Invoke();
         try
         {
             var sameFile = string.Equals(FilePath, selected.Path, PathComparison);
+            if (overwriteOriginal && (!sameFile || Version?.Sha256 is null))
+                throw new InvalidOperationException("覆盖只能用于当前已打开且具有版本记录的文件。");
             var expected = sameFile ? Version ?? new(null) : await Task.Run(() => _files.ReadVersion(selected.Path));
-            var saved = await Task.Run(() => Document.SaveChecked(selected.Path, expected, discardUnsupported));
+            var saved = await Task.Run(() => Document.SaveChecked(selected.Path, expected, discardUnsupported, overwriteOriginal));
             FilePath = selected.Path; Version = saved;
         }
         finally { IsBusy = false; Changed?.Invoke(); }
