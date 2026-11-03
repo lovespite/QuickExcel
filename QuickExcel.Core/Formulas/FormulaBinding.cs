@@ -7,15 +7,17 @@ public sealed record DefinedName(string Name, string Formula, SheetId? Scope = n
 /// <summary>Binds sheet names and defined names without reading cached cell values.</summary>
 public static class FormulaBinding
 {
-    public static FormulaNode Bind(FormulaNode expression, WorkbookSnapshot snapshot, SheetId currentSheet, CellPosition? position = null)
+    public static FormulaNode Bind(FormulaNode expression, WorkbookSnapshot snapshot, SheetId currentSheet, CellPosition? position = null, bool arrayContext = false)
     {
         if (snapshot.TextCompatibilityVersion > 2) throw new FormatException("未知文本计算兼容版本；不能确认公式语义。");
         var bound = Bind(expression, snapshot, currentSheet, new HashSet<(SheetId?, string)>(), new BindingBudget(), 0, false, position);
+        if (BoundDepth(bound) > 128) throw new FormatException("局部名称展开后的求值深度超过 128 层。");
+        arrayContext |= DynamicArrayFunctions.UsesArrays(bound);
         ConditionalRanges.ValidateModes(bound);
-        LookupModes.Validate(bound);
+        LookupModes.Validate(bound, arrayContext);
         DateMathFunctions.Validate(bound);
-        TextFunctions.Validate(bound, snapshot);
-        ScalarFormulaModes.Validate(bound);
+        TextFunctions.Validate(bound, snapshot, arrayContext);
+        if (!arrayContext && !DynamicArrayFunctions.UsesArrays(bound)) ScalarFormulaModes.Validate(bound);
         return bound;
     }
 
@@ -28,14 +30,53 @@ public static class FormulaBinding
             ?? snapshot.DefinedNames.FirstOrDefault(n => n.Scope is null && n.Name.Equals(name.Name, StringComparison.OrdinalIgnoreCase));
     }
 
-    private sealed class BindingBudget { public int Nodes; }
+    private sealed class BindingBudget { public int Nodes; public int LocalId; }
+    private static int BoundDepth(FormulaNode node) => node switch
+    {
+        LocalValueNode local => local.EvaluationDepth,
+        UnaryNode unary => 1 + BoundDepth(unary.Operand),
+        BinaryNode binary => 1 + Math.Max(BoundDepth(binary.Left), BoundDepth(binary.Right)),
+        FunctionNode function => 1 + function.Arguments.Select(BoundDepth).DefaultIfEmpty().Max(),
+        LetNode let => 1 + Math.Max(BoundDepth(let.Body), let.Bindings.Select(b => BoundDepth(b.Value)).DefaultIfEmpty().Max()),
+        _ => 1
+    };
     private static FormulaNode Bind(FormulaNode expression, WorkbookSnapshot snapshot, SheetId currentSheet,
-        HashSet<(SheetId?, string)> visiting, BindingBudget budget, int depth, bool inDefinition, CellPosition? position)
+        HashSet<(SheetId?, string)> visiting, BindingBudget budget, int depth, bool inDefinition, CellPosition? position,
+        IReadOnlyDictionary<string, LocalValueNode>? locals = null, int syntaxDepth = 0)
     {
         if (depth > 16) throw new FormatException("名称引用嵌套过深。");
-        return FormulaSyntax.Map(expression, node =>
+        if (syntaxDepth > 128) throw new FormatException("绑定后公式嵌套超过 128 层。");
+        FormulaNode Child(FormulaNode node, IReadOnlyDictionary<string, LocalValueNode>? scope = null) =>
+            Bind(node, snapshot, currentSheet, visiting, budget, depth, inDefinition, position, scope ?? locals, syntaxDepth + 1);
+        if (++budget.Nodes > 16384) throw new FormatException("名称展开超过 16384 个语法节点。");
+        if (expression is FunctionNode { Name: "LET" } let)
         {
-            if (++budget.Nodes > 16384) throw new FormatException("名称展开超过 16384 个语法节点。");
+            if (!StandardFunctions.AcceptsArguments("LET", let.Arguments.Count)) throw new FormatException("LET 需要名称/值对和最后一个计算表达式。");
+            var scope = locals is null ? new Dictionary<string, LocalValueNode>(StringComparer.OrdinalIgnoreCase)
+                : new Dictionary<string, LocalValueNode>(locals, StringComparer.OrdinalIgnoreCase);
+            var bindings = new List<LetBinding>(); var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            for (var i = 0; i < let.Arguments.Count - 1; i += 2)
+            {
+                if (let.Arguments[i] is not NameNode { Sheet: null } name || !ComplexFormulaFunctions.IsLocalName(name.Name) || !names.Add(name.Name))
+                    throw new FormatException("LET 局部名称无效或重复。");
+                var value = Child(let.Arguments[i + 1], scope); var id = ++budget.LocalId;
+                bindings.Add(new(id, name.Name, value));
+                var valueDepth = BoundDepth(value) + 1;
+                if (valueDepth > 128) throw new FormatException("LET 局部名称引用链超过 128 层。");
+                scope[name.Name] = new(id, name.Name, value, DateMathFunctions.ArrayResult(value), valueDepth);
+            }
+            return new LetNode(bindings, Child(let.Arguments[^1], scope));
+        }
+        var node = expression switch
+        {
+            UnaryNode unary => unary with { Operand = Child(unary.Operand) },
+            BinaryNode binary => binary with { Left = Child(binary.Left), Right = Child(binary.Right) },
+            FunctionNode function => function with { Arguments = function.Arguments.Select(a => Child(a)).ToArray() },
+            _ => expression
+        };
+        {
+            if (node is FunctionNode { Name: "OFFSET" or "INDIRECT" } indirect)
+                return ComplexFormulaFunctions.BindReference(indirect, snapshot, currentSheet, position);
             if (node is StructuredReferenceNode structured) return StructuredReferences.Bind(structured, snapshot, currentSheet, position);
             if (node is ReferenceNode reference)
             {
@@ -44,6 +85,8 @@ public static class FormulaBinding
                 return sheet is null ? new ValueNode(CellValue.FromError(CellErrorCode.Reference)) : reference with { Sheet = sheet.Name };
             }
             if (node is not NameNode name) return node;
+            if (name.Sheet is null && locals?.TryGetValue(name.Name, out var local) == true)
+                return local.Definition is ReferenceNode localReference ? localReference with { SourceExpression = new NameNode(local.Name) } : local;
             var context = name.Sheet is null ? snapshot.GetSheet(currentSheet)
                 : snapshot.Sheets.FirstOrDefault(s => s.Name.Equals(name.Sheet, StringComparison.OrdinalIgnoreCase));
             if (context is null) return new ValueNode(CellValue.FromError(CellErrorCode.Reference));
@@ -67,7 +110,7 @@ public static class FormulaBinding
             if (!visiting.Add(key)) throw new FormatException("名称之间存在循环引用。");
             try { return Bind(FormulaSyntax.Parse(definition.Formula), snapshot, definition.Scope ?? context.Id, visiting, budget, depth + 1, true, position); }
             finally { visiting.Remove(key); }
-        });
+        }
     }
 }
 
@@ -77,12 +120,15 @@ public static class StandardFunctions
     {
         name = name.ToUpperInvariant();
         return Signatures.TryGetValue(name, out var bounds) && count >= bounds.Min && count <= bounds.Max &&
-            (name is "SUMIFS" or "AVERAGEIFS" ? count % 2 == 1 : name != "COUNTIFS" || count % 2 == 0);
+            (name is "SUMIFS" or "AVERAGEIFS" or "LET" ? count % 2 == 1 : name != "COUNTIFS" || count % 2 == 0);
     }
     public static IReadOnlyDictionary<string, (int Min, int Max)> Signatures { get; } =
         new Dictionary<string, (int, int)>(StringComparer.OrdinalIgnoreCase)
         {
             ["SUM"] = (1, 255), ["AVERAGE"] = (1, 255), ["MIN"] = (1, 255), ["MAX"] = (1, 255),
+            ["SEQUENCE"] = (1, 4), ["FILTER"] = (2, 3), ["SORT"] = (1, 4), ["UNIQUE"] = (1, 3),
+            ["LET"] = (3, 253), ["OFFSET"] = (3, 5), ["INDIRECT"] = (1, 2),
+            ["VAR.S"] = (1, 254), ["VAR.P"] = (1, 254), ["STDEV.S"] = (1, 254), ["STDEV.P"] = (1, 254), ["MEDIAN"] = (1, 255),
             ["COUNT"] = (1, 255), ["COUNTA"] = (1, 255), ["PRODUCT"] = (1, 255),
             ["SUBTOTAL"] = (2, 255),
             ["SUMIF"] = (2, 3), ["SUMIFS"] = (3, 255), ["COUNTIF"] = (2, 2), ["COUNTIFS"] = (2, 254),

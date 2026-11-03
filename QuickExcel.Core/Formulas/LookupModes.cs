@@ -17,7 +17,7 @@ public static class LookupModes
         if (node is UnaryNode { Operator: "+" or "-" } u && TryConstant(u.Operand, out value)) { if (u.Operator == "-") value = -value; return true; }
         value = 0; return false;
     }
-    public static void Validate(FormulaNode expression)
+    public static void Validate(FormulaNode expression, bool arrayContext = false)
     {
         foreach (var f in FormulaSyntax.Walk(expression).OfType<FunctionNode>())
         {
@@ -33,10 +33,10 @@ public static class LookupModes
                 if (args[1] is ReferenceNode lookup && args[2] is ReferenceNode output)
                 {
                     var l = ConditionalRanges.Shape(lookup); var r = ConditionalRanges.Shape(output);
-                    if (l.Columns == 1 && l.Rows == r.Rows && r.Columns > 1 || l.Rows == 1 && l.Columns == r.Columns && r.Rows > 1)
+                    if (!arrayContext && (l.Columns == 1 && l.Rows == r.Rows && r.Columns > 1 || l.Rows == 1 && l.Columns == r.Columns && r.Rows > 1))
                         throw new FormatException("XLOOKUP 多格返回尚未实现；导入公式保留原包和来源缓存。");
                 }
-                if (args.Count >= 4 && args[3] is ReferenceNode fallback && ConditionalRanges.Shape(fallback) != (1, 1))
+                if (!arrayContext && args.Count >= 4 && args[3] is ReferenceNode fallback && ConditionalRanges.Shape(fallback) != (1, 1))
                     throw new FormatException("XLOOKUP 尚不支持多格未找到返回值。");
             }
             var matchIndex = f.Name == "XLOOKUP" ? 4 : 2;

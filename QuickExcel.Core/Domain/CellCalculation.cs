@@ -8,7 +8,7 @@ public enum CalculationState { Fresh, Dirty, Running, Stale, Blocked, Error }
 public sealed class CellCalculation
 {
     public CellCalculation(CellValue? value, CalculationState state, long inputRevision,
-        long calculationGeneration, long scriptGeneration, IEnumerable<string>? diagnostics = null)
+        long calculationGeneration, long scriptGeneration, IEnumerable<string>? diagnostics = null, FormulaArray? array = null, FormulaArrayDimensions? blockedSpill = null)
     {
         if (!Enum.IsDefined(state)) throw new ArgumentOutOfRangeException(nameof(state));
         ArgumentOutOfRangeException.ThrowIfNegative(inputRevision);
@@ -18,6 +18,13 @@ public sealed class CellCalculation
             throw new ArgumentException("A fresh result requires a non-error value.", nameof(value));
         if (state == CalculationState.Error && (value is null || value.Value.Kind != CellValueKind.Error))
             throw new ArgumentException("An error result requires an error value.", nameof(value));
+        if (array is not null && value != array[0, 0])
+            throw new ArgumentException("数组锚点缓存必须与数组首元素一致。", nameof(array));
+        if (blockedSpill is { } extent)
+        {
+            FormulaArray.ValidateShape(extent.Rows, extent.Columns);
+            if (value != CellValue.FromError(CellErrorCode.Spill)) throw new ArgumentException("阻塞尺寸仅用于溢出错误。", nameof(blockedSpill));
+        }
 
         var messages = diagnostics?.ToArray() ?? [];
         if (messages.Any(message => message is null))
@@ -27,7 +34,9 @@ public sealed class CellCalculation
         InputRevision = inputRevision;
         CalculationGeneration = calculationGeneration;
         ScriptGeneration = scriptGeneration;
-        Diagnostics = Array.AsReadOnly(messages);
+        Diagnostics = System.Array.AsReadOnly(messages);
+        Array = array;
+        BlockedSpill = blockedSpill;
     }
 
     /// <summary>Null means no cached result; CellValue.Blank is a present blank result.</summary>
@@ -37,4 +46,6 @@ public sealed class CellCalculation
     public long CalculationGeneration { get; }
     public long ScriptGeneration { get; }
     public ReadOnlyCollection<string> Diagnostics { get; }
+    public FormulaArray? Array { get; }
+    public FormulaArrayDimensions? BlockedSpill { get; }
 }

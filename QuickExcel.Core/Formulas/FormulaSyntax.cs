@@ -12,9 +12,14 @@ public sealed record NameNode(string Name, string? Sheet = null) : FormulaNode;
 public sealed record UnaryNode(string Operator, FormulaNode Operand) : FormulaNode;
 public sealed record BinaryNode(string Operator, FormulaNode Left, FormulaNode Right) : FormulaNode;
 public sealed record FunctionNode(string Name, IReadOnlyList<FormulaNode> Arguments) : FormulaNode;
+// Bound-only lexical nodes. Local references never expand their expression at each use.
+public sealed record LocalValueNode(int Id, string Name, FormulaNode Definition, bool ArrayResult, int EvaluationDepth) : FormulaNode;
+public sealed record LetBinding(int Id, string Name, FormulaNode Value);
+public sealed record LetNode(IReadOnlyList<LetBinding> Bindings, FormulaNode Body) : FormulaNode;
 public sealed record ReferenceNode(string? Sheet, int Row, int Column, int EndRow, int EndColumn,
     bool ColumnAbsolute = false, bool RowAbsolute = false, bool EndColumnAbsolute = false,
-    bool EndRowAbsolute = false, bool IsRange = false, bool WholeColumns = false) : FormulaNode
+    bool EndRowAbsolute = false, bool IsRange = false, bool WholeColumns = false,
+    FormulaNode? SourceExpression = null) : FormulaNode
 {
     public bool Contains(int row, int column) => row >= Row && row <= EndRow && column >= Column && column <= EndColumn;
 }
@@ -31,29 +36,68 @@ public static class FormulaSyntax
 
     public static IEnumerable<FormulaNode> Walk(FormulaNode root)
     {
-        var stack = new Stack<FormulaNode>();
-        stack.Push(root);
-        while (stack.TryPop(out var node))
+        var stack = new Stack<(FormulaNode Node, HashSet<string>? Locals)>();
+        stack.Push((root, null));
+        while (stack.TryPop(out var item))
         {
+            var (node, locals) = item;
+            if (node is NameNode { Sheet: null } local && locals?.Contains(local.Name) == true) continue;
             yield return node;
             switch (node)
             {
-                case UnaryNode unary: stack.Push(unary.Operand); break;
-                case BinaryNode binary: stack.Push(binary.Right); stack.Push(binary.Left); break;
+                case UnaryNode unary: stack.Push((unary.Operand, locals)); break;
+                case BinaryNode binary: stack.Push((binary.Right, locals)); stack.Push((binary.Left, locals)); break;
+                case LetNode let:
+                    stack.Push((let.Body, locals));
+                    for (var i = let.Bindings.Count - 1; i >= 0; i--) stack.Push((let.Bindings[i].Value, locals));
+                    break;
+                case FunctionNode { Name: "LET" } let when StandardFunctions.AcceptsArguments("LET", let.Arguments.Count):
+                    var children = new List<(FormulaNode, HashSet<string>?)>(); var scope = locals;
+                    for (var i = 0; i < let.Arguments.Count - 1; i += 2)
+                    {
+                        children.Add((let.Arguments[i + 1], scope));
+                        scope = scope is null ? new(StringComparer.OrdinalIgnoreCase) : new(scope, StringComparer.OrdinalIgnoreCase);
+                        if (let.Arguments[i] is NameNode { Sheet: null } name) scope.Add(name.Name);
+                    }
+                    children.Add((let.Arguments[^1], scope));
+                    for (var i = children.Count - 1; i >= 0; i--) stack.Push(children[i]);
+                    break;
                 case FunctionNode function:
-                    for (var i = function.Arguments.Count - 1; i >= 0; i--) stack.Push(function.Arguments[i]);
+                    for (var i = function.Arguments.Count - 1; i >= 0; i--) stack.Push((function.Arguments[i], locals));
                     break;
             }
         }
     }
 
-    public static FormulaNode Map(FormulaNode node, Func<FormulaNode, FormulaNode> transform) => transform(node switch
+    public static FormulaNode Map(FormulaNode node, Func<FormulaNode, FormulaNode> transform) => MapScoped(node, transform, null);
+    private static FormulaNode MapScoped(FormulaNode node, Func<FormulaNode, FormulaNode> transform, HashSet<string>? locals)
     {
-        UnaryNode unary => unary with { Operand = Map(unary.Operand, transform) },
-        BinaryNode binary => binary with { Left = Map(binary.Left, transform), Right = Map(binary.Right, transform) },
-        FunctionNode function => function with { Arguments = function.Arguments.Select(n => Map(n, transform)).ToArray() },
-        _ => node
-    });
+        if (node is NameNode { Sheet: null } local && locals?.Contains(local.Name) == true) return node;
+        if (node is FunctionNode { Name: "LET" } let && StandardFunctions.AcceptsArguments("LET", let.Arguments.Count))
+        {
+            var scope = locals is null ? new HashSet<string>(StringComparer.OrdinalIgnoreCase) : new(locals, StringComparer.OrdinalIgnoreCase);
+            var args = let.Arguments.ToArray();
+            for (var i = 0; i < args.Length - 1; i += 2)
+            {
+                args[i + 1] = MapScoped(args[i + 1], transform, scope);
+                if (args[i] is NameNode { Sheet: null } name) scope.Add(name.Name);
+            }
+            args[^1] = MapScoped(args[^1], transform, scope);
+            return transform(let with { Arguments = args });
+        }
+        FormulaNode Child(FormulaNode child) => MapScoped(child, transform, locals);
+        var transformed = transform(node switch
+        {
+            UnaryNode unary => unary with { Operand = Child(unary.Operand) },
+            BinaryNode binary => binary with { Left = Child(binary.Left), Right = Child(binary.Right) },
+            LetNode bound => bound with { Bindings = bound.Bindings.Select(b => b with { Value = Child(b.Value) }).ToArray(), Body = Child(bound.Body) },
+            FunctionNode function => function with { Arguments = function.Arguments.Select(Child).ToArray() },
+            _ => node
+        });
+        if (node is NameNode && transformed is NameNode { Sheet: null } renamed && locals?.Contains(renamed.Name) == true)
+            throw new NotSupportedException("名称转换会被 LET 局部变量遮蔽，操作未应用；请使用不冲突的名称。");
+        return transformed;
+    }
 
     public static string ColumnName(int column)
     {
@@ -85,10 +129,11 @@ public static class FormulaSyntax
                     foreach (var ch in value.Value.TextValue)
                         if (!Append(ch == '"' ? "\"\"" : ch.ToString())) return false;
                     return Append("\"");
-                case ValueNode or NameNode or ReferenceNode or StructuredReferenceNode: return Append(Print(part));
+                case ValueNode or NameNode or ReferenceNode or StructuredReferenceNode or LocalValueNode: return Append(Print(part));
+                case LetNode let: return Write(LetFunction(let), depth + 1);
                 case UnaryNode unary:
-                    return Append(unary.Operator == "%" ? "(" : unary.Operator + "(") && Write(unary.Operand, depth + 1)
-                        && Append(unary.Operator == "%" ? ")%" : ")");
+                    return Append(unary.Operator is "%" or "#" ? "(" : unary.Operator + "(") && Write(unary.Operand, depth + 1)
+                        && Append(unary.Operator is "%" or "#" ? ")" + unary.Operator : ")");
                 case BinaryNode binary:
                     return Append("(") && Write(binary.Left, depth + 1) && Append(binary.Operator) && Write(binary.Right, depth + 1) && Append(")");
                 case FunctionNode function:
@@ -122,19 +167,25 @@ public static class FormulaSyntax
         NameNode n => SheetPrefix(n.Sheet) + n.Name,
         ReferenceNode r => PrintReference(r),
         StructuredReferenceNode r => StructuredReferences.Print(r),
-        UnaryNode u => u.Operator == "%" ? "(" + Print(u.Operand) + ")%" : u.Operator + "(" + Print(u.Operand) + ")",
+        UnaryNode u => u.Operator is "%" or "#" ? "(" + Print(u.Operand) + ")" + u.Operator : u.Operator + "(" + Print(u.Operand) + ")",
         BinaryNode b => "(" + Print(b.Left) + b.Operator + Print(b.Right) + ")",
         FunctionNode f => f.Name + "(" + string.Join(",", f.Arguments.Select(Print)) + ")",
+        LocalValueNode local => local.Name,
+        LetNode let => Print(LetFunction(let)),
         _ => throw new NotSupportedException()
     };
 
     private static string PrintReference(ReferenceNode r)
     {
+        if (r.SourceExpression is not null) return Print(r.SourceExpression);
         string End(int row, int col, bool ca, bool ra) => (ca ? "$" : "") + ColumnName(col)
             + (r.WholeColumns ? "" : (ra ? "$" : "") + (row + 1).ToString(CultureInfo.InvariantCulture));
         return SheetPrefix(r.Sheet) + End(r.Row, r.Column, r.ColumnAbsolute, r.RowAbsolute)
             + (r.IsRange || r.WholeColumns ? ":" + End(r.EndRow, r.EndColumn, r.EndColumnAbsolute, r.EndRowAbsolute) : "");
     }
+
+    private static FunctionNode LetFunction(LetNode let) => new("LET", let.Bindings
+        .SelectMany(b => new FormulaNode[] { new NameNode(b.Name), b.Value }).Append(let.Body).ToArray());
 
     private static readonly Regex CellPattern = new(@"^(\$?)([A-Za-z]{1,3})(\$?)([1-9][0-9]*)$", RegexOptions.CultureInvariant);
     private static readonly Regex ColumnPattern = new(@"^(\$?)([A-Za-z]{1,3})$", RegexOptions.CultureInvariant);
@@ -171,9 +222,9 @@ public static class FormulaSyntax
                 }
                 if (ch == '#')
                 {
-                    string[] errors = ["#DIV/0!", "#VALUE!", "#REF!", "#NAME?", "#NUM!", "#N/A", "#NULL!", "#CYCLE!", "#SCRIPT!"];
-                    var error = errors.FirstOrDefault(e => input.AsSpan(pos).StartsWith(e, StringComparison.OrdinalIgnoreCase))
-                        ?? throw new FormatException("未知错误常量。");
+                    string[] errors = ["#DIV/0!", "#VALUE!", "#REF!", "#NAME?", "#NUM!", "#N/A", "#NULL!", "#CYCLE!", "#SCRIPT!", "#CALC!", "#SPILL!"];
+                    var error = errors.FirstOrDefault(e => input.AsSpan(pos).StartsWith(e, StringComparison.OrdinalIgnoreCase));
+                    if (error is null) { _tokens.Add(new("#", "#")); pos++; continue; }
                     _tokens.Add(new("error", error)); pos += error.Length; continue;
                 }
                 if (char.IsAsciiDigit(ch) || ch == '.' && pos + 1 < input.Length && char.IsAsciiDigit(input[pos + 1]))
@@ -238,6 +289,12 @@ public static class FormulaSyntax
             while (true)
             {
                 if (Current.Kind == "%" && 60 >= precedence) { Take(); left = new UnaryNode("%", left); continue; }
+                if (Current.Kind == "#" && 80 >= precedence)
+                {
+                    if (left is not (ReferenceNode { IsRange: false, WholeColumns: false } or NameNode or ValueNode { Value.Kind: CellValueKind.Error }))
+                        throw new FormatException("溢出引用必须指向单个公式锚点。");
+                    Take(); left = new UnaryNode("#", left); continue;
+                }
                 var priority = Current.Kind switch { "=" or "<>" or "<" or ">" or "<=" or ">=" => 10, "&" => 20, "+" or "-" => 30, "*" or "/" => 40, "^" => 50, _ => -1 };
                 if (priority < precedence) break;
                 var op = Take().Kind;
@@ -263,7 +320,7 @@ public static class FormulaSyntax
                 {
                     while (true)
                     {
-                        if (Current.Kind is "," or ")" && (functionName == "XLOOKUP" && (args.Count == 0 || args.Count >= 3) || functionName == "XMATCH" && args.Count >= 2 || functionName == "SUBTOTAL" && args.Count == 0))
+                        if (Current.Kind is "," or ")" && (functionName is "OFFSET" or "INDIRECT" || DynamicArrayFunctions.IsFunction(functionName) || functionName == "XLOOKUP" && (args.Count == 0 || args.Count >= 3) || functionName == "XMATCH" && args.Count >= 2 || functionName == "SUBTOTAL" && args.Count == 0))
                         {
                             if (++_nodes > 2048) throw new FormatException("公式过长。");
                             args.Add(new MissingNode());
@@ -274,6 +331,8 @@ public static class FormulaSyntax
                     }
                 }
                 Expect(")");
+                if (functionName == "ANCHORARRAY" && args.Count == 1 && args[0] is ReferenceNode { IsRange: false, WholeColumns: false })
+                    return new UnaryNode("#", args[0]);
                 return new FunctionNode(functionName, args);
             }
             if (sheet is null && token.Text.Equals("TRUE", StringComparison.OrdinalIgnoreCase)) return new ValueNode(CellValue.FromBoolean(true));

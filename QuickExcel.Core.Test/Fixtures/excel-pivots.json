@@ -1,0 +1,1229 @@
+{
+  "Version": "16.0",
+  "Build": "20527",
+  "Stable": true,
+  "BeforeRefresh": [
+    {
+      "Name": "SalesCount",
+      "Sheet": "Summary",
+      "Range": "A12:D17",
+      "Source": "SalesData",
+      "Values": [
+        {
+          "Row": 0,
+          "Column": 0,
+          "Kind": "Text",
+          "Value": "Count"
+        },
+        {
+          "Row": 0,
+          "Column": 1,
+          "Kind": "Text",
+          "Value": "Product"
+        },
+        {
+          "Row": 0,
+          "Column": 2,
+          "Kind": "Blank",
+          "Value": null
+        },
+        {
+          "Row": 0,
+          "Column": 3,
+          "Kind": "Blank",
+          "Value": null
+        },
+        {
+          "Row": 1,
+          "Column": 0,
+          "Kind": "Text",
+          "Value": "Region"
+        },
+        {
+          "Row": 1,
+          "Column": 1,
+          "Kind": "Text",
+          "Value": "A"
+        },
+        {
+          "Row": 1,
+          "Column": 2,
+          "Kind": "Text",
+          "Value": "B"
+        },
+        {
+          "Row": 1,
+          "Column": 3,
+          "Kind": "Text",
+          "Value": "总计"
+        },
+        {
+          "Row": 2,
+          "Column": 0,
+          "Kind": "Text",
+          "Value": "East"
+        },
+        {
+          "Row": 2,
+          "Column": 1,
+          "Kind": "Blank",
+          "Value": null
+        },
+        {
+          "Row": 2,
+          "Column": 2,
+          "Kind": "Number",
+          "Value": 1.0
+        },
+        {
+          "Row": 2,
+          "Column": 3,
+          "Kind": "Number",
+          "Value": 1.0
+        },
+        {
+          "Row": 3,
+          "Column": 0,
+          "Kind": "Text",
+          "Value": "North"
+        },
+        {
+          "Row": 3,
+          "Column": 1,
+          "Kind": "Number",
+          "Value": 2.0
+        },
+        {
+          "Row": 3,
+          "Column": 2,
+          "Kind": "Number",
+          "Value": 1.0
+        },
+        {
+          "Row": 3,
+          "Column": 3,
+          "Kind": "Number",
+          "Value": 3.0
+        },
+        {
+          "Row": 4,
+          "Column": 0,
+          "Kind": "Text",
+          "Value": "South"
+        },
+        {
+          "Row": 4,
+          "Column": 1,
+          "Kind": "Number",
+          "Value": 2.0
+        },
+        {
+          "Row": 4,
+          "Column": 2,
+          "Kind": "Number",
+          "Value": 1.0
+        },
+        {
+          "Row": 4,
+          "Column": 3,
+          "Kind": "Number",
+          "Value": 3.0
+        },
+        {
+          "Row": 5,
+          "Column": 0,
+          "Kind": "Text",
+          "Value": "总计"
+        },
+        {
+          "Row": 5,
+          "Column": 1,
+          "Kind": "Number",
+          "Value": 4.0
+        },
+        {
+          "Row": 5,
+          "Column": 2,
+          "Kind": "Number",
+          "Value": 3.0
+        },
+        {
+          "Row": 5,
+          "Column": 3,
+          "Kind": "Number",
+          "Value": 7.0
+        }
+      ]
+    },
+    {
+      "Name": "SalesSum",
+      "Sheet": "Summary",
+      "Range": "A3:D8",
+      "Source": "SalesData",
+      "Values": [
+        {
+          "Row": 0,
+          "Column": 0,
+          "Kind": "Text",
+          "Value": "Total"
+        },
+        {
+          "Row": 0,
+          "Column": 1,
+          "Kind": "Text",
+          "Value": "Product"
+        },
+        {
+          "Row": 0,
+          "Column": 2,
+          "Kind": "Blank",
+          "Value": null
+        },
+        {
+          "Row": 0,
+          "Column": 3,
+          "Kind": "Blank",
+          "Value": null
+        },
+        {
+          "Row": 1,
+          "Column": 0,
+          "Kind": "Text",
+          "Value": "Region"
+        },
+        {
+          "Row": 1,
+          "Column": 1,
+          "Kind": "Text",
+          "Value": "A"
+        },
+        {
+          "Row": 1,
+          "Column": 2,
+          "Kind": "Text",
+          "Value": "B"
+        },
+        {
+          "Row": 1,
+          "Column": 3,
+          "Kind": "Text",
+          "Value": "总计"
+        },
+        {
+          "Row": 2,
+          "Column": 0,
+          "Kind": "Text",
+          "Value": "East"
+        },
+        {
+          "Row": 2,
+          "Column": 1,
+          "Kind": "Blank",
+          "Value": null
+        },
+        {
+          "Row": 2,
+          "Column": 2,
+          "Kind": "Number",
+          "Value": -3.0
+        },
+        {
+          "Row": 2,
+          "Column": 3,
+          "Kind": "Number",
+          "Value": -3.0
+        },
+        {
+          "Row": 3,
+          "Column": 0,
+          "Kind": "Text",
+          "Value": "North"
+        },
+        {
+          "Row": 3,
+          "Column": 1,
+          "Kind": "Number",
+          "Value": 17.0
+        },
+        {
+          "Row": 3,
+          "Column": 2,
+          "Kind": "Number",
+          "Value": 5.0
+        },
+        {
+          "Row": 3,
+          "Column": 3,
+          "Kind": "Number",
+          "Value": 22.0
+        },
+        {
+          "Row": 4,
+          "Column": 0,
+          "Kind": "Text",
+          "Value": "South"
+        },
+        {
+          "Row": 4,
+          "Column": 1,
+          "Kind": "Number",
+          "Value": 20.0
+        },
+        {
+          "Row": 4,
+          "Column": 2,
+          "Kind": "Number",
+          "Value": 0.0
+        },
+        {
+          "Row": 4,
+          "Column": 3,
+          "Kind": "Number",
+          "Value": 20.0
+        },
+        {
+          "Row": 5,
+          "Column": 0,
+          "Kind": "Text",
+          "Value": "总计"
+        },
+        {
+          "Row": 5,
+          "Column": 1,
+          "Kind": "Number",
+          "Value": 37.0
+        },
+        {
+          "Row": 5,
+          "Column": 2,
+          "Kind": "Number",
+          "Value": 2.0
+        },
+        {
+          "Row": 5,
+          "Column": 3,
+          "Kind": "Number",
+          "Value": 39.0
+        }
+      ]
+    }
+  ],
+  "Initial": [
+    {
+      "Name": "SalesCount",
+      "Sheet": "Summary",
+      "Range": "A12:D17",
+      "Source": "SalesData",
+      "Values": [
+        {
+          "Row": 0,
+          "Column": 0,
+          "Kind": "Text",
+          "Value": "Count"
+        },
+        {
+          "Row": 0,
+          "Column": 1,
+          "Kind": "Text",
+          "Value": "Product"
+        },
+        {
+          "Row": 0,
+          "Column": 2,
+          "Kind": "Blank",
+          "Value": null
+        },
+        {
+          "Row": 0,
+          "Column": 3,
+          "Kind": "Blank",
+          "Value": null
+        },
+        {
+          "Row": 1,
+          "Column": 0,
+          "Kind": "Text",
+          "Value": "Region"
+        },
+        {
+          "Row": 1,
+          "Column": 1,
+          "Kind": "Text",
+          "Value": "A"
+        },
+        {
+          "Row": 1,
+          "Column": 2,
+          "Kind": "Text",
+          "Value": "B"
+        },
+        {
+          "Row": 1,
+          "Column": 3,
+          "Kind": "Text",
+          "Value": "总计"
+        },
+        {
+          "Row": 2,
+          "Column": 0,
+          "Kind": "Text",
+          "Value": "East"
+        },
+        {
+          "Row": 2,
+          "Column": 1,
+          "Kind": "Blank",
+          "Value": null
+        },
+        {
+          "Row": 2,
+          "Column": 2,
+          "Kind": "Number",
+          "Value": 1.0
+        },
+        {
+          "Row": 2,
+          "Column": 3,
+          "Kind": "Number",
+          "Value": 1.0
+        },
+        {
+          "Row": 3,
+          "Column": 0,
+          "Kind": "Text",
+          "Value": "North"
+        },
+        {
+          "Row": 3,
+          "Column": 1,
+          "Kind": "Number",
+          "Value": 2.0
+        },
+        {
+          "Row": 3,
+          "Column": 2,
+          "Kind": "Number",
+          "Value": 1.0
+        },
+        {
+          "Row": 3,
+          "Column": 3,
+          "Kind": "Number",
+          "Value": 3.0
+        },
+        {
+          "Row": 4,
+          "Column": 0,
+          "Kind": "Text",
+          "Value": "South"
+        },
+        {
+          "Row": 4,
+          "Column": 1,
+          "Kind": "Number",
+          "Value": 2.0
+        },
+        {
+          "Row": 4,
+          "Column": 2,
+          "Kind": "Number",
+          "Value": 1.0
+        },
+        {
+          "Row": 4,
+          "Column": 3,
+          "Kind": "Number",
+          "Value": 3.0
+        },
+        {
+          "Row": 5,
+          "Column": 0,
+          "Kind": "Text",
+          "Value": "总计"
+        },
+        {
+          "Row": 5,
+          "Column": 1,
+          "Kind": "Number",
+          "Value": 4.0
+        },
+        {
+          "Row": 5,
+          "Column": 2,
+          "Kind": "Number",
+          "Value": 3.0
+        },
+        {
+          "Row": 5,
+          "Column": 3,
+          "Kind": "Number",
+          "Value": 7.0
+        }
+      ]
+    },
+    {
+      "Name": "SalesSum",
+      "Sheet": "Summary",
+      "Range": "A3:D8",
+      "Source": "SalesData",
+      "Values": [
+        {
+          "Row": 0,
+          "Column": 0,
+          "Kind": "Text",
+          "Value": "Total"
+        },
+        {
+          "Row": 0,
+          "Column": 1,
+          "Kind": "Text",
+          "Value": "Product"
+        },
+        {
+          "Row": 0,
+          "Column": 2,
+          "Kind": "Blank",
+          "Value": null
+        },
+        {
+          "Row": 0,
+          "Column": 3,
+          "Kind": "Blank",
+          "Value": null
+        },
+        {
+          "Row": 1,
+          "Column": 0,
+          "Kind": "Text",
+          "Value": "Region"
+        },
+        {
+          "Row": 1,
+          "Column": 1,
+          "Kind": "Text",
+          "Value": "A"
+        },
+        {
+          "Row": 1,
+          "Column": 2,
+          "Kind": "Text",
+          "Value": "B"
+        },
+        {
+          "Row": 1,
+          "Column": 3,
+          "Kind": "Text",
+          "Value": "总计"
+        },
+        {
+          "Row": 2,
+          "Column": 0,
+          "Kind": "Text",
+          "Value": "East"
+        },
+        {
+          "Row": 2,
+          "Column": 1,
+          "Kind": "Blank",
+          "Value": null
+        },
+        {
+          "Row": 2,
+          "Column": 2,
+          "Kind": "Number",
+          "Value": -3.0
+        },
+        {
+          "Row": 2,
+          "Column": 3,
+          "Kind": "Number",
+          "Value": -3.0
+        },
+        {
+          "Row": 3,
+          "Column": 0,
+          "Kind": "Text",
+          "Value": "North"
+        },
+        {
+          "Row": 3,
+          "Column": 1,
+          "Kind": "Number",
+          "Value": 17.0
+        },
+        {
+          "Row": 3,
+          "Column": 2,
+          "Kind": "Number",
+          "Value": 5.0
+        },
+        {
+          "Row": 3,
+          "Column": 3,
+          "Kind": "Number",
+          "Value": 22.0
+        },
+        {
+          "Row": 4,
+          "Column": 0,
+          "Kind": "Text",
+          "Value": "South"
+        },
+        {
+          "Row": 4,
+          "Column": 1,
+          "Kind": "Number",
+          "Value": 20.0
+        },
+        {
+          "Row": 4,
+          "Column": 2,
+          "Kind": "Number",
+          "Value": 0.0
+        },
+        {
+          "Row": 4,
+          "Column": 3,
+          "Kind": "Number",
+          "Value": 20.0
+        },
+        {
+          "Row": 5,
+          "Column": 0,
+          "Kind": "Text",
+          "Value": "总计"
+        },
+        {
+          "Row": 5,
+          "Column": 1,
+          "Kind": "Number",
+          "Value": 37.0
+        },
+        {
+          "Row": 5,
+          "Column": 2,
+          "Kind": "Number",
+          "Value": 2.0
+        },
+        {
+          "Row": 5,
+          "Column": 3,
+          "Kind": "Number",
+          "Value": 39.0
+        }
+      ]
+    }
+  ],
+  "Reopened": [
+    {
+      "Name": "SalesCount",
+      "Sheet": "Summary",
+      "Range": "A12:D17",
+      "Source": "SalesData",
+      "Values": [
+        {
+          "Row": 0,
+          "Column": 0,
+          "Kind": "Text",
+          "Value": "Count"
+        },
+        {
+          "Row": 0,
+          "Column": 1,
+          "Kind": "Text",
+          "Value": "Product"
+        },
+        {
+          "Row": 0,
+          "Column": 2,
+          "Kind": "Blank",
+          "Value": null
+        },
+        {
+          "Row": 0,
+          "Column": 3,
+          "Kind": "Blank",
+          "Value": null
+        },
+        {
+          "Row": 1,
+          "Column": 0,
+          "Kind": "Text",
+          "Value": "Region"
+        },
+        {
+          "Row": 1,
+          "Column": 1,
+          "Kind": "Text",
+          "Value": "A"
+        },
+        {
+          "Row": 1,
+          "Column": 2,
+          "Kind": "Text",
+          "Value": "B"
+        },
+        {
+          "Row": 1,
+          "Column": 3,
+          "Kind": "Text",
+          "Value": "总计"
+        },
+        {
+          "Row": 2,
+          "Column": 0,
+          "Kind": "Text",
+          "Value": "East"
+        },
+        {
+          "Row": 2,
+          "Column": 1,
+          "Kind": "Blank",
+          "Value": null
+        },
+        {
+          "Row": 2,
+          "Column": 2,
+          "Kind": "Number",
+          "Value": 1.0
+        },
+        {
+          "Row": 2,
+          "Column": 3,
+          "Kind": "Number",
+          "Value": 1.0
+        },
+        {
+          "Row": 3,
+          "Column": 0,
+          "Kind": "Text",
+          "Value": "North"
+        },
+        {
+          "Row": 3,
+          "Column": 1,
+          "Kind": "Number",
+          "Value": 2.0
+        },
+        {
+          "Row": 3,
+          "Column": 2,
+          "Kind": "Number",
+          "Value": 1.0
+        },
+        {
+          "Row": 3,
+          "Column": 3,
+          "Kind": "Number",
+          "Value": 3.0
+        },
+        {
+          "Row": 4,
+          "Column": 0,
+          "Kind": "Text",
+          "Value": "South"
+        },
+        {
+          "Row": 4,
+          "Column": 1,
+          "Kind": "Number",
+          "Value": 2.0
+        },
+        {
+          "Row": 4,
+          "Column": 2,
+          "Kind": "Number",
+          "Value": 1.0
+        },
+        {
+          "Row": 4,
+          "Column": 3,
+          "Kind": "Number",
+          "Value": 3.0
+        },
+        {
+          "Row": 5,
+          "Column": 0,
+          "Kind": "Text",
+          "Value": "总计"
+        },
+        {
+          "Row": 5,
+          "Column": 1,
+          "Kind": "Number",
+          "Value": 4.0
+        },
+        {
+          "Row": 5,
+          "Column": 2,
+          "Kind": "Number",
+          "Value": 3.0
+        },
+        {
+          "Row": 5,
+          "Column": 3,
+          "Kind": "Number",
+          "Value": 7.0
+        }
+      ]
+    },
+    {
+      "Name": "SalesSum",
+      "Sheet": "Summary",
+      "Range": "A3:D8",
+      "Source": "SalesData",
+      "Values": [
+        {
+          "Row": 0,
+          "Column": 0,
+          "Kind": "Text",
+          "Value": "Total"
+        },
+        {
+          "Row": 0,
+          "Column": 1,
+          "Kind": "Text",
+          "Value": "Product"
+        },
+        {
+          "Row": 0,
+          "Column": 2,
+          "Kind": "Blank",
+          "Value": null
+        },
+        {
+          "Row": 0,
+          "Column": 3,
+          "Kind": "Blank",
+          "Value": null
+        },
+        {
+          "Row": 1,
+          "Column": 0,
+          "Kind": "Text",
+          "Value": "Region"
+        },
+        {
+          "Row": 1,
+          "Column": 1,
+          "Kind": "Text",
+          "Value": "A"
+        },
+        {
+          "Row": 1,
+          "Column": 2,
+          "Kind": "Text",
+          "Value": "B"
+        },
+        {
+          "Row": 1,
+          "Column": 3,
+          "Kind": "Text",
+          "Value": "总计"
+        },
+        {
+          "Row": 2,
+          "Column": 0,
+          "Kind": "Text",
+          "Value": "East"
+        },
+        {
+          "Row": 2,
+          "Column": 1,
+          "Kind": "Blank",
+          "Value": null
+        },
+        {
+          "Row": 2,
+          "Column": 2,
+          "Kind": "Number",
+          "Value": -3.0
+        },
+        {
+          "Row": 2,
+          "Column": 3,
+          "Kind": "Number",
+          "Value": -3.0
+        },
+        {
+          "Row": 3,
+          "Column": 0,
+          "Kind": "Text",
+          "Value": "North"
+        },
+        {
+          "Row": 3,
+          "Column": 1,
+          "Kind": "Number",
+          "Value": 17.0
+        },
+        {
+          "Row": 3,
+          "Column": 2,
+          "Kind": "Number",
+          "Value": 5.0
+        },
+        {
+          "Row": 3,
+          "Column": 3,
+          "Kind": "Number",
+          "Value": 22.0
+        },
+        {
+          "Row": 4,
+          "Column": 0,
+          "Kind": "Text",
+          "Value": "South"
+        },
+        {
+          "Row": 4,
+          "Column": 1,
+          "Kind": "Number",
+          "Value": 20.0
+        },
+        {
+          "Row": 4,
+          "Column": 2,
+          "Kind": "Number",
+          "Value": 0.0
+        },
+        {
+          "Row": 4,
+          "Column": 3,
+          "Kind": "Number",
+          "Value": 20.0
+        },
+        {
+          "Row": 5,
+          "Column": 0,
+          "Kind": "Text",
+          "Value": "总计"
+        },
+        {
+          "Row": 5,
+          "Column": 1,
+          "Kind": "Number",
+          "Value": 37.0
+        },
+        {
+          "Row": 5,
+          "Column": 2,
+          "Kind": "Number",
+          "Value": 2.0
+        },
+        {
+          "Row": 5,
+          "Column": 3,
+          "Kind": "Number",
+          "Value": 39.0
+        }
+      ]
+    }
+  ],
+  "Edited": [
+    {
+      "Name": "SalesCount",
+      "Sheet": "Summary",
+      "Range": "A12:D17",
+      "Source": "SalesData",
+      "Values": [
+        {
+          "Row": 0,
+          "Column": 0,
+          "Kind": "Text",
+          "Value": "Count"
+        },
+        {
+          "Row": 0,
+          "Column": 1,
+          "Kind": "Text",
+          "Value": "Product"
+        },
+        {
+          "Row": 0,
+          "Column": 2,
+          "Kind": "Blank",
+          "Value": null
+        },
+        {
+          "Row": 0,
+          "Column": 3,
+          "Kind": "Blank",
+          "Value": null
+        },
+        {
+          "Row": 1,
+          "Column": 0,
+          "Kind": "Text",
+          "Value": "Region"
+        },
+        {
+          "Row": 1,
+          "Column": 1,
+          "Kind": "Text",
+          "Value": "A"
+        },
+        {
+          "Row": 1,
+          "Column": 2,
+          "Kind": "Text",
+          "Value": "B"
+        },
+        {
+          "Row": 1,
+          "Column": 3,
+          "Kind": "Text",
+          "Value": "总计"
+        },
+        {
+          "Row": 2,
+          "Column": 0,
+          "Kind": "Text",
+          "Value": "East"
+        },
+        {
+          "Row": 2,
+          "Column": 1,
+          "Kind": "Blank",
+          "Value": null
+        },
+        {
+          "Row": 2,
+          "Column": 2,
+          "Kind": "Number",
+          "Value": 1.0
+        },
+        {
+          "Row": 2,
+          "Column": 3,
+          "Kind": "Number",
+          "Value": 1.0
+        },
+        {
+          "Row": 3,
+          "Column": 0,
+          "Kind": "Text",
+          "Value": "North"
+        },
+        {
+          "Row": 3,
+          "Column": 1,
+          "Kind": "Number",
+          "Value": 2.0
+        },
+        {
+          "Row": 3,
+          "Column": 2,
+          "Kind": "Number",
+          "Value": 1.0
+        },
+        {
+          "Row": 3,
+          "Column": 3,
+          "Kind": "Number",
+          "Value": 3.0
+        },
+        {
+          "Row": 4,
+          "Column": 0,
+          "Kind": "Text",
+          "Value": "South"
+        },
+        {
+          "Row": 4,
+          "Column": 1,
+          "Kind": "Number",
+          "Value": 2.0
+        },
+        {
+          "Row": 4,
+          "Column": 2,
+          "Kind": "Number",
+          "Value": 1.0
+        },
+        {
+          "Row": 4,
+          "Column": 3,
+          "Kind": "Number",
+          "Value": 3.0
+        },
+        {
+          "Row": 5,
+          "Column": 0,
+          "Kind": "Text",
+          "Value": "总计"
+        },
+        {
+          "Row": 5,
+          "Column": 1,
+          "Kind": "Number",
+          "Value": 4.0
+        },
+        {
+          "Row": 5,
+          "Column": 2,
+          "Kind": "Number",
+          "Value": 3.0
+        },
+        {
+          "Row": 5,
+          "Column": 3,
+          "Kind": "Number",
+          "Value": 7.0
+        }
+      ]
+    },
+    {
+      "Name": "SalesSum",
+      "Sheet": "Summary",
+      "Range": "A3:D8",
+      "Source": "SalesData",
+      "Values": [
+        {
+          "Row": 0,
+          "Column": 0,
+          "Kind": "Text",
+          "Value": "Total"
+        },
+        {
+          "Row": 0,
+          "Column": 1,
+          "Kind": "Text",
+          "Value": "Product"
+        },
+        {
+          "Row": 0,
+          "Column": 2,
+          "Kind": "Blank",
+          "Value": null
+        },
+        {
+          "Row": 0,
+          "Column": 3,
+          "Kind": "Blank",
+          "Value": null
+        },
+        {
+          "Row": 1,
+          "Column": 0,
+          "Kind": "Text",
+          "Value": "Region"
+        },
+        {
+          "Row": 1,
+          "Column": 1,
+          "Kind": "Text",
+          "Value": "A"
+        },
+        {
+          "Row": 1,
+          "Column": 2,
+          "Kind": "Text",
+          "Value": "B"
+        },
+        {
+          "Row": 1,
+          "Column": 3,
+          "Kind": "Text",
+          "Value": "总计"
+        },
+        {
+          "Row": 2,
+          "Column": 0,
+          "Kind": "Text",
+          "Value": "East"
+        },
+        {
+          "Row": 2,
+          "Column": 1,
+          "Kind": "Blank",
+          "Value": null
+        },
+        {
+          "Row": 2,
+          "Column": 2,
+          "Kind": "Number",
+          "Value": -3.0
+        },
+        {
+          "Row": 2,
+          "Column": 3,
+          "Kind": "Number",
+          "Value": -3.0
+        },
+        {
+          "Row": 3,
+          "Column": 0,
+          "Kind": "Text",
+          "Value": "North"
+        },
+        {
+          "Row": 3,
+          "Column": 1,
+          "Kind": "Number",
+          "Value": 19.0
+        },
+        {
+          "Row": 3,
+          "Column": 2,
+          "Kind": "Number",
+          "Value": 5.0
+        },
+        {
+          "Row": 3,
+          "Column": 3,
+          "Kind": "Number",
+          "Value": 24.0
+        },
+        {
+          "Row": 4,
+          "Column": 0,
+          "Kind": "Text",
+          "Value": "South"
+        },
+        {
+          "Row": 4,
+          "Column": 1,
+          "Kind": "Number",
+          "Value": 20.0
+        },
+        {
+          "Row": 4,
+          "Column": 2,
+          "Kind": "Number",
+          "Value": 0.0
+        },
+        {
+          "Row": 4,
+          "Column": 3,
+          "Kind": "Number",
+          "Value": 20.0
+        },
+        {
+          "Row": 5,
+          "Column": 0,
+          "Kind": "Text",
+          "Value": "总计"
+        },
+        {
+          "Row": 5,
+          "Column": 1,
+          "Kind": "Number",
+          "Value": 39.0
+        },
+        {
+          "Row": 5,
+          "Column": 2,
+          "Kind": "Number",
+          "Value": 2.0
+        },
+        {
+          "Row": 5,
+          "Column": 3,
+          "Kind": "Number",
+          "Value": 41.0
+        }
+      ]
+    }
+  ]
+}

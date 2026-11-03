@@ -7,10 +7,11 @@ public static class TextFunctions
 {
     public static bool IsFunction(string name) => name is "TEXT" or "VALUE" or "SUBSTITUTE" or "REPLACE" or "FIND" or "SEARCH" or "TEXTJOIN" or "CONCAT"
         or "ISBLANK" or "ISNUMBER" or "ISTEXT" or "ISERROR" or "IFNA";
-    public static void Validate(FormulaNode expression, WorkbookSnapshot snapshot)
+    public static void Validate(FormulaNode expression, WorkbookSnapshot snapshot, bool arrayContext = false)
     {
         foreach (var f in FormulaSyntax.Walk(expression).OfType<FunctionNode>().Where(f => IsFunction(f.Name)))
         {
+            if (arrayContext && f.Name == "IFNA") continue;
             for (var i = 0; i < f.Arguments.Count; i++)
             {
                 var rangeAllowed = f.Name == "CONCAT" || f.Name == "TEXTJOIN" && i >= 2;

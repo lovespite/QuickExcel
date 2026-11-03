@@ -16,7 +16,7 @@ public sealed partial class TypedWorkbookStorage : IPortableWorkbookStorage
             var formulas = snapshot.Sheets.SelectMany(s => s.Cells.Values).Where(c => c.Content.Kind == CellContentKind.Formula).ToArray();
             return new(0, formulas.Length, formulas.Count(c => c.Calculation?.Value is null), formulas.Count(c => c.Calculation?.Value is not null));
         }
-        var index = new WorkbookDependencyIndex(snapshot);
+        var index = PortableIndex(snapshot);
         var frozen = index.NonPortableCells.Select(a => snapshot.GetSheet(a.SheetId).GetCell(a.Row, a.Column)!).ToArray();
         return new(index.Nodes.Count - frozen.Length, frozen.Length,
             frozen.Count(c => c.Calculation?.Value is null),
@@ -31,10 +31,12 @@ public sealed partial class TypedWorkbookStorage : IPortableWorkbookStorage
         GuardOriginal(path, snapshot, discardUnsupported);
         if (!discardUnsupported && snapshot.FileState?.CompatibilityIssues.Length > 0)
             throw new WorkbookCompatibilityException(snapshot.FileState.CompatibilityIssues);
-        var index = new WorkbookDependencyIndex(snapshot);
+        var index = PortableIndex(snapshot);
         var sheets = snapshot.Sheets.Select(sheet => sheet.WithCells(sheet.Cells.ToImmutableDictionary(p => p.Key, p =>
         {
             var cell = p.Value;
+            if (cell.SpillOwner is { } owner && index.NonPortableCells.Contains(owner))
+                return NormalizeHostError(new CellSnapshot(CellContent.FromLiteral(cell.Value, cell.Content.StyleId)));
             if (cell.Content.Kind != CellContentKind.Formula)
                 return NormalizeHostError(cell);
             var address = new CellAddress(sheet.Id, p.Key.Row, p.Key.Column);
@@ -51,7 +53,7 @@ public sealed partial class TypedWorkbookStorage : IPortableWorkbookStorage
             var formula = index.Nodes[address].PortableFormula!;
             var cache = cell.Calculation is { } c && c.InputRevision == snapshot.Revision
                 && c.State is CalculationState.Fresh or CalculationState.Error ? c : null;
-            return new CellSnapshot(CellContent.FromFormula(formula, cell.Content.StyleId), cache);
+            return new CellSnapshot(CellContent.FromFormula(formula, cell.Content.StyleId, cell.Content.DynamicArray), cache);
         }))).ToArray();
         var exported = snapshot.WithDefinedNames([]).WithSheets(sheets);
         var bytes = TypedWorkbookXml.Write(exported, false, CancellationToken.None);
@@ -60,6 +62,21 @@ public sealed partial class TypedWorkbookStorage : IPortableWorkbookStorage
             var read = TypedWorkbookXml.Read(ReadFile(temp, new(CancellationToken.None)), new(CancellationToken.None));
             if (!ContentEquals(exported, read.Snapshot, allowRowHeightRounding: true)) throw new InvalidDataException("可移植公式导出后校验未通过。");
         }, CancellationToken.None);
+    }
+
+    // Export must follow derived-cell dependencies too: freezing an array also freezes its
+    // children and consumers, including formulas that reference a child rather than the anchor.
+    private static WorkbookDependencyIndex PortableIndex(WorkbookSnapshot snapshot)
+    {
+        var spills = new Dictionary<CellAddress, FormulaSpill>();
+        foreach (var sheet in snapshot.Sheets)
+        foreach (var (position, cell) in sheet.Cells)
+            if (cell.Content.DynamicArray && cell.Calculation?.Array is { } array)
+            {
+                var address = new CellAddress(sheet.Id, position.Row, position.Column);
+                spills.Add(address, new(address, array));
+            }
+        return new(snapshot, () => { }, spills);
     }
 
     private static CellSnapshot NormalizeHostError(CellSnapshot cell) =>

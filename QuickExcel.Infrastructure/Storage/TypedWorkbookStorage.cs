@@ -18,7 +18,7 @@ public sealed class WorkbookCompatibilityException(IEnumerable<string> issues) :
 public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage, IWorkbookVirtualFiles
 {
     private static readonly string[] Features = ["typed-workbook", "stable-sheet-ids", "script-modules"];
-    private static bool HasExtendedErrors(WorkbookSnapshot snapshot) => snapshot.Sheets.Any(s => s.Cells.Values.Any(c => c.Value is { Kind: CellValueKind.Error, ErrorCode: CellErrorCode.Calculation }));
+    private static bool HasExtendedErrors(WorkbookSnapshot snapshot) => snapshot.Sheets.Any(s => s.Cells.Values.Any(c => c.Value is { Kind: CellValueKind.Error, ErrorCode: CellErrorCode.Calculation or CellErrorCode.Spill }));
     public WorkbookSnapshot Open(string path) => Open(path, CancellationToken.None);
     public WorkbookSnapshot Open(string path, CancellationToken cancellationToken)
     {
@@ -44,6 +44,10 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage, IW
         var declaredViews = false;
         var declaredTextVersion = false;
         var declaredExtendedErrors = false;
+        var declaredDynamicArrays = false;
+        var declaredPivots = false;
+        var declaredStrict = false;
+        var declaredThreads = false;
         JsonDocument? manifest = null, state = null;
         try
         {
@@ -73,7 +77,11 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage, IW
                     declaredViews = features.Contains("workbook-views");
                     declaredTextVersion = features.Contains("text-compatibility-v2");
                     declaredExtendedErrors = features.Contains("extended-cell-errors");
-                    if (features.Distinct().Count() != features.Length || Features.Except(features).Any() || features.Except(Features.Concat(["typescript-sources", "virtual-files", "script-actions", "script-signatures", "workbook-views", "worksheet-printing", "preserved-formulas", "cell-text-annotations", "worksheet-data", "worksheet-tables", "worksheet-validation", "worksheet-conditional-formatting", "worksheet-outline", "text-compatibility-v2", "extended-cell-errors", "drawing-anchors", "drawing-transforms", "worksheet-protection", "worksheet-charts", "worksheet-charts-v2", "worksheet-default-width", "extended-capacity"])).Any() ||
+                    declaredDynamicArrays = features.Contains("dynamic-arrays");
+                    declaredPivots = features.Contains("worksheet-pivots");
+                    declaredStrict = features.Contains("strict-ooxml");
+                    declaredThreads = features.Contains("preserved-threaded-comments");
+                    if (features.Distinct().Count() != features.Length || Features.Except(features).Any() || features.Except(Features.Concat(["strict-ooxml", "preserved-threaded-comments", "worksheet-pivots", "dynamic-arrays", "typescript-sources", "virtual-files", "script-actions", "script-signatures", "workbook-views", "worksheet-printing", "preserved-formulas", "cell-text-annotations", "worksheet-data", "worksheet-tables", "worksheet-validation", "worksheet-conditional-formatting", "worksheet-outline", "text-compatibility-v2", "extended-cell-errors", "drawing-anchors", "drawing-transforms", "worksheet-protection", "worksheet-charts", "worksheet-charts-v2", "worksheet-default-width", "extended-capacity"])).Any() ||
                         features.Contains("script-actions") && scriptApiVersion != 2)
                         throw new InvalidDataException("XLSQ 缺少必要能力或包含未知必需能力。");
                     var referenced = new HashSet<string>(StringComparer.Ordinal) { "manifest.json" };
@@ -156,6 +164,13 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage, IW
                 throw new InvalidDataException("文本计算兼容版本与必需能力不一致。");
             if (version == 2 && HasExtendedErrors(model) != declaredExtendedErrors)
                 throw new InvalidDataException("扩展错误值与必需能力声明不一致。");
+            if (version == 2 && XlsxDynamicArrays.Present(model) != declaredDynamicArrays && read.PreservedFormulas.Count == 0)
+                throw new InvalidDataException("动态数组与必需能力声明不一致。");
+            if (version == 2 && XlsxPivots.Present(model) && !declaredPivots)
+                throw new InvalidDataException("透视模型缺少必需能力声明。");
+            if (version == 2 && read.IsStrict != declaredStrict) throw new InvalidDataException("Strict OOXML 与必需能力声明不一致。");
+            if (version == 2 && read.PreservedAttachments.Any(a => a.Feature == ExtendedObjectSafety.ThreadedComments) && !declaredThreads)
+                throw new InvalidDataException("线程评论保留缺少必需能力声明。");
             var sheets = model.Sheets.ToArray();
             var documentId = Guid.NewGuid();
             long revision = 0;
@@ -176,7 +191,10 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage, IW
                     var index = read.Bindings.ToList().FindIndex(b => b.Part == part && b.WorkbookSheetId == number);
                     if (index < 0 || !seenIds.Add(id) || !seenParts.Add(part)) throw new InvalidDataException("稳定表身份与 XLSX 关系绑定不一致。");
                     var sheet = sheets[index];
-                    sheets[index] = new(new SheetId(id), sheet.Name, sheet.Cells, sheet.Rows, sheet.Columns, sheet.MergedCells, sheet.Images, sheet.ShowGridLines, sheet.DefaultRowHeight, sheet.TabColor, sheet.View, sheet.Visibility, sheet.Printing, sheet.Annotations, sheet.Data);
+                    var stableId = new SheetId(id);
+                    var cells = sheet.Cells.Select(p => p.Value.SpillOwner is { } owner ? KeyValuePair.Create(p.Key,
+                        new CellSnapshot(p.Value.Content, p.Value.Calculation, owner with { SheetId = stableId })) : p);
+                    sheets[index] = new(stableId, sheet.Name, cells, sheet.Rows, sheet.Columns, sheet.MergedCells, sheet.Images, sheet.ShowGridLines, sheet.DefaultRowHeight, sheet.TabColor, sheet.View, sheet.Visibility, sheet.Printing, sheet.Annotations, sheet.Data);
                 }
             }
             var activeSheet = sheets[model.Sheets.IndexOf(model.GetSheet(model.ActiveSheetId))].Id;
@@ -225,7 +243,7 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage, IW
             var issues = read.Issues.ToList();
             // An original package can be retained byte-for-byte even for unsupported workbook features.
             var fileState = new WorkbookFileState(sourcePath, version, workbookBytes, originalModel, read.Bindings, issues,
-                version == 2 ? manifest!.RootElement.GetRawText() : null, state?.RootElement.GetRawText(), read.Diagnostics, read.PreservedFormulas);
+                version == 2 ? manifest!.RootElement.GetRawText() : null, state?.RootElement.GetRawText(), read.Diagnostics, read.PreservedFormulas, read.PreservedAttachments);
             return new(documentId, revision, model.DateSystem, sheets, modules.PrimarySource, model.Styles, modules, fileState, names, activeSheet, model.Window, model.TextCompatibilityVersion, packageFiles);
         }
         catch (Exception exception) when (exception is JsonException or System.Xml.XmlException or FormatException or OverflowException or ArgumentException or InvalidOperationException && exception is not WorkbookCompatibilityException)
@@ -298,6 +316,10 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage, IW
         var manifest = Object(snapshot.FileState?.ManifestJson);
         manifest["format"] = "QuickExcel"; manifest["formatVersion"] = 2; manifest["minReaderVersion"] = 2; manifest["scriptApiVersion"] = snapshot.ScriptModules.ScriptApiVersion;
         manifest["requiredFeatures"] = JsonSerializer.SerializeToNode(Features
+            .Concat(XlsxDynamicArrays.Present(snapshot) ? ["dynamic-arrays"] : [])
+            .Concat(XlsxPivots.Present(snapshot) ? ["worksheet-pivots"] : [])
+            .Concat(XlsxStrict.SourceIsStrict(snapshot, cancellationToken) ? ["strict-ooxml"] : [])
+            .Concat(snapshot.FileState?.PreservedAttachments.Any(a => a.Feature == ExtendedObjectSafety.ThreadedComments) == true ? ["preserved-threaded-comments"] : [])
             .Concat(snapshot.Sheets.Any(s => s.Data.DefaultColumnWidth is not null) ? ["worksheet-default-width"] : [])
             .Concat(snapshot.Styles.Length > 4096 || snapshot.Sheets.Any(s => s.UsedRowCount > 100_000 || s.UsedColumnCount > 1024 || s.Rows.Keys.Any(r => r >= 100_000) || s.Columns.Keys.Any(c => c >= 1024)) ? ["extended-capacity"] : [])
             .Concat(snapshot.Sheets.Any(s => s.Images.Any(i => i.Anchor.Rotation != 0) || s.Data.Charts.Any(c => c.Anchor.Rotation != 0)) ? ["drawing-transforms"] : [])
@@ -385,6 +407,8 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage, IW
         if (formulas.Any(c => c.Calculation?.Value is null)) throw new InvalidOperationException("部分公式缺少缓存结果，不能导出值快照。");
         if (!allowStaleCaches && formulas.Any(c => c.Calculation!.State is not (CalculationState.Fresh or CalculationState.Error) || c.Calculation.InputRevision != snapshot.Revision))
             throw new InvalidOperationException("部分公式结果可能过期；请重算或明确选择导出已有结果。");
+        if (!allowStaleCaches && snapshot.Sheets.Any(s=>s.Data.Pivots.Any(p=>p.Stale)))
+            throw new InvalidOperationException("透视结果尚未刷新；请刷新或明确选择导出已有结果。");
         if (!discardUnsupported && snapshot.FileState?.CompatibilityIssues.Length > 0) throw new WorkbookCompatibilityException(snapshot.FileState.CompatibilityIssues);
         var bytes = TypedWorkbookXml.Write(snapshot.WithDefinedNames([]), true, CancellationToken.None);
         PackageIO.AtomicWrite(path, bytes, temp =>
@@ -395,7 +419,7 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage, IW
                 var value = pair.Value.Value;
                 if (value.Kind == CellValueKind.Error && value.ErrorCode is CellErrorCode.Script or CellErrorCode.Cycle) value = CellValue.FromError(CellErrorCode.Value);
                 return new CellSnapshot(pair.Value.Content.RichText is { } rich ? CellContent.FromRichText(rich, pair.Value.Content.StyleId) : CellContent.FromLiteral(value, pair.Value.Content.StyleId));
-            })));
+            })).WithData(sheet.Data with { Pivots=[] }));
             if (!ContentEquals(snapshot.WithDefinedNames([]).WithSheets(expectedSheets), read.Snapshot, allowRowHeightRounding: true)) throw new InvalidDataException("导出后类型/结构校验未通过。");
         }, CancellationToken.None);
     }
@@ -421,7 +445,9 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage, IW
         string NameKey(WorkbookSnapshot book, QuickExcel.Formulas.DefinedName name) =>
             (name.Scope is { } scope ? book.GetSheet(scope).Name : "") + "\0" + name.Name + "\0" + (allowRowHeightRounding ? QuickExcel.Formulas.StructuredReferences.CanonicalFormula(name.Formula) : name.Formula);
         bool SameContent(CellContent a, CellContent b) => a == b || allowRowHeightRounding && a.Kind == CellContentKind.Formula && b.Kind == CellContentKind.Formula &&
-            a.StyleId == b.StyleId && QuickExcel.Formulas.StructuredReferences.CanonicalFormula(a.FormulaText) == QuickExcel.Formulas.StructuredReferences.CanonicalFormula(b.FormulaText);
+            a.StyleId == b.StyleId && a.DynamicArray == b.DynamicArray && QuickExcel.Formulas.StructuredReferences.CanonicalFormula(a.FormulaText) == QuickExcel.Formulas.StructuredReferences.CanonicalFormula(b.FormulaText);
+        FormulaArrayDimensions? SpillSize(CellSnapshot cell) => cell.Calculation?.BlockedSpill ??
+            (cell.Value is { Kind:CellValueKind.Error,ErrorCode:CellErrorCode.Spill } ? new FormulaArrayDimensions(1,1) : null);
         if (!left.DefinedNames.Select(n => NameKey(left, n)).Order().SequenceEqual(right.DefinedNames.Select(n => NameKey(right, n)).Order())) return false;
         if (left.GetSheet(left.ActiveSheetId).Name != right.GetSheet(right.ActiveSheetId).Name || left.Window != right.Window) return false;
         if (left.TextCompatibilityVersion != right.TextCompatibilityVersion || left.DateSystem != right.DateSystem || !left.Styles.SequenceEqual(right.Styles) || left.Sheets.Length != right.Sheets.Length) return false;
@@ -434,7 +460,11 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage, IW
                     !SameHeight(value.Height, p.Value.Height)) || a.Columns.Any(p => !b.Columns.TryGetValue(p.Key, out var value) || value != p.Value)) return false;
             foreach (var (position, cell) in a.Cells)
                 if (!b.Cells.TryGetValue(position, out var value) || !SameContent(cell.Content, value.Content) ||
-                    (cell.Content.Kind == CellContentKind.Formula && cell.Calculation?.Value != value.Calculation?.Value)) return false;
+                    ((cell.Content.Kind == CellContentKind.Formula || cell.SpillOwner is not null) && cell.Calculation?.Value != value.Calculation?.Value) ||
+                    (cell.Calculation?.Array?.Rows ?? 1, cell.Calculation?.Array?.Columns ?? 1) != (value.Calculation?.Array?.Rows ?? 1, value.Calculation?.Array?.Columns ?? 1) ||
+                    cell.Calculation?.Array is { } leftArray && value.Calculation?.Array is { } rightArray && !leftArray.ContentEquals(rightArray) ||
+                    SpillSize(cell) != SpillSize(value) ||
+                    (cell.SpillOwner?.Row, cell.SpillOwner?.Column) != (value.SpillOwner?.Row, value.SpillOwner?.Column)) return false;
             for (var image = 0; image < a.Images.Length; image++)
             {
                 var x = a.Images[image]; var y = b.Images[image];

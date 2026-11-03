@@ -19,9 +19,12 @@ public static class DateMathFunctions
                 throw new FormatException("日期和数学公式目前仅支持标量参数；多格数组模式尚未实现。");
         }
     }
-    internal static bool ArrayResult(FormulaNode expression) => expression switch
+    public static bool ArrayResult(FormulaNode expression) => expression switch
     {
         ReferenceNode reference => ConditionalRanges.Shape(reference) != (1, 1),
+        LocalValueNode local => local.ArrayResult,
+        LetNode let => ArrayResult(let.Body),
+        FunctionNode function when DynamicArrayFunctions.IsFunction(function.Name) => true,
         UnaryNode unary => ArrayResult(unary.Operand),
         BinaryNode binary => ArrayResult(binary.Left) || ArrayResult(binary.Right),
         FunctionNode { Name: "IF" } function => function.Arguments.Any(ArrayResult),

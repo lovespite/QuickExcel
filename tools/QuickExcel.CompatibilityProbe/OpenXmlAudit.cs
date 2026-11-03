@@ -19,6 +19,8 @@ public static class OpenXmlAudit
 {
     public static readonly XNamespace Main = "http://schemas.openxmlformats.org/spreadsheetml/2006/main";
     public static readonly XNamespace Rel = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
+    private static readonly XNamespace StrictMain = "http://purl.oclc.org/ooxml/spreadsheetml/main";
+    private static readonly XNamespace StrictRel = "http://purl.oclc.org/ooxml/officeDocument/relationships";
     public static readonly XNamespace PackageRel = "http://schemas.openxmlformats.org/package/2006/relationships";
     private const long Limit = 64 * 1024 * 1024;
 
@@ -119,14 +121,14 @@ public static class OpenXmlAudit
                 var relPart = RelationshipPart(part);
                 var ids = xml.GetValueOrDefault(relPart)?.Root?.Elements(PackageRel + "Relationship")
                     .Select(r => (string?)r.Attribute("Id")).ToHashSet() ?? [];
-                foreach (var reference in document.Descendants().Attributes().Where(a => a.Name.Namespace == Rel))
+                foreach (var reference in document.Descendants().Attributes().Where(a => a.Name.Namespace == Rel || a.Name.Namespace == StrictRel))
                     if (!ids.Contains(reference.Value)) issues.Add(new(part, reference.Parent!.Name.LocalName, $"Unresolved relationship: {reference.Value}"));
             }
         }
         AddCells(xml, facts, issues);
         try
         {
-            using var stream = new MemoryStream(bytes, false);
+            using var stream = new MemoryStream(StrictAuditProjection.ForSdk(parts, xml, facts, bytes), false);
             using var document = SpreadsheetDocument.Open(stream, false);
             var validator = new OpenXmlValidator(FileFormatVersions.Office2019) { MaxNumberOfErrors = 1000 };
             issues.AddRange(validator.Validate(document).Select(e => new AuditIssue(
@@ -162,32 +164,33 @@ public static class OpenXmlAudit
 
     private static void AddCells(Dictionary<string, XDocument> xml, IDictionary<string, string> facts, List<AuditIssue> issues)
     {
-        foreach (var (part, document) in xml.Where(p => p.Value.Root?.Name == Main + "worksheet"))
+        foreach (var (part, document) in xml.Where(p => p.Value.Root?.Name == Main + "worksheet" || p.Value.Root?.Name == StrictMain + "worksheet"))
         {
+            var main = document.Root!.Name.Namespace;
             // Resolve styles and strings through the owning workbook's relationships, never fixed filenames.
-            var workbook = xml.FirstOrDefault(p => p.Value.Root?.Name == Main + "workbook" && Related(xml, p.Key, "worksheet").Contains(part)).Key;
+            var workbook = xml.FirstOrDefault(p => p.Value.Root?.Name == main + "workbook" && Related(xml, p.Key, "worksheet").Contains(part)).Key;
             if (workbook is null) continue;
             var stylePart = Related(xml, workbook, "styles").FirstOrDefault();
             var stringPart = Related(xml, workbook, "sharedStrings").FirstOrDefault();
-            var xfs = stylePart is null ? [] : xml.GetValueOrDefault(stylePart)?.Root?.Element(Main + "cellXfs")?.Elements().ToArray() ?? [];
-            var strings = stringPart is null ? [] : xml.GetValueOrDefault(stringPart)?.Root?.Elements(Main + "si").ToArray() ?? [];
-            foreach (var cell in document.Descendants(Main + "c"))
+            var xfs = stylePart is null ? [] : xml.GetValueOrDefault(stylePart)?.Root?.Element(main + "cellXfs")?.Elements().ToArray() ?? [];
+            var strings = stringPart is null ? [] : xml.GetValueOrDefault(stringPart)?.Root?.Elements(main + "si").ToArray() ?? [];
+            foreach (var cell in document.Descendants(main + "c"))
             {
                 var address = (string?)cell.Attribute("r") ?? "(implicit)";
                 var type = (string?)cell.Attribute("t") ?? "n";
-                var value = cell.Element(Main + "v")?.Value;
-                if (type == "inlineStr") { type = "text"; value = string.Concat(cell.Element(Main + "is")?.Descendants(Main + "t").Select(t => t.Value) ?? []); }
+                var value = cell.Element(main + "v")?.Value;
+                if (type == "inlineStr") { type = "text"; value = string.Concat(cell.Element(main + "is")?.Descendants(main + "t").Select(t => t.Value) ?? []); }
                 if (type == "s")
                 {
                     type = "text";
                     if (int.TryParse(value, out var index) && index >= 0 && index < strings.Length)
-                        value = string.Concat(strings[index].Descendants(Main + "t").Select(t => t.Value));
+                        value = string.Concat(strings[index].Descendants(main + "t").Select(t => t.Value));
                     else issues.Add(new(part, address, "Shared string index is outside the string table."));
                 }
                 if (type == "n" && double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var number))
                     value = number.ToString("R", CultureInfo.InvariantCulture);
                 facts[$"cells|{part}!{address}/value"] = JsonSerializer.Serialize(new { type, value });
-                if (cell.Element(Main + "f") is { } formula) facts[$"cells|{part}!{address}/formula"] = formula.Value;
+                if (cell.Element(main + "f") is { } formula) facts[$"cells|{part}!{address}/formula"] = formula.Value;
                 if (cell.Attribute("s") is { } style && (!int.TryParse(style.Value, out var id) || id < 0 || id >= xfs.Length))
                     issues.Add(new(part, address, "Style index is outside cellXfs."));
             }
@@ -196,7 +199,7 @@ public static class OpenXmlAudit
 
     private static IEnumerable<string> Related(Dictionary<string, XDocument> xml, string source, string type) =>
         xml.GetValueOrDefault(RelationshipPart(source))?.Root?.Elements(PackageRel + "Relationship")
-            .Where(r => (string?)r.Attribute("Type") == Rel.NamespaceName + "/" + type && (string?)r.Attribute("TargetMode") != "External")
+            .Where(r => ((string?)r.Attribute("Type") == Rel.NamespaceName + "/" + type || (string?)r.Attribute("Type") == StrictRel.NamespaceName + "/" + type) && (string?)r.Attribute("TargetMode") != "External")
             .Select(r => Resolve(source, (string?)r.Attribute("Target") ?? "")) ?? [];
 
     private static string RelationshipPart(string part)

@@ -182,6 +182,15 @@ public sealed partial class WorkbookGrid
         if (_snapshot is null) return;
         using var transform = context.PushTransform(Matrix.CreateScale(_zoom, _zoom));
         if (_selectedObject is not null) { PaintDrawingSelection(context); return; }
+        var selectedCell = Sheet.GetCell(_current.Row,_current.Column);
+        var spillAnchor = selectedCell?.SpillOwner is { } owner ? new CellPosition(owner.Row,owner.Column) : _current;
+        if (Sheet.GetCell(spillAnchor.Row,spillAnchor.Column)?.Calculation?.Array is { } array)
+        foreach (var fragment in Fragments(new GridCellRange(spillAnchor.Row,spillAnchor.Column,
+            spillAnchor.Row + array.Rows - 1,spillAnchor.Column + array.Columns - 1)))
+        {
+            using var clip = context.PushClip(fragment.Clip);
+            context.DrawRectangle(null,new Pen(Brushes.DodgerBlue,1 / _zoom),fragment.Bounds);
+        }
         foreach (var range in _selection.Ranges)
         foreach (var fragment in Fragments(range))
         {

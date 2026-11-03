@@ -49,6 +49,8 @@ public sealed class WorkbookCalculator(IScriptRuntimeFactory runtimeFactory) : I
         if (request.ScriptsEnabled && !request.Snapshot.ScriptModules.CanExecute)
             throw new NotSupportedException("多模块执行需要显式声明脚本 API v2。");
         var index = new WorkbookDependencyIndex(request.Snapshot, Check);
+        if (index.Nodes.Values.Any(n => n.Cell.Content.DynamicArray || DynamicArrayFunctions.UsesArrays(n.Expression)))
+            return ArrayCalculationRound.Calculate(request with { CancellationToken = cancellationToken }, _factory, Check, timer);
         Cache? prior; lock (_gate) prior = _cache;
         var reusable = !request.ForceFull && !request.ScriptsEnabled && !index.Nodes.Values.Any(n => n.Script)
             && prior is not null && !prior.Request.ScriptsEnabled

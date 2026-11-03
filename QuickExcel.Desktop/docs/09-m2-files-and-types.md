@@ -1,5 +1,7 @@
 # M2 文件与类型保真：0.3 预览交付
 
+2026-11-04 文件扩展：E5 已接入原生动态数组及溢出元数据、基本透视定义/缓存、Strict OOXML 源变体保持和线程评论原位保留。XLSQ v2 分别声明 `dynamic-arrays`、`worksheet-pivots`、`strict-ooxml`、`preserved-threaded-comments` 必需特征。动态数组改写保存要求本轮有效结果；透视旧缓存显式标记过期；线程评论不能移动或编辑讨论。实际支持范围、预算、独立 XML 与 Excel 双向证据见 [74](74-e5-implementation-log.md)，不承诺任意 Strict 对象或外部链接刷新。下文是 M2 历史记录。
+
 2026-10-30 状态说明：本页保留 M2/0.3 的交付证据，文中的“本轮”“下一阶段”及源码状态只指当时。M3 计算、M4 模块/actions、桌面签名信任及后续显示已分别接入；当前优先扩展范围见 [XLSX / Excel 对齐计划](26-excel-compatibility-roadmap.md)，总进度见 [实施计划](05-implementation-plan.md)。
 
 本轮从已提交的 QuickExcel `82381fe`（phase 2）继续；仅修改独立 QuickExcel 仓库，ExcelIO 为只读源码依赖。日期：2026-10-27。源码工作树尚未提交。

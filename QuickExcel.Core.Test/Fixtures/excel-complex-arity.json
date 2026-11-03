@@ -1,0 +1,283 @@
+{
+  "Version": "16.0",
+  "Build": "20527",
+  "Language": 2052,
+  "SpecSha256": "1BAD60D8693F505BEDC670AF243ED8819A76CDC6751197BADADCEC175877505B",
+  "NormalReopen": true,
+  "OracleSha256": "EEF2C8F9453E207F9251591F6E8A19885E0699B067CC6EBE0268EDB543BC5C59",
+  "Cases": [
+    {
+      "Function": "LET",
+      "Count": 2,
+      "Formula": "=LET(local_0,1)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "LET",
+      "Count": 3,
+      "Formula": "=LET(local_0,1,1)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "LET",
+      "Count": 4,
+      "Formula": "=LET(local_0,1,local_2,1)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "LET",
+      "Count": 253,
+      "Formula": "=LET(local_0,1,local_2,1,local_4,1,local_6,1,local_8,1,local_10,1,local_12,1,local_14,1,local_16,1,local_18,1,local_20,1,local_22,1,local_24,1,local_26,1,local_28,1,local_30,1,local_32,1,local_34,1,local_36,1,local_38,1,local_40,1,local_42,1,local_44,1,local_46,1,local_48,1,local_50,1,local_52,1,local_54,1,local_56,1,local_58,1,local_60,1,local_62,1,local_64,1,local_66,1,local_68,1,local_70,1,local_72,1,local_74,1,local_76,1,local_78,1,local_80,1,local_82,1,local_84,1,local_86,1,local_88,1,local_90,1,local_92,1,local_94,1,local_96,1,local_98,1,local_100,1,local_102,1,local_104,1,local_106,1,local_108,1,local_110,1,local_112,1,local_114,1,local_116,1,local_118,1,local_120,1,local_122,1,local_124,1,local_126,1,local_128,1,local_130,1,local_132,1,local_134,1,local_136,1,local_138,1,local_140,1,local_142,1,local_144,1,local_146,1,local_148,1,local_150,1,local_152,1,local_154,1,local_156,1,local_158,1,local_160,1,local_162,1,local_164,1,local_166,1,local_168,1,local_170,1,local_172,1,local_174,1,local_176,1,local_178,1,local_180,1,local_182,1,local_184,1,local_186,1,local_188,1,local_190,1,local_192,1,local_194,1,local_196,1,local_198,1,local_200,1,local_202,1,local_204,1,local_206,1,local_208,1,local_210,1,local_212,1,local_214,1,local_216,1,local_218,1,local_220,1,local_222,1,local_224,1,local_226,1,local_228,1,local_230,1,local_232,1,local_234,1,local_236,1,local_238,1,local_240,1,local_242,1,local_244,1,local_246,1,local_248,1,local_250,1,1)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "LET",
+      "Count": 254,
+      "Formula": "=LET(local_0,1,local_2,1,local_4,1,local_6,1,local_8,1,local_10,1,local_12,1,local_14,1,local_16,1,local_18,1,local_20,1,local_22,1,local_24,1,local_26,1,local_28,1,local_30,1,local_32,1,local_34,1,local_36,1,local_38,1,local_40,1,local_42,1,local_44,1,local_46,1,local_48,1,local_50,1,local_52,1,local_54,1,local_56,1,local_58,1,local_60,1,local_62,1,local_64,1,local_66,1,local_68,1,local_70,1,local_72,1,local_74,1,local_76,1,local_78,1,local_80,1,local_82,1,local_84,1,local_86,1,local_88,1,local_90,1,local_92,1,local_94,1,local_96,1,local_98,1,local_100,1,local_102,1,local_104,1,local_106,1,local_108,1,local_110,1,local_112,1,local_114,1,local_116,1,local_118,1,local_120,1,local_122,1,local_124,1,local_126,1,local_128,1,local_130,1,local_132,1,local_134,1,local_136,1,local_138,1,local_140,1,local_142,1,local_144,1,local_146,1,local_148,1,local_150,1,local_152,1,local_154,1,local_156,1,local_158,1,local_160,1,local_162,1,local_164,1,local_166,1,local_168,1,local_170,1,local_172,1,local_174,1,local_176,1,local_178,1,local_180,1,local_182,1,local_184,1,local_186,1,local_188,1,local_190,1,local_192,1,local_194,1,local_196,1,local_198,1,local_200,1,local_202,1,local_204,1,local_206,1,local_208,1,local_210,1,local_212,1,local_214,1,local_216,1,local_218,1,local_220,1,local_222,1,local_224,1,local_226,1,local_228,1,local_230,1,local_232,1,local_234,1,local_236,1,local_238,1,local_240,1,local_242,1,local_244,1,local_246,1,local_248,1,local_250,1,local_252,1)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "OFFSET",
+      "Count": 2,
+      "Formula": "=OFFSET(Z1,1)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "OFFSET",
+      "Count": 3,
+      "Formula": "=OFFSET(Z1,1,1)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "OFFSET",
+      "Count": 4,
+      "Formula": "=OFFSET(Z1,1,1,1)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "OFFSET",
+      "Count": 5,
+      "Formula": "=OFFSET(Z1,1,1,1,1)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "OFFSET",
+      "Count": 6,
+      "Formula": "=OFFSET(Z1,1,1,1,1,1)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "INDIRECT",
+      "Count": 0,
+      "Formula": "=INDIRECT()",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "INDIRECT",
+      "Count": 1,
+      "Formula": "=INDIRECT(\"Z1\")",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "INDIRECT",
+      "Count": 2,
+      "Formula": "=INDIRECT(\"Z1\",1)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "INDIRECT",
+      "Count": 3,
+      "Formula": "=INDIRECT(\"Z1\",1,1)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "VAR.S",
+      "Count": 0,
+      "Formula": "=VAR.S()",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "VAR.S",
+      "Count": 1,
+      "Formula": "=VAR.S(1)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "VAR.S",
+      "Count": 2,
+      "Formula": "=VAR.S(1,1)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "VAR.S",
+      "Count": 254,
+      "Formula": "=VAR.S(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "VAR.S",
+      "Count": 255,
+      "Formula": "=VAR.S(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "VAR.P",
+      "Count": 0,
+      "Formula": "=VAR.P()",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "VAR.P",
+      "Count": 1,
+      "Formula": "=VAR.P(1)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "VAR.P",
+      "Count": 2,
+      "Formula": "=VAR.P(1,1)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "VAR.P",
+      "Count": 254,
+      "Formula": "=VAR.P(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "VAR.P",
+      "Count": 255,
+      "Formula": "=VAR.P(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "STDEV.S",
+      "Count": 0,
+      "Formula": "=STDEV.S()",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "STDEV.S",
+      "Count": 1,
+      "Formula": "=STDEV.S(1)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "STDEV.S",
+      "Count": 2,
+      "Formula": "=STDEV.S(1,1)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "STDEV.S",
+      "Count": 254,
+      "Formula": "=STDEV.S(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "STDEV.S",
+      "Count": 255,
+      "Formula": "=STDEV.S(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "STDEV.P",
+      "Count": 0,
+      "Formula": "=STDEV.P()",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "STDEV.P",
+      "Count": 1,
+      "Formula": "=STDEV.P(1)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "STDEV.P",
+      "Count": 2,
+      "Formula": "=STDEV.P(1,1)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "STDEV.P",
+      "Count": 254,
+      "Formula": "=STDEV.P(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "STDEV.P",
+      "Count": 255,
+      "Formula": "=STDEV.P(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "MEDIAN",
+      "Count": 0,
+      "Formula": "=MEDIAN()",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "MEDIAN",
+      "Count": 1,
+      "Formula": "=MEDIAN(1)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "MEDIAN",
+      "Count": 2,
+      "Formula": "=MEDIAN(1,1)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "MEDIAN",
+      "Count": 255,
+      "Formula": "=MEDIAN(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "MEDIAN",
+      "Count": 256,
+      "Formula": "=MEDIAN(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    }
+  ]
+}

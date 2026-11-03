@@ -14,7 +14,7 @@ internal sealed partial class TypedEvaluator
     }
     private CellValue LookupScalar(FormulaNode node) => node is ReferenceNode reference && ConditionalRanges.Shape(reference) == (1, 1)
         ? Read(LookupRange(reference).Sheet, reference.Row, reference.Column) : Scalar(node);
-    private CellValue LookupValue(FunctionNode function)
+    private object LookupValue(FunctionNode function)
     {
         var args = function.Arguments; var name = function.Name; var modern = name is "XLOOKUP" or "XMATCH";
         var needle = args[0] is MissingNode ? CellValue.Blank : LookupScalar(args[0]);
@@ -37,7 +37,8 @@ internal sealed partial class TypedEvaluator
         else if (name == "XLOOKUP")
         {
             output = LookupRange(args[2]);
-            if (ConditionalRanges.Shape(output.Reference) != shape) return Error(CellErrorCode.Value);
+            var outputShape = ConditionalRanges.Shape(output.Reference);
+            if (ArrayMode ? horizontal ? outputShape.Columns != shape.Columns : outputShape.Rows != shape.Rows : outputShape != shape) return Error(CellErrorCode.Value);
         }
         double Mode(int index, double fallback)
         {
@@ -80,10 +81,22 @@ internal sealed partial class TypedEvaluator
         }
         if (best < 0)
         {
+            if (ArrayMode && name == "XLOOKUP" && args.Count > 3 && args[3] is not MissingNode) return FormulaResult(args[3]);
             var fallback = name == "XLOOKUP" && args.Count > 3 && args[3] is not MissingNode ? LookupScalar(args[3]) : Error(CellErrorCode.NotAvailable);
             return fallback.Kind == CellValueKind.Blank ? CellValue.FromNumber(0) : fallback;
         }
         if (name is "MATCH" or "XMATCH") return CellValue.FromNumber(best + 1);
+        if (ArrayMode && output is not null)
+        {
+            var size = ConditionalRanges.Shape(output.Reference);
+            var rows = horizontal ? size.Rows : 1; var columns = horizontal ? 1 : size.Columns;
+            if (rows > 1 || columns > 1)
+            {
+                CheckArrayShape(rows,columns);
+                return new FormulaArray(rows,columns,Enumerable.Range(0,rows * columns).Select(i =>
+                    Read(output.Sheet, output.Reference.Row + (horizontal ? i : best), output.Reference.Column + (horizontal ? best : i))));
+            }
+        }
         var result = output is not null ? Read(output.Sheet, output.Reference.Row + (horizontal ? 0 : best), output.Reference.Column + (horizontal ? best : 0))
             : Read(lookup.Sheet, lookup.Reference.Row + (horizontal ? outputIndex : best), lookup.Reference.Column + (horizontal ? best : outputIndex));
         return result.Kind == CellValueKind.Blank ? CellValue.FromNumber(0) : result;
@@ -91,7 +104,10 @@ internal sealed partial class TypedEvaluator
 
     private IEnumerable<int> LookupPositions(Range range, bool horizontal, int length, bool includeBlank, int direction)
     {
-        if (!_positions.TryGetValue(range.Sheet.Id, out var positions))
+        CellPosition[] positions;
+        if (DerivedPositions is not null) positions = range.Sheet.Cells.Keys.Concat(DerivedPositions().Where(a => a.SheetId == range.Sheet.Id)
+            .Select(a => new CellPosition(a.Row,a.Column))).Distinct().OrderBy(p => p.Row).ThenBy(p => p.Column).ToArray();
+        else if (!_positions.TryGetValue(range.Sheet.Id, out positions!))
             _positions[range.Sheet.Id] = positions = range.Sheet.Cells.Keys.OrderBy(p => p.Row).ThenBy(p => p.Column).ToArray();
         var indices = new List<int>(); var r = range.Reference;
         foreach (var p in positions)

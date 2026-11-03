@@ -30,8 +30,8 @@ public sealed class FillCellsCommand(SheetId sheetId, CellRectangle source, Cell
             if (source.Contains(row, column)) continue;
             var sr = Mod(row - source.Top, captured.Rows); var sc = Mod(column - source.Left, captured.Columns);
             var content = captured.Cells[sr * captured.Columns + sc].Content;
-            if (content.Kind == CellContentKind.Formula) content = CellContent.FromFormula(PasteCellsCommand.CopyFormula(snapshot, sheetId, sheetId,
-                content.FormulaText, new(source.Top + sr, source.Left + sc), new(row, column)), content.StyleId);
+            if (content.Kind == CellContentKind.Formula) content = content.WithFormula(PasteCellsCommand.CopyFormula(snapshot, sheetId, sheetId,
+                content.FormulaText, new(source.Top + sr, source.Left + sc), new(row, column)));
             edits.Add(new(new(sheetId, row, column), content));
         }
         return new SetCellsCommand(edits).Prepare(snapshot);

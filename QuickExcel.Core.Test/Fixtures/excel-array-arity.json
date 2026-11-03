@@ -1,0 +1,178 @@
+{
+  "Version": "16.0",
+  "Build": "20527",
+  "Language": 2052,
+  "SpecSha256": "272DC04413D962A45A95FE58545BFAE768AF71665AA432214BA87C2FC8263BB3",
+  "NormalReopen": true,
+  "OracleSha256": "BAEF4C3FDFDA48C3D03860E428E9E1BA29C682CA816C7A0E9848C60864700F69",
+  "Cases": [
+    {
+      "Function": "SEQUENCE",
+      "Count": 0,
+      "Formula": "=SEQUENCE()",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "SEQUENCE",
+      "Count": 1,
+      "Formula": "=SEQUENCE(1)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "SEQUENCE",
+      "Count": 2,
+      "Formula": "=SEQUENCE(1,1)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "SEQUENCE",
+      "Count": 3,
+      "Formula": "=SEQUENCE(1,1,1)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "SEQUENCE",
+      "Count": 4,
+      "Formula": "=SEQUENCE(1,1,1,1)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "SEQUENCE",
+      "Count": 5,
+      "Formula": "=SEQUENCE(1,1,1,1,1)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "FILTER",
+      "Count": 0,
+      "Formula": "=FILTER()",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "FILTER",
+      "Count": 1,
+      "Formula": "=FILTER(1)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "FILTER",
+      "Count": 2,
+      "Formula": "=FILTER(1,1)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "FILTER",
+      "Count": 3,
+      "Formula": "=FILTER(1,1,1)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "FILTER",
+      "Count": 4,
+      "Formula": "=FILTER(1,1,1,1)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "FILTER",
+      "Count": 5,
+      "Formula": "=FILTER(1,1,1,1,1)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "SORT",
+      "Count": 0,
+      "Formula": "=SORT()",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "SORT",
+      "Count": 1,
+      "Formula": "=SORT(1)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "SORT",
+      "Count": 2,
+      "Formula": "=SORT(1,1)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "SORT",
+      "Count": 3,
+      "Formula": "=SORT(1,1,1)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "SORT",
+      "Count": 4,
+      "Formula": "=SORT(1,1,1,1)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "SORT",
+      "Count": 5,
+      "Formula": "=SORT(1,1,1,1,1)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "UNIQUE",
+      "Count": 0,
+      "Formula": "=UNIQUE()",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "UNIQUE",
+      "Count": 1,
+      "Formula": "=UNIQUE(1)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "UNIQUE",
+      "Count": 2,
+      "Formula": "=UNIQUE(1,1)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "UNIQUE",
+      "Count": 3,
+      "Formula": "=UNIQUE(1,1,1)",
+      "ExcelAccepted": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "UNIQUE",
+      "Count": 4,
+      "Formula": "=UNIQUE(1,1,1,1)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "UNIQUE",
+      "Count": 5,
+      "Formula": "=UNIQUE(1,1,1,1,1)",
+      "ExcelAccepted": false,
+      "ProductAccepted": false
+    }
+  ]
+}

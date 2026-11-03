@@ -80,7 +80,7 @@ public sealed class CopySheetCommand : DocumentCommand
             return changed ? "=" + FormulaSyntax.Print(expression) : text;
         }
         var cells = source.Cells.Select(p => new KeyValuePair<CellPosition, CellSnapshot>(p.Key,
-            p.Value.Content.Kind == CellContentKind.Formula ? new(CellContent.FromFormula(Formula(p.Value.Content.FormulaText, false, Source), p.Value.Content.StyleId)) : p.Value)).ToImmutableDictionary();
+            p.Value.Content.Kind == CellContentKind.Formula ? new(p.Value.Content.WithFormula(Formula(p.Value.Content.FormulaText, false, Source))) : p.Value)).ToImmutableDictionary();
         var nextTableId = snapshot.Sheets.SelectMany(s => s.Data.Tables).Select(t => t.Id).DefaultIfEmpty().Max();
         var data = source.Data with { Charts = source.Data.Charts.Select(c => c.MapReferences(f => Formula(f, false, Source))).ToImmutableArray(), Validations = source.Data.Validations.Select(v => v.MapFormulas(f => Formula(f, false, Source))).ToImmutableArray(),
             ConditionalFormats = source.Data.ConditionalFormats.Select(v => v.MapFormulas(f => Formula(f, false, Source))).ToImmutableArray(),
@@ -121,7 +121,7 @@ public sealed class RenameDefinedNameCommand(string name, SheetId? scope, string
         {
             if (p.Value.Content.Kind != CellContentKind.Formula) return p.Value;
             var next = Formula(p.Value.Content.FormulaText, sheet.Id, false);
-            return next == p.Value.Content.FormulaText ? p.Value : new(CellContent.FromFormula(next, p.Value.Content.StyleId));
+            return next == p.Value.Content.FormulaText ? p.Value : new(p.Value.Content.WithFormula(next));
         })).WithData(sheet.Data with { Validations = sheet.Data.Validations.Select(v => v.MapFormulas(f => Formula(f, sheet.Id, false))).ToImmutableArray(),
             ConditionalFormats = sheet.Data.ConditionalFormats.Select(v => v.MapFormulas(f => Formula(f, sheet.Id, false))).ToImmutableArray(),
             Tables = sheet.Data.Tables.Select(t => t.WithColumns(t.Columns.Select(c => c with

@@ -6,7 +6,7 @@
 
 2026-11-02：[SkiaSharp 方案](59-skia-rendering-and-pdf-plan.md) **P0–P4 声明范围完成**，包括共享文字/图片/图表渲染、直接 PDF、按需页面预览、主网格和旧依赖清理。Windows/Linux 实际输出、功能定向验证和原有滚动预算通过，完整状态、测量修正与外部门禁见 [60 号实施记录](60-skia-rendering-and-pdf-implementation.md)。
 
-2026-11-02 当前状态：XLSX / Excel 对齐计划 E0–E4 已逐项完成声明范围；[E4 报表、打印与容量](57-e4-reporting-and-capacity.md) 的五项实现、289 项相关回归、最终 117 项专项、81 项 Excel、23 项 WPF、PDF/DPI 和容量分级验收完成。以下较早的阶段描述为历史；E5、M4/M6 剩余门禁未完成，本轮未发布新包。
+2026-11-04 当前状态：XLSX / Excel 对齐计划 E0–E5 已逐项完成声明范围。[E5 高级分析与扩展兼容](74-e5-implementation-log.md) 包含动态数组、基础透视表、LET/静态引用/统计函数、Strict OOXML 和线程评论原位保留；764 项相关测试、90 项 Avalonia 检查、真实 Excel 对照及本地生产包自检通过，默认启动包已更新。未支持功能和 M4/M5/M6 剩余门禁仍独立列示，以下较早的阶段描述为历史。
 
 XC-0001/0002 完成：[真实 Excel 业务基线](37-excel-business-baseline.md) 覆盖五类六文件，5384 属性通过；[独立编辑矩阵](38-excel-edit-matrix.md) 的 48 路径及 Excel 重开对照通过，原始差异、诊断副本和预期公式表示均明确登记。[XC-0003 诊断收尾](39-xlsx-diagnostic-closure.md) 完成，E0/E1 按声明范围关闭，[XC-0201 内部剪贴板](40-internal-clipboard.md)、[XC-0202 填充与序列](41-fill-and-series.md) 已完成声明范围，[XC-0203 录入和公式编辑](42-formula-entry-and-navigation.md) 完成声明范围，[XC-0204 工作表与名称管理](43-sheet-and-name-management.md) 已完成声明范围，[XC-0205 条件统计公式](44-conditional-functions.md) 已完成声明范围，[XC-0206 查找公式](45-lookup-functions.md) 已完成声明范围，[XC-0207 日期/数学及工作日](46-date-and-math-functions.md) 已完成声明范围，接续 XC-0208。
 

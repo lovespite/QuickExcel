@@ -9,6 +9,8 @@ namespace QuickExcel.Storage;
 /// <summary>MS-XLSX _error/errorType=13. Other rich values and descriptive properties remain diagnosed.</summary>
 internal static class XlsxRichErrors
 {
+    internal readonly record struct ErrorKey(CellErrorCode Code, int Rows = 1, int Columns = 1);
+    internal static ErrorKey Key(CellSnapshot cell) => new(cell.Value.ErrorCode, cell.Calculation?.BlockedSpill?.Rows ?? 1, cell.Calculation?.BlockedSpill?.Columns ?? 1);
     private static readonly XNamespace Rich = "http://schemas.microsoft.com/office/spreadsheetml/2017/richdata";
     private const string Relation = "http://schemas.microsoft.com/office/2017/06/relationships/";
     private const string Extension = "{3e2802c4-a4d2-4d8b-9148-e3be6c30e623}";
@@ -20,21 +22,23 @@ internal static class XlsxRichErrors
             throw new InvalidDataException("富值元数据数量不一致或超限。");
         return items;
     }
-    public static IReadOnlyDictionary<int, CellErrorCode?> Read(XlsxPackage package, string workbook)
+    public static IReadOnlyDictionary<int, ErrorKey?> Read(XlsxPackage package, string workbook)
     {
-        var result = new Dictionary<int, CellErrorCode?>();
+        var result = new Dictionary<int, ErrorKey?>();
         var path = package.RelatedByType(workbook, "sheetMetadata");
         if (path is null) return result;
         package.RequireType(path, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheetMetadata+xml");
         var metadata = package.XmlPart(path).Root!;
         if (metadata.Name != Main + "metadata") throw new InvalidDataException("无效元数据部件。");
-        package.Shape(metadata, "metadataTypes futureMetadata valueMetadata", "", path);
+        package.Shape(metadata, "metadataTypes futureMetadata cellMetadata valueMetadata", "", path);
         foreach (var name in new[] { "metadataTypes", "valueMetadata" })
             if (metadata.Elements(Main + name).Count() > 1) throw new InvalidDataException("重复的富值元数据集合。");
         var records = Items(metadata.Element(Main + "valueMetadata"), Main + "bk");
         for (var i = 0; i < records.Length; i++) result[i + 1] = null;
         var dataPath = package.RelatedByUri(workbook, Relation + "rdRichValue");
         var structurePath = package.RelatedByUri(workbook, Relation + "rdRichValueStructure");
+        if (dataPath is null && structurePath is null && records.Length == 0 &&
+            metadata.Element(Main + "metadataTypes")?.Elements(Main + "metadataType").All(t => (string?)t.Attribute("name") == "XLDAPR") == true) return result;
         if (dataPath is null || structurePath is null)
         { package.Loss("此元数据尚未建模。", "rich-values/metadata", path); return result; }
         package.RequireType(dataPath, "application/vnd.ms-excel.rdrichvalue+xml");
@@ -42,7 +46,7 @@ internal static class XlsxRichErrors
         var data = package.XmlPart(dataPath).Root!; var structuresRoot = package.XmlPart(structurePath).Root!;
         if (data.Name != Rich + "rvData" || structuresRoot.Name != Rich + "rvStructures") throw new InvalidDataException("无效富值数据部件。");
         package.Shape(data, "rv", "count", dataPath); package.Shape(structuresRoot, "s", "count", structurePath);
-        var structures = Items(structuresRoot, Rich + "s"); var values = Items(data, Rich + "rv"); var errors = new CellErrorCode?[values.Length];
+        var structures = Items(structuresRoot, Rich + "s"); var values = Items(data, Rich + "rv"); var errors = new ErrorKey?[values.Length];
         for (var i = 0; i < values.Length; i++)
         {
             package.Budget.Check(); var item = values[i]; package.Shape(item, "v", "s", dataPath);
@@ -53,8 +57,19 @@ internal static class XlsxRichErrors
             var errorKey = Array.FindIndex(keys, k => (string?)k.Attribute("n") == "errorType" && (string?)k.Attribute("t") == "i");
             if ((string?)structure.Attribute("t") == "_error" && errorKey >= 0 && cells[errorKey].Value == "13")
             {
-                errors[i] = CellErrorCode.Calculation;
+                errors[i] = new(CellErrorCode.Calculation);
                 if (keys.Length != 1) package.Loss("#CALC! 附加说明属性未建模；修改后的副本仅保留错误身份。", "rich-error/details", dataPath);
+            }
+            else if ((string?)structure.Attribute("t") == "_error" && errorKey >= 0 && cells[errorKey].Value == "8")
+            {
+                var column = Array.FindIndex(keys, k => (string?)k.Attribute("n") == "colOffset" && (string?)k.Attribute("t") == "i");
+                var row = Array.FindIndex(keys, k => (string?)k.Attribute("n") == "rwOffset" && (string?)k.Attribute("t") == "i");
+                if (column < 0 || row < 0) throw new InvalidDataException("溢出错误缺少区域尺寸。");
+                var rows = Int(cells[row].Value, WorkbookLimits.MaxRows - 1) + 1;
+                var columns = Int(cells[column].Value, WorkbookLimits.MaxColumns - 1) + 1;
+                FormulaArray.ValidateShape(rows, columns);
+                errors[i] = new(CellErrorCode.Spill, rows, columns);
+                if (keys.Length != 3) package.Loss("溢出错误附加属性未建模。", "rich-error/details", dataPath);
             }
             else package.Loss("富值类型尚未建模。", "rich-values/type", dataPath);
         }
@@ -63,6 +78,7 @@ internal static class XlsxRichErrors
         var richType = Array.FindIndex(metadataTypes, t => (string?)t.Attribute("name") == "XLRICHVALUE") + 1;
         foreach (var type in metadataTypes)
         {
+            if ((string?)type.Attribute("name") == "XLDAPR") continue; // Validated by XlsxDynamicArrays.
             package.Shape(type, "", "name minSupportedVersion copy pasteAll pasteValues merge splitFirst rowColShift clearFormats clearComments assign coerce", path);
             if ((string?)type.Attribute("name") != "XLRICHVALUE") package.Loss("元数据类型尚未建模。", "rich-values/metadata-type", path);
             else if ((string?)type.Attribute("minSupportedVersion") != "120000" ||
@@ -71,7 +87,7 @@ internal static class XlsxRichErrors
         }
         var future = metadata.Elements(Main + "futureMetadata").Where(e => (string?)e.Attribute("name") == "XLRICHVALUE").ToArray();
         if (future.Length != 1 || richType == 0) throw new InvalidDataException("富值元数据绑定缺失或重复。");
-        foreach (var other in metadata.Elements(Main + "futureMetadata").Where(e => (string?)e.Attribute("name") != "XLRICHVALUE"))
+        foreach (var other in metadata.Elements(Main + "futureMetadata").Where(e => (string?)e.Attribute("name") is not ("XLRICHVALUE" or "XLDAPR")))
             package.Loss("未来元数据类型尚未建模。", "rich-values/future-metadata", path, other);
         package.Shape(future[0], "bk", "name count", path);
         var bindings = Items(future[0], Main + "bk"); var indexes = new int[bindings.Length];
@@ -95,18 +111,25 @@ internal static class XlsxRichErrors
         }
         return result;
     }
-    public static CellValue Apply(XElement cell, CellValue value, IReadOnlyDictionary<int, CellErrorCode?> errors, XlsxPackage package, string path)
+    public static CellValue Apply(XElement cell, CellValue value, IReadOnlyDictionary<int, ErrorKey?> errors, XlsxPackage package, string path)
     {
         if (cell.Attribute("vm") is not { } attribute || attribute.Value == "0") return value;
         var index = Int(attribute.Value, WorkbookLimits.MaxCells);
         if (!errors.TryGetValue(index, out var code)) throw new InvalidDataException("单元格富值元数据引用越界。");
         if (code is null) { package.Loss("单元格富值身份未建模，保留普通回退值。", "cell/value-metadata", path, cell); return value; }
         if ((string?)cell.Attribute("t") != "e" || value != CellValue.FromError(CellErrorCode.Value)) throw new InvalidDataException("#CALC! 富值与回退错误不一致。");
-        return CellValue.FromError(code.Value);
+        return CellValue.FromError(code.Value.Code);
     }
-    public static void Write(WorkbookSnapshot snapshot, Dictionary<string, byte[]> parts, XElement relationships, XElement types)
+    public static FormulaArrayDimensions? SpillExtent(XElement cell, IReadOnlyDictionary<int, ErrorKey?> errors) =>
+        cell.Attribute("vm") is { } attribute && errors.TryGetValue(Int(attribute.Value,WorkbookLimits.MaxCells), out var key) && key is { Code: CellErrorCode.Spill } spill
+            ? new(spill.Rows,spill.Columns) : null;
+
+    public static IReadOnlyDictionary<ErrorKey, int> Write(WorkbookSnapshot snapshot, Dictionary<string, byte[]> parts, XElement relationships, XElement types)
     {
-        if (!snapshot.Sheets.Any(s => s.Cells.Values.Any(c => c.Value is { Kind: CellValueKind.Error, ErrorCode: CellErrorCode.Calculation }))) return;
+        var keys = snapshot.Sheets.SelectMany(s => s.Cells.OrderBy(p => p.Key.Row).ThenBy(p => p.Key.Column).Select(p => p.Value))
+            .Where(c => c.Value is { Kind: CellValueKind.Error, ErrorCode: CellErrorCode.Calculation or CellErrorCode.Spill }).Select(Key).Distinct().ToArray();
+        var result = keys.Select((key,i) => KeyValuePair.Create(key,i + 1)).ToDictionary();
+        if (keys.Length == 0) return result;
         void Part(string path, string type, string relation, XElement root)
         {
             parts["xl/" + path] = XmlBytes(new XDocument(root));
@@ -117,12 +140,16 @@ internal static class XlsxRichErrors
         foreach (var flag in new[] { "copy", "pasteAll", "pasteValues", "merge", "splitFirst", "rowColShift", "clearFormats", "clearComments", "assign", "coerce" }) type.Add(new XAttribute(flag, "1"));
         Part("metadata.xml", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheetMetadata+xml", Rel.NamespaceName + "/sheetMetadata",
             new(Main + "metadata", new XElement(Main + "metadataTypes", new XAttribute("count", 1), type),
-                new XElement(Main + "futureMetadata", new XAttribute("name", "XLRICHVALUE"), new XAttribute("count", 1),
-                    new XElement(Main + "bk", new XElement(Main + "extLst", new XElement(Main + "ext", new XAttribute("uri", Extension), new XElement(Rich + "rvb", new XAttribute("i", 0)))))),
-                new XElement(Main + "valueMetadata", new XAttribute("count", 1), new XElement(Main + "bk", new XElement(Main + "rc", new XAttribute("t", 1), new XAttribute("v", 0))))));
+                new XElement(Main + "futureMetadata", new XAttribute("name", "XLRICHVALUE"), new XAttribute("count", keys.Length),
+                    keys.Select((_,i) => new XElement(Main + "bk", new XElement(Main + "extLst", new XElement(Main + "ext", new XAttribute("uri", Extension), new XElement(Rich + "rvb", new XAttribute("i", i))))))),
+                new XElement(Main + "valueMetadata", new XAttribute("count", keys.Length), keys.Select((_,i) => new XElement(Main + "bk", new XElement(Main + "rc", new XAttribute("t", 1), new XAttribute("v", i)))))));
         Part("richData/rdrichvalue.xml", "application/vnd.ms-excel.rdrichvalue+xml", Relation + "rdRichValue",
-            new(Rich + "rvData", new XAttribute("count", 1), new XElement(Rich + "rv", new XAttribute("s", 0), new XElement(Rich + "v", 13))));
+            new(Rich + "rvData", new XAttribute("count", keys.Length), keys.Select(key => key.Code == CellErrorCode.Calculation
+                ? new XElement(Rich + "rv", new XAttribute("s", 0), new XElement(Rich + "v", 13))
+                : new XElement(Rich + "rv", new XAttribute("s", 1), new XElement(Rich + "v", 8), new XElement(Rich + "v", key.Columns - 1), new XElement(Rich + "v", key.Rows - 1)))));
         Part("richData/rdrichvaluestructure.xml", "application/vnd.ms-excel.rdrichvaluestructure+xml", Relation + "rdRichValueStructure",
-            new(Rich + "rvStructures", new XAttribute("count", 1), new XElement(Rich + "s", new XAttribute("t", "_error"), new XElement(Rich + "k", new XAttribute("n", "errorType"), new XAttribute("t", "i")))));
+            new(Rich + "rvStructures", new XAttribute("count", 2), new XElement(Rich + "s", new XAttribute("t", "_error"), new XElement(Rich + "k", new XAttribute("n", "errorType"), new XAttribute("t", "i"))),
+                new XElement(Rich + "s", new XAttribute("t", "_error"), new[] { "errorType", "colOffset", "rwOffset" }.Select(name => new XElement(Rich + "k", new XAttribute("n", name), new XAttribute("t", "i"))))));
+        return result;
     }
 }

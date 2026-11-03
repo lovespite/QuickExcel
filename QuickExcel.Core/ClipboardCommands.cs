@@ -18,7 +18,9 @@ public sealed class WorkbookClipboard
             var cell = sheet.GetCell(row, column) ?? new(CellContent.FromLiteral(CellValue.Blank));
             if (ProtectionSafety.HidesFormula(snapshot, sheet, row, column) && cell.Content.Kind == CellContentKind.Formula)
                 return new CellSnapshot(CellContent.FromLiteral(cell.Value, sheet.GetStyleId(row, column)));
-            return new CellSnapshot(cell.Content.WithStyle(sheet.GetStyleId(row, column)), cell.Calculation);
+            if (cell.SpillOwner is { } owner && !range.Contains(owner.Row,owner.Column))
+                return new CellSnapshot(CellContent.FromLiteral(cell.Value,sheet.GetStyleId(row,column)));
+            return new CellSnapshot(cell.Content.WithStyle(sheet.GetStyleId(row, column)), cell.Calculation, cell.SpillOwner);
         })).ToImmutableArray();
         HasAnnotations = sheet.Annotations.Links.Keys.Concat(sheet.Annotations.Notes.Keys).Any(p => range.Contains(p.Row, p.Column));
         HasConditionalFormats = sheet.Data.ConditionalFormats.Any(r => r.Ranges.Any(a => ValidationSafety.Overlaps(a, range))) ||
@@ -41,8 +43,16 @@ public sealed class WorkbookClipboard
     public static WorkbookClipboard Capture(WorkbookSnapshot snapshot, SheetId sheetId, CellRectangle range, bool cut = false)
     {
         ValidateRange(range); var sheet = snapshot.GetSheet(sheetId);
+        ExtendedObjectSafety.ValidateCopy(snapshot, sheetId, range);
         RequirePlainGeometry(sheet, range);
         RequireVisibleDimensions(sheet, range);
+        if (cut)
+            foreach (var (position,cell) in sheet.Cells.Where(p => p.Value.Calculation?.Array is not null))
+            {
+                var array = cell.Calculation!.Array!; var spill = new CellRectangle(position.Row,position.Column,position.Row + array.Rows - 1,position.Column + array.Columns - 1);
+                if (ValidationSafety.Overlaps(spill,range) && !(range.Contains(spill.Top,spill.Left) && range.Contains(spill.Bottom,spill.Right)))
+                    throw new InvalidOperationException("剪切需要包含整个数组溢出区域。");
+            }
         return new(snapshot, sheet, range, cut);
     }
     internal static void ValidateRange(CellRectangle range)
@@ -79,6 +89,8 @@ public sealed class PasteCellsCommand(WorkbookClipboard clipboard, SheetId sheet
     {
         ArgumentNullException.ThrowIfNull(clipboard);
         if (!Enum.IsDefined(mode)) throw new ArgumentException("未知粘贴模式。");
+        if (transpose && mode is CellPasteMode.All or CellPasteMode.Formulas && clipboard.Cells.Any(c => c.Content.DynamicArray || c.SpillOwner is not null))
+            throw new NotSupportedException("数组公式的转置粘贴尚未支持；可明确选择转置粘贴值。");
         if (snapshot.DocumentId != clipboard.DocumentId || snapshot.Revision != expectedRevision || expectedRevision < clipboard.Revision)
             throw new InvalidOperationException("复制后文档已改变，请重新复制或剪切；整批操作未应用。");
         WorkbookClipboard.ValidateRange(target);
@@ -140,9 +152,9 @@ public sealed class PasteCellsCommand(WorkbookClipboard clipboard, SheetId sheet
             else if (original.Content.Kind == CellContentKind.Formula)
             {
                 content = CellContent.FromFormula(CopyFormula(snapshot, clipboard.SheetId, sheetId, original.Content.FormulaText,
-                    new(clipboard.Range.Top + sr, clipboard.Range.Left + sc), position, transpose), style);
+                    new(clipboard.Range.Top + sr, clipboard.Range.Left + sc), position, transpose), style, original.Content.DynamicArray);
             }
-            else content = mode == CellPasteMode.All ? original.Content.WithStyle(style) : CellContent.FromLiteral(original.Value, style);
+            else content = mode == CellPasteMode.All || original.SpillOwner is not null ? original.Content.WithStyle(style) : CellContent.FromLiteral(original.Value, style);
             edits.Add(new(new(sheetId, position.Row, position.Column), content));
         }
         var draft = new SetCellsCommand(edits).Prepare(snapshot);

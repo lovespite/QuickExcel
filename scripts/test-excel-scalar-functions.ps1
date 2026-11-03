@@ -1,5 +1,6 @@
 param([Parameter(Mandatory)][string]$SpecPath, [Parameter(Mandatory)][string]$OutputDirectory,
-    [string]$WorkbookPath, [string]$OraclePath, [ValidateSet('Initial','Edited')][string]$State='Initial')
+    [string]$WorkbookPath, [string]$OraclePath, [ValidateSet('Initial','Edited')][string]$State='Initial',
+    [ValidateSet(51,61)][int]$FileFormat=51)
 $ErrorActionPreference='Stop'
 $repo=Split-Path $PSScriptRoot -Parent; $target=[IO.Path]::GetFullPath($OutputDirectory,$repo)
 $root=[IO.Path]::GetFullPath((Join-Path $repo 'artifacts'))+[IO.Path]::DirectorySeparatorChar
@@ -20,6 +21,7 @@ function Put($book,$item){
             'FormulaLegacy'{$cell.Formula=[string]$item.Value}
             default{throw 'Invalid input kind.'}
         }
+        if($item.NumberFormat){$cell.NumberFormat=[string]$item.NumberFormat}
     }catch{throw "Cannot set $($item.Sheet)!$($item.Address) [$($item.Value)]: $_"}finally{Release-Com $cell;Release-Com $sheet}
 }
 function Capture($book,$caseList=$spec.Cases){
@@ -71,14 +73,14 @@ try{
         foreach($case in $spec.Cases){if($case.Formula){Put $book @{Sheet=$case.Sheet;Address=$case.Address;Kind=$(if($case.Legacy){'FormulaLegacy'}else{'Formula'});Value=$case.Formula}}}
     }
     $excel.CalculateFullRebuild();$initial=Capture $book
-    $initialPath=Join-Path $target 'initial.xlsx';$book.SaveAs($initialPath,51);$book.Close($false);Release-Com $book;$book=$null
+    $initialPath=Join-Path $target 'initial.xlsx';$book.SaveAs($initialPath,$FileFormat);$book.Close($false);Release-Com $book;$book=$null
     $book=$excel.Workbooks.Open($initialPath,0,$true);$excel.CalculateFullRebuild();$initialReopened=Capture $book
     $stable=($initial|ConvertTo-Json -Depth 5 -Compress) -ceq ($initialReopened|ConvertTo-Json -Depth 5 -Compress)
     $edited=$null;$editedStable=$null
     if(-not $WorkbookPath){
         foreach($item in $spec.Edits){Put $book $item}
         $excel.CalculateFullRebuild();$edited=Capture $book
-        $editedPath=Join-Path $target 'edited.xlsx';$book.SaveAs($editedPath,51);$book.Close($false);Release-Com $book;$book=$null
+        $editedPath=Join-Path $target 'edited.xlsx';$book.SaveAs($editedPath,$FileFormat);$book.Close($false);Release-Com $book;$book=$null
         $book=$excel.Workbooks.Open($editedPath,0,$true);$excel.CalculateFullRebuild();$editedReopened=Capture $book
         $editedStable=($edited|ConvertTo-Json -Depth 5 -Compress) -ceq ($editedReopened|ConvertTo-Json -Depth 5 -Compress)
     }
@@ -89,13 +91,13 @@ try{
             $book=$excel.Workbooks.Open($initialPath,0,$true)
             Put $book @{Sheet=$case.Sheet;Address=$case.Address;Kind='Formula';Value=$case.Formula}
             $excel.CalculateFullRebuild();$observed=Capture $book @($case);$guardPath=Join-Path $target ('guard-'+$case.Id+'.xlsx')
-            $book.SaveAs($guardPath,51);$book.Close($false);Release-Com $book;$book=$null
+            $book.SaveAs($guardPath,$FileFormat);$book.Close($false);Release-Com $book;$book=$null
             $guarded+=@{Id=$case.Id;File=[IO.Path]::GetFileName($guardPath);Sha256=(Get-FileHash -LiteralPath $guardPath -Algorithm SHA256).Hash;Observed=$observed}
         }
     }
     $unchanged=if($WorkbookPath){$sourceHash -eq (Get-FileHash -LiteralPath $source -Algorithm SHA256).Hash}else{$true}
     $matches=if($WorkbookPath){($oracle.$State|ConvertTo-Json -Depth 5 -Compress) -ceq ($initial|ConvertTo-Json -Depth 5 -Compress)}else{$null}
-    [ordered]@{Version=[string]$excel.Version;Build=[string]$excel.Build;Language=$excel.LanguageSettings.LanguageID(2);Calculation=[int]$excel.Calculation;
+    [ordered]@{Version=[string]$excel.Version;Build=[string]$excel.Build;Language=$excel.LanguageSettings.LanguageID(2);Calculation=[int]$excel.Calculation;FileFormat=$FileFormat;
         SpecSha256=(Get-FileHash -LiteralPath $specFile -Algorithm SHA256).Hash;Initial=$initial;Edited=$edited;Guarded=$guarded;Stable=$stable;EditedStable=$editedStable;
         SourceUnchanged=$unchanged;SourceSha256=$sourceHash;ReferenceMatches=$matches;InitialSha256=(Get-FileHash -LiteralPath $initialPath -Algorithm SHA256).Hash}|
         ConvertTo-Json -Depth 7|Set-Content -LiteralPath (Join-Path $target 'scalar-functions.json') -Encoding utf8

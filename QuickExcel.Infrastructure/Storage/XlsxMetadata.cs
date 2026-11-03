@@ -164,6 +164,7 @@ internal static class XlsxMetadata
     {
         var expected = new Dictionary<string, byte[]>();
         Write(snapshot, expected, new XElement(PackageRel + "Relationships"), new XElement(ContentTypes + "Types"), cancellationToken);
+        XlsxStrict.PreserveVariant(snapshot, expected, cancellationToken);
         if (expected.Count == 0) return;
         var written = new XlsxPackage(bytes, new(cancellationToken));
         var recognized = Read(written, snapshot.Sheets.Select(s => s.Name).ToArray());

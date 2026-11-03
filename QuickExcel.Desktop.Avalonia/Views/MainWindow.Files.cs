@@ -71,6 +71,7 @@ public sealed partial class MainWindow
         var snapshot = Document.Snapshot; var formulas = snapshot.Sheets.SelectMany(s => s.Cells.Values).Where(c => c.Content.Kind == CellContentKind.Formula).ToArray();
         var missing = formulas.Count(c => c.Calculation?.Value is null);
         var stale = formulas.Count(c => c.Calculation?.Value is not null && (c.Calculation.InputRevision != snapshot.Revision || c.Calculation.State is not (CalculationState.Fresh or CalculationState.Error)));
+        var stalePivots=snapshot.Sheets.Sum(s=>s.Data.Pivots.Count(p=>p.Stale));
         var losses = snapshot.FileState?.CompatibilityIssues.ToArray() ?? [];
         var hostErrors = formulas.Count(c => c.Value.Kind == CellValueKind.Error && c.Value.ErrorCode is CellErrorCode.Script or CellErrorCode.Cycle);
         var message = $"所有公式将转为类型化结果值，不包含脚本。\n旧缓存 {stale} 个；宿主错误 {hostErrors} 个将映射为 #VALUE!。";
@@ -81,11 +82,13 @@ public sealed partial class MainWindow
             message = $"保留 {report.RetainedFormulas} 个标准公式；冻结 {report.FrozenFormulas} 个脚本、不支持公式或其依赖为值；名称展开为引用。\n其中 {stale} 个结果可能过期。";
         }
         if (missing > 0) throw new InvalidOperationException($"{missing} 个待导出的公式缺少结果，请先完成计算。");
+        if (stalePivots>0) message+=$"\n另有 {stalePivots} 个透视结果未刷新，将保留已有结果。";
+        if (!portable && snapshot.Sheets.Any(s=>!s.Data.Pivots.IsEmpty)) message+="\n透视表将转为普通结果值，不保留透视定义。";
         if (losses.Length > 0) message += "\n副本将移除以下未支持内容：\n" + string.Join("\n", losses);
         if (!await Dialogs.Confirm(this, portable ? "导出可移植公式" : "导出当前结果", message + "\n是否导出？")) return;
         var selected = await _files.SaveAsync(new("导出工作簿副本", [new("Excel 工作簿", ["*.xlsx"])],
             Path.GetFileNameWithoutExtension(_workspace.FilePath ?? "未命名") + (portable ? "-公式.xlsx" : "-结果.xlsx"), ".xlsx"));
         if (selected is null) return;
-        await _workspace.ExportAsync(selected, portable, stale > 0, losses.Length > 0); _status.Text = "已导出 " + selected.Path;
+        await _workspace.ExportAsync(selected, portable, stale > 0 || stalePivots>0, losses.Length > 0); _status.Text = "已导出 " + selected.Path;
     }
 }

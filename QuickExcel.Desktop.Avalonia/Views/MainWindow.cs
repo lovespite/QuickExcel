@@ -135,7 +135,7 @@ public sealed partial class MainWindow : Window
         _start.Children.Add(new TextBlock { Text = "最近文件", FontSize = 18 }); _start.Children.Add(_recent);
         var content = new global::Avalonia.Controls.Grid(); content.Children.Add(_book); content.Children.Add(new ScrollViewer { Content = _start });
         var root = new DockPanel(); DockPanel.SetDock(_menu, Dock.Top);
-        var footer = new DockPanel(); DockPanel.SetDock(_selectionStatistics, Dock.Right); footer.Children.Add(_selectionStatistics); footer.Children.Add(_status);
+        var footer = new DockPanel(); DockPanel.SetDock(_selectionStatistics, Dock.Right); footer.Children.Add(_selectionStatistics); DockPanel.SetDock(_pivotStatus,Dock.Right); footer.Children.Add(_pivotStatus); footer.Children.Add(_status);
         DockPanel.SetDock(footer, Dock.Bottom); root.Children.Add(_menu); root.Children.Add(footer); root.Children.Add(content);
         Content = _execution = new ExecutionOverlay(this, root, () => _grid.IsComposing || _formula.IsComposing);
     }
@@ -170,7 +170,7 @@ public sealed partial class MainWindow : Window
             _sheets.ItemsSource = items; _sheets.SelectedItem = items.FirstOrDefault(s => s.Id == Document.Snapshot.ActiveSheetId);
         }
         finally { _synchronizing = false; }
-        UpdateFormula(); UpdateTitle(); UpdateRibbon(); UpdateValidation(); UpdateOutline(); QueueStatistics(); RefreshPrintStatus(); RefreshScriptConsole();
+        UpdateFormula(); UpdateTitle(); UpdateRibbon(); UpdateValidation(); UpdateOutline(); QueueStatistics(); RefreshPrintStatus(); RefreshScriptConsole(); UpdatePivotStatus();
     }
     private void UpdateTitle()
     {

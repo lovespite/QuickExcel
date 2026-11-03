@@ -17,7 +17,11 @@ internal sealed class XlsxPackage
     private (string Part, string Range)? _sourceRange;
     private (string Part, string? Range, string Feature)? _readContext;
     private Dictionary<(string Part, string Range), CompatibilityDiagnostic[]> _sharedDiagnostics = [];
+    private readonly List<CompatibilityDiagnostic> _notices = [];
+    public List<PreservedCellAttachment> PreservedAttachments { get; } = [];
+    public HashSet<string> ThreadedFallbackParts { get; } = new(StringComparer.Ordinal);
     public Dictionary<string, byte[]> Parts { get; }
+    public bool IsStrict { get; private set; }
     public FileReadBudget Budget { get; }
     public CompatibilityIssueCollection Issues { get; } = new();
 
@@ -85,7 +89,17 @@ internal sealed class XlsxPackage
     {
         SetReadContext(path, null, "XML/part");
         _used.Add(path);
-        if (!_xml.TryGetValue(path, out var result)) _xml[path] = result = Xml(Required(Parts, path), Budget);
+        if (!_xml.TryGetValue(path, out var result))
+        {
+            result = Xml(Required(Parts, path), Budget);
+            if (path == "_rels/.rels") IsStrict = result.Root?.Elements(PackageRel + "Relationship").Any(r =>
+                (string?)r.Attribute("Type") == "http://purl.oclc.org/ooxml/officeDocument/relationships/officeDocument") == true;
+            if (result.Root?.Name.LocalName == "workbook" && result.Root.Name.NamespaceName is "http://purl.oclc.org/ooxml/spreadsheetml/main" or "http://schemas.openxmlformats.org/spreadsheetml/2006/main" &&
+                (result.Root.Name.NamespaceName == XlsxStrict.StrictMain) != IsStrict)
+                throw new InvalidDataException("工作簿根命名空间与入口关系的 Strict/Transitional 类别不一致。");
+            _ = XlsxStrict.Map(result, false, Budget.Check);
+            _xml[path] = result;
+        }
         return result;
     }
     public byte[] BinaryPart(string path) { _used.Add(path); return Required(Parts, path); }
@@ -153,7 +167,8 @@ internal sealed class XlsxPackage
             Issues.Add(diagnostic with { Code = "xlsx.affected-location", SheetName = _sheetNames.GetValueOrDefault(sheetPart),
                 Range = range, Feature = diagnostic.Feature + " · " + sourceRange });
     }
-    public IReadOnlyList<CompatibilityDiagnostic> Diagnostics => Issues.Diagnostics.Select(d => d with {
+    public void Notice(CompatibilityDiagnostic diagnostic) { if (_notices.Count < 128) _notices.Add(diagnostic); }
+    public IReadOnlyList<CompatibilityDiagnostic> Diagnostics => Issues.Diagnostics.Concat(_notices).Select(d => d with {
         SheetName = d.SheetName ?? (d.Part is { } part ? _sheetNames.GetValueOrDefault(
             part.EndsWith(".rels", StringComparison.Ordinal) ? SourceForRelationships(part) : part) : null)
     }).ToArray();

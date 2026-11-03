@@ -12,7 +12,10 @@ public sealed class CalculationBoundaryTests
     public void EveryRegisteredFunctionHasIndependentExcelArityEvidence()
     {
         using var json = ScalarFormulaFixture.Load("excel-function-arity");
-        var cases = json.RootElement.GetProperty("Cases").EnumerateArray().ToArray();
+        using var arrays = ScalarFormulaFixture.Load("excel-array-arity");
+        using var complex = ScalarFormulaFixture.Load("excel-complex-arity");
+        var cases = json.RootElement.GetProperty("Cases").EnumerateArray().Concat(arrays.RootElement.GetProperty("Cases").EnumerateArray())
+            .Concat(complex.RootElement.GetProperty("Cases").EnumerateArray()).ToArray();
         Assert.Equal(StandardFunctions.Signatures.Keys.Order(), cases.Select(c => c.GetProperty("Function").GetString()!).Distinct().Order());
         foreach (var item in cases)
         {

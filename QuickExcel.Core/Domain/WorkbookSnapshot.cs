@@ -14,19 +14,29 @@ public readonly record struct CellAddress(SheetId SheetId, int Row, int Column);
 /// <summary>A cell's immutable input and optional calculation cache.</summary>
 public sealed record CellSnapshot
 {
-    public CellSnapshot(CellContent content, CellCalculation? calculation = null)
+    public CellSnapshot(CellContent content, CellCalculation? calculation = null, CellAddress? spillOwner = null)
     {
         ArgumentNullException.ThrowIfNull(content);
         if (content.Kind == CellContentKind.Formula) WorkbookLimits.ValidateText(content.FormulaText);
         else if (content.LiteralValue.Kind == CellValueKind.Text) WorkbookLimits.ValidateText(content.LiteralValue.TextValue);
         if (calculation?.Value is { Kind: CellValueKind.Text } value) WorkbookLimits.ValidateText(value.TextValue);
+        if (calculation?.Array is not null && content.Kind != CellContentKind.Formula)
+            throw new ArgumentException("只有公式锚点可以拥有数组结果。", nameof(calculation));
+        if (spillOwner is { } owner)
+        {
+            WorkbookLimits.ValidatePosition(owner.Row, owner.Column);
+            if (owner.SheetId.Value == Guid.Empty || content.Kind != CellContentKind.Literal || content.LiteralValue.Kind != CellValueKind.Blank || calculation is null)
+                throw new ArgumentException("溢出子格只能含派生缓存，不能含独立输入。", nameof(spillOwner));
+        }
         Content = content;
         Calculation = calculation;
+        SpillOwner = spillOwner;
     }
 
     public CellContent Content { get; }
     public CellCalculation? Calculation { get; }
-    public CellValue Value => Content.Kind == CellContentKind.Literal
+    public CellAddress? SpillOwner { get; }
+    public CellValue Value => Content.Kind == CellContentKind.Literal && SpillOwner is null
         ? Content.LiteralValue : Calculation?.Value ?? CellValue.Blank;
 }
 
@@ -186,6 +196,8 @@ public sealed class WorksheetSnapshot
         Data.Protection?.Validate();
         if (Data.Charts.IsDefault || Data.Charts.Length > 128 || Data.Charts.Sum(c => c.EstimatedBytes) > 8 * 1024 * 1024) throw new ArgumentException("每表图表最多 128 张、8 MiB 定义。");
         foreach (var chart in Data.Charts) chart.Validate();
+        if (Data.Pivots.IsDefault || Data.Pivots.Length > 16 || Data.Pivots.Any(p => p is null) || Data.Pivots.Sum(p => p.EstimatedBytes) > 32 * 1024 * 1024)
+            throw new ArgumentException("每表透视定义最多 16 个、缓存合计 32 MiB。");
         QuickExcel.Core.ValidationSafety.Validate(Data);
         if (Data.ConditionalFormats.IsDefault || Data.ConditionalFormats.Length > 1024 || Data.ConditionalFormats.Any(r => r is null) ||
             Data.ConditionalFormats.Sum(r => r.Ranges.Length) > 4096 || Data.ConditionalFormats.Sum(r => r.EstimatedBytes) > 4 * 1024 * 1024 ||

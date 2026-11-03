@@ -193,6 +193,9 @@ public sealed partial class WorkbookGrid : UserControl, IGridSurface, IDisposabl
     }
     public void Cancel() { if (IsCommitPending) return; _editing = false; if (_snapshot is not null) PrepareEditor(false); DraftEnded?.Invoke(); }
     public bool IsCellReadOnly(CellPosition position) => _snapshot is null || _snapshot.FileState?.FormulaReadOnly == true ||
+        PivotReport.HasUnmodeledDefinitions(_snapshot) ||
+        Sheet.GetCell(position.Row, position.Column)?.SpillOwner is not null ||
+        Sheet.Data.Pivots.Any(p=>p.Range.Contains(position.Row,position.Column)) ||
         Sheet.GetCell(position.Row, position.Column)?.Content.RichText is not null || !ProtectionSafety.CanEdit(_snapshot, Sheet, position.Row, position.Column);
     public bool BeginEdit()
     {
@@ -205,8 +208,7 @@ public sealed partial class WorkbookGrid : UserControl, IGridSurface, IDisposabl
     {
         if (_snapshot is null || _editing || IsComposing || _selectedObject is not null) return;
         _draftOwner = _current; _settingText = true;
-        CellEditor.Text = ProtectionSafety.HidesFormula(_snapshot, Sheet, _current.Row, _current.Column) ? "" :
-            Sheet.GetCell(_current.Row, _current.Column) is { } cell ? CellInput.EditText(cell.Content) : "";
+        CellEditor.Text = CellInput.EditText(_snapshot, Sheet, _current.Row, _current.Column);
         CellEditor.IsReadOnly = IsCellReadOnly(_current);
         _settingText = false; CellEditor.Opacity = 0; CellEditor.IsHitTestVisible = false;
         PositionEditor(); if (focus) { CellEditor.Focus(); CellEditor.SelectAll(); }

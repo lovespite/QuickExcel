@@ -116,8 +116,8 @@ public sealed class SortRangeCommand : DocumentCommand
                         return new ValueNode(CellValue.FromError(CellErrorCode.Reference));
                     return r with { Row = start, EndRow = end };
                 }
-                source = new(CellContent.FromFormula("=" + FormulaSyntax.Print(FormulaSyntax.Map(
-                    FormulaSyntax.Parse(source.Content.FormulaText), Shift)), source.Content.StyleId));
+                source = new(source.Content.WithFormula("=" + FormulaSyntax.Print(FormulaSyntax.Map(
+                    FormulaSyntax.Parse(source.Content.FormulaText), Shift))));
             }
             cells[position] = source;
         }
@@ -233,7 +233,8 @@ public sealed class SetCellStyleCommand : DocumentCommand
                 });
                 content = CellContent.FromRichText(new(runs), id);
             }
-            edits.Add(new(address, content.WithStyle(id)));
+            var updated = content.WithStyle(id);
+            if (updated != sheet.GetCell(address.Row,address.Column)?.Content) edits.Add(new(address,updated));
         }
         var styled = new WorkbookSnapshot(snapshot.DocumentId, snapshot.Revision, snapshot.DateSystem, snapshot.Sheets,
             snapshot.ScriptSource, styles, snapshot.ScriptModules, snapshot.FileState, snapshot.DefinedNames, snapshot.ActiveSheetId, snapshot.Window, snapshot.TextCompatibilityVersion, snapshot.PackageFiles);

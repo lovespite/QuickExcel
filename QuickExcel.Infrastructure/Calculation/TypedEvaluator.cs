@@ -15,6 +15,18 @@ internal sealed partial class TypedEvaluator(WorkbookSnapshot snapshot, IReadOnl
     IScriptRuntime? runtime, IReadOnlyDictionary<string, ScriptFunctionDescriptor> scripts, Action check)
 {
     public SheetId CurrentSheet { get; set; }
+    internal bool ArrayMode { get; set; }
+    internal Func<CellAddress, CellValue?>? DerivedValue { get; set; }
+    internal Func<IEnumerable<CellAddress>>? DerivedPositions { get; set; }
+    internal object FormulaResult(FormulaNode node)
+    {
+        var value = Evaluate(node);
+        if (value is Range range) value = Materialize(range);
+        if (value is FormulaArray array && array.Values.Any(v => v.Kind == CellValueKind.Blank))
+            value = new FormulaArray(array.Rows, array.Columns, array.Values.Select(v => v.Kind == CellValueKind.Blank ? CellValue.FromNumber(0) : v));
+        return value is CellValue { Kind: CellValueKind.Blank } && node is ReferenceNode or LetNode or FunctionNode { Name: "IF" or "IFERROR" or "IFNA" or "INDEX" }
+            ? CellValue.FromNumber(0) : value;
+    }
     private readonly Dictionary<SheetId, CellPosition[]> _positions = [];
     private readonly DateTime _now = DateTime.Now;
     private sealed record Range(WorksheetSnapshot Sheet, ReferenceNode Reference);
@@ -25,12 +37,13 @@ internal sealed partial class TypedEvaluator(WorkbookSnapshot snapshot, IReadOnl
     {
         var value = Evaluate(node);
         if (value is Range range && ConditionalRanges.Shape(range.Reference) == (1, 1)) value = Read(range.Sheet, range.Reference.Row, range.Reference.Column);
+        if (value is FormulaArray { Rows: 1, Columns: 1 } array) value = array[0, 0];
         return value is CellValue scalar ? scalar : Error(CellErrorCode.Value);
     }
     public CellValue CellResult(FormulaNode node)
     {
         var value = Scalar(node);
-        return value.Kind == CellValueKind.Blank && node is ReferenceNode or FunctionNode { Name: "IF" or "IFERROR" or "IFNA" or "INDEX" }
+        return value.Kind == CellValueKind.Blank && node is ReferenceNode or LetNode or FunctionNode { Name: "IF" or "IFERROR" or "IFNA" or "INDEX" }
             ? CellValue.FromNumber(0) : value;
     }
 
@@ -39,16 +52,29 @@ internal sealed partial class TypedEvaluator(WorkbookSnapshot snapshot, IReadOnl
         check();
         switch (node)
         {
+            case LetNode let: return WithLocals(let, Evaluate);
+            case LocalValueNode local: return _locals[local.Id].Value.Value;
             case ValueNode value: return value.Value;
             case ReferenceNode reference:
                 var sheet = snapshot.Sheets.First(s => s.Name.Equals(reference.Sheet, StringComparison.OrdinalIgnoreCase));
                 return reference.IsRange || reference.WholeColumns ? new Range(sheet, reference) : Read(sheet, reference.Row, reference.Column);
+            case UnaryNode { Operator: "#" } spill:
+                if (spill.Operand is ValueNode { Value.Kind: CellValueKind.Error } error) return error.Value;
+                if (spill.Operand is not ReferenceNode anchor) return Error(CellErrorCode.Reference);
+                var targetSheet = snapshot.Sheets.First(s => s.Name.Equals(anchor.Sheet, StringComparison.OrdinalIgnoreCase));
+                return results.TryGetValue(new(targetSheet.Id, anchor.Row, anchor.Column), out var result) && result.Array is { } spilled
+                    ? spilled : Error(CellErrorCode.Reference);
             case UnaryNode unary:
+                if (ArrayMode) return ArrayUnary(unary);
                 var operand = Scalar(unary.Operand);
                 if (operand.Kind == CellValueKind.Error) return operand;
                 var number = Number(operand);
                 return CellValue.FromNumber(unary.Operator switch { "-" => -number, "%" => number / 100, _ => number });
-            case BinaryNode binary: return Binary(binary);
+            case BinaryNode binary: return ArrayMode ? ArrayBinary(binary) : Binary(binary);
+            case FunctionNode function when ArrayMode && DynamicArrayFunctions.IsFunction(function.Name): return ArrayFunction(function);
+            case FunctionNode { Name: "XLOOKUP" } function when ArrayMode:
+                return StandardFunctions.AcceptsArguments(function.Name,function.Arguments.Count) ? LookupValue(function) : Error(CellErrorCode.Value);
+            case FunctionNode { Name: "IF" or "IFERROR" or "IFNA" } function when ArrayMode: return ArrayBranch(function);
             case FunctionNode function: return Function(function);
             default: return Error(CellErrorCode.Name);
         }
@@ -58,7 +84,9 @@ internal sealed partial class TypedEvaluator(WorkbookSnapshot snapshot, IReadOnl
     {
         check();
         if (results.TryGetValue(new(sheet.Id, row, column), out var calculated)) return calculated.Value ?? CellValue.Blank;
+        if (DerivedValue?.Invoke(new(sheet.Id, row, column)) is { } derived) return derived;
         var cell = sheet.Cells.GetValueOrDefault(new(row, column));
+        if (cell?.SpillOwner is not null) return CellValue.Blank;
         if (cell?.Content.Kind == CellContentKind.Formula) throw new InvalidOperationException("依赖计划尝试读取尚未计算的公式。");
         return cell?.Value ?? CellValue.Blank;
     }
@@ -66,18 +94,23 @@ internal sealed partial class TypedEvaluator(WorkbookSnapshot snapshot, IReadOnl
     private CellValue Binary(BinaryNode binary)
     {
         var a = Scalar(binary.Left); var b = Scalar(binary.Right);
+        return BinaryValues(binary.Operator, a, b);
+    }
+
+    private static CellValue BinaryValues(string operation, CellValue a, CellValue b)
+    {
         if (a.Kind == CellValueKind.Error) return a;
         if (b.Kind == CellValueKind.Error) return b;
-        if (binary.Operator == "&") return CellValue.FromText(Text(a) + Text(b));
-        if (binary.Operator is "=" or "<>" or "<" or "<=" or ">" or ">=")
+        if (operation == "&") return CellValue.FromText(Text(a) + Text(b));
+        if (operation is "=" or "<>" or "<" or "<=" or ">" or ">=")
         {
             var c = Compare(a, b);
-            return CellValue.FromBoolean(binary.Operator switch { "=" => c == 0, "<>" => c != 0, "<" => c < 0, "<=" => c <= 0, ">" => c > 0, _ => c >= 0 });
+            return CellValue.FromBoolean(operation switch { "=" => c == 0, "<>" => c != 0, "<" => c < 0, "<=" => c <= 0, ">" => c > 0, _ => c >= 0 });
         }
         var left = Number(a); var right = Number(b);
-        if (binary.Operator == "/" && right == 0) return Error(CellErrorCode.DivisionByZero);
-        if (binary.Operator == "^" && left == 0 && right <= 0) return Error(right == 0 ? CellErrorCode.Number : CellErrorCode.DivisionByZero);
-        return CellValue.FromNumber(binary.Operator switch { "+" => left + right, "-" => left - right, "*" => left * right, "/" => left / right, "^" => Math.Pow(left, right), _ => double.NaN });
+        if (operation == "/" && right == 0) return Error(CellErrorCode.DivisionByZero);
+        if (operation == "^" && left == 0 && right <= 0) return Error(right == 0 ? CellErrorCode.Number : CellErrorCode.DivisionByZero);
+        return CellValue.FromNumber(operation switch { "+" => left + right, "-" => left - right, "*" => left * right, "/" => left / right, "^" => Math.Pow(left, right), _ => double.NaN });
     }
 
     private CellValue Function(FunctionNode function)
@@ -103,10 +136,11 @@ internal sealed partial class TypedEvaluator(WorkbookSnapshot snapshot, IReadOnl
             { return Scalar(function.Arguments[1]); }
         }
         if (ConditionalRanges.IsFunction(function.Name)) return Conditional(function);
-        if (LookupModes.IsFunction(function.Name)) return LookupValue(function);
+        if (LookupModes.IsFunction(function.Name)) return LookupValue(function) is CellValue lookupValue ? lookupValue : Error(CellErrorCode.Value);
         if (DateMathFunctions.IsFunction(function.Name)) return DateMath(function);
         if (TextFunctions.IsFunction(function.Name)) return TextFunction(function);
         if (function.Name == "SUBTOTAL") return Subtotal(function);
+        if (ComplexFormulaFunctions.IsStatistic(function.Name)) return Statistic(function);
         var aggregate = function.Name is "SUM" or "AVERAGE" or "MIN" or "MAX" or "COUNT" or "COUNTA" or "PRODUCT";
         var contextual = aggregate || function.Name is "AND" or "OR" ? function.Arguments.Select(AggregateArgument).ToArray() : null;
         var args = contextual is null ? function.Arguments.Select(Evaluate).ToArray() : contextual.Select(a => a.Value).ToArray();
@@ -127,7 +161,7 @@ internal sealed partial class TypedEvaluator(WorkbookSnapshot snapshot, IReadOnl
         }
         for (var i = 0; i < args.Length; i++)
             if (args[i] is Range range && ConditionalRanges.Shape(range.Reference) == (1, 1)) args[i] = Read(range.Sheet, range.Reference.Row, range.Reference.Column);
-        if (args.Any(a => a is Range)) return Error(CellErrorCode.Value);
+        if (args.Any(a => a is Range or FormulaArray)) return Error(CellErrorCode.Value);
         var values = args.Cast<CellValue>().ToArray();
         CellValue A(int i) => values[i];
         string S(int i) => Text(A(i));
@@ -174,9 +208,11 @@ internal sealed partial class TypedEvaluator(WorkbookSnapshot snapshot, IReadOnl
 
     private (object Value, bool Reference) AggregateArgument(FormulaNode expression)
     {
+        if (expression is LetNode let) return WithLocals(let, AggregateArgument);
+        if (expression is LocalValueNode local) return _locals[local.Id].Value;
         // IF and INDEX can return a reference. Preserve that origin only in aggregate/logical contexts;
         // evaluating the selected branch once also keeps UDF side effects and lazy branches intact.
-        if (expression is FunctionNode { Name: "IF", Arguments.Count: 2 or 3 } choice)
+        if (expression is FunctionNode { Name: "IF", Arguments.Count: 2 or 3 } choice && (!ArrayMode || !DateMathFunctions.ArrayResult(choice.Arguments[0])))
         {
             var condition = Scalar(choice.Arguments[0]);
             if (condition.Kind == CellValueKind.Error) return (condition, false);
@@ -184,7 +220,7 @@ internal sealed partial class TypedEvaluator(WorkbookSnapshot snapshot, IReadOnl
                 : choice.Arguments.Count == 3 ? AggregateArgument(choice.Arguments[2]) : (CellValue.FromBoolean(false), false);
         }
         var value = Evaluate(expression);
-        var reference = expression is ReferenceNode || expression is FunctionNode { Name: "INDEX", Arguments.Count: > 0 } index && index.Arguments[0] is ReferenceNode;
+        var reference = value is FormulaArray or Range || expression is ReferenceNode || expression is FunctionNode { Name: "INDEX", Arguments.Count: > 0 } index && index.Arguments[0] is ReferenceNode;
         if (value is CellValue { Kind: CellValueKind.Blank } && expression is FunctionNode { Name: "IFERROR" or "IFNA" }) value = CellValue.FromNumber(0);
         return (value, reference);
     }
@@ -221,9 +257,20 @@ internal sealed partial class TypedEvaluator(WorkbookSnapshot snapshot, IReadOnl
         };
     }
 
-    private IEnumerable<CellValue> Values(object arg) => arg is Range range ? Stored(range) : [(CellValue)arg];
+    private IEnumerable<CellValue> Values(object arg) => arg switch { Range range => Stored(range), FormulaArray array => array.Values, _ => [(CellValue)arg] };
     private IEnumerable<CellValue> Stored(Range range)
     {
+        if (DerivedPositions is not null)
+        {
+            foreach (var position in range.Sheet.Cells.Keys.Concat(DerivedPositions().Where(a => a.SheetId == range.Sheet.Id)
+                .Select(a => new CellPosition(a.Row, a.Column))).Distinct().OrderBy(p => p.Row).ThenBy(p => p.Column))
+            {
+                check();
+                if (position.Row > range.Reference.EndRow) break;
+                if (range.Reference.Contains(position.Row, position.Column)) yield return Read(range.Sheet, position.Row, position.Column);
+            }
+            yield break;
+        }
         if (!_positions.TryGetValue(range.Sheet.Id, out var positions))
             _positions[range.Sheet.Id] = positions = range.Sheet.Cells.Keys.OrderBy(p => p.Row).ThenBy(p => p.Column).ToArray();
         foreach (var p in positions)

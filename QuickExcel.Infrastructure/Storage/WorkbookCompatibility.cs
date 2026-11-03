@@ -28,8 +28,11 @@ public sealed partial class TypedWorkbookStorage
         cancellationToken.ThrowIfCancellationRequested();
         var inspected = PrepareReadOnlyFormulaSave(snapshot, false);
         var unchanged = inspected.FileState is { } state && ContentEquals(inspected, state.OriginalModel);
+        var threadsRetained = true;
+        try { ExtendedObjectSafety.ValidateRetention(snapshot); }
+        catch (NotSupportedException) { threadsRetained = false; }
         var diagnostics = (snapshot.FileState?.CompatibilityDiagnostics ?? []).Select(d => d with {
-            Kind = unchanged ? d.Kind : CompatibilityKind.PotentialLoss
+            Kind = unchanged || threadsRetained && d.Code == "xlsx.threaded-comments-preserved" ? d.Kind : CompatibilityKind.PotentialLoss
         }).ToList();
         if (snapshot.FileState is { FormulaReadOnly: true } source)
         {

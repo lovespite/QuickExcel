@@ -6,6 +6,7 @@ using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 using QuickExcel.Core;
 using QuickExcel.Domain;
 using QuickExcel.Presentation;
@@ -92,6 +93,40 @@ public sealed partial class MainWindow
             try { await PasteAsync("all"); throw new InvalidOperationException("Hidden paste succeeded"); }
             catch (InvalidOperationException ex) when (ex.Message != "Hidden paste succeeded") { Check(ReferenceEquals(before, Document.Snapshot), "Paste never remaps across hidden rows"); }
             await Capture("final-grid"); Check(_grid.CachedNativeBytes <= 96L * 1024 * 1024, "Native content caches remain within budgets");
+            _workspace.Editor.SetCell(0,24,5,"=SEQUENCE(3,2)"); await CalculateAsync();
+            _grid.Select(new(26,6)); UpdateFormula();
+            Check(_grid.IsCellReadOnly(_grid.Current) && !_grid.BeginEdit(),"Spill child is read-only through native editor");
+            Check(_formula.IsReadOnly && _formula.Text == "=SEQUENCE(3,2)" && Document.GetCellValue(0,26,6) == "6","Spill child shows owner formula and derived value");
+            await Capture("dynamic-array-child");
+            _grid.Select(new(24,5)); Check(_grid.BeginEdit(),"Spill anchor remains editable");
+            _grid.CellEditor.Text = "=SEQUENCE(2)"; Check(await _grid.CommitAsync(),"Spill anchor uses normal command commit"); await CalculateAsync();
+            Check(Document.Snapshot.Sheets[0].GetCell(26,6) is null,"Shrinking array clears former derived cells");
+            await History(false); Check(Document.GetCellValue(0,26,6) == "6","Undo restores entire array");
+            _workspace.Editor.SetCells(0,[(0,9,"Region"),(0,10,"Product"),(0,11,"Amount"),(1,9,"North"),(1,10,"A"),(1,11,"10"),
+                (2,9,"South"),(2,10,"A"),(2,11,"20"),(3,9,"North"),(3,10,"B"),(3,11,"5"),(4,9,"South"),(4,10,"B"),(4,11,"0"),
+                (5,9,"East"),(5,10,"B"),(5,11,"-3"),(6,9,"East"),(6,10,"A")]);
+            await ExecuteAsync(new CreateTableCommand(id,new(0,9,6,11),"PivotSource"));
+            _grid.Select(new(9,9));
+            _dialogDriver=window=>
+            {
+                var dialog=(FieldsDialog)window;
+                ((ComboBox)dialog.Input("column")).SelectedIndex=2;
+                ((TextBox)dialog.Input("name")).Text="GridPivot";
+                dialog.Validate!(); window.Close(true); return Task.CompletedTask;
+            };
+            await CreatePivotAsync();
+            Check(CurrentPivot?.Name=="GridPivot" && Document.GetCellValue(0,14,12)=="32","Native pivot dialog creates row/column sum report");
+            Check(_grid.IsCellReadOnly(new(11,10)) && !_pivotStatus.IsVisible,"Pivot results are read-only and initially current");
+            _workspace.Editor.SetCell(0,1,11,"12"); Synchronize();
+            Check(_pivotStatus.IsVisible && CurrentPivot!.Stale && Document.GetCellValue(0,14,12)=="32","Source edit retains old pivot values and shows persistent stale notice");
+            await RefreshPivotAsync();
+            Check(!CurrentPivot!.Stale && !_pivotStatus.IsVisible && Document.GetCellValue(0,14,12)=="34","Native refresh updates report and clears stale notice");
+            await History(false); Check(CurrentPivot!.Stale && Document.GetCellValue(0,14,12)=="32","Pivot refresh is one undo transaction");
+            await History(true); await CalculateAsync(); _grid.ScrollTo(900,240); await Capture("pivot-report");
+            var pivotPath=Path.Combine(directory,"pivot.xlsq"); new TypedWorkbookStorage().Save(pivotPath,Document.Snapshot);
+            Check(new TypedWorkbookStorage().Open(pivotPath).Sheets[0].Data.Pivots.Single().Name=="GridPivot","Native pivot workbook saves and reopens with definition and cache");
+            _dialogDriver=window=>{window.GetVisualDescendants().OfType<Button>().Single(b=>b.Content?.ToString()=="确定").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));return Task.CompletedTask;}; await ConvertPivotToValuesAsync();
+            Check(CurrentPivot is null && Document.GetCellValue(0,14,12)=="34","Converting pivot to values keeps displayed report");
             var validation = new WorksheetValidation([new(20, 0, 20, 0)], ValidationKind.Whole, "=1", "=5", alert: ValidationAlert.Warning);
             await ExecuteAsync(new SetValidationCommand(id, validation)); _grid.Select(new(20, 0)); _grid.BeginEdit(); _grid.CellEditor.Text = "9";
             var answer = new TaskCompletionSource<bool>(); _validationChoice = _ => answer.Task;

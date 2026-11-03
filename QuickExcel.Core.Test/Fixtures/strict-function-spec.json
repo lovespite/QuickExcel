@@ -1,0 +1,117 @@
+{
+  "Sheets": [
+    "Data"
+  ],
+  "Date1904": false,
+  "TextCompatibilityVersion": 1,
+  "Inputs": [
+    {
+      "Address": "A1",
+      "Sheet": "Data",
+      "Value": 45400.5,
+      "NumberFormat": "yyyy-mm-dd hh:mm:ss",
+      "Kind": "Number"
+    },
+    {
+      "Address": "A2",
+      "Sheet": "Data",
+      "Value": "_x0041_",
+      "Kind": "Text"
+    },
+    {
+      "Address": "A3",
+      "Sheet": "Data",
+      "Value": "a\rb",
+      "Kind": "Text"
+    },
+    {
+      "Address": "A4",
+      "Sheet": "Data",
+      "Value": true,
+      "Kind": "Boolean"
+    },
+    {
+      "Address": "A5",
+      "Sheet": "Data",
+      "Value": "汉字😀",
+      "Kind": "Text"
+    },
+    {
+      "Address": "A6",
+      "Sheet": "Data",
+      "Value": "http://purl.oclc.org/ooxml/spreadsheetml/main",
+      "Kind": "Text"
+    }
+  ],
+  "Cases": [
+    {
+      "Id": "strict-1",
+      "Address": "B1",
+      "Sheet": "Data",
+      "Formula": "=A1"
+    },
+    {
+      "Id": "strict-2",
+      "Address": "B2",
+      "Sheet": "Data",
+      "Formula": "=A2"
+    },
+    {
+      "Id": "strict-3",
+      "Address": "B3",
+      "Sheet": "Data",
+      "Formula": "=A3"
+    },
+    {
+      "Id": "strict-4",
+      "Address": "B4",
+      "Sheet": "Data",
+      "Formula": "=A4"
+    },
+    {
+      "Id": "strict-5",
+      "Address": "B5",
+      "Sheet": "Data",
+      "Formula": "=A5"
+    },
+    {
+      "Id": "strict-6",
+      "Address": "B6",
+      "Sheet": "Data",
+      "Formula": "=A6"
+    },
+    {
+      "Id": "strict-7",
+      "Address": "B7",
+      "Sheet": "Data",
+      "Formula": "=YEAR(A1)"
+    },
+    {
+      "Id": "strict-8",
+      "Address": "B8",
+      "Sheet": "Data",
+      "Formula": "=A1+1"
+    },
+    {
+      "Id": "strict-9",
+      "Address": "B9",
+      "Sheet": "Data",
+      "Formula": "=SUM(1,2)"
+    },
+    {
+      "Id": "strict-10",
+      "Address": "B10",
+      "Sheet": "Data",
+      "Formula": "=LEN(A3)"
+    }
+  ],
+  "Edits": [
+    {
+      "Address": "A1",
+      "Sheet": "Data",
+      "Value": 45402.25,
+      "Kind": "Number"
+    }
+  ],
+  "GuardedCases": []
+}

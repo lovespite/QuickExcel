@@ -43,6 +43,9 @@ public sealed class SetCellsCommand : DocumentCommand
                 : edit.Content.LiteralValue.Kind == CellValueKind.Text ? edit.Content.LiteralValue.TextValue : "";
             if (text.Length > WorkbookLimits.MaxCellTextLength) throw new ArgumentException("单元格最多支持 32767 个字符，整批编辑尚未应用。");
             var before = sheet.GetCell(edit.Address.Row, edit.Address.Column);
+            if (before?.SpillOwner is { } owner && (before.Content.StyleId == edit.Content.StyleId || before.Content.WithStyle(0) != edit.Content.WithStyle(0)) &&
+                !Edits.Any(e => e.Address == owner && e.Content.WithStyle(0) != sheet.GetCell(owner.Row, owner.Column)?.Content.WithStyle(0)))
+                throw new InvalidOperationException("不能单独修改溢出结果，请编辑数组左上角公式；整批修改未应用。");
             if (!_allowRichTextLoss && before?.Content.RichText is not null && edit.Content.RichText is null)
             {
                 if (edit.Content.Kind == CellContentKind.Literal && edit.Content.LiteralValue == before.Value && edit.Content.StyleId == before.Content.StyleId) continue;
@@ -54,10 +57,12 @@ public sealed class SetCellsCommand : DocumentCommand
                     if (merge.Contains(edit.Address.Row, edit.Address.Column) && (edit.Address.Row != merge.Top || edit.Address.Column != merge.Left))
                         throw new InvalidOperationException("不能写入合并区域的非主单元格，请先取消合并；整批操作未应用。");
             var inheritedStyle = sheet.GetInheritedStyleId(edit.Address.Row, edit.Address.Column);
-            var after = edit.Content.Kind == CellContentKind.Literal && edit.Content.LiteralValue.Kind == CellValueKind.Blank && edit.Content.StyleId == 0 && inheritedStyle == 0
+            var after = before?.SpillOwner is null && edit.Content.Kind == CellContentKind.Literal && edit.Content.LiteralValue.Kind == CellValueKind.Blank && edit.Content.StyleId == 0 && inheritedStyle == 0
                 ? null : new CellSnapshot(edit.Content,
+                    before?.SpillOwner is not null && before.Content.WithStyle(0) == edit.Content.WithStyle(0) ? before.Calculation :
                     before?.Content.Kind == CellContentKind.Formula && edit.Content.Kind == CellContentKind.Formula &&
-                    before.Content.FormulaText == edit.Content.FormulaText ? before.Calculation : null);
+                    before.Content.FormulaText == edit.Content.FormulaText ? before.Calculation : null,
+                    before?.SpillOwner is not null && before.Content.WithStyle(0) == edit.Content.WithStyle(0) ? before.SpillOwner : null);
             if (before is null && after is null) continue;
             if (!builders.TryGetValue(sheet.Id, out var builder)) builders[sheet.Id] = builder = sheet.Cells.ToBuilder();
             var position = new CellPosition(edit.Address.Row, edit.Address.Column);

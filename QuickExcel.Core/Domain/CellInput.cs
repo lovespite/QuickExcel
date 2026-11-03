@@ -44,6 +44,18 @@ public static class CellInput
     }
 
     /// <summary>Serializes input for an editor; typed text is escaped when parsing could reinterpret it.</summary>
+    public static string EditText(WorkbookSnapshot snapshot, WorksheetSnapshot sheet, int row, int column)
+    {
+        if (QuickExcel.Core.ProtectionSafety.HidesFormula(snapshot, sheet, row, column)) return "";
+        var cell = sheet.GetCell(row,column);
+        if (cell?.SpillOwner is { } owner)
+        {
+            if (owner.SheetId != sheet.Id || QuickExcel.Core.ProtectionSafety.HidesFormula(snapshot,sheet,owner.Row,owner.Column)) return "";
+            cell = sheet.GetCell(owner.Row,owner.Column);
+        }
+        return cell is null ? "" : EditText(cell.Content);
+    }
+
     public static string EditText(CellContent content)
     {
         ArgumentNullException.ThrowIfNull(content);
@@ -73,6 +85,7 @@ public static class CellInput
             CellErrorCode.Cycle => "#CYCLE!",
             CellErrorCode.Script => "#SCRIPT!",
             CellErrorCode.Calculation => "#CALC!",
+            CellErrorCode.Spill => "#SPILL!",
             _ => throw new InvalidOperationException("Unknown cell error code.")
         },
         _ => throw new InvalidOperationException("Unknown cell value kind.")
@@ -97,6 +110,7 @@ public static class CellInput
             "#CYCLE!" => CellErrorCode.Cycle,
             "#SCRIPT!" => CellErrorCode.Script,
             "#CALC!" => CellErrorCode.Calculation,
+            "#SPILL!" => CellErrorCode.Spill,
             _ => null
         };
         value = code.HasValue ? CellValue.FromError(code.Value) : CellValue.Blank;

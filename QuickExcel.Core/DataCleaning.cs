@@ -114,7 +114,7 @@ public static class DataCleaning
                 var oldRow = keep[index]; content = sheet.GetCell(oldRow, col)?.Content ?? CellContent.FromLiteral(CellValue.Blank, sheet.GetStyleId(oldRow, col));
                 if (oldRow != row) content = content.WithStyle(sheet.GetStyleId(oldRow, col));
                 if (content.Kind == CellContentKind.Formula)
-                    content = CellContent.FromFormula(CompactFormula(book, sheetId, content.FormulaText, work, first, removed), content.StyleId);
+                    content = content.WithFormula(CompactFormula(book, sheetId, content.FormulaText, work, first, removed));
             }
             edits.Add(new(new(sheetId, row, col), content));
         }

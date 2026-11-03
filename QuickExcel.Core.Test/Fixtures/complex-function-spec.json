@@ -1,0 +1,405 @@
+{
+  "Sheets": [
+    "Data"
+  ],
+  "Date1904": false,
+  "TextCompatibilityVersion": 1,
+  "Inputs": [
+    {
+      "Address": "A1",
+      "Sheet": "Data",
+      "Kind": "Number",
+      "Value": 2
+    },
+    {
+      "Address": "A2",
+      "Sheet": "Data",
+      "Kind": "Text",
+      "Value": "3"
+    },
+    {
+      "Address": "A3",
+      "Sheet": "Data",
+      "Kind": "Boolean",
+      "Value": true
+    },
+    {
+      "Address": "A4",
+      "Sheet": "Data",
+      "Kind": "Number",
+      "Value": 4
+    },
+    {
+      "Address": "A5",
+      "Sheet": "Data",
+      "Kind": "Number",
+      "Value": 0
+    },
+    {
+      "Address": "A6",
+      "Sheet": "Data",
+      "Kind": "Number",
+      "Value": -2
+    },
+    {
+      "Address": "A7",
+      "Sheet": "Data",
+      "Kind": "Text",
+      "Value": "text"
+    }
+  ],
+  "Cases": [
+    {
+      "Id": "complex-1",
+      "Sheet": "Data",
+      "Address": "D1",
+      "Formula": "=LET(x,2,x+x)"
+    },
+    {
+      "Id": "complex-2",
+      "Sheet": "Data",
+      "Address": "D2",
+      "Formula": "=LET(x,2,y,x+3,x*y)"
+    },
+    {
+      "Id": "complex-3",
+      "Sheet": "Data",
+      "Address": "D3",
+      "Formula": "=LET(x,2,LET(x,3,x)+x)"
+    },
+    {
+      "Id": "complex-4",
+      "Sheet": "Data",
+      "Address": "D4",
+      "Formula": "=LET(x,2,LET(x,x+1,x))"
+    },
+    {
+      "Id": "complex-5",
+      "Sheet": "Data",
+      "Address": "D5",
+      "Formula": "=LET(x,1/0,5)"
+    },
+    {
+      "Id": "complex-6",
+      "Sheet": "Data",
+      "Address": "D6",
+      "Formula": "=LET(x,A1,COUNT(x))"
+    },
+    {
+      "Id": "complex-7",
+      "Sheet": "Data",
+      "Address": "D7",
+      "Formula": "=LET(x,A2,COUNT(x))"
+    },
+    {
+      "Id": "complex-8",
+      "Sheet": "Data",
+      "Address": "D8",
+      "Formula": "=LET(x,A3,COUNT(x))"
+    },
+    {
+      "Id": "complex-9",
+      "Sheet": "Data",
+      "Address": "D9",
+      "Formula": "=LET(x,A8,x)"
+    },
+    {
+      "Id": "complex-10",
+      "Sheet": "Data",
+      "Address": "D10",
+      "Formula": "=LET(x,A2,SUM(x))"
+    },
+    {
+      "Id": "complex-11",
+      "Sheet": "Data",
+      "Address": "D11",
+      "Formula": "=LET(x,TRUE,COUNT(x))"
+    },
+    {
+      "Id": "complex-12",
+      "Sheet": "Data",
+      "Address": "D12",
+      "Formula": "=LET(x,\"3\",SUM(x))"
+    },
+    {
+      "Id": "complex-13",
+      "Sheet": "Data",
+      "Address": "D13",
+      "Formula": "=LET(x,A1:A7,SUM(x))"
+    },
+    {
+      "Id": "complex-14",
+      "Sheet": "Data",
+      "Address": "D14",
+      "Formula": "=LET(x,SEQUENCE(3),SUM(x*x))"
+    },
+    {
+      "Id": "complex-15",
+      "Sheet": "Data",
+      "Address": "D15",
+      "Formula": "=LET(x,1/0,IFERROR(x,7))"
+    },
+    {
+      "Id": "complex-16",
+      "Sheet": "Data",
+      "Address": "D16",
+      "Formula": "=LET(x,1,y,x+1,x+y)"
+    },
+    {
+      "Id": "complex-17",
+      "Sheet": "Data",
+      "Address": "D17",
+      "Formula": "=SUM(OFFSET(A1,1,0,3,1))"
+    },
+    {
+      "Id": "complex-18",
+      "Sheet": "Data",
+      "Address": "D18",
+      "Formula": "=OFFSET(A1,2,0)"
+    },
+    {
+      "Id": "complex-19",
+      "Sheet": "Data",
+      "Address": "D19",
+      "Formula": "=OFFSET(A1,-1,0)"
+    },
+    {
+      "Id": "complex-20",
+      "Sheet": "Data",
+      "Address": "D20",
+      "Formula": "=SUM(OFFSET(A1,0,0,0,1))"
+    },
+    {
+      "Id": "complex-21",
+      "Sheet": "Data",
+      "Address": "D21",
+      "Formula": "=SUM(OFFSET(A4,0,0,-2,1))"
+    },
+    {
+      "Id": "complex-22",
+      "Sheet": "Data",
+      "Address": "D22",
+      "Formula": "=SUM(OFFSET(A1,1.9,0,2.9,1))"
+    },
+    {
+      "Id": "complex-23",
+      "Sheet": "Data",
+      "Address": "D23",
+      "Formula": "=SUM(OFFSET(A1:A3,1,0))"
+    },
+    {
+      "Id": "complex-24",
+      "Sheet": "Data",
+      "Address": "D24",
+      "Formula": "=SUM(OFFSET(A1,0,0,,1))"
+    },
+    {
+      "Id": "complex-25",
+      "Sheet": "Data",
+      "Address": "D25",
+      "Formula": "=INDIRECT(\"A1\")"
+    },
+    {
+      "Id": "complex-26",
+      "Sheet": "Data",
+      "Address": "D26",
+      "Formula": "=SUM(INDIRECT(\"A1:A7\"))"
+    },
+    {
+      "Id": "complex-27",
+      "Sheet": "Data",
+      "Address": "D27",
+      "Formula": "=INDIRECT(\"R1C1\",FALSE)"
+    },
+    {
+      "Id": "complex-28",
+      "Sheet": "Data",
+      "Address": "D28",
+      "Formula": "=INDIRECT(\"R[-1]C[-3]\",FALSE)"
+    },
+    {
+      "Id": "complex-29",
+      "Sheet": "Data",
+      "Address": "D29",
+      "Formula": "=INDIRECT(\"Z1000\")"
+    },
+    {
+      "Id": "complex-30",
+      "Sheet": "Data",
+      "Address": "D30",
+      "Formula": "=INDIRECT(\"nonsense\")"
+    },
+    {
+      "Id": "complex-31",
+      "Sheet": "Data",
+      "Address": "D31",
+      "Formula": "=VAR.S(A1:A7)"
+    },
+    {
+      "Id": "complex-32",
+      "Sheet": "Data",
+      "Address": "D32",
+      "Formula": "=VAR.P(A1:A7)"
+    },
+    {
+      "Id": "complex-33",
+      "Sheet": "Data",
+      "Address": "D33",
+      "Formula": "=STDEV.S(A1:A7)"
+    },
+    {
+      "Id": "complex-34",
+      "Sheet": "Data",
+      "Address": "D34",
+      "Formula": "=STDEV.P(A1:A7)"
+    },
+    {
+      "Id": "complex-35",
+      "Sheet": "Data",
+      "Address": "D35",
+      "Formula": "=MEDIAN(A1:A7)"
+    },
+    {
+      "Id": "complex-36",
+      "Sheet": "Data",
+      "Address": "D36",
+      "Formula": "=VAR.S(1)"
+    },
+    {
+      "Id": "complex-37",
+      "Sheet": "Data",
+      "Address": "D37",
+      "Formula": "=VAR.P(1)"
+    },
+    {
+      "Id": "complex-38",
+      "Sheet": "Data",
+      "Address": "D38",
+      "Formula": "=VAR.S(TRUE,\"3\",5)"
+    },
+    {
+      "Id": "complex-39",
+      "Sheet": "Data",
+      "Address": "D39",
+      "Formula": "=VAR.S(\"text\",2)"
+    },
+    {
+      "Id": "complex-40",
+      "Sheet": "Data",
+      "Address": "D40",
+      "Formula": "=VAR.S(A8:A10)"
+    },
+    {
+      "Id": "complex-41",
+      "Sheet": "Data",
+      "Address": "D41",
+      "Formula": "=MEDIAN(A8:A10)"
+    },
+    {
+      "Id": "complex-42",
+      "Sheet": "Data",
+      "Address": "D42",
+      "Formula": "=MEDIAN(1,3,4,7)"
+    },
+    {
+      "Id": "complex-43",
+      "Sheet": "Data",
+      "Address": "D43",
+      "Formula": "=STDEV.P(1000000000001,1000000000002,1000000000003)"
+    },
+    {
+      "Id": "complex-44",
+      "Sheet": "Data",
+      "Address": "D44",
+      "Formula": "=VAR.S(1000000000001,1000000000002,1000000000003)"
+    },
+    {
+      "Id": "complex-45",
+      "Sheet": "Data",
+      "Address": "D45",
+      "Formula": "=VAR.S(0,0)"
+    },
+    {
+      "Id": "complex-46",
+      "Sheet": "Data",
+      "Address": "D46",
+      "Formula": "=MEDIAN(TRUE,\"3\",5)"
+    },
+    {
+      "Id": "complex-47",
+      "Sheet": "Data",
+      "Address": "D47",
+      "Formula": "=LET(x,A2,ISNUMBER(x))"
+    },
+    {
+      "Id": "complex-48",
+      "Sheet": "Data",
+      "Address": "D48",
+      "Formula": "=LET(x,A8,ISBLANK(x))"
+    },
+    {
+      "Formula": "=SUM(LET(x,A2,x))",
+      "Sheet": "Data",
+      "Address": "D49",
+      "Id": "complex-49"
+    },
+    {
+      "Formula": "=SUM(LET(x,A1:A7,x))",
+      "Sheet": "Data",
+      "Address": "D50",
+      "Id": "complex-50"
+    },
+    {
+      "Formula": "=LET(x,IF(TRUE,A2),SUM(x))",
+      "Sheet": "Data",
+      "Address": "D51",
+      "Id": "complex-51"
+    },
+    {
+      "Formula": "=LET(x,IF(TRUE,A3),COUNT(x))",
+      "Sheet": "Data",
+      "Address": "D52",
+      "Id": "complex-52"
+    },
+    {
+      "Formula": "=LET(x,A2&\"\",SUM(x))",
+      "Sheet": "Data",
+      "Address": "D53",
+      "Id": "complex-53"
+    },
+    {
+      "Formula": "=LET(x,IFNA(SEQUENCE(2),SEQUENCE(3)),SUM(x))",
+      "Sheet": "Data",
+      "Address": "D54",
+      "Id": "complex-54"
+    },
+    {
+      "Formula": "=SUM(OFFSET(A1:A3,0,0,,1))",
+      "Sheet": "Data",
+      "Address": "D55",
+      "Id": "complex-55"
+    },
+    {
+      "Formula": "=INDIRECT(\"A1\",)",
+      "Sheet": "Data",
+      "Address": "D56",
+      "Id": "complex-56"
+    }
+  ],
+  "Edits": [
+    {
+      "Address": "A1",
+      "Sheet": "Data",
+      "Kind": "Number",
+      "Value": 6
+    }
+  ],
+  "GuardedCases": [
+    {
+      "Address": "D29",
+      "Formula": "=INDIRECT(\"XFD1048576\")",
+      "Id": "outside-product-grid",
+      "Sheet": "Data"
+    }
+  ]
+}

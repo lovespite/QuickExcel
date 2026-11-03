@@ -29,6 +29,9 @@ public sealed class WorkbookDependencyIndex
         : this(snapshot, () => cancellationToken.ThrowIfCancellationRequested()) { }
 
     internal WorkbookDependencyIndex(WorkbookSnapshot snapshot, Action check)
+        : this(snapshot, check, null) { }
+
+    internal WorkbookDependencyIndex(WorkbookSnapshot snapshot, Action check, IReadOnlyDictionary<CellAddress, QuickExcel.Core.FormulaSpill>? spills)
     {
         var sheets = snapshot.Sheets.ToDictionary(s => s.Name, StringComparer.OrdinalIgnoreCase);
         var references = new Dictionary<SheetId, List<Entry>>();
@@ -42,7 +45,7 @@ public sealed class WorkbookDependencyIndex
             var node = new Node(cell, order++); Nodes.Add(address, node);
             try
             {
-                node.Expression = FormulaBinding.Bind(FormulaSyntax.Parse(cell.Content.FormulaText), snapshot, sheet.Id, position);
+                node.Expression = FormulaBinding.Bind(FormulaSyntax.Parse(cell.Content.FormulaText), snapshot, sheet.Id, position, cell.Content.DynamicArray);
                 node.VisibilityBlocked = SubtotalFunctions.Contains(node.Expression) && SubtotalFunctions.HasUnmodeledFilters(snapshot);
                 var depthCheck = new Stack<(FormulaNode Node, int Depth)>();
                 depthCheck.Push((node.Expression, 0));
@@ -55,6 +58,10 @@ public sealed class WorkbookDependencyIndex
                         case UnaryNode u: depthCheck.Push((u.Operand, item.Depth + 1)); break;
                         case BinaryNode b: depthCheck.Push((b.Left, item.Depth + 1)); depthCheck.Push((b.Right, item.Depth + 1)); break;
                         case FunctionNode f: foreach (var a in f.Arguments) depthCheck.Push((a, item.Depth + 1)); break;
+                        case LetNode let:
+                            depthCheck.Push((let.Body, item.Depth + 1));
+                            foreach (var b in let.Bindings) depthCheck.Push((b.Value, item.Depth + 1));
+                            break;
                     }
                 }
                 foreach (var part in FormulaSyntax.Walk(ConditionalRanges.ForDependencies(node.Expression)).Concat(SubtotalFunctions.FilterDependencies(node.Expression, snapshot)))
@@ -66,6 +73,7 @@ public sealed class WorkbookDependencyIndex
                         node.Volatile |= function.Name is "TODAY" or "NOW" or "SUBTOTAL";
                     }
                     if (part is not ReferenceNode reference) continue;
+                    node.Volatile |= reference.SourceExpression is FunctionNode { Name: "OFFSET" or "INDIRECT" };
                     var target = sheets[reference.Sheet!].Id;
                     if (!references.TryGetValue(target, out var entries)) references[target] = entries = [];
                     if (++referenceCount > 2_000_000) throw new InvalidOperationException("公式引用索引超过 2,000,000 项。");
@@ -88,8 +96,25 @@ public sealed class WorkbookDependencyIndex
                 if (++edges > 2_000_000) throw new InvalidOperationException("公式依赖超过 2,000,000 条，未发布本轮结果。");
             }
         }
+        if (spills is not null)
+        foreach (var spill in spills.Values)
+        {
+            if (!Nodes.TryGetValue(spill.Anchor, out var producer)) continue;
+            for (var row = 0; row < spill.Array.Rows; row++)
+            for (var column = 0; column < spill.Array.Columns; column++)
+            {
+                check();
+                if (row == 0 && column == 0) continue;
+                foreach (var dependent in DirectDependents(new(spill.Anchor.SheetId, spill.Anchor.Row + row, spill.Anchor.Column + column), check))
+                {
+                    if (!producer.Dependents.Add(dependent)) continue;
+                    Nodes[dependent].Dependencies.Add(spill.Anchor);
+                    if (++edges > 2_000_000) throw new InvalidOperationException("数组公式依赖超过 2,000,000 条。");
+                }
+            }
+        }
         CycleMembers = FindCycles(check);
-        NonPortableCells = Closure(Nodes.Where(p => p.Value.Script || p.Value.VisibilityBlocked || p.Value.ParseError is not null || p.Value.PortableFormula is null || p.Value.Expression is ReferenceNode { IsRange: true }
+        NonPortableCells = Closure(Nodes.Where(p => p.Value.Script || p.Value.VisibilityBlocked || p.Value.ParseError is not null || p.Value.PortableFormula is null || !p.Value.Cell.Content.DynamicArray && p.Value.Expression is ReferenceNode { IsRange: true }
             || FormulaSyntax.Walk(p.Value.Expression).OfType<FunctionNode>().Any(f => !StandardFunctions.AcceptsArguments(f.Name, f.Arguments.Count))
             || FormulaSyntax.Walk(p.Value.Expression).OfType<ValueNode>().Any(n => n.Value.Kind == CellValueKind.Error && n.Value.ErrorCode is CellErrorCode.Cycle or CellErrorCode.Script))
             .Select(p => p.Key).Concat(CycleMembers), check);

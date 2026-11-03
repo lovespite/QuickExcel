@@ -69,6 +69,7 @@ public sealed class ScriptModuleSet
 }
 
 public sealed record WorkbookPartBinding(string WorkbookSheetId, string Part);
+public sealed record PreservedCellAttachment(string Feature, string SheetName, CellPosition Position);
 
 /// <summary>Immutable import provenance used to prevent silent loss of unsupported file content.</summary>
 public sealed class WorkbookFileState
@@ -76,7 +77,7 @@ public sealed class WorkbookFileState
     public WorkbookFileState(string sourcePath, int sourceFormatVersion, IEnumerable<byte> originalWorkbook,
         WorkbookSnapshot originalModel, IEnumerable<WorkbookPartBinding> sheetParts, IEnumerable<string> compatibilityIssues,
         string? manifestJson = null, string? stateJson = null, IEnumerable<CompatibilityDiagnostic>? compatibilityDiagnostics = null,
-        IEnumerable<PreservedFormula>? preservedFormulas = null)
+        IEnumerable<PreservedFormula>? preservedFormulas = null, IEnumerable<PreservedCellAttachment>? preservedAttachments = null)
     {
         SourcePath = Path.GetFullPath(sourcePath);
         SourceFormatVersion = sourceFormatVersion;
@@ -89,6 +90,7 @@ public sealed class WorkbookFileState
         ManifestJson = manifestJson;
         StateJson = stateJson;
         PreservedFormulas = preservedFormulas?.ToImmutableArray() ?? [];
+        PreservedAttachments = preservedAttachments?.ToImmutableArray() ?? [];
     }
     public string SourcePath { get; }
     public int SourceFormatVersion { get; }
@@ -100,6 +102,7 @@ public sealed class WorkbookFileState
     public string? ManifestJson { get; }
     public string? StateJson { get; }
     public ImmutableArray<PreservedFormula> PreservedFormulas { get; }
+    public ImmutableArray<PreservedCellAttachment> PreservedAttachments { get; }
     public bool FormulaReadOnly => !PreservedFormulas.IsEmpty;
     public const string FormulaReadOnlyMessage = "此工作簿含尚不能安全计算或变换的公式，当前以只读模式打开；可查看源码/来源缓存及另存原包，导航不会写入文件。请在 Excel 中修改，或明确导出已有缓存的值快照。";
     public bool RequiresMigration => SourceFormatVersion == 1;

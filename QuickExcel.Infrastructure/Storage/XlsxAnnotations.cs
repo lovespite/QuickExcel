@@ -37,7 +37,9 @@ internal static class XlsxAnnotations
         {
             package.RequireType(comments, CommentsType); var root = package.XmlPart(comments).Root!;
             if (root.Name != Main + "comments") throw new InvalidDataException("批注部件无效。");
-            package.Shape(root, "authors commentList", "", comments);
+            var rootShape = new XElement(root);
+            if (package.ThreadedFallbackParts.Contains(comments)) rootShape.Attribute(XName.Get("Ignorable", "http://schemas.openxmlformats.org/markup-compatibility/2006"))?.Remove();
+            package.Shape(rootShape, "authors commentList", "", comments);
             if (root.Elements(Main + "authors").Count() != 1 || root.Elements(Main + "commentList").Count() != 1) throw new InvalidDataException("批注作者或列表定义无效。");
             package.Shape(root.Element(Main + "authors")!, "author", "", comments);
             foreach (var author in root.Element(Main + "authors")!.Elements(Main + "author")) package.Shape(author, "", "", comments);
@@ -48,7 +50,13 @@ internal static class XlsxAnnotations
             {
                 package.Budget.Parse(256);
                 if (notes.Count >= 65530) throw new InvalidDataException("批注数量过多。");
-                package.Shape(comment, "text", "ref authorId", comments);
+                var commentShape = new XElement(comment);
+                if (package.ThreadedFallbackParts.Contains(comments))
+                {
+                    commentShape.Attribute("shapeId")?.Remove();
+                    commentShape.Attribute(XName.Get("uid", "http://schemas.microsoft.com/office/spreadsheetml/2014/revision"))?.Remove();
+                }
+                package.Shape(commentShape, "text", "ref authorId", comments);
                 var address = Position(Attr(comment, "ref")); var author = authors[Int(Attr(comment, "authorId"), authors.Length - 1)];
                 if (comment.Elements(Main + "text").Count() != 1 || comment.Element(Main + "text") is not { } text) throw new InvalidDataException("批注文本定义无效。");
                 var parsed = textReader.Read(text, comments);

@@ -9,7 +9,8 @@ using static QuickExcel.Storage.XlsxPackage;
 namespace QuickExcel.Storage;
 
 internal sealed record TypedWorkbookRead(WorkbookSnapshot Snapshot, IReadOnlyList<WorkbookPartBinding> Bindings,
-    IReadOnlyList<string> Issues, IReadOnlyList<CompatibilityDiagnostic> Diagnostics, bool HasWorkbookView, IReadOnlyList<PreservedFormula> PreservedFormulas);
+    IReadOnlyList<string> Issues, IReadOnlyList<CompatibilityDiagnostic> Diagnostics, bool HasWorkbookView, IReadOnlyList<PreservedFormula> PreservedFormulas,
+    IReadOnlyList<PreservedCellAttachment> PreservedAttachments, bool IsStrict);
 
 internal static class TypedWorkbookXml
 {
@@ -31,7 +32,9 @@ internal static class TypedWorkbookXml
         var root = package.XmlPart(workbookPart).Root!;
         if (root.Name != Main + "workbook") throw new InvalidDataException("无效工作簿。");
         var textCompatibility = XlsxTextCompatibility.Read(package, root, workbookPart);
-        package.Shape(XlsxTextCompatibility.Shape(root), "workbookPr bookViews sheets definedNames calcPr", "", workbookPart);
+        package.Shape(XlsxTextCompatibility.Shape(root), "workbookPr bookViews sheets definedNames calcPr pivotCaches", "conformance", workbookPart);
+        if ((string?)root.Attribute("conformance") is { } conformance && conformance != (package.IsStrict ? "strict" : "transitional"))
+            throw new InvalidDataException("工作簿一致性类别与命名空间不一致。");
         if (root.Element(Main + "workbookPr") is { } pr) package.Shape(pr, "", "date1904", workbookPart);
         if (root.Element(Main + "calcPr") is { } calc)
         {
@@ -44,6 +47,7 @@ internal static class TypedWorkbookXml
         var dateSystem = Bool((string?)root.Element(Main + "workbookPr")?.Attribute("date1904")) ? ExcelDateSystem.Mac1904 : ExcelDateSystem.Windows1900;
         var styles = TypedStyles.Read(package, workbookPart);
         var textReader = new XlsxCellText(package, workbookPart);
+        var dynamicMetadata = XlsxDynamicArrays.Read(package, workbookPart);
         var richErrors = XlsxRichErrors.Read(package, workbookPart);
         var strings = new List<XlsxTextValue>();
         var stylesPart = package.RelatedByType(workbookPart, "styles");
@@ -68,6 +72,7 @@ internal static class TypedWorkbookXml
         long cellCount = 0;
         var selectedTabs = 0;
         var preservedFormulas = new List<PreservedFormula>();
+        var nativeDynamicLocations = new HashSet<(string Part, string Cell)>();
         long inspectedArrayCells = 0;
         foreach (var definition in root.Element(Main + "sheets")?.Elements(Main + "sheet") ?? [])
         {
@@ -88,6 +93,7 @@ internal static class TypedWorkbookXml
             if (sheet.Name != Main + "worksheet") throw new InvalidDataException("无效工作表部件。");
             package.Shape(XlsxFiltering.Shape(sheet), "autoFilter sortState tableParts dataValidations conditionalFormatting dimension sheetPr sheetViews sheetFormatPr cols sheetData sheetProtection mergeCells hyperlinks printOptions pageMargins pageSetup headerFooter rowBreaks colBreaks drawing legacyDrawing", "", path);
             var sharedFormulas = new SharedFormulaExpander(sheet);
+            var dynamicRanges = new Dictionary<CellPosition, CellRectangle>();
             var cells = new Dictionary<CellPosition, CellSnapshot>();
             var cachedCells = new HashSet<CellPosition>();
             var firstPreserved = preservedFormulas.Count;
@@ -131,11 +137,17 @@ internal static class TypedWorkbookXml
                     var position = element.Attribute("r") is { } address ? Position(address.Value) : new CellPosition(rowIndex, nextColumn);
                     if (position.Row != rowIndex || position.Column >= WorkbookLimits.MaxColumns) throw new InvalidDataException("单元格地址与所在行不一致。");
                     nextColumn = position.Column + 1;
-                    package.Shape(element, "f v is extLst", "r s t vm", path);
+                    package.Shape(element, "f v is extLst", "r s t vm cm", path);
+                    var cellMetadata = Int((string?)element.Attribute("cm") ?? "0", WorkbookLimits.MaxCells);
+                    if (cellMetadata > 0 && (string?)element.Element(Main + "f")?.Attribute("t") != "array")
+                        package.Loss("动态数组元数据未附着到数组公式锚点。", "dynamic-array/anchor", path, element);
+                    if (cellMetadata > 0 && !dynamicMetadata.Contains(cellMetadata))
+                        package.Loss("单元格元数据未能绑定到支持的动态数组属性。", "cell/metadata", path, element);
                     var style = element.Attribute("s") is not null ? Style(element, "s", styles.Count)
                         : rowMetadata.ApplyStyle ? rowMetadata.StyleId : columns.GetValueOrDefault(position.Column)?.StyleId ?? 0;
-                    var value = Value(element, strings, package, path, textReader, out var richText);
+                    var value = Value(element, strings, package, path, textReader, dateSystem, out var richText);
                     value = XlsxRichErrors.Apply(element, value, richErrors, package, path);
+                    var blockedSpill = XlsxRichErrors.SpillExtent(element, richErrors);
                     if (package.HasSharedLocations)
                     {
                         var cellReference = Reference(position);
@@ -143,13 +155,14 @@ internal static class TypedWorkbookXml
                         if ((string?)element.Attribute("t") == "s")
                             package.RegisterSharedUsage(stringsPart, "sharedStrings[" + Int(element.Element(Main + "v")!.Value, strings.Count - 1) + "]", path, cellReference);
                     }
-                    if (element.Element(Main + "v") is not null) cachedCells.Add(position);
+                    if (element.Element(Main + "v") is not null || element.Element(Main + "is") is not null) cachedCells.Add(position);
                     CellSnapshot cell;
                     if (element.Element(Main + "f") is { } formula)
                     {
                         package.Shape(formula, "", "t si ref", path);
                         string expression;
                         var preserved = false;
+                        var dynamicArray = false;
                         try
                         {
                             if ((string?)formula.Attribute("t") == "array")
@@ -157,9 +170,28 @@ internal static class TypedWorkbookXml
                                 var range = Attr(formula, "ref"); ValidateRange(range);
                                 if (!CellRectangle.Parse(range).Contains(position.Row, position.Column)) throw new InvalidDataException("数组公式主格不在结果区域内。");
                                 expression = formula.Value;
-                                preservedFormulas.Add(new(element.Attribute("cm") is null ? PreservedFormulaKind.Array : PreservedFormulaKind.DynamicArray,
-                                    path, Decode(Attr(definition, "name")), Reference(position), range, expression));
-                                preserved = true;
+                                if (dynamicMetadata.Contains(cellMetadata))
+                                {
+                                    var decoded = QuickExcel.Formulas.ExcelFormulaNames.Decode("=" + expression.TrimStart('='));
+                                    try
+                                    {
+                                        var parsed = QuickExcel.Formulas.FormulaSyntax.Parse(decoded);
+                                        dynamicArray = QuickExcel.Formulas.FormulaSyntax.Walk(parsed).OfType<QuickExcel.Formulas.FunctionNode>()
+                                            .All(f => QuickExcel.Formulas.StandardFunctions.Signatures.ContainsKey(f.Name));
+                                    }
+                                    catch (Exception error) when (error is FormatException or OverflowException) { }
+                                }
+                                if (dynamicArray)
+                                {
+                                    dynamicRanges.Add(position, CellRectangle.Parse(range));
+                                    nativeDynamicLocations.Add((path, Reference(position)));
+                                }
+                                else
+                                {
+                                    preservedFormulas.Add(new(element.Attribute("cm") is null ? PreservedFormulaKind.Array : PreservedFormulaKind.DynamicArray,
+                                        path, Decode(Attr(definition, "name")), Reference(position), range, expression));
+                                    preserved = true;
+                                }
                             }
                             else expression = sharedFormulas.Expand(formula, position);
                         }
@@ -188,10 +220,11 @@ internal static class TypedWorkbookXml
                                 preservedFormulas.Add(new(kind, path, Decode(Attr(definition, "name")), Reference(position), null, expression));
                             }
                         }
-                        cell = new(CellContent.FromFormula(XlsxStructuredFormula.Read("=" + expression.TrimStart('=')), style),
-                            new CellCalculation(element.Element(Main + "v") is null ? null : value, CalculationState.Stale, 0, 0, 0));
+                        cell = new(CellContent.FromFormula(XlsxStructuredFormula.Read("=" + expression.TrimStart('=')), style, dynamicArray),
+                            new CellCalculation(element.Element(Main + "v") is null ? null : value, CalculationState.Stale, 0, 0, 0, blockedSpill: blockedSpill));
                     }
-                    else cell = new(richText is null ? CellContent.FromLiteral(value, style) : CellContent.FromRichText(richText, style));
+                    else cell = new(richText is null ? CellContent.FromLiteral(value, style) : CellContent.FromRichText(richText, style),
+                        blockedSpill is null ? null : new(value, CalculationState.Stale, 0, 0, 0, blockedSpill: blockedSpill));
                     if (!cells.TryAdd(position, cell)) throw new InvalidDataException("单元格地址重复。");
                 }
             }
@@ -234,9 +267,11 @@ internal static class TypedWorkbookXml
             var dataState = XlsxFiltering.Read(package, workbookPart, path, sheet) with
             { DefaultColumnWidth = modeledDefaultWidth, ImplicitColumnWidth = format?.Attribute("defaultColWidth") is null, Charts = XlsxCharts.Read(package, workbookPart, path, sheet, imageGeometry), Protection = XlsxProtection.Read(package, path, sheet), Outline = XlsxOutline.Read(package, path, sheet), Tables = XlsxTables.Read(package, workbookPart, path, sheet, preservedFormulas, Decode(Attr(definition, "name"))),
                 Validations = XlsxValidation.Read(package, path, sheet), ConditionalFormats = XlsxConditionalFormatting.Read(package, workbookPart, path, sheet) };
+            _ = XlsxThreadedComments.Read(package, workbookPart, path, Decode(Attr(definition, "name")));
             var modeledSheet = new WorksheetSnapshot(SheetId.New(), Decode(Attr(definition, "name")), cells, rows, columns, merges, images,
                 view?.Attribute("showGridLines") is null || Bool((string?)view.Attribute("showGridLines")), OptionalDouble(format?.Attribute("defaultRowHeight")) / 0.75, (string?)tabColor?.Attribute("rgb"),
                 viewState, visibility, XlsxPrinting.Read(package, path, sheet), XlsxAnnotations.Read(package, path, sheet, textReader), dataState);
+            modeledSheet = XlsxDynamicArrays.ApplyCaches(modeledSheet, dynamicRanges, cachedCells, package, path, preservedFormulas);
             sheets.Add(XlsxFiltering.ReadHidden(package, path, sheet, modeledSheet, styles, dateSystem));
             bindings.Add(new(sheetId, path));
         }
@@ -326,7 +361,11 @@ internal static class TypedWorkbookXml
                 var parsed = QuickExcel.Formulas.FormulaSyntax.Parse(cell.Content.FormulaText);
                 if (QuickExcel.Formulas.FormulaSyntax.Walk(parsed).OfType<QuickExcel.Formulas.NameNode>().Any(n => rejectedNames.Contains(n.Name)))
                     throw new FormatException("公式引用了未建模的名称。");
-                _ = QuickExcel.Formulas.FormulaBinding.Bind(parsed, snapshot, sheet.Id, position);
+                var bound = QuickExcel.Formulas.FormulaBinding.Bind(parsed, snapshot, sheet.Id, position, cell.Content.DynamicArray);
+                if (!nativeDynamicLocations.Contains((part, address)) && bound is QuickExcel.Formulas.ReferenceNode
+                    { SourceExpression: QuickExcel.Formulas.FunctionNode { Name: "OFFSET" or "INDIRECT" } } reference &&
+                    QuickExcel.Formulas.ConditionalRanges.Shape(reference) != (1, 1))
+                    throw new FormatException("旧 OFFSET/INDIRECT 多格结果缺少动态数组标记，隐式交叉语义尚未建模；保留原公式和缓存。");
             }
             catch (Exception e) when (e is FormatException or OverflowException)
             {
@@ -357,13 +396,14 @@ internal static class TypedWorkbookXml
                 s.WithData(s.Data with { Validations = accepted, ConditionalFormats = conditionals });
         }).ToArray();
         snapshot = snapshot.WithSheets(validatedSheets);
+        snapshot = XlsxPivots.Read(package,workbookPart,root,snapshot,bindings);
         package.FinishInventory();
         return new(snapshot, bindings,
-            package.Issues.ToArray(), package.Diagnostics, root.Element(Main + "bookViews") is not null, preservedFormulas);
+            package.Issues.ToArray(), package.Diagnostics, root.Element(Main + "bookViews") is not null, preservedFormulas, package.PreservedAttachments, package.IsStrict);
     }
 
     private static int Style(XElement element, string name, int count) => Int((string?)element.Attribute(name) ?? "0", count - 1);
-    private static CellValue Value(XElement element, List<XlsxTextValue> strings, XlsxPackage package, string path, XlsxCellText textReader, out RichCellText? richText)
+    private static CellValue Value(XElement element, List<XlsxTextValue> strings, XlsxPackage package, string path, XlsxCellText textReader, ExcelDateSystem dateSystem, out RichCellText? richText)
     {
         foreach (var name in new[] { "f", "v", "is", "extLst" })
             if (element.Elements(Main + name).Count() > 1) throw new InvalidDataException("单元格内容存在重复定义。");
@@ -381,8 +421,9 @@ internal static class TypedWorkbookXml
             case "str": result = value is null ? CellValue.Blank : CellValue.FromText(Decode(value.Value)); break;
             case "s": var shared = strings[Int(value?.Value ?? "", strings.Count - 1)]; richText = shared.Rich; result = CellValue.FromText(shared.Text); break;
             case "b": result = value is null ? CellValue.Blank : CellValue.FromBoolean(Bool(value.Value)); break;
+            case "d": result = value is null ? CellValue.Blank : XlsxStrict.DateValue(value.Value, dateSystem); break;
             case "e":
-                if (value is null || !CellInput.TryFromErrorText(value.Value, out result) || result.ErrorCode == CellErrorCode.Calculation)
+                if (value is null || !CellInput.TryFromErrorText(value.Value, out result) || result.ErrorCode is CellErrorCode.Calculation or CellErrorCode.Spill)
                     throw new InvalidDataException("错误单元格代码无效；#CALC! 必须使用富值元数据和 #VALUE! 回退值。");
                 break;
             case null or "n":
@@ -408,6 +449,9 @@ internal static class TypedWorkbookXml
     public static byte[] Write(WorkbookSnapshot snapshot, bool valuesOnly, CancellationToken cancellationToken)
     {
         if (!valuesOnly && snapshot.FileState?.FormulaReadOnly == true) throw new InvalidOperationException(WorkbookFileState.FormulaReadOnlyMessage);
+        if (!valuesOnly && snapshot.Sheets.Any(s => s.Cells.Values.Any(c => c.Content.DynamicArray &&
+            (c.Calculation is not { State: CalculationState.Fresh or CalculationState.Error } cache || cache.InputRevision != snapshot.Revision))))
+            throw new InvalidOperationException("动态数组结果尚未完成本轮重算，请重算后保存公式文件；旧溢出区域不能作为新的可编辑数据写出。");
         long allocation = snapshot.Styles.Length * 2048L, imageBytes = 0;
         foreach (var sheet in snapshot.Sheets)
         {
@@ -450,7 +494,8 @@ internal static class TypedWorkbookXml
         Override("xl/workbook.xml", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml");
         Override("xl/styles.xml", "application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml");
         rels.Add(Relationship("styles", "styles", "styles.xml"));
-        XlsxRichErrors.Write(snapshot, parts, rels, types);
+        var richErrorKeys = XlsxRichErrors.Write(snapshot, parts, rels, types);
+        if (!valuesOnly) XlsxDynamicArrays.Write(snapshot, parts, rels, types);
         var rootRels = new XElement(PackageRel + "Relationships", Relationship("workbook", "officeDocument", "xl/workbook.xml"));
         XlsxMetadata.Write(snapshot, parts, rootRels, types, cancellationToken);
         parts["_rels/.rels"] = XmlBytes(new XDocument(rootRels));
@@ -501,7 +546,7 @@ internal static class TypedWorkbookXml
                 }
                 if (filteredRows.Contains(rowIndex)) row.SetAttributeValue("hidden", 1);
                 if (grouped.TryGetValue(rowIndex, out var rowCells))
-                    foreach (var (position, cell) in rowCells) row.Add(WriteCell(position, cell, valuesOnly));
+                    foreach (var (position, cell) in rowCells) row.Add(WriteCell(position, cell, valuesOnly, richErrorKeys));
                 data.Add(row);
             }
             root.Add(data);
@@ -547,21 +592,36 @@ internal static class TypedWorkbookXml
             workbook.Add(names);
         }
         workbook.Add(new XElement(Main + "calcPr", new XAttribute("fullCalcOnLoad", 1)));
+        if (!valuesOnly) XlsxPivots.Write(snapshot,parts,workbook,rels,types,cancellationToken);
+        XlsxThreadedComments.Write(snapshot, parts, rels, types, cancellationToken);
         workbook.Add(XlsxTextCompatibility.Write(snapshot));
         parts["xl/workbook.xml"] = XmlBytes(new XDocument(workbook));
         parts["xl/_rels/workbook.xml.rels"] = XmlBytes(new XDocument(rels));
         parts["[Content_Types].xml"] = XmlBytes(new XDocument(types));
+        XlsxStrict.PreserveVariant(snapshot, parts, cancellationToken);
         return Zip(parts);
     }
 
     private static long RichAllocation(RichCellText rich) => rich.Runs.Sum(run => 512L +
         ((run.Font?.Name?.Length ?? 0) + (run.Font?.EastAsianName?.Length ?? 0)) * 8L);
 
-    private static XElement WriteCell(CellPosition position, CellSnapshot cell, bool valuesOnly)
+    private static XElement WriteCell(CellPosition position, CellSnapshot cell, bool valuesOnly, IReadOnlyDictionary<XlsxRichErrors.ErrorKey,int> richErrorKeys)
     {
         var result = new XElement(Main + "c", new XAttribute("r", Reference(position)), new XAttribute("s", cell.Content.StyleId));
         var formula = !valuesOnly && cell.Content.Kind == CellContentKind.Formula;
-        if (formula) result.Add(new XElement(Main + "f", XlsxStructuredFormula.Write(cell.Content.FormulaText)[1..]));
+        if (formula)
+        {
+            var expression = new XElement(Main + "f", XlsxStructuredFormula.Write(cell.Content.FormulaText)[1..]);
+            if (cell.Content.DynamicArray)
+            {
+                var array = cell.Calculation?.Array;
+                var range = new CellRectangle(position.Row, position.Column, position.Row + (array?.Rows ?? 1) - 1, position.Column + (array?.Columns ?? 1) - 1);
+                expression.SetAttributeValue("t", "array");
+                expression.SetAttributeValue("ref", range.Count == 1 ? Reference(position) : range.ToString());
+                result.SetAttributeValue("cm", 1);
+            }
+            result.Add(expression);
+        }
         if (formula && cell.Calculation?.Value is null) return result;
         var value = cell.Value;
         switch (value.Kind)
@@ -575,9 +635,9 @@ internal static class TypedWorkbookXml
             case CellValueKind.Error:
                 result.SetAttributeValue("t", "e");
                 var hostError = value.ErrorCode is CellErrorCode.Script or CellErrorCode.Cycle;
-                var richError = value.ErrorCode == CellErrorCode.Calculation;
+                var richError = value.ErrorCode is CellErrorCode.Calculation or CellErrorCode.Spill;
                 result.Add(new XElement(Main + "v", hostError || richError ? "#VALUE!" : CellInput.DisplayText(value)));
-                if (richError) result.SetAttributeValue("vm", "1");
+                if (richError) result.SetAttributeValue("vm", richErrorKeys[XlsxRichErrors.Key(cell)]);
                 if (hostError && !valuesOnly) result.Add(new XElement(Main + "extLst", new XElement(Main + "ext", new XAttribute("uri", ErrorExtension), new XElement(Quick + "error", new XAttribute("code", value.ErrorCode)))));
                 break;
         }

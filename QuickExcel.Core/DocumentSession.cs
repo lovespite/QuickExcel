@@ -104,6 +104,12 @@ public sealed partial class DocumentSession : IDisposable
             var before = _snapshot;
             if (before.FileState?.FormulaReadOnly == true && action?.ConsoleSource is null) throw new InvalidOperationException(WorkbookFileState.FormulaReadOnlyMessage);
             var draft = command.Prepare(before); // No session state is changed until every check succeeds.
+            ExtendedObjectSafety.ValidateEdit(before, draft.Snapshot, command, draft.StructureChanged);
+            PivotSafety.ValidateEdit(before,draft.Snapshot,command,draft.StructureChanged);
+            draft = draft with { Snapshot = PivotSafety.MarkSourceChanges(before,draft.Snapshot) };
+            FormulaSpillSafety.ValidateEdit(before, draft.Snapshot, draft.StructureChanged);
+            if (draft.StructureChanged && command is not (CreatePivotCommand or RefreshPivotCommand or RemovePivotCommand) && !draft.CalculationUnchanged && !ReferenceEquals(before,draft.Snapshot))
+                draft = draft with { Snapshot = FormulaSpillSafety.DropDerivedAfterStructure(draft.Snapshot) };
             ProtectionSafety.Validate(before, draft.Snapshot, command);
             if (draft.Snapshot.Sheets.Any(s => WorksheetOutline.HasGroups(s) && s.Data.AllFilters.Any(f => f.Columns.Count > 0)))
                 throw new NotSupportedException("分组与活动筛选的混合编辑暂未对齐 Excel；请先展开并取消分组，或清除筛选条件。");
@@ -333,6 +339,29 @@ public sealed partial class DocumentSession : IDisposable
             var sheets = _snapshot.Sheets.ToArray();
             var builders = new Dictionary<SheetId, ImmutableDictionary<CellPosition, CellSnapshot>.Builder>();
             var changes = ImmutableArray.CreateBuilder<CellChange>();
+            var allocation = new FormulaSpillAllocator(_snapshot);
+            foreach (var (address, calculation) in result.Cells.OrderBy(p => p.Key.SheetId.Value).ThenBy(p => p.Key.Row).ThenBy(p => p.Key.Column))
+                if (calculation.Array is { } array)
+                {
+                    if (calculation.State is not (CalculationState.Fresh or CalculationState.Error) ||
+                        !allocation.TryReserve(new(address, array), out _))
+                        throw new InvalidOperationException("数组结果未通过溢出区域校验，整轮结果未提交。");
+                }
+            foreach (var sheet in sheets)
+            foreach (var (position, cell) in sheet.Cells)
+                if (cell.SpillOwner is { } owner && result.Cells.TryGetValue(owner, out var ownerResult))
+                {
+                    if (!builders.TryGetValue(sheet.Id, out var builder)) builders[sheet.Id] = builder = sheet.Cells.ToBuilder();
+                    if (ownerResult.State == CalculationState.Blocked)
+                    {
+                        var retained = new CellSnapshot(cell.Content, new(cell.Calculation!.Value, CalculationState.Blocked,
+                            result.Stamp.InputRevision, result.Stamp.CalculationGeneration, result.Stamp.ScriptGeneration, ownerResult.Diagnostics), owner);
+                        builder[position] = retained; changes.Add(new(new(sheet.Id,position.Row,position.Column),cell,retained)); continue;
+                    }
+                    var after = cell.Content.StyleId == sheet.GetInheritedStyleId(position.Row, position.Column) ? null : new CellSnapshot(cell.Content);
+                    if (after is null) builder.Remove(position); else builder[position] = after;
+                    changes.Add(new(new(sheet.Id, position.Row, position.Column), cell, after));
+                }
             foreach (var (address, calculation) in result.Cells)
             {
                 WorkbookLimits.ValidatePosition(address.Row, address.Column);
@@ -347,13 +376,34 @@ public sealed partial class DocumentSession : IDisposable
                 if (_snapshot.FileState?.FormulaReadOnly == true && (calculation.State != CalculationState.Blocked || calculation.Value != before.Calculation?.Value))
                     throw new InvalidOperationException("只读公式工作簿只能保留原缓存并标记受阻，不能发布新结果。");
                 if (!builders.TryGetValue(sheet.Id, out var builder)) builders[sheet.Id] = builder = sheet.Cells.ToBuilder();
-                var after = new CellSnapshot(before.Content, calculation);
+                var committed = calculation.State == CalculationState.Blocked && before.Calculation?.Array is { } oldArray && calculation.Value == oldArray[0,0]
+                    ? new CellCalculation(calculation.Value, calculation.State, calculation.InputRevision, calculation.CalculationGeneration,
+                        calculation.ScriptGeneration, calculation.Diagnostics, oldArray, calculation.BlockedSpill) : calculation;
+                var content = calculation.Array is not null && !before.Content.DynamicArray
+                    ? CellContent.FromFormula(before.Content.FormulaText, before.Content.StyleId, dynamicArray: true) : before.Content;
+                var after = new CellSnapshot(content, committed);
                 builder[new(address.Row, address.Column)] = after;
                 changes.Add(new(address, before, after));
             }
+            foreach (var spill in allocation.Spills.Values)
+            {
+                var sheet = _snapshot.GetSheet(spill.Anchor.SheetId); var builder = builders[sheet.Id];
+                for (var row = 0; row < spill.Array.Rows; row++)
+                for (var column = 0; column < spill.Array.Columns; column++)
+                {
+                    if (row == 0 && column == 0) continue;
+                    var position = new CellPosition(spill.Anchor.Row + row, spill.Anchor.Column + column);
+                    var before = sheet.GetCell(position.Row, position.Column); var value = spill.Array[row, column];
+                    var calculation = new CellCalculation(value, value.Kind == CellValueKind.Error ? CalculationState.Error : CalculationState.Fresh,
+                        result.Stamp.InputRevision, result.Stamp.CalculationGeneration, result.Stamp.ScriptGeneration);
+                    var after = new CellSnapshot(CellContent.FromLiteral(CellValue.Blank, sheet.GetStyleId(position.Row, position.Column)), calculation, spill.Anchor);
+                    builder[position] = after;
+                    changes.Add(new(new(sheet.Id, position.Row, position.Column), before, after));
+                }
+            }
             for (var index = 0; index < sheets.Length; index++)
                 if (builders.TryGetValue(sheets[index].Id, out var builder)) sheets[index] = sheets[index].WithCells(builder.ToImmutable());
-            _snapshot = _snapshot.WithSheets(sheets);
+            _snapshot = PivotSafety.MarkSourceChanges(_snapshot,_snapshot.WithSheets(sheets));
             _diagnostics = result.Diagnostics;
             AppendConsole(_diagnostics);
             AdvanceCalculationGeneration(); // A completed request is single-use.
@@ -421,12 +471,18 @@ public sealed partial class DocumentSession : IDisposable
             var changed = false;
             foreach (var (position, cell) in sheet.Cells)
             {
-                if (cell.Content.Kind != CellContentKind.Formula) continue;
+                if (cell.Content.Kind != CellContentKind.Formula && cell.SpillOwner is null) continue;
+                if (cell.SpillOwner is { } owner && sheet.GetCell(owner.Row, owner.Column)?.Content.Kind != CellContentKind.Formula)
+                {
+                    if (cell.Content.StyleId == sheet.GetInheritedStyleId(position.Row, position.Column)) cells.Remove(position);
+                    else cells[position] = new(cell.Content);
+                    changed = true; continue;
+                }
                 var old = cell.Calculation;
                 var state = old?.State == CalculationState.Blocked ? CalculationState.Blocked
                     : old?.Value is null ? CalculationState.Dirty : CalculationState.Stale;
                 cells[position] = new(cell.Content, new(old?.Value, state, old?.InputRevision ?? snapshot.Revision,
-                    old?.CalculationGeneration ?? 0, old?.ScriptGeneration ?? 0, old?.Diagnostics));
+                    old?.CalculationGeneration ?? 0, old?.ScriptGeneration ?? 0, old?.Diagnostics, old?.Array, old?.BlockedSpill), cell.SpillOwner);
                 changed = true;
             }
             return changed ? sheet.WithCells(cells.ToImmutable()) : sheet;
@@ -440,8 +496,8 @@ public sealed partial class DocumentSession : IDisposable
             var currentSheet = current.GetSheet(sheet.Id);
             var cells = sheet.Cells.ToBuilder();
             foreach (var (position, cell) in sheet.Cells)
-                if (cell.Content.Kind == CellContentKind.Formula)
-                    cells[position] = new(cell.Content, currentSheet.GetCell(position.Row, position.Column)?.Calculation);
+                if (cell.Content.Kind == CellContentKind.Formula || cell.SpillOwner is not null)
+                    cells[position] = new(cell.Content, currentSheet.GetCell(position.Row, position.Column)?.Calculation, cell.SpillOwner);
             return sheet.WithCells(cells.ToImmutable());
         }));
 
@@ -454,12 +510,12 @@ public sealed partial class DocumentSession : IDisposable
         {
             ImmutableDictionary<CellPosition, CellSnapshot>.Builder? cells = null;
             foreach (var (position, cell) in sheet.Cells)
-                if (cell.Content.Kind == CellContentKind.Formula && cell.Calculation is { } cache &&
+                if ((cell.Content.Kind == CellContentKind.Formula || cell.SpillOwner is not null) && cell.Calculation is { } cache &&
                     cache.InputRevision == previousRevision && cache.State is CalculationState.Fresh or CalculationState.Error)
                 {
                     cells ??= sheet.Cells.ToBuilder();
                     cells[position] = new(cell.Content, new(cache.Value, cache.State, snapshot.Revision,
-                        cache.CalculationGeneration, cache.ScriptGeneration, cache.Diagnostics));
+                        cache.CalculationGeneration, cache.ScriptGeneration, cache.Diagnostics, cache.Array, cache.BlockedSpill), cell.SpillOwner);
                 }
             return cells is null ? sheet : sheet.WithCells(cells.ToImmutable());
         }));
@@ -560,7 +616,7 @@ public sealed partial class DocumentSession : IDisposable
             + (StructureChanged ? 512L * Math.Abs(After.Sheets.Length - Before.Sheets.Length) : 0);
         private static long ChangedDataMetadata(WorkbookSnapshot from, WorkbookSnapshot to) => from.Sheets
             .Where(s => !ReferenceEquals(s.Data, to.Sheets.FirstOrDefault(other => other.Id == s.Id)?.Data))
-            .Sum(s => 128L + s.Data.Charts.Sum(c => c.EstimatedBytes) + s.Data.Validations.Sum(v => v.EstimatedBytes) + s.Data.ConditionalFormats.Sum(v => v.EstimatedBytes) + (s.Data.Filter?.Columns.Values.Sum(c => 256L + (c.Values?.Sum(v => 32L + v.Length * 2L) ?? 0) +
+            .Sum(s => 128L + s.Data.Pivots.Sum(p => p.EstimatedBytes) + s.Data.Charts.Sum(c => c.EstimatedBytes) + s.Data.Validations.Sum(v => v.EstimatedBytes) + s.Data.ConditionalFormats.Sum(v => v.EstimatedBytes) + (s.Data.Filter?.Columns.Values.Sum(c => 256L + (c.Values?.Sum(v => 32L + v.Length * 2L) ?? 0) +
                 ((c.First?.Operand.Length ?? 0) + (c.Second?.Operand.Length ?? 0)) * 2L) ?? 0) +
                 (s.Data.Sort?.Keys.Sum(k => 128L + k.CustomOrder.Sum(v => 32L + v.Length * 2L)) ?? 0) +
                 s.Data.Tables.Sum(t => 1024L + t.Style.Elements.Length * 512L + t.Columns.Sum(c => 512L + 2L * (c.Name.Length + (c.CalculatedFormula?.Length ?? 0) + (c.TotalsFormula?.Length ?? 0) + (c.TotalsLabel?.Length ?? 0))) +
@@ -588,8 +644,9 @@ public sealed partial class DocumentSession : IDisposable
             return bytes;
         }
         private static long FormulaCaches(WorkbookSnapshot snapshot) => snapshot.Sheets.Sum(sheet => sheet.Cells.Values
-            .Where(cell => cell.Content.Kind == CellContentKind.Formula).Sum(cell => 256L
+            .Where(cell => cell.Content.Kind == CellContentKind.Formula || cell.SpillOwner is not null).Sum(cell => 256L
                 + (cell.Calculation?.Value is { Kind: CellValueKind.Text } value ? value.TextValue.Length * 2L : 0)
+                + (cell.Calculation?.Array is { } array ? array.Values.Length * 32L + array.Values.Where(v => v.Kind == CellValueKind.Text).Sum(v => v.TextValue.Length * 2L) : 0)
                 + (cell.Calculation?.Diagnostics.Sum(message => 32L + message.Length * 2L) ?? 0)));
         private static long Estimate(CellSnapshot? cell) => cell is null ? 0 : 256L
             + (cell.Content.Kind == CellContentKind.Formula ? cell.Content.FormulaText.Length * 2L

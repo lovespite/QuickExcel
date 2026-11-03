@@ -28,6 +28,7 @@ public sealed partial class MainWindow
             RibbonButton("清除全部筛选条件", ClearFiltersAsync), RibbonButton("取消筛选区域", RemoveFilterAsync), RibbonButton("清除排序标记", ClearSortAsync));
         RibbonGroup("插入", "表格", RibbonButton("创建表", CreateTableAsync), RibbonButton("调整表范围", ResizeTableAsync), RibbonButton("重命名表", () => EditTableAsync(0)),
             RibbonButton("重命名表列", () => EditTableAsync(1)), RibbonButton("设置计算列", () => EditTableAsync(2)));
+        RibbonGroup("数据","透视表",RibbonButton("创建透视表",CreatePivotAsync),RibbonButton("刷新透视表",RefreshPivotAsync),RibbonButton("透视表转换为值",ConvertPivotToValuesAsync));
         _grid.FilterRequested += column => _ = PerformAsync(() => FilterAsync(column));
         AddHandler(KeyDownEvent, async (_, e) =>
         { if (!e.Handled && e.Key == Key.Down && e.KeyModifiers == KeyModifiers.Alt && !_grid.IsEditing && !_formula.IsComposing &&

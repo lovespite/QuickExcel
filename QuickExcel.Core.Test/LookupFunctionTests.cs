@@ -64,7 +64,6 @@ public sealed class LookupFunctionTests
     [InlineData("=XMATCH(2,A1:A7,0,-1.5)")]
     [InlineData("=XMATCH(2,A1:A7,3)")]
     [InlineData("=XMATCH(2,A1:A7,0,B1)")]
-    [InlineData("=XLOOKUP(2,A1:A7,B1:C7)")]
     public void UnimplementedLookupModesImportReadOnlyAndKeepOriginalCache(string formula)
     {
         var path = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".xlsx"); var copy = path + ".copy.xlsx";

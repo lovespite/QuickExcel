@@ -1,5 +1,9 @@
 # M3 跨表与增量计算 / 0.4 计算预览
 
+2026-11-04：E5 另外完成 LET 顺序词法绑定/按需单次记忆、常量目标 OFFSET/INDIRECT 的静态依赖及 VAR.S/VAR.P/STDEV.S/STDEV.P/MEDIAN。56 条真实 Excel 公式、39 条参数边界、编辑和两格式往返均通过；可移植导出保留显式数组模式，冻结非可移植数组时同时冻结派生格及其消费者。LAMBDA、动态目标引用、旧 CSE、多区域引用及未列出函数仍未支持，具体边界见 [74](74-e5-implementation-log.md)。
+
+2026-11-03：新增 SEQUENCE/FILTER/SORT/UNIQUE、XLOOKUP 单查找值的多格返回、`#` 溢出引用、数组广播和 IF/IFERROR/IFNA 分支；统一所有权与依赖规划、原生文件往返及声明边界见 [E5 实施记录](74-e5-implementation-log.md)。标量工作簿保留原增量/合批路径；数组工作簿先规划纯公式区域，再按最终拓扑执行一次脚本，暂不支持脚本决定数组尺寸。
+
 > 2026-11-03 引擎迁移更新：当前生产路径为固定 JSC、IPC 6，隔离 TS 编译与同步模块/中断契约见 [71 号实施记录](71-jsc-typescript-implementation-log.md)。执行仍为 256 MiB 进程 / 256 KiB 栈 / 1 秒操作 / 5 秒整轮；64 MiB 引擎硬限额 `JSC-MEM-001` 未实现，用户明确延期且不作为推进门禁。下文 QuickJS、旧协议、预算及构建入口均为当时版本的历史证据，不代表当前实现。
 
 2026-10-30 状态说明：本页保留 M3/0.4 计算子集与当时验收；后续已接入独立 AppContainer worker、模块/actions、完整工作区入口和签名信任，不能从下文历史“尚未实现”推导当前状态。新增 Excel 公式、结构化引用和导出扩展按 [专项计划](26-excel-compatibility-roadmap.md) 推进，总进度见 [实施计划](05-implementation-plan.md)。现有公式子集的语义限制继续适用，除非后续实现记录明确更新。

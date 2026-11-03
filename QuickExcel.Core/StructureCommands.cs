@@ -207,7 +207,7 @@ public sealed class MoveCellsCommand(SheetId sourceSheet, CellPosition first, Ce
                             NameNode n1 when n1.Sheet is null => n1 with { Sheet = source.Name },
                             _ => n
                         });
-                        cell = new(CellContent.FromFormula("=" + FormulaSyntax.Print(expression), cell.Content.StyleId));
+                        cell = new(cell.Content.WithFormula("=" + FormulaSyntax.Print(expression)));
                     }
                     cells[new(p.Row + dr, p.Column + dc)] = cell;
                 }
@@ -381,7 +381,7 @@ internal static class StructureEdits
             {
                 if (cell.Content.Kind != CellContentKind.Formula) continue;
                 var formula = Formula(cell.Content.FormulaText, sheet.Id, p);
-                if (formula != cell.Content.FormulaText) cells[p] = new(CellContent.FromFormula(formula, cell.Content.StyleId));
+                if (formula != cell.Content.FormulaText) cells[p] = new(cell.Content.WithFormula(formula));
             }
             var data = sheet.Data with { Charts = sheet.Data.Charts.Select(c => c.MapReferences(f => Formula(f, sheet.Id, null))).ToImmutableArray(), Validations = sheet.Data.Validations.Select(v => v.MapFormulas(f => Formula(f, sheet.Id, v.Anchor))).ToImmutableArray(),
                 ConditionalFormats = sheet.Data.ConditionalFormats.Select(v => v.MapFormulas(f => Formula(f, sheet.Id, v.Anchor))).ToImmutableArray(),

@@ -164,7 +164,7 @@ public sealed class WorkbookDocument : IDisposable
     }
 
     public string GetCellInput(int sheetIndex, int row, int column) =>
-        Snapshot.Sheets[sheetIndex].GetCell(row, column) is { } cell ? CellInput.EditText(cell.Content) : "";
+        CellInput.EditText(Snapshot, Snapshot.Sheets[sheetIndex], row, column);
     public string GetCellValue(int sheetIndex, int row, int column)
     {
         var snapshot = Snapshot;
