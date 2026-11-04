@@ -147,6 +147,7 @@ public sealed partial class MainWindow
             _grid.Cancel(); _grid.Select(new(30, 0)); _formula.Focus(); _formula.Text = "=SUM()"; _formula.CaretIndex = 5; _formula.SelectionStart = _formula.SelectionEnd = 5;
             Check(PickFormulaReference(new(5, 0, 5, 0)) && PickFormulaReference(new(5, 0, 7, 1)) && _formula.Text == "=SUM(A6:B8)", "Formula-bar reference drag replaces one draft slot");
             _formulaGesture = null; Check(await CommitFormulaAsync() && Document.GetCellInput(0, 30, 0) == "=SUM(A6:B8)", "Picked formula commits to original owner");
+            await RunFormulaReferenceChecksAsync(Check);
             _grid.Select(new(35, 0)); _workspace.Editor.SetCell(0, 35, 0, "自动列宽需要完整测量远端内容"); Synchronize();
             var oldWidth = DrawingGeometry.ColumnSize(Document.Snapshot.Sheets[0], 0); await AutoFitAsync(SheetAxis.Column, 0);
             Check(DrawingGeometry.ColumnSize(Document.Snapshot.Sheets[0], 0) > oldWidth, "Auto-fit measures offscreen stored content");

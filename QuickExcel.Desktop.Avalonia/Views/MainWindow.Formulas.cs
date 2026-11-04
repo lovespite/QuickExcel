@@ -17,6 +17,7 @@ public sealed partial class MainWindow
     private readonly TextBlock _formulaHint = new() { Margin = new(6), MaxWidth = 600, TextWrapping = TextWrapping.Wrap };
     private FormulaCompletion? _completion;
     private CompositionTextBox? _assistEditor;
+    private CompositionTextBox? _referenceEditor;
     private bool _changingDraft;
     private sealed record FormulaGesture(CompositionTextBox Editor, string Original, FormulaTextEdit Slot);
     private FormulaGesture? _formulaGesture;
@@ -35,7 +36,7 @@ public sealed partial class MainWindow
                 if (e.Property == TextBox.TextProperty || e.Property == TextBox.CaretIndexProperty || e.Property == TextBox.SelectionStartProperty)
                     UpdateFormulaHelp(editor);
             };
-            editor.GotFocus += (_, _) => UpdateFormulaHelp(editor);
+            editor.GotFocus += (_, _) => { _referenceEditor = editor; UpdateFormulaHelp(editor); };
             editor.LostFocus += (_, _) => { if (_formulaGesture is null) CloseFormulaHelp(); };
             editor.CompositionChanged += () => UpdateFormulaHelp(editor);
         }
@@ -114,8 +115,9 @@ public sealed partial class MainWindow
     {
         if (_formulaGesture is null)
         {
-            var editor = _formula.IsKeyboardFocusWithin ? _formula : _grid.CellEditor;
-            if (!IsFormulaDraft(editor)) return false;
+            // The focusable grid receives focus before its pointer handler runs. Keep
+            // the last text editor so a formula-bar click still edits that draft.
+            if (_referenceEditor is not { } editor || !IsFormulaDraft(editor)) return false;
             var start = Math.Min(editor.SelectionStart, editor.SelectionEnd);
             if (FormulaEditing.ReferenceSlot(editor.Text!, start, Math.Abs(editor.SelectionStart - editor.SelectionEnd)) is not { } slot) return false;
             _formulaGesture = new(editor, editor.Text!, slot); CloseFormulaHelp();
