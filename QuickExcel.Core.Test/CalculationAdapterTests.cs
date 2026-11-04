@@ -378,7 +378,7 @@ public sealed class CalculationAdapterTests
     public void NativeAdapterStartsCleanJavaScriptContextForEveryRound()
     {
         var snapshot = Snapshot((0, 0, Formula("=NEXT()"))).WithScriptSource(
-            "let count = 0; quickExcel.functions.register('NEXT', () => ++count);");
+            "let count = 0; host.functions.register('NEXT', () => ++count);");
         var calculator = new WorkbookCalculator(new JscRuntimeFactory());
 
         Assert.Equal(CellValue.FromNumber(1), Value(calculator.Calculate(Request(snapshot, true)), snapshot, 0, 0));

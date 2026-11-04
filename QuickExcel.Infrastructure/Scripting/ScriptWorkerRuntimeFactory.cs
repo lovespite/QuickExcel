@@ -112,10 +112,10 @@ public sealed class ScriptWorkerRuntime : IScriptBatchRuntime
             LoadedScript loaded;
             if (request.Modules.ScriptApiVersion == 2)
             {
+                // JscSession appends the main(workbook, host) registration to every
+                // entry module; no QuickExcel global wrapper is generated here.
                 var bundle = new LoadModules(request.Modules.Modules.Select(m => new ModuleSource(m.Key, m.Value.Path,
-                    (executableSources is null ? m.Value.Source : executableSources[m.Key]) +
-                    (actionsMode && request.Modules.EntriesFor("actions").Contains(m.Key)
-                        ? "\n;if (typeof main === 'function') quickExcel.actions.register(" + System.Text.Json.JsonSerializer.Serialize(request.Modules.EntriesFor("actions").Length == 1 ? "main" : m.Key + ".main") + ", () => main(quickExcel));" : "")
+                    executableSources is null ? m.Value.Source : executableSources[m.Key], m.Value.Description
                     )).ToArray(),
                     request.Modules.EntriesFor(actionsMode ? "actions" : "formula-functions").ToArray(), "")
                 { FunctionEntries = shared && !actionsMode ? request.Modules.EntriesFor("formula-functions").ToArray() : [],

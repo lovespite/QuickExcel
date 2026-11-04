@@ -125,7 +125,7 @@ public sealed partial class MainWindow
             check(memoryClipboard.Value.Text == ConsoleVisibleText, "Copy toolbar command writes only filtered output through the clipboard adapter");
         }
         finally { _clipboard = clipboard; }
-        _consoleFilter.Text = ""; _consoleInput.Text = "snapshot.sheets";
+        _consoleFilter.Text = ""; _consoleInput.Text = "workbook.getWorksheets";
         await Capture("console-styled");
         // A wide navigation split must still leave room for the editor when the window shrinks.
         var workspace = (global::Avalonia.Controls.Grid)navigation.Parent!;
@@ -144,12 +144,12 @@ public sealed partial class MainWindow
         _scriptWindow.Width = 1080; _scriptWindow.Height = 760;
         check(!Document.ScriptsEnabled && ReferenceEquals(modules, Document.Snapshot.ScriptModules),
             "Console runs only explicit input without authorizing or executing stored modules");
-        _consoleInput.Text = "patch.setValue(snapshot.sheets[0].id,'A1',42);";
+        _consoleInput.Text = "workbook.getActiveWorksheet().getCell('A1').setValue(42);";
         _consoleRun!.RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); await CompleteCommand();
         check(Document.GetCellValue(0, 0, 0) == "42" && Document.Undo() && Document.GetCellValue(0, 0, 0) == "",
             "Native console submits one undoable workbook transaction");
         check(_consoleInput.Text == "", "Execute button clears accepted input just like Enter");
-        _consoleInput.Text = "console.log('visible before error'); patch.setValue(snapshot.sheets[0].id,'B1',99); throw Error('console failure');";
+        _consoleInput.Text = "console.log('visible before error'); workbook.getActiveWorksheet().getCell('B1').setValue(99); throw Error('console failure');";
         Press(Key.Enter); await CompleteCommand();
         check(ConsoleVisibleText.Contains("visible before error") && ConsoleVisibleText.Contains("console failure") && Document.GetCellValue(0, 0, 1) == "" &&
             Document.Session.ConsoleEntries[^1].Level == ScriptConsoleLevel.Error,
@@ -171,7 +171,7 @@ public sealed partial class MainWindow
         Press(Key.Up);
         check(_consoleInput.Text == draft && _consoleInput.CaretIndex == 0 && _consoleInput.SelectionStart == _consoleInput.SelectionEnd,
             "Up collapses a selection to the start before recalling history");
-        _consoleInput.Text = "patch.setValue(snapshot.sheets[0].id,'C1',9); while(true){}";
+        _consoleInput.Text = "workbook.getActiveWorksheet().getCell('C1').setValue(9); while(true){}";
         var running = RunConsoleAsync();
         for (var retry = 0; retry < 100 && _scriptCancellation is null && !running.IsCompleted; retry++) await Task.Delay(10);
         check(_scriptCancellation is not null && _consoleInput.Text == "", "Input clears when submission is accepted, before worker completion");

@@ -11,7 +11,7 @@ namespace QuickExcel.Core.Test;
 
 public sealed class M4WorkerTests
 {
-    private const string IdentitySource = "quickExcel.functions.register('IDENTITY', x => x);";
+    private const string IdentitySource = "host.functions.register('IDENTITY', x => x);";
     private static ScriptWorkerRuntime Create(string source, CancellationToken token = default, TimeSpan? limit = null) =>
         (ScriptWorkerRuntime)new ScriptWorkerRuntimeFactory().Create(new ScriptRuntimeRequest(source,
             new(Guid.NewGuid(), 1, 2, 3), limit ?? TimeSpan.FromSeconds(5), token));
@@ -35,9 +35,9 @@ public sealed class M4WorkerTests
     public void WorkerAndNativeBridgeAgreeForV1V2ErrorsAndLazyBranches()
     {
         var source = """
-            quickExcel.functions.register('FLAT', r => r.length === 4 && r[1] === '' && r[2] === '');
-            quickExcel.functions.register('FAIL', () => { throw new Error('bad'); });
-            quickExcel.functions.register({name:'JS.SHAPE',apiVersion:2,parameters:[{name:'r',type:'range'}],returns:'text'},
+            host.functions.register('FLAT', r => r.length === 4 && r[1] === '' && r[2] === '');
+            host.functions.register('FAIL', () => { throw new Error('bad'); });
+            host.functions.register({name:'JS.SHAPE',apiVersion:2,parameters:[{name:'r',type:'range'}],returns:'text'},
               r => [r.rows,r.columns,r.values[1] === null,r.values[2] === null,Object.isFrozen(r.values)].join('|'));
             """;
         var data = Sheet("Data", (0, 0, N(2)), (1, 1, T("end")));
@@ -53,9 +53,9 @@ public sealed class M4WorkerTests
     [Fact]
     public void ContextsAndLogsAreIsolatedAndConservativeRoundsNeverReuseUdfResults()
     {
-        const string source = "let n=0; quickExcel.functions.register('NEXT',()=>++n);console.log('private A');";
+        const string source = "let n=0; host.functions.register('NEXT',()=>++n);console.log('private A');";
         using var first = Create(source);
-        using var second = Create("quickExcel.functions.register('NEXT',()=>40);console.log('private B');");
+        using var second = Create("host.functions.register('NEXT',()=>40);console.log('private B');");
         Assert.NotEqual(first.WorkerInstanceId, second.WorkerInstanceId);
         Assert.Equal(1d, first.Invoke("NEXT", [])); Assert.Equal(2d, first.Invoke("NEXT", []));
         Assert.Equal(40d, second.Invoke("NEXT", []));
@@ -84,7 +84,7 @@ public sealed class M4WorkerTests
 
     [Theory]
     [InlineData("while(true) {}")]
-    [InlineData("quickExcel.functions.register('F',()=>1); throw new Error('bad load');")]
+    [InlineData("host.functions.register('F',()=>1); throw new Error('bad load');")]
     [InlineData("this is invalid js !!")]
     public void LoadingFailureNeverPublishesPartialRegistryOrFallsBack(string source)
     {
@@ -125,7 +125,7 @@ public sealed class M4WorkerTests
     [Fact]
     public void NativeTimeoutKillsRoundAndNeverReusesHandle()
     {
-        using var runtime = Create("quickExcel.functions.register('LOOP',()=>{while(true){}});");
+        using var runtime = Create("host.functions.register('LOOP',()=>{while(true){}});");
         var clock = Stopwatch.StartNew();
         Assert.Throws<TimeoutException>(() => runtime.Invoke("LOOP", []));
         Assert.True(clock.Elapsed < TimeSpan.FromSeconds(4));
@@ -137,7 +137,7 @@ public sealed class M4WorkerTests
     public async Task CancellationTerminatesWorkerBeforeNativeDeadline()
     {
         using var cancel = new CancellationTokenSource();
-        using var runtime = Create("quickExcel.functions.register('LOOP',()=>{while(true){}});", cancel.Token);
+        using var runtime = Create("host.functions.register('LOOP',()=>{while(true){}});", cancel.Token);
         var invoke = Task.Run(() => runtime.Invoke("LOOP", []));
         await Task.Delay(50);
         var clock = Stopwatch.StartNew(); cancel.Cancel();
@@ -163,7 +163,7 @@ public sealed class M4WorkerTests
     {
         var factory = new ObservedFactory();
         var sheet = Sheet("S", (0, 0, F("=9", 12)), (0, 1, F("=LOOP()", 13)));
-        using var document = new WorkbookDocument(Book(sheet).WithScriptSource("quickExcel.functions.register('LOOP',()=>{while(true){}});"),
+        using var document = new WorkbookDocument(Book(sheet).WithScriptSource("host.functions.register('LOOP',()=>{while(true){}});"),
             new(new TypedWorkbookStorage(), new WorkbookCalculator(factory)));
         document.Session.SetScriptsEnabled(true);
         var work = Task.Run(() => document.Calculate(CancellationToken.None));
@@ -175,7 +175,7 @@ public sealed class M4WorkerTests
         var file = Path.Combine(Path.GetTempPath(), "quickexcel-worker-" + Guid.NewGuid() + ".xlsq");
         try { document.Save(file); using var reopened = WorkbookDocument.Open(file, new(new TypedWorkbookStorage(), new WorkbookCalculator(new ScriptWorkerRuntimeFactory()))); Assert.False(reopened.ScriptsEnabled); Assert.Equal("editable", reopened.GetCellValue(0, 1, 0)); }
         finally { File.Delete(file); }
-        document.ScriptSource = "quickExcel.functions.register('LOOP',()=>7);";
+        document.ScriptSource = "host.functions.register('LOOP',()=>7);";
         document.EnableScriptsAndCalculate();
         Assert.Equal("7", document.GetCellValue(0, 0, 1));
     }
@@ -186,7 +186,7 @@ public sealed class M4WorkerTests
     {
         var factory = new ObservedFactory();
         var sheet = Sheet("S", (0, 0, F("=LOOP()", 13)));
-        using var document = new WorkbookDocument(Book(sheet).WithScriptSource("quickExcel.functions.register('LOOP',()=>{while(true){}});"),
+        using var document = new WorkbookDocument(Book(sheet).WithScriptSource("host.functions.register('LOOP',()=>{while(true){}});"),
             new(new TypedWorkbookStorage(), new WorkbookCalculator(factory)));
         document.Session.SetScriptsEnabled(true);
         var work = Task.Run(() => document.Calculate(CancellationToken.None));
@@ -208,7 +208,7 @@ public sealed class M4WorkerTests
     public async Task OverlappingRequestsAreRejectedWithoutGrowingQueue()
     {
         using var cancellation = new CancellationTokenSource();
-        using var runtime = Create("quickExcel.functions.register('LOOP',()=>{while(true){}});", cancellation.Token);
+        using var runtime = Create("host.functions.register('LOOP',()=>{while(true){}});", cancellation.Token);
         var work = Task.Run(() => runtime.Invoke("LOOP", []));
         await Task.Delay(100);
         Assert.Equal("Busy", Assert.Throws<ScriptRuntimeFailureException>(() => runtime.GetLogs()).Code);

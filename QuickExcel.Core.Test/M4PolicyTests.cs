@@ -14,7 +14,7 @@ public sealed class M4PolicyTests
     [InlineData("eval('7')")]
     public void ConservativeWorkerStillExposesSourcesThatPreventAPurityClaim(string expression)
     {
-        using var runtime = new ScriptWorkerRuntimeFactory().Create($"quickExcel.functions.register('F',()=>{expression});");
+        using var runtime = new ScriptWorkerRuntimeFactory().Create($"host.functions.register('F',()=>{expression});");
         Assert.Equal("conservative", Assert.Single(runtime.FunctionDescriptors).Profile);
         Assert.IsType<double>(runtime.Invoke("F", []));
     }
@@ -23,7 +23,7 @@ public sealed class M4PolicyTests
     public void UnsupportedStrictDescriptorIsRejectedByRealWorker()
     {
         Assert.Equal("Load", Assert.Throws<ScriptRuntimeFailureException>(() => new ScriptWorkerRuntimeFactory().Create(
-            "quickExcel.functions.register({name:'JS.F',apiVersion:2,profile:'strict'},()=>1);")).Code);
+            "host.functions.register({name:'JS.F',apiVersion:2,profile:'strict'},()=>1);")).Code);
     }
 
     [Fact]
@@ -32,7 +32,7 @@ public sealed class M4PolicyTests
         var sheet = Sheet("S", (0, 0, F("=NEXT(1)")), (1, 0, F("=NEXT(1)")), (2, 0, F("=A1+A2")));
         var modules = new ScriptModuleSet(new Dictionary<string, ScriptModule>
         {
-            ["main"] = new("scripts/main.js", "import {next} from 'state'; quickExcel.functions.register('NEXT',next);"),
+            ["main"] = new("scripts/main.js", "import {next} from 'state'; host.functions.register('NEXT',next);"),
             ["state"] = new("scripts/state.js", "let hidden=0; export const next=x=>x+(++hidden);")
         }, ["main"], scriptApiVersion: 2);
         using var session = new DocumentSession(Book(sheet).WithScriptModules(modules));

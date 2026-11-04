@@ -39,7 +39,7 @@ public sealed partial class MainWindow
         DockPanel.SetDock(_modulePicker, Dock.Top); navigation.Children.Add(_modulePicker);
         var groups = new StackPanel();
         _scriptModuleGroups.Clear(); _scriptNavigationSelection = null;
-        foreach (var (label, kind) in new (string, string?)[] { ("UDF", "formula-functions"), ("Actions", "actions"), ("辅助", null) })
+        foreach (var (label, kind) in new (string, string?)[] { ("UDF", "formula-functions"), ("Actions", "actions"), ("Common", null) })
         {
             var picker = CreateScriptModulePicker(label + " 脚本文件列表");
             var panel = new Expander { Header = label, Content = picker, IsExpanded = true, Padding = new(0),
@@ -104,7 +104,8 @@ public sealed partial class MainWindow
                 if (id is null || !Document.Snapshot.ScriptModules.Modules.TryGetValue(id, out var module)) return null;
                 var item = new TextBlock { Text = Path.GetFileName(module.Path), TextTrimming = TextTrimming.CharacterEllipsis,
                     VerticalAlignment = VerticalAlignment.Center };
-                ToolTip.SetTip(item, $"{module.Path}\n模块 ID：{id}\n{ScriptModuleProperties(Document.Snapshot.ScriptModules, id)}"); return item;
+                ToolTip.SetTip(item, $"{module.Path}\n模块 ID：{id}\n{ScriptModuleProperties(Document.Snapshot.ScriptModules, id)}" +
+                    (string.IsNullOrWhiteSpace(module.Description) ? string.Empty : $"\n描述：{module.Description}")); return item;
             });
         AutomationProperties.SetName(picker, name);
         picker.SelectionChanged += async (_, _) =>
@@ -123,7 +124,7 @@ public sealed partial class MainWindow
     private static string ScriptModuleProperties(ScriptModuleSet modules, string id)
     {
         var roles = modules.Bindings.Where(b => b.Module == id).Select(b => b.Kind == "formula-functions" ? "UDF" : "Actions").ToArray();
-        var role = IsMainScriptModule(id, modules.Modules[id]) ? "主入口" : roles.Length == 0 ? "辅助" : string.Join(" / ", roles);
+        var role = IsMainScriptModule(id, modules.Modules[id]) ? "主入口" : roles.Length == 0 ? "Common" : string.Join(" / ", roles);
         return $"{role} · {(modules.Modules[id].Language == ScriptLanguage.TypeScript ? "TypeScript" : "JavaScript")}";
     }
 

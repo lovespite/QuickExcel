@@ -44,6 +44,8 @@ E1 七项实现及各自真实 Excel 对照已完成；[行列样式优先级](2
 
 | 文档 | 解决的问题 |
 | --- | --- |
+| [脚本 JavaScript API 重新设计](79-script-api-redesign.md) | API v3：ExcelScript 同步基线、QuickExcel 命名空间、main 动作、能力清单与声明生成；运行时与声明已落地，v3 存储待实施 |
+| [Excel 与 QuickExcel 剪贴板互操作方案](78-excel-clipboard-interoperability-plan.md) | Windows Excel 双向值/格式/合并与相对公式交换；筛选列头可直接粘贴、必要时自动只贴值；日期系统、跨实例和真实剪贴板证据 |
 | [JSC 单引擎替换与 TypeScript 接入方案](70-jsc-typescript-migration-plan.md) | JSC 原生桥、TS 自动处理、缓存/签名/IPC、平台隔离、J0–J6 迁移与定向验收 |
 | [JSC / TypeScript 实施记录](71-jsc-typescript-implementation-log.md) | 固定来源、同步桥、Worker/TS/桌面候选证据、JSC-MEM-001 延期及独立平台进度；尚未正式切换 |
 | [Avalonia 迁移方案与实施计划](61-avalonia-migration-plan.md) | MIT 依赖准入、模块边界、主网格迁移、PDF.js/Monaco、A0–A7 工作项、平台隔离与发布回退；A0–A5 工程完成 |
@@ -115,7 +117,7 @@ E1 七项实现及各自真实 Excel 对照已完成；[行列样式优先级](2
 
 实时对象 API、整次成功提交/失败回滚、Windows 每工作簿 worker，以及事件耗时测量见 [76：实时工作簿脚本模型](76-live-workbook-script-model.md)。
 
-当前 UDF 与 actions/events 的持久上下文隔离、事务内公式读取和 IPC 9 契约见 [77：UDF 上下文隔离与事务内计算](77-udf-context-isolation-and-transaction-calculation.md)。
+当前 UDF 与 actions/events 的持久上下文隔离、事务内公式读取和 IPC 10 契约见 [77：UDF 上下文隔离与事务内计算](77-udf-context-isolation-and-transaction-calculation.md)。
 
 ## 文档维护
 

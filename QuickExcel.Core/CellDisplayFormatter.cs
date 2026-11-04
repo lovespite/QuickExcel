@@ -14,7 +14,14 @@ public static partial class CellDisplayFormatter
     public static bool IsDateFormat(StyleDefinition style, double serial)
     {
         var section = Formats.GetValue(style, s => Parse(s.NumberFormatCode ?? BuiltIn(s.NumberFormatId))).Select(serial);
-        return section is { Supported: true } && section.Tokens.Any(t => t.Kind is 'y' or 'd');
+        // Parsing already distinguishes calendar months ('m') from minutes ('n').
+        return section is { Supported: true } && section.Tokens.Any(t => t.Kind is 'y' or 'm' or 'd');
+    }
+
+    public static bool IsTimeOnlyFormat(StyleDefinition style, double serial)
+    {
+        var section = Formats.GetValue(style, s => Parse(s.NumberFormatCode ?? BuiltIn(s.NumberFormatId))).Select(serial);
+        return section is { Supported: true, HasDate: true } && !section.Tokens.Any(t => t.Kind is 'y' or 'd' or 'm');
     }
 
     public static string Format(CellValue value, StyleDefinition style, ExcelDateSystem dateSystem, CultureInfo? culture = null)
@@ -54,7 +61,7 @@ public static partial class CellDisplayFormatter
     private static CellDisplay DisplayResult(string text, Section section, int offset = -1) => new(text, section.Color, offset, section.FillCharacter);
 
     // Locale-dependent IDs use the application's simplified-Chinese convention.
-    private static string? BuiltIn(int id) => id switch
+    public static string? BuiltIn(int id) => id switch
     {
         1 => "0", 2 => "0.00", 3 => "#,##0", 4 => "#,##0.00",
         5 => "\"$\"#,##0;(\"$\"#,##0)", 6 => "\"$\"#,##0;[Red](\"$\"#,##0)",
@@ -165,6 +172,9 @@ public static partial class CellDisplayFormatter
                 var lower = bracket.ToLowerInvariant();
                 if (lower is "h" or "hh" or "m" or "mm" or "s" or "ss")
                     tokens.Add(new(char.ToUpperInvariant(lower[0]), lower));
+                // Excel SpreadsheetML uses [ENG] for English month/day names, including
+                // copies from a Chinese Excel installation. It remains a calendar format.
+                else if (lower == "eng") section.Culture = CultureInfo.GetCultureInfo("en-US");
                 else if (lower.StartsWith('$'))
                 {
                     var separator = bracket.LastIndexOf('-');

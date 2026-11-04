@@ -1,6 +1,6 @@
 # UDF 上下文隔离与事务内计算
 
-2026-11-04。更新 76 中的运行契约。文件 `scriptApiVersion` 保持 2；IPC 为 9；原生桥 ABI 和 `JavaScriptCore/2.54.2/b95c91b1/qx-sync-2` 标识不变。本次没有修改引擎、放松沙箱或新增进程内回退。
+2026-11-04。更新 76 中的运行契约。文件 `scriptApiVersion` 保持 2；IPC 为 10（对象 API 见 [79](79-script-api-redesign.md)）；原生桥 ABI 和 `JavaScriptCore/2.54.2/b95c91b1/qx-sync-2` 标识不变。本次没有修改引擎、放松沙箱或新增进程内回退。
 
 ## 两个持久上下文
 

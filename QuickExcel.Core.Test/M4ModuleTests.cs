@@ -47,9 +47,9 @@ public sealed class M4ModuleTests
             import discount, { label } from 'exports';
             import * as math from 'price';
             const privateValue = 7;
-            quickExcel.functions.register('VALUE', n => discount(n) + math.extra);
-            quickExcel.functions.register('TEXT', () => label);
-            quickExcel.functions.register('SCOPE', () => this === undefined && !('privateValue' in globalThis));
+            host.functions.register('VALUE', n => discount(n) + math.extra);
+            host.functions.register('TEXT', () => label);
+            host.functions.register('SCOPE', () => this === undefined && !('privateValue' in globalThis));
             """,
             ("exports", "export {default, label} from 'price';"),
             ("price", "export default n => n * .8; export const extra = 2; export const label = '中文 🧮';"),
@@ -64,9 +64,9 @@ public sealed class M4ModuleTests
     [InlineData(false)] [InlineData(true)]
     public void EntryOrderSharedDependenciesAndCyclesFollowEsModuleSemantics(bool worker)
     {
-        var package = Package("import { next } from 'shared'; console.log('main'); quickExcel.functions.register('NEXT', next);",
+        var package = Package("import { next } from 'shared'; console.log('main'); host.functions.register('NEXT', next);",
             ("second", "import { next } from 'shared'; console.log('second:' + next());"),
-            ("shared", "import { odd } from 'cycle'; console.log('shared'); let n=0; export function next(){return ++n}; export function even(n){return n===0 || odd(n-1)}; quickExcel.functions.register('EVEN',even);"),
+            ("shared", "import { odd } from 'cycle'; console.log('shared'); let n=0; export function next(){return ++n}; export function even(n){return n===0 || odd(n-1)}; host.functions.register('EVEN',even);"),
             ("cycle", "import { even } from 'shared'; export function odd(n){return n!==0 && even(n-1)};"));
         package = new(package.Modules, ["second", "main", "shared"], scriptApiVersion: 2);
         for (var round = 0; round < 2; round++)
@@ -85,14 +85,14 @@ public sealed class M4ModuleTests
     [InlineData("Price")] [InlineData("C:/price.js")]
     public void UndeclaredPathsUrlsAndCaseAliasesCannotResolve(string id)
     {
-        var modules = Package($"import '{id}'; quickExcel.functions.register('VALUE',()=>1);", ("price", "export const value = 1;"));
+        var modules = Package($"import '{id}'; host.functions.register('VALUE',()=>1);", ("price", "export const value = 1;"));
         Assert.Equal("Load", Assert.Throws<ScriptRuntimeFailureException>(() => Create(modules)).Code);
     }
 
     [Theory]
     [InlineData("this is not valid JavaScript !!!")]
     [InlineData("throw new Error('failure');")]
-    [InlineData("quickExcel.functions.register('MODULEVALUE',()=>2);")]
+    [InlineData("host.functions.register('MODULEVALUE',()=>2);")]
     [InlineData("while(true){}")]
     [InlineData("await Promise.resolve(3);")]
     [InlineData("await new Promise(()=>{});")]
@@ -102,7 +102,7 @@ public sealed class M4ModuleTests
     [InlineData("import 'main' with { type: 'json' };")]
     public void FailedEntryDiscardsWholeRegistryAndCachedCalculation(string badEntry)
     {
-        var package = Package("quickExcel.functions.register('MODULEVALUE',()=>7);", ("bad", badEntry));
+        var package = Package("host.functions.register('MODULEVALUE',()=>7);", ("bad", badEntry));
         package = new(package.Modules, ["main", "bad"], scriptApiVersion: 2);
         var sheet = Sheet("S", (0, 0, F("=MODULEVALUE()", 42)), (0, 1, F("=3", 9)));
         using var document = new WorkbookDocument(Book(sheet).WithScriptModules(package),
@@ -111,7 +111,7 @@ public sealed class M4ModuleTests
         Assert.False(document.ScriptsEnabled);
         Assert.Equal("42", document.GetCellValue(0, 0, 0));
         Assert.Equal("9", document.GetCellValue(0, 0, 1));
-        document.Session.Execute(new UpdateScriptModulesCommand(Package("quickExcel.functions.register('MODULEVALUE',()=>8);")));
+        document.Session.Execute(new UpdateScriptModulesCommand(Package("host.functions.register('MODULEVALUE',()=>8);")));
         document.EnableScriptsAndCalculate();
         Assert.Equal("8", document.GetCellValue(0, 0, 0));
     }
@@ -119,8 +119,8 @@ public sealed class M4ModuleTests
     [Fact]
     public void ModuleFunctionsRetainTypedRangesAndFrozenRegistration()
     {
-        var modules = Package("import { shape } from 'helpers'; quickExcel.functions.register({name:'JS.SHAPE',apiVersion:2,parameters:[{name:'r',type:'range'}],returns:'text'},shape);",
-            ("helpers", "export const shape = r => [r.rows,r.columns,r.values[1]===null,r.values[2]==='',Object.isFrozen(r.values)].join('|'); quickExcel.functions.register('LATE',()=>quickExcel.functions.register('NEW',()=>3));"));
+        var modules = Package("import { shape } from 'helpers'; host.functions.register({name:'JS.SHAPE',apiVersion:2,parameters:[{name:'r',type:'range'}],returns:'text'},shape);",
+            ("helpers", "export const shape = r => [r.rows,r.columns,r.values[1]===null,r.values[2]==='',Object.isFrozen(r.values)].join('|'); host.functions.register('LATE',()=>host.functions.register('NEW',()=>3));"));
         var data = Sheet("Data", (0, 0, N(2)), (1, 0, T("")), (1, 1, N(4)));
         var output = Sheet("Out", (0, 0, F("=JS.SHAPE(Data!A1:B2)")), (1, 0, F("=LATE()")));
         var result = new WorkbookCalculator(new ScriptWorkerRuntimeFactory()).Calculate(Request(Book(data, output).WithScriptModules(modules), true));
@@ -132,7 +132,7 @@ public sealed class M4ModuleTests
     public void RoundtripKeepsModuleModeEntryOrderAndNeverRestoresAuthorization()
     {
         var path = Path.Combine(Path.GetTempPath(), "qx-modules-" + Guid.NewGuid() + ".xlsq");
-        var modules = Package("import {next} from 'state'; quickExcel.functions.register('NEXT',next);", ("state", "let n=0; export const next=()=>++n;"));
+        var modules = Package("import {next} from 'state'; host.functions.register('NEXT',next);", ("state", "let n=0; export const next=()=>++n;"));
         var sheet = Sheet("S", (0, 0, F("=NEXT()", 10)), (1, 0, F("=NEXT()+A1", 20)));
         var services = new WorkbookServices(new TypedWorkbookStorage(), new WorkbookCalculator(new ScriptWorkerRuntimeFactory()));
         try
@@ -162,11 +162,11 @@ public sealed class M4ModuleTests
     [Fact]
     public void HelperAndBindingChangesInvalidateAuthorizationAndInFlightResult()
     {
-        var original = Package("import 'helper';", ("helper", "quickExcel.functions.register('VALUE',()=>1);"));
+        var original = Package("import 'helper';", ("helper", "host.functions.register('VALUE',()=>1);"));
         using var session = new DocumentSession(Book(Sheet("S")).WithScriptModules(original));
         session.SetScriptsEnabled(true);
         var old = session.BeginCalculation();
-        var changed = Package("import 'helper';", ("helper", "quickExcel.functions.register('VALUE',()=>2);"));
+        var changed = Package("import 'helper';", ("helper", "host.functions.register('VALUE',()=>2);"));
         session.Execute(new UpdateScriptModulesCommand(changed));
         Assert.True(old.CancellationToken.IsCancellationRequested);
         Assert.False(session.ScriptsEnabled);
@@ -200,6 +200,7 @@ public sealed class M4ModuleTests
         Assert.Equal(hash, (bundle with { Modules = bundle.Modules.Reverse().ToArray() }).ComputeDigest());
         Assert.NotEqual(hash, (bundle with { EntryModules = ["b", "a"] }).ComputeDigest());
         Assert.NotEqual(hash, (bundle with { Modules = [bundle.Modules[0] with { Source = "// changed" }, bundle.Modules[1]] }).ComputeDigest());
+        Assert.NotEqual(hash, (bundle with { Modules = [bundle.Modules[0] with { Description = "误导性描述" }, bundle.Modules[1]] }).ComputeDigest());
         Assert.NotEqual(hash, (bundle with { Modules = [bundle.Modules[0] with { Path = "scripts/other.js" }, bundle.Modules[1]] }).ComputeDigest());
         Assert.Throws<ProtocolException>(() => bundle.Validate());
         (bundle with { Sha256 = hash }).Validate();
@@ -233,7 +234,7 @@ public sealed class M4ModuleTests
     public void MaximumModuleCountAndUtf8BudgetAreAccepted()
     {
         var modules = Enumerable.Range(0, 64).ToDictionary(i => "m" + i, i => new ScriptModule($"scripts/{i}.js", ""));
-        var source = "quickExcel.functions.register('VALUE',()=>64); //";
+        var source = "host.functions.register('VALUE',()=>64); //";
         modules["m0"] = modules["m0"] with { Source = source + new string('x', 1024 * 1024 - Encoding.UTF8.GetByteCount(source)) };
         using var runtime = Create(new ScriptModuleSet(modules, modules.Keys, scriptApiVersion: 2));
         Assert.Equal(64d, runtime.Invoke("VALUE", []));

@@ -2,87 +2,308 @@ namespace QuickExcel.Scripting;
 
 public sealed partial class JscSession
 {
+    // Capability-driven object model. Every implemented member is declared in the
+    // generated manifest; local members are pure handle operations, host members
+    // cross the transactional model bridge. Anything else fails with UnsupportedApi
+    // before any workbook state is touched.
     private const string WorkbookModelBootstrap = """
-        let activeModel = false;
-        let modelWriteFailed = false;
+        const implemented = capabilities.types;
+        const prototypes = Object.create(null);
+        const handleData = new WeakMap();
+        const actionEntries = [];
+        let hostWrote = false;
+
+        function unsupported(type, member) {
+            return new ScriptError('UnsupportedApi', type + '.' + String(member) + ' 尚未实现。', type + '.' + String(member));
+        }
+        function dataOf(value) {
+            const data = handleData.get(value);
+            if (!data) throw new ScriptError('InvalidReference', '工作簿对象句柄已失效。');
+            return data;
+        }
         function model(method, ...args) {
-            if (!activeModel) throw new TypeErrorCtor('Workbook objects are available only during an action, event or console request.');
-            const reply = nativeModelCall(JSON.stringify({method,args}));
-            if (!reply || reply.ok !== true) throw new TypeErrorCtor(reply?.error ?? 'Workbook request failed.');
+            if (!activeModel) throw new ScriptError('InvalidReference', '工作簿对象只能在操作、事件或控制台请求中使用。');
+            const reply = nativeModelCall(JSON.stringify({ method, args }));
+            if (!reply || reply.ok !== true) {
+                const code = reply && typeof reply.code === 'string' ? reply.code : 'TransactionAborted';
+                if (method.startsWith('set') || method === 'clear' || code === 'BudgetExceeded' || code === 'Locked' ||
+                    code === 'InvalidArgument' && hostWrote) hostWriteFailed = true;
+                throw new ScriptError(code, reply && typeof reply.error === 'string' ? reply.error : '工作簿请求失败。');
+            }
+            if (method.startsWith('set') || method === 'clear') hostWrote = true;
             return reply.value;
         }
-        function modelScalar(value) {
-            if(value===null || typeof value==='boolean' || typeof value==='string' && value.length<=32767 || typeof value==='number' && Number.isFinite(value)) return value;
-            if(value && typeof value==='object' && value.kind==='error' && typeof value.code==='string') return {kind:'error',code:value.code};
-            throw new TypeErrorCtor('Unsupported cell value.');
-        }
-        function modelWrite(method,id,address,value) {
-            try {
-                if(method==='setValue') value=modelScalar(value);
-                else if(method==='setValues') {
-                    if(!isArray(value)) throw new TypeErrorCtor('Expected a rectangular value matrix.');
-                    value=value.map(row=>{if(!isArray(row)) throw new TypeErrorCtor('Expected a row array.');return row.map(modelScalar);});
-                } else if(method==='setFill' && value!==null && typeof value!=='string' || method==='setFormula' && typeof value!=='string')
-                    throw new TypeErrorCtor('Expected a string.');
-                model(method,id,address,value);
-            } catch(error) { modelWriteFailed=true; throw error; }
-        }
         function modelAddress(address) {
-            if (typeof address !== 'string' || address.length > 40 || !/^[A-Za-z]+[1-9][0-9]*(?::[A-Za-z]+[1-9][0-9]*)?$/.test(address))
-                throw new TypeErrorCtor('Expected an A1 cell or rectangular A1:B2 range.');
-            const parts=address.toUpperCase().split(':');
-            return parts.length===2 && parts[0]===parts[1] ? parts[0] : parts.join(':');
+            if (typeof address !== 'string' || address.length > 40 ||
+                !/^[A-Za-z]+[1-9][0-9]*(?::[A-Za-z]+[1-9][0-9]*)?$/.test(address))
+                throw new ScriptError('InvalidArgument', '需要 A1 单元格或矩形 A1:B2 区域。');
+            const parts = address.toUpperCase().split(':');
+            return parts.length === 2 && parts[0] === parts[1] ? parts[0] : parts.join(':');
         }
-        function modelRange(id, input) {
-            const address = modelAddress(input);
-            const fill = freeze({
-                setColor(color) { modelWrite('setFill',id,address,color); },
-                getColor() { return model('getFill',id,address); },
-                clear() { modelWrite('setFill',id,address,null); }
-            });
-            const format = freeze({getFill:()=>fill});
-            return freeze({
-                getAddress:()=>address, getWorksheet:()=>modelSheet(id), getFormat:()=>format,
-                getValue() {
-                    const cell=model('getCell',id,address);
-                    if(cell.state!=='literal' && (cell.state!=='Fresh' && cell.state!=='Error' || !cell.hasValue)) throw new TypeErrorCtor('Formula value is unavailable; a function or dependency may be blocked.');
-                    return cell.value;
-                },
-                getValues() { return model('getValues',id,address); },
-                setValue(value) { modelWrite('setValue',id,address,value); },
-                setValues(values) { modelWrite('setValues',id,address,values); },
-                getFormula() { return model('getFormula',id,address); },
-                setFormula(formula) { modelWrite('setFormula',id,address,formula); },
-                setFormulas(formulas) { modelWrite('setFormulas',id,address,formulas); }
-            });
+        function rangeSize(address) {
+            const parts = address.split(':');
+            function point(text) {
+                const match = /^([A-Z]+)([1-9][0-9]*)$/.exec(text);
+                if (!match) throw new ScriptError('InvalidArgument', 'A1 地址无效。');
+                let column = 0;
+                for (const c of match[1]) column = column * 26 + c.charCodeAt(0) - 64;
+                const row = Number(match[2]);
+                if (!Number.isSafeInteger(row) || row > 100000 || column > 1024)
+                    throw new ScriptError('InvalidArgument', 'A1 地址超出范围。');
+                return [row, column];
+            }
+            const a = point(parts[0]), b = point(parts[1] || parts[0]);
+            if (b[0] < a[0] || b[1] < a[1]) throw new ScriptError('InvalidArgument', '区域起止顺序颠倒。');
+            return { rows: b[0] - a[0] + 1, columns: b[1] - a[1] + 1 };
         }
-        function modelSheet(id) {
-            return freeze({getId:()=>id, getName:()=>model('sheet',id).name,
-                getCell(address, column) {
-                    if (typeof address === 'number') {
-                        if (!Number.isInteger(address) || address<0 || address>=200000 || !Number.isInteger(column) || column<0 || column>=2048)
-                            throw new TypeErrorCtor('Cell indexes must be zero-based row and column indexes.');
-                        let name='', n=column+1; while(n>0) { n--; name=String.fromCharCode(65+n%26)+name; n=Math.floor(n/26); }
-                        address=name+(address+1);
+        function checkScalar(value) {
+            if (typeof value === 'string' && value.length <= 32767) return value;
+            if (typeof value === 'number' && isFiniteNumber(value)) return value;
+            if (typeof value === 'boolean') return value;
+            throw new ScriptError('InvalidArgument', '单元格值必须是字符串、有限数值或布尔值。');
+        }
+        function checkMatrix(values, address, check) {
+            if (!isArray(values)) throw new ScriptError('InvalidArgument', '需要二维数组。');
+            const size = rangeSize(address);
+            if (values.length !== size.rows) throw new ScriptError('InvalidArgument', '数据行数与区域不一致。');
+            let total = 0;
+            const rows = [];
+            for (const row of values) {
+                if (!isArray(row) || row.length !== size.columns)
+                    throw new ScriptError('InvalidArgument', '数据列数与区域不一致。');
+                total += row.length;
+                if (total > 20000) throw new ScriptError('InvalidArgument', '一次写入最多 20000 个单元格。');
+                rows.push(row.map(check));
+            }
+            return rows;
+        }
+        function checkFormula(formula) {
+            if (typeof formula !== 'string' || formula.length < 2 || formula.length > 8192 || formula[0] !== '=')
+                throw new ScriptError('InvalidArgument', '公式必须以 = 开头且不超过 8192 个字符。');
+            return formula;
+        }
+        function checkColor(color) {
+            if (typeof color !== 'string' || !/^#[0-9a-fA-F]{6}$/.test(color))
+                throw new ScriptError('InvalidArgument', '颜色必须是 #RRGGBB。');
+            return color;
+        }
+
+        function makeHandle(type, data) {
+            const target = Object.create(prototypeFor(type));
+            const proxy = new Proxy(target, {
+                get(value, key) {
+                    if (typeof key === 'symbol') {
+                        if (key === Symbol.toPrimitive || key === Symbol.iterator || key === Symbol.asyncIterator) return undefined;
+                        if (key === Symbol.toStringTag) return type;
+                        return value[key];
                     }
-                    address=modelAddress(address);
-                    if(address.includes(':')) throw new TypeErrorCtor('getCell expects one cell.');
-                    return modelRange(id,address);
-                },
-                getRange:address=>modelRange(id,address)
+                    if (key in value) return value[key];
+                    if (key === 'then' || key === 'toJSON') return undefined;
+                    throw unsupported(type, key);
+                }
             });
+            const frozen = freeze(data);
+            handleData.set(target, frozen);
+            handleData.set(proxy, frozen);
+            return freeze(proxy);
         }
-        const workbookApi = {
-            getActiveWorksheet() { return modelSheet(model('active').sheetId); },
-            getActiveCell() { const active=model('active'); return modelRange(active.sheetId,active.cell); },
-            getActiveRange() {
-                const active=model('active');
-                if(active.ranges.length!==1) throw new TypeErrorCtor('The selection has multiple areas; use getActiveRanges().');
-                return modelRange(active.sheetId,active.ranges[0]);
+        function worksheet(sheetId) { return makeHandle('Worksheet', { sheetId }); }
+        function range(sheetId, address) { return makeHandle('Range', { sheetId, address }); }
+
+        const localMembers = {
+            Worksheet: {
+                getId() { return dataOf(this).sheetId; },
+                getCell(address, column) {
+                    const data = dataOf(this);
+                    let text;
+                    if (typeof address === 'number') {
+                        if (!Number.isInteger(address) || address < 0 || address >= 100000 ||
+                            !Number.isInteger(column) || column < 0 || column >= 1024)
+                            throw new ScriptError('InvalidArgument', '行列索引必须是零基整数。');
+                        let name = '', n = column + 1;
+                        while (n > 0) { n--; name = String.fromCharCode(65 + n % 26) + name; n = Math.floor(n / 26); }
+                        text = name + (address + 1);
+                    } else {
+                        text = modelAddress(address);
+                        if (text.indexOf(':') >= 0) throw new ScriptError('InvalidArgument', 'getCell 只接受单个单元格。');
+                    }
+                    return range(data.sheetId, text);
+                },
+                getRange(address) { const data = dataOf(this); return range(data.sheetId, modelAddress(address)); }
             },
-            getActiveRanges() { const active=model('active'); return active.ranges.map(r=>modelRange(active.sheetId,r)); },
-            getWorksheets() { return model('sheets').map(s=>modelSheet(s.id)); },
-            getWorksheet(nameOrId) { const sheet=model('sheet',nameOrId); return sheet ? modelSheet(sheet.id) : undefined; }
+            Range: {
+                getAddress() { return dataOf(this).address; },
+                getWorksheet() { return worksheet(dataOf(this).sheetId); },
+                getFormat() { return makeHandle('RangeFormat', dataOf(this)); }
+            },
+            RangeFormat: {
+                getFill() { return makeHandle('RangeFill', dataOf(this)); }
+            },
+            RangeAreas: {
+                getAddress() { return dataOf(this).addresses.join(','); },
+                getAreaCount() { return dataOf(this).addresses.length; },
+                getCellCount() {
+                    const data = dataOf(this);
+                    return data.addresses.reduce((total, address) => {
+                        const size = rangeSize(address);
+                        return total + size.rows * size.columns;
+                    }, 0);
+                },
+                getAreas() { const data = dataOf(this); return data.addresses.map(address => range(data.sheetId, address)); },
+                getWorksheet() { return worksheet(dataOf(this).sheetId); }
+            }
         };
+
+        const resultAdapters = {
+            'Workbook.getActiveWorksheet': value => worksheet(value.sheetId),
+            'Workbook.getActiveCell': value => range(value.sheetId, value.cell),
+            'Workbook.getSelectedRange': value => {
+                if (value.ranges.length !== 1)
+                    throw new ScriptError('InvalidArgument', '当前选区包含多个区域；请使用 getSelectedRanges()。');
+                return range(value.sheetId, value.ranges[0]);
+            },
+            'Workbook.getSelectedRanges': value => makeHandle('RangeAreas', { sheetId: value.sheetId, addresses: value.ranges }),
+            'Workbook.getWorksheet': value => value ? worksheet(value.id) : undefined,
+            'Workbook.getWorksheets': value => value.map(sheet => worksheet(sheet.id)),
+            'Worksheet.getName': value => value.name
+        };
+
+        function contextOf(type, data) {
+            if (type === 'Workbook') return [];
+            if (type === 'Worksheet') return [data.sheetId];
+            return [data.sheetId, data.address];
+        }
+        function hostMember(type, name, spec) {
+            return function (...args) {
+                try {
+                    const data = dataOf(this);
+                    if (type === 'Range') {
+                        if (name === 'setValue') args = [checkScalar(args[0])];
+                        else if (name === 'setValues') args = [checkMatrix(args[0], data.address, checkScalar)];
+                        else if (name === 'setFormula') args = [checkFormula(args[0])];
+                        else if (name === 'setFormulas') args = [checkMatrix(args[0], data.address, checkFormula)];
+                    } else if (type === 'RangeFill') {
+                        if (name === 'setColor') args = [checkColor(args[0])];
+                        else if (name === 'clear') args = [null];
+                    }
+                    const context = contextOf(type, data);
+                    if (args.length + context.length !== spec.arity)
+                        throw new ScriptError('InvalidArgument', type + '.' + name + ' 的参数个数不正确。');
+                    const value = model(spec.host, ...context, ...args);
+                    const adapt = resultAdapters[type + '.' + name];
+                    return adapt ? adapt(value) : value;
+                } catch (error) {
+                    // A rejected argument after a successful host write still
+                    // aborts the transaction, even when the script catches it.
+                    if (hostWrote && error instanceof ScriptError && error.code === 'InvalidArgument') hostWriteFailed = true;
+                    throw error;
+                }
+            };
+        }
+        function prototypeFor(type) {
+            const existing = prototypes[type];
+            if (existing) return existing;
+            const definition = implemented[type];
+            if (!definition || typeof definition.members !== 'object')
+                throw new ScriptError('InvalidReference', '未知的工作簿对象类型：' + type);
+            const proto = Object.create(Object.prototype);
+            for (const name of ownKeys(definition.members)) {
+                const spec = definition.members[name];
+                const implementation = spec.kind === 'local'
+                    ? localMembers[type] && localMembers[type][name]
+                    : spec.kind === 'host' ? hostMember(type, name, spec) : null;
+                if (typeof implementation !== 'function')
+                    throw new ScriptError('InvalidReference', '能力清单成员缺少实现：' + type + '.' + name);
+                Object.defineProperty(proto, name, { value: implementation, writable: false, enumerable: false, configurable: false });
+            }
+            return prototypes[type] = freeze(proto);
+        }
+
+        function registerFunction(name, fn) {
+            // Unbound helper modules are shared between contexts; registration is
+            // simply inert when the current context does not declare UDF support.
+            if (actionMode || sharedMode && !(registrationRole() & 1)) return;
+            if (loaded) throw new ScriptError('InvalidArgument', '函数只能在脚本加载期间注册。');
+            let descriptor = { apiVersion: 1, minArguments: 0, maxArguments: 255, returnType: 'any', profile: 'conservative', parameters: [] };
+            if (typeof name === 'object' && name !== null) {
+                const input = name;
+                if (input.apiVersion !== 2 || typeof input.name !== 'string')
+                    throw new ScriptError('InvalidArgument', 'v2 描述符需要 apiVersion: 2 和 name。');
+                name = upper(input.name);
+                if (!validV2Name(name)) throw new ScriptError('InvalidArgument', 'v2 函数必须使用 JS 命名空间。');
+                const parameters = input.parameters ?? [];
+                if (!isArray(parameters) || parameters.length > 255)
+                    throw new ScriptError('InvalidArgument', '无效的参数描述。');
+                const types = ['any', 'number', 'text', 'boolean', 'blank', 'range'];
+                for (const p of parameters)
+                    if (!p || typeof p.name !== 'string' || !types.includes(p.type ?? 'any'))
+                        throw new ScriptError('InvalidArgument', '无效的参数类型。');
+                descriptor = { name, apiVersion: 2, minArguments: parameters.length, maxArguments: parameters.length,
+                    returnType: input.returns ?? 'any', profile: input.profile ?? 'conservative',
+                    parameters: parameters.map(p => ({ name: p.name, type: p.type ?? 'any' })) };
+                if (!['any', 'number', 'text', 'boolean', 'blank'].includes(descriptor.returnType) || descriptor.profile !== 'conservative')
+                    throw new ScriptError('InvalidArgument', 'M3 只支持标量返回和保守执行。');
+            } else {
+                if (typeof name !== 'string') throw new ScriptError('InvalidArgument', '函数名必须是字符串。');
+                name = upper(name);
+                if (!validName(name)) throw new ScriptError('InvalidArgument', 'v1 函数名只能包含 A-Z。');
+            }
+            descriptor.name = name;
+            if (typeof fn !== 'function') throw new ScriptError('InvalidArgument', '注册的公式必须是函数。');
+            if (registry[name]) throw new ScriptError('InvalidArgument', '函数重复注册：' + name);
+            registry[name] = fn;
+            descriptors[name] = deepFreeze(descriptor);
+        }
+
+        let runFiles = null;
+        let fileFailed = false;
+        function fileContext() {
+            if (!runFiles) throw new ScriptError('InvalidReference', '虚拟文件只在该事务内可用。');
+            return runFiles.fs;
+        }
+
+        const workbook = makeHandle('Workbook', {});
+        const host = freeze({
+            functions: freeze({ register(name, fn) { registerFunction(name, fn); } }),
+            events,
+            get files() { return fileContext(); }
+        });
+
+        function runAction(name, request) {
+            if (!actionMode || !loaded || actionInvoked) throw new ScriptError('InvalidReference', '操作不可用。');
+            actionInvoked = true;
+            activeModel = true;
+            hostWriteFailed = false;
+            hostWrote = false;
+            fileFailed = false;
+            const baseRevision = request && request.snapshot ? request.snapshot.baseRevision : 0;
+            try {
+                runFiles = createFs(model('files'),
+                    () => { if (!activeModel) throw new ScriptError('InvalidReference', '文件上下文已失效。'); },
+                    () => { fileFailed = true; });
+                let returned;
+                if (request && request.event) {
+                    const handlers = eventHandlers[request.event.name] || [];
+                    const context = freeze({ workbook, host, event: deepFreeze(request.event) });
+                    for (const handler of handlers) {
+                        returned = handler(context);
+                        if (returned !== undefined && returned !== null)
+                            throw new ScriptError('InvalidArgument', '事件处理器必须同步完成且不能返回值。');
+                    }
+                } else {
+                    const main = mains[name];
+                    if (typeof main !== 'function') throw new ScriptError('ItemNotFound', '找不到操作入口：' + name);
+                    returned = main(workbook, host);
+                    if (returned !== undefined && returned !== null)
+                        throw new ScriptError('InvalidArgument', 'main 必须同步完成且不能返回值。');
+                }
+                if (hostWriteFailed || fileFailed)
+                    throw new ScriptError('TransactionAborted', '有一次写入失败，本次变更未提交。');
+                return { operationId: request.operationId, baseRevision, name, edits: [], fileEdits: runFiles.edits };
+            } finally {
+                activeModel = false;
+                runFiles = null;
+            }
+        }
         """;
 }

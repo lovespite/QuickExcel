@@ -34,14 +34,14 @@ public sealed class ScriptValueWriteTests
     {
         var sheet = SheetWithAttachments(inCellImage);
         using var doc = Document("""
-            $.events.on('sheet.activate', ({patch,event}) => {
-              const s=$.getWorksheet(event.sheetId);
+            host.events.on('sheet.activate', context => {
+              const s=context.workbook.getWorksheet(context.event.sheetId);
               s.getCell('A1').setValue(7);
               if(s.getCell('A1').getValue()!==7) throw Error('anchor read');
               s.getRange('C3:D3').setValues([[8,9]]);
-              patch.setFormula(s.getId(),'A1','=C3+D3');
+              s.getCell('A1').setFormula('=C3+D3');
               s.getRange('A3:B3').setFormulas([['=C3*2','=D3*2']]);
-              patch.setValue(s.getId(),'C4',10);
+              s.getCell('C4').setValue(10);
               if(s.getCell('A1').getValue()!==17) throw Error('formula read');
               s.getCell('A1').getFormat().getFill().setColor('#ff0000');
             });
@@ -75,12 +75,12 @@ public sealed class ScriptValueWriteTests
     public void InvalidTargetsRollBackEarlierEventWritesEvenWhenCaught(string write, bool inCellImage)
     {
         var sheet = SheetWithAttachments(inCellImage);
-        using var doc = Document("$.events.on('sheet.activate',()=>{const s=$.getActiveWorksheet();" +
+        using var doc = Document("host.events.on('sheet.activate',context=>{const s=context.workbook.getActiveWorksheet();" +
             "s.getCell('C3').setValue(5);s.getCell('A1').getFormat().getFill().setColor('#ff0000');" +
             "try{" + write + ";}catch(e){console.log(String(e));}});", sheet);
         doc.EnableScriptsAndCalculate(); var revision = doc.Snapshot.Revision;
         var error = Assert.Throws<ScriptRuntimeFailureException>(() => doc.DispatchScriptEvents());
-        Assert.Contains("invalid write", error.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("写入失败", error.Message);
         Assert.Equal(revision, doc.Snapshot.Revision); Assert.False(doc.CanUndo);
         Assert.Equal("42", doc.GetCellValue(0, 0, 0)); Assert.Null(doc.Snapshot.Sheets[0].GetCell(2, 2));
         Assert.Equal(0, doc.Snapshot.Sheets[0].GetStyleId(0, 0));
@@ -128,9 +128,10 @@ public sealed class ScriptValueWriteTests
     public void FailedMergedWriteRollsBackCellsAndAllVirtualFileVolumes()
     {
         using var doc = Document("""
-            $.events.on('sheet.activate', ({fs}) => {
+            host.events.on('sheet.activate', context => {
+              const fs=context.host.files;
               fs.writeText('//mem/test','memory'); fs.writeText('//temp/test','temporary'); fs.writeText('//xlsq/test','persistent');
-              const s=$.getActiveWorksheet(); s.getCell('A1').setValue(7);
+              const s=context.workbook.getActiveWorksheet(); s.getCell('A1').setValue(7);
               try { s.getCell('B1').setValue(9); } catch {}
             });
             """, SheetWithAttachments());
@@ -145,7 +146,7 @@ public sealed class ScriptValueWriteTests
     {
         var sheet = SheetWithAttachments();
         using var doc = Document("", sheet);
-        doc.RunConsole("$.getActiveWorksheet().getCell('A1').setValue('updated');");
+        doc.RunConsole("workbook.getActiveWorksheet().getCell('A1').setValue('updated');");
         var folder = Path.Combine(Directory.GetCurrentDirectory(), "artifacts", "script-value-writes", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(folder); var path = Path.Combine(folder, "merged.xlsq");
         doc.Save(path);

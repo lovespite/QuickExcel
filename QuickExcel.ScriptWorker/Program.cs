@@ -71,7 +71,8 @@ try
                     throw new ProtocolException("A reusable worker must load exactly one bound role.");
                 digest = bundle.Sha256;
                 create = () => new JscSession(bundle.Modules.ToDictionary(m => m.Id, m => m.Source, StringComparer.Ordinal), bundle.EntryModules, actionsMode,
-                    sharedMode ? bundle.Modules.ToDictionary(m => m.Id, m => (bundle.FunctionEntries.Contains(m.Id) ? 1 : 0) | (bundle.ActionEntries.Contains(m.Id) ? 2 : 0)) : null);
+                    sharedMode ? bundle.Modules.ToDictionary(m => m.Id, m => (bundle.FunctionEntries.Contains(m.Id) ? 1 : 0) | (bundle.ActionEntries.Contains(m.Id) ? 2 : 0)) : null,
+                    bundle.Modules.ToDictionary(m => m.Id, m => m.Description, StringComparer.Ordinal));
             }
             else
             {
@@ -165,7 +166,7 @@ try
                     WorkerProtocol.ValidateReply(response, request.Identity, "model");
                     var reply = WorkerProtocol.Payload<ModelReply>(response);
                     if (reply.OperationId != action.OperationId || reply.Sequence != modelSequence) throw new ProtocolException("Model reply identity mismatch.");
-                    return JsonSerializer.Serialize(new { ok = reply.Ok, value = reply.Value, error = reply.Error }, WorkerProtocol.Json);
+                    return JsonSerializer.Serialize(new { ok = reply.Ok, value = reply.Value, error = reply.Error, code = reply.Code }, WorkerProtocol.Json);
                 } : null;
                 var raw = runtime.RunAction(action.Name, WorkerProtocol.EncodePayload(action));
                 var patch = WorkerProtocol.Payload<ActionPatch>(request with { Payload = raw });

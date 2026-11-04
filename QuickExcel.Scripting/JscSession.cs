@@ -16,8 +16,8 @@ public sealed partial class JscSession : IDisposable
     private IntPtr _hostResponse;
     public Func<string, string>? HostRequest { get; set; }
 
-    // The bridge object is held by native code, not exposed on globalThis. Workbook
-    // code receives only registration and console APIs, with no host CLR objects.
+    // The bridge object is held by native code, not exposed on globalThis. Module
+    // code sees only the host extension object and a bounded console.
     private static readonly string Bootstrap = """
         (() => {
             const nativeModelCall = globalThis.__qxModelCall;
@@ -27,6 +27,9 @@ public sealed partial class JscSession : IDisposable
             /*VIRTUAL_FILES*/
             const registry = Object.create(null);
             const descriptors = Object.create(null);
+            const mains = Object.create(null);
+            let actionDescriptions = Object.create(null);
+            const eventHandlers = Object.create(null);
             const ownKeys = Object.keys;
             const freeze = Object.freeze;
             const makeFunction = Function;
@@ -34,21 +37,27 @@ public sealed partial class JscSession : IDisposable
             const validName = Function.prototype.call.bind(RegExp.prototype.test, /^[A-Z]+$/);
             const validV2Name = Function.prototype.call.bind(RegExp.prototype.test, /^JS\.[A-Z_][A-Z0-9_]*(\.[A-Z_][A-Z0-9_]*)*$/);
             const isArray = Array.isArray;
-            const deepFreeze = value => {
-                if (value && typeof value === 'object') { for (const key of ownKeys(value)) deepFreeze(value[key]); freeze(value); }
-                return value;
-            };
             const isFiniteNumber = Number.isFinite;
             const TypeErrorCtor = TypeError;
-            /*WORKBOOK_MODEL*/
+            const capabilities = JSON.parse(/*CAPABILITIES*/);
             let loaded = false;
             let actionMode = false;
             let sharedMode = false;
             let actionInvoked = false;
-            const actions = Object.create(null);
-            const actionInfo = Object.create(null);
-            const eventHandlers = Object.create(null);
-            /*EVENT_API*/
+            let activeModel = false;
+            let hostWriteFailed = false;
+            class ScriptError extends Error {
+                constructor(code, message, member) {
+                    super(message);
+                    Object.defineProperty(this, 'name', { value: 'ScriptError', configurable: true });
+                    Object.defineProperty(this, 'code', { value: code, enumerable: true });
+                    if (member !== undefined) Object.defineProperty(this, 'member', { value: member, enumerable: true });
+                }
+            }
+            const deepFreeze = value => {
+                if (value && typeof value === 'object') { for (const key of ownKeys(value)) deepFreeze(value[key]); freeze(value); }
+                return value;
+            };
             const logs = [];
             function display(value, depth = 0, seen = new Set()) {
                 if (typeof value === 'string') return value.slice(0, 4000);
@@ -68,159 +77,40 @@ public sealed partial class JscSession : IDisposable
                 } catch { return '[Uninspectable]'; }
                 finally { seen.delete(value); }
             }
-            const logger = (prefix, values) => {
+            const console = freeze({ log: (...v) => log('', v), info: (...v) => log('[info] ', v),
+                warn: (...v) => log('[warn] ', v), error: (...v) => log('[error] ', v), debug: (...v) => log('[debug] ', v) });
+            function log(prefix, values) {
                 if (logs.length < 100) logs.push((prefix + values.slice(0, 30).map(value => display(value)).join(' ')).slice(0, 4000));
-            };
-            const console = freeze({ log: (...v) => logger('', v), info: (...v) => logger('[info] ', v),
-                warn: (...v) => logger('[warn] ', v), error: (...v) => logger('[error] ', v), debug: (...v) => logger('[debug] ', v) });
-            const quickExcel = freeze({ ...workbookApi, functions: freeze({
-                register(name, fn) {
-                    if (actionMode || sharedMode && !(registrationRole() & 1)) return;
-                    if (loaded) throw new TypeErrorCtor('Functions can only be registered while loading the script.');
-                    let descriptor = { apiVersion: 1, minArguments: 0, maxArguments: 255, returnType: 'any', profile: 'conservative', parameters: [] };
-                    if (typeof name === 'object' && name !== null) {
-                        const input = name;
-                        if (input.apiVersion !== 2 || typeof input.name !== 'string') throw new TypeErrorCtor('A v2 descriptor requires apiVersion: 2 and a name.');
-                        name = upper(input.name);
-                        if (!validV2Name(name)) throw new TypeErrorCtor('V2 functions must use the JS namespace.');
-                        const parameters = input.parameters ?? [];
-                        if (!isArray(parameters) || parameters.length > 255) throw new TypeErrorCtor('Invalid parameter descriptors.');
-                        const types = ['any', 'number', 'text', 'boolean', 'blank', 'range'];
-                        for (const p of parameters)
-                            if (!p || typeof p.name !== 'string' || !types.includes(p.type ?? 'any')) throw new TypeErrorCtor('Invalid parameter type.');
-                        descriptor = { name, apiVersion: 2, minArguments: parameters.length, maxArguments: parameters.length,
-                            returnType: input.returns ?? 'any', profile: input.profile ?? 'conservative',
-                            parameters: parameters.map(p => ({ name: p.name, type: p.type ?? 'any' })) };
-                        if (!['any', 'number', 'text', 'boolean', 'blank'].includes(descriptor.returnType) || descriptor.profile !== 'conservative')
-                            throw new TypeErrorCtor('M3 supports scalar returns and conservative execution only.');
-                    } else {
-                        if (typeof name !== 'string') throw new TypeErrorCtor('Function name must be a string.');
-                        name = upper(name);
-                        if (!validName(name)) throw new TypeErrorCtor('V1 function names must contain letters A-Z only.');
-                    }
-                    descriptor.name = name;
-
-                    if (typeof fn !== 'function') throw new TypeErrorCtor('A registered formula must be a function.');
-                    if (registry[name]) throw new TypeErrorCtor('Duplicate function: ' + name);
-                    registry[name] = fn;
-                    descriptors[name] = deepFreeze(descriptor);
-                }
-            }), actions: freeze({
-                register(input, fn) {
-                    if (!actionMode || sharedMode && !(registrationRole() & 2)) return;
-                    if (loaded) throw new TypeErrorCtor('Actions can only be registered while loading.');
-                    const name = typeof input === 'string' ? input : input?.name;
-                    const description = typeof input === 'string' ? '' : (input?.description ?? '');
-                    if (typeof name !== 'string' || !name.trim() || name.length > 128 || /[\x00-\x1f\x7f-\x9f]/.test(name) ||
-                        name.startsWith('@event/') || typeof description !== 'string' || description.length > 1000 || typeof fn !== 'function' || actions[name] || ownKeys(actions).length >= 256)
-                        throw new TypeErrorCtor('Invalid or duplicate action registration.');
-                    actions[name] = fn;
-                    actionInfo[name] = freeze({ name, description });
-                }
-            }), events: createEvents() });
-            // One frozen API object and one registry. A global alias also lets
-            // legacy function bodies keep their own local `const $` bindings.
-            Object.defineProperty(globalThis, '$', { value: quickExcel });
-            function runAction(name, request) {
-                if (!actionMode || !loaded || actionInvoked || !actions[name]) throw new TypeErrorCtor('Action is unavailable.');
-                actionInvoked = true;
-                activeModel = request.liveModel === true;
-                modelWriteFailed = false;
-                const data = deepFreeze(request.snapshot);
-                const sheets = new Map();
-                for (const sheet of data.sheets) {
-                    const cells = new Map();
-                    for (const c of sheet.cells) cells.set(c.row + ':' + c.column, c);
-                    sheets.set(sheet.id, cells);
-                }
-                let reads = 0, active = true, invalidPatch = false;
-                const edits = [], targets = new Set();
-                let files = null;
-                function fileContext() {
-                    if(!active) throw new TypeErrorCtor('Expired file context.');
-                    return files ??= createFs(activeModel ? model('files') : (request.files ?? []),
-                        ()=>{if(!active) throw new TypeErrorCtor('Expired file context.');}, ()=>{invalidPatch=true;});
-                }
-                function range(id, address) {
-                    if (!active || !sheets.has(id) || typeof address !== 'string' || address.length > 40) throw new TypeErrorCtor('Invalid sheet or range.');
-                    const parts = address.split(':');
-                    if (parts.length > 2) throw new TypeErrorCtor('Expected A1 or rectangular A1:B2 range.');
-                    function point(text) {
-                        const m = /^([A-Za-z]+)([1-9][0-9]*)$/.exec(text);
-                        if (!m) throw new TypeErrorCtor('Invalid A1 address.');
-                        let col=0; for (const c of m[1].toUpperCase()) col=col*26+c.charCodeAt(0)-64;
-                        const row=Number(m[2]);
-                        if (!Number.isSafeInteger(row) || row>100000 || col>1024) throw new TypeErrorCtor('Address out of bounds.');
-                        return [row-1,col-1];
-                    }
-                    const a=point(parts[0]), b=point(parts[1] ?? parts[0]);
-                    if (b[0]<a[0] || b[1]<a[1]) throw new TypeErrorCtor('Reversed range.');
-                    return {row:a[0],column:a[1],rows:b[0]-a[0]+1,columns:b[1]-a[1]+1};
-                }
-                function value(v) { return v.kind === 'error' ? freeze({kind:'error',code:v.value}) : v.value; }
-                function cell(id,row,col) {
-                    const c=sheets.get(id).get(row+':'+col);
-                    return c ? freeze({value:value(c.value),formula:c.formula,state:c.state,hasValue:c.hasValue})
-                        : freeze({value:null,formula:null,state:'literal',hasValue:true});
-                }
-                function readBudget(count) { reads+=count; if(reads>100000) throw new TypeErrorCtor('Snapshot read budget exceeded.'); }
-                const snapshot=freeze({baseRevision:data.baseRevision,dateSystem:data.dateSystem,
-                    sheets:freeze(data.sheets.map(s=>freeze({id:s.id,name:s.name}))),
-                    getCell(id,address) { const r=range(id,address); if(r.rows*r.columns!==1) throw new TypeErrorCtor('Expected one cell.'); readBudget(1); return activeModel ? deepFreeze(model('snapshotCell',id,address)) : cell(id,r.row,r.column); },
-                    getRange(id,address) { const r=range(id,address); readBudget(r.rows*r.columns); return activeModel ? deepFreeze(model('snapshotValues',id,address)) : freeze(Array.from({length:r.rows},(_,i)=>freeze(Array.from({length:r.columns},(_,j)=>cell(id,r.row+i,r.column+j).value)))); }
-                });
-                function scalar(v) {
-                    if(v===null) return {kind:'blank',value:null};
-                    if(typeof v==='string' && v.length<=32767) return {kind:'text',value:v};
-                    if(typeof v==='number' && isFiniteNumber(v)) return {kind:'number',value:v};
-                    if(typeof v==='boolean') return {kind:'boolean',value:v};
-                    if(v && typeof v==='object' && v.kind==='error' && typeof v.code==='string') return {kind:'error',value:v.code};
-                    throw new TypeErrorCtor('Unsupported patch value.');
-                }
-                function write(id,address,values,formulas) {
-                    try { writeChecked(id,address,values,formulas); }
-                    catch(error) { invalidPatch=true; throw error; }
-                }
-                function writeChecked(id,address,values,formulas) {
-                    const r=range(id,address);
-                    if(r.rows*r.columns+edits.length>20000 || !isArray(values) || values.length!==r.rows) throw new TypeErrorCtor('Patch size or shape is invalid.');
-                    for(let i=0;i<r.rows;i++) {
-                        if(!isArray(values[i]) || values[i].length!==r.columns) throw new TypeErrorCtor('Patch shape is invalid.');
-                        for(let j=0;j<r.columns;j++) {
-                            const key=id+':'+(r.row+i)+':'+(r.column+j), v=values[i][j];
-                            if(targets.has(key)) throw new TypeErrorCtor('Overlapping patch writes.');
-                            if(formulas && (typeof v!=='string' || v.length<2 || v.length>8192 || v[0]!=='=')) throw new TypeErrorCtor('Invalid formula.');
-                            targets.add(key);
-                            edits.push({sheetId:id,row:r.row+i,column:r.column+j,value:formulas?null:scalar(v),formula:formulas?v:null});
-                        }
-                    }
-                    if(activeModel) model(formulas?'setFormulas':'setValues',id,address,values);
-                }
-                const patch=freeze({setValues:(id,r,v)=>write(id,r,v,false),setFormulas:(id,r,v)=>write(id,r,v,true),
-                    setValue:(id,a,v)=>write(id,a,[[v]],false),setFormula:(id,a,v)=>write(id,a,[[v]],true)});
-                try {
-                    const returned=actions[name](freeze({snapshot,patch,get fs(){return fileContext().fs;},workbook:quickExcel,event:request.event ? deepFreeze(request.event) : null}));
-                    if(invalidPatch || modelWriteFailed) throw new TypeErrorCtor('An invalid write rejected the entire patch.');
-                    if(returned!==undefined && returned!==null) throw new TypeErrorCtor('Actions must complete synchronously without a return value.');
-                    return {operationId:request.operationId,baseRevision:data.baseRevision,name,edits:activeModel?[]:edits,fileEdits:files?.edits ?? []};
-                } finally { active=false; activeModel=false; }
             }
+            /*EVENT_API*/
+            /*WORKBOOK_MODEL*/
             return freeze({
                 load(source) {
-                    if (loaded) throw new TypeErrorCtor('Script has already been loaded.');
-                    makeFunction('quickExcel', 'console', '"use strict";\n' + source)(quickExcel, console);
+                    if (loaded) throw new ScriptError('InvalidArgument', '脚本已经加载。');
+                    makeFunction('host', 'console', '"use strict";\n' + source)(host, console);
                     loaded = true;
                     return ownKeys(registry);
                 },
                 prepareModules(useActions, share) {
-                    if (loaded) throw new TypeErrorCtor('Script has already been loaded.');
+                    if (loaded) throw new ScriptError('InvalidArgument', '脚本已经加载。');
                     actionMode = useActions === true;
                     sharedMode = share === true;
-                    Object.defineProperty(globalThis, 'quickExcel', { value: quickExcel });
+                    Object.defineProperty(globalThis, 'host', { value: host });
                     Object.defineProperty(globalThis, 'console', { value: console });
+                    Object.defineProperty(globalThis, '__qxRegisterMain', {
+                        value: (id, entry) => { if (typeof id === 'string' && typeof entry === 'function') mains[id] = entry; },
+                        configurable: true
+                    });
                 },
-                finishModules() {
+                finishModules(entries, descriptions) {
+                    delete globalThis.__qxRegisterMain;
                     loaded = true;
+                    const roots = isArray(entries) ? entries.filter(id => typeof id === 'string') : [];
+                    actionEntries.length = 0;
+                    for (const id of roots) actionEntries.push(id);
+                    actionDescriptions = Object.create(null);
+                    for (const id of ownKeys(descriptions || {}))
+                        if (typeof descriptions[id] === 'string') actionDescriptions[id] = descriptions[id].slice(0, 200);
                     return ownKeys(registry);
                 },
                 invoke(name, args) {
@@ -245,15 +135,24 @@ public sealed partial class JscSession : IDisposable
                     throw new TypeErrorCtor('Formula functions must return a finite number, string, boolean, or null; objects and promises are not supported.');
                 },
                 descriptors() { return ownKeys(descriptors).map(name => descriptors[name]); },
-                actionDescriptors() { return ownKeys(actionInfo).map(name => actionInfo[name]); },
-                beginRound() { logs.length=0; actionInvoked=false; activeModel=false; modelWriteFailed=false; },
+                actionDescriptors() {
+                    // Event bindings stay visible to Core as @event/ pseudo entries so
+                    // notifications are gated by what the module actually registered;
+                    // the action picker filters them out.
+                    const result = actionEntries.filter(name => typeof mains[name] === 'function')
+                        .map(name => ({ name, description: actionDescriptions[name] || '' }));
+                    for (const name of ownKeys(eventHandlers)) result.push({ name: '@event/' + name, description: '' });
+                    return result;
+                },
+                beginRound() { logs.length = 0; actionInvoked = false; activeModel = false; hostWriteFailed = false; hostWrote = false; },
                 runAction,
                 logs() { return logs.slice(); }
             });
         })()
         """.Replace("/*VIRTUAL_FILES*/", VirtualFileBootstrap, StringComparison.Ordinal)
             .Replace("/*EVENT_API*/", EventApiBootstrap, StringComparison.Ordinal)
-            .Replace("/*WORKBOOK_MODEL*/", WorkbookModelBootstrap, StringComparison.Ordinal);
+            .Replace("/*WORKBOOK_MODEL*/", WorkbookModelBootstrap, StringComparison.Ordinal)
+            .Replace("/*CAPABILITIES*/", JsonSerializer.Serialize(ScriptCapabilities.Current.Json), StringComparison.Ordinal);
 
     public IReadOnlyList<string> FunctionNames { get; }
     public IReadOnlyList<JsFunctionDescriptor> FunctionDescriptors { get; }
@@ -276,12 +175,14 @@ public sealed partial class JscSession : IDisposable
         }
     }
 
-    public JscSession(string source) : this(source, null, null, false, null) { }
+    public JscSession(string source) : this(source, null, null, false, null, null) { }
 
-    public JscSession(IReadOnlyDictionary<string, string> modules, IReadOnlyList<string> entries, bool actions = false, IReadOnlyDictionary<string, int>? roles = null)
-        : this(null, modules, entries, actions, roles) { }
+    public JscSession(IReadOnlyDictionary<string, string> modules, IReadOnlyList<string> entries, bool actions = false, IReadOnlyDictionary<string, int>? roles = null,
+        IReadOnlyDictionary<string, string>? descriptions = null)
+        : this(null, modules, entries, actions, roles, descriptions) { }
 
-    private JscSession(string? source, IReadOnlyDictionary<string, string>? modules, IReadOnlyList<string>? entries, bool actions, IReadOnlyDictionary<string, int>? roles)
+    private JscSession(string? source, IReadOnlyDictionary<string, string>? modules, IReadOnlyList<string>? entries, bool actions, IReadOnlyDictionary<string, int>? roles,
+        IReadOnlyDictionary<string, string>? descriptions)
     {
         _hostCallback = HostCall;
         if (modules is null) ArgumentNullException.ThrowIfNull(source);
@@ -291,6 +192,7 @@ public sealed partial class JscSession : IDisposable
                 entries.Distinct(StringComparer.Ordinal).Count() != entries.Count || entries.Any(id => id is null || !modules.ContainsKey(id)) ||
                 modules.Any(m => string.IsNullOrEmpty(m.Key) || m.Key.Length > 128 || m.Key is "." or ".." ||
                     m.Key.Any(c => !char.IsAsciiLetterOrDigit(c) && c is not ('_' or '-' or '.')) || m.Value is null) ||
+                descriptions?.Any(d => !modules.ContainsKey(d.Key) || d.Value is null || d.Value.Length > 200 || d.Value.Any(char.IsControl)) == true ||
                 modules.Sum(m => (long)Encoding.UTF8.GetByteCount(m.Value)) > 1024 * 1024)
                 throw new ArgumentException("Invalid package module mapping or source budget.");
         }
@@ -308,10 +210,19 @@ public sealed partial class JscSession : IDisposable
             else
             {
                 Call("prepareModules", [actions, roles is not null]);
-                var json = JsonSerializer.Serialize(new { modules = modules.Select(m => new { id = m.Key, source = m.Value, roles = roles is null ? 3 : roles.GetValueOrDefault(m.Key) }), entries });
+                // Each entry module registers its own main(workbook, host) binding
+                // during evaluation; the native loader does not expose exports.
+                var rooted = new Dictionary<string, string>(modules, StringComparer.Ordinal);
+                foreach (var entry in entries!)
+                    rooted[entry] += "\n;globalThis.__qxRegisterMain && globalThis.__qxRegisterMain(" +
+                        JsonSerializer.Serialize(entry) + ", typeof main === 'function' ? main : undefined);";
+                var actionEntries = actions
+                    ? (roles is null ? entries!.ToArray() : entries!.Where(id => (roles.GetValueOrDefault(id) & 2) != 0).ToArray())
+                    : [];
+                var json = JsonSerializer.Serialize(new { modules = rooted.Select(m => new { id = m.Key, source = m.Value, roles = roles is null ? 3 : roles.GetValueOrDefault(m.Key) }), entries });
                 if (Encoding.UTF8.GetByteCount(json) > MaxMessageBytes) throw new ArgumentException("Module payload exceeds 16 MiB UTF-8.");
                 if (NativeLoadModules(_session, json, out var moduleError) == 0) throw ReadException(moduleError);
-                result = Call("finishModules", []);
+                result = Call("finishModules", [actionEntries, descriptions is null ? new Dictionary<string, string>() : new Dictionary<string, string>(descriptions, StringComparer.Ordinal)]);
             }
             FunctionNames = Array.AsReadOnly(JsonSerializer.Deserialize<string[]>(result) ?? []);
             FunctionDescriptors = Array.AsReadOnly(JsonSerializer.Deserialize<JsFunctionDescriptor[]>(Call("descriptors", []),
@@ -384,8 +295,8 @@ public sealed partial class JscSession : IDisposable
         // Exceptions must never cross the reverse P/Invoke boundary.
         string response;
         try { response = HostRequest?.Invoke(request) ?? throw new InvalidOperationException("此执行阶段没有工作簿模型。"); }
-        catch (Exception error) { response = JsonSerializer.Serialize(new { ok = false, error = error.Message.Length <= 4000 ? error.Message : "模型请求失败。" }); }
-        if (Encoding.UTF8.GetByteCount(response) > MaxMessageBytes) response = "{\"ok\":false,\"error\":\"模型响应超过 16 MiB。\"}";
+        catch (Exception error) { response = JsonSerializer.Serialize(new { ok = false, error = error.Message.Length <= 4000 ? error.Message : "模型请求失败。", code = "TransactionAborted" }); }
+        if (Encoding.UTF8.GetByteCount(response) > MaxMessageBytes) response = "{\"ok\":false,\"error\":\"模型响应超过 16 MiB。\",\"code\":\"BudgetExceeded\"}";
         if (_hostResponse != IntPtr.Zero) Marshal.FreeCoTaskMem(_hostResponse);
         return _hostResponse = Marshal.StringToCoTaskMemUTF8(response);
     }

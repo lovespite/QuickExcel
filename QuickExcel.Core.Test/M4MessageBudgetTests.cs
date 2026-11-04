@@ -30,7 +30,7 @@ public sealed class M4MessageBudgetTests
     [Fact]
     public void NativeBridgeAndRealWorkerAcceptInputsAboveFourMiB()
     {
-        const string source = "quickExcel.functions.register('SIZE',s=>s.length); quickExcel.functions.register('LARGE',()=> 'x'.repeat(5*1024*1024));";
+        const string source = "host.functions.register('SIZE',s=>s.length); host.functions.register('LARGE',()=> 'x'.repeat(5*1024*1024));";
         var input = new string('x', 5 * 1024 * 1024);
         using (var native = new JscSession(source))
         {
@@ -48,16 +48,16 @@ public sealed class M4MessageBudgetTests
     {
         var sheet = Sheet("S", Enumerable.Range(0, 160).Select(i => (i, 0, T(new string('x', 32767)))).ToArray());
         var modules = M4ActionTests.Actions("""
-            quickExcel.actions.register('Copy',({snapshot,patch})=>{
-                const id=snapshot.sheets[0].id;
-                patch.setValue(id,'B1',snapshot.getRange(id,'A1:A160').reduce((n,r)=>n+r[0].length,0));
-            });
+            function main(workbook){
+                const sheet=workbook.getActiveWorksheet();
+                sheet.getRange('B1').setValue(sheet.getRange('A1:A160').getValues().reduce((n,r)=>n+r[0].length,0));
+            }
             """);
         using var doc = new WorkbookDocument(Book(sheet).WithScriptModules(modules),
             new(new TypedWorkbookStorage(), new WorkbookCalculator(new ScriptWorkerRuntimeFactory()), new ScriptWorkerActionExecutor()));
         doc.EnableScriptsAndCalculate();
         var revision = doc.Snapshot.Revision;
-        Assert.True(doc.RunAction("Copy").Changed);
+        Assert.True(doc.RunAction("A").Changed);
         Assert.Equal(revision + 1, doc.Snapshot.Revision);
         Assert.Equal(CellValue.FromNumber(160 * 32767), doc.Snapshot.GetSheet(sheet.Id).GetCell(0, 1)!.Value);
         Assert.True(doc.Undo());

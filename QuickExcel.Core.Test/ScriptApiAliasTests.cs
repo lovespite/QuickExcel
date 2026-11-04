@@ -1,98 +1,57 @@
-using QuickExcel.Calculation;
-using QuickExcel.Core;
-using QuickExcel.Domain;
-using QuickExcel.Runtime;
-using QuickExcel.Storage;
-using static QuickExcel.Core.Test.M3CalculationTests;
+using QuickExcel.Scripting;
 
 namespace QuickExcel.Core.Test;
 
+/// <summary>The legacy $ / quickExcel globals and snapshot/patch context are gone.</summary>
 public sealed class ScriptApiAliasTests
 {
-    private static ScriptModuleSet Modules(string source, int api, ScriptLanguage language) => new(
-        new Dictionary<string, ScriptModule> { ["main"] = new(language == ScriptLanguage.TypeScript ? "scripts/main.ts" : "scripts/main.js", source, language) },
-        ["main"], scriptApiVersion: api);
-    private static IScriptRuntime Runtime(ScriptModuleSet modules)
+    [Fact]
+    public void LegacyGlobalsDoNotExistAndHostRegistersFunctions()
     {
-        try { return new ScriptWorkerRuntimeFactory().Create(new ScriptRuntimeRequest(modules, new(Guid.NewGuid(), 1, 1, 1), TimeSpan.FromSeconds(5), default)); }
-        catch (ScriptCompilationException error)
-        { throw new InvalidOperationException(string.Join("\n", error.Diagnostics.Select(d => $"{d.Module}:{d.Line}:{d.Column} TS{d.Code}: {d.Message}")), error); }
+        using var session = new JscSession("""
+            if (typeof $ !== 'undefined' || typeof quickExcel !== 'undefined') throw Error('legacy global');
+            if (typeof host !== 'object' || !host.functions || !host.events) throw Error('host');
+            host.functions.register('OK', () => 1);
+            """);
+        Assert.Equal(1d, session.Invoke("OK", []));
     }
 
-    [Theory]
-    [InlineData(1, ScriptLanguage.JavaScript)]
-    [InlineData(2, ScriptLanguage.JavaScript)]
-    [InlineData(2, ScriptLanguage.TypeScript)]
-    public void AliasAndOriginalShareOneFrozenApiAndFunctionRegistry(int api, ScriptLanguage language)
+    [Fact]
+    public void MainReceivesOnlyWorkbookAndHostWithoutSnapshotOrPatch()
     {
-        using var runtime = Runtime(Modules("""
-            $.functions.register('SAME', () => $ === quickExcel && $.functions === quickExcel.functions
-              && $.actions === quickExcel.actions && $.events === quickExcel.events);
-            quickExcel.functions.register('ORIGINAL', n => n * 2);
-            $.functions.register('FROZEN', () => {
-              const d = Object.getOwnPropertyDescriptor(globalThis, '$');
-              return !!d && !d.writable && !d.configurable && Object.isFrozen($) && Object.isFrozen($.functions);
-            });
-            """, api, language));
-        Assert.Equal(true, runtime.Invoke("SAME", []));
-        Assert.Equal(12d, runtime.Invoke("ORIGINAL", [6d]));
-        Assert.Equal(true, runtime.Invoke("FROZEN", []));
+        using var session = new JscSession(new Dictionary<string, string>
+        {
+            ["main"] = """
+                export function main(workbook, host) {
+                  if (typeof $ !== 'undefined' || typeof quickExcel !== 'undefined') throw Error('legacy global');
+                  if (typeof workbook !== 'object' || typeof host !== 'object') throw Error('arguments');
+                  if (typeof snapshot !== 'undefined' || typeof patch !== 'undefined') throw Error('legacy context');
+                  console.log('ran');
+                }
+                """
+        }, ["main"], actions: true);
+        Assert.Equal("main", Assert.Single(session.ActionDescriptors).Name);
+        session.HostRequest = json =>
+            json.Contains("\"files\"", StringComparison.Ordinal) ? "{\"ok\":true,\"value\":[]}" : "{\"ok\":true,\"value\":null}";
+        session.RunAction("main", new { operationId = Guid.NewGuid(), name = "main", snapshot = new { baseRevision = 0 }, liveModel = true });
+        Assert.Contains("ran", session.GetLogs());
     }
 
-    [Theory]
-    [InlineData(1, ScriptLanguage.JavaScript)]
-    [InlineData(2, ScriptLanguage.JavaScript)]
-    [InlineData(2, ScriptLanguage.TypeScript)]
-    public void ExistingLocalDollarBindingsCanShadowTheAlias(int api, ScriptLanguage language)
+    [Fact]
+    public void ModuleDescriptionSurfacesOnActionDescriptorWithoutAffectingExecution()
     {
-        using var runtime = Runtime(Modules("const $ = 42; quickExcel.functions.register('LOCAL', () => $);", api, language));
-        Assert.Equal(42d, runtime.Invoke("LOCAL", []));
-    }
-
-    [Theory]
-    [InlineData(1)]
-    [InlineData(2)]
-    public void RegistrationGuardsAreSharedAcrossBothNames(int api)
-    {
-        Assert.Throws<ScriptRuntimeFailureException>(() => Runtime(Modules(
-            "$.functions.register('SAME',()=>1); quickExcel.functions.register('SAME',()=>2);", api, ScriptLanguage.JavaScript)));
-        using var runtime = Runtime(Modules("$.functions.register('LATE',()=>{$.functions.register('OTHER',()=>1);return 0;});", api, ScriptLanguage.JavaScript));
-        Assert.Throws<InvalidOperationException>(() => runtime.Invoke("LATE", []));
-    }
-
-    [Theory]
-    [InlineData(ScriptLanguage.JavaScript)]
-    [InlineData(ScriptLanguage.TypeScript)]
-    public void AliasActionsAndEventsCommitAtomicPatchesAndKeepUndo(ScriptLanguage language)
-    {
-        var modules = Modules("""
-            $.actions.register('write', ({snapshot,patch,fs}) => {
-              if ($ !== quickExcel) throw Error('Different API');
-              patch.setValue(snapshot.sheets[0].id, 'A1', 42);
-              fs.writeText('//xlsq/value.txt', '42');
-            });
-            $.events.on('cell.click', ({snapshot,patch,fs,event}) => {
-              if (event.name !== 'cell.click') throw Error('Different event');
-              patch.setValue(snapshot.sheets[0].id, 'B1', fs.readText('//xlsq/value.txt'));
-            });
-            """, 2, language);
-        modules = new(modules.Modules, modules.EntryModules, scriptApiVersion: 2, bindings: [new("main", "actions")]);
-        using var document = new WorkbookDocument(Book(Sheet("Data")).WithScriptModules(modules),
-            new(new TypedWorkbookStorage(), new WorkbookCalculator(new ScriptWorkerRuntimeFactory()), new ScriptWorkerActionExecutor()));
-        Assert.Throws<InvalidOperationException>(() => document.RunAction("write"));
-        document.EnableScriptsAndCalculate();
-        document.RunAction("write");
-        Assert.Equal("42", document.GetCellValue(0, 0, 0));
-        Assert.True(document.Snapshot.PackageFiles.Entries.ContainsKey("//xlsq/value.txt"));
-        Assert.True(document.Undo());
-        Assert.Empty(document.Snapshot.PackageFiles.Entries);
-        Assert.Equal("", document.GetCellValue(0, 0, 0));
-        Assert.True(document.Redo());
-        document.Session.RaiseScriptEvent("cell.click", document.Snapshot.ActiveSheetId, ["A1"]);
-        document.DispatchScriptEvents();
-        Assert.Equal("42", document.GetCellValue(0, 0, 1));
-        Assert.True(document.Undo());
-        Assert.Equal("", document.GetCellValue(0, 0, 1));
-        Assert.True(document.Snapshot.PackageFiles.Entries.ContainsKey("//xlsq/value.txt"));
+        using var session = new JscSession(new Dictionary<string, string>
+        {
+            ["main"] = """
+                export function main(workbook, host) { console.log('ran'); }
+                """,
+            ["helper"] = "export const value = 1;"
+        }, ["main"], actions: true, descriptions: new Dictionary<string, string> { ["main"] = "填充示例单元格", ["helper"] = "不应显示在操作列表" });
+        var action = Assert.Single(session.ActionDescriptors);
+        Assert.Equal("main", action.Name);
+        Assert.Equal("填充示例单元格", action.Description);
+        session.HostRequest = json => "{\"ok\":true,\"value\":null}";
+        session.RunAction("main", new { operationId = Guid.NewGuid(), name = "main", snapshot = new { baseRevision = 0 }, liveModel = true });
+        Assert.Contains("ran", session.GetLogs());
     }
 }

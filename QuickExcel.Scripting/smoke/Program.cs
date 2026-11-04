@@ -15,14 +15,14 @@ static void Fails(Action action, string expected)
 
 using var session = new JscSession("""
     console.log('JSC ready');
-    quickExcel.functions.register('discount', (price, rate) => price * (1 - rate));
-    quickExcel.functions.register('RANGESUM', values => values.reduce((sum, value) => sum + value, 0));
-    quickExcel.functions.register('TEXT', value => '中文 ' + value);
-    quickExcel.functions.register('BOOL', value => value > 0);
-    quickExcel.functions.register('EMPTY', () => null);
-    quickExcel.functions.register('BAD', () => ({}));
-    quickExcel.functions.register('PROMISE', () => Promise.resolve(42));
-    quickExcel.functions.register('ENV', () => typeof std + ',' + typeof os + ',' + typeof require + ',' + typeof fetch);
+    host.functions.register('discount', (price, rate) => price * (1 - rate));
+    host.functions.register('RANGESUM', values => values.reduce((sum, value) => sum + value, 0));
+    host.functions.register('TEXT', value => '中文 ' + value);
+    host.functions.register('BOOL', value => value > 0);
+    host.functions.register('EMPTY', () => null);
+    host.functions.register('BAD', () => ({}));
+    host.functions.register('PROMISE', () => Promise.resolve(42));
+    host.functions.register('ENV', () => typeof std + ',' + typeof os + ',' + typeof require + ',' + typeof fetch);
     """);
 
 Assert(session.FunctionNames.Contains("DISCOUNT"), "Case normalization");
@@ -36,12 +36,12 @@ Assert(session.GetLogs().Single() == "JSC ready", "Console logs");
 Fails(() => session.Invoke("BAD", []), "objects and promises");
 Fails(() => session.Invoke("PROMISE", []), "objects and promises");
 var timer = Stopwatch.StartNew();
-using (var recursive = new JscSession("quickExcel.functions.register('F',()=>{function f(){return 1+f()}return f();});"))
+using (var recursive = new JscSession("host.functions.register('F',()=>{function f(){return 1+f()}return f();});"))
 {
     Fails(() => recursive.Invoke("F", []), "stack");
     Assert(recursive.LastOperationInvalidated, "Stack overflow invalidates the context");
 }
-using (var looping = new JscSession("quickExcel.functions.register('F',()=>{try {while(true){}} catch(e) {return 1}});"))
+using (var looping = new JscSession("host.functions.register('F',()=>{try {while(true){}} catch(e) {return 1}});"))
 {
     timer.Restart();
     Fails(() => looping.Invoke("F", []), "time limit");
@@ -49,7 +49,7 @@ using (var looping = new JscSession("quickExcel.functions.register('F',()=>{try 
     Assert(looping.LastOperationInvalidated && looping.LastOperationInterrupted, "No reuse after interrupt");
 }
 await Task.Run(() => Assert(Equals(session.Invoke("DISCOUNT", [100d, 0.2d]), 80d), "Thread switch"));
-Fails(() => { using var invalid = new JscSession("quickExcel.functions.register('BAD_NAME', () => 1)"); }, "A-Z");
+Fails(() => { using var invalid = new JscSession("host.functions.register('BAD_NAME', () => 1)"); }, "A-Z");
 Fails(() => { using var invalid = new JscSession("while (true) {}"); }, "time limit");
 
 timer.Restart();

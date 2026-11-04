@@ -59,7 +59,19 @@ public sealed partial class MainWindow
         { var button = new Button { Content = text, Margin = new(4) }; button.Click += async (_, _) => await PerformAsync(action); toolbar.Children.Add(button); }
         Button("添加模块", AddScriptModuleAsync); Button("应用并重算", ApplyScriptsAsync);
         Button("停用", () => { DisableScripts(); return Task.CompletedTask; }); Button("保存", async () => await SaveAsync(false));
-        _actionPicker = new ComboBox { MinWidth = 140, Margin = new(4), ItemTemplate = new FuncDataTemplate<ScriptActionDescriptor>((item, _) => new TextBlock { Text = item?.Name }) };
+        _actionPicker = new ComboBox
+        {
+            MinWidth = 180, Margin = new(4), ItemTemplate = new FuncDataTemplate<ScriptActionDescriptor>((item, _) =>
+            {
+                if (item is null) return null;
+                var text = new StackPanel { Spacing = 1 };
+                text.Children.Add(new TextBlock { Text = item.Name, FontWeight = FontWeight.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis });
+                if (!string.IsNullOrWhiteSpace(item.Description))
+                    text.Children.Add(new TextBlock { Text = item.Description, FontSize = 11, TextTrimming = TextTrimming.CharacterEllipsis });
+                ToolTip.SetTip(text, string.IsNullOrWhiteSpace(item.Description) ? item.Name : item.Name + "\n" + item.Description);
+                return text;
+            })
+        };
         AutomationProperties.SetName(_actionPicker, "脚本操作"); toolbar.Children.Add(_actionPicker); Button("运行操作", RunScriptActionAsync);
         RefreshScriptActions(); _actionPicker.ItemsSource = _availableScriptActions; _actionPicker.SelectedIndex = _availableScriptActions.Count > 0 ? 0 : -1;
         Button("签名", ScriptSignatureDetailsAsync);
@@ -221,10 +233,12 @@ public sealed partial class MainWindow
         var document = Document;
         if (document.Snapshot.ScriptModules.ScriptApiVersion != 2) throw new InvalidOperationException("API v1 工作簿保持原有执行语义；添加模块需要 API v2 工作簿。");
         if (document.Snapshot.FileState?.FormulaReadOnly == true) throw new InvalidOperationException(WorkbookFileState.FormulaReadOnlyMessage);
-        var dialog = new FieldsDialog("新建模块").Text("id", "模块逻辑 ID", "helpers")
-            .Choice("role", "角色", ["辅助", "UDF（公式函数）", "Actions（操作与事件）", "UDF / Actions"])
+        var dialog = new FieldsDialog("新建模块").Text("id", "模块逻辑 ID")
+            .Text("description", "描述（可选）", "")
+            .Choice("role", "角色", ["Common", "Actions", "UDF"], selected: 1)
             .Choice("language", "语言", ["JavaScript (.js)", "TypeScript (.ts)"], selected: (int)ScriptLanguage.TypeScript)
-            .Note("角色和语言在创建后不可更改。");
+            .Note("UDF 只用于注册函数；Actions 只用于定义操作，一个文件对应一个操作。事件请在主入口或由主入口导入的 Common 模块中注册。")
+            .Note("描述显示在操作列表中，留空时只显示模块 ID。角色和语言在创建后不可更改。");
         ScriptModuleSet BuildModules()
         {
             if (!ReferenceEquals(document, Document)) throw new InvalidOperationException("所属文档已变化，请重新创建模块。");
@@ -232,13 +246,21 @@ public sealed partial class MainWindow
             if (old.Modules.ContainsKey(id)) throw new ArgumentException("模块 ID 已存在。");
             if (id.Length is < 1 or > 128 || id is "." or ".." || id.Any(c => !char.IsAsciiLetterOrDigit(c) && c is not ('_' or '-' or '.')))
                 throw new ArgumentException("模块 ID 须为 1–128 个英文字母、数字、下划线、连字符或点，且不能仅为 . 或 ..。");
-            var role = dialog.Index("role"); var language = (ScriptLanguage)dialog.Index("language");
+            var description = dialog.String("description").Trim();
+            if (description.Length > ScriptModuleSet.MaximumDescriptionLength)
+                throw new ArgumentException($"模块描述不能超过 {ScriptModuleSet.MaximumDescriptionLength} 个字符。");
+            var binding = dialog.Index("role") switch
+            {
+                0 => null,
+                1 => "actions",
+                2 => "formula-functions",
+                _ => throw new ArgumentException("请选择模块角色。")
+            };
+            var language = (ScriptLanguage)dialog.Index("language");
             var bindings = old.Bindings.ToList(); var entries = old.EntryModules.ToList();
-            if ((role & 1) != 0) bindings.Add(new(id, "formula-functions"));
-            if ((role & 2) != 0) bindings.Add(new(id, "actions"));
-            if (role != 0) entries.Add(id);
+            if (binding is not null) { bindings.Add(new(id, binding)); entries.Add(id); }
             var module = new ScriptModule($"scripts/{id}.{(language == ScriptLanguage.TypeScript ? "ts" : "js")}",
-                ScriptModuleTemplates.Create(id, language, (role & 1) != 0, (role & 2) != 0), language);
+                ScriptModuleTemplates.Create(id, language, binding == "formula-functions", binding == "actions"), language, description);
             return new(old.Modules.Add(id, module), entries, old.Revision, old.BindingRevision, old.ScriptApiVersion, bindings);
         }
         dialog.Validate = () => BuildModules();

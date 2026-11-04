@@ -29,16 +29,20 @@ public sealed partial class MainWindow
         }
         try
         {
-            ShowBook(); _workspace.New(); _files = new SmokeFiles { NextSave = Path.Combine(directory, "script-roundtrip.xlsq") };
+            ShowBook();
+            if (Program.WebModulesOnly) await CheckScriptNavigationAsync(Test, SelectModule, Check, directory);
+            else
+            {
+            _workspace.New(); _files = new SmokeFiles { NextSave = Path.Combine(directory, "script-roundtrip.xlsq") };
             _workspace.Editor.Execute(new UpdateScriptModulesCommand(new(new Dictionary<string, ScriptModule>
-            { ["main"] = new("scripts/main.js", "import { twice } from 'helpers';\nquickExcel.functions.register('DOUBLE', twice);\n"), ["helpers"] = new("scripts/helpers.js", "export function twice(value) { return value * 2; }\n") }, ["main"], scriptApiVersion: 2)));
+            { ["main"] = new("scripts/main.js", "import { twice } from 'helpers';\nhost.functions.register('DOUBLE', twice);\n"), ["helpers"] = new("scripts/helpers.js", "export function twice(value) { return value * 2; }\n") }, ["main"], scriptApiVersion: 2)));
             await OpenScriptsAsync(); Check(_scriptPage!.Browser.IsReady && !_scriptPage.Drafts.Failed, "Actual native WebView loads offline Monaco and a real language worker");
             var inspected = await Test(new { action = "inspect" });
             Check(inspected.GetProperty("workers").GetInt32() > 0 && inspected.GetProperty("source").GetString()!.Contains("DOUBLE"), "Language worker and initial module source are available");
             Check(inspected.GetProperty("diagnostics").GetArrayLength() == 0, "Declared logical module imports and actual QuickExcel API type-check without DOM or Node libraries");
             await CheckColdJavaScriptDefinitionsAsync(Test, Check);
             var revision = Document.Snapshot.Revision;
-            const string changed = "import { twice } from 'helpers';\nquickExcel.functions.register('DOUBLE', value => twice(value) + 1);\n";
+            const string changed = "import { twice } from 'helpers';\nhost.functions.register('DOUBLE', value => twice(value) + 1);\n";
             await Test(new { action = "edit", module = "main", text = changed });
             Check(Document.Snapshot.Revision == revision, "Browser editing does not create per-keystroke workbook history");
             await SelectModule("helpers"); inspected = await Test(new { action = "inspect" });
@@ -55,18 +59,19 @@ public sealed partial class MainWindow
             await File.WriteAllTextAsync(Path.Combine(directory, "language-diagnostics.json"), inspected.ToString());
             Check(inspected.GetProperty("diagnostics").EnumerateArray().Any(d => d.GetProperty("code").GetInt32() == 2322), "JavaScript semantic diagnostics report incorrect annotated types");
             Check(inspected.GetProperty("diagnostics").EnumerateArray().Any(d => d.GetProperty("text").GetString()!.Contains("document")), "DOM globals are absent from the workbook runtime language environment");
-            await Test(new { action = "edit", module = "main", text = "quickExcel.functions." });
+            await Test(new { action = "edit", module = "main", text = "host.functions." });
             inspected = await Test(new { action = "inspect" });
             Check(inspected.GetProperty("completions").EnumerateArray().Any(v => v.GetString() == "register"), "QuickExcel completion is provided by the language worker");
-            await Test(new { action = "edit", module = "main", text = "$.functions" });
-            await Test(new { action = "assistance", offset = "$.functions".Length, typeText = "." });
+            await Test(new { action = "edit", module = "main", text = "host" });
+            await Test(new { action = "assistance", offset = "host".Length, typeText = "." });
             for (var retry = 0; retry < 100; retry++)
             {
                 inspected = await Test(new { action = "assistance" });
-                if (inspected.GetProperty("suggestions").GetString()!.Contains("register")) break;
+                if (inspected.GetProperty("suggestions").GetString()!.Contains("functions")) break;
                 await Task.Delay(50);
             }
-            Check(inspected.GetProperty("suggestions").GetString()!.Contains("register"), "JavaScript dollar alias opens the actual completion list on typing a dot");
+            Check(inspected.GetProperty("suggestions").GetString()!.Contains("functions") && inspected.GetProperty("suggestions").GetString()!.Contains("events"),
+                "The host extension opens the actual completion list on typing a dot");
             // Each host message remains below 256 KiB; drive the native editor with bounded test edits.
             // A smaller multi-chunk Unicode draft exercises the same checksum and total-source budget path.
             var large = "//" + string.Concat(Enumerable.Repeat("中文😀", 6_000));
@@ -95,7 +100,7 @@ public sealed partial class MainWindow
             if (DesktopServices.SupportsScripts)
             {
             _workspace.New();
-            const string actionSource = "quickExcel.actions.register('写入', ({snapshot,patch}) => { patch.setValue(snapshot.sheets[0].id, 'A1', 42); console.log('原子写入完成'); });";
+            const string actionSource = "function main(workbook) { workbook.getActiveWorksheet().getRange('A1').setValue(42); console.log('原子写入完成'); }";
             _workspace.Editor.Execute(new UpdateScriptModulesCommand(new(new Dictionary<string, ScriptModule> { ["main"] = new("scripts/main.js", actionSource) }, ["main"], scriptApiVersion: 2, bindings: [new("main", "actions")])));
             await OpenScriptsAsync(); await ApplyScriptsAsync(); await RunScriptActionAsync();
             Check(Document.GetCellValue(0, 0, 0) == "42" && Document.ScriptErrors.Any(e => e.Contains("原子写入完成")), "Migrated action picker executes an immutable worker action and displays logs");
@@ -111,7 +116,7 @@ public sealed partial class MainWindow
             _dialogDriver = window =>
             {
                 var dialog = (FieldsDialog)window;
-                ((TextBox)dialog.Input("id")).Text = "udf"; ((ComboBox)dialog.Input("role")).SelectedIndex = 1;
+                ((TextBox)dialog.Input("id")).Text = "udf"; ((ComboBox)dialog.Input("role")).SelectedIndex = 2;
                 window.GetVisualDescendants().OfType<Button>().Single(b => Equals(b.Content, "确定")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
                 return Task.CompletedTask;
             };
@@ -126,7 +131,7 @@ public sealed partial class MainWindow
             _files = new SmokeFiles { NextSave = Path.Combine(directory, "typescript-roundtrip.xlsq") };
             _workspace.Editor.Execute(new UpdateScriptModulesCommand(new(new Dictionary<string, ScriptModule>
             {
-                ["main"] = new("scripts/main.ts", "import {twice} from 'helpers'; quickExcel.functions.register('DOUBLE',()=>twice(5));", ScriptLanguage.TypeScript),
+                ["main"] = new("scripts/main.ts", "import {twice} from 'helpers'; host.functions.register('DOUBLE',()=>twice(5));", ScriptLanguage.TypeScript),
                 ["helpers"] = new("scripts/helpers.ts", "export const twice=(n:number):number=>n*2;", ScriptLanguage.TypeScript)
             }, ["main"], scriptApiVersion: 2)));
             _workspace.Editor.Execute(new SetCellsCommand([new(new(Document.Snapshot.ActiveSheetId, 0, 0), CellInput.Parse("=DOUBLE()"))]));
@@ -142,7 +147,7 @@ public sealed partial class MainWindow
             Check(_scriptOutputTabs!.IsVisible && _scriptOutputTabs.SelectedIndex == 1, "Compiler failures expand runtime diagnostics even when the output pane was collapsed");
             _scriptDiagnostics!.SelectedIndex = 0; await ActivateScriptDiagnosticAsync();
             Check(_scriptPage!.Drafts.IsDirty, "Compiler diagnostic navigation retains failed draft text");
-            await Test(new { action = "edit", module = "main", text = "import {twice} from 'helpers'; enum E { A=6 }; quickExcel.functions.register('DOUBLE',()=>twice(E.A));" });
+            await Test(new { action = "edit", module = "main", text = "import {twice} from 'helpers'; enum E { A=6 }; host.functions.register('DOUBLE',()=>twice(E.A));" });
             await ApplyScriptsAsync();
             Check(Document.ScriptsEnabled && Document.GetCellValue(0, 0, 0) == "12", "Apply automatically checks TS then runs emitted ESM in a fresh isolated execution worker");
             Check(await SaveAsync(false), "TS original sources save without an external toolchain");
@@ -209,7 +214,7 @@ public sealed partial class MainWindow
             Check(_scriptPage!.Drafts.Models.Count == 64 && await CommitScriptsAsync(), "Real Monaco initializes and confirms all 64 modules at the exact 1 MiB total-source boundary");
             await CloseScriptWindowAsync();
             _workspace.New();
-            _workspace.Editor.Execute(new UpdateScriptModulesCommand(ScriptModuleSet.Single("quickExcel.functions.register('LEGACY', value => value);")));
+            _workspace.Editor.Execute(new UpdateScriptModulesCommand(ScriptModuleSet.Single("host.functions.register('LEGACY', value => value);")));
             await OpenScriptsAsync();
             Check(await CommitScriptsAsync() && Document.Snapshot.ScriptModules.ScriptApiVersion == 1, "Monaco preserves API v1 sources and does not migrate their execution contract");
             await CloseScriptWindowAsync();
@@ -230,14 +235,15 @@ public sealed partial class MainWindow
             Check(inspected.GetProperty("suggestDisabled").GetBoolean(), "Read-only workbooks disable the completion insertion control");
             if (DesktopServices.SupportsScripts)
             {
-                _consoleInput!.Text = "snapshot.sheets.length"; await RunConsoleAsync();
+                _consoleInput!.Text = "workbook.getWorksheets().length"; await RunConsoleAsync();
                 Check(ConsoleVisibleText.Contains("=> 1") && Document.Snapshot.Revision == revision,
-                    "Read-only preserved workbooks allow console snapshot inspection without mutation");
-                _consoleInput.Text = "patch.setValue(snapshot.sheets[0].id,'C1',42)"; await RunConsoleAsync();
+                    "Read-only preserved workbooks allow console workbook inspection without mutation");
+                _consoleInput.Text = "workbook.getActiveWorksheet().getRange('C1').setValue(42)"; await RunConsoleAsync();
                 Check(Document.Snapshot.Revision == revision && Document.GetCellInput(0, 0, 2) == "" && _scriptStatus!.Text!.Contains("只读"),
                     "Read-only console rejects writes and keeps original workbook contents");
             }
             await CloseScriptWindowAsync();
+        }
         }
         catch (Exception ex) { error = ex; }
         finally { try { await CloseScriptWindowAsync(); await ClosePrintPreviewAsync(); } catch (Exception ex) { error ??= ex; } }

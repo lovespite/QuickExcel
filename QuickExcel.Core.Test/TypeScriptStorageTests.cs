@@ -15,7 +15,7 @@ public sealed class TypeScriptStorageTests : IDisposable
     public void Dispose() => Directory.Delete(_folder, true);
     private static ScriptModuleSet Modules() => new(new Dictionary<string, ScriptModule>
     {
-        ["main"] = new("scripts/main.ts", "import {n} from 'helper'; const value:number=n; quickExcel.functions.register('F',()=>value);", ScriptLanguage.TypeScript),
+        ["main"] = new("scripts/main.ts", "import {n} from 'helper'; const value:number=n; host.functions.register('F',()=>value);", ScriptLanguage.TypeScript),
         ["helper"] = new("scripts/helper.js", "export const n=7;")
     }, ["main"], scriptApiVersion: 2);
 

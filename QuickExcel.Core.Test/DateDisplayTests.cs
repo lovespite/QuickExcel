@@ -15,6 +15,16 @@ public sealed class DateDisplayTests : IDisposable
     private static string Display(double serial, string code, ExcelDateSystem system = ExcelDateSystem.Windows1900) =>
         CellDisplayFormatter.Format(CellValue.FromNumber(serial), new() { NumberFormatCode = code }, system, CultureInfo.InvariantCulture);
 
+    [Fact]
+    public void SpreadsheetMlEnglishMonthMarkerOverridesHostCultureAndRetainsDateClassification()
+    {
+        var style = new StyleDefinition { NumberFormatCode = "[ENG]mmmm" };
+        Assert.True(CellDisplayFormatter.IsDateFormat(style, 45000.5));
+        Assert.False(CellDisplayFormatter.IsTimeOnlyFormat(style, 45000.5));
+        Assert.Equal("March", CellDisplayFormatter.Format(CellValue.FromNumber(45000.5), style,
+            ExcelDateSystem.Windows1900, CultureInfo.GetCultureInfo("zh-CN")));
+    }
+
     [Theory]
     [InlineData(14, 61, "03-01-00")]
     [InlineData(15, 61, "1-Mar-00")]

@@ -88,6 +88,7 @@ public sealed partial class MainWindow
             Check(await ConfirmDiscardAsync() && !Document.IsDirty, "Close save waits until checked save completes");
             Check(Directory.Exists(Path.Combine(directory, "settings")), "Smoke settings remain isolated");
             await RunMergedClipboardChecksAsync(Check);
+            await RunExternalClipboardChecksAsync(Check);
             await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Background);
             using var screenshot = new RenderTargetBitmap(new PixelSize((int)Bounds.Width, (int)Bounds.Height), new Vector(96, 96));
             screenshot.Render(this); screenshot.Save(Path.Combine(directory, "workspace.png"), PngBitmapEncoderOptions.Default);

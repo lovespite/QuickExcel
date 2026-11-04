@@ -141,3 +141,23 @@ QuickExcel 声明现在直接使用已打包的文本；内置标准库声明通
 新建主入口同时声明 `formula-functions` 和 `actions` 绑定，可注册 UDF、操作和事件，并支持现有 `function main(workbook: ExcelScript.Workbook)` 操作入口。主入口不重复归入 UDF / Actions 分类，未新增文件格式中的绑定种类。打开已有工作簿不改写语言、源码、绑定或签名，API v1 和示例工作簿保留既有执行语义。
 
 验证：`WorkbookWorkspaceTests` 与 `ScriptModuleTemplateTests` 共 **17 项通过**，包括新建/保存重开默认值、旧 JS 保留、TS 主入口内 UDF 计算与 `main()` 操作及撤销；`scripts/test-avalonia-web.ps1 -ScriptsOnly` **148 项通过**，证据 `artifacts/avalonia/web-tests/20261104-035517-3d9e5735`，验证实际 Monaco 语言、主入口属性、创建对话框默认值与分类导航。首次 Web 打包因临时目录重命名失败（EPERM）中止，重试成功。导航截图已复核；测试后恢复正式 Web 资源并完成 Avalonia Release 构建，0 警告、0 错误。未运行全量回归或性能基准。
+
+## 2026-11-04：简化新增模块角色
+
+新建模块的逻辑 ID 初始为空，不再预填 `helpers`。角色选项依次为 `Common`、`Actions`、`UDF`，默认选择 `Actions`，语言继续默认 TypeScript；移除 `UDF / Actions` 选项。原“辅助”的分类名和模块属性统一显示为 `Common`。
+
+创建 Common 模块不添加执行入口或绑定；UDF 只添加 `formula-functions` 绑定并生成函数注册示例；Actions 只添加 `actions` 绑定，通过文件中的 `main` 定义一个操作，操作名为模块 ID。对话框和模板明确提示：事件在主入口或由主入口导入的 Common 模块中注册。现有工作簿的绑定读取、隔离执行和主入口语义不变。
+
+同时修正 UDF 模板的参数类型：使用 `unknown` 接收注册接口传入的参数，再通过原有数值检查收窄类型，使默认 TypeScript 示例能直接检查并执行。
+
+验证：`ScriptModuleTemplateTests` **8 项通过**；新增 `scripts/test-avalonia-web.ps1 -ModulesOnly` 定向入口，**22 项通过**，证据 `artifacts/avalonia/web-tests/20261104-083735-d8961401`，覆盖空 ID、默认角色、选项顺序、三类模块实际创建、独立绑定、Common 分类、非法输入、取消和 XLSQ 保存重开，并保存创建对话框及分类截图。Avalonia Release 构建 0 警告、0 错误。
+
+较广的 `-ScriptsOnly` 检查在模块流程通过后，停在现有 `ScriptIntelligenceSmoke` 的 `Workbook range members reject object values` 类型提示断言；失败证据保留在 `artifacts/avalonia/web-tests/20261104-083546-292b338e`。本次未修改该断言或对应 API 声明，未运行全量回归或性能基准。
+
+## 2026-11-04：对齐生成 API 的类型诊断检查
+
+上述脚本专项失败已修复。固定来源和生成声明中的 `Range.setValue(value: any)` 不会对 `{}` 产生 TypeScript 参数类型错误，原断言沿用了旧对象 API 的类型约束。改用 `Range.setValues` 的二维标量数组签名验证非法对象单元格，并确认改为数值、文本和布尔值后诊断消失；事件回调同时验证推断出的 workbook 单元格类型与 host 文件参数类型，以及修正后两项诊断均清除。未改动生成声明或运行时参数校验。
+
+定义导航用例同步采用当前 API：通过缺少 `FunctionDescriptor.apiVersion` 的错误验证声明关联链接，并在 `main(workbook: QuickExcel.Workbook)` 中测试 API 成员定义跳转，移除对旧错误值结构和全局 workbook 的依赖。
+
+验证：`scripts/test-avalonia-web.ps1 -ScriptsOnly` **151 项全部通过**，证据 `artifacts/avalonia/web-tests/20261104-084055-967f8da5`，包含类型提示、参数提示、悬浮信息、诊断链接、声明导航、模块创建、隔离执行和控制台流程。测试后恢复正式 Web 资源并完成 Avalonia Release 构建，0 警告、0 错误；未运行全量回归或性能基准。

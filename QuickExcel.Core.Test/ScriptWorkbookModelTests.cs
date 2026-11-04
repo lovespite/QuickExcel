@@ -25,15 +25,15 @@ public sealed class ScriptWorkbookModelTests
     [InlineData(ScriptLanguage.TypeScript)]
     public void MainEntrySupportsActiveCellWorksheetRangeAndSequentialFillWithOneUndo(ScriptLanguage language)
     {
-        var parameter = language == ScriptLanguage.TypeScript ? "workbook: ExcelScript.Workbook" : "workbook";
+        var parameter = language == ScriptLanguage.TypeScript ? "workbook: QuickExcel.Workbook" : "workbook";
         using var doc = Document("function main(" + parameter + ") {" + """
-            const selectedCell=$.getActiveCell(), selectedSheet=$.getActiveWorksheet(), selectedRange=$.getActiveRange();
-            if (workbook !== $ || selectedCell.getAddress() !== 'B2' || selectedRange.getAddress() !== 'B2:C3') throw Error('selection');
-            if (selectedSheet.getName() !== 'Data' || selectedSheet.getCell('A1').getValue() !== 42) throw Error('read');
+            const selectedCell=workbook.getActiveCell(), selectedSheet=workbook.getActiveWorksheet(), selectedRange=workbook.getSelectedRange();
+            if(selectedCell.getAddress() !== 'B2' || selectedRange.getAddress() !== 'B2:C3') throw Error('selection');
+            if(selectedSheet.getName() !== 'Data' || selectedSheet.getCell('A1').getValue() !== 42) throw Error('read');
             selectedCell.getFormat().getFill().setColor('#ff0000');
-            if (selectedCell.getFormat().getFill().getColor() !== '#FF0000') throw Error('first write');
+            if(selectedCell.getFormat().getFill().getColor() !== '#FF0000') throw Error('first write');
             selectedRange.getFormat().getFill().setColor('#00ff00');
-            if (selectedCell.getFormat().getFill().getColor() !== '#00FF00') throw Error('overlap');
+            if(selectedCell.getFormat().getFill().getColor() !== '#00FF00') throw Error('overlap');
             console.info(selectedSheet.getCell(0,0).getValue());
             }
             """, language);
@@ -51,21 +51,22 @@ public sealed class ScriptWorkbookModelTests
     }
 
     [Fact]
-    public void ModelReadsPriorWritesWhileLegacySnapshotRemainsImmutableAndFilesAreLazy()
+    public void ModelReadsPriorWritesAndFilesStayLazy()
     {
         var storage = new CountingStorage();
         using var doc = Document("""
-            $.actions.register('A',({snapshot,patch})=>{
-              const sheet=$.getWorksheet('Data'), id=sheet.getId(), cell=sheet.getCell('A1');
+            function main(workbook, host){
+              const sheet=workbook.getWorksheet('Data'), cell=sheet.getCell('A1');
               cell.setValue(7);
-              if(cell.getValue()!==7 || snapshot.getCell(id,'A1').value!==42) throw Error('view');
-              patch.setValue(id,'B1',8);
+              if(cell.getValue()!==7) throw Error('view');
+              sheet.getRange('B1').setValue(8);
               if(sheet.getCell('B1').getValue()!==8) throw Error('patch order');
               sheet.getRange('B1:C2').setValues([[9,10],[11,12]]);
               if(sheet.getCell('B1').getValue()!==9 || sheet.getRange('B1:C2').getValues()[1][1]!==12) throw Error('matrix');
-            });
+              host.files.writeText('//mem/seen','yes');
+            }
             """, storage: storage);
-        doc.EnableScriptsAndCalculate(); doc.RunAction("A");
+        doc.EnableScriptsAndCalculate(); doc.RunAction("main");
         Assert.Equal(0, storage.Captures);
         Assert.Equal("7", doc.GetCellValue(0, 0, 0)); Assert.Equal("9", doc.GetCellValue(0, 0, 1));
         Assert.True(doc.Undo()); Assert.Equal("42", doc.GetCellValue(0, 0, 0)); Assert.Null(doc.Snapshot.Sheets[0].GetCell(0, 1));
@@ -80,7 +81,7 @@ public sealed class ScriptWorkbookModelTests
     [InlineData("while(true){}")]
     public void FailureRollsBackValuesAndFormattingEvenWhenAnInvalidWriteIsCaught(string failure)
     {
-        using var doc = Document("function main(){const cell=$.getActiveWorksheet().getCell('A1');cell.setValue(7);cell.getFormat().getFill().setColor('#ff0000');" + failure + ";}");
+        using var doc = Document("function main(workbook){const cell=workbook.getActiveWorksheet().getCell('A1');cell.setValue(7);cell.getFormat().getFill().setColor('#ff0000');" + failure + ";}");
         doc.EnableScriptsAndCalculate(); var revision = doc.Snapshot.Revision;
         Assert.NotNull(Record.Exception(() => doc.RunAction("main")));
         Assert.Equal(revision, doc.Snapshot.Revision); Assert.Equal("42", doc.GetCellValue(0, 0, 0));
@@ -91,8 +92,8 @@ public sealed class ScriptWorkbookModelTests
     public void LiveFormulaReadsCalculatePendingInputsAndNewFormulasBeforeCommit()
     {
         using var doc = Document("""
-            function main() {
-              const sheet=$.getActiveWorksheet(), formula=sheet.getCell('B1');
+            function main(workbook) {
+              const sheet=workbook.getActiveWorksheet(), formula=sheet.getCell('B1');
               if(formula.getValue()!==43) throw Error('initial calculation');
               sheet.getCell('A1').setValue(7);
               if(formula.getFormula()!=='=A1+1') throw Error('formula text');
@@ -116,18 +117,17 @@ public sealed class ScriptWorkbookModelTests
     [InlineData(true, true)]
     public void FormulaReadAfterWriteUsesTheDraftAndPreservesAtomicFilesHistoryAndSnapshots(bool udf, bool fail)
     {
-        var source = "$.functions.register('TWICE',n=>n*2);" + """
-            $.actions.register('Add', c => {
-                const sheet=$.getActiveWorksheet(), cell=sheet.getCell('a1');
+        var source = "host.functions.register('TWICE',n=>n*2);" + """
+            function main(workbook, host) {
+                const sheet=workbook.getActiveWorksheet(), cell=sheet.getCell('a1');
                 cell.setValue(Number(cell.getValue())+1);
                 const result=sheet.getCell('a2').getValue();
                 console.log(result);
                 if(result!==12 || sheet.getRange('A1:A2').getValues()[1][0]!==12) throw Error('not current');
-                if(c.snapshot.getCell(c.snapshot.sheets[0].id,'A1').value!==5) throw Error('legacy snapshot changed');
                 sheet.getCell('B1').setValue(result);
-                c.fs.writeText('//xlsq/result.txt',String(result));
-                c.fs.writeText('//mem/result',String(result));
-            """ + (fail ? "throw Error('after calculation');" : "") + "});";
+                host.files.writeText('//xlsq/result.txt',String(result));
+                host.files.writeText('//mem/result',String(result));
+            """ + (fail ? "throw Error('after calculation');" : "") + "}";
         using var doc = new WorkbookDocument(Book(Sheet("Data", (0, 0, N(5)), (1, 0, F(udf ? "=TWICE(A1)" : "=A1*2"))))
             .WithScriptModules(M4ActionTests.Actions(source, udf)),
             new(new TypedWorkbookStorage(), new WorkbookCalculator(new ScriptWorkerRuntimeFactory()), new ScriptWorkerActionExecutor()));
@@ -137,7 +137,7 @@ public sealed class ScriptWorkbookModelTests
         var changes = new List<DocumentChange>(); doc.Session.Changed += (_, change) => changes.Add(change);
         if (fail)
         {
-            Assert.Throws<ScriptRuntimeFailureException>(() => doc.RunAction("Add"));
+            Assert.Throws<ScriptRuntimeFailureException>(() => doc.RunAction("A"));
             Assert.Equal(revision, doc.Snapshot.Revision); Assert.Equal("5", doc.GetCellValue(0, 0, 0));
             Assert.Equal("", doc.GetCellValue(0, 0, 1)); Assert.False(doc.CanUndo);
             Assert.Empty(doc.Snapshot.PackageFiles.Entries); Assert.Empty(doc.Session.TransientFiles.Entries);
@@ -145,7 +145,7 @@ public sealed class ScriptWorkbookModelTests
         }
         else
         {
-            doc.RunAction("Add");
+            doc.RunAction("A");
             Assert.Equal(revision + 1, doc.Snapshot.Revision); Assert.Single(changes);
             Assert.Equal("6", doc.GetCellValue(0, 0, 0)); Assert.Equal("12", doc.GetCellValue(0, 0, 1));
             Assert.True(doc.Snapshot.PackageFiles.Entries.ContainsKey("//xlsq/result.txt"));
@@ -159,15 +159,15 @@ public sealed class ScriptWorkbookModelTests
     public void FormulaValueReadsIncludeNewAndResizedSpillsAndTypedErrors()
     {
         using var doc = Document("""
-            function main() {
-                const s=$.getActiveWorksheet();
+            function main(workbook) {
+                const s=workbook.getActiveWorksheet();
                 s.getCell('B1').setFormula('=SEQUENCE(3)');
                 if(s.getCell('B3').getValue()!==3) throw Error('new spill');
                 s.getCell('B1').setFormula('=SEQUENCE(2)');
                 const values=s.getRange('B1:B3').getValues();
-                if(values[0][0]!==1 || values[1][0]!==2 || values[2][0]!==null) throw Error('shrinking spill');
+                if(values[0][0]!==1 || values[1][0]!==2 || values[2][0]!=='') throw Error('shrinking spill');
                 s.getCell('C1').setFormula('=1/0');
-                if(s.getCell('C1').getValue().kind!=='error' || s.getCell('C1').getValues()[0][0].kind!=='error') throw Error('typed error');
+                if(s.getCell('C1').getValue()!=='#DIV/0!' || s.getCell('C1').getValues()[0][0]!=='#DIV/0!') throw Error('typed error');
                 s.getCell('D1').setValue(values[1][0]);
             }
             """);
@@ -179,9 +179,9 @@ public sealed class ScriptWorkbookModelTests
     public void UdfTimeoutDuringFormulaReadRollsBackEvenIfTheScriptTriesToCatchIt()
     {
         const string source = """
-            $.functions.register('SLOW',n=>{if(n===6)while(true){};return n*2;});
-            function main(){
-                const s=$.getActiveWorksheet();s.getCell('A1').setValue(6);
+            host.functions.register('SLOW',n=>{if(n===6)while(true){};return n*2;});
+            function main(workbook){
+                const s=workbook.getActiveWorksheet();s.getCell('A1').setValue(6);
                 try{s.getCell('A2').getValue();}catch{}
                 s.getCell('B1').setValue(99);
             }
@@ -199,7 +199,7 @@ public sealed class ScriptWorkbookModelTests
     public void ConsoleCalculatesBuiltinsWithoutLoadingStoredUdfModules()
     {
         using var doc = Document("throw Error('stored modules must not execute');");
-        doc.RunConsole("const s=$.getActiveWorksheet();s.getCell('B1').setFormula('=A1*2');s.getCell('C1').setValue(s.getCell('B1').getValue());");
+        doc.RunConsole("const s=workbook.getActiveWorksheet();s.getCell('B1').setFormula('=A1*2');s.getCell('C1').setValue(s.getCell('B1').getValue());");
         Assert.Equal("84", doc.GetCellValue(0, 0, 2)); Assert.False(doc.ScriptsEnabled);
     }
 
@@ -207,8 +207,8 @@ public sealed class ScriptWorkbookModelTests
     public void BlankReadResolvesAnInitialUncalculatedSpillBeforeAnyWrite()
     {
         const string source = """
-            function main(){
-                const s=$.getActiveWorksheet();
+            function main(workbook){
+                const s=workbook.getActiveWorksheet();
                 if(s.getCell('B2').getValue()!==2) throw Error('initial spill');
                 s.getCell('A1').setValue(3);
                 if(s.getCell('B3').getValue()!==3) throw Error('grown spill');
@@ -225,8 +225,8 @@ public sealed class ScriptWorkbookModelTests
     public void BlockedFormulaReadsNeverReturnOldCachesAndFormulaTextDoesNotCalculate()
     {
         const string source = """
-            function main(){
-                const s=$.getActiveWorksheet(), f=s.getCell('B1');
+            function main(workbook){
+                const s=workbook.getActiveWorksheet(), f=s.getCell('B1');
                 s.getCell('A1').setValue(6);
                 if(f.getFormula()!=='=MISSING(A1)') throw Error('formula text');
                 let rejected=0;
@@ -247,10 +247,10 @@ public sealed class ScriptWorkbookModelTests
     public void MultipleAreasAreNotSilentlyExpandedToBoundingRectangle()
     {
         using var doc = Document("""
-            function main() {
-              let rejected=false; try { $.getActiveRange(); } catch { rejected=true; }
+            function main(workbook) {
+              let rejected=false; try { workbook.getSelectedRange(); } catch { rejected=true; }
               if(!rejected) throw Error('multiple areas');
-              for(const range of $.getActiveRanges()) range.getFormat().getFill().setColor('#ff0000');
+              for(const range of workbook.getSelectedRanges().getAreas()) range.getFormat().getFill().setColor('#ff0000');
             }
             """);
         doc.EnableScriptsAndCalculate();

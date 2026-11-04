@@ -110,7 +110,8 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage, IW
                         var language = module.Value.TryGetProperty("language", out var lang) ? ReadScriptLanguage(lang.GetString()) : ScriptLanguage.JavaScript;
                         if (features.Contains("typescript-sources") && !module.Value.TryGetProperty("language", out _))
                             throw new InvalidDataException("TS 包必须明确全部模块的语言。");
-                        moduleList.Add(new(module.Name, new ScriptModule(String(module.Value, "path"), Utf8.GetString(content), language)));
+                        var description = module.Value.TryGetProperty("description", out _) ? String(module.Value, "description") : "";
+                        moduleList.Add(new(module.Name, new ScriptModule(String(module.Value, "path"), Utf8.GetString(content), language, description)));
                     }
                     var bindings = Array(state.RootElement, "scriptBindings").ToArray();
                     if (bindings.Any(b => String(b, "scope") != "workbook")) throw new InvalidDataException("脚本绑定作用域无效。");
@@ -355,6 +356,8 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage, IW
         {
             parts.Add(module.Path, Utf8.GetBytes(module.Source));
             var item = Merge(manifest["scripts"]?["modules"]?[id], Reference(module.Path));
+            if (module.Description.Length > 0) item["description"] = module.Description;
+            else item.AsObject().Remove("description");
             if (snapshot.ScriptModules.HasTypeScript) item["language"] = module.Language == ScriptLanguage.TypeScript ? "typescript" : "javascript";
             else item.AsObject().Remove("language");
             modules.Add(id, item);

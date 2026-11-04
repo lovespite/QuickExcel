@@ -12,7 +12,7 @@ public sealed class M3ScriptTests
     public void V2DescriptorReceivesExplicitRangeShapeAndDistinguishesBlankFromEmptyText()
     {
         var source = """
-            quickExcel.functions.register({ name: "JS.SHAPE", apiVersion: 2, parameters: [{name:"cells", type:"range"}],
+            host.functions.register({ name: "JS.SHAPE", apiVersion: 2, parameters: [{name:"cells", type:"range"}],
                 returns: "text", profile: "conservative" }, r =>
                 [r.rows, r.columns, r.values[0], r.values[1] === "", r.values[2] === null, r.values[3], Object.isFrozen(r.values)].join("|"));
             """;
@@ -26,7 +26,7 @@ public sealed class M3ScriptTests
     public void V1FlatRangeAndScalarBlankContractIsPreserved()
     {
         var source = """
-            quickExcel.functions.register("CHECK", (r, blank) => r.length === 4 && r[1] === "" && r[2] === "" && blank === "");
+            host.functions.register("CHECK", (r, blank) => r.length === 4 && r[1] === "" && r[2] === "" && blank === "");
             """;
         var data = Sheet("Data", (0, 0, N(2)), (1, 1, T("end")));
         var output = Sheet("S", (0, 0, F("=CHECK(Data!A1:B2,Data!C1)")));
@@ -37,7 +37,7 @@ public sealed class M3ScriptTests
     [Fact]
     public void AuthorizedRoundsResetClosuresAndAlwaysRecalculateIndependentAndDownstreamCells()
     {
-        var source = "let n=0; quickExcel.functions.register('NEXT', () => ++n);";
+        var source = "let n=0; host.functions.register('NEXT', () => ++n);";
         var first = Sheet("A", (0, 0, F("=NEXT()")));
         var second = Sheet("B", (0, 0, F("=NEXT()+A!A1")), (0, 1, F("=42")));
         using var session = new DocumentSession(Book(first, second).WithScriptSource(source));
@@ -63,15 +63,15 @@ public sealed class M3ScriptTests
     public void ScriptConflictsAreRejectedWithoutApplyingResults()
     {
         var sheet = Sheet("S", (0, 0, F("=SUM(1)", 3)));
-        var book = Book(sheet).WithScriptSource("quickExcel.functions.register('SUM',()=>99)");
+        var book = Book(sheet).WithScriptSource("host.functions.register('SUM',()=>99)");
         Assert.Throws<InvalidOperationException>(() => new WorkbookCalculator(new JscRuntimeFactory()).Calculate(Request(book, true)));
         Assert.Equal(CellValue.FromNumber(3), sheet.GetCell(0, 0)!.Value);
     }
 
     [Theory]
-    [InlineData("quickExcel.functions.register({name:'JS.F', apiVersion:2, profile:'strict'}, ()=>1);")]
-    [InlineData("quickExcel.functions.register({name:'F', apiVersion:2}, ()=>1);")]
-    [InlineData("quickExcel.functions.register('F',()=>1);quickExcel.functions.register('f',()=>2);")]
+    [InlineData("host.functions.register({name:'JS.F', apiVersion:2, profile:'strict'}, ()=>1);")]
+    [InlineData("host.functions.register({name:'F', apiVersion:2}, ()=>1);")]
+    [InlineData("host.functions.register('F',()=>1);host.functions.register('f',()=>2);")]
     public void InvalidDescriptorOrDuplicateRegistrationFailsLoading(string source)
     {
         Assert.Throws<InvalidOperationException>(() => new JscSession(source));
@@ -80,7 +80,7 @@ public sealed class M3ScriptTests
     [Fact]
     public void ScriptErrorsStayTypedAndUnselectedLazyBranchesAreNeverInvoked()
     {
-        var source = "quickExcel.functions.register('FAIL', () => {throw new Error('failed');});";
+        var source = "host.functions.register('FAIL', () => {throw new Error('failed');});";
         var sheet = Sheet("S", (0, 0, F("=IF(FALSE,FAIL(),7)")), (1, 0, F("=IFERROR(FAIL(),8)")),
             (2, 0, F("=FAIL()")), (3, 0, F("=A3+1")), (4, 0, F("=IFERROR(\"#SCRIPT!\",FAIL())")));
         var result = new WorkbookCalculator(new JscRuntimeFactory()).Calculate(Request(Book(sheet).WithScriptSource(source), true));
@@ -95,7 +95,7 @@ public sealed class M3ScriptTests
     public void ErrorArgumentsNeverReachJsAndV2TypesAreValidated()
     {
         var source = """
-            quickExcel.functions.register({name:"JS.NUM", apiVersion:2, parameters:[{name:"n",type:"number"}], returns:"number"}, n=>n);
+            host.functions.register({name:"JS.NUM", apiVersion:2, parameters:[{name:"n",type:"number"}], returns:"number"}, n=>n);
             """;
         var sheet = Sheet("S", (0, 0, F("=JS.NUM(#DIV/0!)")), (1, 0, F("=JS.NUM(\"00123\")")), (2, 0, F("=JS.NUM(4)")));
         var result = new WorkbookCalculator(new JscRuntimeFactory()).Calculate(Request(Book(sheet).WithScriptSource(source), true));

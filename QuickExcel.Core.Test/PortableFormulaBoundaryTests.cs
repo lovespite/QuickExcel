@@ -61,7 +61,7 @@ public sealed class PortableFormulaBoundaryTests : IDisposable
     {
         var sheet = Sheet("S", (0, 0, F("=SUM(IF(TRUE,NEXT(),FAIL()))")), (1, 0, F("=COUNT(IF(FALSE,FAIL(),NEXT()))")),
             (2, 0, F("=SUM(IFERROR(NEXT(),FAIL()))")), (3, 0, F("=IFNA(NEXT(),FAIL())")));
-        using var session = new DocumentSession(Book(sheet).WithScriptSource("let n=0; quickExcel.functions.register('NEXT',()=>++n); quickExcel.functions.register('FAIL',()=>{throw new Error('unselected')});"));
+        using var session = new DocumentSession(Book(sheet).WithScriptSource("let n=0; host.functions.register('NEXT',()=>++n); host.functions.register('FAIL',()=>{throw new Error('unselected')});"));
         session.SetScriptsEnabled(true);
         Assert.True(session.TryCommitCalculation(new WorkbookCalculator(new ScriptWorkerRuntimeFactory()).Calculate(session.BeginCalculation())));
         Assert.Equal(new[] { 1d, 1d, 3d, 4d }, Enumerable.Range(0, 4).Select(row => session.Snapshot.Sheets[0].GetCell(row, 0)!.Value.NumberValue));

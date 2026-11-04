@@ -63,22 +63,22 @@ public sealed partial class MainWindow
             _ribbon.SelectedItem = tab; await Layout(); var ribbonHeight = _ribbon.Bounds.Height;
             Check(_automationEmpty.IsVisible && !_automationRun!.IsEnabled, "Empty workbook explains the empty action list and disables Execute");
             const string source = """
-                quickExcel.actions.register({name:'增加计数',description:'将 A1 增加 1，并将 B1 增加 10；全部修改可一次撤销。'}, ({snapshot,patch}) => {
-                    const id=snapshot.sheets[0].id;
-                    patch.setValue(id,'A1',(snapshot.getCell(id,'A1').value || 0)+1);
-                    patch.setValue(id,'B1',(snapshot.getCell(id,'B1').value || 0)+10);
-                });
-                quickExcel.actions.register('失败操作', ({snapshot,patch}) => {
-                    patch.setValue(snapshot.sheets[0].id,'A1',999); throw new Error('自动执行失败测试');
-                });
+                function main(workbook) {
+                    const sheet=workbook.getActiveWorksheet(), a=sheet.getRange('A1'), b=sheet.getRange('B1');
+                    a.setValue((Number(a.getValue()) || 0) + 1);
+                    b.setValue((Number(b.getValue()) || 0) + 10);
+                }
                 """;
-            var description = string.Concat(Enumerable.Repeat("较长的操作描述，悬停可查看完整内容。", 20));
-            var more = "quickExcel.actions.register({name:'写入文本',description:" + JsonSerializer.Serialize(description) + "}, ({snapshot,patch}) => { patch.setValue(snapshot.sheets[0].id,'C1','已执行'); });\n" +
-                string.Join("\n", Enumerable.Range(0, 24).Select(i => $"quickExcel.actions.register('附加操作{i:00}', () => {{ }});"));
-            var modules = new ScriptModuleSet(new Dictionary<string, ScriptModule>
+            var dictionary = new Dictionary<string, ScriptModule>
             {
-                ["main"] = new("scripts/main.js", source), ["extra"] = new("scripts/extra.js", more)
-            }, ["main", "extra"], scriptApiVersion: 2, bindings: [new("main", "actions"), new("extra", "actions")]);
+                ["increment"] = new("scripts/increment.js", source),
+                ["fail"] = new("scripts/fail.js", "function main(workbook){ workbook.getActiveWorksheet().getRange('A1').setValue(999); throw new Error('自动执行失败测试'); }"),
+                ["writeText"] = new("scripts/writeText.js", "function main(workbook){ workbook.getActiveWorksheet().getRange('C1').setValue('已执行'); }")
+            };
+            for (var i = 0; i < 24; i++) dictionary[$"extra{i:00}"] = new($"scripts/extra{i:00}.js", "function main(){}");
+            var names = dictionary.Keys.ToArray();
+            var modules = new ScriptModuleSet(dictionary, names, scriptApiVersion: 2,
+                bindings: names.Select(name => new ScriptBinding(name, "actions")).ToArray());
             _workspace.Editor.Execute(new UpdateScriptModulesCommand(modules)); Synchronize();
             var path = Path.Combine(directory, "automation.xlsq"); new TypedWorkbookStorage().Save(path, Document.Snapshot);
             await OpenPathAsync(path);
@@ -88,18 +88,18 @@ public sealed partial class MainWindow
             Check(Document.GetCellInput(0, 0, 0) == "" && Document.GetCellInput(0, 0, 2) == "", "Discovery does not execute action bodies");
             Check(!_automationRun!.IsEnabled && !_automationEmpty.IsVisible, "Execute requires an explicit selection after loading");
             Check(_automationActions.ItemTemplate!.Build(null) is null, "Dropdown template safely accepts a null item");
-            var increment = _availableScriptActions.Single(a => a.Name == "增加计数");
+            var increment = _availableScriptActions.Single(a => a.Name == "increment");
             var revision = Document.Snapshot.Revision;
-            await Search("  计数  ");
+            await Search("  INCREMENT  ");
             Check(_automationActions.ItemCount == 1 && Equals(_automationActions.Items[0], increment) && !_automationRun.IsEnabled, "Name keyword search trims surrounding whitespace and requires explicit selection");
             await OpenDropdown(); _automationActions.SelectedItem = increment; await Layout();
             Check(_automationRun.IsEnabled && Document.Snapshot.Revision == revision && Document.GetCellInput(0, 0, 0) == "", "Selecting an action enables Execute without changing cells");
-            Check(Item(increment.Name).Children.OfType<TextBlock>().Select(t => t.Text).SequenceEqual(new[] { increment.Name, increment.Description }), "Action rows display both the registered name and description");
+            Check(Item(increment.Name).Children.OfType<TextBlock>().Select(t => t.Text).SequenceEqual(new[] { increment.Name, "无描述" }), "Action rows display the module name and an empty-description placeholder");
             DoubleClick(Item(increment.Name)); await _operation; await Layout();
             Check(Document.Snapshot.Revision == revision && Document.GetCellInput(0, 0, 0) == "", "Double-clicking a dropdown item never executes an action");
             _automationActions.IsDropDownOpen = false;
-            await Search("a1");
-            Check(_automationActions.ItemCount == 1 && Equals(_automationActions.SelectedItem, increment), "Description keywords match case-insensitively and preserve a matching selection");
+            await Search("CREMENT");
+            Check(_automationActions.ItemCount == 1 && Equals(_automationActions.SelectedItem, increment), "Name keywords match case-insensitively and preserve a matching selection");
             await Search("不存在的操作");
             Check(_automationActions.ItemCount == 0 && _automationActions.SelectedItem is null && _automationEmpty.IsVisible && _automationEmpty.Text!.Contains("没有匹配") && !_automationRun.IsEnabled,
                 "No matches show an empty state and clear the hidden selection");
@@ -120,9 +120,9 @@ public sealed partial class MainWindow
             Check(_automationRun.IsEffectivelyEnabled, "Execute keeps its enabled appearance while duplicate submissions are guarded");
             await _operation; await Layout();
             Check(Document.GetCellValue(0, 0, 0) == "2", "Repeated execution requests during a run do not submit a second action");
-            var textAction = _availableScriptActions.Single(a => a.Name == "写入文本");
-            await Search("较长"); await OpenDropdown(); var textItem = Item(textAction.Name);
-            Check(ToolTip.GetTip(textItem)?.ToString() == textAction.Name + "\n" + description, "Long descriptions remain available in full through the tooltip");
+            var textAction = _availableScriptActions.Single(a => a.Name == "writeText");
+            await Search("writeText"); await OpenDropdown(); var textItem = Item(textAction.Name);
+            Check(ToolTip.GetTip(textItem)?.ToString() == textAction.Name + "\n无描述", "Action tooltips remain available for modules without descriptions");
             revision = Document.Snapshot.Revision;
             DoubleClick(textItem); await _operation; await Layout();
             Check(Document.Snapshot.Revision == revision && Document.GetCellInput(0, 0, 2) == "", "Double-clicking a search result does not execute it");
@@ -146,9 +146,9 @@ public sealed partial class MainWindow
                 }
             Width = 1280;
             await Idle(); revision = Document.Snapshot.Revision;
-            _automationSearch.Focus(); await Search("x计数"); _automationSearch.CaretIndex = 0;
+            _automationSearch.Focus(); await Search("xincrement"); _automationSearch.CaretIndex = 0;
             _automationSearch.RaiseEvent(new KeyEventArgs { RoutedEvent = KeyDownEvent, Key = Key.Delete }); await _operation; await Layout();
-            Check(_automationSearch.Text == "计数" && Document.Snapshot.Revision == revision && Document.GetCellValue(0, 0, 0) == "2", "Delete edits the search keyword without clearing worksheet cells");
+            Check(_automationSearch.Text == "increment" && Document.Snapshot.Revision == revision && Document.GetCellValue(0, 0, 0) == "2", "Delete edits the search keyword without clearing worksheet cells");
             _automationSearch.SelectAll();
             _automationSearch.RaiseEvent(new KeyEventArgs { RoutedEvent = KeyDownEvent, Key = Key.X, KeyModifiers = KeyModifiers.Control }); await _operation; await Layout();
             Check(_automationSearch.Text == "" && Document.Snapshot.Revision == revision && _clipboardCells?.IsCut != true, "Cut edits the search field without cutting worksheet cells");
@@ -163,14 +163,14 @@ public sealed partial class MainWindow
             ((Control)FocusManager.GetFocusedElement()!).RaiseEvent(new KeyEventArgs { RoutedEvent = KeyDownEvent, Key = Key.Enter }); await _operation; await Layout();
             Check(!_automationActions.IsDropDownOpen && Document.Snapshot.Revision == revision && !_workspace.IsBusy && !_working,
                 $"Keyboard selection confirms an action without running it (busy={_workspace.IsBusy}, working={_working}, focus={FocusManager.GetFocusedElement()?.GetType().Name})");
-            _automationActions.SelectedItem = _availableScriptActions.Single(a => a.Name == "失败操作");
+            _automationActions.SelectedItem = _availableScriptActions.Single(a => a.Name == "fail");
             revision = Document.Snapshot.Revision;
             await PerformAsync(() => RunScriptActionAsync(_automationActions.SelectedItem as ScriptActionDescriptor));
             Check(Document.Snapshot.Revision == revision && Document.GetCellValue(0, 0, 0) == "2" && _status.Text!.Contains("自动执行失败测试"), "Worker errors are shown without committing partial edits");
             _grid.Select(new(0, 0)); _formula.Focus(); _formula.Text = "8";
             _automationActions.SelectedItem = increment; await Click(_automationRun);
             Check(Document.GetCellValue(0, 0, 0) == "9", "Execute commits the active cell draft before capturing the action snapshot");
-            await Search("计数"); await OpenDropdown();
+            await Search("increment"); await OpenDropdown();
             DisableScripts();
             await Layout();
             Check(_automationActions.ItemCount == 0 && !_automationRun.IsEnabled && string.IsNullOrEmpty(_automationSearch.Text) && !_automationActions.IsDropDownOpen,
@@ -183,7 +183,7 @@ public sealed partial class MainWindow
             await Layout();
             Check(Document.Snapshot.Revision == revision && _status.Text!.Contains("请先加载"), "A stale action cannot execute after source changes");
             await Click(_automationLoad!);
-            _workspace.Editor.Execute(new UpdateScriptModulesCommand(new(Document.Snapshot.ScriptModules.Modules, ["main", "extra"], scriptApiVersion: 2)));
+            _workspace.Editor.Execute(new UpdateScriptModulesCommand(new(Document.Snapshot.ScriptModules.Modules, ["increment"], scriptApiVersion: 2)));
             Synchronize();
             Check(_automationActions.ItemCount == 0 && !_automationRun.IsEnabled, "Changing action bindings clears previously discovered actions");
             _workspace.Editor.Execute(new UpdateScriptModulesCommand(new(new Dictionary<string, ScriptModule> { ["main"] = new("scripts/main.js", "// no registrations") }, ["main"], scriptApiVersion: 2, bindings: [new("main", "actions")])));

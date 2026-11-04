@@ -10,7 +10,7 @@ public sealed class WorkbookDocument : IDisposable
     public const int MaxCells = WorkbookLimits.MaxCells;
     public const string DefaultScript = """
         // 单元格：=DISCOUNT(B2,D2)*C2
-        quickExcel.functions.register(
+        host.functions.register(
             "DISCOUNT", (price, rate) => {
                 const result = price * (1 - rate);
                 return Math.round(result * 100) / 100;
@@ -18,7 +18,7 @@ public sealed class WorkbookDocument : IDisposable
         );
 
         // 范围传入数组：=TOTAL(B2:B4)
-        quickExcel.functions.register(
+        host.functions.register(
             "TOTAL", values => values.reduce(
                 (sum, value) => sum + Number(value),
                 0

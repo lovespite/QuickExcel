@@ -27,45 +27,45 @@ public sealed class SharedWorkbookWorkerTests
     public async Task WindowsKeepsOneIsolatedProcessAndContextAcrossIdleTimeAndReleasesItWhenDisabled()
     {
         if (!OperatingSystem.IsWindows()) return;
-        using var document = Document("let count=0; function main(){ $.getActiveCell().setValue(++count); }");
+        using var document = Document("let count=0; function main(workbook){ workbook.getActiveCell().setValue(++count); }");
         document.EnableScriptsAndCalculate();
         document.ListActions(); var first = WorkerId(document);
-        document.RunAction("main"); Assert.Equal("1", document.GetCellValue(0, 0, 0));
+        document.RunAction("A"); Assert.Equal("1", document.GetCellValue(0, 0, 0));
         Assert.Equal(first, WorkerId(document));
         await Task.Delay(5200); // The deadline is per active round, not time since process creation.
-        document.RunAction("main"); Assert.Equal("2", document.GetCellValue(0, 0, 0));
+        document.RunAction("A"); Assert.Equal("2", document.GetCellValue(0, 0, 0));
         Assert.Equal(first, WorkerId(document));
         document.DisableScripts();
         try { using var process = Process.GetProcessById(first); Assert.True(process.WaitForExit(2000)); } catch (ArgumentException) { }
-        document.EnableScriptsAndCalculate(); document.RunAction("main"); Assert.Equal("1", document.GetCellValue(0, 0, 0));
+        document.EnableScriptsAndCalculate(); document.RunAction("A"); Assert.Equal("1", document.GetCellValue(0, 0, 0));
     }
 
     [Fact]
     public void WorkbookStateIsSeparateAndFailureRebuildsTheContextWithoutReplayingWrites()
     {
         if (!OperatingSystem.IsWindows()) return;
-        const string source = "let n=0; function main(){ $.getActiveCell().setValue(++n); } $.actions.register('fail',()=>{n=99;$.getActiveCell().setValue(99);throw Error('fail');});";
+        const string source = "let n=0; function main(workbook){ workbook.getActiveCell().setValue(++n); if(n===3) throw Error('fail'); }";
         using var first = Document(source); using var second = Document(source);
         first.EnableScriptsAndCalculate(); second.EnableScriptsAndCalculate();
-        first.RunAction("main"); first.RunAction("main"); second.RunAction("main");
+        first.RunAction("A"); first.RunAction("A"); second.RunAction("A");
         Assert.Equal("2", first.GetCellValue(0, 0, 0)); Assert.Equal("1", second.GetCellValue(0, 0, 0));
         Assert.NotEqual(WorkerId(first), WorkerId(second));
-        Assert.Throws<ScriptRuntimeFailureException>(() => first.RunAction("fail"));
+        Assert.Throws<ScriptRuntimeFailureException>(() => first.RunAction("A"));
         Assert.Equal("2", first.GetCellValue(0, 0, 0));
-        first.RunAction("main"); Assert.Equal("1", first.GetCellValue(0, 0, 0));
-        second.RunAction("main"); Assert.Equal("2", second.GetCellValue(0, 0, 0));
+        first.RunAction("A"); Assert.Equal("1", first.GetCellValue(0, 0, 0));
+        second.RunAction("A"); Assert.Equal("2", second.GetCellValue(0, 0, 0));
     }
 
     [Fact]
     public void StateOnlyActionsCannotChangeFormulaStateOrInvalidateItsCache()
     {
         if (!OperatingSystem.IsWindows()) return;
-        var source = "let n=0; $.functions.register('STATE',()=>n); $.actions.register('advance',()=>{n++;});";
+        var source = "let n=0; host.functions.register('STATE',()=>n); function main(){n++;}";
         using var doc = new WorkbookDocument(Book(Sheet("Data", (0, 0, F("=STATE()")))).WithScriptModules(M4ActionTests.Actions(source, true)),
             new(new TypedWorkbookStorage(), new WorkbookCalculator(new ScriptWorkerRuntimeFactory()), new ScriptWorkerActionExecutor()));
         doc.EnableScriptsAndCalculate(); var revision = doc.Snapshot.Revision;
         Assert.Equal(CalculationState.Fresh, doc.Snapshot.Sheets[0].GetCell(0, 0)!.Calculation!.State);
-        Assert.False(doc.RunAction("advance").Changed); Assert.Equal(revision, doc.Snapshot.Revision); Assert.False(doc.IsDirty);
+        Assert.False(doc.RunAction("A").Changed); Assert.Equal(revision, doc.Snapshot.Revision); Assert.False(doc.IsDirty);
         Assert.Equal(CalculationState.Fresh, doc.Snapshot.Sheets[0].GetCell(0, 0)!.Calculation!.State);
         doc.Calculate(); Assert.Equal("0", doc.GetCellValue(0, 0, 0));
     }
@@ -76,13 +76,13 @@ public sealed class SharedWorkbookWorkerTests
         if (!OperatingSystem.IsWindows()) return;
         var source = """
             let n=0;
-            $.functions.register('STATE',()=>n);
-            $.actions.register('advance',()=>{n++;});
-            $.events.on('workbook.calculated',()=>{n=99;$.getActiveWorksheet().getCell('B1').setValue(99);});
+            host.functions.register('STATE',()=>n);
+            function main(){n++;}
+            host.events.on('workbook.calculated',context=>{n=99;context.workbook.getActiveWorksheet().getCell('B1').setValue(99);});
             """;
         using var doc = new WorkbookDocument(Book(Sheet("Data", (0, 0, F("=STATE()")))).WithScriptModules(M4ActionTests.Actions(source, true)),
             new(new TypedWorkbookStorage(), new WorkbookCalculator(new ScriptWorkerRuntimeFactory()), new ScriptWorkerActionExecutor()));
-        doc.EnableScriptsAndCalculate(); doc.ListActions(); doc.RunAction("advance"); doc.Calculate();
+        doc.EnableScriptsAndCalculate(); doc.ListActions(); doc.RunAction("A"); doc.Calculate();
         Assert.Equal("0", doc.GetCellValue(0, 0, 0));
         var revision = doc.Snapshot.Revision;
         Assert.NotNull(Record.Exception(() => doc.DispatchScriptEvents()));
@@ -98,14 +98,14 @@ public sealed class SharedWorkbookWorkerTests
         if (!OperatingSystem.IsWindows()) return;
         var modules = new ScriptModuleSet(new Dictionary<string, ScriptModule>
         {
-            ["a"] = new("scripts/a.js", "globalThis.__qxRegistrationRole=()=>3; $.functions.register('WRONG',()=>77); function main(){ $.getActiveCell().setValue(1); }"),
-            ["f"] = new("scripts/f.js", "$.actions.register('wrong',()=>{}); $.events.onActivate=()=>{}; $.functions.register('BOUNDVALUE',()=>42);"),
+            ["a"] = new("scripts/a.js", "globalThis.__qxRegistrationRole=()=>3; host.functions.register('WRONG',()=>77); export function main(workbook){ workbook.getActiveCell().setValue(1); }"),
+            ["f"] = new("scripts/f.js", "host.functions.register('BOUNDVALUE',()=>42);"),
             ["unbound"] = new("scripts/unbound.js", "throw Error('unbound entry must not initialize');")
         }, ["a", "f"], scriptApiVersion: 2, bindings: [new("a", "actions"), new("f", "formula-functions")]);
         using var doc = new WorkbookDocument(Book(Sheet("Data", (1, 0, F("=BOUNDVALUE()")), (2, 0, F("=WRONG()")))).WithScriptModules(modules),
             new(new TypedWorkbookStorage(), new WorkbookCalculator(new ScriptWorkerRuntimeFactory()), new ScriptWorkerActionExecutor()));
         doc.EnableScriptsAndCalculate();
-        Assert.Equal("main", Assert.Single(doc.ListActions()).Name);
+        Assert.Equal("a", Assert.Single(doc.ListActions()).Name);
         Assert.Equal("42", doc.GetCellValue(0, 1, 0));
         Assert.Equal(CalculationState.Blocked, doc.Snapshot.Sheets[0].GetCell(2, 0)!.Calculation!.State);
         doc.Session.RaiseScriptEvent("workbook.activate"); Assert.False(doc.Session.HasScriptEvents);
@@ -118,16 +118,16 @@ public sealed class SharedWorkbookWorkerTests
         const string source = """
             let calls=0;
             globalThis.marker=10;
-            $.functions.register('NEXT',()=>++calls + globalThis.marker);
-            $.actions.register('advance',()=>{calls=100;globalThis.marker=1000;});
-            $.events.onActivate=()=>{calls=200;globalThis.marker=2000;};
+            host.functions.register('NEXT',()=>++calls + globalThis.marker);
+            function main(){calls=100;globalThis.marker=1000;}
+            host.events.on('workbook.activate',()=>{calls=200;globalThis.marker=2000;});
             """;
         using var doc = new WorkbookDocument(Book(Sheet("Data", (0, 0, F("=NEXT()")))).WithScriptModules(M4ActionTests.Actions(source, true)),
             new(new TypedWorkbookStorage(), new WorkbookCalculator(new ScriptWorkerRuntimeFactory()), new ScriptWorkerActionExecutor()));
         doc.EnableScriptsAndCalculate(); Assert.Equal("11", doc.GetCellValue(0, 0, 0));
         var formulaWorker = WorkerId(doc, actions: false); var actionWorker = WorkerId(doc);
         Assert.NotEqual(formulaWorker, actionWorker);
-        doc.ListActions(); doc.RunAction("advance");
+        doc.ListActions(); doc.RunAction("A");
         doc.Session.RaiseScriptEvent("workbook.activate"); doc.DispatchScriptEvents();
         doc.Calculate(); Assert.Equal("12", doc.GetCellValue(0, 0, 0));
         doc.Calculate(); Assert.Equal("13", doc.GetCellValue(0, 0, 0));
@@ -145,9 +145,9 @@ public sealed class SharedWorkbookWorkerTests
         {
             ["actions"] = new("scripts/actions.js", "throw Error('action root must not run during calculation');"),
             ["formulas"] = new("scripts/formulas.js", """
-                $.functions.register('SAFE',()=>21);
-                $.functions.register('READ',()=>$.getActiveWorksheet().getCell('A1').getValue());
-                $.functions.register('WRITE',()=>{$.getActiveWorksheet().getCell('A1').setValue(99);return 0;});
+                host.functions.register('SAFE',()=>21);
+                host.functions.register('READ',()=>workbook.getActiveWorksheet().getCell('A1').getValue());
+                host.functions.register('WRITE',()=>{workbook.getActiveWorksheet().getCell('A1').setValue(99);return 0;});
                 """)
         }, ["actions", "formulas"], scriptApiVersion: 2, bindings: [new("actions", "actions"), new("formulas", "formula-functions")]);
         using var doc = new WorkbookDocument(Book(Sheet("Data", (0, 0, N(7)), (0, 1, F("=SAFE()")), (0, 2, F("=READ()")), (0, 3, F("=WRITE()")))).WithScriptModules(modules),

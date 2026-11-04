@@ -17,7 +17,7 @@ public sealed partial class MainWindow
             var state = await test(new { action = "assistance" });
             check(!_scriptPage!.Drafts.Failed && state.GetProperty("definition").GetString() == name &&
                 state.GetProperty("readOnly").GetBoolean() && state.GetProperty("source").GetString()!
-                    .Contains(name == "quickexcel.d.ts" ? "declare const quickExcel" : "interface Array<T>"),
+                    .Contains(name == "quickexcel.d.ts" ? "declare const host" : "interface Array<T>"),
                 $"A fresh JavaScript-only page opens {name} read-only without requiring TypeScript registration");
             check(await NavigateScriptAsync(new("main", null)) && await CommitScriptsAsync() &&
                 ReferenceEquals(originals, Document.Snapshot.ScriptModules),
@@ -63,7 +63,7 @@ public sealed partial class MainWindow
         var state = await Until(s => s.GetProperty("definition").GetString() == "quickexcel.d.ts" && s.GetProperty("readOnly").GetBoolean(),
             "The native definitions list opens the actual bundled QuickExcel declarations read-only");
         var declarations = state.GetProperty("source").GetString()!;
-        check(declarations.Contains("declare const quickExcel") && !Regex.IsMatch(declarations, @"[\u4e00-\u9fff]"),
+        check(declarations.Contains("declare const host") && !Regex.IsMatch(declarations, @"[\u4e00-\u9fff]"),
             "The definition viewer exposes the complete API with English documentation");
         await Ui(new { action = "assistance", typeText = "THIS MUST NOT BE INSERTED" });
         state = await Ui();
@@ -72,9 +72,10 @@ public sealed partial class MainWindow
             "Typing and draft flushing never modify, save or execute a definition model");
         await Main();
 
-        const string invalid = "const invalid: QxScalar = { code: 'Value' };";
+        const string invalid = "const invalid: QuickExcel.FunctionDescriptor = { name: 'JS.TEST' };";
         await Edit(invalid);
-        await Until(s => s.GetProperty("markers").GetArrayLength() > 0, "A missing error kind produces the diagnostic shown in the reported screenshot");
+        await Until(s => s.GetProperty("markers").EnumerateArray().Any(m => m.GetProperty("code").ToString() == "2741"),
+            "A missing required API descriptor property produces a diagnostic with declaration information");
         await Ui(new { action = "assistance", offset = 8, button = "editor.action.showHover" });
         state = await Until(s => s.GetProperty("hover").GetString()!.Contains("quickexcel.d.ts("),
             "The actual diagnostic hover contains a clickable quickexcel.d.ts related-information link");
@@ -88,10 +89,10 @@ public sealed partial class MainWindow
             "Diagnostic links preserve the pending source and land on the declared line and column");
         await Main();
         check(!(await Ui()).GetProperty("readOnly").GetBoolean(), "Returning from a definition restores source editability");
-        const string api = "$.getActiveCell();";
+        const string api = "export function main(workbook: QuickExcel.Workbook) { workbook.getActiveCell(); }";
         await Edit(api);
-        await Ui(new { action = "assistance", offset = 5, button = "editor.action.revealDefinition" });
-        await Until(s => s.GetProperty("definition").GetString() == "quickexcel.d.ts" && s.GetProperty("position").GetProperty("lineNumber").GetInt32() > 100,
+        await Ui(new { action = "assistance", offset = api.IndexOf("getActiveCell", StringComparison.Ordinal) + 2, button = "editor.action.revealDefinition" });
+        await Until(s => s.GetProperty("definition").GetString() == "quickexcel.d.ts" && s.GetProperty("position").GetProperty("lineNumber").GetInt32() > 1,
             "Go to Definition resolves QuickExcel API members through the actual Monaco provider");
         await Main();
         const string standard = "const values = [1, 2]; values.map(value => value * 2);";

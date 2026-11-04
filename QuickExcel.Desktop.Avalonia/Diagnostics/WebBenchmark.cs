@@ -25,7 +25,7 @@ public sealed partial class MainWindow
             if (Program.WebBenchmarkKind is "all" or "editor")
             {
             var boundary = Enumerable.Range(0, 64).ToDictionary(i => "m" + i, i => new ScriptModule($"scripts/m{i}.js",
-                (i == 0 ? "quickExcel.functions.register('SMOKE', value => value);\n//" : $"export const value = {i};\n//").PadRight(16 * 1024, ' ')));
+                (i == 0 ? "host.functions.register('SMOKE', value => value);\n//" : $"export const value = {i};\n//").PadRight(16 * 1024, ' ')));
             _workspace.Editor.Execute(new UpdateScriptModulesCommand(new(boundary, ["m0"], scriptApiVersion: 2)));
             var cold = new List<double>();
             for (var run = 0; run < 5; run++)

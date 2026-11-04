@@ -17,7 +17,7 @@ public sealed class WorkbookWorkspaceTests : IDisposable
         var document = workspace.Document;
         document.ScriptSource = """
             const value: number = 42;
-            $.functions.register('ENTRYVALUE', () => value);
+            host.functions.register('ENTRYVALUE', () => value);
             function main(workbook: ExcelScript.Workbook) {
                 workbook.getActiveCell().setValue(value);
             }

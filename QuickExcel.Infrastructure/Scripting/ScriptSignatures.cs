@@ -133,7 +133,7 @@ public static class ScriptSignatures
             if (modules.HasTypeScript) writer.Write(ScriptModuleSet.TypeScriptOptions);
             writer.Write(modules.Modules.Count);
             foreach (var (id, module) in modules.Modules.OrderBy(m => m.Key, StringComparer.Ordinal))
-            { writer.Write(id); writer.Write(module.Path); writer.Write(module.Source); if (modules.HasTypeScript) writer.Write(module.Language == ScriptLanguage.TypeScript ? "typescript" : "javascript"); }
+            { writer.Write(id); writer.Write(module.Path); writer.Write(module.Source); writer.Write(module.Description); if (modules.HasTypeScript) writer.Write(module.Language == ScriptLanguage.TypeScript ? "typescript" : "javascript"); }
             writer.Write(modules.EntryModules.Length);
             foreach (var entry in modules.EntryModules) writer.Write(entry);
             writer.Write(modules.Bindings.Length);

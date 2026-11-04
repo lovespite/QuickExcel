@@ -4,7 +4,7 @@ using System.Text;
 namespace QuickExcel.Domain;
 
 public enum ScriptLanguage { JavaScript, TypeScript }
-public sealed record ScriptModule(string Path, string Source, ScriptLanguage Language = ScriptLanguage.JavaScript);
+public sealed record ScriptModule(string Path, string Source, ScriptLanguage Language = ScriptLanguage.JavaScript, string Description = "");
 public sealed record ScriptBinding(string Module, string Kind);
 // Public certificate and signature only; private keys and trust decisions never enter a workbook.
 public sealed record ScriptSignature(int Version, string Algorithm, string Certificate, string Value);
@@ -13,6 +13,8 @@ public sealed record ScriptSignature(int Version, string Algorithm, string Certi
 public sealed class ScriptModuleSet
 {
     public const string TypeScriptOptions = "ts5.9.3-es2022-esnext-strict-isolated-verbatim-define-v1";
+    /// <summary>Descriptions are inert single-line metadata shown in the action picker; they never affect execution.</summary>
+    public const int MaximumDescriptionLength = 200;
     public ScriptModuleSet(IEnumerable<KeyValuePair<string, ScriptModule>> modules, IEnumerable<string> entryModules,
         long revision = 0, long bindingRevision = 0, int scriptApiVersion = 1, IEnumerable<ScriptBinding>? bindings = null,
         ScriptSignature? signature = null)
@@ -36,6 +38,7 @@ public sealed class ScriptModuleSet
         {
             if (string.IsNullOrEmpty(id) || id.Length > 128 || id is "." or ".." || id.Any(c => !char.IsAsciiLetterOrDigit(c) && c is not ('_' or '-' or '.')) ||
                 module is null || !Enum.IsDefined(module.Language) || module.Language == ScriptLanguage.TypeScript && scriptApiVersion != 2 ||
+                module.Description is null || module.Description.Length > MaximumDescriptionLength || module.Description.Any(char.IsControl) ||
                 module.Source is null || module.Path is null || module.Path.Length > 512 || module.Path.Any(char.IsControl) || !module.Path.StartsWith("scripts/", StringComparison.Ordinal) ||
                 module.Path.Split('/').Any(s => s.Length == 0 || s is "." or "..") ||
                 module.Path.IndexOfAny(['\\', ':', '%', '?', '#']) >= 0 || !paths.Add(module.Path))

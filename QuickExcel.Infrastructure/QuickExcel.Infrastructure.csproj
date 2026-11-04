@@ -6,6 +6,8 @@
     <Version>0.2.0</Version>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="AngleSharp" Version="[1.9.1]" />
+    <PackageReference Include="OpenMcdf" Version="[3.4.0]" />
     <EmbeddedResource Include="Storage/BuiltinTableStyles.xml" />
     <EmbeddedResource Include="Storage/DefaultTableTheme.xml" />
     <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="10.0.0" />

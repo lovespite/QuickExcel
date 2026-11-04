@@ -4,11 +4,13 @@ using System.Text.Json;
 
 namespace QuickExcel.ScriptContracts;
 
-public sealed record ModuleSource(string Id, string Path, string Source);
+public sealed record ModuleSource(string Id, string Path, string Source, string Description = "");
 
 /// <summary>API v2 package source, never filenames to open. Digest covers identities, paths, sources and entry order.</summary>
 public sealed record LoadModules(ModuleSource[] Modules, string[] EntryModules, string Sha256)
 {
+    /// <summary>Inert single-line module metadata carried to the action picker; never executed.</summary>
+    public const int MaxDescriptionLength = 200;
     public string[] FunctionEntries { get; init; } = [];
     public string[] ActionEntries { get; init; } = [];
     public string ComputeDigest()
@@ -18,7 +20,7 @@ public sealed record LoadModules(ModuleSource[] Modules, string[] EntryModules, 
         {
             apiVersion = 2, entries = EntryModules, functionEntries = FunctionEntries, actionEntries = ActionEntries,
             modules = Modules.OrderBy(m => m.Id, StringComparer.Ordinal).Select(m => new
-            { id = m.Id, path = m.Path, sha256 = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(m.Source))) })
+            { id = m.Id, path = m.Path, sha256 = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(m.Source))), description = m.Description })
         })));
     }
 
@@ -40,7 +42,8 @@ public sealed record LoadModules(ModuleSource[] Modules, string[] EntryModules, 
                 module.Id is "." or ".." || module.Id.Any(c => !char.IsAsciiLetterOrDigit(c) && c is not ('_' or '-' or '.')) || !ids.Add(module.Id) ||
                 module.Path is null || module.Path.Length > 512 || !module.Path.StartsWith("scripts/", StringComparison.Ordinal) ||
                 module.Path.Any(char.IsControl) || module.Path.IndexOfAny(['\\', ':', '%', '?', '#']) >= 0 ||
-                module.Path.Split('/').Any(s => s.Length == 0 || s is "." or "..") || !paths.Add(module.Path) || module.Source is null)
+                module.Path.Split('/').Any(s => s.Length == 0 || s is "." or "..") || !paths.Add(module.Path) || module.Source is null ||
+                module.Description is null || module.Description.Length > MaxDescriptionLength || module.Description.Any(char.IsControl))
                 throw new ProtocolException("Invalid module identity or path.");
             sourceBytes += Encoding.UTF8.GetByteCount(module.Source);
         }

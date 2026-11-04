@@ -133,7 +133,7 @@ public sealed class PreservedFormulaTests : IDisposable
     [Fact]
     public void EnablingScriptsOnlyUnblocksFunctionsActuallyRegisteredInThatRuntime()
     {
-        var source = "quickExcel.functions.register(\"DOUBLE\", value => value * 2);";
+        var source = "host.functions.register(\"DOUBLE\", value => value * 2);";
         var sheet = Sheet("Data", (0, 0, N(9)), (0, 1, F("=SQRT(A1)", 3)), (0, 2, F("=B1+1", 4)),
             (0, 3, F("=DOUBLE(A1)", 0)), (0, 4, F("=D1+1", 0)));
         var book = Book(sheet).WithScriptSource(source);

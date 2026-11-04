@@ -36,7 +36,7 @@ public sealed class ComplexFormulaTests
     {
         var sheet = Sheet("S", (0, 0, F("=LET(x,NEXT(),x+x)")),
             (1, 0, F("=LET(x,NEXT(),LET(y,x+x,y+x))")), (2, 0, F("=LET(x,NEXT(),5)")), (3, 0, F("=NEXT()")));
-        var book = Book(sheet).WithScriptSource("let n=0;quickExcel.functions.register('NEXT',()=>++n);");
+        var book = Book(sheet).WithScriptSource("let n=0;host.functions.register('NEXT',()=>++n);");
         var result = new WorkbookCalculator(new QuickExcel.Runtime.JscRuntimeFactory()).Calculate(Request(book) with { ScriptsEnabled = true });
         Assert.Equal(new double[] { 2, 6, 5, 3 }, Enumerable.Range(0, 4).Select(row => result.Cells[new(sheet.Id, row, 0)].Value!.Value.NumberValue));
         var parsed = FormulaSyntax.Parse("=LET(x,global_name,LET(y,x,y)+x+global_name)");

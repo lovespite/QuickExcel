@@ -42,7 +42,7 @@ public sealed class M3StorageTests : IDisposable
         var a = Sheet("A", (0, 0, F("=DOUBLE(7)")), (0, 1, F("=4+5")), (0, 2, N(4)));
         var b = Sheet("B", (0, 0, F("=A!A1*2")), (0, 1, F("=SUM(A!A1:A2)")), (0, 2, F("=A!B1+1")));
         var c = Sheet("C", (0, 0, F("=B!A1+1")), (0, 1, F("=SUM(Independent)")));
-        var book = Book(c, b, a).WithScriptSource("quickExcel.functions.register('DOUBLE', n => n*2);")
+        var book = Book(c, b, a).WithScriptSource("host.functions.register('DOUBLE', n => n*2);")
             .WithDefinedNames([new("Independent", "='A'!$B$1:$C$1")]);
         using var doc = new WorkbookDocument(book, new(new TypedWorkbookStorage(), new WorkbookCalculator(new JscRuntimeFactory())));
         doc.EnableScriptsAndCalculate();
@@ -94,7 +94,7 @@ public sealed class M3StorageTests : IDisposable
     public void ScriptInDefinedNameIsPartOfFrozenClosure()
     {
         var sheet = Sheet("S", (0, 0, F("=Rate+1")), (0, 1, F("=A1*2")));
-        var book = Book(sheet).WithScriptSource("quickExcel.functions.register('NUMBER', ()=>9)")
+        var book = Book(sheet).WithScriptSource("host.functions.register('NUMBER', ()=>9)")
             .WithDefinedNames([new("Rate", "=NUMBER()")]);
         using var doc = new WorkbookDocument(book, new(new TypedWorkbookStorage(), new WorkbookCalculator(new JscRuntimeFactory())));
         doc.EnableScriptsAndCalculate();

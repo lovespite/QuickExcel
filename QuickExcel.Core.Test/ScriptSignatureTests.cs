@@ -226,6 +226,7 @@ public sealed class ScriptSignatureTests : IDisposable
     [InlineData("entries")]
     [InlineData("bindings")]
     [InlineData("added")]
+    [InlineData("description")]
     public void EveryExecutablePartIsCovered(string mutation)
     {
         var signed = Signed(); var map = signed.Modules; var entries = signed.EntryModules.ToArray();
@@ -235,6 +236,7 @@ public sealed class ScriptSignatureTests : IDisposable
             case "source": map = map.SetItem("main", map["main"] with { Source = "console.log('evil');" }); break;
             case "helper": map = map.SetItem("helper", map["helper"] with { Source = "export const value = 'other';" }); break;
             case "path": map = map.SetItem("helper", map["helper"] with { Path = "scripts/other.js" }); break;
+            case "description": map = map.SetItem("main", map["main"] with { Description = "误导性描述" }); break;
             case "id": map = map.Remove("helper").Add("other", map["helper"]); entries = ["main", "other"]; bindings = [new("main", "formula-functions"), new("other", "formula-functions")]; break;
             case "api": api = 1; break;
             case "entries": entries = ["helper", "main"]; break;
@@ -271,7 +273,7 @@ public sealed class ScriptSignatureTests : IDisposable
         var request = new CertificateRequest("CN=EC", key, HashAlgorithmName.SHA256);
         request.CertificateExtensions.Add(new X509EnhancedKeyUsageExtension(new OidCollection { new(ScriptSignatures.CodeSigningOid) }, false));
         using var cert = request.CreateSelfSigned(DateTimeOffset.UtcNow.AddMinutes(-1), DateTimeOffset.UtcNow.AddDays(1));
-        var modules = ScriptModuleSet.Single("quickExcel.functions.register('F', () => 1);");
+        var modules = ScriptModuleSet.Single("host.functions.register('F', () => 1);");
         var signed = modules.WithSignature(ScriptSignatures.Sign(modules, cert));
         Assert.Equal(ScriptSignatureStatus.UntrustedSelfSigned, ScriptSignatures.Verify(signed).Status);
     }

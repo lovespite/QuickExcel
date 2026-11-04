@@ -1,4 +1,3 @@
-using System.Collections.Immutable;
 using System.Text.Json;
 using QuickExcel.Calculation;
 using QuickExcel.Core;
@@ -11,64 +10,48 @@ namespace QuickExcel.Core.Test;
 
 public sealed class ScriptEventApiTests
 {
-    private static readonly (string Constant, string Name, string Property)[] Events = [
-        ("ON_OPEN", "workbook.open", "onWorkbookOpen"), ("ON_BEFORE_CLOSE", "workbook.beforeClose", "onWorkbookBeforeClose"),
-        ("ON_CLOSE", "workbook.close", "onWorkbookClose"), ("ON_ACTIVATE", "workbook.activate", "onWorkbookActivate"),
-        ("ON_DEACTIVATE", "workbook.deactivate", "onWorkbookDeactivate"), ("ON_BEFORE_SAVE", "workbook.beforeSave", "onWorkbookBeforeSave"),
-        ("ON_SAVED", "workbook.saved", "onWorkbookSaved"), ("ON_CALCULATED", "workbook.calculated", "onWorkbookCalculated"),
-        ("ON_WORKSHEET_ADDED", "sheet.added", "onWorksheetAdded"), ("ON_WORKSHEET_DELETED", "sheet.deleted", "onWorksheetDeleted"),
-        ("ON_WORKSHEET_RENAMED", "sheet.renamed", "onWorksheetRenamed"), ("ON_WORKSHEET_ACTIVATE", "sheet.activate", "onWorksheetActivate"),
-        ("ON_WORKSHEET_DEACTIVATE", "sheet.deactivate", "onWorksheetDeactivate"), ("ON_SELECTION_CHANGED", "selection.changed", "onSelectionChanged"),
-        ("ON_CELL_CLICK", "cell.click", "onCellClick"), ("ON_CELL_EDIT", "cell.edit", "onCellEdit"),
-        ("ON_CELL_COMMIT", "cell.commit", "onCellCommit"), ("ON_CELLS_CHANGED", "cells.changed", "onCellsChanged")
+    private static readonly string[] Events = [
+        "workbook.open", "workbook.beforeClose", "workbook.close", "workbook.activate",
+        "workbook.deactivate", "workbook.beforeSave", "workbook.saved", "workbook.calculated",
+        "sheet.added", "sheet.deleted", "sheet.renamed", "sheet.activate", "sheet.deactivate",
+        "selection.changed", "cell.click", "cell.edit", "cell.commit", "cells.changed"
     ];
     private static ScriptModuleSet Modules(string source, ScriptLanguage language = ScriptLanguage.JavaScript) => new(
         new Dictionary<string, ScriptModule> { ["main"] = new(language == ScriptLanguage.TypeScript ? "scripts/main.ts" : "scripts/main.js", source, language) },
         ["main"], scriptApiVersion: 2, bindings: [new("main", "actions")]);
 
     [Fact]
-    public void AllExistingEventsHaveConstantsAndPropertyHandlersWithCorrectArguments()
+    public void AllExistingEventsHaveContextHandlersWithCorrectArguments()
     {
-        Assert.True(ScriptEventNames.All.SetEquals(Events.Select(e => e.Name)));
-        var entries = JsonSerializer.Serialize(Events.Select(e => new[] { e.Constant, e.Name, e.Property }));
-        var source = "const entries=" + entries + ";" + """
-            if (!Object.isFrozen(QxEventNames) || Object.keys(QxEventNames).length !== entries.length) throw Error('constants');
-            for (const [key, name, property] of entries) {
-              if (QxEventNames[key] !== name || $.events[property] !== null) throw Error('mapping');
-              $.events[property] = (argument, context) => {
-                if (!Object.isFrozen(argument) || context.event.name !== name) throw Error('payload');
-                if (name.startsWith('sheet.')) {
-                  if (argument.id !== context.event.sheetId || argument.name !== 'Deleted or current') throw Error('sheet');
-                } else if (argument !== context.event) throw Error('event');
-                console.log('property:' + name);
-              };
-              $.events.on(QxEventNames[key], context => console.log('listener:' + context.event.name));
-            }
+        Assert.True(ScriptEventNames.All.SetEquals(Events));
+        var names = JsonSerializer.Serialize(Events);
+        var source = "const names=" + names + ";" + """
+            for (const name of names) host.events.on(name, context => {
+              if (!Object.isFrozen(context) || !Object.isFrozen(context.event) || context.event.name !== name) throw Error('payload');
+              if (name.startsWith('sheet.') && (context.event.sheetId === null || context.event.sheetName !== 'Deleted or current')) throw Error('sheet');
+              console.log('listener:' + name);
+            });
             """;
         var sheet = Sheet("Data"); var snapshot = Book(sheet).WithScriptModules(Modules(source)); var executor = new ScriptWorkerActionExecutor();
-        foreach (var (_, name, _) in Events)
+        foreach (var name in Events)
         {
             var stamp = new CalculationStamp(Guid.NewGuid(), snapshot.Revision, 1, 1);
             var ev = new ScriptEvent(name, stamp.SessionId, 1, snapshot.Revision, sheet.Id.ToString(), "Deleted or current", []);
             var result = executor.Run(new(stamp, Guid.NewGuid(), ScriptEventNames.Prefix + name, snapshot, default) { Event = ev }, default);
-            Assert.Equal(["property:" + name, "listener:" + name], result.Logs.ToArray());
+            Assert.Equal(["listener:" + name], result.Logs.ToArray());
         }
     }
 
     [Theory]
     [InlineData(ScriptLanguage.JavaScript)]
     [InlineData(ScriptLanguage.TypeScript)]
-    public void ReplacementNullRemovalAndExistingListenersShareOneOrderedTransaction(ScriptLanguage language)
+    public void MultipleHandlersShareOneOrderedTransaction(ScriptLanguage language)
     {
         var source = """
-            $.events.onWorksheetActivate = () => { throw Error('replaced'); };
-            $.events.on(QxEventNames.ON_WORKSHEET_ACTIVATE, ({patch,snapshot}) => patch.setValue(snapshot.sheets[0].id,'B1','listener'));
-            $.events.onWorksheetActivate = (sheet, {patch}) => patch.setValue(sheet.id,'A1',sheet.name);
-            $.events.onCellClick = () => { throw Error('removed'); };
-            $.events.onCellClick = null;
-            $.events.on(QxEventNames.ON_CELL_CLICK, ({patch,snapshot}) => patch.setValue(snapshot.sheets[0].id,'C1','retained'));
-            $.events.onBeforeSave = () => { throw Error('alias replaced'); };
-            $.events.onWorkbookBeforeSave = (event, {fs}) => fs.writeText('//xlsq/saved.txt',event.name);
+            host.events.on('sheet.activate', context => context.workbook.getActiveWorksheet().getRange('A1').setValue(context.event.sheetName));
+            host.events.on('sheet.activate', context => context.workbook.getActiveWorksheet().getRange('B1').setValue('listener'));
+            host.events.on('cell.click', context => context.workbook.getActiveWorksheet().getRange('C1').setValue('retained'));
+            host.events.on('workbook.beforeSave', context => context.host.files.writeText('//xlsq/saved.txt',context.event.name));
             """;
         using var doc = new WorkbookDocument(Book(Sheet("Data")).WithScriptModules(Modules(source, language)),
             new(new TypedWorkbookStorage(), new WorkbookCalculator(new ScriptWorkerRuntimeFactory()), new ScriptWorkerActionExecutor()));
@@ -83,10 +66,10 @@ public sealed class ScriptEventApiTests
     }
 
     [Theory]
-    [InlineData("$.events.onCellClick = 42;")]
-    [InlineData("$.events.onCellClick = undefined;")]
-    [InlineData("for (let i=0;i<32;i++) $.events.on(QxEventNames.ON_CELL_CLICK,()=>{}); $.events.onCellClick=()=>{};")]
-    public void InvalidPropertyAssignmentsAndCombinedHandlerLimitAreRejected(string source)
+    [InlineData("host.events.on('missing.event',()=>{});")]
+    [InlineData("host.events.on('cell.click',42);")]
+    [InlineData("for (let i=0;i<32;i++) host.events.on('cell.click',()=>{}); host.events.on('cell.click',()=>{});")]
+    public void InvalidRegistrationsAndCombinedHandlerLimitAreRejected(string source)
     {
         var snapshot = Book(Sheet("Data")).WithScriptModules(Modules(source));
         Assert.Throws<ScriptRuntimeFailureException>(() => new ScriptWorkerActionExecutor().List(
@@ -94,12 +77,12 @@ public sealed class ScriptEventApiTests
     }
 
     [Fact]
-    public void RemovingOnlyPropertyHandlerRemovesDiscoveryAndLateAssignmentsFail()
+    public void LateRegistrationInsideMainFailsWithoutCommitting()
     {
-        var modules = Modules("$.events.onCellClick=()=>{}; $.events.onCellClick=null; $.actions.register('late',()=>{$.events.onCellClick=()=>{};});");
+        var modules = Modules("host.events.on('cell.click',()=>{}); function main(){ host.events.on('cell.click',()=>{}); }");
         var snapshot = Book(Sheet("Data")).WithScriptModules(modules); var executor = new ScriptWorkerActionExecutor();
         var request = new ScriptActionRequest(new(Guid.NewGuid(), snapshot.Revision, 1, 1), Guid.NewGuid(), null, snapshot, default);
-        Assert.Equal("late", Assert.Single(executor.List(request, default)).Name);
-        Assert.Throws<ScriptRuntimeFailureException>(() => executor.Run(request with { Name = "late" }, default));
+        Assert.Equal("main", Assert.Single(executor.List(request, default)).Name);
+        Assert.Throws<ScriptRuntimeFailureException>(() => executor.Run(request with { Name = "main" }, default));
     }
 }

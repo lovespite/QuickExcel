@@ -31,15 +31,15 @@ public sealed class TypeScriptCompilerTests
     {
         const string source = """
             enum Amount { Value = 42 }
-            quickExcel.actions.register('write', ({snapshot,patch,fs})=>{
+            function main(workbook: QuickExcel.Workbook, host: QuickExcel.Host) {
               const n:number=Amount.Value;
-              patch.setValue(snapshot.sheets[0].id,'A1',n);
-              fs.writeText('//xlsq/value.txt',String(n));
-            });
-            quickExcel.events.on('cell.click',({snapshot,patch,fs})=>{
-              const message:string=fs.readText('//xlsq/value.txt');
-              patch.setValue(snapshot.sheets[0].id,'B1',message);
-              fs.writeText('//xlsq/event.txt',message);
+              workbook.getActiveWorksheet().getRange('A1').setValue(n);
+              host.files.writeText('//xlsq/value.txt',String(n));
+            }
+            host.events.on('cell.click',context=>{
+              const message:string=context.host.files.readText('//xlsq/value.txt');
+              context.workbook.getActiveWorksheet().getRange('B1').setValue(message);
+              context.host.files.writeText('//xlsq/event.txt',message);
             });
             """;
         var modules = new ScriptModuleSet(new Dictionary<string, ScriptModule>
@@ -47,7 +47,7 @@ public sealed class TypeScriptCompilerTests
         using var doc = new WorkbookDocument(Book(Sheet("Data")).WithScriptModules(modules),
             new(new TypedWorkbookStorage(), new WorkbookCalculator(new ScriptWorkerRuntimeFactory()), new ScriptWorkerActionExecutor()));
         doc.EnableScriptsAndCalculate();
-        doc.RunAction("write");
+        doc.RunAction("main");
         Assert.Equal("42", doc.GetCellValue(0, 0, 0));
         Assert.True(doc.Snapshot.PackageFiles.Entries.ContainsKey("//xlsq/value.txt"));
         Assert.True(doc.Undo());
@@ -106,7 +106,7 @@ public sealed class TypeScriptCompilerTests
     {
         var compiler = new ScriptCompiler();
         var request = Request(new("shared", "typescript", "export const twice=(n:number):number=>n*2;"),
-            new("main", "typescript", "import {twice} from 'shared'; quickExcel.functions.register('F',()=>twice(4));"));
+            new("main", "typescript", "import {twice} from 'shared'; host.functions.register('F',()=>twice(4));"));
         var result = await compiler.CompileAsync(request, Stamp);
         Assert.True(result.Result.Success);
         var modules = new ScriptModuleSet(result.Result.Outputs.ToDictionary(m => m.Id, m => new ScriptModule("scripts/" + m.Id + ".js", m.Javascript)), ["main"], scriptApiVersion: 2);
@@ -121,9 +121,9 @@ public sealed class TypeScriptCompilerTests
 
     [Theory]
     [InlineData("export const n:number='bad';")]
-    [InlineData("$.actions.register('write', context => context.patch.setValue('sheet', 'A1', {}));")]
-    [InlineData("$.events.on('missing.event', context => {});")]
-    [InlineData("$.functions.register(42, () => 1);")]
+    [InlineData("host.actions.register('write', context => context.workbook);")]
+    [InlineData("host.events.on('missing.event', context => {});")]
+    [InlineData("host.functions.register(42, () => 1);")]
     [InlineData("export const n = document.title;")]
     [InlineData("export const n = process.env.PATH;")]
     [InlineData("import {n} from './external'; export {n};")]
@@ -143,12 +143,12 @@ public sealed class TypeScriptCompilerTests
         var compiler = new ScriptCompiler();
         var valid = await compiler.CompileAsync(Request(
             new("helpers", "typescript", "const $ = 7; const value = 1;"),
-            new("main", "typescript", "const $ = 42; const value = 2; quickExcel.functions.register('LOCAL', () => $ + value);")), Stamp);
+            new("main", "typescript", "const $ = 42; const value = 2; host.functions.register('LOCAL', () => $ + value);")), Stamp);
         Assert.True(valid.Result.Success, string.Join("\n", valid.Result.Diagnostics.Select(d => d.Message)));
         Assert.Equal(2, valid.Result.Outputs.Length);
         var invalid = await compiler.CompileAsync(Request(
             new("helpers", "typescript", "const privateValue = 7;"),
-            new("main", "typescript", "$.functions.register('LOCAL', () => privateValue);")), Stamp);
+            new("main", "typescript", "host.functions.register('LOCAL', () => privateValue);")), Stamp);
         Assert.False(invalid.Result.Success);
         Assert.Contains(invalid.Result.Diagnostics, d => d.Module == "main" && d.Message.Contains("privateValue"));
         Assert.Empty(invalid.Result.Outputs);
@@ -184,7 +184,7 @@ public sealed class TypeScriptCompilerTests
     [Fact]
     public void RuntimeAcceptsOnlyCurrentCompiledSourcesAndMapsErrorsToOriginalLines()
     {
-        const string source = "enum E { A, B }\n\nquickExcel.functions.register('F',()=>{\n  const n:number=E.B;\n  throw new Error('mapped '+n);\n});";
+        const string source = "enum E { A, B }\n\nhost.functions.register('F',()=>{\n  const n:number=E.B;\n  throw new Error('mapped '+n);\n});";
         var modules = new ScriptModuleSet(new Dictionary<string, ScriptModule>
         { ["main"] = new("scripts/main.ts", source, ScriptLanguage.TypeScript) }, ["main"], scriptApiVersion: 2);
         using var runtime = new ScriptWorkerRuntimeFactory().Create(new ScriptRuntimeRequest(modules, Stamp, TimeSpan.FromSeconds(5), default));

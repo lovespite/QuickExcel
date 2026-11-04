@@ -10,6 +10,17 @@ namespace QuickExcel.Core.Test;
 public sealed class ScriptModuleTemplateTests
 {
     [Fact]
+    public void ModuleDescriptionIsBoundedSingleLineMetadata()
+    {
+        ScriptModuleSet Build(string description) => new(
+            new Dictionary<string, ScriptModule> { ["main"] = new("scripts/main.js", "export const value = 1;", Description: description) },
+            ["main"], scriptApiVersion: 2);
+        Assert.Equal("填充示例单元格", Build("填充示例单元格").Modules["main"].Description);
+        Assert.Throws<ArgumentException>(() => Build(new string('x', ScriptModuleSet.MaximumDescriptionLength + 1)));
+        Assert.Throws<ArgumentException>(() => Build("第一行\n第二行"));
+    }
+
+    [Fact]
     public void ValidModuleIdsProduceBoundedDistinctRegistrationNames()
     {
         string[] ids = ["123", "sample", "Sample", "sample-name", new('x', 128)];
@@ -52,7 +63,7 @@ public sealed class ScriptModuleTemplateTests
         if (actions)
         {
             document.Session.UpdateNavigation(sheet.Id, new(1, 0));
-            document.RunAction("sample.FillActiveCell");
+            document.RunAction("sample");
             Assert.Equal("42", document.GetCellValue(0, 1, 0));
             Assert.True(document.Undo());
             Assert.Equal("", document.GetCellValue(0, 1, 0));

@@ -39,7 +39,7 @@ public sealed class ProtocolException(string message, Exception? inner = null) :
 
 public static class WorkerProtocol
 {
-    public const int Version = 9;
+    public const int Version = 10;
     public const string Engine = "JavaScriptCore/2.54.2/b95c91b1/qx-sync-2";
     public const string Policy = "conservative-jsc-v1-memory-issue-open";
     public const int MaxFrameBytes = 16 * 1024 * 1024;

@@ -1,6 +1,9 @@
 # 实时工作簿对象与每工作簿脚本上下文
 
-2026-11-04。此文更新 11/13/69/72 中关于逐次创建执行 worker、预先复制全量单元格与文件快照的运行机制。文件 `scriptApiVersion` 仍为 2；初版 IPC 为 8；当前为 9，UDF 独立上下文与事务内计算见 [77](77-udf-context-isolation-and-transaction-calculation.md)，桥标识为 `JavaScriptCore/2.54.2/b95c91b1/qx-sync-2`，旧 host/worker/native 混用会被拒绝。
+> 2026-11-04：本文的对象 API 部分已被 [79](79-script-api-redesign.md) 取代；`$` / `quickExcel` 全局、`snapshot` / `patch`、`getActiveRange(s)` 和事件属性处理器均已移除。事务、读己写和 live model 契约仍然适用。
+
+
+2026-11-04。此文更新 11/13/69/72 中关于逐次创建执行 worker、预先复制全量单元格与文件快照的运行机制。文件 `scriptApiVersion` 仍为 2；初版 IPC 为 8；当前为 10，UDF 独立上下文与事务内计算见 [77](77-udf-context-isolation-and-transaction-calculation.md)，桥标识为 `JavaScriptCore/2.54.2/b95c91b1/qx-sync-2`，旧 host/worker/native 混用会被拒绝。
 
 ## 对象 API
 

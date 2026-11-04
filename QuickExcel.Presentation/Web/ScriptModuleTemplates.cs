@@ -20,14 +20,15 @@ public static class ScriptModuleTemplates
             sections.Add($$"""
                 // Apply scripts, then try ={{name}}(21) in a cell.
                 // UDFs use only their arguments; workbook access belongs in Actions.
-                {{(typed ? "" : "/** @param {QxScalar} value @returns {number} */\n")}}function double(value{{(typed ? ": QxScalar" : "")}}){{(typed ? ": number" : "")}} {
+                // Register events in the main entry or a Common module imported by it.
+                {{(typed ? "" : "/** @param {unknown} value @returns {number} */\n")}}function double(value{{(typed ? ": unknown" : "")}}){{(typed ? ": number" : "")}} {
                     if (typeof value !== 'number' || !Number.isFinite(value)) {
                         throw new TypeError('Expected a finite number.');
                     }
                     return value * 2;
                 }
 
-                $.functions.register({
+                host.functions.register({
                     name: '{{name}}',
                     apiVersion: 2,
                     parameters: [{ name: 'value', type: 'any' }],
@@ -37,21 +38,21 @@ public static class ScriptModuleTemplates
         }
         if (actions)
             sections.Add($$"""
-                // Apply scripts, select this action, then click Run Action.
+                // Apply scripts, select this module in the action picker, then run it.
+                // One file defines one action through main; use a separate module for another action.
+                // Register events in the main entry or a Common module imported by it.
                 // Writes commit together and can be undone as one operation.
-                $.actions.register({
-                    name: '{{CompactName(id)}}.FillActiveCell',
-                    description: 'Write 42 and highlight the active cell.'
-                }, ({ workbook }) => {
+                export function main(workbook{{(typed ? ": QuickExcel.Workbook" : "")}}) {
                     const cell = workbook.getActiveCell();
                     cell.setValue(42);
                     cell.getFormat().getFill().setColor('#FFF2CC');
                     console.log('Updated', cell.getAddress());
-                });
+                }
                 """);
         if (sections.Count == 0)
             sections.Add($$"""
-                // Import this helper by its logical module ID: '{{id}}'.
+                // Import this Common module by its logical module ID: '{{id}}'.
+                // To register events here, import this module from the main entry.
                 export function example(value{{(typed ? ": number" : "")}}) {
                     return value;
                 }

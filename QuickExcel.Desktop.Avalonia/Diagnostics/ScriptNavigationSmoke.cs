@@ -26,21 +26,28 @@ public sealed partial class MainWindow
         check(!_scriptWindow!.GetVisualDescendants().OfType<Button>().Any(b => b.Content is "模块角色" or "JS / TS"),
             "The workspace exposes no post-creation role or language editor");
         var beforeCancel = Document.Snapshot.ScriptModules;
-        _dialogDriver = window =>
+        _dialogDriver = async window =>
         {
-            check(((FieldsDialog)window).Index("language") == (int)ScriptLanguage.TypeScript,
+            var dialog = (FieldsDialog)window;
+            check(dialog.String("id") == "" && dialog.Index("role") == 1 &&
+                ((ComboBox)dialog.Input("role")).Items.Cast<string>().SequenceEqual(["Common", "Actions", "UDF"]),
+                "Module creation starts with an empty ID and Actions selected from exactly Common, Actions and UDF");
+            check(dialog.Index("language") == (int)ScriptLanguage.TypeScript,
                 "The module creation dialog defaults to TypeScript");
-            window.Close(false); return Task.CompletedTask;
+            await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Background);
+            using (var image = new RenderTargetBitmap(new PixelSize((int)Math.Ceiling(window.Bounds.Width), (int)Math.Ceiling(window.Bounds.Height)), new Vector(96, 96)))
+            { image.Render(window); image.Save(Path.Combine(directory, "script-module-dialog.png"), PngBitmapEncoderOptions.Default); }
+            window.Close(false);
         };
         await AddScriptModuleAsync();
         check(ReferenceEquals(beforeCancel, Document.Snapshot.ScriptModules), "Cancelling module creation preserves the complete module set");
-        foreach (var (id, role, language) in new[] { ("utility", 0, 0), ("formula", 1, 1), ("action", 2, 0), ("shared", 3, 1) })
+        foreach (var (id, role, language) in new[] { ("utility", 0, 0), ("formula", 2, 1), ("action", 1, 0) })
         {
             _dialogDriver = window =>
             {
                 var dialog = (FieldsDialog)window;
                 ((TextBox)dialog.Input("id")).Text = id;
-                ((ComboBox)dialog.Input("role")).SelectedIndex = role;
+                if (role != 1) ((ComboBox)dialog.Input("role")).SelectedIndex = role;
                 if (language == 0) ((ComboBox)dialog.Input("language")).SelectedIndex = language;
                 window.GetVisualDescendants().OfType<Button>().Single(b => Equals(b.Content, "确定")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
                 return Task.CompletedTask;
@@ -54,15 +61,15 @@ public sealed partial class MainWindow
         }
         var udf = _scriptModuleGroups.Single(g => g.Kind == "formula-functions");
         var actions = _scriptModuleGroups.Single(g => g.Kind == "actions");
-        var helpers = _scriptModuleGroups.Single(g => g.Kind is null);
-        check(udf.Picker.Items.Cast<string>().SequenceEqual(["formula", "shared"]) &&
-            actions.Picker.Items.Cast<string>().SequenceEqual(["action", "shared"]) && helpers.Picker.Items.Cast<string>().SequenceEqual(["utility"]),
-            "UDF, Actions and helpers are sorted by ID; dual-role modules appear in both groups and main stays ungrouped");
+        var common = _scriptModuleGroups.Single(g => g.Kind is null);
+        check(udf.Picker.Items.Cast<string>().SequenceEqual(["formula"]) &&
+            actions.Picker.Items.Cast<string>().SequenceEqual(["action"]) && common.Picker.Items.Cast<string>().SequenceEqual(["utility"]) &&
+            common.Label == "Common" && ScriptModuleProperties(Document.Snapshot.ScriptModules, "utility") == "Common · JavaScript",
+            "Created modules appear only in their selected category; Common has consistent labels and main stays ungrouped");
         var modules = Document.Snapshot.ScriptModules;
-        check(modules.EntryModules.SequenceEqual(["main", "formula", "action", "shared"]) && modules.Bindings.ToHashSet().SetEquals(
-            [new("main", "formula-functions"), new("main", "actions"), new("formula", "formula-functions"), new("action", "actions"),
-                new("shared", "formula-functions"), new("shared", "actions")]),
-            "Creation persists exactly the chosen roles without turning helper modules into execution entries");
+        check(modules.EntryModules.SequenceEqual(["main", "formula", "action"]) && modules.Bindings.ToHashSet().SetEquals(
+            [new("main", "formula-functions"), new("main", "actions"), new("formula", "formula-functions"), new("action", "actions")]),
+            "Creation persists exclusive UDF or Actions bindings without turning Common modules into execution entries");
         await select("main");
         var revision = Document.Snapshot.Revision;
         foreach (var group in _scriptModuleGroups) group.Panel.IsExpanded = false;
@@ -74,16 +81,16 @@ public sealed partial class MainWindow
         var navigation = (Control)_modulePicker.Parent!;
         using (var image = new RenderTargetBitmap(new PixelSize((int)Math.Ceiling(navigation.Bounds.Width), (int)Math.Ceiling(navigation.Bounds.Height)), new Vector(96, 96)))
         { image.Render(navigation); image.Save(Path.Combine(directory, "script-navigation-collapsed.png"), PngBitmapEncoderOptions.Default); }
-        helpers.Panel.IsExpanded = true;
+        common.Panel.IsExpanded = true;
         await test(new { action = "edit", module = "main", text = "// draft before category navigation\n" });
         await select("utility");
         check(Document.Snapshot.ScriptModules.Modules["main"].Source.Contains("draft before category navigation") &&
-            _modulePicker.SelectedItem is null && helpers.Picker.SelectedItem is "utility" && !udf.Panel.IsExpanded && !actions.Panel.IsExpanded,
+            _modulePicker.SelectedItem is null && common.Picker.SelectedItem is "utility" && !udf.Panel.IsExpanded && !actions.Panel.IsExpanded,
             "Cross-category selection flushes drafts, clears the prior highlight and retains unrelated collapsed panels");
         _scriptDiagnostics!.ItemsSource = new[] { new ScriptDiagnostic("formula location", Document.Snapshot.ScriptModules.Revision, "formula") };
         _scriptDiagnostics.SelectedIndex = 0;
         await ActivateScriptDiagnosticAsync();
-        check(_selectedModule == "formula" && udf.Panel.IsExpanded && udf.Picker.SelectedItem is "formula" && helpers.Picker.SelectedItem is null,
+        check(_selectedModule == "formula" && udf.Panel.IsExpanded && udf.Picker.SelectedItem is "formula" && common.Picker.SelectedItem is null,
             "Diagnostic navigation reveals the target in a collapsed category and synchronizes selection");
         udf.Panel.IsExpanded = false;
         await ActivateScriptDiagnosticAsync();
@@ -93,12 +100,12 @@ public sealed partial class MainWindow
         {
             var dialog = (FieldsDialog)window;
             ((ComboBox)dialog.Input("language")).SelectedIndex = (int)ScriptLanguage.JavaScript;
-            foreach (var id in new[] { "main", "../invalid", "UTILITY" })
+            foreach (var id in new[] { "", "   ", "main", "../invalid", "UTILITY" })
             {
                 ((TextBox)dialog.Input("id")).Text = id;
                 window.GetVisualDescendants().OfType<Button>().Single(b => Equals(b.Content, "确定")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
                 check(window.IsVisible && ReferenceEquals(beforeInvalid, Document.Snapshot.ScriptModules),
-                    $"Creation rejects duplicate, invalid or path-colliding ID '{id}' in the dialog without mutating the workbook");
+                    $"Creation rejects empty, duplicate, invalid or path-colliding ID '{id}' in the dialog without mutating the workbook");
             }
             window.Close(false); return Task.CompletedTask;
         };

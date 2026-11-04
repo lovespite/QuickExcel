@@ -231,12 +231,18 @@ public sealed partial class TypedStorageTests : IDisposable
     [Fact]
     public void MultiModuleSourceAndBindingsRoundTripButCannotRunInLegacyRuntime()
     {
-        var modules = new ScriptModuleSet(new Dictionary<string, ScriptModule> { ["main"] = new("scripts/main.js", "import 'price';"), ["price"] = new("scripts/lib/price.js", "export const rate = 0.2;") }, ["main"], 4, 2);
+        var modules = new ScriptModuleSet(new Dictionary<string, ScriptModule>
+        {
+            ["main"] = new("scripts/main.js", "import 'price';", Description: "计算折扣并写入活动单元格"),
+            ["price"] = new("scripts/lib/price.js", "export const rate = 0.2;", Description: "共享折扣率")
+        }, ["main"], 4, 2);
         var basic = Model();
         var snapshot = new WorkbookSnapshot(basic.DocumentId, 12, basic.DateSystem, basic.Sheets, modules.PrimarySource, basic.Styles, modules);
         var path = PathFor("modules.xlsq"); _storage.Save(path, snapshot);
         var result = _storage.Open(path);
         Assert.Equal(modules.Modules, result.ScriptModules.Modules);
+        Assert.Equal("计算折扣并写入活动单元格", result.ScriptModules.Modules["main"].Description);
+        Assert.Equal("", new ScriptModule("scripts/plain.js", "").Description);
         Assert.Equal(4, result.ScriptModules.Revision);
         using var document = new WorkbookDocument(result, new(_storage, new NoCalculation()));
         Assert.Throws<NotSupportedException>(document.EnableScriptsAndCalculate);
@@ -247,7 +253,7 @@ public sealed partial class TypedStorageTests : IDisposable
     }
 
     [Theory]
-    [InlineData("version")] [InlineData("source")] [InlineData("actions-feature")] [InlineData("actions-binding")]
+    [InlineData("version")] [InlineData("source")] [InlineData("actions-feature")] [InlineData("actions-binding")] [InlineData("description")]
     public void ModuleModeRejectsTamperingAndMismatchedActionCapability(string change)
     {
         var modules = new ScriptModuleSet(new Dictionary<string, ScriptModule>
@@ -261,6 +267,7 @@ public sealed partial class TypedStorageTests : IDisposable
         var manifest = JsonNode.Parse(parts["manifest.json"])!;
         if (change == "version") manifest["scriptApiVersion"] = 1;
         if (change == "source") parts["scripts/lib/price.js"] = Encoding.UTF8.GetBytes("// tampered helper");
+        if (change == "description") manifest["scripts"]!["modules"]!["main"]!["description"] = new string('x', ScriptModuleSet.MaximumDescriptionLength + 1);
         if (change == "actions-feature") manifest["requiredFeatures"]!.AsArray().Add("script-actions");
         parts["manifest.json"] = Encoding.UTF8.GetBytes(manifest.ToJsonString());
         if (change == "actions-binding")

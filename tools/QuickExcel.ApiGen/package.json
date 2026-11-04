@@ -1,0 +1,15 @@
+{
+  "name": "quickexcel-api-gen",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Generate QuickExcel script declarations and the capability manifest from the pinned Office Scripts API definition.",
+  "scripts": {
+    "fetch": "node src/fetch-source.mjs",
+    "generate": "node src/generate.mjs",
+    "test": "node test/generate.test.mjs"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3"
+  }
+}

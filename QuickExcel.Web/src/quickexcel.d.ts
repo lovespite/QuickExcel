@@ -1,174 +1,4178 @@
-/** QuickExcel native bridge contract. No DOM, Node, OS filesystem, network or asynchronous host API. Virtual files are session scoped. */
-type QxErrorCode = 'Value' | 'Name' | 'Reference' | 'DivisionByZero' | 'Number' | 'NotAvailable' | 'Null' | 'Script' | 'Cycle' | 'Calculation';
-type QxScalar = number | string | boolean | null | { readonly kind: 'error'; readonly code: QxErrorCode };
-interface QxFunctionDescriptor {
-  name: string;
-  apiVersion: 2;
-  parameters?: readonly { name: string; type?: 'any' | 'number' | 'text' | 'boolean' | 'blank' | 'range' }[];
-  returns?: 'any' | 'number' | 'text' | 'boolean' | 'blank';
-  profile?: 'conservative';
-}
-type QxEventName = 'workbook.open' | 'workbook.beforeClose' | 'workbook.close' | 'workbook.activate' | 'workbook.deactivate'
-  | 'workbook.beforeSave' | 'workbook.saved' | 'workbook.calculated' | 'sheet.added' | 'sheet.deleted' | 'sheet.renamed'
-  | 'sheet.activate' | 'sheet.deactivate' | 'selection.changed' | 'cell.click' | 'cell.edit' | 'cell.commit' | 'cells.changed';
-/** Supported event names. ON_BEFORE_SAVE fires before saving; ON_SAVED fires after a successful save. */
-declare enum QxEventNames {
-  ON_OPEN = 'workbook.open', ON_BEFORE_CLOSE = 'workbook.beforeClose', ON_CLOSE = 'workbook.close',
-  ON_ACTIVATE = 'workbook.activate', ON_DEACTIVATE = 'workbook.deactivate',
-  ON_BEFORE_SAVE = 'workbook.beforeSave', ON_SAVED = 'workbook.saved',
-  ON_CALCULATED = 'workbook.calculated', ON_WORKSHEET_ADDED = 'sheet.added', ON_WORKSHEET_DELETED = 'sheet.deleted',
-  ON_WORKSHEET_RENAMED = 'sheet.renamed', ON_WORKSHEET_ACTIVATE = 'sheet.activate', ON_WORKSHEET_DEACTIVATE = 'sheet.deactivate',
-  ON_SELECTION_CHANGED = 'selection.changed', ON_CELL_CLICK = 'cell.click', ON_CELL_EDIT = 'cell.edit',
-  ON_CELL_COMMIT = 'cell.commit', ON_CELLS_CHANGED = 'cells.changed'
-}
-interface QxEvent {
-  readonly name: QxEventName;
-  readonly sessionId: string;
-  readonly sequence: number;
-  /** Revision at notification time. snapshot.baseRevision is the state used by this handler. */
-  readonly revision: number;
-  readonly sheetId: string | null;
-  readonly sheetName: string | null;
-  /** A1 rectangles. cells.changed carries a bounding rectangle per sheet. */
-  readonly ranges: readonly string[];
-  readonly isUndoOrRedo: boolean;
-}
-interface QxFileInfo { readonly path: string; readonly type: 'file' | 'directory'; readonly size: number }
-/** Worksheet identity at notification time. Deletion events retain the original id and name. */
-interface QxEventWorksheet { readonly id: string; readonly name: string }
-type QxEventContext = QxActionContext & { readonly event: QxEvent };
-type QxEventHandler = ((event: QxEvent, context: QxEventContext) => void | null) | null;
-type QxWorksheetEventHandler = ((sheet: QxEventWorksheet, context: QxEventContext) => void | null) | null;
-/** Register during initialization. Assigning a property replaces its handler; null removes it. Property handlers coexist with on() listeners. */
-interface QxEvents {
-  on(name: QxEventName, handler: (context: QxEventContext) => void | null): void;
-  onOpen: QxEventHandler; onWorkbookOpen: QxEventHandler;
-  onBeforeClose: QxEventHandler; onWorkbookBeforeClose: QxEventHandler;
-  onClose: QxEventHandler; onWorkbookClose: QxEventHandler;
-  onActivate: QxEventHandler; onWorkbookActivate: QxEventHandler;
-  onDeactivate: QxEventHandler; onWorkbookDeactivate: QxEventHandler;
-  /** Fires before saving. Persistent changes made by the handler are included in that save. */
-  onBeforeSave: QxEventHandler; onWorkbookBeforeSave: QxEventHandler;
-  onSaved: QxEventHandler; onWorkbookSaved: QxEventHandler;
-  onCalculated: QxEventHandler; onWorkbookCalculated: QxEventHandler;
-  onWorksheetAdded: QxWorksheetEventHandler; onWorksheetDeleted: QxWorksheetEventHandler;
-  onWorksheetRenamed: QxWorksheetEventHandler; onWorksheetActivate: QxWorksheetEventHandler;
-  onWorksheetDeactivate: QxWorksheetEventHandler;
-  onSelectionChanged: QxEventHandler; onCellClick: QxEventHandler; onCellEdit: QxEventHandler;
-  onCellCommit: QxEventHandler; onCellsChanged: QxEventHandler;
-}
-interface QxVirtualFiles {
-  /** Only //xlsq/, //temp/, //mem/. Case sensitive, no relative segments, escapes or OS paths. */
-  exists(path: string): boolean;
-  stat(path: string): QxFileInfo;
-  list(directory: string, options?: { recursive?: boolean }): readonly QxFileInfo[];
-  /** Parent directories are implicit; mkdir also preserves empty directories. No trailing slash except volume roots. */
-  mkdir(path: string): void;
-  /** Directory must be empty. */
-  remove(path: string): void;
-  /** Reads bytes from a virtual file. Paths are restricted to //xlsq/, //temp/ and //mem/. */
-  readBytes(path: string): Uint8Array;
-  writeBytes(path: string, bytes: Uint8Array): void;
-  /** Strict UTF-8. */
-  readText(path: string): string;
-  /** Writes UTF-8 text to a virtual file and commits atomically with this operation's cell changes. */
-  writeText(path: string, text: string): void;
-  readJson(path: string): any;
-  writeJson(path: string, value: unknown): void;
-  copy(source: string, destination: string): void;
-  move(source: string, destination: string): void;
-}
-interface QxActionContext {
-  /** The current workbook transaction. Reads see earlier writes in this operation; all changes commit together on success. */
-  readonly workbook: ExcelScript.Workbook;
-  /** A transaction-local view; all writes commit atomically with patch. No OS path mapping. */
-  readonly fs: QxVirtualFiles;
-  readonly event: QxEvent | null;
-  readonly snapshot: {
-    readonly baseRevision: number;
-    readonly dateSystem: 'Windows1900' | 'Mac1904';
-    readonly sheets: readonly { readonly id: string; readonly name: string }[];
-    /** Reads a cell from the immutable snapshot. Use an A1 address and a sheetId from snapshot.sheets. */
-    getCell(sheetId: string, cell: string): Readonly<{ value: QxScalar; formula: string | null; state: string; hasValue: boolean }>;
-    /** Returns row-major values for a rectangle such as A1:C3. Blank cells are null. */
-    getRange(sheetId: string, range: string): readonly (readonly QxScalar[])[];
-  };
-  readonly patch: {
-    /** Sets a cell value using an A1 address. Changes commit together on success and can be undone as one operation. */
-    setValue(sheetId: string, cell: string, value: QxScalar): void;
-    setValues(sheetId: string, range: string, values: readonly (readonly QxScalar[])[]): void;
-    /** Sets a formula such as =SUM(A1:A3). This does not directly execute scripts. */
-    setFormula(sheetId: string, cell: string, formula: string): void;
-    setFormulas(sheetId: string, range: string, formulas: readonly (readonly string[])[]): void;
-  };
-}
-/** The ExcelScript object subset supported by QuickExcel. Office services and network access are not available. */
-declare namespace ExcelScript {
-  interface RangeFill {
-    /** Sets the fill color in #RRGGBB format, for example #ff0000. */
-    setColor(color: string): void;
-    /** Returns the top-left cell's fill color, or an empty string when it has no fill. */
-    getColor(): string;
-    clear(): void;
+/*!
+ * QuickExcel script declarations. Generated by tools/QuickExcel.ApiGen; do not edit.
+ *
+ * Derived from the Office Scripts API definition:
+ * https://github.com/OfficeDev/office-scripts-docs-reference/blob/97f8f415842e13e004d7c53c1d24fe45653e50c0/generate-docs/script-inputs/office-scripts-docs.d.ts
+ * Copyright (c) Microsoft Corporation. Licensed under CC BY 4.0.
+ * https://creativecommons.org/licenses/by/4.0/legalcode
+ *
+ * Modified for QuickExcel: the namespace was renamed to QuickExcel, documentation
+ * comments were removed, the OfficeScript namespace was removed, and QuickExcel
+ * host extensions were appended. This file contains declarations only; all
+ * behavior is implemented independently by QuickExcel.
+ *
+ * Source blob (git SHA-1): a2ea76f0e65faab8bd70e2fcd683c9e00502b6bd
+ * Source SHA-256: 76e9d9bb7bed539185ef8e92f91000c042fb1731f7f6d449f5d207b5d2542eaf
+ */
+
+declare namespace QuickExcel {
+  interface AllowEditRange {
+      getAddress(): string;
+      setAddress(address: string): void;
+      getIsPasswordProtected(): boolean;
+      getTitle(): string;
+      setTitle(title: string): void;
+      delete(): void;
+      pauseProtection(password?: string): void;
+      setPassword(password?: string): void;
   }
-  interface RangeFormat { getFill(): RangeFill }
-  interface Range {
-    /** Returns the A1 address within the worksheet. */
-    getAddress(): string;
-    getWorksheet(): Worksheet;
-    getFormat(): RangeFormat;
-    /** Returns the top-left cell's current value, calculating the transaction draft if needed. Blocked formulas throw; formula errors return an error value with kind and code. */
-    getValue(): QxScalar;
-    getValues(): QxScalar[][];
-    /** Sets every cell in the range to the same value. */
-    setValue(value: QxScalar): void;
-    setValues(values: readonly (readonly QxScalar[])[]): void;
-    getFormula(): string;
-    setFormula(formula: string): void;
-    setFormulas(formulas: readonly (readonly string[])[]): void;
+
+  interface Query {
+      getError(): QueryError;
+      getLoadedTo(): LoadToType;
+      getLoadedToDataModel(): boolean;
+      getName(): string;
+      getRefreshDate(): Date;
+      getRowsLoadedCount(): number;
   }
-  interface Worksheet {
-    getId(): string;
-    getName(): string;
-    getCell(address: string): Range;
-    /** Row and column indices are zero-based. */
-    getCell(row: number, column: number): Range;
-    getRange(address: string): Range;
+
+  interface LinkedWorkbook {
+      getId(): string;
+      breakLinks(): void;
+      refreshLinks(): void;
   }
+
+  interface Application {
+      getCalculationEngineVersion(): number;
+      getCalculationMode(): CalculationMode;
+      setCalculationMode(calculationMode: CalculationMode): void;
+      getCalculationState(): CalculationState;
+      getCultureInfo(): CultureInfo;
+      getDecimalSeparator(): string;
+      getIterativeCalculation(): IterativeCalculation;
+      getThousandsSeparator(): string;
+      getUseSystemSeparators(): boolean;
+      calculate(calculationType: CalculationType): void;
+  }
+
+  interface IterativeCalculation {
+      getEnabled(): boolean;
+      setEnabled(enabled: boolean): void;
+      getMaxChange(): number;
+      setMaxChange(maxChange: number): void;
+      getMaxIteration(): number;
+      setMaxIteration(maxIteration: number): void;
+  }
+
   interface Workbook {
-    getActiveCell(): Range;
-    getActiveWorksheet(): Worksheet;
-    /** Returns the current selection. Throws for multiple areas; use getActiveRanges() for those selections. */
-    getActiveRange(): Range;
-    getActiveRanges(): Range[];
-    getWorksheet(nameOrId: string): Worksheet | undefined;
-    getWorksheets(): Worksheet[];
+      getApplication(): Application;
+      getAutoSave(): boolean;
+      getCalculationEngineVersion(): number;
+      getChartDataPointTrack(): boolean;
+      setChartDataPointTrack(chartDataPointTrack: boolean): void;
+      getIsDirty(): boolean;
+      setIsDirty(isDirty: boolean): void;
+      getName(): string;
+      getPreviouslySaved(): boolean;
+      getProperties(): DocumentProperties;
+      getProtection(): WorkbookProtection;
+      getReadOnly(): boolean;
+      getUsePrecisionAsDisplayed(): boolean;
+      setUsePrecisionAsDisplayed(usePrecisionAsDisplayed: boolean): void;
+      getActiveCell(): Range;
+      getActiveChart(): Chart;
+      getActiveSlicer(): Slicer;
+      getSelectedRange(): Range;
+      getSelectedRanges(): RangeAreas;
+      getBindings(): Binding[];
+      addBinding(range: Range | string, bindingType: BindingType, id: string): Binding;
+      addBindingFromNamedItem(name: string, bindingType: BindingType, id: string): Binding;
+      addBindingFromSelection(bindingType: BindingType, id: string): Binding;
+      getBinding(id: string): Binding | undefined;
+      getComments(): Comment[];
+      addComment(cellAddress: Range | string, content: CommentRichContent | string, contentType?: ContentType): Comment;
+      getCommentByCell(cellAddress: Range | string): Comment;
+      getCommentByReplyId(replyId: string): Comment;
+      getComment(commentId: string): Comment | undefined;
+      getCustomXmlParts(): CustomXmlPart[];
+      addCustomXmlPart(xml: string): CustomXmlPart;
+      getCustomXmlPartsByNamespace(namespaceUri: string): CustomXmlPart[];
+      getCustomXmlPart(id: string): CustomXmlPart | undefined;
+      getLinkedWorkbooks(): LinkedWorkbook[];
+      getLinkedWorkbookRefreshMode(): WorkbookLinksRefreshMode;
+      setLinkedWorkbookRefreshMode(linkedWorkbookRefreshMode: WorkbookLinksRefreshMode): void;
+      breakAllLinksToLinkedWorkbooks(): void;
+      getLinkedWorkbookByUrl(key: string): LinkedWorkbook | undefined;
+      refreshAllLinksToLinkedWorkbooks(): void;
+      getNames(): NamedItem[];
+      addNamedItem(name: string, reference: Range | string, comment?: string): NamedItem;
+      addNamedItemFormulaLocal(name: string, formula: string, comment?: string): NamedItem;
+      getNamedItem(name: string): NamedItem | undefined;
+      getPivotTableStyles(): PivotTableStyle[];
+      addPivotTableStyle(name: string, makeUniqueName?: boolean): PivotTableStyle;
+      getDefaultPivotTableStyle(): PivotTableStyle;
+      getPivotTableStyle(name: string): PivotTableStyle | undefined;
+      setDefaultPivotTableStyle(newDefaultStyle: PivotTableStyle | string): void;
+      getPivotTables(): PivotTable[];
+      addPivotTable(name: string, source: Range | string | Table, destination: Range | string): PivotTable;
+      getPivotTable(name: string): PivotTable | undefined;
+      refreshAllPivotTables(): void;
+      getQueries(): Query[];
+      getQuery(key: string): Query;
+      getSlicerStyles(): SlicerStyle[];
+      addSlicerStyle(name: string, makeUniqueName?: boolean): SlicerStyle;
+      getDefaultSlicerStyle(): SlicerStyle;
+      getSlicerStyle(name: string): SlicerStyle | undefined;
+      setDefaultSlicerStyle(newDefaultStyle: SlicerStyle | string): void;
+      getSlicers(): Slicer[];
+      addSlicer(slicerSource: string | PivotTable | Table, sourceField: string | PivotField | number | TableColumn, slicerDestination?: string | Worksheet): Slicer;
+      getSlicer(key: string): Slicer | undefined;
+      getPredefinedCellStyles(): PredefinedCellStyle[];
+      addPredefinedCellStyle(name: string): void;
+      getPredefinedCellStyle(name: string): PredefinedCellStyle | undefined;
+      getTableStyles(): TableStyle[];
+      addTableStyle(name: string, makeUniqueName?: boolean): TableStyle;
+      getDefaultTableStyle(): TableStyle;
+      getTableStyle(name: string): TableStyle | undefined;
+      setDefaultTableStyle(newDefaultStyle: TableStyle | string): void;
+      getTables(): Table[];
+      addTable(address: Range | string, hasHeaders: boolean): Table;
+      getTable(key: string): Table | undefined;
+      getTimelineStyles(): TimelineStyle[];
+      addTimelineStyle(name: string, makeUniqueName?: boolean): TimelineStyle;
+      getDefaultTimelineStyle(): TimelineStyle;
+      getTimelineStyle(name: string): TimelineStyle | undefined;
+      setDefaultTimelineStyle(newDefaultStyle: TimelineStyle | string): void;
+      getWorksheets(): Worksheet[];
+      addWorksheet(name?: string): Worksheet;
+      getActiveWorksheet(): Worksheet;
+      getFirstWorksheet(visibleOnly?: boolean): Worksheet;
+      getWorksheet(key: string): Worksheet | undefined;
+      getLastWorksheet(visibleOnly?: boolean): Worksheet;
+      refreshAllDataConnections(): void;
+      getCustomXmlPartByNamespace(namespaceUri: string): CustomXmlPart[];
+  }
+
+  interface WorkbookProtection {
+      getProtected(): boolean;
+      protect(password?: string): void;
+      unprotect(password?: string): void;
+  }
+
+  interface Worksheet {
+      getAutoFilter(): AutoFilter;
+      getEnableCalculation(): boolean;
+      setEnableCalculation(enableCalculation: boolean): void;
+      getFreezePanes(): WorksheetFreezePanes;
+      getId(): string;
+      getName(): string;
+      setName(name: string): void;
+      getPageLayout(): PageLayout;
+      getPosition(): number;
+      setPosition(position: number): void;
+      getProtection(): WorksheetProtection;
+      getShowDataTypeIcons(): boolean;
+      setShowDataTypeIcons(showDataTypeIcons: boolean): void;
+      getShowGridlines(): boolean;
+      setShowGridlines(showGridlines: boolean): void;
+      getShowHeadings(): boolean;
+      setShowHeadings(showHeadings: boolean): void;
+      getStandardHeight(): number;
+      getStandardWidth(): number;
+      setStandardWidth(standardWidth: number): void;
+      getTabColor(): string;
+      setTabColor(tabColor: string): void;
+      getTabId(): number;
+      getVisibility(): SheetVisibility;
+      setVisibility(visibility: SheetVisibility): void;
+      activate(): void;
+      calculate(markAllDirty: boolean): void;
+      copy(positionType?: WorksheetPositionType, relativeTo?: Worksheet): Worksheet;
+      delete(): void;
+      findAll(text: string, criteria: WorksheetSearchCriteria): RangeAreas;
+      getCell(row: number, column: number): Range;
+      getNext(visibleOnly?: boolean): Worksheet;
+      getPrevious(visibleOnly?: boolean): Worksheet;
+      getRange(address?: string): Range;
+      getRangeByIndexes(startRow: number, startColumn: number, rowCount: number, columnCount: number): Range;
+      getRanges(address?: string): RangeAreas;
+      getUsedRange(valuesOnly?: boolean): Range;
+      replaceAll(text: string, replacement: string, criteria: ReplaceCriteria): number;
+      showOutlineLevels(rowLevels: number, columnLevels: number): void;
+      getCharts(): Chart[];
+      addChart(type: ChartType, sourceData: Range, seriesBy?: ChartSeriesBy): Chart;
+      getChart(name: string): Chart | undefined;
+      getComments(): Comment[];
+      addComment(cellAddress: Range | string, content: CommentRichContent | string, contentType?: ContentType): Comment;
+      getCommentByCell(cellAddress: Range | string): Comment;
+      getCommentByReplyId(replyId: string): Comment;
+      getComment(commentId: string): Comment | undefined;
+      getCustomProperties(): WorksheetCustomProperty[];
+      addWorksheetCustomProperty(key: string, value: string): WorksheetCustomProperty;
+      getWorksheetCustomProperty(key: string): WorksheetCustomProperty | undefined;
+      getHorizontalPageBreaks(): PageBreak[];
+      addHorizontalPageBreak(pageBreakRange: Range | string): PageBreak;
+      removeAllHorizontalPageBreaks(): void;
+      getNamedSheetViews(): NamedSheetView[];
+      addNamedSheetView(name: string): NamedSheetView;
+      enterTemporaryNamedSheetView(): NamedSheetView;
+      exitActiveNamedSheetView(): void;
+      getActiveNamedSheetView(): NamedSheetView;
+      getNamedSheetView(key: string): NamedSheetView | undefined;
+      getNames(): NamedItem[];
+      addNamedItem(name: string, reference: Range | string, comment?: string): NamedItem;
+      addNamedItemFormulaLocal(name: string, formula: string, comment?: string): NamedItem;
+      getNamedItem(name: string): NamedItem | undefined;
+      getPivotTables(): PivotTable[];
+      addPivotTable(name: string, source: Range | string | Table, destination: Range | string): PivotTable;
+      getPivotTable(name: string): PivotTable | undefined;
+      refreshAllPivotTables(): void;
+      getShapes(): Shape[];
+      addGeometricShape(geometricShapeType: GeometricShapeType): Shape;
+      addGroup(values: Array<string | Shape>): Shape;
+      addImage(base64ImageString: string): Shape;
+      addLine(startLeft: number, startTop: number, endLeft: number, endTop: number, connectorType?: ConnectorType): Shape;
+      addTextBox(text?: string): Shape;
+      getShape(key: string): Shape | undefined;
+      getSlicers(): Slicer[];
+      addSlicer(slicerSource: string | PivotTable | Table, sourceField: string | PivotField | number | TableColumn, slicerDestination?: string | Worksheet): Slicer;
+      getSlicer(key: string): Slicer | undefined;
+      getTables(): Table[];
+      addTable(address: Range | string, hasHeaders: boolean): Table;
+      getTable(key: string): Table | undefined;
+      getVerticalPageBreaks(): PageBreak[];
+      addVerticalPageBreak(pageBreakRange: Range | string): PageBreak;
+      removeAllVerticalPageBreaks(): void;
+  }
+
+  interface WorksheetProtection {
+      getCanPauseProtection(): boolean;
+      getIsPasswordProtected(): boolean;
+      getIsPaused(): boolean;
+      getOptions(): WorksheetProtectionOptions;
+      getProtected(): boolean;
+      getSavedOptions(): WorksheetProtectionOptions;
+      checkPassword(password?: string): boolean;
+      pauseProtection(password?: string): void;
+      protect(options?: WorksheetProtectionOptions, password?: string): void;
+      resumeProtection(): void;
+      setPassword(password?: string): void;
+      unprotect(password?: string): void;
+      updateOptions(options: WorksheetProtectionOptions): void;
+      getAllowEditRanges(): AllowEditRange[];
+      addAllowEditRange(title: string, rangeAddress: string, options?: AllowEditRangeOptions): void;
+      getAllowEditRange(key: string): AllowEditRange | undefined;
+      pauseProtectionForAllAllowEditRanges(password: string): void;
+  }
+
+  interface WorksheetFreezePanes {
+      freezeAt(frozenRange: Range | string): void;
+      freezeColumns(count?: number): void;
+      freezeRows(count?: number): void;
+      getLocation(): Range;
+      unfreeze(): void;
+  }
+
+  interface Range {
+      getAddress(): string;
+      getAddressLocal(): string;
+      getCellCount(): number;
+      getColumnCount(): number;
+      getColumnHidden(): boolean;
+      setColumnHidden(columnHidden: boolean): void;
+      getColumnIndex(): number;
+      getControl(): CellControl;
+      setControl(control: CellControl): void;
+      getDataValidation(): DataValidation;
+      getFormat(): RangeFormat;
+      getFormulas(): string[][];
+      setFormulas(formulas: string[][]): void;
+      getFormulasLocal(): string[][];
+      setFormulasLocal(formulasLocal: string[][]): void;
+      getFormulasR1C1(): string[][];
+      setFormulasR1C1(formulasR1C1: string[][]): void;
+      getHasSpill(): boolean;
+      getHeight(): number;
+      getHidden(): boolean;
+      getHyperlink(): RangeHyperlink;
+      setHyperlink(hyperlink: RangeHyperlink): void;
+      getIsEntireColumn(): boolean;
+      getIsEntireRow(): boolean;
+      getLeft(): number;
+      getLinkedDataTypeStates(): LinkedDataTypeState[][];
+      getNumberFormats(): string[][];
+      setNumberFormats(numberFormats: string[][]): void;
+      getNumberFormatCategories(): NumberFormatCategory[][];
+      getNumberFormatsLocal(): string[][];
+      setNumberFormatsLocal(numberFormatsLocal: string[][]): void;
+      getRowCount(): number;
+      getRowHidden(): boolean;
+      setRowHidden(rowHidden: boolean): void;
+      getRowIndex(): number;
+      getSavedAsArray(): boolean;
+      getSort(): RangeSort;
+      getPredefinedCellStyle(): string;
+      setPredefinedCellStyle(predefinedCellStyle: string): void;
+      getTexts(): string[][];
+      getTop(): number;
+      getValueTypes(): RangeValueType[][];
+      getValues(): (string | number | boolean)[][];
+      setValues(values: (string | number | boolean)[][]): void;
+      getWidth(): number;
+      getWorksheet(): Worksheet;
+      autoFill(destinationRange?: Range | string, autoFillType?: AutoFillType): void;
+      calculate(): void;
+      clear(applyTo?: ClearApplyTo): void;
+      clearOrResetContents(): void;
+      convertDataTypeToText(): void;
+      copyFrom(sourceRange: Range | RangeAreas | string, copyType?: RangeCopyType, skipBlanks?: boolean, transpose?: boolean): void;
+      delete(shift: DeleteShiftDirection): void;
+      find(text: string, criteria: SearchCriteria): Range;
+      flashFill(): void;
+      getAbsoluteResizedRange(numRows: number, numColumns: number): Range;
+      getBoundingRect(anotherRange: Range | string): Range;
+      getCell(row: number, column: number): Range;
+      getColumn(column: number): Range;
+      getColumnsAfter(count?: number): Range;
+      getColumnsBefore(count?: number): Range;
+      getDependents(): WorkbookRangeAreas;
+      getDirectDependents(): WorkbookRangeAreas;
+      getDirectPrecedents(): WorkbookRangeAreas;
+      getEntireColumn(): Range;
+      getEntireRow(): Range;
+      getExtendedRange(direction: KeyboardDirection, activeCell?: Range | string): Range;
+      getImage(): string;
+      getIntersection(anotherRange: Range | string): Range;
+      getLastCell(): Range;
+      getLastColumn(): Range;
+      getLastRow(): Range;
+      getMergedAreas(): RangeAreas;
+      getOffsetRange(rowOffset: number, columnOffset: number): Range;
+      getPivotTables(fullyContained?: boolean): PivotTable[];
+      getPrecedents(): WorkbookRangeAreas;
+      getRangeEdge(direction: KeyboardDirection, activeCell?: Range | string): Range;
+      getResizedRange(deltaRows: number, deltaColumns: number): Range;
+      getRow(row: number): Range;
+      getRowsAbove(count?: number): Range;
+      getRowsBelow(count?: number): Range;
+      getSpecialCells(cellType: SpecialCellType, cellValueType?: SpecialCellValueType): RangeAreas;
+      getSpillParent(): Range;
+      getSpillingToRange(): Range;
+      getSurroundingRegion(): Range;
+      getTables(fullyContained?: boolean): Table[];
+      getUsedRange(valuesOnly?: boolean): Range;
+      getVisibleView(): RangeView;
+      group(groupOption: GroupOption): void;
+      hideGroupDetails(groupOption: GroupOption): void;
+      insert(shift: InsertShiftDirection): Range;
+      merge(across?: boolean): void;
+      moveTo(destinationRange: Range | string): void;
+      removeDuplicates(columns: number[], includesHeader: boolean): RemoveDuplicatesResult;
+      replaceAll(text: string, replacement: string, criteria: ReplaceCriteria): number;
+      select(): void;
+      setDirty(): void;
+      showCard(): void;
+      showGroupDetails(groupOption: GroupOption): void;
+      ungroup(groupOption: GroupOption): void;
+      unmerge(): void;
+      getConditionalFormats(): ConditionalFormat[];
+      addConditionalFormat(type: ConditionalFormatType): ConditionalFormat;
+      clearAllConditionalFormats(): void;
+      getConditionalFormat(id: string): ConditionalFormat | undefined;
+      getFormula(): string;
+      setFormula(formula: string): void;
+      getFormulaLocal(): string;
+      setFormulaLocal(formulaLocal: string): void;
+      getFormulaR1C1(): string;
+      setFormulaR1C1(formulaR1C1: string): void;
+      getLinkedDataTypeState(): LinkedDataTypeState;
+      getNumberFormat(): string;
+      setNumberFormat(numberFormat: string): void;
+      getNumberFormatLocal(): string;
+      setNumberFormatLocal(numberFormatLocal: string): void;
+      getNumberFormatCategory(): NumberFormatCategory;
+      getText(): string;
+      getValueType(): RangeValueType;
+      getValue(): string | number | boolean;
+      setValue(value: any): void;
+  }
+
+  interface RangeAreas {
+      getAddress(): string;
+      getAddressLocal(): string;
+      getAreaCount(): number;
+      getCellCount(): number;
+      getDataValidation(): DataValidation;
+      getFormat(): RangeFormat;
+      getIsEntireColumn(): boolean;
+      getIsEntireRow(): boolean;
+      getPredefinedCellStyle(): string;
+      setPredefinedCellStyle(predefinedCellStyle: string): void;
+      getWorksheet(): Worksheet;
+      calculate(): void;
+      clear(applyTo?: ClearApplyTo): void;
+      clearOrResetContents(): void;
+      convertDataTypeToText(): void;
+      copyFrom(sourceRange: Range | RangeAreas | string, copyType?: RangeCopyType, skipBlanks?: boolean, transpose?: boolean): void;
+      getEntireColumn(): RangeAreas;
+      getEntireRow(): RangeAreas;
+      getIntersection(anotherRange: Range | RangeAreas | string): RangeAreas;
+      getOffsetRangeAreas(rowOffset: number, columnOffset: number): RangeAreas;
+      getSpecialCells(cellType: SpecialCellType, cellValueType?: SpecialCellValueType): RangeAreas;
+      getTables(fullyContained?: boolean): Table[];
+      getUsedRangeAreas(valuesOnly?: boolean): RangeAreas;
+      setDirty(): void;
+      getAreas(): Range[];
+      getConditionalFormats(): ConditionalFormat[];
+      addConditionalFormat(type: ConditionalFormatType): ConditionalFormat;
+      clearAllConditionalFormats(): void;
+      getConditionalFormat(id: string): ConditionalFormat | undefined;
+  }
+
+  interface WorkbookRangeAreas {
+      getAddresses(): string[];
+      getRangeAreasBySheet(key: string): RangeAreas;
+      getAreas(): RangeAreas[];
+      getRanges(): Range[];
+  }
+
+  interface RangeView {
+      getCellAddresses(): string[][];
+      getColumnCount(): number;
+      getFormulas(): string[][];
+      setFormulas(formulas: string[][]): void;
+      getFormulasLocal(): string[][];
+      setFormulasLocal(formulasLocal: string[][]): void;
+      getFormulasR1C1(): string[][];
+      setFormulasR1C1(formulasR1C1: string[][]): void;
+      getIndex(): number;
+      getNumberFormat(): string[][];
+      setNumberFormat(numberFormat: string[][]): void;
+      getRowCount(): number;
+      getText(): string[][];
+      getValueTypes(): RangeValueType[][];
+      getValues(): (string | number | boolean)[][];
+      setValues(values: (string | number | boolean)[][]): void;
+      getRange(): Range;
+      getRows(): RangeView[];
+  }
+
+  interface NamedItem {
+      getArrayValues(): NamedItemArrayValues;
+      getComment(): string;
+      setComment(comment: string): void;
+      getFormula(): string;
+      setFormula(formula: string): void;
+      getName(): string;
+      getScope(): NamedItemScope;
+      getType(): NamedItemType;
+      getValue(): string | number;
+      getVisible(): boolean;
+      setVisible(visible: boolean): void;
+      getWorksheet(): Worksheet | undefined;
+      delete(): void;
+      getRange(): Range;
+  }
+
+  interface NamedItemArrayValues {
+      getTypes(): RangeValueType[][];
+      getValues(): (string | number | boolean)[][];
+  }
+
+  interface Binding {
+      getId(): string;
+      getType(): BindingType;
+      delete(): void;
+      getRange(): Range;
+      getTable(): Table;
+      getText(): string;
+  }
+
+  interface Table {
+      getAutoFilter(): AutoFilter;
+      getHighlightFirstColumn(): boolean;
+      setHighlightFirstColumn(highlightFirstColumn: boolean): void;
+      getHighlightLastColumn(): boolean;
+      setHighlightLastColumn(highlightLastColumn: boolean): void;
+      getId(): string;
+      getLegacyId(): string;
+      getName(): string;
+      setName(name: string): void;
+      getShowBandedColumns(): boolean;
+      setShowBandedColumns(showBandedColumns: boolean): void;
+      getShowBandedRows(): boolean;
+      setShowBandedRows(showBandedRows: boolean): void;
+      getShowFilterButton(): boolean;
+      setShowFilterButton(showFilterButton: boolean): void;
+      getShowHeaders(): boolean;
+      setShowHeaders(showHeaders: boolean): void;
+      getShowTotals(): boolean;
+      setShowTotals(showTotals: boolean): void;
+      getSort(): TableSort;
+      getPredefinedTableStyle(): string;
+      setPredefinedTableStyle(predefinedTableStyle: string): void;
+      getWorksheet(): Worksheet;
+      clearFilters(): void;
+      convertToRange(): Range;
+      delete(): void;
+      getRangeBetweenHeaderAndTotal(): Range;
+      getHeaderRowRange(): Range;
+      getRange(): Range;
+      getTotalRowRange(): Range;
+      reapplyFilters(): void;
+      resize(newRange: Range | string): void;
+      getColumns(): TableColumn[];
+      getColumn(key: number | string): TableColumn | undefined;
+      addRow(index?: number, values?: (boolean | string | number)[]): void;
+      addRows(index?: number, values?: (boolean | string | number)[][]): void;
+      addColumn(index?: number, values?: (boolean | string | number)[], name?: string): TableColumn;
+      deleteRowsAt(index: number, count?: number): void;
+      getColumnById(key: number): TableColumn | undefined;
+      getColumnByName(key: string): TableColumn | undefined;
+      getRowCount(): number;
+  }
+
+  interface TableColumn {
+      getFilter(): Filter;
+      getId(): number;
+      getIndex(): number;
+      getName(): string;
+      setName(name: string): void;
+      delete(): void;
+      getRangeBetweenHeaderAndTotal(): Range;
+      getHeaderRowRange(): Range;
+      getRange(): Range;
+      getTotalRowRange(): Range;
+  }
+
+  interface DataValidation {
+      getErrorAlert(): DataValidationErrorAlert;
+      setErrorAlert(errorAlert: DataValidationErrorAlert): void;
+      getIgnoreBlanks(): boolean;
+      setIgnoreBlanks(ignoreBlanks: boolean): void;
+      getPrompt(): DataValidationPrompt;
+      setPrompt(prompt: DataValidationPrompt): void;
+      getRule(): DataValidationRule;
+      setRule(rule: DataValidationRule): void;
+      getType(): DataValidationType;
+      getValid(): boolean;
+      clear(): void;
+      getInvalidCells(): RangeAreas;
+  }
+
+  interface RemoveDuplicatesResult {
+      getRemoved(): number;
+      getUniqueRemaining(): number;
+  }
+
+  interface RangeFormat {
+      getAutoIndent(): boolean;
+      setAutoIndent(autoIndent: boolean): void;
+      getColumnWidth(): number;
+      setColumnWidth(columnWidth: number): void;
+      getFill(): RangeFill;
+      getFont(): RangeFont;
+      getHorizontalAlignment(): HorizontalAlignment;
+      setHorizontalAlignment(horizontalAlignment: HorizontalAlignment): void;
+      getIndentLevel(): number;
+      setIndentLevel(indentLevel: number): void;
+      getProtection(): FormatProtection;
+      getReadingOrder(): ReadingOrder;
+      setReadingOrder(readingOrder: ReadingOrder): void;
+      getRowHeight(): number;
+      setRowHeight(rowHeight: number): void;
+      getShrinkToFit(): boolean;
+      setShrinkToFit(shrinkToFit: boolean): void;
+      getTextOrientation(): number;
+      setTextOrientation(textOrientation: number): void;
+      getUseStandardHeight(): boolean;
+      setUseStandardHeight(useStandardHeight: boolean): void;
+      getUseStandardWidth(): boolean;
+      setUseStandardWidth(useStandardWidth: boolean): void;
+      getVerticalAlignment(): VerticalAlignment;
+      setVerticalAlignment(verticalAlignment: VerticalAlignment): void;
+      getWrapText(): boolean;
+      setWrapText(wrapText: boolean): void;
+      adjustIndent(amount: number): void;
+      autofitColumns(): void;
+      autofitRows(): void;
+      getBorders(): RangeBorder[];
+      getRangeBorderTintAndShade(): number;
+      setRangeBorderTintAndShade(rangeBorderTintAndShade: number): void;
+      getRangeBorder(index: BorderIndex): RangeBorder;
+  }
+
+  interface FormatProtection {
+      getFormulaHidden(): boolean;
+      setFormulaHidden(formulaHidden: boolean): void;
+      getLocked(): boolean;
+      setLocked(locked: boolean): void;
+  }
+
+  interface RangeFill {
+      getColor(): string;
+      setColor(color: string): void;
+      getPattern(): FillPattern;
+      setPattern(pattern: FillPattern): void;
+      getPatternColor(): string;
+      setPatternColor(patternColor: string): void;
+      getPatternTintAndShade(): number;
+      setPatternTintAndShade(patternTintAndShade: number): void;
+      getTintAndShade(): number;
+      setTintAndShade(tintAndShade: number): void;
+      clear(): void;
+  }
+
+  interface RangeBorder {
+      getColor(): string;
+      setColor(color: string): void;
+      getSideIndex(): BorderIndex;
+      getStyle(): BorderLineStyle;
+      setStyle(style: BorderLineStyle): void;
+      getTintAndShade(): number;
+      setTintAndShade(tintAndShade: number): void;
+      getWeight(): BorderWeight;
+      setWeight(weight: BorderWeight): void;
+  }
+
+  interface RangeFont {
+      getBold(): boolean;
+      setBold(bold: boolean): void;
+      getColor(): string;
+      setColor(color: string): void;
+      getItalic(): boolean;
+      setItalic(italic: boolean): void;
+      getName(): string;
+      setName(name: string): void;
+      getSize(): number;
+      setSize(size: number): void;
+      getStrikethrough(): boolean;
+      setStrikethrough(strikethrough: boolean): void;
+      getSubscript(): boolean;
+      setSubscript(subscript: boolean): void;
+      getSuperscript(): boolean;
+      setSuperscript(superscript: boolean): void;
+      getTintAndShade(): number;
+      setTintAndShade(tintAndShade: number): void;
+      getUnderline(): RangeUnderlineStyle;
+      setUnderline(underline: RangeUnderlineStyle): void;
+  }
+
+  interface Chart {
+      getAxes(): ChartAxes;
+      getCategoryLabelLevel(): number;
+      setCategoryLabelLevel(categoryLabelLevel: number): void;
+      getChartType(): ChartType;
+      setChartType(chartType: ChartType): void;
+      getDataLabels(): ChartDataLabels;
+      getDisplayBlanksAs(): ChartDisplayBlanksAs;
+      setDisplayBlanksAs(displayBlanksAs: ChartDisplayBlanksAs): void;
+      getFormat(): ChartAreaFormat;
+      getHeight(): number;
+      setHeight(height: number): void;
+      getId(): string;
+      getLeft(): number;
+      setLeft(left: number): void;
+      getLegend(): ChartLegend;
+      getName(): string;
+      setName(name: string): void;
+      getPivotOptions(): ChartPivotOptions;
+      getPlotArea(): ChartPlotArea;
+      getPlotBy(): ChartPlotBy;
+      setPlotBy(plotBy: ChartPlotBy): void;
+      getPlotVisibleOnly(): boolean;
+      setPlotVisibleOnly(plotVisibleOnly: boolean): void;
+      getSeriesNameLevel(): number;
+      setSeriesNameLevel(seriesNameLevel: number): void;
+      getShowAllFieldButtons(): boolean;
+      setShowAllFieldButtons(showAllFieldButtons: boolean): void;
+      getShowDataLabelsOverMaximum(): boolean;
+      setShowDataLabelsOverMaximum(showDataLabelsOverMaximum: boolean): void;
+      getStyle(): number;
+      setStyle(style: number): void;
+      getTitle(): ChartTitle;
+      getTop(): number;
+      setTop(top: number): void;
+      getWidth(): number;
+      setWidth(width: number): void;
+      getWorksheet(): Worksheet;
+      activate(): void;
+      delete(): void;
+      getDataTable(): ChartDataTable;
+      getImage(width?: number, height?: number, fittingMode?: ImageFittingMode): string;
+      setData(sourceData: Range, seriesBy?: ChartSeriesBy): void;
+      setPosition(startCell: Range | string, endCell?: Range | string): void;
+      getSeries(): ChartSeries[];
+      addChartSeries(name?: string, index?: number): ChartSeries;
+  }
+
+  interface ChartPivotOptions {
+      getShowAxisFieldButtons(): boolean;
+      setShowAxisFieldButtons(showAxisFieldButtons: boolean): void;
+      getShowLegendFieldButtons(): boolean;
+      setShowLegendFieldButtons(showLegendFieldButtons: boolean): void;
+      getShowReportFilterFieldButtons(): boolean;
+      setShowReportFilterFieldButtons(showReportFilterFieldButtons: boolean): void;
+      getShowValueFieldButtons(): boolean;
+      setShowValueFieldButtons(showValueFieldButtons: boolean): void;
+  }
+
+  interface ChartAreaFormat {
+      getBorder(): ChartBorder;
+      getColorScheme(): ChartColorScheme;
+      setColorScheme(colorScheme: ChartColorScheme): void;
+      getFill(): ChartFill;
+      getFont(): ChartFont;
+      getRoundedCorners(): boolean;
+      setRoundedCorners(roundedCorners: boolean): void;
+  }
+
+  interface ChartSeries {
+      getAxisGroup(): ChartAxisGroup;
+      setAxisGroup(axisGroup: ChartAxisGroup): void;
+      getBinOptions(): ChartBinOptions;
+      getBoxwhiskerOptions(): ChartBoxwhiskerOptions;
+      getBubbleScale(): number;
+      setBubbleScale(bubbleScale: number): void;
+      getChartType(): ChartType;
+      setChartType(chartType: ChartType): void;
+      getDataLabels(): ChartDataLabels;
+      getDoughnutHoleSize(): number;
+      setDoughnutHoleSize(doughnutHoleSize: number): void;
+      getExplosion(): number;
+      setExplosion(explosion: number): void;
+      getFiltered(): boolean;
+      setFiltered(filtered: boolean): void;
+      getFirstSliceAngle(): number;
+      setFirstSliceAngle(firstSliceAngle: number): void;
+      getFormat(): ChartSeriesFormat;
+      getGapWidth(): number;
+      setGapWidth(gapWidth: number): void;
+      getGradientMaximumColor(): string;
+      setGradientMaximumColor(gradientMaximumColor: string): void;
+      getGradientMaximumType(): ChartGradientStyleType;
+      setGradientMaximumType(gradientMaximumType: ChartGradientStyleType): void;
+      getGradientMaximumValue(): number;
+      setGradientMaximumValue(gradientMaximumValue: number): void;
+      getGradientMidpointColor(): string;
+      setGradientMidpointColor(gradientMidpointColor: string): void;
+      getGradientMidpointType(): ChartGradientStyleType;
+      setGradientMidpointType(gradientMidpointType: ChartGradientStyleType): void;
+      getGradientMidpointValue(): number;
+      setGradientMidpointValue(gradientMidpointValue: number): void;
+      getGradientMinimumColor(): string;
+      setGradientMinimumColor(gradientMinimumColor: string): void;
+      getGradientMinimumType(): ChartGradientStyleType;
+      setGradientMinimumType(gradientMinimumType: ChartGradientStyleType): void;
+      getGradientMinimumValue(): number;
+      setGradientMinimumValue(gradientMinimumValue: number): void;
+      getGradientStyle(): ChartGradientStyle;
+      setGradientStyle(gradientStyle: ChartGradientStyle): void;
+      getHasDataLabels(): boolean;
+      setHasDataLabels(hasDataLabels: boolean): void;
+      getInvertColor(): string;
+      setInvertColor(invertColor: string): void;
+      getInvertIfNegative(): boolean;
+      setInvertIfNegative(invertIfNegative: boolean): void;
+      getMapOptions(): ChartMapOptions;
+      getMarkerBackgroundColor(): string;
+      setMarkerBackgroundColor(markerBackgroundColor: string): void;
+      getMarkerForegroundColor(): string;
+      setMarkerForegroundColor(markerForegroundColor: string): void;
+      getMarkerSize(): number;
+      setMarkerSize(markerSize: number): void;
+      getMarkerStyle(): ChartMarkerStyle;
+      setMarkerStyle(markerStyle: ChartMarkerStyle): void;
+      getName(): string;
+      setName(name: string): void;
+      getOverlap(): number;
+      setOverlap(overlap: number): void;
+      getParentLabelStrategy(): ChartParentLabelStrategy;
+      setParentLabelStrategy(parentLabelStrategy: ChartParentLabelStrategy): void;
+      getPlotOrder(): number;
+      setPlotOrder(plotOrder: number): void;
+      getSecondPlotSize(): number;
+      setSecondPlotSize(secondPlotSize: number): void;
+      getShowConnectorLines(): boolean;
+      setShowConnectorLines(showConnectorLines: boolean): void;
+      getShowLeaderLines(): boolean;
+      setShowLeaderLines(showLeaderLines: boolean): void;
+      getShowShadow(): boolean;
+      setShowShadow(showShadow: boolean): void;
+      getSmooth(): boolean;
+      setSmooth(smooth: boolean): void;
+      getSplitType(): ChartSplitType;
+      setSplitType(splitType: ChartSplitType): void;
+      getSplitValue(): number;
+      setSplitValue(splitValue: number): void;
+      getVaryByCategories(): boolean;
+      setVaryByCategories(varyByCategories: boolean): void;
+      getXErrorBars(): ChartErrorBars;
+      getYErrorBars(): ChartErrorBars;
+      delete(): void;
+      getDimensionDataSourceString(dimension: ChartSeriesDimension): string;
+      getDimensionDataSourceType(dimension: ChartSeriesDimension): ChartDataSourceType;
+      getDimensionValues(dimension: ChartSeriesDimension): string[];
+      setBubbleSizes(sourceData: Range): void;
+      setValues(sourceData: Range): void;
+      setXAxisValues(sourceData: Range): void;
+      getPoints(): ChartPoint[];
+      getTrendlines(): ChartTrendline[];
+      addChartTrendline(type?: ChartTrendlineType): ChartTrendline;
+      getChartTrendline(index: number): ChartTrendline;
+  }
+
+  interface ChartSeriesFormat {
+      getFill(): ChartFill;
+      getLine(): ChartLineFormat;
+  }
+
+  interface ChartPoint {
+      getDataLabel(): ChartDataLabel;
+      getFormat(): ChartPointFormat;
+      getHasDataLabel(): boolean;
+      setHasDataLabel(hasDataLabel: boolean): void;
+      getMarkerBackgroundColor(): string;
+      setMarkerBackgroundColor(markerBackgroundColor: string): void;
+      getMarkerForegroundColor(): string;
+      setMarkerForegroundColor(markerForegroundColor: string): void;
+      getMarkerSize(): number;
+      setMarkerSize(markerSize: number): void;
+      getMarkerStyle(): ChartMarkerStyle;
+      setMarkerStyle(markerStyle: ChartMarkerStyle): void;
+      getValue(): number;
+  }
+
+  interface ChartPointFormat {
+      getBorder(): ChartBorder;
+      getFill(): ChartFill;
+  }
+
+  interface ChartAxes {
+      getCategoryAxis(): ChartAxis;
+      getSeriesAxis(): ChartAxis;
+      getValueAxis(): ChartAxis;
+      getChartAxis(type: ChartAxisType, group?: ChartAxisGroup): ChartAxis;
+  }
+
+  interface ChartAxis {
+      getAlignment(): ChartTickLabelAlignment;
+      setAlignment(alignment: ChartTickLabelAlignment): void;
+      getAxisGroup(): ChartAxisGroup;
+      getBaseTimeUnit(): ChartAxisTimeUnit;
+      setBaseTimeUnit(baseTimeUnit: ChartAxisTimeUnit): void;
+      getCategoryType(): ChartAxisCategoryType;
+      setCategoryType(categoryType: ChartAxisCategoryType): void;
+      getCustomDisplayUnit(): number;
+      getDisplayUnit(): ChartAxisDisplayUnit;
+      setDisplayUnit(displayUnit: ChartAxisDisplayUnit): void;
+      getFormat(): ChartAxisFormat;
+      getHeight(): number;
+      getIsBetweenCategories(): boolean;
+      setIsBetweenCategories(isBetweenCategories: boolean): void;
+      getLeft(): number;
+      getLinkNumberFormat(): boolean;
+      setLinkNumberFormat(linkNumberFormat: boolean): void;
+      getLogBase(): number;
+      setLogBase(logBase: number): void;
+      getMajorGridlines(): ChartGridlines;
+      getMajorTickMark(): ChartAxisTickMark;
+      setMajorTickMark(majorTickMark: ChartAxisTickMark): void;
+      getMajorTimeUnitScale(): ChartAxisTimeUnit;
+      setMajorTimeUnitScale(majorTimeUnitScale: ChartAxisTimeUnit): void;
+      getMajorUnit(): number;
+      setMajorUnit(majorUnit: number): void;
+      getMaximum(): number;
+      setMaximum(maximum: number): void;
+      getMinimum(): number;
+      setMinimum(minimum: number): void;
+      getMinorGridlines(): ChartGridlines;
+      getMinorTickMark(): ChartAxisTickMark;
+      setMinorTickMark(minorTickMark: ChartAxisTickMark): void;
+      getMinorTimeUnitScale(): ChartAxisTimeUnit;
+      setMinorTimeUnitScale(minorTimeUnitScale: ChartAxisTimeUnit): void;
+      getMinorUnit(): number;
+      setMinorUnit(minorUnit: number): void;
+      getMultiLevel(): boolean;
+      setMultiLevel(multiLevel: boolean): void;
+      getNumberFormat(): string;
+      setNumberFormat(numberFormat: string): void;
+      getOffset(): number;
+      setOffset(offset: number): void;
+      getPosition(): ChartAxisPosition;
+      setPosition(position: ChartAxisPosition): void;
+      getPositionAt(): number;
+      getReversePlotOrder(): boolean;
+      setReversePlotOrder(reversePlotOrder: boolean): void;
+      getScaleType(): ChartAxisScaleType;
+      setScaleType(scaleType: ChartAxisScaleType): void;
+      getShowDisplayUnitLabel(): boolean;
+      setShowDisplayUnitLabel(showDisplayUnitLabel: boolean): void;
+      getTextOrientation(): number;
+      setTextOrientation(textOrientation: number): void;
+      getTickLabelPosition(): ChartAxisTickLabelPosition;
+      setTickLabelPosition(tickLabelPosition: ChartAxisTickLabelPosition): void;
+      getTickLabelSpacing(): number;
+      setTickLabelSpacing(tickLabelSpacing: number): void;
+      getTickMarkSpacing(): number;
+      setTickMarkSpacing(tickMarkSpacing: number): void;
+      getTitle(): ChartAxisTitle;
+      getTop(): number;
+      getType(): ChartAxisType;
+      getVisible(): boolean;
+      setVisible(visible: boolean): void;
+      getWidth(): number;
+      setCategoryNames(sourceData: Range): void;
+      setCustomDisplayUnit(value: number): void;
+      setPositionAt(value: number): void;
+  }
+
+  interface ChartAxisFormat {
+      getFill(): ChartFill;
+      getFont(): ChartFont;
+      getLine(): ChartLineFormat;
+  }
+
+  interface ChartAxisTitle {
+      getFormat(): ChartAxisTitleFormat;
+      getText(): string;
+      setText(text: string): void;
+      getTextOrientation(): number;
+      setTextOrientation(textOrientation: number): void;
+      getVisible(): boolean;
+      setVisible(visible: boolean): void;
+      setFormula(formula: string): void;
+  }
+
+  interface ChartAxisTitleFormat {
+      getBorder(): ChartBorder;
+      getFill(): ChartFill;
+      getFont(): ChartFont;
+  }
+
+  interface ChartDataLabels {
+      getAutoText(): boolean;
+      setAutoText(autoText: boolean): void;
+      getFormat(): ChartDataLabelFormat;
+      getGeometricShapeType(): GeometricShapeType;
+      setGeometricShapeType(geometricShapeType: GeometricShapeType): void;
+      getHorizontalAlignment(): ChartTextHorizontalAlignment;
+      setHorizontalAlignment(horizontalAlignment: ChartTextHorizontalAlignment): void;
+      getLeaderLines(): ChartLeaderLines;
+      getLinkNumberFormat(): boolean;
+      setLinkNumberFormat(linkNumberFormat: boolean): void;
+      getNumberFormat(): string;
+      setNumberFormat(numberFormat: string): void;
+      getPosition(): ChartDataLabelPosition;
+      setPosition(position: ChartDataLabelPosition): void;
+      getSeparator(): string;
+      setSeparator(separator: string): void;
+      getShowAsStickyCallout(): boolean;
+      getShowBubbleSize(): boolean;
+      setShowBubbleSize(showBubbleSize: boolean): void;
+      getShowCategoryName(): boolean;
+      setShowCategoryName(showCategoryName: boolean): void;
+      getShowLeaderLines(): boolean;
+      setShowLeaderLines(showLeaderLines: boolean): void;
+      getShowLegendKey(): boolean;
+      setShowLegendKey(showLegendKey: boolean): void;
+      getShowPercentage(): boolean;
+      setShowPercentage(showPercentage: boolean): void;
+      getShowSeriesName(): boolean;
+      setShowSeriesName(showSeriesName: boolean): void;
+      getShowValue(): boolean;
+      setShowValue(showValue: boolean): void;
+      getTextOrientation(): number;
+      setTextOrientation(textOrientation: number): void;
+      getVerticalAlignment(): ChartTextVerticalAlignment;
+      setVerticalAlignment(verticalAlignment: ChartTextVerticalAlignment): void;
+  }
+
+  interface ChartDataLabel {
+      getAutoText(): boolean;
+      setAutoText(autoText: boolean): void;
+      getFormat(): ChartDataLabelFormat;
+      getFormula(): string;
+      setFormula(formula: string): void;
+      getGeometricShapeType(): GeometricShapeType;
+      setGeometricShapeType(geometricShapeType: GeometricShapeType): void;
+      getHeight(): number;
+      getHorizontalAlignment(): ChartTextHorizontalAlignment;
+      setHorizontalAlignment(horizontalAlignment: ChartTextHorizontalAlignment): void;
+      getLeft(): number;
+      setLeft(left: number): void;
+      getLinkNumberFormat(): boolean;
+      setLinkNumberFormat(linkNumberFormat: boolean): void;
+      getNumberFormat(): string;
+      setNumberFormat(numberFormat: string): void;
+      getPosition(): ChartDataLabelPosition;
+      setPosition(position: ChartDataLabelPosition): void;
+      getSeparator(): string;
+      setSeparator(separator: string): void;
+      getShowAsStickyCallout(): boolean;
+      getShowBubbleSize(): boolean;
+      setShowBubbleSize(showBubbleSize: boolean): void;
+      getShowCategoryName(): boolean;
+      setShowCategoryName(showCategoryName: boolean): void;
+      getShowLegendKey(): boolean;
+      setShowLegendKey(showLegendKey: boolean): void;
+      getShowPercentage(): boolean;
+      setShowPercentage(showPercentage: boolean): void;
+      getShowSeriesName(): boolean;
+      setShowSeriesName(showSeriesName: boolean): void;
+      getShowValue(): boolean;
+      setShowValue(showValue: boolean): void;
+      getText(): string;
+      setText(text: string): void;
+      getTextOrientation(): number;
+      setTextOrientation(textOrientation: number): void;
+      getTop(): number;
+      setTop(top: number): void;
+      getVerticalAlignment(): ChartTextVerticalAlignment;
+      setVerticalAlignment(verticalAlignment: ChartTextVerticalAlignment): void;
+      getWidth(): number;
+      getSubstring(start: number, length?: number): ChartFormatString;
+      getTailAnchor(): ChartDataLabelAnchor;
+      setHeight(height: number): void;
+      setWidth(width: number): void;
+  }
+
+  interface ChartDataLabelFormat {
+      getBorder(): ChartBorder;
+      getFill(): ChartFill;
+      getFont(): ChartFont;
+  }
+
+  interface ChartDataLabelAnchor {
+      getLeft(): number;
+      setLeft(left: number): void;
+      getTop(): number;
+      setTop(top: number): void;
+  }
+
+  interface ChartDataTable {
+      getFormat(): ChartDataTableFormat;
+      getShowHorizontalBorder(): boolean;
+      setShowHorizontalBorder(showHorizontalBorder: boolean): void;
+      getShowLegendKey(): boolean;
+      setShowLegendKey(showLegendKey: boolean): void;
+      getShowOutlineBorder(): boolean;
+      setShowOutlineBorder(showOutlineBorder: boolean): void;
+      getShowVerticalBorder(): boolean;
+      setShowVerticalBorder(showVerticalBorder: boolean): void;
+      getVisible(): boolean;
+      setVisible(visible: boolean): void;
+  }
+
+  interface ChartDataTableFormat {
+      getBorder(): ChartBorder;
+      getFill(): ChartFill;
+      getFont(): ChartFont;
+  }
+
+  interface ChartErrorBars {
+      getEndStyleCap(): boolean;
+      setEndStyleCap(endStyleCap: boolean): void;
+      getFormat(): ChartErrorBarsFormat;
+      getInclude(): ChartErrorBarsInclude;
+      setInclude(include: ChartErrorBarsInclude): void;
+      getType(): ChartErrorBarsType;
+      setType(type: ChartErrorBarsType): void;
+      getVisible(): boolean;
+      setVisible(visible: boolean): void;
+  }
+
+  interface ChartErrorBarsFormat {
+      getLine(): ChartLineFormat;
+  }
+
+  interface ChartGridlines {
+      getFormat(): ChartGridlinesFormat;
+      getVisible(): boolean;
+      setVisible(visible: boolean): void;
+  }
+
+  interface ChartGridlinesFormat {
+      getLine(): ChartLineFormat;
+  }
+
+  interface ChartLegend {
+      getFormat(): ChartLegendFormat;
+      getHeight(): number;
+      setHeight(height: number): void;
+      getLeft(): number;
+      setLeft(left: number): void;
+      getOverlay(): boolean;
+      setOverlay(overlay: boolean): void;
+      getPosition(): ChartLegendPosition;
+      setPosition(position: ChartLegendPosition): void;
+      getShowShadow(): boolean;
+      setShowShadow(showShadow: boolean): void;
+      getTop(): number;
+      setTop(top: number): void;
+      getVisible(): boolean;
+      setVisible(visible: boolean): void;
+      getWidth(): number;
+      setWidth(width: number): void;
+      getLegendEntries(): ChartLegendEntry[];
+  }
+
+  interface ChartLegendEntry {
+      getHeight(): number;
+      getIndex(): number;
+      getLeft(): number;
+      getTop(): number;
+      getVisible(): boolean;
+      setVisible(visible: boolean): void;
+      getWidth(): number;
+  }
+
+  interface ChartLegendFormat {
+      getBorder(): ChartBorder;
+      getFill(): ChartFill;
+      getFont(): ChartFont;
+  }
+
+  interface ChartMapOptions {
+      getLabelStrategy(): ChartMapLabelStrategy;
+      setLabelStrategy(labelStrategy: ChartMapLabelStrategy): void;
+      getLevel(): ChartMapAreaLevel;
+      setLevel(level: ChartMapAreaLevel): void;
+      getProjectionType(): ChartMapProjectionType;
+      setProjectionType(projectionType: ChartMapProjectionType): void;
+  }
+
+  interface ChartTitle {
+      getFormat(): ChartTitleFormat;
+      getHeight(): number;
+      getHorizontalAlignment(): ChartTextHorizontalAlignment;
+      setHorizontalAlignment(horizontalAlignment: ChartTextHorizontalAlignment): void;
+      getLeft(): number;
+      setLeft(left: number): void;
+      getOverlay(): boolean;
+      setOverlay(overlay: boolean): void;
+      getPosition(): ChartTitlePosition;
+      setPosition(position: ChartTitlePosition): void;
+      getShowShadow(): boolean;
+      setShowShadow(showShadow: boolean): void;
+      getText(): string;
+      setText(text: string): void;
+      getTextOrientation(): number;
+      setTextOrientation(textOrientation: number): void;
+      getTop(): number;
+      setTop(top: number): void;
+      getVerticalAlignment(): ChartTextVerticalAlignment;
+      setVerticalAlignment(verticalAlignment: ChartTextVerticalAlignment): void;
+      getVisible(): boolean;
+      setVisible(visible: boolean): void;
+      getWidth(): number;
+      getSubstring(start: number, length: number): ChartFormatString;
+      setFormula(formula: string): void;
+  }
+
+  interface ChartFormatString {
+      getFont(): ChartFont;
+  }
+
+  interface ChartTitleFormat {
+      getBorder(): ChartBorder;
+      getFill(): ChartFill;
+      getFont(): ChartFont;
+  }
+
+  interface ChartFill {
+      clear(): void;
+      getSolidColor(): string;
+      setSolidColor(color: string): void;
+  }
+
+  interface ChartBorder {
+      getColor(): string;
+      setColor(color: string): void;
+      getLineStyle(): ChartLineStyle;
+      setLineStyle(lineStyle: ChartLineStyle): void;
+      getWeight(): number;
+      setWeight(weight: number): void;
+      clear(): void;
+  }
+
+  interface ChartBinOptions {
+      getAllowOverflow(): boolean;
+      setAllowOverflow(allowOverflow: boolean): void;
+      getAllowUnderflow(): boolean;
+      setAllowUnderflow(allowUnderflow: boolean): void;
+      getCount(): number;
+      setCount(count: number): void;
+      getOverflowValue(): number;
+      setOverflowValue(overflowValue: number): void;
+      getType(): ChartBinType;
+      setType(type: ChartBinType): void;
+      getUnderflowValue(): number;
+      setUnderflowValue(underflowValue: number): void;
+      getWidth(): number;
+      setWidth(width: number): void;
+  }
+
+  interface ChartBoxwhiskerOptions {
+      getQuartileCalculation(): ChartBoxQuartileCalculation;
+      setQuartileCalculation(quartileCalculation: ChartBoxQuartileCalculation): void;
+      getShowInnerPoints(): boolean;
+      setShowInnerPoints(showInnerPoints: boolean): void;
+      getShowMeanLine(): boolean;
+      setShowMeanLine(showMeanLine: boolean): void;
+      getShowMeanMarker(): boolean;
+      setShowMeanMarker(showMeanMarker: boolean): void;
+      getShowOutlierPoints(): boolean;
+      setShowOutlierPoints(showOutlierPoints: boolean): void;
+  }
+
+  interface ChartLineFormat {
+      getColor(): string;
+      setColor(color: string): void;
+      getLineStyle(): ChartLineStyle;
+      setLineStyle(lineStyle: ChartLineStyle): void;
+      getWeight(): number;
+      setWeight(weight: number): void;
+      clear(): void;
+  }
+
+  interface ChartFont {
+      getBold(): boolean;
+      setBold(bold: boolean): void;
+      getColor(): string;
+      setColor(color: string): void;
+      getItalic(): boolean;
+      setItalic(italic: boolean): void;
+      getName(): string;
+      setName(name: string): void;
+      getSize(): number;
+      setSize(size: number): void;
+      getUnderline(): ChartUnderlineStyle;
+      setUnderline(underline: ChartUnderlineStyle): void;
+  }
+
+  interface ChartTrendline {
+      getBackwardPeriod(): number;
+      setBackwardPeriod(backwardPeriod: number): void;
+      getFormat(): ChartTrendlineFormat;
+      getForwardPeriod(): number;
+      setForwardPeriod(forwardPeriod: number): void;
+      getIntercept(): number;
+      setIntercept(intercept: number): void;
+      getLabel(): ChartTrendlineLabel;
+      getMovingAveragePeriod(): number;
+      setMovingAveragePeriod(movingAveragePeriod: number): void;
+      getName(): string;
+      setName(name: string): void;
+      getPolynomialOrder(): number;
+      setPolynomialOrder(polynomialOrder: number): void;
+      getShowEquation(): boolean;
+      setShowEquation(showEquation: boolean): void;
+      getShowRSquared(): boolean;
+      setShowRSquared(showRSquared: boolean): void;
+      getType(): ChartTrendlineType;
+      setType(type: ChartTrendlineType): void;
+      delete(): void;
+  }
+
+  interface ChartTrendlineFormat {
+      getLine(): ChartLineFormat;
+  }
+
+  interface ChartTrendlineLabel {
+      getAutoText(): boolean;
+      setAutoText(autoText: boolean): void;
+      getFormat(): ChartTrendlineLabelFormat;
+      getFormula(): string;
+      setFormula(formula: string): void;
+      getHeight(): number;
+      getHorizontalAlignment(): ChartTextHorizontalAlignment;
+      setHorizontalAlignment(horizontalAlignment: ChartTextHorizontalAlignment): void;
+      getLeft(): number;
+      setLeft(left: number): void;
+      getLinkNumberFormat(): boolean;
+      setLinkNumberFormat(linkNumberFormat: boolean): void;
+      getNumberFormat(): string;
+      setNumberFormat(numberFormat: string): void;
+      getText(): string;
+      setText(text: string): void;
+      getTextOrientation(): number;
+      setTextOrientation(textOrientation: number): void;
+      getTop(): number;
+      setTop(top: number): void;
+      getVerticalAlignment(): ChartTextVerticalAlignment;
+      setVerticalAlignment(verticalAlignment: ChartTextVerticalAlignment): void;
+      getWidth(): number;
+  }
+
+  interface ChartTrendlineLabelFormat {
+      getBorder(): ChartBorder;
+      getFill(): ChartFill;
+      getFont(): ChartFont;
+  }
+
+  interface ChartPlotArea {
+      getFormat(): ChartPlotAreaFormat;
+      getHeight(): number;
+      setHeight(height: number): void;
+      getInsideHeight(): number;
+      setInsideHeight(insideHeight: number): void;
+      getInsideLeft(): number;
+      setInsideLeft(insideLeft: number): void;
+      getInsideTop(): number;
+      setInsideTop(insideTop: number): void;
+      getInsideWidth(): number;
+      setInsideWidth(insideWidth: number): void;
+      getLeft(): number;
+      setLeft(left: number): void;
+      getPosition(): ChartPlotAreaPosition;
+      setPosition(position: ChartPlotAreaPosition): void;
+      getTop(): number;
+      setTop(top: number): void;
+      getWidth(): number;
+      setWidth(width: number): void;
+  }
+
+  interface ChartPlotAreaFormat {
+      getBorder(): ChartBorder;
+      getFill(): ChartFill;
+  }
+
+  interface ChartLeaderLines {
+      getFormat(): ChartLeaderLinesFormat;
+  }
+
+  interface ChartLeaderLinesFormat {
+      getLine(): ChartLineFormat;
+  }
+
+  interface RangeSort {
+      apply(fields: SortField[], matchCase?: boolean, hasHeaders?: boolean, orientation?: SortOrientation, method?: SortMethod): void;
+  }
+
+  interface TableSort {
+      getFields(): SortField[];
+      getMatchCase(): boolean;
+      getMethod(): SortMethod;
+      apply(fields: SortField[], matchCase?: boolean, method?: SortMethod): void;
+      clear(): void;
+      reapply(): void;
+  }
+
+  interface Filter {
+      getCriteria(): FilterCriteria;
+      apply(criteria: FilterCriteria): void;
+      applyBottomItemsFilter(count: number): void;
+      applyBottomPercentFilter(percent: number): void;
+      applyCellColorFilter(color: string): void;
+      applyCustomFilter(criteria1: string, criteria2?: string, oper?: FilterOperator): void;
+      applyDynamicFilter(criteria: DynamicFilterCriteria): void;
+      applyFontColorFilter(color: string): void;
+      applyIconFilter(icon: Icon): void;
+      applyTopItemsFilter(count: number): void;
+      applyTopPercentFilter(percent: number): void;
+      applyValuesFilter(values: Array<string | FilterDatetime>): void;
+      clear(): void;
+  }
+
+  interface AutoFilter {
+      getCriteria(): FilterCriteria[];
+      getEnabled(): boolean;
+      getIsDataFiltered(): boolean;
+      apply(range: Range | string, columnIndex?: number, criteria?: FilterCriteria): void;
+      clearColumnCriteria(columnIndex: number): void;
+      clearCriteria(): void;
+      getRange(): Range;
+      reapply(): void;
+      remove(): void;
+  }
+
+  interface CultureInfo {
+      getDatetimeFormat(): DatetimeFormatInfo;
+      getName(): string;
+      getNumberFormat(): NumberFormatInfo;
+  }
+
+  interface NumberFormatInfo {
+      getCurrencySymbol(): string;
+      getNumberDecimalSeparator(): string;
+      getNumberGroupSeparator(): string;
+  }
+
+  interface DatetimeFormatInfo {
+      getDateSeparator(): string;
+      getLongDatePattern(): string;
+      getLongTimePattern(): string;
+      getShortDatePattern(): string;
+      getTimeSeparator(): string;
+  }
+
+  interface CustomXmlPart {
+      getId(): string;
+      getNamespaceUri(): string;
+      delete(): void;
+      getXml(): string;
+      setXml(xml: string): void;
+  }
+
+  interface PivotTable {
+      getAllowMultipleFiltersPerField(): boolean;
+      setAllowMultipleFiltersPerField(allowMultipleFiltersPerField: boolean): void;
+      getEnableDataValueEditing(): boolean;
+      setEnableDataValueEditing(enableDataValueEditing: boolean): void;
+      getId(): string;
+      getLayout(): PivotLayout;
+      getName(): string;
+      setName(name: string): void;
+      getUseCustomSortLists(): boolean;
+      setUseCustomSortLists(useCustomSortLists: boolean): void;
+      getWorksheet(): Worksheet;
+      delete(): void;
+      getDataSourceString(): string;
+      getDataSourceType(): DataSourceType;
+      refresh(): void;
+      getColumnHierarchies(): RowColumnPivotHierarchy[];
+      addColumnHierarchy(pivotHierarchy: PivotHierarchy): RowColumnPivotHierarchy;
+      getColumnHierarchy(name: string): RowColumnPivotHierarchy | undefined;
+      removeColumnHierarchy(rowColumnPivotHierarchy: RowColumnPivotHierarchy): void;
+      getDataHierarchies(): DataPivotHierarchy[];
+      addDataHierarchy(pivotHierarchy: PivotHierarchy): DataPivotHierarchy;
+      getDataHierarchy(name: string): DataPivotHierarchy | undefined;
+      removeDataHierarchy(DataPivotHierarchy: DataPivotHierarchy): void;
+      getFilterHierarchies(): FilterPivotHierarchy[];
+      addFilterHierarchy(pivotHierarchy: PivotHierarchy): FilterPivotHierarchy;
+      getFilterHierarchy(name: string): FilterPivotHierarchy | undefined;
+      removeFilterHierarchy(filterPivotHierarchy: FilterPivotHierarchy): void;
+      getHierarchies(): PivotHierarchy[];
+      getHierarchy(name: string): PivotHierarchy | undefined;
+      getRowHierarchies(): RowColumnPivotHierarchy[];
+      addRowHierarchy(pivotHierarchy: PivotHierarchy): RowColumnPivotHierarchy;
+      getRowHierarchy(name: string): RowColumnPivotHierarchy | undefined;
+      removeRowHierarchy(rowColumnPivotHierarchy: RowColumnPivotHierarchy): void;
+  }
+
+  interface PivotLayout {
+      getAltTextDescription(): string;
+      setAltTextDescription(altTextDescription: string): void;
+      getAltTextTitle(): string;
+      setAltTextTitle(altTextTitle: string): void;
+      getAutoFormat(): boolean;
+      setAutoFormat(autoFormat: boolean): void;
+      getEmptyCellText(): string;
+      setEmptyCellText(emptyCellText: string): void;
+      getEnableFieldList(): boolean;
+      setEnableFieldList(enableFieldList: boolean): void;
+      getFillEmptyCells(): boolean;
+      setFillEmptyCells(fillEmptyCells: boolean): void;
+      getLayoutType(): PivotLayoutType;
+      setLayoutType(layoutType: PivotLayoutType): void;
+      getPreserveFormatting(): boolean;
+      setPreserveFormatting(preserveFormatting: boolean): void;
+      getShowColumnGrandTotals(): boolean;
+      setShowColumnGrandTotals(showColumnGrandTotals: boolean): void;
+      getShowFieldHeaders(): boolean;
+      setShowFieldHeaders(showFieldHeaders: boolean): void;
+      getShowRowGrandTotals(): boolean;
+      setShowRowGrandTotals(showRowGrandTotals: boolean): void;
+      getSubtotalLocation(): SubtotalLocationType;
+      setSubtotalLocation(subtotalLocation: SubtotalLocationType): void;
+      displayBlankLineAfterEachItem(display: boolean): void;
+      getColumnLabelRange(): Range;
+      getBodyAndTotalRange(): Range;
+      getDataHierarchy(cell: Range | string): DataPivotHierarchy;
+      getFilterAxisRange(): Range;
+      getRange(): Range;
+      getRowLabelRange(): Range;
+      repeatAllItemLabels(repeatLabels: boolean): void;
+      setAutoSortOnCell(cell: Range | string, sortBy: SortBy): void;
+  }
+
+  interface PivotHierarchy {
+      getId(): string;
+      getName(): string;
+      setName(name: string): void;
+      getFields(): PivotField[];
+      getPivotField(name: string): PivotField | undefined;
+  }
+
+  interface RowColumnPivotHierarchy {
+      getId(): string;
+      getName(): string;
+      setName(name: string): void;
+      getPosition(): number;
+      setPosition(position: number): void;
+      setToDefault(): void;
+      getFields(): PivotField[];
+      getPivotField(name: string): PivotField | undefined;
+  }
+
+  interface FilterPivotHierarchy {
+      getEnableMultipleFilterItems(): boolean;
+      setEnableMultipleFilterItems(enableMultipleFilterItems: boolean): void;
+      getId(): string;
+      getName(): string;
+      setName(name: string): void;
+      getPosition(): number;
+      setPosition(position: number): void;
+      setToDefault(): void;
+      getFields(): PivotField[];
+      getPivotField(name: string): PivotField | undefined;
+  }
+
+  interface DataPivotHierarchy {
+      getField(): PivotField;
+      getId(): string;
+      getName(): string;
+      setName(name: string): void;
+      getNumberFormat(): string;
+      setNumberFormat(numberFormat: string): void;
+      getPosition(): number;
+      setPosition(position: number): void;
+      getShowAs(): ShowAsRule;
+      setShowAs(showAs: ShowAsRule): void;
+      getSummarizeBy(): AggregationFunction;
+      setSummarizeBy(summarizeBy: AggregationFunction): void;
+      setToDefault(): void;
+  }
+
+  interface PivotField {
+      getId(): string;
+      getName(): string;
+      setName(name: string): void;
+      getShowAllItems(): boolean;
+      setShowAllItems(showAllItems: boolean): void;
+      getSubtotals(): Subtotals;
+      setSubtotals(subtotals: Subtotals): void;
+      applyFilter(filter: PivotFilters): void;
+      clearAllFilters(): void;
+      clearFilter(filterType: PivotFilterType): void;
+      getFilters(): PivotFilters;
+      isFiltered(filterType?: PivotFilterType): boolean;
+      sortByLabels(sortBy: SortBy): void;
+      sortByValues(sortBy: SortBy, valuesHierarchy: DataPivotHierarchy, pivotItemScope?: Array<PivotItem | string>): void;
+      getItems(): PivotItem[];
+      getPivotItem(name: string): PivotItem | undefined;
+  }
+
+  interface PivotItem {
+      getId(): string;
+      getIsExpanded(): boolean;
+      setIsExpanded(isExpanded: boolean): void;
+      getName(): string;
+      setName(name: string): void;
+      getVisible(): boolean;
+      setVisible(visible: boolean): void;
+  }
+
+  interface WorksheetCustomProperty {
+      getKey(): string;
+      getValue(): string;
+      setValue(value: string): void;
+      delete(): void;
+  }
+
+  interface DocumentProperties {
+      getAuthor(): string;
+      setAuthor(author: string): void;
+      getCategory(): string;
+      setCategory(category: string): void;
+      getComments(): string;
+      setComments(comments: string): void;
+      getCompany(): string;
+      setCompany(company: string): void;
+      getCreationDate(): Date;
+      getKeywords(): string;
+      setKeywords(keywords: string): void;
+      getLastAuthor(): string;
+      getManager(): string;
+      setManager(manager: string): void;
+      getRevisionNumber(): number;
+      setRevisionNumber(revisionNumber: number): void;
+      getSubject(): string;
+      setSubject(subject: string): void;
+      getTitle(): string;
+      setTitle(title: string): void;
+      getCustom(): CustomProperty[];
+      addCustomProperty(key: string, value: any): CustomProperty;
+      deleteAllCustomProperties(): void;
+      getCustomProperty(key: string): CustomProperty | undefined;
+  }
+
+  interface CustomProperty {
+      getKey(): string;
+      getType(): DocumentPropertyType;
+      getValue(): any;
+      setValue(value: any): void;
+      delete(): void;
+  }
+
+  interface ConditionalFormat {
+      getCellValue(): CellValueConditionalFormat | undefined;
+      getColorScale(): ColorScaleConditionalFormat | undefined;
+      getCustom(): CustomConditionalFormat | undefined;
+      getDataBar(): DataBarConditionalFormat | undefined;
+      getIconSet(): IconSetConditionalFormat | undefined;
+      getId(): string;
+      getPreset(): PresetCriteriaConditionalFormat | undefined;
+      getPriority(): number;
+      setPriority(priority: number): void;
+      getStopIfTrue(): boolean;
+      setStopIfTrue(stopIfTrue: boolean): void;
+      getTextComparison(): TextConditionalFormat | undefined;
+      getTopBottom(): TopBottomConditionalFormat | undefined;
+      getType(): ConditionalFormatType;
+      changeRuleToCellValue(properties: ConditionalCellValueRule): void;
+      changeRuleToColorScale(): void;
+      changeRuleToContainsText(properties: ConditionalTextComparisonRule): void;
+      changeRuleToCustom(formula: string): void;
+      changeRuleToDataBar(): void;
+      changeRuleToIconSet(): void;
+      changeRuleToPresetCriteria(properties: ConditionalPresetCriteriaRule): void;
+      changeRuleToTopBottom(properties: ConditionalTopBottomRule): void;
+      delete(): void;
+      getRange(): Range;
+      getRanges(): RangeAreas;
+      setRanges(ranges: Range | RangeAreas | string): void;
+  }
+
+  interface DataBarConditionalFormat {
+      getAxisColor(): string;
+      setAxisColor(axisColor: string): void;
+      getAxisFormat(): ConditionalDataBarAxisFormat;
+      setAxisFormat(axisFormat: ConditionalDataBarAxisFormat): void;
+      getBarDirection(): ConditionalDataBarDirection;
+      setBarDirection(barDirection: ConditionalDataBarDirection): void;
+      getLowerBoundRule(): ConditionalDataBarRule;
+      setLowerBoundRule(lowerBoundRule: ConditionalDataBarRule): void;
+      getNegativeFormat(): ConditionalDataBarNegativeFormat;
+      getPositiveFormat(): ConditionalDataBarPositiveFormat;
+      getShowDataBarOnly(): boolean;
+      setShowDataBarOnly(showDataBarOnly: boolean): void;
+      getUpperBoundRule(): ConditionalDataBarRule;
+      setUpperBoundRule(upperBoundRule: ConditionalDataBarRule): void;
+  }
+
+  interface ConditionalDataBarPositiveFormat {
+      getBorderColor(): string;
+      setBorderColor(borderColor: string): void;
+      getFillColor(): string;
+      setFillColor(fillColor: string): void;
+      getGradientFill(): boolean;
+      setGradientFill(gradientFill: boolean): void;
+  }
+
+  interface ConditionalDataBarNegativeFormat {
+      getBorderColor(): string;
+      setBorderColor(borderColor: string): void;
+      getFillColor(): string;
+      setFillColor(fillColor: string): void;
+      getMatchPositiveBorderColor(): boolean;
+      setMatchPositiveBorderColor(matchPositiveBorderColor: boolean): void;
+      getMatchPositiveFillColor(): boolean;
+      setMatchPositiveFillColor(matchPositiveFillColor: boolean): void;
+  }
+
+  interface CustomConditionalFormat {
+      getFormat(): ConditionalRangeFormat;
+      getRule(): ConditionalFormatRule;
+  }
+
+  interface ConditionalFormatRule {
+      getFormula(): string;
+      setFormula(formula: string): void;
+      getFormulaLocal(): string;
+      setFormulaLocal(formulaLocal: string): void;
+  }
+
+  interface IconSetConditionalFormat {
+      getCriteria(): ConditionalIconCriterion[];
+      setCriteria(criteria: ConditionalIconCriterion[]): void;
+      getReverseIconOrder(): boolean;
+      setReverseIconOrder(reverseIconOrder: boolean): void;
+      getShowIconOnly(): boolean;
+      setShowIconOnly(showIconOnly: boolean): void;
+      getStyle(): IconSet;
+      setStyle(style: IconSet): void;
+  }
+
+  interface ColorScaleConditionalFormat {
+      getCriteria(): ConditionalColorScaleCriteria;
+      setCriteria(criteria: ConditionalColorScaleCriteria): void;
+      getThreeColorScale(): boolean;
+  }
+
+  interface TopBottomConditionalFormat {
+      getFormat(): ConditionalRangeFormat;
+      getRule(): ConditionalTopBottomRule;
+      setRule(rule: ConditionalTopBottomRule): void;
+  }
+
+  interface PresetCriteriaConditionalFormat {
+      getFormat(): ConditionalRangeFormat;
+      getRule(): ConditionalPresetCriteriaRule;
+      setRule(rule: ConditionalPresetCriteriaRule): void;
+  }
+
+  interface TextConditionalFormat {
+      getFormat(): ConditionalRangeFormat;
+      getRule(): ConditionalTextComparisonRule;
+      setRule(rule: ConditionalTextComparisonRule): void;
+  }
+
+  interface CellValueConditionalFormat {
+      getFormat(): ConditionalRangeFormat;
+      getRule(): ConditionalCellValueRule;
+      setRule(rule: ConditionalCellValueRule): void;
+  }
+
+  interface ConditionalRangeFormat {
+      getFill(): ConditionalRangeFill;
+      getFont(): ConditionalRangeFont;
+      getNumberFormat(): string;
+      setNumberFormat(numberFormat: string): void;
+      clearFormat(): void;
+      getBorders(): ConditionalRangeBorder[];
+      getConditionalRangeBorderBottom(): ConditionalRangeBorder;
+      getConditionalRangeBorderLeft(): ConditionalRangeBorder;
+      getConditionalRangeBorderRight(): ConditionalRangeBorder;
+      getConditionalRangeBorderTop(): ConditionalRangeBorder;
+      getConditionalRangeBorder(index: ConditionalRangeBorderIndex): ConditionalRangeBorder;
+  }
+
+  interface ConditionalRangeFont {
+      getBold(): boolean;
+      setBold(bold: boolean): void;
+      getColor(): string;
+      setColor(color: string): void;
+      getItalic(): boolean;
+      setItalic(italic: boolean): void;
+      getStrikethrough(): boolean;
+      setStrikethrough(strikethrough: boolean): void;
+      getUnderline(): ConditionalRangeFontUnderlineStyle;
+      setUnderline(underline: ConditionalRangeFontUnderlineStyle): void;
+      clear(): void;
+  }
+
+  interface ConditionalRangeFill {
+      getColor(): string;
+      setColor(color: string): void;
+      clear(): void;
+  }
+
+  interface ConditionalRangeBorder {
+      getColor(): string;
+      setColor(color: string): void;
+      getSideIndex(): ConditionalRangeBorderIndex;
+      getStyle(): ConditionalRangeBorderLineStyle;
+      setStyle(style: ConditionalRangeBorderLineStyle): void;
+  }
+
+  interface PredefinedCellStyle {
+      getAutoIndent(): boolean;
+      setAutoIndent(autoIndent: boolean): void;
+      getBuiltIn(): boolean;
+      getFill(): RangeFill;
+      getFont(): RangeFont;
+      getFormulaHidden(): boolean;
+      setFormulaHidden(formulaHidden: boolean): void;
+      getHorizontalAlignment(): HorizontalAlignment;
+      setHorizontalAlignment(horizontalAlignment: HorizontalAlignment): void;
+      getIncludeAlignment(): boolean;
+      setIncludeAlignment(includeAlignment: boolean): void;
+      getIncludeBorder(): boolean;
+      setIncludeBorder(includeBorder: boolean): void;
+      getIncludeFont(): boolean;
+      setIncludeFont(includeFont: boolean): void;
+      getIncludeNumber(): boolean;
+      setIncludeNumber(includeNumber: boolean): void;
+      getIncludePatterns(): boolean;
+      setIncludePatterns(includePatterns: boolean): void;
+      getIncludeProtection(): boolean;
+      setIncludeProtection(includeProtection: boolean): void;
+      getIndentLevel(): number;
+      setIndentLevel(indentLevel: number): void;
+      getLocked(): boolean;
+      setLocked(locked: boolean): void;
+      getName(): string;
+      getNumberFormat(): string;
+      setNumberFormat(numberFormat: string): void;
+      getNumberFormatLocal(): string;
+      setNumberFormatLocal(numberFormatLocal: string): void;
+      getReadingOrder(): ReadingOrder;
+      setReadingOrder(readingOrder: ReadingOrder): void;
+      getShrinkToFit(): boolean;
+      setShrinkToFit(shrinkToFit: boolean): void;
+      getTextOrientation(): number;
+      setTextOrientation(textOrientation: number): void;
+      getVerticalAlignment(): VerticalAlignment;
+      setVerticalAlignment(verticalAlignment: VerticalAlignment): void;
+      getWrapText(): boolean;
+      setWrapText(wrapText: boolean): void;
+      delete(): void;
+      getBorders(): RangeBorder[];
+      getRangeBorderTintAndShade(): number;
+      setRangeBorderTintAndShade(rangeBorderTintAndShade: number): void;
+      getRangeBorder(index: BorderIndex): RangeBorder;
+  }
+
+  interface TableStyle {
+      getName(): string;
+      setName(name: string): void;
+      getReadOnly(): boolean;
+      delete(): void;
+      duplicate(): TableStyle;
+  }
+
+  interface PivotTableStyle {
+      getName(): string;
+      setName(name: string): void;
+      getReadOnly(): boolean;
+      delete(): void;
+      duplicate(): PivotTableStyle;
+  }
+
+  interface SlicerStyle {
+      getName(): string;
+      setName(name: string): void;
+      getReadOnly(): boolean;
+      delete(): void;
+      duplicate(): SlicerStyle;
+  }
+
+  interface TimelineStyle {
+      getName(): string;
+      setName(name: string): void;
+      getReadOnly(): boolean;
+      delete(): void;
+      duplicate(): TimelineStyle;
+  }
+
+  interface PageLayout {
+      getBlackAndWhite(): boolean;
+      setBlackAndWhite(blackAndWhite: boolean): void;
+      getBottomMargin(): number;
+      setBottomMargin(bottomMargin: number): void;
+      getCenterHorizontally(): boolean;
+      setCenterHorizontally(centerHorizontally: boolean): void;
+      getCenterVertically(): boolean;
+      setCenterVertically(centerVertically: boolean): void;
+      getDraftMode(): boolean;
+      setDraftMode(draftMode: boolean): void;
+      getFirstPageNumber(): number | "";
+      setFirstPageNumber(firstPageNumber: number | ""): void;
+      getFooterMargin(): number;
+      setFooterMargin(footerMargin: number): void;
+      getHeaderMargin(): number;
+      setHeaderMargin(headerMargin: number): void;
+      getHeadersFooters(): HeaderFooterGroup;
+      getLeftMargin(): number;
+      setLeftMargin(leftMargin: number): void;
+      getOrientation(): PageOrientation;
+      setOrientation(orientation: PageOrientation): void;
+      getPaperSize(): PaperType;
+      setPaperSize(paperSize: PaperType): void;
+      getPrintComments(): PrintComments;
+      setPrintComments(printComments: PrintComments): void;
+      getPrintErrors(): PrintErrorType;
+      setPrintErrors(printErrors: PrintErrorType): void;
+      getPrintGridlines(): boolean;
+      setPrintGridlines(printGridlines: boolean): void;
+      getPrintHeadings(): boolean;
+      setPrintHeadings(printHeadings: boolean): void;
+      getPrintOrder(): PrintOrder;
+      setPrintOrder(printOrder: PrintOrder): void;
+      getRightMargin(): number;
+      setRightMargin(rightMargin: number): void;
+      getTopMargin(): number;
+      setTopMargin(topMargin: number): void;
+      getZoom(): PageLayoutZoomOptions;
+      setZoom(zoom: PageLayoutZoomOptions): void;
+      getPrintArea(): RangeAreas;
+      getPrintTitleColumns(): Range;
+      getPrintTitleRows(): Range;
+      setPrintArea(printArea: Range | RangeAreas | string): void;
+      setPrintMargins(unit: PrintMarginUnit, marginOptions: PageLayoutMarginOptions): void;
+      setPrintTitleColumns(printTitleColumns: Range | string): void;
+      setPrintTitleRows(printTitleRows: Range | string): void;
+  }
+
+  interface HeaderFooter {
+      getCenterFooter(): string;
+      setCenterFooter(centerFooter: string): void;
+      getCenterHeader(): string;
+      setCenterHeader(centerHeader: string): void;
+      getLeftFooter(): string;
+      setLeftFooter(leftFooter: string): void;
+      getLeftHeader(): string;
+      setLeftHeader(leftHeader: string): void;
+      getRightFooter(): string;
+      setRightFooter(rightFooter: string): void;
+      getRightHeader(): string;
+      setRightHeader(rightHeader: string): void;
+  }
+
+  interface HeaderFooterGroup {
+      getDefaultForAllPages(): HeaderFooter;
+      getEvenPages(): HeaderFooter;
+      getFirstPage(): HeaderFooter;
+      getOddPages(): HeaderFooter;
+      getState(): HeaderFooterState;
+      setState(state: HeaderFooterState): void;
+      getUseSheetMargins(): boolean;
+      setUseSheetMargins(useSheetMargins: boolean): void;
+      getUseSheetScale(): boolean;
+      setUseSheetScale(useSheetScale: boolean): void;
+  }
+
+  interface PageBreak {
+      getColumnIndex(): number;
+      getRowIndex(): number;
+      delete(): void;
+      getCellAfterBreak(): Range;
+  }
+
+  interface Comment {
+      getAuthorEmail(): string;
+      getAuthorName(): string;
+      getContent(): string;
+      setContent(content: string): void;
+      getContentType(): ContentType;
+      getCreationDate(): Date;
+      getId(): string;
+      getMentions(): CommentMention[];
+      getResolved(): boolean;
+      setResolved(resolved: boolean): void;
+      getRichContent(): string;
+      delete(): void;
+      getLocation(): Range;
+      updateMentions(contentWithMentions: CommentRichContent): void;
+      getReplies(): CommentReply[];
+      addCommentReply(content: CommentRichContent | string, contentType?: ContentType): CommentReply;
+      getCommentReply(commentReplyId: string): CommentReply | undefined;
+  }
+
+  interface CommentReply {
+      getAuthorEmail(): string;
+      getAuthorName(): string;
+      getContent(): string;
+      setContent(content: string): void;
+      getContentType(): ContentType;
+      getCreationDate(): Date;
+      getId(): string;
+      getMentions(): CommentMention[];
+      getResolved(): boolean;
+      getRichContent(): string;
+      delete(): void;
+      getLocation(): Range;
+      getParentComment(): Comment;
+      updateMentions(contentWithMentions: CommentRichContent): void;
+  }
+
+  interface Shape {
+      getAltTextDescription(): string;
+      setAltTextDescription(altTextDescription: string): void;
+      getAltTextTitle(): string;
+      setAltTextTitle(altTextTitle: string): void;
+      getConnectionSiteCount(): number;
+      getDisplayName(): string;
+      getFill(): ShapeFill;
+      getGeometricShape(): GeometricShape;
+      getGeometricShapeType(): GeometricShapeType;
+      setGeometricShapeType(geometricShapeType: GeometricShapeType): void;
+      getGroup(): ShapeGroup;
+      getHeight(): number;
+      setHeight(height: number): void;
+      getId(): string;
+      getImage(): Image;
+      getLeft(): number;
+      setLeft(left: number): void;
+      getLevel(): number;
+      getLine(): Line;
+      getLineFormat(): ShapeLineFormat;
+      getLockAspectRatio(): boolean;
+      setLockAspectRatio(lockAspectRatio: boolean): void;
+      getName(): string;
+      setName(name: string): void;
+      getParentGroup(): Shape;
+      getPlacement(): Placement;
+      setPlacement(placement: Placement): void;
+      getRotation(): number;
+      setRotation(rotation: number): void;
+      getTextFrame(): TextFrame;
+      getTop(): number;
+      setTop(top: number): void;
+      getType(): ShapeType;
+      getVisible(): boolean;
+      setVisible(visible: boolean): void;
+      getWidth(): number;
+      setWidth(width: number): void;
+      getZOrderPosition(): number;
+      copyTo(destinationSheet?: Worksheet | string): Shape;
+      delete(): void;
+      getImageAsBase64(format: PictureFormat): string;
+      incrementLeft(increment: number): void;
+      incrementRotation(increment: number): void;
+      incrementTop(increment: number): void;
+      scaleHeight(scaleFactor: number, scaleType: ShapeScaleType, scaleFrom?: ShapeScaleFrom): void;
+      scaleWidth(scaleFactor: number, scaleType: ShapeScaleType, scaleFrom?: ShapeScaleFrom): void;
+      setZOrder(position: ShapeZOrder): void;
+      getAsImage(format: PictureFormat): string;
+  }
+
+  interface GeometricShape {
+      getId(): string;
+  }
+
+  interface Image {
+      getId(): string;
+      getShape(): Shape;
+      getFormat(): PictureFormat;
+  }
+
+  interface ShapeGroup {
+      getId(): string;
+      getGroupShape(): Shape;
+      ungroup(): void;
+      getShapes(): Shape[];
+      getShape(key: string): Shape | undefined;
+  }
+
+  interface Line {
+      getBeginArrowheadLength(): ArrowheadLength;
+      setBeginArrowheadLength(beginArrowheadLength: ArrowheadLength): void;
+      getBeginArrowheadStyle(): ArrowheadStyle;
+      setBeginArrowheadStyle(beginArrowheadStyle: ArrowheadStyle): void;
+      getBeginArrowheadWidth(): ArrowheadWidth;
+      setBeginArrowheadWidth(beginArrowheadWidth: ArrowheadWidth): void;
+      getBeginConnectedShape(): Shape;
+      getBeginConnectedSite(): number;
+      getEndArrowheadLength(): ArrowheadLength;
+      setEndArrowheadLength(endArrowheadLength: ArrowheadLength): void;
+      getEndArrowheadStyle(): ArrowheadStyle;
+      setEndArrowheadStyle(endArrowheadStyle: ArrowheadStyle): void;
+      getEndArrowheadWidth(): ArrowheadWidth;
+      setEndArrowheadWidth(endArrowheadWidth: ArrowheadWidth): void;
+      getEndConnectedShape(): Shape;
+      getEndConnectedSite(): number;
+      getId(): string;
+      getIsBeginConnected(): boolean;
+      getIsEndConnected(): boolean;
+      getShape(): Shape;
+      getConnectorType(): ConnectorType;
+      setConnectorType(connectorType: ConnectorType): void;
+      connectBeginShape(shape: Shape, connectionSite: number): void;
+      connectEndShape(shape: Shape, connectionSite: number): void;
+      disconnectBeginShape(): void;
+      disconnectEndShape(): void;
+  }
+
+  interface ShapeFill {
+      getForegroundColor(): string;
+      setForegroundColor(foregroundColor: string): void;
+      getTransparency(): number;
+      setTransparency(transparency: number): void;
+      getType(): ShapeFillType;
+      clear(): void;
+      setSolidColor(color: string): void;
+  }
+
+  interface ShapeLineFormat {
+      getColor(): string;
+      setColor(color: string): void;
+      getDashStyle(): ShapeLineDashStyle;
+      setDashStyle(dashStyle: ShapeLineDashStyle): void;
+      getStyle(): ShapeLineStyle;
+      setStyle(style: ShapeLineStyle): void;
+      getTransparency(): number;
+      setTransparency(transparency: number): void;
+      getVisible(): boolean;
+      setVisible(visible: boolean): void;
+      getWeight(): number;
+      setWeight(weight: number): void;
+  }
+
+  interface TextFrame {
+      getAutoSizeSetting(): ShapeAutoSize;
+      setAutoSizeSetting(autoSizeSetting: ShapeAutoSize): void;
+      getBottomMargin(): number;
+      setBottomMargin(bottomMargin: number): void;
+      getHasText(): boolean;
+      getHorizontalAlignment(): ShapeTextHorizontalAlignment;
+      setHorizontalAlignment(horizontalAlignment: ShapeTextHorizontalAlignment): void;
+      getHorizontalOverflow(): ShapeTextHorizontalOverflow;
+      setHorizontalOverflow(horizontalOverflow: ShapeTextHorizontalOverflow): void;
+      getLeftMargin(): number;
+      setLeftMargin(leftMargin: number): void;
+      getOrientation(): ShapeTextOrientation;
+      setOrientation(orientation: ShapeTextOrientation): void;
+      getReadingOrder(): ShapeTextReadingOrder;
+      setReadingOrder(readingOrder: ShapeTextReadingOrder): void;
+      getRightMargin(): number;
+      setRightMargin(rightMargin: number): void;
+      getTextRange(): TextRange;
+      getTopMargin(): number;
+      setTopMargin(topMargin: number): void;
+      getVerticalAlignment(): ShapeTextVerticalAlignment;
+      setVerticalAlignment(verticalAlignment: ShapeTextVerticalAlignment): void;
+      getVerticalOverflow(): ShapeTextVerticalOverflow;
+      setVerticalOverflow(verticalOverflow: ShapeTextVerticalOverflow): void;
+      deleteText(): void;
+  }
+
+  interface TextRange {
+      getFont(): ShapeFont;
+      getText(): string;
+      setText(text: string): void;
+      getSubstring(start: number, length?: number): TextRange;
+  }
+
+  interface ShapeFont {
+      getBold(): boolean;
+      setBold(bold: boolean): void;
+      getColor(): string;
+      setColor(color: string): void;
+      getItalic(): boolean;
+      setItalic(italic: boolean): void;
+      getName(): string;
+      setName(name: string): void;
+      getSize(): number;
+      setSize(size: number): void;
+      getUnderline(): ShapeFontUnderlineStyle;
+      setUnderline(underline: ShapeFontUnderlineStyle): void;
+  }
+
+  interface Slicer {
+      getCaption(): string;
+      setCaption(caption: string): void;
+      getHeight(): number;
+      setHeight(height: number): void;
+      getId(): string;
+      getIsFilterCleared(): boolean;
+      getLeft(): number;
+      setLeft(left: number): void;
+      getName(): string;
+      setName(name: string): void;
+      getSortBy(): SlicerSortType;
+      setSortBy(sortBy: SlicerSortType): void;
+      getStyle(): string;
+      setStyle(style: string): void;
+      getTop(): number;
+      setTop(top: number): void;
+      getWidth(): number;
+      setWidth(width: number): void;
+      getWorksheet(): Worksheet;
+      clearFilters(): void;
+      delete(): void;
+      getSelectedItems(): string[];
+      selectItems(items?: string[]): void;
+      getSlicerItems(): SlicerItem[];
+      getSlicerItem(key: string): SlicerItem | undefined;
+  }
+
+  interface SlicerItem {
+      getHasData(): boolean;
+      getIsSelected(): boolean;
+      setIsSelected(isSelected: boolean): void;
+      getKey(): string;
+      getName(): string;
+  }
+
+  interface NamedSheetView {
+      getName(): string;
+      setName(name: string): void;
+      activate(): void;
+      delete(): void;
+      duplicate(name?: string): NamedSheetView;
+  }
+
+  interface AllowEditRangeOptions {
+      password?: string;
+  }
+
+  interface PivotDateFilter {
+      comparator?: FilterDatetime;
+      condition: DateFilterCondition;
+      exclusive?: boolean;
+      lowerBound?: FilterDatetime;
+      upperBound?: FilterDatetime;
+      wholeDays?: boolean;
+  }
+
+  interface PivotFilters {
+      dateFilter?: PivotDateFilter;
+      labelFilter?: PivotLabelFilter;
+      manualFilter?: PivotManualFilter;
+      valueFilter?: PivotValueFilter;
+  }
+
+  interface PivotLabelFilter {
+      comparator?: string;
+      condition: LabelFilterCondition;
+      exclusive?: boolean;
+      lowerBound?: string;
+      substring?: string;
+      upperBound?: string;
+  }
+
+  interface PivotManualFilter {
+      selectedItems?: (string | PivotItem)[];
+  }
+
+  interface PivotValueFilter {
+      comparator?: number;
+      condition: ValueFilterCondition;
+      exclusive?: boolean;
+      lowerBound?: number;
+      selectionType?: TopBottomSelectionType;
+      threshold?: number;
+      upperBound?: number;
+      value: string;
+  }
+
+  interface WorksheetProtectionOptions {
+      allowAutoFilter?: boolean;
+      allowDeleteColumns?: boolean;
+      allowDeleteRows?: boolean;
+      allowEditObjects?: boolean;
+      allowEditScenarios?: boolean;
+      allowFormatCells?: boolean;
+      allowFormatColumns?: boolean;
+      allowFormatRows?: boolean;
+      allowInsertColumns?: boolean;
+      allowInsertHyperlinks?: boolean;
+      allowInsertRows?: boolean;
+      allowPivotTables?: boolean;
+      allowSort?: boolean;
+      selectionMode?: ProtectionSelectionMode;
+  }
+
+  interface RangeHyperlink {
+      address?: string;
+      documentReference?: string;
+      screenTip?: string;
+      textToDisplay?: string;
+  }
+
+  interface SearchCriteria {
+      completeMatch?: boolean;
+      matchCase?: boolean;
+      searchDirection?: SearchDirection;
+  }
+
+  interface WorksheetSearchCriteria {
+      completeMatch?: boolean;
+      matchCase?: boolean;
+  }
+
+  interface ReplaceCriteria {
+      completeMatch?: boolean;
+      matchCase?: boolean;
+  }
+
+  interface DataValidationRule {
+      custom?: CustomDataValidation;
+      date?: DateTimeDataValidation;
+      decimal?: BasicDataValidation;
+      list?: ListDataValidation;
+      textLength?: BasicDataValidation;
+      time?: DateTimeDataValidation;
+      wholeNumber?: BasicDataValidation;
+  }
+
+  interface BasicDataValidation {
+      formula1: string | number | Range;
+      formula2?: string | number | Range;
+      operator: DataValidationOperator;
+  }
+
+  interface DateTimeDataValidation {
+      formula1: string | Date | Range;
+      formula2?: string | Date | Range;
+      operator: DataValidationOperator;
+  }
+
+  interface ListDataValidation {
+      inCellDropDown: boolean;
+      source: string | Range;
+  }
+
+  interface CustomDataValidation {
+      formula: string;
+  }
+
+  interface DataValidationErrorAlert {
+      message: string;
+      showAlert: boolean;
+      style: DataValidationAlertStyle;
+      title: string;
+  }
+
+  interface DataValidationPrompt {
+      message: string;
+      showPrompt: boolean;
+      title: string;
+  }
+
+  interface SortField {
+      ascending?: boolean;
+      color?: string;
+      dataOption?: SortDataOption;
+      icon?: Icon;
+      key: number;
+      sortOn?: SortOn;
+      subField?: string;
+  }
+
+  interface FilterCriteria {
+      color?: string;
+      criterion1?: string;
+      criterion2?: string;
+      dynamicCriteria?: DynamicFilterCriteria;
+      filterOn: FilterOn;
+      icon?: Icon;
+      operator?: FilterOperator;
+      subField?: string;
+      values?: Array<string | FilterDatetime>;
+  }
+
+  interface FilterDatetime {
+      date: string;
+      specificity: FilterDatetimeSpecificity;
+  }
+
+  interface Icon {
+      index: number;
+      set: IconSet;
+  }
+
+  interface ShowAsRule {
+      baseField?: PivotField;
+      baseItem?: PivotItem;
+      calculation: ShowAsCalculation;
+  }
+
+  interface Subtotals {
+      automatic?: boolean;
+      average?: boolean;
+      count?: boolean;
+      countNumbers?: boolean;
+      max?: boolean;
+      min?: boolean;
+      product?: boolean;
+      standardDeviation?: boolean;
+      standardDeviationP?: boolean;
+      sum?: boolean;
+      variance?: boolean;
+      varianceP?: boolean;
+  }
+
+  interface ConditionalDataBarRule {
+      formula?: string;
+      type: ConditionalFormatRuleType;
+  }
+
+  interface ConditionalIconCriterion {
+      customIcon?: Icon;
+      formula: string;
+      operator: ConditionalIconCriterionOperator;
+      type: ConditionalFormatIconRuleType;
+  }
+
+  interface ConditionalColorScaleCriteria {
+      maximum: ConditionalColorScaleCriterion;
+      midpoint?: ConditionalColorScaleCriterion;
+      minimum: ConditionalColorScaleCriterion;
+  }
+
+  interface ConditionalColorScaleCriterion {
+      color?: string;
+      formula?: string;
+      type: ConditionalFormatColorCriterionType;
+  }
+
+  interface ConditionalTopBottomRule {
+      rank: number;
+      type: ConditionalTopBottomCriterionType;
+  }
+
+  interface ConditionalPresetCriteriaRule {
+      criterion: ConditionalFormatPresetCriterion;
+  }
+
+  interface ConditionalTextComparisonRule {
+      operator: ConditionalTextOperator;
+      text: string;
+  }
+
+  interface ConditionalCellValueRule {
+      formula1: string;
+      formula2?: string;
+      operator: ConditionalCellValueOperator;
+  }
+
+  interface PageLayoutZoomOptions {
+      horizontalFitToPages?: number;
+      scale?: number;
+      verticalFitToPages?: number;
+  }
+
+  interface PageLayoutMarginOptions {
+      bottom?: number;
+      footer?: number;
+      header?: number;
+      left?: number;
+      right?: number;
+      top?: number;
+  }
+
+  interface CommentMention {
+      email: string;
+      id: number;
+      name: string;
+  }
+
+  interface CommentRichContent {
+      mentions?: CommentMention[];
+      richContent: string;
+  }
+
+  enum LoadToType {
+      connectionOnly,
+      table,
+      pivotTable,
+      pivotChart
+  }
+
+  enum QueryError {
+      unknown,
+      none,
+      failedLoadToWorksheet,
+      failedLoadToDataModel,
+      failedDownload,
+      failedToCompleteDownload
+  }
+
+  enum WorkbookLinksRefreshMode {
+      manual,
+      automatic
+  }
+
+  enum DataSourceType {
+      unknown,
+      localRange,
+      localTable
+  }
+
+  enum DateFilterCondition {
+      unknown,
+      equals,
+      before,
+      beforeOrEqualTo,
+      after,
+      afterOrEqualTo,
+      between,
+      tomorrow,
+      today,
+      yesterday,
+      nextWeek,
+      thisWeek,
+      lastWeek,
+      nextMonth,
+      thisMonth,
+      lastMonth,
+      nextQuarter,
+      thisQuarter,
+      lastQuarter,
+      nextYear,
+      thisYear,
+      lastYear,
+      yearToDate,
+      allDatesInPeriodQuarter1,
+      allDatesInPeriodQuarter2,
+      allDatesInPeriodQuarter3,
+      allDatesInPeriodQuarter4,
+      allDatesInPeriodJanuary,
+      allDatesInPeriodFebruary,
+      allDatesInPeriodMarch,
+      allDatesInPeriodApril,
+      allDatesInPeriodMay,
+      allDatesInPeriodJune,
+      allDatesInPeriodJuly,
+      allDatesInPeriodAugust,
+      allDatesInPeriodSeptember,
+      allDatesInPeriodOctober,
+      allDatesInPeriodNovember,
+      allDatesInPeriodDecember
+  }
+
+  enum LabelFilterCondition {
+      unknown,
+      equals,
+      beginsWith,
+      endsWith,
+      contains,
+      greaterThan,
+      greaterThanOrEqualTo,
+      lessThan,
+      lessThanOrEqualTo,
+      between
+  }
+
+  enum PivotFilterType {
+      unknown,
+      value,
+      manual,
+      label,
+      date
+  }
+
+  enum TopBottomSelectionType {
+      items,
+      percent,
+      sum
+  }
+
+  enum ValueFilterCondition {
+      unknown,
+      equals,
+      greaterThan,
+      greaterThanOrEqualTo,
+      lessThan,
+      lessThanOrEqualTo,
+      between,
+      topN,
+      bottomN
+  }
+
+  enum ChartSeriesDimension {
+      categories,
+      values,
+      xvalues,
+      yvalues,
+      bubbleSizes
+  }
+
+  enum CellControlType {
+      unknown = "Unknown",
+      empty = "Empty",
+      mixed = "Mixed",
+      checkbox = "Checkbox"
+  }
+
+  enum PivotFilterTopBottomCriterion {
+      invalid,
+      topItems,
+      topPercent,
+      topSum,
+      bottomItems,
+      bottomPercent,
+      bottomSum
+  }
+
+  enum SortBy {
+      ascending,
+      descending
+  }
+
+  enum AggregationFunction {
+      unknown,
+      automatic,
+      sum,
+      count,
+      average,
+      max,
+      min,
+      product,
+      countNumbers,
+      standardDeviation,
+      standardDeviationP,
+      variance,
+      varianceP
+  }
+
+  enum ShowAsCalculation {
+      unknown,
+      none,
+      percentOfGrandTotal,
+      percentOfRowTotal,
+      percentOfColumnTotal,
+      percentOfParentRowTotal,
+      percentOfParentColumnTotal,
+      percentOfParentTotal,
+      percentOf,
+      runningTotal,
+      percentRunningTotal,
+      differenceFrom,
+      percentDifferenceFrom,
+      rankAscending,
+      rankDecending,
+      index
+  }
+
+  enum PivotAxis {
+      unknown,
+      row,
+      column,
+      data,
+      filter
+  }
+
+  enum ChartAxisType {
+      invalid,
+      category,
+      value,
+      series
+  }
+
+  enum ChartAxisGroup {
+      primary,
+      secondary
+  }
+
+  enum ChartAxisScaleType {
+      linear,
+      logarithmic
+  }
+
+  enum ChartAxisPosition {
+      automatic,
+      maximum,
+      minimum,
+      custom
+  }
+
+  enum ChartAxisTickMark {
+      none,
+      cross,
+      inside,
+      outside
+  }
+
+  enum CalculationState {
+      done,
+      calculating,
+      pending
+  }
+
+  enum ChartAxisTickLabelPosition {
+      nextToAxis,
+      high,
+      low,
+      none
+  }
+
+  enum ChartAxisDisplayUnit {
+      none,
+      hundreds,
+      thousands,
+      tenThousands,
+      hundredThousands,
+      millions,
+      tenMillions,
+      hundredMillions,
+      billions,
+      trillions,
+      custom
+  }
+
+  enum ChartAxisTimeUnit {
+      days,
+      months,
+      years
+  }
+
+  enum ChartBoxQuartileCalculation {
+      inclusive,
+      exclusive
+  }
+
+  enum ChartAxisCategoryType {
+      automatic,
+      textAxis,
+      dateAxis
+  }
+
+  enum ChartBinType {
+      category,
+      auto,
+      binWidth,
+      binCount
+  }
+
+  enum ChartLineStyle {
+      none,
+      continuous,
+      dash,
+      dashDot,
+      dashDotDot,
+      dot,
+      grey25,
+      grey50,
+      grey75,
+      automatic,
+      roundDot
+  }
+
+  enum ChartDataLabelPosition {
+      invalid,
+      none,
+      center,
+      insideEnd,
+      insideBase,
+      outsideEnd,
+      left,
+      right,
+      top,
+      bottom,
+      bestFit,
+      callout
+  }
+
+  enum ChartErrorBarsInclude {
+      both,
+      minusValues,
+      plusValues
+  }
+
+  enum ChartErrorBarsType {
+      fixedValue,
+      percent,
+      stDev,
+      stError,
+      custom
+  }
+
+  enum ChartMapAreaLevel {
+      automatic,
+      dataOnly,
+      city,
+      county,
+      state,
+      country,
+      continent,
+      world
+  }
+
+  enum ChartGradientStyle {
+      twoPhaseColor,
+      threePhaseColor
+  }
+
+  enum ChartGradientStyleType {
+      extremeValue,
+      number,
+      percent
+  }
+
+  enum ChartTitlePosition {
+      automatic,
+      top,
+      bottom,
+      left,
+      right
+  }
+
+  enum ChartLegendPosition {
+      invalid,
+      top,
+      bottom,
+      left,
+      right,
+      corner,
+      custom
+  }
+
+  enum ChartMarkerStyle {
+      invalid,
+      automatic,
+      none,
+      square,
+      diamond,
+      triangle,
+      x,
+      star,
+      dot,
+      dash,
+      circle,
+      plus,
+      picture
+  }
+
+  enum ChartPlotAreaPosition {
+      automatic,
+      custom
+  }
+
+  enum ChartMapLabelStrategy {
+      none,
+      bestFit,
+      showAll
+  }
+
+  enum ChartMapProjectionType {
+      automatic,
+      mercator,
+      miller,
+      robinson,
+      albers
+  }
+
+  enum ChartParentLabelStrategy {
+      none,
+      banner,
+      overlapping
+  }
+
+  enum ChartSeriesBy {
+      auto,
+      columns,
+      rows
+  }
+
+  enum ChartDataSourceType {
+      localRange,
+      externalRange,
+      list,
+      unknown
+  }
+
+  enum ChartTextHorizontalAlignment {
+      center,
+      left,
+      right,
+      justify,
+      distributed
+  }
+
+  enum ChartTextVerticalAlignment {
+      center,
+      bottom,
+      top,
+      justify,
+      distributed
+  }
+
+  enum ChartTickLabelAlignment {
+      center,
+      left,
+      right
+  }
+
+  enum ChartType {
+      invalid,
+      columnClustered,
+      columnStacked,
+      columnStacked100,
+      barClustered,
+      barStacked,
+      barStacked100,
+      lineStacked,
+      lineStacked100,
+      lineMarkers,
+      lineMarkersStacked,
+      lineMarkersStacked100,
+      pieOfPie,
+      pieExploded,
+      barOfPie,
+      xyscatterSmooth,
+      xyscatterSmoothNoMarkers,
+      xyscatterLines,
+      xyscatterLinesNoMarkers,
+      areaStacked,
+      areaStacked100,
+      doughnutExploded,
+      radarMarkers,
+      radarFilled,
+      surface,
+      surfaceWireframe,
+      surfaceTopView,
+      surfaceTopViewWireframe,
+      bubble,
+      bubble3DEffect,
+      stockHLC,
+      stockOHLC,
+      stockVHLC,
+      stockVOHLC,
+      cylinderColClustered,
+      cylinderColStacked,
+      cylinderColStacked100,
+      cylinderBarClustered,
+      cylinderBarStacked,
+      cylinderBarStacked100,
+      cylinderCol,
+      coneColClustered,
+      coneColStacked,
+      coneColStacked100,
+      coneBarClustered,
+      coneBarStacked,
+      coneBarStacked100,
+      coneCol,
+      pyramidColClustered,
+      pyramidColStacked,
+      pyramidColStacked100,
+      pyramidBarClustered,
+      pyramidBarStacked,
+      pyramidBarStacked100,
+      pyramidCol,
+      line,
+      pie,
+      xyscatter,
+      area,
+      doughnut,
+      radar,
+      histogram,
+      boxwhisker,
+      pareto,
+      regionMap,
+      treemap,
+      waterfall,
+      sunburst,
+      funnel
+  }
+
+  enum ChartUnderlineStyle {
+      none,
+      single
+  }
+
+  enum ChartDisplayBlanksAs {
+      notPlotted,
+      zero,
+      interplotted
+  }
+
+  enum ChartPlotBy {
+      rows,
+      columns
+  }
+
+  enum ChartSplitType {
+      splitByPosition,
+      splitByValue,
+      splitByPercentValue,
+      splitByCustomSplit
+  }
+
+  enum ChartColorScheme {
+      colorfulPalette1,
+      colorfulPalette2,
+      colorfulPalette3,
+      colorfulPalette4,
+      monochromaticPalette1,
+      monochromaticPalette2,
+      monochromaticPalette3,
+      monochromaticPalette4,
+      monochromaticPalette5,
+      monochromaticPalette6,
+      monochromaticPalette7,
+      monochromaticPalette8,
+      monochromaticPalette9,
+      monochromaticPalette10,
+      monochromaticPalette11,
+      monochromaticPalette12,
+      monochromaticPalette13
+  }
+
+  enum ChartTrendlineType {
+      linear,
+      exponential,
+      logarithmic,
+      movingAverage,
+      polynomial,
+      power
+  }
+
+  enum ShapeZOrder {
+      bringToFront,
+      bringForward,
+      sendToBack,
+      sendBackward
+  }
+
+  enum ShapeType {
+      unsupported,
+      image,
+      geometricShape,
+      group,
+      line
+  }
+
+  enum ShapeScaleType {
+      currentSize,
+      originalSize
+  }
+
+  enum ShapeScaleFrom {
+      scaleFromTopLeft,
+      scaleFromMiddle,
+      scaleFromBottomRight
+  }
+
+  enum ShapeFillType {
+      noFill,
+      solid,
+      gradient,
+      pattern,
+      pictureAndTexture,
+      mixed
+  }
+
+  enum ShapeFontUnderlineStyle {
+      none,
+      single,
+      double,
+      heavy,
+      dotted,
+      dottedHeavy,
+      dash,
+      dashHeavy,
+      dashLong,
+      dashLongHeavy,
+      dotDash,
+      dotDashHeavy,
+      dotDotDash,
+      dotDotDashHeavy,
+      wavy,
+      wavyHeavy,
+      wavyDouble
+  }
+
+  enum PictureFormat {
+      unknown,
+      bmp,
+      jpeg,
+      gif,
+      png,
+      svg
+  }
+
+  enum ShapeLineStyle {
+      single,
+      thickBetweenThin,
+      thickThin,
+      thinThick,
+      thinThin
+  }
+
+  enum ShapeLineDashStyle {
+      dash,
+      dashDot,
+      dashDotDot,
+      longDash,
+      longDashDot,
+      roundDot,
+      solid,
+      squareDot,
+      longDashDotDot,
+      systemDash,
+      systemDot,
+      systemDashDot
+  }
+
+  enum ArrowheadLength {
+      short,
+      medium,
+      long
+  }
+
+  enum ArrowheadStyle {
+      none,
+      triangle,
+      stealth,
+      diamond,
+      oval,
+      open
+  }
+
+  enum ArrowheadWidth {
+      narrow,
+      medium,
+      wide
+  }
+
+  enum BindingType {
+      range,
+      table,
+      text
+  }
+
+  enum BorderIndex {
+      edgeTop,
+      edgeBottom,
+      edgeLeft,
+      edgeRight,
+      insideVertical,
+      insideHorizontal,
+      diagonalDown,
+      diagonalUp
+  }
+
+  enum BorderLineStyle {
+      none,
+      continuous,
+      dash,
+      dashDot,
+      dashDotDot,
+      dot,
+      double,
+      slantDashDot
+  }
+
+  enum BorderWeight {
+      hairline,
+      thin,
+      medium,
+      thick
+  }
+
+  enum CalculationMode {
+      automatic,
+      automaticExceptTables,
+      manual
+  }
+
+  enum CalculationType {
+      recalculate,
+      full,
+      fullRebuild
+  }
+
+  enum ClearApplyTo {
+      all,
+      formats,
+      contents,
+      hyperlinks,
+      removeHyperlinks,
+      resetContents
+  }
+
+  enum ConditionalDataBarAxisFormat {
+      automatic,
+      none,
+      cellMidPoint
+  }
+
+  enum ConditionalDataBarDirection {
+      context,
+      leftToRight,
+      rightToLeft
+  }
+
+  enum ConditionalFormatDirection {
+      top,
+      bottom
+  }
+
+  enum ConditionalFormatType {
+      custom,
+      dataBar,
+      colorScale,
+      iconSet,
+      topBottom,
+      presetCriteria,
+      containsText,
+      cellValue
+  }
+
+  enum ConditionalFormatRuleType {
+      invalid,
+      automatic,
+      lowestValue,
+      highestValue,
+      number,
+      percent,
+      formula,
+      percentile
+  }
+
+  enum ConditionalFormatIconRuleType {
+      invalid,
+      number,
+      percent,
+      formula,
+      percentile
+  }
+
+  enum ConditionalFormatColorCriterionType {
+      invalid,
+      lowestValue,
+      highestValue,
+      number,
+      percent,
+      formula,
+      percentile
+  }
+
+  enum ConditionalTopBottomCriterionType {
+      invalid,
+      topItems,
+      topPercent,
+      bottomItems,
+      bottomPercent
+  }
+
+  enum ConditionalFormatPresetCriterion {
+      invalid,
+      blanks,
+      nonBlanks,
+      errors,
+      nonErrors,
+      yesterday,
+      today,
+      tomorrow,
+      lastSevenDays,
+      lastWeek,
+      thisWeek,
+      nextWeek,
+      lastMonth,
+      thisMonth,
+      nextMonth,
+      aboveAverage,
+      belowAverage,
+      equalOrAboveAverage,
+      equalOrBelowAverage,
+      oneStdDevAboveAverage,
+      oneStdDevBelowAverage,
+      twoStdDevAboveAverage,
+      twoStdDevBelowAverage,
+      threeStdDevAboveAverage,
+      threeStdDevBelowAverage,
+      uniqueValues,
+      duplicateValues
+  }
+
+  enum ConditionalTextOperator {
+      invalid,
+      contains,
+      notContains,
+      beginsWith,
+      endsWith
+  }
+
+  enum ConditionalCellValueOperator {
+      invalid,
+      between,
+      notBetween,
+      equalTo,
+      notEqualTo,
+      greaterThan,
+      lessThan,
+      greaterThanOrEqual,
+      lessThanOrEqual
+  }
+
+  enum ConditionalIconCriterionOperator {
+      invalid,
+      greaterThan,
+      greaterThanOrEqual
+  }
+
+  enum ConditionalRangeBorderIndex {
+      edgeTop,
+      edgeBottom,
+      edgeLeft,
+      edgeRight
+  }
+
+  enum ConditionalRangeBorderLineStyle {
+      none,
+      continuous,
+      dash,
+      dashDot,
+      dashDotDot,
+      dot
+  }
+
+  enum ConditionalRangeFontUnderlineStyle {
+      none,
+      single,
+      double
+  }
+
+  enum DataValidationType {
+      none,
+      wholeNumber,
+      decimal,
+      list,
+      date,
+      time,
+      textLength,
+      custom,
+      inconsistent,
+      mixedCriteria
+  }
+
+  enum DataValidationOperator {
+      between,
+      notBetween,
+      equalTo,
+      notEqualTo,
+      greaterThan,
+      lessThan,
+      greaterThanOrEqualTo,
+      lessThanOrEqualTo
+  }
+
+  enum DataValidationAlertStyle {
+      stop,
+      warning,
+      information
+  }
+
+  enum DeleteShiftDirection {
+      up,
+      left
+  }
+
+  enum DynamicFilterCriteria {
+      unknown,
+      aboveAverage,
+      allDatesInPeriodApril,
+      allDatesInPeriodAugust,
+      allDatesInPeriodDecember,
+      allDatesInPeriodFebruary,
+      allDatesInPeriodJanuary,
+      allDatesInPeriodJuly,
+      allDatesInPeriodJune,
+      allDatesInPeriodMarch,
+      allDatesInPeriodMay,
+      allDatesInPeriodNovember,
+      allDatesInPeriodOctober,
+      allDatesInPeriodQuarter1,
+      allDatesInPeriodQuarter2,
+      allDatesInPeriodQuarter3,
+      allDatesInPeriodQuarter4,
+      allDatesInPeriodSeptember,
+      belowAverage,
+      lastMonth,
+      lastQuarter,
+      lastWeek,
+      lastYear,
+      nextMonth,
+      nextQuarter,
+      nextWeek,
+      nextYear,
+      thisMonth,
+      thisQuarter,
+      thisWeek,
+      thisYear,
+      today,
+      tomorrow,
+      yearToDate,
+      yesterday
+  }
+
+  enum FilterDatetimeSpecificity {
+      year,
+      month,
+      day,
+      hour,
+      minute,
+      second
+  }
+
+  enum FilterOn {
+      bottomItems,
+      bottomPercent,
+      cellColor,
+      dynamic,
+      fontColor,
+      values,
+      topItems,
+      topPercent,
+      icon,
+      custom
+  }
+
+  enum FilterOperator {
+      and,
+      or
+  }
+
+  enum HorizontalAlignment {
+      general,
+      left,
+      center,
+      right,
+      fill,
+      justify,
+      centerAcrossSelection,
+      distributed
+  }
+
+  enum IconSet {
+      invalid,
+      threeArrows,
+      threeArrowsGray,
+      threeFlags,
+      threeTrafficLights1,
+      threeTrafficLights2,
+      threeSigns,
+      threeSymbols,
+      threeSymbols2,
+      fourArrows,
+      fourArrowsGray,
+      fourRedToBlack,
+      fourRating,
+      fourTrafficLights,
+      fiveArrows,
+      fiveArrowsGray,
+      fiveRating,
+      fiveQuarters,
+      threeStars,
+      threeTriangles,
+      fiveBoxes
+  }
+
+  enum ImageFittingMode {
+      fit,
+      fitAndCenter,
+      fill
+  }
+
+  enum InsertShiftDirection {
+      down,
+      right
+  }
+
+  enum NamedItemScope {
+      worksheet,
+      workbook
+  }
+
+  enum NamedItemType {
+      string,
+      integer,
+      double,
+      boolean,
+      range,
+      error,
+      array
+  }
+
+  enum RangeUnderlineStyle {
+      none,
+      single,
+      double,
+      singleAccountant,
+      doubleAccountant
+  }
+
+  enum SheetVisibility {
+      visible,
+      hidden,
+      veryHidden
+  }
+
+  enum RangeValueType {
+      unknown,
+      empty,
+      string,
+      integer,
+      double,
+      boolean,
+      error,
+      richValue
+  }
+
+  enum KeyboardDirection {
+      left,
+      right,
+      up,
+      down
+  }
+
+  enum SearchDirection {
+      forward,
+      backwards
+  }
+
+  enum SortOrientation {
+      rows,
+      columns
+  }
+
+  enum SortOn {
+      value,
+      cellColor,
+      fontColor,
+      icon
+  }
+
+  enum SortDataOption {
+      normal,
+      textAsNumber
+  }
+
+  enum SortMethod {
+      pinYin,
+      strokeCount
+  }
+
+  enum VerticalAlignment {
+      top,
+      center,
+      bottom,
+      justify,
+      distributed
+  }
+
+  enum DocumentPropertyType {
+      number,
+      boolean,
+      date,
+      string,
+      float
+  }
+
+  enum SubtotalLocationType {
+      atTop,
+      atBottom,
+      off
+  }
+
+  enum PivotLayoutType {
+      compact,
+      tabular,
+      outline
+  }
+
+  enum ProtectionSelectionMode {
+      normal,
+      unlocked,
+      none
+  }
+
+  enum PageOrientation {
+      portrait,
+      landscape
+  }
+
+  enum PaperType {
+      letter,
+      letterSmall,
+      tabloid,
+      ledger,
+      legal,
+      statement,
+      executive,
+      a3,
+      a4,
+      a4Small,
+      a5,
+      b4,
+      b5,
+      folio,
+      quatro,
+      paper10x14,
+      paper11x17,
+      note,
+      envelope9,
+      envelope10,
+      envelope11,
+      envelope12,
+      envelope14,
+      csheet,
+      dsheet,
+      esheet,
+      envelopeDL,
+      envelopeC5,
+      envelopeC3,
+      envelopeC4,
+      envelopeC6,
+      envelopeC65,
+      envelopeB4,
+      envelopeB5,
+      envelopeB6,
+      envelopeItaly,
+      envelopeMonarch,
+      envelopePersonal,
+      fanfoldUS,
+      fanfoldStdGerman,
+      fanfoldLegalGerman
+  }
+
+  enum ReadingOrder {
+      context,
+      leftToRight,
+      rightToLeft
+  }
+
+  enum BuiltInStyle {
+      normal,
+      comma,
+      currency,
+      percent,
+      wholeComma,
+      wholeDollar,
+      hlink,
+      hlinkTrav,
+      note,
+      warningText,
+      emphasis1,
+      emphasis2,
+      emphasis3,
+      sheetTitle,
+      heading1,
+      heading2,
+      heading3,
+      heading4,
+      input,
+      output,
+      calculation,
+      checkCell,
+      linkedCell,
+      total,
+      good,
+      bad,
+      neutral,
+      accent1,
+      accent1_20,
+      accent1_40,
+      accent1_60,
+      accent2,
+      accent2_20,
+      accent2_40,
+      accent2_60,
+      accent3,
+      accent3_20,
+      accent3_40,
+      accent3_60,
+      accent4,
+      accent4_20,
+      accent4_40,
+      accent4_60,
+      accent5,
+      accent5_20,
+      accent5_40,
+      accent5_60,
+      accent6,
+      accent6_20,
+      accent6_40,
+      accent6_60,
+      explanatoryText
+  }
+
+  enum PrintErrorType {
+      asDisplayed,
+      blank,
+      dash,
+      notAvailable
+  }
+
+  enum WorksheetPositionType {
+      none,
+      before,
+      after,
+      beginning,
+      end
+  }
+
+  enum PrintComments {
+      noComments,
+      endSheet,
+      inPlace
+  }
+
+  enum PrintOrder {
+      downThenOver,
+      overThenDown
+  }
+
+  enum PrintMarginUnit {
+      points,
+      inches,
+      centimeters
+  }
+
+  enum HeaderFooterState {
+      default,
+      firstAndDefault,
+      oddAndEven,
+      firstOddAndEven
+  }
+
+  enum AutoFillType {
+      fillDefault,
+      fillCopy,
+      fillSeries,
+      fillFormats,
+      fillValues,
+      fillDays,
+      fillWeekdays,
+      fillMonths,
+      fillYears,
+      linearTrend,
+      growthTrend,
+      flashFill
+  }
+
+  enum GroupOption {
+      byRows,
+      byColumns
+  }
+
+  enum RangeCopyType {
+      all,
+      formulas,
+      values,
+      formats,
+      link
+  }
+
+  enum LinkedDataTypeState {
+      none,
+      validLinkedData,
+      disambiguationNeeded,
+      brokenLinkedData,
+      fetchingData
+  }
+
+  enum GeometricShapeType {
+      lineInverse,
+      triangle,
+      rightTriangle,
+      rectangle,
+      diamond,
+      parallelogram,
+      trapezoid,
+      nonIsoscelesTrapezoid,
+      pentagon,
+      hexagon,
+      heptagon,
+      octagon,
+      decagon,
+      dodecagon,
+      star4,
+      star5,
+      star6,
+      star7,
+      star8,
+      star10,
+      star12,
+      star16,
+      star24,
+      star32,
+      roundRectangle,
+      round1Rectangle,
+      round2SameRectangle,
+      round2DiagonalRectangle,
+      snipRoundRectangle,
+      snip1Rectangle,
+      snip2SameRectangle,
+      snip2DiagonalRectangle,
+      plaque,
+      ellipse,
+      teardrop,
+      homePlate,
+      chevron,
+      pieWedge,
+      pie,
+      blockArc,
+      donut,
+      noSmoking,
+      rightArrow,
+      leftArrow,
+      upArrow,
+      downArrow,
+      stripedRightArrow,
+      notchedRightArrow,
+      bentUpArrow,
+      leftRightArrow,
+      upDownArrow,
+      leftUpArrow,
+      leftRightUpArrow,
+      quadArrow,
+      leftArrowCallout,
+      rightArrowCallout,
+      upArrowCallout,
+      downArrowCallout,
+      leftRightArrowCallout,
+      upDownArrowCallout,
+      quadArrowCallout,
+      bentArrow,
+      uturnArrow,
+      circularArrow,
+      leftCircularArrow,
+      leftRightCircularArrow,
+      curvedRightArrow,
+      curvedLeftArrow,
+      curvedUpArrow,
+      curvedDownArrow,
+      swooshArrow,
+      cube,
+      can,
+      lightningBolt,
+      heart,
+      sun,
+      moon,
+      smileyFace,
+      irregularSeal1,
+      irregularSeal2,
+      foldedCorner,
+      bevel,
+      frame,
+      halfFrame,
+      corner,
+      diagonalStripe,
+      chord,
+      arc,
+      leftBracket,
+      rightBracket,
+      leftBrace,
+      rightBrace,
+      bracketPair,
+      bracePair,
+      callout1,
+      callout2,
+      callout3,
+      accentCallout1,
+      accentCallout2,
+      accentCallout3,
+      borderCallout1,
+      borderCallout2,
+      borderCallout3,
+      accentBorderCallout1,
+      accentBorderCallout2,
+      accentBorderCallout3,
+      wedgeRectCallout,
+      wedgeRRectCallout,
+      wedgeEllipseCallout,
+      cloudCallout,
+      cloud,
+      ribbon,
+      ribbon2,
+      ellipseRibbon,
+      ellipseRibbon2,
+      leftRightRibbon,
+      verticalScroll,
+      horizontalScroll,
+      wave,
+      doubleWave,
+      plus,
+      flowChartProcess,
+      flowChartDecision,
+      flowChartInputOutput,
+      flowChartPredefinedProcess,
+      flowChartInternalStorage,
+      flowChartDocument,
+      flowChartMultidocument,
+      flowChartTerminator,
+      flowChartPreparation,
+      flowChartManualInput,
+      flowChartManualOperation,
+      flowChartConnector,
+      flowChartPunchedCard,
+      flowChartPunchedTape,
+      flowChartSummingJunction,
+      flowChartOr,
+      flowChartCollate,
+      flowChartSort,
+      flowChartExtract,
+      flowChartMerge,
+      flowChartOfflineStorage,
+      flowChartOnlineStorage,
+      flowChartMagneticTape,
+      flowChartMagneticDisk,
+      flowChartMagneticDrum,
+      flowChartDisplay,
+      flowChartDelay,
+      flowChartAlternateProcess,
+      flowChartOffpageConnector,
+      actionButtonBlank,
+      actionButtonHome,
+      actionButtonHelp,
+      actionButtonInformation,
+      actionButtonForwardNext,
+      actionButtonBackPrevious,
+      actionButtonEnd,
+      actionButtonBeginning,
+      actionButtonReturn,
+      actionButtonDocument,
+      actionButtonSound,
+      actionButtonMovie,
+      gear6,
+      gear9,
+      funnel,
+      mathPlus,
+      mathMinus,
+      mathMultiply,
+      mathDivide,
+      mathEqual,
+      mathNotEqual,
+      cornerTabs,
+      squareTabs,
+      plaqueTabs,
+      chartX,
+      chartStar,
+      chartPlus
+  }
+
+  enum ConnectorType {
+      straight,
+      elbow,
+      curve
+  }
+
+  enum ContentType {
+      plain,
+      mention
+  }
+
+  enum SpecialCellType {
+      conditionalFormats,
+      dataValidations,
+      blanks,
+      constants,
+      formulas,
+      sameConditionalFormat,
+      sameDataValidation,
+      visible
+  }
+
+  enum SpecialCellValueType {
+      all,
+      errors,
+      errorsLogical,
+      errorsNumbers,
+      errorsText,
+      errorsLogicalNumber,
+      errorsLogicalText,
+      errorsNumberText,
+      logical,
+      logicalNumbers,
+      logicalText,
+      logicalNumbersText,
+      numbers,
+      numbersText,
+      text
+  }
+
+  enum Placement {
+      twoCell,
+      oneCell,
+      absolute
+  }
+
+  enum FillPattern {
+      none,
+      solid,
+      gray50,
+      gray75,
+      gray25,
+      horizontal,
+      vertical,
+      down,
+      up,
+      checker,
+      semiGray75,
+      lightHorizontal,
+      lightVertical,
+      lightDown,
+      lightUp,
+      grid,
+      crissCross,
+      gray16,
+      gray8,
+      linearGradient,
+      rectangularGradient
+  }
+
+  enum ShapeTextHorizontalAlignment {
+      left,
+      center,
+      right,
+      justify,
+      justifyLow,
+      distributed,
+      thaiDistributed
+  }
+
+  enum ShapeTextVerticalAlignment {
+      top,
+      middle,
+      bottom,
+      justified,
+      distributed
+  }
+
+  enum ShapeTextVerticalOverflow {
+      overflow,
+      ellipsis,
+      clip
+  }
+
+  enum ShapeTextHorizontalOverflow {
+      overflow,
+      clip
+  }
+
+  enum ShapeTextReadingOrder {
+      leftToRight,
+      rightToLeft
+  }
+
+  enum ShapeTextOrientation {
+      horizontal,
+      vertical,
+      vertical270,
+      wordArtVertical,
+      eastAsianVertical,
+      mongolianVertical,
+      wordArtVerticalRTL
+  }
+
+  enum ShapeAutoSize {
+      autoSizeNone,
+      autoSizeTextToFitShape,
+      autoSizeShapeToFitText,
+      autoSizeMixed
+  }
+
+  enum SlicerSortType {
+      dataSourceOrder,
+      ascending,
+      descending
+  }
+
+  enum NumberFormatCategory {
+      general,
+      number,
+      currency,
+      accounting,
+      date,
+      time,
+      percentage,
+      fraction,
+      scientific,
+      text,
+      special,
+      custom
+  }
+
+  interface UnknownCellControl {
+      type: CellControlType.unknown;
+  }
+
+  interface EmptyCellControl {
+      type: CellControlType.empty;
+  }
+
+  interface MixedCellControl {
+      type: CellControlType.mixed;
+  }
+
+  interface CheckboxCellControl {
+      type: CellControlType.checkbox;
+  }
+
+  type CellControl = UnknownCellControl | EmptyCellControl | MixedCellControl | CheckboxCellControl;
+}
+
+// QuickExcel host extensions. Hand-written; not part of the Office Scripts API.
+// Appended after the generated QuickExcel namespace declarations.
+declare namespace QuickExcel {
+  type ScriptValue = string | number | boolean | null;
+
+  type EventName =
+    | 'workbook.open' | 'workbook.beforeClose' | 'workbook.close'
+    | 'workbook.activate' | 'workbook.deactivate'
+    | 'workbook.beforeSave' | 'workbook.saved' | 'workbook.calculated'
+    | 'sheet.added' | 'sheet.deleted' | 'sheet.renamed'
+    | 'sheet.activate' | 'sheet.deactivate'
+    | 'selection.changed' | 'cell.click' | 'cell.edit' | 'cell.commit' | 'cells.changed';
+
+  type ScriptErrorCode =
+    | 'UnsupportedApi' | 'InvalidArgument' | 'ItemNotFound' | 'InvalidReference'
+    | 'BudgetExceeded' | 'Locked' | 'TransactionAborted';
+
+  /** Every error thrown by the QuickExcel object model carries a stable code. */
+  interface ScriptError extends Error {
+    readonly code: ScriptErrorCode;
+    readonly member?: string;
+  }
+
+  /** The entry point of an action module. One module can declare one action. */
+  type Main = (workbook: Workbook, host: Host) => void;
+
+  interface Host {
+    readonly events: Events;
+    readonly functions: Functions;
+    /** Available only inside an action, event or console transaction. */
+    readonly files: VirtualFiles;
+  }
+
+  interface Functions {
+    /** Registers a worksheet function during module initialization. Value-only interoperability. */
+    register(name: string, handler: (...args: ScriptValue[]) => ScriptValue): void;
+    /** Descriptor form preserves blank arguments, rectangular ranges and the JS namespace. */
+    register(descriptor: FunctionDescriptor, handler: (...args: unknown[]) => ScriptValue): void;
+  }
+
+  interface FunctionDescriptor {
+    readonly name: string;
+    readonly apiVersion: 2;
+    readonly parameters?: readonly { readonly name: string; readonly type?: 'any' | 'number' | 'text' | 'boolean' | 'blank' | 'range' }[];
+    readonly returns?: 'any' | 'number' | 'text' | 'boolean' | 'blank';
+    readonly profile?: 'conservative';
+  }
+
+  interface Events {
+    /** Registers a handler during module initialization. Handlers run synchronously. */
+    on(name: EventName, handler: (context: EventContext) => void): void;
+  }
+
+  interface Event {
+    readonly name: EventName;
+    readonly sessionId: string;
+    readonly sequence: number;
+    readonly revision: number;
+    readonly sheetId: string | null;
+    readonly sheetName: string | null;
+    readonly ranges: readonly string[];
+    readonly isUndoOrRedo: boolean;
+  }
+
+  interface ActionContext {
+    readonly workbook: Workbook;
+    readonly host: Host;
+    readonly event: Event | null;
+  }
+
+  interface EventContext extends ActionContext {
+    readonly event: Event;
+  }
+
+  interface VirtualFileInfo {
+    readonly path: string;
+    readonly type: 'file' | 'directory';
+    readonly size: number;
+  }
+
+  interface VirtualFiles {
+    exists(path: string): boolean;
+    stat(path: string): VirtualFileInfo;
+    list(directory: string, options?: { recursive?: boolean }): readonly VirtualFileInfo[];
+    mkdir(path: string): void;
+    remove(path: string): void;
+    readBytes(path: string): Uint8Array;
+    writeBytes(path: string, bytes: Uint8Array): void;
+    readText(path: string): string;
+    writeText(path: string, text: string): void;
+    readJson(path: string): unknown;
+    writeJson(path: string, value: unknown): void;
+    copy(source: string, destination: string): void;
+    move(source: string, destination: string): void;
   }
 }
-declare const quickExcel: ExcelScript.Workbook & {
-  readonly functions: {
-    /** Registers a worksheet function during module initialization. UDFs run in a persistent context separate from actions/events, cannot access workbook objects, and should depend only on their arguments. This overload receives scalars or flattened ranges. */
-    register(name: string, callback: (...args: any[]) => QxScalar): void;
-    /** Descriptor API v2 preserves Blank and rectangular ranges; JS namespace required. */
-    register(descriptor: QxFunctionDescriptor, callback: (...args: any[]) => QxScalar): void;
-  };
-  /** File scriptApiVersion 2 and an actions entry binding are required. */
-  readonly actions: { register(name: string | { name: string; description?: string }, callback: (context: QxActionContext) => void | null): void };
-  /** Uses the same API v2 actions entry binding and trust decision. Register only during module initialization. */
-  readonly events: QxEvents;
-};
-/** Alias for the same quickExcel object, including functions, actions and events. */
-declare const $: typeof quickExcel;
-/** Writes to the script workspace debug console. Supports multiple arguments and objects; output appears after execution. */
+
+/** Host extensions during module initialization and every action, event or console request. */
+declare const host: QuickExcel.Host;
+/** Writes to the script workspace debug console. Output appears after execution. */
 declare const console: {
-  /** Writes a log message. */
   log(...values: unknown[]): void;
-  /** Writes an informational message. */
   info(...values: unknown[]): void;
-  /** Writes a warning, displayed with a yellow background in the console. */
   warn(...values: unknown[]): void;
-  /** Writes an error with a red console background. Does not throw or stop execution. */
   error(...values: unknown[]): void;
-  /** Writes a debug message that can be shown with the console level filter. */
   debug(...values: unknown[]): void;
 };

@@ -15,7 +15,7 @@ public sealed class M4IsolationTests
     [Fact]
     public void ActualWorkerHasZeroCapabilitiesAndUniqueIdentityAndCleansOwnedResources()
     {
-        var first = (ScriptWorkerRuntime)new ScriptWorkerRuntimeFactory().Create("quickExcel.functions.register('F',()=>42);");
+        var first = (ScriptWorkerRuntime)new ScriptWorkerRuntimeFactory().Create("host.functions.register('F',()=>42);");
         var directory = first.SandboxPayloadDirectory;
         var profile = first.SandboxProfileName;
         try
@@ -25,7 +25,7 @@ public sealed class M4IsolationTests
             try { WorkerProcess.VerifyToken(process.SafeHandle, sid); }
             finally { FreeSid(sid); }
             Assert.Equal(42d, first.Invoke("F", []));
-            using var second = (ScriptWorkerRuntime)new ScriptWorkerRuntimeFactory().Create("quickExcel.functions.register('F',()=>7);");
+            using var second = (ScriptWorkerRuntime)new ScriptWorkerRuntimeFactory().Create("host.functions.register('F',()=>7);");
             Assert.NotEqual(profile, second.SandboxProfileName);
             Assert.NotEqual(directory, second.SandboxPayloadDirectory);
             Assert.Equal(7d, second.Invoke("F", []));
@@ -109,7 +109,7 @@ public sealed class M4IsolationTests
     {
         using var cancellation = new CancellationTokenSource();
         var runtime = (ScriptWorkerRuntime)new ScriptWorkerRuntimeFactory().Create(new ScriptRuntimeRequest(
-            "quickExcel.functions.register('F',()=>42);", new(Guid.NewGuid(), 0, 0, 0), TimeSpan.FromSeconds(5), cancellation.Token));
+            "host.functions.register('F',()=>42);", new(Guid.NewGuid(), 0, 0, 0), TimeSpan.FromSeconds(5), cancellation.Token));
         var directory = runtime.SandboxPayloadDirectory;
         var profile = runtime.SandboxProfileName;
         try

@@ -1,0 +1,173 @@
+{
+  "apiVersion": 3,
+  "types": {
+    "Workbook": {
+      "members": {
+        "getActiveCell": {
+          "kind": "host",
+          "host": "active",
+          "arity": 0,
+          "cost": 1
+        },
+        "getActiveWorksheet": {
+          "kind": "host",
+          "host": "active",
+          "arity": 0,
+          "cost": 1
+        },
+        "getWorksheet": {
+          "kind": "host",
+          "host": "sheet",
+          "arity": 1,
+          "cost": 1
+        },
+        "getWorksheets": {
+          "kind": "host",
+          "host": "sheets",
+          "arity": 0,
+          "cost": 1
+        },
+        "getSelectedRange": {
+          "kind": "host",
+          "host": "active",
+          "arity": 0,
+          "cost": 1
+        },
+        "getSelectedRanges": {
+          "kind": "host",
+          "host": "active",
+          "arity": 0,
+          "cost": 1
+        }
+      }
+    },
+    "Worksheet": {
+      "members": {
+        "getId": {
+          "kind": "local"
+        },
+        "getName": {
+          "kind": "host",
+          "host": "sheet",
+          "arity": 1,
+          "cost": 1
+        },
+        "getCell": {
+          "kind": "local"
+        },
+        "getRange": {
+          "kind": "local"
+        }
+      }
+    },
+    "Range": {
+      "members": {
+        "getAddress": {
+          "kind": "local"
+        },
+        "getWorksheet": {
+          "kind": "local"
+        },
+        "getFormat": {
+          "kind": "local"
+        },
+        "getValue": {
+          "kind": "host",
+          "host": "getCell",
+          "arity": 2,
+          "cost": 1
+        },
+        "getValues": {
+          "kind": "host",
+          "host": "getValues",
+          "arity": 2,
+          "cost": 100000
+        },
+        "setValue": {
+          "kind": "host",
+          "host": "setValue",
+          "arity": 3,
+          "cost": 20000
+        },
+        "setValues": {
+          "kind": "host",
+          "host": "setValues",
+          "arity": 3,
+          "cost": 20000
+        },
+        "getFormula": {
+          "kind": "host",
+          "host": "getFormula",
+          "arity": 2,
+          "cost": 1
+        },
+        "setFormula": {
+          "kind": "host",
+          "host": "setFormula",
+          "arity": 3,
+          "cost": 20000
+        },
+        "setFormulas": {
+          "kind": "host",
+          "host": "setFormulas",
+          "arity": 3,
+          "cost": 20000
+        },
+        "clear": {
+          "kind": "host",
+          "host": "clear",
+          "arity": 2,
+          "cost": 20000
+        }
+      }
+    },
+    "RangeFormat": {
+      "members": {
+        "getFill": {
+          "kind": "local"
+        }
+      }
+    },
+    "RangeFill": {
+      "members": {
+        "getColor": {
+          "kind": "host",
+          "host": "getFill",
+          "arity": 2,
+          "cost": 1
+        },
+        "setColor": {
+          "kind": "host",
+          "host": "setFill",
+          "arity": 3,
+          "cost": 20000
+        },
+        "clear": {
+          "kind": "host",
+          "host": "setFill",
+          "arity": 3,
+          "cost": 20000
+        }
+      }
+    },
+    "RangeAreas": {
+      "members": {
+        "getAddress": {
+          "kind": "local"
+        },
+        "getAreaCount": {
+          "kind": "local"
+        },
+        "getCellCount": {
+          "kind": "local"
+        },
+        "getAreas": {
+          "kind": "local"
+        },
+        "getWorksheet": {
+          "kind": "local"
+        }
+      }
+    }
+  }
+}

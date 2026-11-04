@@ -21,7 +21,7 @@ public sealed class M4BatchTests
     public void IndependentCallsBatchWithinReplyBudgetAndKeepStatefulOrderAcrossRounds()
     {
         var sheet = Sheet("S", Enumerable.Range(0, 600).Select(i => (i, 0, F("=NEXT()"))).ToArray());
-        var book = Book(sheet).WithScriptSource("let n=0; quickExcel.functions.register('NEXT',()=>++n);");
+        var book = Book(sheet).WithScriptSource("let n=0; host.functions.register('NEXT',()=>++n);");
         var factory = new ObservedFactory();
         var calculator = new WorkbookCalculator(factory);
         var request = Request(book);
@@ -45,7 +45,7 @@ public sealed class M4BatchTests
             (6, 0, F("=NEXT(1/0)")), (7, 0, F("=NEXT()")), (8, 0, F("=NEXT(\"bad\"+1)")),
             (9, 0, F("=NEXT()")), (10, 0, F("=IFERROR(NEXT(1/0),NEXT())")));
         var b = Sheet("B", (0, 0, F("=NEXT()")), (1, 0, F("=NEXT()")));
-        var book = Book(a, b).WithScriptSource("let n=0; quickExcel.functions.register('NEXT',()=>++n); quickExcel.functions.register('BAD',()=>{n++;throw Error('bad');});");
+        var book = Book(a, b).WithScriptSource("let n=0; host.functions.register('NEXT',()=>++n); host.functions.register('BAD',()=>{n++;throw Error('bad');});");
         var serial = new WorkbookCalculator(new JscRuntimeFactory()).Calculate(Request(book));
         var factory = new ObservedFactory();
         var batched = new WorkbookCalculator(factory).Calculate(Request(book));
@@ -66,9 +66,9 @@ public sealed class M4BatchTests
             (2, 0, F("=JS.R(Data!A3)")), (3, 0, F("=JS.R()")), (4, 0, F("=JS.WRONG()")),
             (5, 0, F("=JS.LONG()")), (6, 0, F("=JS.R(Data!A1:B2)")));
         var book = Book(output, data).WithScriptSource("""
-            quickExcel.functions.register({name:'JS.R',apiVersion:2,parameters:[{name:'r',type:'range'}],returns:'text'},r=>JSON.stringify(r));
-            quickExcel.functions.register({name:'JS.WRONG',apiVersion:2,returns:'number'},()=>true);
-            quickExcel.functions.register({name:'JS.LONG',apiVersion:2},()=>'x'.repeat(32768));
+            host.functions.register({name:'JS.R',apiVersion:2,parameters:[{name:'r',type:'range'}],returns:'text'},r=>JSON.stringify(r));
+            host.functions.register({name:'JS.WRONG',apiVersion:2,returns:'number'},()=>true);
+            host.functions.register({name:'JS.LONG',apiVersion:2},()=>'x'.repeat(32768));
             """);
         var serial = new WorkbookCalculator(new JscRuntimeFactory()).Calculate(Request(book));
         var batched = new WorkbookCalculator(new ScriptWorkerRuntimeFactory()).Calculate(Request(book));
@@ -84,7 +84,7 @@ public sealed class M4BatchTests
     {
         var data = Sheet("Data", Enumerable.Range(0, 10).Select(i => (i, 0, T(new string('中', 32767)))).ToArray());
         var output = Sheet("S", Enumerable.Range(0, 12).Select(i => (i, 0, F("=SIZE(Data!A1:A10)"))).ToArray());
-        var book = Book(output, data).WithScriptSource("quickExcel.functions.register('SIZE',r=>r[0].length);");
+        var book = Book(output, data).WithScriptSource("host.functions.register('SIZE',r=>r[0].length);");
         var factory = new ObservedFactory();
         var result = new WorkbookCalculator(factory).Calculate(Request(book));
         Assert.Equal(2, factory.Runtime!.InvocationBatchCount);
@@ -95,7 +95,7 @@ public sealed class M4BatchTests
     [Fact]
     public void BatchIsSingleUseAndIndividuallyOversizedArgumentsFailBeforeSending()
     {
-        using var runtime = (ScriptWorkerRuntime)new ScriptWorkerRuntimeFactory().Create("quickExcel.functions.register('F',()=>1);");
+        using var runtime = (ScriptWorkerRuntime)new ScriptWorkerRuntimeFactory().Create("host.functions.register('F',()=>1);");
         var batch = runtime.CreateBatch();
         Assert.True(batch.TryAdd("F", []));
         Assert.Single(batch.Invoke());
@@ -125,7 +125,7 @@ public sealed class M4BatchTests
     public void TimeoutAfterSuccessfulCallRejectsWholeBatchAndPreservesOldCache()
     {
         var sheet = Sheet("S", (0, 0, F("=F(1)", 41)), (1, 0, F("=F(2)", 42)));
-        using var session = new DocumentSession(Book(sheet).WithScriptSource("quickExcel.functions.register('F',x=>{if(x===2)while(true){};return x;});"));
+        using var session = new DocumentSession(Book(sheet).WithScriptSource("host.functions.register('F',x=>{if(x===2)while(true){};return x;});"));
         session.SetScriptsEnabled(true);
         var before = session.Snapshot;
         Assert.Throws<TimeoutException>(() => new WorkbookCalculator(new ScriptWorkerRuntimeFactory()).Calculate(session.BeginCalculation()));
@@ -136,7 +136,7 @@ public sealed class M4BatchTests
     public void WorstCaseValidTextRepliesFitAndOversizedTextRemainsACellError()
     {
         var sheet = Sheet("S", Enumerable.Range(0, 45).Select(i => (i, 0, F($"=PAYLOAD({i})"))).ToArray());
-        var book = Book(sheet).WithScriptSource("quickExcel.functions.register('PAYLOAD',n=>'中'.repeat(n===22?32768:32767));");
+        var book = Book(sheet).WithScriptSource("host.functions.register('PAYLOAD',n=>'中'.repeat(n===22?32768:32767));");
         var factory = new ObservedFactory();
         var result = new WorkbookCalculator(factory).Calculate(Request(book));
         Assert.Equal(1, factory.Runtime!.InvocationBatchCount);

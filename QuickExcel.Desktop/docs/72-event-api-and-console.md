@@ -1,5 +1,8 @@
 # 事件名称、属性处理器与调试控制台
 
+> 2026-11-04：对象与事件 API 已被 [79](79-script-api-redesign.md) 取代。事件只通过模块初始化阶段的 `host.events.on(name, context => …)` 注册，`QxEventNames`、`quickExcel.events` 和事件属性处理器均已移除；控制台仍使用同一隔离 worker 与 `workbook`/`host` 作用域。
+
+
 2026-11-03。在现有事件与隔离脚本执行基础上增加名称枚举、属性式处理器和交互控制台。只映射已有的 18 个事件，不新增保存事件。`$` 与 `quickExcel` 继续指向同一个 API 对象。
 
 ## 事件 API

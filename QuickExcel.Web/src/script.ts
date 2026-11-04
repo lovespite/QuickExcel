@@ -211,7 +211,7 @@ async function handle(message: Message) {
     }
     if (p.action === 'completionSample') {
       const started = performance.now(); const getWorker = await languageWorker(); const worker = await getWorker(editor.getModel()!.uri);
-      const completion = await worker.getCompletionsAtPosition(editor.getModel()!.uri.toString(), editor.getValue().indexOf('quickExcel.functions.') + 'quickExcel.functions.'.length);
+      const completion = await worker.getCompletionsAtPosition(editor.getModel()!.uri.toString(), editor.getValue().indexOf('host.functions.') + 'host.functions.'.length);
       post('testResult', { elapsedMs: performance.now() - started, registered: completion?.entries.some(e => e.name === 'register') }, message.requestId); return;
     }
     if (p.action === 'edit') {

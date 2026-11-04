@@ -15,6 +15,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Remove="smoke\**\*.cs" />
+    <EmbeddedResource Include="capabilities.json" LogicalName="QuickExcel.Scripting.capabilities.json" />
     <None Condition="'$(QuickExcelNativeLibrary)' != ''" Include="$(QuickExcelNativeLibrary)" Link="%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
   <ItemGroup Condition="'$(QuickExcelNativeRid)' == 'win-x64' or '$(QuickExcelNativeRid)' == 'linux-x64'">

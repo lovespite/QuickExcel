@@ -127,7 +127,7 @@ public sealed class WorkbookDocumentTests : IDisposable
     public void JavascriptHandlesScalarAndRangeArgumentsAndRecompiles()
     {
         using var document = WorkbookDocument.CreateBlank(Services());
-        document.ScriptSource = "quickExcel.functions.register('DOUBLE', x => x * 2); quickExcel.functions.register('TOTAL', xs => xs.reduce((a,b) => a + Number(b), 0));";
+        document.ScriptSource = "host.functions.register('DOUBLE', x => x * 2); host.functions.register('TOTAL', xs => xs.reduce((a,b) => a + Number(b), 0));";
         document.SetCell(0, 0, 0, "3");
         document.SetCell(0, 1, 0, "4");
         document.SetCell(0, 0, 1, "=DOUBLE(A1)");
@@ -135,7 +135,7 @@ public sealed class WorkbookDocumentTests : IDisposable
         document.EnableScriptsAndCalculate();
         Assert.Equal("6", document.GetCellValue(0, 0, 1));
         Assert.Equal("7", document.GetCellValue(0, 1, 1));
-        document.ScriptSource = "quickExcel.functions.register('DOUBLE', x => x * 3);";
+        document.ScriptSource = "host.functions.register('DOUBLE', x => x * 3);";
         Assert.False(document.ScriptsEnabled);
         document.EnableScriptsAndCalculate();
         Assert.Equal("9", document.GetCellValue(0, 0, 1));
@@ -147,7 +147,7 @@ public sealed class WorkbookDocumentTests : IDisposable
     public void JavascriptErrorsProduceCellErrorAndDiagnostic()
     {
         using var document = WorkbookDocument.CreateBlank(Services());
-        document.ScriptSource = "quickExcel.functions.register('FAIL', () => { throw new Error('demo failure'); });";
+        document.ScriptSource = "host.functions.register('FAIL', () => { throw new Error('demo failure'); });";
         document.SetCell(0, 0, 0, "=FAIL()");
         document.EnableScriptsAndCalculate();
         Assert.Equal("#SCRIPT!", document.GetCellValue(0, 0, 0));

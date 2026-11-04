@@ -14,10 +14,12 @@ public sealed class ScriptWorkerActionExecutor(string? executablePath = null) : 
         if (request.ConsoleSource is not { } source) return request.Snapshot.ScriptModules;
         // Serialize the code as data. Direct eval runs only inside the normal
         // zero-capability action worker, with this immutable transaction context.
-        var text = "$.actions.register('__console__', ({snapshot,patch,fs,event}) => { const result = eval(" +
-            JsonSerializer.Serialize(source) + "); console.log('=>', result); });";
-        return new(new Dictionary<string, ScriptModule> { ["console"] = new("scripts/console.js", text) }, ["console"],
-            scriptApiVersion: 2, bindings: [new("console", "actions")]);
+        // The console is one synthetic main(workbook, host) entry. Direct eval runs
+        // only inside the zero-capability action worker with this transaction context.
+        var text = "function main(workbook, host) { const result = eval(" +
+            JsonSerializer.Serialize(source) + "); console.log('=>', result); }";
+        return new(new Dictionary<string, ScriptModule> { ["__console__"] = new("scripts/console.js", text) }, ["__console__"],
+            scriptApiVersion: 2, bindings: [new("__console__", "actions")]);
     }
     private ScriptWorkerLease Create(ScriptActionRequest request, CancellationToken token) => SharedScriptWorkers.Acquire(_executable,
         new ScriptRuntimeRequest(ExecutionModules(request), request.Stamp, TimeSpan.FromSeconds(5), token) { RuntimeLifetime = request.RuntimeLifetime }, actions: true);

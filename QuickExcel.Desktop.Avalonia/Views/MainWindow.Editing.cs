@@ -4,6 +4,7 @@ using QuickExcel.Core;
 using QuickExcel.Domain;
 using QuickExcel.Grid.Avalonia;
 using QuickExcel.Presentation;
+using QuickExcel.Clipboard;
 
 namespace QuickExcel.Desktop.Avalonia;
 
@@ -64,28 +65,47 @@ public sealed partial class MainWindow
             sheet.Columns.Any(p => p.Value.Hidden && p.Key >= target.Left && p.Key <= target.Right))
             throw new InvalidOperationException("目标含隐藏行列，请先取消隐藏；本次没有写入。");
     }
-    private async Task CopyAsync(bool cut)
+    private async Task CopyAsync(bool cut, bool externalFormulas = false, bool valuesOnly = false)
     {
         if (!await CommitEditorsAsync()) return;
         var view = CurrentView; view.RequireCurrentFilter(Document.Snapshot);
         var range = SelectedRange(); var snapshot = Document.Snapshot; var sheet = snapshot.Sheets[SheetIndex];
         bool Excluded(int row) => sheet.Rows.GetValueOrDefault(row)?.Hidden == true || view.IsFilteredOut(snapshot, SheetIndex, row);
-        var text = GridClipboard.Write(range, (r, c) => Document.GetCellValue(SheetIndex, r, c), Excluded);
+        string? text = GridClipboard.Write(range, (r, c) => Document.GetCellValue(SheetIndex, r, c), Excluded);
         var plain = range.Count > WorkbookClipboard.MaxCells || Enumerable.Range(range.Top, range.Rows).Any(Excluded);
         if (cut && plain) throw new InvalidOperationException("剪切需要不含隐藏行且不超过 20,000 格的连续矩形。");
         if (cut && snapshot.FileState?.FormulaReadOnly == true) throw new InvalidOperationException(WorkbookFileState.FormulaReadOnlyMessage);
-        _clipboardCells = plain ? null : WorkbookClipboard.Capture(snapshot, sheet.Id, Rectangle(range), cut);
-        _clipboardToken = plain ? null : Guid.NewGuid().ToString("N");
+        var capture = plain ? null : WorkbookClipboard.Capture(snapshot, sheet.Id, Rectangle(range), cut);
+        var token = plain || valuesOnly || externalFormulas ? null : Guid.NewGuid().ToString("N");
+        byte[]? xml = null, html = null; string? limitation = null;
+        if (capture is not null && OperatingSystem.IsWindows())
+        {
+            try
+            {
+                var region = SpreadsheetClipboardCodec.Capture(snapshot, capture, externalFormulas, valuesOnly);
+                var encodedXml = SpreadsheetClipboardCodec.Write(region, externalFormulas);
+                var encodedHtml = HtmlClipboardCodec.Write(region, externalFormulas);
+                // Publish the external representations together only after every encoder succeeds.
+                xml = encodedXml; html = encodedHtml;
+            }
+            catch (Exception ex) when (!externalFormulas && !valuesOnly && (ex is NotSupportedException || ex is InvalidOperationException && capture.HasOldResults))
+            { limitation = ex.Message; text = null; }
+        }
+        if (externalFormulas && (plain || !OperatingSystem.IsWindows())) throw new NotSupportedException("公式对外复制需要 Windows 上不超过 20,000 格的完整可见矩形。");
+        await _clipboard.WriteAsync(new(text, token, xml, html));
+        _clipboardCells = capture; _clipboardToken = token;
         _clipboardSession = Document.Session.SessionId; _clipboardRevision = snapshot.Revision;
-        await _clipboard.WriteAsync(new(text, _clipboardToken));
-        _status.Text = cut ? "已准备剪切；粘贴后才移动，Esc 取消。" : plain ? "已复制可见行显示文本。" : "已复制值、公式、格式和合并区域。";
+        _status.Text = limitation is not null ? "已内部复制；未发布外部数据。" + limitation : cut ? "已准备内部剪切；跨应用粘贴仅复制，来源不会删除。Esc 取消。" :
+            plain ? "已复制可见行显示文本。" : externalFormulas ? "已对外复制公式（相对引用）。" : valuesOnly ? "已复制类型化结果值。" : "已复制；对外粘贴结果值、格式和完整合并区域。";
     }
     private async Task PasteAsync(string mode)
     {
         if (!await CommitEditorsAsync()) return;
-        var session = Document.Session.SessionId; var revision = Document.Snapshot.Revision; var target = SelectedRange();
+        string? notice = null;
+        var session = Document.Session.SessionId; var revision = Document.Snapshot.Revision; var target = SelectedRange(); var sheetId = Document.Snapshot.ActiveSheetId;
         var data = await _clipboard.ReadAsync();
-        if (session != Document.Session.SessionId || revision != Document.Snapshot.Revision) throw new InvalidOperationException("读取剪贴板期间文档已改变，请重试。");
+        if (session != Document.Session.SessionId || revision != Document.Snapshot.Revision || sheetId != Document.Snapshot.ActiveSheetId || target != SelectedRange())
+            throw new InvalidOperationException("读取剪贴板期间文档、工作表或目标选区已改变，请重试。");
         if (data.Token is not null && data.Token == _clipboardToken)
         {
             if (_clipboardCells is not { } cells || _clipboardSession != session || _clipboardRevision != revision)
@@ -102,6 +122,23 @@ public sealed partial class MainWindow
             _clipboardRevision = Document.Snapshot.Revision; if (cells.IsCut) _clipboardCells = null;
             _grid.SelectRange(new(target.Top, target.Left, target.Top + rows - 1, target.Left + columns - 1), new(target.Top, target.Left));
         }
+        else if (data.SpreadsheetXml is not null || data.Html is not null)
+        {
+            if (mode == "transpose") throw new NotSupportedException("外部转置粘贴尚未支持。");
+            // A damaged rich format is an error, never silent fallback to HTML or text.
+            var source = data.SpreadsheetXml is { } xml ? SpreadsheetClipboardCodec.Read(xml, data.Biff8) : HtmlClipboardCodec.Read(data.Html!);
+            var paste = mode switch { "values" => CellPasteMode.Values, "formulas" => CellPasteMode.Formulas, "formats" => CellPasteMode.Formats, _ => CellPasteMode.All };
+            var plan = ExternalClipboardPastePolicy.Prepare(source, paste);
+            paste = plan.Mode; notice = plan.Notice;
+            if (paste != CellPasteMode.Formats && source.Rows == 1 && source.Columns == 1 &&
+                Document.Snapshot.GetSheet(sheetId).MergedCells.Select(CellRectangle.Parse).Any(m => m == Rectangle(target)))
+                target = new(target.Top, target.Left, target.Top, target.Left);
+            var rows = source.Rows == 1 && source.Columns == 1 ? target.Rows : source.Rows;
+            var columns = source.Rows == 1 && source.Columns == 1 ? target.Columns : source.Columns;
+            RequireVisiblePaste(new(target.Top, target.Left, checked(target.Top + rows - 1), checked(target.Left + columns - 1)));
+            if (!await ExecuteAsync(new PasteExternalCellsCommand(source, sheetId, Rectangle(target), revision, paste), revision)) return;
+            _grid.SelectRange(new(target.Top, target.Left, target.Top + rows - 1, target.Left + columns - 1), new(target.Top, target.Left));
+        }
         else
         {
             if (mode is "formats" or "transpose") throw new InvalidOperationException("只贴格式和转置需要本工作簿内部复制。");
@@ -115,7 +152,7 @@ public sealed partial class MainWindow
             if (!await ExecuteAsync(new SetCellsCommand(edits), revision)) return;
             _grid.SelectRange(new(target.Top, target.Left, values.Max(v => v.Row), values.Max(v => v.Column)), new(target.Top, target.Left));
         }
-        await CalculateAsync(); _status.Text = "已粘贴，可一次撤销。";
+        await CalculateAsync(); _status.Text = notice is null ? "已粘贴，可一次撤销。" : notice + " 可一次撤销。";
     }
     private async Task FillAsync(GridRange source, GridRange extent, long? revision = null)
     {
@@ -148,6 +185,8 @@ public sealed partial class MainWindow
         _grid.FillRequested += (source, extent, revision) => _ = PerformAsync(() => FillAsync(source, extent, revision));
         var edit = (MenuItem)_menu.Items[1]!;
         edit.Items.Add(CommandMenu("复制  Ctrl+C", () => CopyAsync(false))); edit.Items.Add(CommandMenu("剪切  Ctrl+X", () => CopyAsync(true)));
+        edit.Items.Add(CommandMenu("复制结果值（对外）", () => CopyAsync(false, valuesOnly: true)));
+        edit.Items.Add(CommandMenu("复制公式（对外，相对引用）", () => CopyAsync(false, externalFormulas: true)));
         foreach (var (title, mode) in new[] { ("粘贴  Ctrl+V", "all"), ("只贴值", "values"), ("粘贴公式", "formulas"), ("只贴格式", "formats"), ("转置粘贴", "transpose") })
             edit.Items.Add(CommandMenu(title, () => PasteAsync(mode)));
         edit.Items.Add(CommandMenu("向下填充  Ctrl+D", () => FillDirectionAsync(false)));

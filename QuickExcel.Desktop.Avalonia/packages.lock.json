@@ -34,6 +34,11 @@
           "Avalonia": "12.1.4"
         }
       },
+      "AngleSharp": {
+        "type": "Transitive",
+        "resolved": "1.9.1",
+        "contentHash": "QgOLaoPvDofo66KBOHlI9WLH+L/3xGDDd1joM4CrsFsxm0knRu/6ZoiWU0DUOhBZzSCa13zYKAeVPS/CxnF12Q=="
+      },
       "Avalonia": {
         "type": "Transitive",
         "resolved": "12.1.4",
@@ -168,6 +173,11 @@
         "resolved": "0.11.6",
         "contentHash": "NdNWGDiZ6eS/Mf/9+QHR91cj1K7Hy+PX9yrHI/zM7xFYuj9IWT2uxtB6sCHjrnxAeLV9fut1R6zHDUGKX6f9lQ=="
       },
+      "OpenMcdf": {
+        "type": "Transitive",
+        "resolved": "3.4.0",
+        "contentHash": "HO/oY3oEUJw1DEcjSxR/dMEhYbJ/psUH1mZ0OFDhqrDaZg/kEPc4Go1U7eRjYgEgsEqujYueE+0+A67VlttemQ=="
+      },
       "PdfPig": {
         "type": "Transitive",
         "resolved": "0.1.16",
@@ -238,6 +248,8 @@
       "quickexcel.infrastructure": {
         "type": "Project",
         "dependencies": {
+          "AngleSharp": "[1.9.1, 1.9.1]",
+          "OpenMcdf": "[3.4.0, 3.4.0]",
           "QuickExcel.Core": "[0.2.0, )",
           "QuickExcel.ScriptContracts": "[1.0.0, )",
           "QuickExcel.Scripting": "[1.0.0, )",

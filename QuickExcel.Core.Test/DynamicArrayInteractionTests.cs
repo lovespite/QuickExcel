@@ -109,7 +109,7 @@ public sealed class DynamicArrayInteractionTests
     public void StatefulScriptsRunOnceInFinalTopologyAfterPureSpillPlanning()
     {
         var sheet = Sheet("Data",(0,0,F("=NEXT(B4)")),(1,0,F("=NEXT()")),(2,1,F("=SEQUENCE(2)")),(5,0,F("=IF(FALSE,NEXT(),NEXT())")));
-        var book = Book(sheet).WithScriptSource("let n=0;quickExcel.functions.register('NEXT',()=>++n);");
+        var book = Book(sheet).WithScriptSource("let n=0;host.functions.register('NEXT',()=>++n);");
         var request = Request(book) with { ScriptsEnabled = true };
         var result = new WorkbookCalculator(new JscRuntimeFactory()).Calculate(request);
         Assert.Equal(CellValue.FromNumber(2),C(result,sheet,0).Value);

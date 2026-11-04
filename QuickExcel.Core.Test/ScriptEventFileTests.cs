@@ -14,8 +14,9 @@ namespace QuickExcel.Core.Test;
 public sealed class ScriptEventFileTests
 {
     private static readonly TypedWorkbookStorage Storage = new();
-    private static WorkbookDocument Document(string source) => new(Book(Sheet("Data")).WithScriptModules(M4ActionTests.Actions(source)),
+    private static WorkbookDocument Document(ScriptModuleSet modules) => new(Book(Sheet("Data")).WithScriptModules(modules),
         new(Storage, new WorkbookCalculator(new ScriptWorkerRuntimeFactory()), new ScriptWorkerActionExecutor()));
+    private static WorkbookDocument Document(string source) => Document(M4ActionTests.Actions(source));
     private static VirtualFileEdit Write(string path, string value) => new("write", path, Encoding.UTF8.GetBytes(value).ToImmutableArray());
     private static string Text(VirtualFileSet files, string path) => Encoding.UTF8.GetString(files.Entries[path].Data.AsSpan());
 
@@ -44,25 +45,33 @@ public sealed class ScriptEventFileTests
     [Fact]
     public void WorkerFilesAreTransactionalAndOnlyPackageVolumePersists()
     {
-        using var doc = Document("""
-            quickExcel.actions.register('write', ({fs,snapshot,patch})=>{
-              fs.mkdir('//xlsq/data'); fs.mkdir('//xlsq/empty');
-              fs.writeText('//xlsq/data/中文.txt','汉字 😀\nline');
-              fs.writeJson('//temp/session.json',{count:7});
-              fs.writeBytes('//mem/cache',new Uint8Array([0,128,255]));
-              if(fs.readText('//xlsq/data/中文.txt')!=='汉字 😀\nline') throw Error('UTF8');
-              if(fs.readJson('//temp/session.json').count!==7 || fs.readBytes('//mem/cache')[2]!==255) throw Error('read');
-              if(!fs.list('//xlsq/').some(x=>x.path==='//xlsq/data' && x.type==='directory')) throw Error('list');
-              if(!fs.list('//xlsq/data',{recursive:true}).some(x=>x.size>0)) throw Error('recursive');
-              if(!fs.readJson('//xlsq/manifest.json').scripts.modules.main) throw Error('system');
-              fs.copy('//mem/cache','//temp/copy'); fs.move('//temp/copy','//temp/moved'); fs.remove('//temp/moved');
-              fs.move('//mem/cache','//mem/cache'); if(!fs.exists('//mem/cache')) throw Error('self move');
-              patch.setValue(snapshot.sheets[0].id,'A1','committed');
-            });
-            quickExcel.actions.register('next',({fs,patch,snapshot})=>{
-              patch.setValue(snapshot.sheets[0].id,'A2',fs.readJson('//temp/session.json').count);
-            });
-            """);
+        var modules = new ScriptModuleSet(new Dictionary<string, ScriptModule>
+        {
+            ["write"] = new("scripts/write.js", """
+                function main(workbook, host) {
+                  const fs=host.files;
+                  fs.mkdir('//xlsq/data'); fs.mkdir('//xlsq/empty');
+                  fs.writeText('//xlsq/data/中文.txt','汉字 😀\nline');
+                  fs.writeJson('//temp/session.json',{count:7});
+                  fs.writeBytes('//mem/cache',new Uint8Array([0,128,255]));
+                  if(fs.readText('//xlsq/data/中文.txt')!=='汉字 😀\nline') throw Error('UTF8');
+                  if(fs.readJson('//temp/session.json').count!==7 || fs.readBytes('//mem/cache')[2]!==255) throw Error('read');
+                  if(!fs.list('//xlsq/').some(x=>x.path==='//xlsq/data' && x.type==='directory')) throw Error('list');
+                  if(!fs.list('//xlsq/data',{recursive:true}).some(x=>x.size>0)) throw Error('recursive');
+                  if(!fs.readJson('//xlsq/manifest.json').scripts.modules.write) throw Error('system');
+                  fs.copy('//mem/cache','//temp/copy'); fs.move('//temp/copy','//temp/moved'); fs.remove('//temp/moved');
+                  fs.move('//mem/cache','//mem/cache'); if(!fs.exists('//mem/cache')) throw Error('self move');
+                  workbook.getActiveWorksheet().getRange('A1').setValue('committed');
+                }
+                """),
+            ["next"] = new("scripts/next.js", """
+                function main(workbook, host) {
+                  const fs=host.files;
+                  workbook.getActiveWorksheet().getRange('A2').setValue(fs.readJson('//temp/session.json').count);
+                }
+                """)
+        }, ["write", "next"], scriptApiVersion: 2, bindings: [new("write", "actions"), new("next", "actions")]);
+        using var doc = Document(modules);
         doc.EnableScriptsAndCalculate();
         doc.RunAction("write");
         Assert.Equal("committed", doc.GetCellValue(0, 0, 0));
@@ -98,7 +107,7 @@ public sealed class ScriptEventFileTests
     [InlineData("return Promise.resolve()")]
     public void FailedWorkerNeverCommitsAnyVolumeOrCell(string tail)
     {
-        using var doc = Document("quickExcel.actions.register('A',({fs,patch,snapshot})=>{fs.writeText('//mem/a','memory');fs.writeText('//temp/a','temp');fs.writeText('//xlsq/a','package');patch.setValue(snapshot.sheets[0].id,'A1',42);" + tail + ";});");
+        using var doc = Document("function main(workbook, host){const fs=host.files;fs.writeText('//mem/a','memory');fs.writeText('//temp/a','temp');fs.writeText('//xlsq/a','package');workbook.getActiveWorksheet().getRange('A1').setValue(42);" + tail + ";}");
         doc.EnableScriptsAndCalculate(); var before = doc.Snapshot;
         Assert.NotNull(Record.Exception(() => doc.RunAction("A")));
         Assert.Equal(before.Revision, doc.Snapshot.Revision); Assert.Empty(doc.Snapshot.PackageFiles.Entries); Assert.Empty(doc.Snapshot.Sheets[0].Cells); Assert.Empty(doc.Session.TransientFiles.Entries); Assert.False(doc.CanUndo);
@@ -107,7 +116,7 @@ public sealed class ScriptEventFileTests
     [Fact]
     public void MemoryOnlyTransactionsDoNotDirtyOrEnterHistoryAndRejectStaleReplies()
     {
-        using var doc = Document("quickExcel.actions.register('A',({fs})=>fs.writeText('//mem/cache','cached'));");
+        using var doc = Document("function main(workbook, host){host.files.writeText('//mem/cache','cached');}");
         doc.EnableScriptsAndCalculate(); var revision = doc.Session.Revision;
         Assert.False(doc.RunAction("A").Changed); Assert.Equal(revision, doc.Session.Revision); Assert.False(doc.IsDirty); Assert.False(doc.CanUndo);
         var request = doc.Session.BeginAction("A");
@@ -120,10 +129,10 @@ public sealed class ScriptEventFileTests
     [Fact]
     public void SystemSourceEditsRefreshHashesRevokeTrustAndPersist()
     {
-        using var doc = Document("quickExcel.actions.register('A',({fs})=>{fs.writeText('//xlsq/scripts/main.js',\"quickExcel.actions.register('B',()=>{});\");});");
+        using var doc = Document("function main(workbook, host){host.files.writeText('//xlsq/scripts/main.js','function main(){ return 1; }');}");
         doc.EnableScriptsAndCalculate(); var revision = doc.Snapshot.ScriptModules.Revision;
         doc.RunAction("A"); Assert.False(doc.ScriptsEnabled);
-        Assert.Contains("'B'", doc.ScriptSource); Assert.True(doc.Snapshot.ScriptModules.Revision > revision);
+        Assert.Contains("return 1", doc.ScriptSource); Assert.True(doc.Snapshot.ScriptModules.Revision > revision);
         Assert.Null(doc.Snapshot.ScriptModules.Signature); Assert.False(doc.CanUndo);
         var files = Storage.Capture(doc.Snapshot);
         Assert.Equal(doc.ScriptSource, Text(files, "//xlsq/scripts/main.js"));
@@ -132,7 +141,7 @@ public sealed class ScriptEventFileTests
     [Fact]
     public void RawWorkbookFileReplacementIsParsedAndUndoable()
     {
-        using var doc = Document("quickExcel.actions.register('A',()=>{});");
+        using var doc = Document("function main(){}");
         doc.EnableScriptsAndCalculate();
         var source = Storage.Capture(doc.Snapshot);
         using var input = new MemoryStream(source.Entries["//xlsq/workbook.xlsx"].Data.ToArray());
@@ -165,14 +174,15 @@ public sealed class ScriptEventFileTests
     public void EventsAreTrustedOrderedSingleTransactionAndDoNotReenter()
     {
         using var doc = Document("""
-            function log(ctx) {
-              const entries=ctx.fs.exists('//mem/events')?ctx.fs.readJson('//mem/events'):[];
-              entries.push(ctx.event.name); ctx.fs.writeJson('//mem/events',entries);
+            function log(context) {
+              const fs=context.host.files;
+              const entries=fs.exists('//mem/events')?fs.readJson('//mem/events'):[];
+              entries.push(context.event.name); fs.writeJson('//mem/events',entries);
             }
-            for(const name of ['workbook.open','sheet.activate','sheet.deactivate','sheet.added','sheet.deleted','cell.click','cell.edit','cell.commit','cells.changed']) quickExcel.events.on(name,log);
-            quickExcel.events.on('cell.commit',({snapshot,patch,event})=>{
-              if(!Object.isFrozen(event) || event.ranges[0]!=='A1') throw Error('event');
-              patch.setValue(snapshot.sheets[0].id,'B1','event');
+            for(const name of ['workbook.open','sheet.activate','sheet.deactivate','sheet.added','sheet.deleted','cell.click','cell.edit','cell.commit','cells.changed']) host.events.on(name,log);
+            host.events.on('cell.commit',context=>{
+              if(!Object.isFrozen(context.event) || context.event.ranges[0]!=='A1') throw Error('event');
+              context.workbook.getActiveWorksheet().getRange('B1').setValue('event');
             });
             """);
         doc.Session.RaiseScriptEvent("cell.click", doc.Snapshot.ActiveSheetId, ["A1"]); Assert.False(doc.Session.HasScriptEvents);
@@ -193,7 +203,7 @@ public sealed class ScriptEventFileTests
     [InlineData("workbook.saved")][InlineData("workbook.calculated")][InlineData("workbook.close")]
     public void CompletionNotificationsCannotDirtyTheWorkbook(string name)
     {
-        using var doc = Document($"quickExcel.events.on('{name}',({{fs}})=>fs.writeText('//xlsq/late','no')); ");
+        using var doc = Document($"host.events.on('{name}',context=>context.host.files.writeText('//xlsq/late','no')); ");
         doc.EnableScriptsAndCalculate(); doc.ListActions();
         while (doc.Session.TakeScriptEvent() is not null) { }
         doc.Session.RaiseScriptEvent(name);
@@ -205,8 +215,9 @@ public sealed class ScriptEventFileTests
     public void MultipleHandlersShareFilesAndRollbackTogether()
     {
         using var doc = Document("""
-            quickExcel.events.on('cell.click',({fs})=>fs.writeText('//mem/a','first'));
-            quickExcel.events.on('cell.click',({fs})=>{
+            host.events.on('cell.click',context=>context.host.files.writeText('//mem/a','first'));
+            host.events.on('cell.click',context=>{
+              const fs=context.host.files;
               if(fs.readText('//mem/a')!=='first') throw Error('missing');
               fs.writeText('//xlsq/a','second'); throw Error('rollback');
             });
@@ -220,7 +231,7 @@ public sealed class ScriptEventFileTests
     [Fact]
     public async Task CancelledFileWorkerAndHistoryOverflowNeverCommitTransientData()
     {
-        using var doc = Document("quickExcel.actions.register('A',({fs})=>{fs.writeText('//mem/a','no');fs.writeText('//xlsq/a','no');while(true){}});");
+        using var doc = Document("function main(workbook, host){const fs=host.files;fs.writeText('//mem/a','no');fs.writeText('//xlsq/a','no');while(true){}}");
         doc.EnableScriptsAndCalculate(); using var cancellation = new CancellationTokenSource();
         var run = Task.Run(() => doc.RunAction("A", cancellation.Token));
         cancellation.CancelAfter(150);
@@ -236,7 +247,7 @@ public sealed class ScriptEventFileTests
     [Fact]
     public void TamperedPersistentFileHashAndNamespaceCollisionsAreRejectedOnOpen()
     {
-        using var doc = Document("quickExcel.actions.register('A',({fs})=>{fs.mkdir('//xlsq/data');fs.writeText('//xlsq/data/a','good');});");
+        using var doc = Document("function main(workbook, host){const fs=host.files;fs.mkdir('//xlsq/data');fs.writeText('//xlsq/data/a','good');}");
         doc.EnableScriptsAndCalculate(); doc.RunAction("A");
         var path = Path.Combine(Directory.GetCurrentDirectory(), "artifacts", "event-files", Guid.NewGuid() + ".xlsq");
         Directory.CreateDirectory(Path.GetDirectoryName(path)!); doc.Save(path);
@@ -251,7 +262,7 @@ public sealed class ScriptEventFileTests
     [Fact]
     public void SourceChangesCannotHideNonUndoableCellOrDataChanges()
     {
-        using var doc = Document("quickExcel.actions.register('A',({fs,patch,snapshot})=>{fs.writeText('//xlsq/scripts/main.js','// changed');patch.setValue(snapshot.sheets[0].id,'A1',1);});");
+        using var doc = Document("function main(workbook, host){host.files.writeText('//xlsq/scripts/main.js','// changed');workbook.getActiveWorksheet().getRange('A1').setValue(1);}");
         doc.EnableScriptsAndCalculate(); var source = doc.ScriptSource;
         Assert.Throws<InvalidOperationException>(() => doc.RunAction("A"));
         Assert.Equal(source, doc.ScriptSource); Assert.Empty(doc.Snapshot.Sheets[0].Cells); Assert.False(doc.CanUndo);
@@ -260,7 +271,7 @@ public sealed class ScriptEventFileTests
     [Fact]
     public void VirtualSystemEditsPreserveV1MigrationOverwriteGuard()
     {
-        const string source = "quickExcel.actions.register('A',({fs})=>fs.writeText('//xlsq/scripts/main.js','// replacement'));";
+        const string source = "function main(workbook, host){host.files.writeText('//xlsq/scripts/main.js','// replacement');}";
         using var seed = Document(source);
         var path = Path.Combine(Directory.GetCurrentDirectory(), "artifacts", "event-files", Guid.NewGuid() + ".xlsq");
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);

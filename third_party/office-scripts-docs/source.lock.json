@@ -1,0 +1,12 @@
+{
+  "repository": "OfficeDev/office-scripts-docs-reference",
+  "commit": "97f8f415842e13e004d7c53c1d24fe45653e50c0",
+  "file": "generate-docs/script-inputs/office-scripts-docs.d.ts",
+  "localPath": "third_party/office-scripts-docs/office-scripts-docs.d.ts",
+  "gitBlobSha1": "a2ea76f0e65faab8bd70e2fcd683c9e00502b6bd",
+  "sha256": "76e9d9bb7bed539185ef8e92f91000c042fb1731f7f6d449f5d207b5d2542eaf",
+  "size": 487506,
+  "license": "CC-BY-4.0",
+  "licenseUrl": "https://creativecommons.org/licenses/by/4.0/legalcode",
+  "licenseFile": "https://github.com/OfficeDev/office-scripts-docs-reference/blob/main/LICENSE"
+}

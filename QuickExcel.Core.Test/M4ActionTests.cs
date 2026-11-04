@@ -12,40 +12,39 @@ namespace QuickExcel.Core.Test;
 public sealed class M4ActionTests
 {
     internal static ScriptModuleSet Actions(string source, bool functions = false) => new(
-        new Dictionary<string, ScriptModule> { ["main"] = new("scripts/main.js", source) }, ["main"], scriptApiVersion: 2,
-        bindings: functions ? [new("main", "formula-functions"), new("main", "actions")] : [new("main", "actions")]);
+        new Dictionary<string, ScriptModule> { ["A"] = new("scripts/main.js", source) }, ["A"], scriptApiVersion: 2,
+        bindings: functions ? [new("A", "formula-functions"), new("A", "actions")] : [new("A", "actions")]);
     private static WorkbookServices Services(IScriptActionExecutor? actions = null) => new(new TypedWorkbookStorage(), new WorkbookCalculator(new ScriptWorkerRuntimeFactory()), actions ?? new ScriptWorkerActionExecutor());
     private static WorkbookDocument Document(string source, params WorksheetSnapshot[] sheets) => new(Book(sheets.Length == 0 ? [Sheet("S")] : sheets).WithScriptModules(Actions(source)), Services());
     private static ScriptActionResult Result(ScriptActionRequest request, params ScriptActionEdit[] edits) => new(request.OperationId, request.Stamp.InputRevision, request.Name!, edits.ToImmutableArray(), []);
 
     [Fact]
-    public void RealActionReadsFrozenTypedSnapshotAndCommitsAcrossSheetsWithOneUndo()
+    public void RealActionReadsLiveModelAndCommitsAcrossSheetsWithOneUndo()
     {
         var s = Sheet("Data", (0, 0, T("  产品  ")), (1, 0, N(2)), (2, 0, T("00123")), (3, 0, F("=1+1", 2)));
         var other = Sheet("Out");
         using var doc = Document("""
-            quickExcel.actions.register({name:'规范商品名',description:'一次事务'}, ({snapshot,patch})=>{
-              const a=snapshot.sheets[0].id,b=snapshot.sheets[1].id;
-              if(!Object.isFrozen(snapshot) || !Object.isFrozen(snapshot.sheets) || !Object.isFrozen(snapshot.getRange(a,'A1:A3'))) throw 1;
-              if(snapshot.getCell(a,'A4').formula!=='=1+1') throw 2;
-              patch.setValues(a,'B1:B3',snapshot.getRange(a,'A1:A3').map(r=>r.map(v=>typeof v==='string'?v.trim():v)));
-              patch.setValues(b,'A1:E1',[[true,null,'',3,{kind:'error',code:'DivisionByZero'}]]);
-              patch.setFormula(b,'A2','=Data!B2*2');
-            });
+            function main(workbook) {
+              const a=workbook.getWorksheet('Data'),b=workbook.getWorksheet('Out');
+              if(a.getRange('A4').getFormula()!=='=1+1') throw 2;
+              a.getRange('B1:B3').setValues(a.getRange('A1:A3').getValues().map(r=>r.map(v=>typeof v==='string'?v.trim():v)));
+              b.getRange('A1:C1').setValues([[true,'',3]]);
+              b.getRange('A2').setFormula('=Data!B2*2');
+            }
             """, s, other);
-        Assert.Throws<InvalidOperationException>(() => doc.RunAction("规范商品名"));
+        Assert.Throws<InvalidOperationException>(() => doc.RunAction("A"));
         doc.EnableScriptsAndCalculate();
         var actions = doc.ListActions();
-        Assert.Equal("一次事务", Assert.Single(actions).Description);
+        Assert.Equal("A", Assert.Single(actions).Name);
         var before = doc.Snapshot; var events = 0;
         doc.Session.Changed += (_, e) => { if (!e.CalculationOnly) events++; };
-        var result = doc.RunAction("规范商品名");
+        var result = doc.RunAction("A");
         Assert.True(result.Changed); Assert.Equal(before.Revision + 1, doc.Snapshot.Revision); Assert.Equal(1, events);
         Assert.Equal(CellValue.FromText("产品"), doc.Snapshot.GetSheet(s.Id).GetCell(0, 1)!.Value);
         Assert.Equal(CellValue.FromText("00123"), doc.Snapshot.GetSheet(s.Id).GetCell(2, 1)!.Value);
         Assert.Equal(CellValue.FromBoolean(true), doc.Snapshot.GetSheet(other.Id).GetCell(0, 0)!.Value);
-        Assert.Equal(CellValue.FromText(""), doc.Snapshot.GetSheet(other.Id).GetCell(0, 2)!.Value);
-        Assert.Equal(CellValue.FromError(CellErrorCode.DivisionByZero), doc.Snapshot.GetSheet(other.Id).GetCell(0, 4)!.Value);
+        Assert.Equal(CellValue.FromText(""), doc.Snapshot.GetSheet(other.Id).GetCell(0, 1)!.Value);
+        Assert.Equal(CellValue.FromNumber(3), doc.Snapshot.GetSheet(other.Id).GetCell(0, 2)!.Value);
         Assert.Equal("=Data!B2*2", doc.Snapshot.GetSheet(other.Id).GetCell(1, 0)!.Content.FormulaText);
         Assert.True(doc.Undo()); Assert.False(doc.Session.CanUndo);
         Assert.Null(doc.Snapshot.GetSheet(s.Id).GetCell(0, 1)); Assert.Empty(doc.Snapshot.GetSheet(other.Id).Cells);
@@ -59,14 +58,14 @@ public sealed class M4ActionTests
     {
         var source = """
             let n=0;
-            quickExcel.functions.register('NEXT',()=>++n);
-            quickExcel.actions.register('写入',({snapshot,patch})=>patch.setValue(snapshot.sheets[0].id,'B1',++n));
+            host.functions.register('NEXT',()=>++n);
+            function main(workbook){ workbook.getActiveWorksheet().getRange('B1').setValue(++n); }
             """;
         using var doc = new WorkbookDocument(Book(Sheet("S", (0, 0, F("=NEXT()", 99)))).WithScriptModules(Actions(source, true)), Services());
         doc.EnableScriptsAndCalculate(); Assert.Equal("1", doc.GetCellValue(0, 0, 0));
         Assert.Single(doc.ListActions()); Assert.Null(doc.Snapshot.Sheets[0].GetCell(0, 1));
-        doc.RunAction("写入"); Assert.Equal("1", doc.GetCellValue(0, 0, 1));
-        Assert.Equal(OperatingSystem.IsWindows(), doc.RunAction("写入").Changed);
+        doc.RunAction("A"); Assert.Equal("1", doc.GetCellValue(0, 0, 1));
+        Assert.Equal(OperatingSystem.IsWindows(), doc.RunAction("A").Changed);
         doc.Calculate(); Assert.Equal(OperatingSystem.IsWindows() ? "2" : "1", doc.GetCellValue(0, 0, 0));
     }
 
@@ -74,22 +73,21 @@ public sealed class M4ActionTests
     [InlineData("throw new Error('failure')")]
     [InlineData("while(true){}")]
     [InlineData("return Promise.resolve()")]
-    [InlineData("Promise.resolve().then(()=>patch.setValue(id,'A2',7))")]
-    [InlineData("patch.setValue(id,'A1',2)")]
-    [InlineData("patch.setValue('missing','B1',3)")]
-    [InlineData("patch.setValues(id,'B1:C1',[[1]])")]
-    [InlineData("patch.setValue(id,'B1',NaN)")]
-    [InlineData("patch.setValue(id,'B1',{})")]
-    [InlineData("patch.setValue(id,'B1','x'.repeat(32768))")]
-    [InlineData("patch.setValue(id,'A100001',1)")]
-    [InlineData("patch.setValues(id,'B1:B20001',Array.from({length:20001},()=>[1]))")]
-    [InlineData("snapshot.getRange(id,'A1:B100000')")]
-    [InlineData("snapshot.sheets[0].name='changed'")]
-    [InlineData("patch.setFormula(id,'B1','=1+')")]
-    [InlineData("try { patch.setValues(id,'B1:C1',[[1,{}]]) } catch {}")]
+    [InlineData("Promise.resolve().then(()=>sheet.getRange('A2').setValue(7))")]
+    [InlineData("sheet.getRange('A100001').setValue(2)")]
+    [InlineData("workbook.getWorksheet('missing').getRange('B1')")]
+    [InlineData("sheet.getRange('B1:C1').setValues([[1]])")]
+    [InlineData("sheet.getRange('B1').setValue(NaN)")]
+    [InlineData("sheet.getRange('B1').setValue({})")]
+    [InlineData("sheet.getRange('B1').setValue('x'.repeat(32768))")]
+    [InlineData("sheet.getRange('B1:B20001').setValues(Array.from({length:20001},()=>[1]))")]
+    [InlineData("sheet.getRange('A1:B100000').getValues()")]
+    [InlineData("sheet.name='changed'")]
+    [InlineData("sheet.getRange('B1').setFormula('=1+')")]
+    [InlineData("try { sheet.getRange('B1:C1').setValues([[1,{}]]) } catch {}")]
     public void FailureAfterFirstWriteNeverCommitsPartialPatch(string tail)
     {
-        using var doc = Document("quickExcel.actions.register('A',({snapshot,patch})=>{const id=snapshot.sheets[0].id;patch.setValue(id,'A1',1);" + tail + ";});", Sheet("S", (0, 0, N(42))));
+        using var doc = Document("function main(workbook){const sheet=workbook.getActiveWorksheet();sheet.getRange('A1').setValue(1);" + tail + ";}", Sheet("S", (0, 0, N(42))));
         doc.EnableScriptsAndCalculate(); var revision = doc.Snapshot.Revision;
         Assert.NotNull(Record.Exception(() => doc.RunAction("A")));
         Assert.Equal("42", doc.GetCellValue(0, 0, 0)); Assert.Equal(revision, doc.Snapshot.Revision); Assert.False(doc.Session.CanUndo);
@@ -177,7 +175,7 @@ public sealed class M4ActionTests
     [Fact]
     public async Task CancelRunningWorkerLeavesWorkbookEditable()
     {
-        using var doc = Document("quickExcel.actions.register('A',({snapshot,patch})=>{patch.setValue(snapshot.sheets[0].id,'A1',9);while(true){}});", Sheet("S", (0, 0, N(42))));
+        using var doc = Document("function main(workbook){workbook.getActiveWorksheet().getRange('A1').setValue(9);while(true){}}", Sheet("S", (0, 0, N(42))));
         doc.EnableScriptsAndCalculate(); using var cancel = new CancellationTokenSource(150);
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => Task.Run(() => doc.RunAction("A", cancel.Token)));
         Assert.Equal("42", doc.GetCellValue(0, 0, 0)); Assert.False(doc.Session.CanUndo);
@@ -206,30 +204,31 @@ public sealed class M4ActionTests
     {
         var modules = new ScriptModuleSet(new Dictionary<string, ScriptModule>
         {
-            ["action"] = new("scripts/action.js", "import { next } from 'helper'; quickExcel.functions.register('UNBOUND',()=>0); quickExcel.actions.register('A',({snapshot,patch})=>{console.log('committed');patch.setValue(snapshot.sheets[0].id,'A1',next());});"),
+            ["action"] = new("scripts/action.js", "import { next } from 'helper'; host.functions.register('UNBOUND',()=>0); export function main(workbook){console.log('committed');workbook.getActiveWorksheet().getRange('A1').setValue(next());}"),
             ["helper"] = new("scripts/helper.js", "let n=6; export const next=()=>++n;"),
-            ["udf"] = new("scripts/udf.js", "import { next } from 'helper'; quickExcel.actions.register('unbound',()=>{}); quickExcel.functions.register('NEXTVALUE',()=>next());")
+            ["udf"] = new("scripts/udf.js", "import { next } from 'helper'; host.functions.register('NEXTVALUE',()=>next());")
         }, ["udf", "action"], scriptApiVersion: 2, bindings: [new("udf", "formula-functions"), new("action", "actions")]);
         using var doc = new WorkbookDocument(Book(Sheet("S")).WithScriptModules(modules), Services());
         doc.Session.SetScriptsEnabled(true);
-        Assert.Single(doc.ListActions()); doc.RunAction("A");
+        Assert.Equal("action", Assert.Single(doc.ListActions()).Name); doc.RunAction("action");
         Assert.Equal("7", doc.GetCellValue(0, 0, 0)); Assert.Contains("committed", doc.Session.Diagnostics);
         doc.SetCell(0, 1, 0, "=NEXTVALUE()"); doc.Calculate();
         Assert.Equal("7", doc.GetCellValue(0, 1, 0));
     }
 
     [Fact]
-    public void SnapshotDistinguishesMissingCacheAndWritesPreserveStylesAndLiteralText()
+    public void LiveFormulaReadCalculatesMissingCacheAndWritesPreserveStylesAndLiteralText()
     {
         var sheet = new WorksheetSnapshot(SheetId.New(), "S",
             [new(new(0, 0), new(CellContent.FromFormula("=1+2", 1)))], rows: [new(1, new(StyleId: 1))]);
         var source = """
-            quickExcel.actions.register('A',({snapshot,patch})=>{
-              const id=snapshot.sheets[0].id, c=snapshot.getCell(id,'A1');
-              if(c.hasValue || c.value!==null || c.formula!=='=1+2' || c.state==='Fresh') throw 1;
-              if(!snapshot.getCell(id,'B1').hasValue) throw 2;
-              patch.setValue(id,'A1','=literal'); patch.setValue(id,'A2','00123');
-            });
+            function main(workbook){
+              const sheet=workbook.getActiveWorksheet();
+              if(sheet.getRange('A1').getValue()!==3) throw 1;
+              if(sheet.getRange('A1').getFormula()!=='=1+2') throw 2;
+              if(sheet.getRange('B1').getValue()!=='') throw 3;
+              sheet.getRange('A1').setValue('=literal'); sheet.getRange('A2').setValue('00123');
+            }
             """;
         var snapshot = new WorkbookSnapshot(Guid.NewGuid(), 0, ExcelDateSystem.Mac1904, [sheet], source,
             [new(), new() { NumberFormatCode = "@" }], Actions(source));
@@ -248,7 +247,7 @@ public sealed class M4ActionTests
     {
         var target = new WorksheetSnapshot(SheetId.New(), "Protected", mergedCells: image ? [] : ["A1:B1"],
             images: image ? [new SheetImage([1], "png", 0, 1, placeInCell: true)] : []);
-        using var doc = Document("quickExcel.actions.register('A',({snapshot,patch})=>{patch.setValue(snapshot.sheets[0].id,'A1',1);patch.setValue(snapshot.sheets[1].id,'B1',2);});", Sheet("Safe"), target);
+        using var doc = Document("function main(workbook){const sheets=workbook.getWorksheets();sheets[0].getRange('A1').setValue(1);sheets[1].getRange('B1').setValue(2);}", Sheet("Safe"), target);
         doc.Session.SetScriptsEnabled(true);
         Assert.Throws<ScriptRuntimeFailureException>(() => doc.RunAction("A"));
         Assert.Empty(doc.Snapshot.Sheets[0].Cells); Assert.False(doc.Session.CanUndo);
@@ -258,7 +257,7 @@ public sealed class M4ActionTests
     public void ActionsRoundtripFeatureBindingsAndSourceWithoutExecutionOrAuthorization()
     {
         var path = Path.Combine(Path.GetTempPath(), "qx-actions-" + Guid.NewGuid() + ".xlsq");
-        var modules = Actions("quickExcel.functions.register('F',()=>7);quickExcel.actions.register('A',()=>{throw 1;});", true);
+        var modules = Actions("host.functions.register('F',()=>7);function main(){throw 1;}", true);
         try
         {
             using (var doc = new WorkbookDocument(Book(Sheet("S")).WithScriptModules(modules), Services())) doc.Save(path);
