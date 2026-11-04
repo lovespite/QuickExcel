@@ -29,7 +29,7 @@
 | 样式与图片 | [FastGridArtwork](../Controls/Grid/FastGridArtwork.cs) 使用 WPF DrawingGroup、FormattedText、BitmapDecoder | 提取样式绘制、富文本布局与解码接口，保留图片限制及诊断 |
 | 自动尺寸 | [FastGridSurface.AutoFit](../Controls/Grid/FastGridSurface.AutoFit.cs) 分别使用普通字形和样式文字度量 | 与实际绘制使用同一布局结果，保留稀疏遍历和合并/隐藏处理 |
 | 图表 | `Controls/Grid/ChartDrawing.cs` 共用于网格和打印，依赖 WPF DrawingContext | 将已有基础图表绘制迁至共享模块，不新增图表语义 |
-| 分页 | [PrintingLayout](../../QuickExcel.Core/PrintingLayout.cs) 已在 Core，以 1/96 英寸单位分页 | 直接复用；继续遵守纸张、区域、标题、隐藏和输出预算 |
+| 分页 | [PrintingLayout](../../QuickExcel.Core/Printing/PrintingLayout.cs) 已在 Core，以 1/96 英寸单位分页 | 直接复用；继续遵守纸张、区域、标题、隐藏和输出预算 |
 | 页面与 PDF | [WorkbookPaginator](../Printing/WorkbookPaginator.cs)、[PdfExport](../Printing/PdfExport.cs) 使用 WPF、XPS、XpsPrint 和 Microsoft Print to PDF | 提取页面绘制；直接 PDF 生成；系统打印留在 Windows 适配层 |
 
 “移除 Windows 依赖”指业务与可复用渲染模块不直接绑定 Windows API。SkiaSharp 仍使用各平台的原生图形/字体实现及原生库；这些依赖由后端和发行包管理，不要求底层完全不调用操作系统 API。

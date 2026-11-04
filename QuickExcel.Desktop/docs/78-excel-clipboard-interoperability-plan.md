@@ -22,7 +22,7 @@ P1 是首个可独立交付的阶段，目标是满足日常表格搬运。现�
 | [AvaloniaClipboard](../../QuickExcel.Desktop.Avalonia/Composition/AvaloniaClipboard.cs) | 读写文本和内部令牌，写入后刷新系统剪贴板 | Excel 可识别的类型化和 HTML 格式 |
 | [GridClipboard](../../QuickExcel.Presentation/Interaction/GridInteraction.cs) | 有界 TSV，处理引号、换行和矩形数据；公式解释需显式选择 | 保留原始类型、底层值及格式，减少显示文本重新解析 |
 | [MainWindow.Editing](../../QuickExcel.Desktop.Avalonia/Views/MainWindow.Editing.cs) | 内部捕获优先；外部文本经输入解析后原子提交 | 外部类型化数据和选择性粘贴接线 |
-| [WorkbookClipboard 与 PasteCellsCommand](../../QuickExcel.Core/ClipboardCommands.cs) | 内部类型、公式、样式、合并、引用变换和一次撤销 | 可供外部数据使用的粘贴模型及命令；保留内部文档身份保护 |
+| [WorkbookClipboard 与 PasteCellsCommand](../../QuickExcel.Core/Clipboard/ClipboardCommands.cs) | 内部类型、公式、样式、合并、引用变换和一次撤销 | 可供外部数据使用的粘贴模型及命令；保留内部文档身份保护 |
 
 当前已经存在基础文本互粘路径，但它不能可靠交换 Excel 原始数据语义。例如数值 `0.12` 显示为 `12%` 时，显示文本无法单独表达底层值和数字格式；文本 `"123"` 与数字 `123` 也可能在重新解析时失去区别。外部粘贴需要直接构造经过验证的类型值，不能把全部数据绕回用户输入字符串解析。
 

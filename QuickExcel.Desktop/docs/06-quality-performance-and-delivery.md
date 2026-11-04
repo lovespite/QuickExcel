@@ -45,7 +45,7 @@ XLSQ v2 的单元格权威数据仍在内嵌 `workbook.xlsx`，`state/document.j
 历史开发机记录过 10,000 次简单 JS 调用约 139 ms，首切片记录 135 ms；均为单次探索样本，不是固定机器/预热口径下的 p95，也不是 0.2 的性能承诺。
 当前 Core.Test 禁用并行执行；解除全局状态依赖、提供独立测试目录之后，才逐组启用并行。
 
-当前资源限制可从 [WorkbookDocument.cs](../../QuickExcel.Core/WorkbookDocument.cs)、`DocumentPackage.cs`（历史代码，已移除） 和 [native/SOURCES.md](../../QuickExcel.Scripting/native/SOURCES.md) 核查：
+当前资源限制可从 [WorkbookDocument.cs](../../QuickExcel.Core/Documents/WorkbookDocument.cs)、`DocumentPackage.cs`（历史代码，已移除） 和 [native/SOURCES.md](../../QuickExcel.Scripting/native/SOURCES.md) 核查：
 
 - Core：64 张表、100,000 行、1,024 列、总计 1,000,000 个实际存储格。旧 IO 适配另有 1,000,000 个占位行/单元格预算；领域稀疏编辑不分配这些空洞。
 - UI：100,000 行 × 256 列；单次粘贴 20,000 格；模型允许的列数不等于界面可见列数。

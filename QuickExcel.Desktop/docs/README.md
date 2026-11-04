@@ -111,7 +111,7 @@ E1 七项实现及各自真实 Excel 对照已完成；[行列样式优先级](2
 | 兼容元数据 | 保留原型受支持的样式、尺寸、隐藏、合并与图片；界面呈现与完整类型保真尚不完整 |
 | 验证与产物 | 本轮 build/Core 日志位于 `artifacts/validation/release-0.2`；最终包 smoke、ZIP/hash 记录见实施记录 |
 
-源码入口：[Desktop 目录约定](../README.md#源码目录)、[桌面组合根](../Composition/DesktopComposition.cs)、[编辑控制器](../Editing/EditorController.cs)、[文档 facade](../../QuickExcel.Core/WorkbookDocument.cs)、[会话](../../QuickExcel.Core/DocumentSession.cs)、`存储适配`（历史代码，已移除）、`包封装`（历史代码，已移除）、[原生桥](../../QuickExcel.Scripting/QuickJsSession.cs)。
+源码入口：[Desktop 目录约定](../README.md#源码目录)、[桌面组合根](../Composition/DesktopComposition.cs)、[编辑控制器](../Editing/EditorController.cs)、[文档 facade](../../QuickExcel.Core/Documents/WorkbookDocument.cs)、[会话](../../QuickExcel.Core/Documents/DocumentSession.cs)、`存储适配`（历史代码，已移除）、`包封装`（历史代码，已移除）、[原生桥](../../QuickExcel.Scripting/QuickJsSession.cs)。
 
 图表选中时的数据源彩色标记、系列/类别筛选、文件恢复、定向验证及 Excel 互操作限制见 [75：图表数据源标记与持久筛选](75-chart-source-highlights-and-filters.md)。
 

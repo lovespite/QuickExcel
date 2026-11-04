@@ -35,7 +35,7 @@ QuickExcel 与同级 `../ExcelIO` 是独立 Git 仓库。QuickExcel 已移除 Ex
 
 | 目录 | 职责 |
 | --- | --- |
-| `QuickExcel.Core` | 纯 .NET 领域快照、会话、命令、历史和端口 |
+| [QuickExcel.Core](QuickExcel.Core/README.md) | 纯 .NET 领域快照、会话、命令、历史和端口；源码按职责分目录 |
 | `QuickExcel.Infrastructure` | 类型化 XLSX/XLSQ v2、v1 导入迁移、计算与运行时适配 |
 | `QuickExcel.Scripting` | JSC 托管桥、隔离 TypeScript 编译和固定来源原生引擎 |
 | `QuickExcel.ScriptContracts` / `QuickExcel.ScriptWorker` | 有界 IPC 协议与独立脚本执行进程 |

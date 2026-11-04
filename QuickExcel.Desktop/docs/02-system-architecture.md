@@ -40,7 +40,7 @@ M5 UI-004/UI-005 的结构/排序/样式/尺寸命令在 Core，由 EditorContro
 | 当前代码 | 当前职责与限制 | 演进方式 |
 | --- | --- | --- |
 | [MainWindow.xaml.cs](../Views/MainWindow/MainWindow.xaml.cs)、[EditorController.cs](../Editing/EditorController.cs)、[DocumentViewModel.cs](../ViewModels/DocumentViewModel.cs) | 控件提交、统一编辑/粘贴/撤销入口、会话状态投影；保留 DataGrid | M5 扩展视图拆分、网格和交互验收 |
-| [WorkbookDocument.cs](../../QuickExcel.Core/WorkbookDocument.cs)、[DocumentSession.cs](../../QuickExcel.Core/DocumentSession.cs) | facade、不可变快照、串行写入门禁、事务历史、计算代次与保存修订 | M3 扩展计算协调，M4 接入动作事务 |
+| [WorkbookDocument.cs](../../QuickExcel.Core/Documents/WorkbookDocument.cs)、[DocumentSession.cs](../../QuickExcel.Core/Documents/DocumentSession.cs) | facade、不可变快照、串行写入门禁、事务历史、计算代次与保存修订 | M3 扩展计算协调，M4 接入动作事务 |
 | `LegacyWorkbookStorage.cs`（历史代码，已移除）、`DocumentPackage.cs`（历史代码，已移除） | Infrastructure 内的 XLSQ v1/XLSX 适配、容量预检、同目录原子保存 | M2 实现类型保真、v2 格式和损失报告 |
 | `LegacyWorkbookCalculator.cs`（历史代码，已移除） | 消费稀疏快照，按类型求值和同表依赖完整重算 | M3 完成跨表、名称、增量和完整公式契约 |
 | [QuickJsRuntimeFactory.cs](../../QuickExcel.Infrastructure/Scripting/QuickJsRuntimeFactory.cs)、[QuickJsSession.cs](../../QuickExcel.Scripting/QuickJsSession.cs) | 每轮授权计算新建并释放进程内 QuickJS 上下文 | M4 移入 ScriptWorker |
