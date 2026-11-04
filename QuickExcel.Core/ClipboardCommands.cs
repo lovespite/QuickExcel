@@ -22,6 +22,7 @@ public sealed class WorkbookClipboard
                 return new CellSnapshot(CellContent.FromLiteral(cell.Value,sheet.GetStyleId(row,column)));
             return new CellSnapshot(cell.Content.WithStyle(sheet.GetStyleId(row, column)), cell.Calculation, cell.SpillOwner);
         })).ToImmutableArray();
+        MergedCells = sheet.MergedCells.Select(CellRectangle.Parse).Where(m => ValidationSafety.Overlaps(m, range)).ToImmutableArray();
         HasAnnotations = sheet.Annotations.Links.Keys.Concat(sheet.Annotations.Notes.Keys).Any(p => range.Contains(p.Row, p.Column));
         HasConditionalFormats = sheet.Data.ConditionalFormats.Any(r => r.Ranges.Any(a => ValidationSafety.Overlaps(a, range))) ||
             snapshot.FileState?.CompatibilityDiagnostics.Any(d => d.Feature.Contains("conditionalFormatting", StringComparison.OrdinalIgnoreCase)) == true;
@@ -39,12 +40,14 @@ public sealed class WorkbookClipboard
     public bool HasAnnotations { get; }
     public bool HasConditionalFormats { get; }
     public ImmutableArray<CellSnapshot> Cells { get; }
+    public ImmutableArray<CellRectangle> MergedCells { get; }
 
     public static WorkbookClipboard Capture(WorkbookSnapshot snapshot, SheetId sheetId, CellRectangle range, bool cut = false)
     {
         ValidateRange(range); var sheet = snapshot.GetSheet(sheetId);
         ExtendedObjectSafety.ValidateCopy(snapshot, sheetId, range);
-        RequirePlainGeometry(sheet, range);
+        if (cut) RequirePlainGeometry(sheet, range);
+        else { RequireCompleteMerges(sheet, range); RequireNoDrawings(sheet, range); }
         RequireVisibleDimensions(sheet, range);
         if (cut)
             foreach (var (position,cell) in sheet.Cells.Where(p => p.Value.Calculation?.Array is not null))
@@ -63,15 +66,26 @@ public sealed class WorkbookClipboard
     }
     internal static void RequirePlainGeometry(WorksheetSnapshot sheet, CellRectangle range)
     {
+        if (sheet.MergedCells.Select(CellRectangle.Parse).Any(m => ValidationSafety.Overlaps(m, range)))
+            throw new NotSupportedException("此操作暂不支持合并单元格；整批操作未应用。");
+        RequireNoDrawings(sheet, range);
+    }
+    internal static void RequireCompleteMerges(WorksheetSnapshot sheet, CellRectangle range)
+    {
+        if (sheet.MergedCells.Select(CellRectangle.Parse).Any(m => ValidationSafety.Overlaps(m, range) &&
+            !(range.Contains(m.Top, m.Left) && range.Contains(m.Bottom, m.Right))))
+            throw new InvalidOperationException("复制/粘贴区域必须包含完整的合并单元格；整批操作未应用。");
+    }
+    internal static void RequireNoDrawings(WorksheetSnapshot sheet, CellRectangle range)
+    {
         bool Intersects(int top, int left, int bottom, int right) => top <= range.Bottom && bottom >= range.Top && left <= range.Right && right >= range.Left;
-        if (sheet.MergedCells.Select(CellRectangle.Parse).Any(m => Intersects(m.Top, m.Left, m.Bottom, m.Right)) ||
-            sheet.Images.Select(i => i.Anchor).Concat(sheet.Data.Charts.Select(c => c.Anchor)).Any(a =>
+        if (sheet.Images.Select(i => i.Anchor).Concat(sheet.Data.Charts.Select(c => c.Anchor)).Any(a =>
             {
                 var b = a.Bounds(sheet); if (b.Width <= 0 || b.Height <= 0) return false;
                 var extent = DrawingGeometry.FromBounds(sheet, b, DrawingAnchorKind.TwoCell);
                 return Intersects(extent.Row, extent.Column, extent.EndRow - (extent.EndRowOffset == 0 ? 1 : 0), extent.EndColumn - (extent.EndColumnOffset == 0 ? 1 : 0));
             }))
-            throw new NotSupportedException("内部复制/粘贴区域含合并单元格或图片，尚不能完整复制其结构；整批操作未应用。");
+            throw new NotSupportedException("内部复制/粘贴区域含图片或图表，尚不能完整复制其结构；整批操作未应用。");
     }
     internal static void RequireVisibleDimensions(WorksheetSnapshot sheet, CellRectangle range)
     {
@@ -94,16 +108,27 @@ public sealed class PasteCellsCommand(WorkbookClipboard clipboard, SheetId sheet
         if (snapshot.DocumentId != clipboard.DocumentId || snapshot.Revision != expectedRevision || expectedRevision < clipboard.Revision)
             throw new InvalidOperationException("复制后文档已改变，请重新复制或剪切；整批操作未应用。");
         WorkbookClipboard.ValidateRange(target);
-        var rows = transpose ? clipboard.Columns : clipboard.Rows; var columns = transpose ? clipboard.Rows : clipboard.Columns;
-        var single = target.Top == target.Bottom && target.Left == target.Right;
-        var fill = clipboard.Rows == 1 && clipboard.Columns == 1 && !clipboard.IsCut;
-        if (fill) { rows = target.Bottom - target.Top + 1; columns = target.Right - target.Left + 1; }
-        if (!single && !fill && (target.Bottom - target.Top + 1 != rows || target.Right - target.Left + 1 != columns))
-            throw new ArgumentException("选区尺寸须与粘贴数据相同，或只选择左上角单元格。");
-        var output = new CellRectangle(target.Top, target.Left, checked(target.Top + rows - 1), checked(target.Left + columns - 1));
-        WorkbookClipboard.ValidateRange(output);
         var sheet = snapshot.GetSheet(sheetId);
-        WorkbookClipboard.RequirePlainGeometry(sheet, output); WorkbookClipboard.RequireVisibleDimensions(sheet, output);
+        // A scalar pasted into a selected merged cell edits its anchor, like ordinary entry.
+        var scalarMerge = mode != CellPasteMode.Formats && !clipboard.IsCut && clipboard.Rows == 1 && clipboard.Columns == 1 &&
+            sheet.MergedCells.Select(CellRectangle.Parse).Any(m => m.Top == target.Top && m.Left == target.Left &&
+                (m == target || target.Top == target.Bottom && target.Left == target.Right));
+        var destination = scalarMerge ? new CellRectangle(target.Top, target.Left, target.Top, target.Left) : target;
+        var rows = transpose ? clipboard.Columns : clipboard.Rows; var columns = transpose ? clipboard.Rows : clipboard.Columns;
+        var single = destination.Top == destination.Bottom && destination.Left == destination.Right;
+        var fill = clipboard.Rows == 1 && clipboard.Columns == 1 && !clipboard.IsCut;
+        if (fill) { rows = destination.Bottom - destination.Top + 1; columns = destination.Right - destination.Left + 1; }
+        if (!single && !fill && (destination.Bottom - destination.Top + 1 != rows || destination.Right - destination.Left + 1 != columns))
+            throw new ArgumentException("选区尺寸须与粘贴数据相同，或只选择左上角单元格。");
+        var output = new CellRectangle(destination.Top, destination.Left, checked(destination.Top + rows - 1), checked(destination.Left + columns - 1));
+        WorkbookClipboard.ValidateRange(output);
+        if (clipboard.IsCut) WorkbookClipboard.RequirePlainGeometry(sheet, output);
+        else
+        {
+            if (!scalarMerge) WorkbookClipboard.RequireCompleteMerges(sheet, output);
+            WorkbookClipboard.RequireNoDrawings(sheet, scalarMerge ? target : output);
+        }
+        WorkbookClipboard.RequireVisibleDimensions(sheet, scalarMerge ? target : output);
         if (mode is CellPasteMode.All or CellPasteMode.Formats && (clipboard.HasConditionalFormats ||
             sheet.Data.ConditionalFormats.Any(r => r.Ranges.Any(a => ValidationSafety.Overlaps(a, output)))))
             throw new NotSupportedException("完整/格式粘贴涉及条件格式，尚不能复制或拆分其作用范围；可明确选择只贴值或公式，规则可在条件格式管理器中编辑。");
@@ -155,10 +180,31 @@ public sealed class PasteCellsCommand(WorkbookClipboard clipboard, SheetId sheet
                     new(clipboard.Range.Top + sr, clipboard.Range.Left + sc), position, transpose), style, original.Content.DynamicArray);
             }
             else content = mode == CellPasteMode.All || original.SpillOwner is not null ? original.Content.WithStyle(style) : CellContent.FromLiteral(original.Value, style);
+            if (mode == CellPasteMode.Formats && content == sheet.GetCell(position.Row, position.Column)?.Content) continue;
             edits.Add(new(new(sheetId, position.Row, position.Column), content));
         }
-        var draft = new SetCellsCommand(edits).Prepare(snapshot);
-        return mode == CellPasteMode.Formats ? draft with { CalculationUnchanged = true } : draft;
+        var copiedMerges = clipboard.MergedCells.Select(m => transpose
+            ? new CellRectangle(output.Top + m.Left - clipboard.Range.Left, output.Left + m.Top - clipboard.Range.Top,
+                output.Top + m.Right - clipboard.Range.Left, output.Left + m.Bottom - clipboard.Range.Top)
+            : new CellRectangle(output.Top + m.Top - clipboard.Range.Top, output.Left + m.Left - clipboard.Range.Left,
+                output.Top + m.Bottom - clipboard.Range.Top, output.Left + m.Right - clipboard.Range.Left)).ToArray();
+        var targetMerges = sheet.MergedCells.Select(CellRectangle.Parse).Where(m => ValidationSafety.Overlaps(m, output)).ToHashSet();
+        var copyMergeFormat = mode is CellPasteMode.All or CellPasteMode.Formats && !scalarMerge;
+        var mergeChanged = copyMergeFormat && !targetMerges.SetEquals(copiedMerges);
+        // Apply cells while unmerged so an Excel format-paste can retain covered values/formulas.
+        var prepared = copyMergeFormat && targetMerges.Count > 0
+            ? new MergeCellsCommand(sheetId, output, unmerge: true).Prepare(snapshot).Snapshot : snapshot;
+        var draft = new SetCellsCommand(edits).Prepare(prepared);
+        if (copyMergeFormat)
+        {
+            var merged = draft.Snapshot;
+            foreach (var merge in copiedMerges)
+                merged = new MergeCellsCommand(sheetId, merge) { PreserveCoveredContent = true }.Prepare(merged).Snapshot;
+            if (!mergeChanged && draft.Changes.IsEmpty && !draft.StructureChanged)
+                return new(snapshot, [], false, CalculationUnchanged: mode == CellPasteMode.Formats);
+            draft = draft with { Snapshot = merged, StructureChanged = draft.StructureChanged || mergeChanged };
+        }
+        return mode == CellPasteMode.Formats ? draft with { CalculationUnchanged = !mergeChanged } : draft;
     }
 
     internal static string CopyFormula(WorkbookSnapshot snapshot, SheetId sourceSheet, SheetId targetSheet, string formula,

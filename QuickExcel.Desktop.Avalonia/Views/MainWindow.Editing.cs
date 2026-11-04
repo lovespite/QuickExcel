@@ -78,7 +78,7 @@ public sealed partial class MainWindow
         _clipboardToken = plain ? null : Guid.NewGuid().ToString("N");
         _clipboardSession = Document.Session.SessionId; _clipboardRevision = snapshot.Revision;
         await _clipboard.WriteAsync(new(text, _clipboardToken));
-        _status.Text = cut ? "已准备剪切；粘贴后才移动，Esc 取消。" : plain ? "已复制可见行显示文本。" : "已复制值、公式和格式。";
+        _status.Text = cut ? "已准备剪切；粘贴后才移动，Esc 取消。" : plain ? "已复制可见行显示文本。" : "已复制值、公式、格式和合并区域。";
     }
     private async Task PasteAsync(string mode)
     {
@@ -91,6 +91,9 @@ public sealed partial class MainWindow
             if (_clipboardCells is not { } cells || _clipboardSession != session || _clipboardRevision != revision)
                 throw new InvalidOperationException("复制/剪切已取消或文档已改变，请重新复制。");
             var paste = mode switch { "values" => CellPasteMode.Values, "formulas" => CellPasteMode.Formulas, "formats" => CellPasteMode.Formats, _ => CellPasteMode.All };
+            if (paste != CellPasteMode.Formats && !cells.IsCut && cells.Rows == 1 && cells.Columns == 1 &&
+                Document.Snapshot.Sheets[SheetIndex].MergedCells.Select(CellRectangle.Parse).Any(m => m == Rectangle(target)))
+                target = new(target.Top, target.Left, target.Top, target.Left);
             var transpose = mode == "transpose"; var fill = cells.Rows == 1 && cells.Columns == 1 && !cells.IsCut;
             var rows = fill ? target.Rows : transpose ? cells.Columns : cells.Rows;
             var columns = fill ? target.Columns : transpose ? cells.Rows : cells.Columns;

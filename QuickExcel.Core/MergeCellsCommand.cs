@@ -4,6 +4,9 @@ namespace QuickExcel.Core;
 
 public sealed class MergeCellsCommand(SheetId sheetId, CellRectangle range, bool unmerge = false) : DocumentCommand
 {
+    // Clipboard merge formatting preserves covered inputs, as Excel PasteSpecial formats does.
+    // Ordinary interactive merging keeps its existing explicit content-conflict guard.
+    internal bool PreserveCoveredContent { get; init; }
     internal override CommandDraft Prepare(WorkbookSnapshot snapshot)
     {
         WorkbookLimits.ValidatePosition(range.Top, range.Left); WorkbookLimits.ValidatePosition(range.Bottom, range.Right);
@@ -18,7 +21,7 @@ public sealed class MergeCellsCommand(SheetId sheetId, CellRectangle range, bool
             if (merges.Any(Overlaps)) throw new ArgumentException("选区与现有合并区域重叠。");
             if (sheet.Annotations.Links.Keys.Concat(sheet.Annotations.Notes.Keys).Any(p => range.Contains(p.Row, p.Column) && (p.Row != range.Top || p.Column != range.Left)))
                 throw new InvalidOperationException("合并会遮盖其他单元格的超链接或批注；操作未应用。");
-            if (sheet.Cells.Any(p => range.Contains(p.Key.Row, p.Key.Column) && (p.Key.Row != range.Top || p.Key.Column != range.Left) &&
+            if (!PreserveCoveredContent && sheet.Cells.Any(p => range.Contains(p.Key.Row, p.Key.Column) && (p.Key.Row != range.Top || p.Key.Column != range.Left) &&
                 (p.Value.Content.Kind == CellContentKind.Formula || p.Value.Value.Kind != CellValueKind.Blank)))
                 throw new InvalidOperationException("合并会遮盖其他单元格内容，请先移动或清除这些内容。");
             merges.Add(range);

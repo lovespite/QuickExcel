@@ -160,7 +160,7 @@ public sealed class ClipboardCommandTests
     }
 
     [Fact]
-    public void HiddenMergedOversizeStaleAndMissingResultsRejectWithoutPartialWrites()
+    public void HiddenPartialMergeOversizeStaleAndMissingResultsRejectWithoutPartialWrites()
     {
         var book = Book(); var id = book.Sheets[0].Id; using var session = new DocumentSession(book);
         var payload = WorkbookClipboard.Capture(book, id, new(0, 0, 1, 1));
@@ -171,7 +171,7 @@ public sealed class ClipboardCommandTests
         Assert.Throws<InvalidOperationException>(() => session.Execute(new PasteCellsCommand(newer, id, new(6, 0, 6, 0), 1)));
         Assert.Same(current, session.Snapshot);
         session.Execute(new MergeCellsCommand(id, new(8, 0, 8, 1)));
-        Assert.Throws<NotSupportedException>(() => WorkbookClipboard.Capture(session.Snapshot, id, new(8, 0, 8, 1)));
+        Assert.Throws<InvalidOperationException>(() => WorkbookClipboard.Capture(session.Snapshot, id, new(8, 0, 8, 0)));
         session.Execute(new SetCellsCommand([new(new(id, 9, 0), CellContent.FromFormula("=1+2"))]));
         var missing = WorkbookClipboard.Capture(session.Snapshot, id, new(9, 0, 9, 0));
         Assert.True(missing.HasOldResults); current = session.Snapshot;
@@ -179,13 +179,15 @@ public sealed class ClipboardCommandTests
         Assert.Same(current, session.Snapshot);
     }
 
-    [Fact]
-    public void CopyBlankEffectiveStyleOverridesDestinationInheritance()
+    [Theory]
+    [InlineData(CellPasteMode.All)]
+    [InlineData(CellPasteMode.Formats)]
+    public void CopyBlankEffectiveStyleOverridesDestinationInheritance(CellPasteMode mode)
     {
         var id = SheetId.New(); var sheet = new WorksheetSnapshot(id, "S", columns: [new(2, new(StyleId: 1))]);
         var book = new WorkbookSnapshot(Guid.NewGuid(), 0, ExcelDateSystem.Windows1900, [sheet], styles: [new(), new() { Bold = true }]);
         using var session = new DocumentSession(book);
-        session.Execute(new PasteCellsCommand(WorkbookClipboard.Capture(book, id, new(0, 0, 0, 0)), id, new(0, 2, 0, 2), 0));
+        session.Execute(new PasteCellsCommand(WorkbookClipboard.Capture(book, id, new(0, 0, 0, 0)), id, new(0, 2, 0, 2), 0, mode));
         Assert.Equal(0, session.Snapshot.Sheets[0].GetStyleId(0, 2)); Assert.NotNull(session.Snapshot.Sheets[0].GetCell(0, 2));
         session.Undo(); Assert.Equal(1, session.Snapshot.Sheets[0].GetStyleId(0, 2));
     }

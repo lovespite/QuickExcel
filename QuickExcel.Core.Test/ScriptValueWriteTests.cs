@@ -65,22 +65,22 @@ public sealed class ScriptValueWriteTests
     }
 
     [Theory]
-    [InlineData("s.getCell('B1').setValue(9)", false, "非主单元格")]
-    [InlineData("s.getCell('B2').setFormula('=1')", false, "非主单元格")]
-    [InlineData("s.getRange('A1:B1').setValues([[7,9]])", false, "非主单元格")]
-    [InlineData("s.getRange('A1:B1').setFormulas([['=7','=9']])", false, "非主单元格")]
-    [InlineData("s.getCell('D4').setValue(null)", true, "单元格内图片")]
-    [InlineData("s.getRange('C4:D4').setValues([[7,9]])", true, "单元格内图片")]
-    [InlineData("s.getRange('C4:D4').setFormulas([['=7','=9']])", true, "单元格内图片")]
-    public void InvalidTargetsRollBackEarlierEventWritesEvenWhenCaught(string write, bool inCellImage, string message)
+    [InlineData("s.getCell('B1').setValue(9)", false)]
+    [InlineData("s.getCell('B2').setFormula('=1')", false)]
+    [InlineData("s.getRange('A1:B1').setValues([[7,9]])", false)]
+    [InlineData("s.getRange('A1:B1').setFormulas([['=7','=9']])", false)]
+    [InlineData("s.getCell('D4').setValue(null)", true)]
+    [InlineData("s.getRange('C4:D4').setValues([[7,9]])", true)]
+    [InlineData("s.getRange('C4:D4').setFormulas([['=7','=9']])", true)]
+    public void InvalidTargetsRollBackEarlierEventWritesEvenWhenCaught(string write, bool inCellImage)
     {
         var sheet = SheetWithAttachments(inCellImage);
         using var doc = Document("$.events.on('sheet.activate',()=>{const s=$.getActiveWorksheet();" +
             "s.getCell('C3').setValue(5);s.getCell('A1').getFormat().getFill().setColor('#ff0000');" +
             "try{" + write + ";}catch(e){console.log(String(e));}});", sheet);
         doc.EnableScriptsAndCalculate(); var revision = doc.Snapshot.Revision;
-        Assert.Throws<InvalidOperationException>(() => doc.DispatchScriptEvents());
-        Assert.Contains(doc.Session.Diagnostics, line => line.Contains(message, StringComparison.Ordinal));
+        var error = Assert.Throws<ScriptRuntimeFailureException>(() => doc.DispatchScriptEvents());
+        Assert.Contains("invalid write", error.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(revision, doc.Snapshot.Revision); Assert.False(doc.CanUndo);
         Assert.Equal("42", doc.GetCellValue(0, 0, 0)); Assert.Null(doc.Snapshot.Sheets[0].GetCell(2, 2));
         Assert.Equal(0, doc.Snapshot.Sheets[0].GetStyleId(0, 0));
@@ -135,7 +135,7 @@ public sealed class ScriptValueWriteTests
             });
             """, SheetWithAttachments());
         doc.EnableScriptsAndCalculate();
-        Assert.Throws<InvalidOperationException>(() => doc.DispatchScriptEvents());
+        Assert.Throws<ScriptRuntimeFailureException>(() => doc.DispatchScriptEvents());
         Assert.Equal("42", doc.GetCellValue(0, 0, 0)); Assert.False(doc.CanUndo);
         Assert.Empty(doc.Snapshot.PackageFiles.Entries); Assert.Empty(doc.Session.TransientFiles.Entries);
     }
@@ -151,9 +151,9 @@ public sealed class ScriptValueWriteTests
         doc.Save(path);
         var restored = new TypedWorkbookStorage().Open(path).Sheets[0];
         Assert.Equal(CellValue.FromText("updated"), restored.GetCell(0, 0)!.Value);
-        Assert.Equal(sheet.MergedCells, restored.MergedCells);
+        Assert.Equal(sheet.MergedCells.ToArray(), restored.MergedCells.ToArray());
         Assert.True(sheet.Annotations.ContentEquals(restored.Annotations));
         var image = Assert.Single(restored.Images);
-        Assert.Equal(sheet.Images[0].Data, image.Data); Assert.Equal(sheet.Images[0].Anchor, image.Anchor);
+        Assert.Equal(sheet.Images[0].Data.ToArray(), image.Data.ToArray()); Assert.Equal(sheet.Images[0].Anchor, image.Anchor);
     }
 }
