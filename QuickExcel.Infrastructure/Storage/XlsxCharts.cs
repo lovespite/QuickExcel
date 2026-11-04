@@ -180,7 +180,8 @@ internal static partial class XlsxCharts
             var v = (string?)e.Attribute("val");
             if (e.Name.Namespace != Chart) continue;
             if (e.Name.LocalName is "overlay" or "roundedCorners" or "invertIfNegative" && v is not (null or "0" or "false") ||
-                e.Name.LocalName == "crosses" && v != "autoZero" || e.Name.LocalName == "crossBetween" && v != "between") throw new NotSupportedException("非基础图表布局 " + e.Name.LocalName);
+                e.Name.LocalName == "crosses" && v != "autoZero" || e.Name.LocalName == "crossBetween" && v != "between" &&
+                !(v == "midCat" && root.Descendants(Chart + "scatterChart").Any() && !root.Descendants(Chart + "catAx").Any())) throw new NotSupportedException("非基础图表布局 " + e.Name.LocalName);
         }
     }
 

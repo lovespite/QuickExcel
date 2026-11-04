@@ -26,7 +26,7 @@ public static class ClipboardNative
         var result = new Dictionary<string,byte[]>(); Open(IntPtr.Zero);
         try { uint f=0; while((f=EnumClipboardFormats(f))!=0) { var s=new StringBuilder(256); GetClipboardFormatName(f,s,256); string name=s.Length==0 ? "CF_"+f : s.ToString();
             // Never dereference bitmap/metafile/OLE handles; only capture bounded HGLOBAL text formats.
-            if(name!="XML Spreadsheet" && name!="HTML Format" && name!="Biff8" && f!=13) { result[name]=new byte[0]; continue; }
+            if(name!="XML Spreadsheet" && name!="HTML Format" && name!="Biff8" && name!="PNG" && name!="Art::GVML ClipFormat" && name!="Excel 2007 Internal Shape" && name!="ShadowWorkbook" && f!=13 && f!=8 && f!=17) { result[name]=new byte[0]; continue; }
             var h=GetClipboardData(f); ulong size=GlobalSize(h).ToUInt64(); if(size>16*1024*1024) throw new InvalidOperationException("Payload too large");
             var p=GlobalLock(h); if(p==IntPtr.Zero) continue; try { var b=new byte[(int)size]; Marshal.Copy(p,b,0,b.Length); result[name]=b; } finally { GlobalUnlock(h); }
         } } finally { CloseClipboard(); } return result;

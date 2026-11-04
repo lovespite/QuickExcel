@@ -25,10 +25,10 @@ internal sealed class XlsxPackage
     public FileReadBudget Budget { get; }
     public CompatibilityIssueCollection Issues { get; } = new();
 
-    public XlsxPackage(byte[] bytes, FileReadBudget budget)
+    public XlsxPackage(byte[] bytes, FileReadBudget budget, int maximumEntries = 2048)
     {
         Budget = budget;
-        Parts = Unzip(bytes, budget, 2048);
+        Parts = Unzip(bytes, budget, maximumEntries);
         var contentTypes = XmlPart("[Content_Types].xml");
         if (contentTypes.Root?.Name != ContentTypes + "Types") throw new InvalidDataException("无效的 OPC 内容类型目录。");
         var defaults = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);

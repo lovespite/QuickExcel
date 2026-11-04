@@ -20,6 +20,11 @@ public sealed partial class WorkbookGrid
     private IPointer? _objectPointer;
     private long _objectRevision;
     public DrawingObjectId? SelectedDrawingObject => _selectedObject;
+    public void SelectDrawingObject(DrawingObjectId target)
+    {
+        if (_snapshot is null || ObjectAnchor(target) is null) throw new ArgumentOutOfRangeException(nameof(target));
+        CancelObjectGesture(); _selectedObject = target; CellEditor.IsVisible = false; InvalidateContent(); DrawingObjectSelectionChanged?.Invoke();
+    }
     public bool IsDrawingObjectDragging => _objectPointer is not null;
     public event Action<DrawingObjectChange>? DrawingObjectChanged;
     public event Action? DrawingObjectSelectionChanged;

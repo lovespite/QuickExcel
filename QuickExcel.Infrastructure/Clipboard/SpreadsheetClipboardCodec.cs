@@ -179,7 +179,6 @@ public static class SpreadsheetClipboardCodec
         var cells = capture.Cells.Select((c, i) =>
         {
             var style = snapshot.Styles[c.Content.StyleId] with { FontScheme = null, NamedStyleId = 0 };
-            if (style.TextRotation == 255) throw new NotSupportedException("竖排文字尚不支持对外复制。");
             var formula = formulas && c.Content.Kind == CellContentKind.Formula ? c.Content.FormulaText : null;
             if (formula is not null) ExternalClipboardFormula.Validate(formula);
             var date = c.Value.Kind == CellValueKind.Number && CellDisplayFormatter.IsDateFormat(style, c.Value.NumberValue)

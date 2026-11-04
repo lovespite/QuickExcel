@@ -90,6 +90,11 @@ public static partial class HtmlClipboardCodec
                 if (rs > 1 || cs > 1) merges.Add(new(r, c, r + rs - 1, c + cs - 1));
                 var css = string.Join(";", rules.Where(x => x.Selector == td.LocalName || x.Selector.StartsWith('.') && td.ClassList.Contains(x.Selector[1..])).OrderBy(x => x.Selector.StartsWith('.') ? 1 : 0).Select(x => x.Css)) + ";" + td.GetAttribute("style");
                 var style = Css(css, limitations);
+                foreach (var decoration in td.QuerySelectorAll("s,strike,u"))
+                {
+                    if (decoration.TextContent != td.TextContent) { limitations.Add("HTML 含单元格内局部文字格式"); continue; }
+                    style = decoration.LocalName == "u" ? style with { Underline = style.Underline ?? "single" } : style with { Strike = true };
+                }
                 var text = new StringBuilder();
                 void Text(INode n) { if (n is IText t) text.Append(t.Data); else if (n is IElement { LocalName: "br" }) text.Append('\n'); else if (n is not IElement { LocalName: "script" or "style" }) foreach (var child in n.ChildNodes) Text(child); }
                 Text(td);
@@ -100,7 +105,9 @@ public static partial class HtmlClipboardCodec
             }
         }
         if (columns == 0) throw new FormatException("HTML 表格没有单元格。");
-        return new(rows.Length, columns, Enumerable.Range(0, rows.Length).SelectMany(r => Enumerable.Range(0, columns).Select(c => cells.GetValueOrDefault(new(r, c)) ?? new(CellValue.Blank, new()))), merges, limitations, valuesAreDisplayText: true);
+        var region = new ExternalClipboardRegion(rows.Length, columns, Enumerable.Range(0, rows.Length).SelectMany(r => Enumerable.Range(0, columns).Select(c => cells.GetValueOrDefault(new(r, c)) ?? new(CellValue.Blank, new()))), merges, limitations, valuesAreDisplayText: true);
+        _ = new WorkbookSnapshot(Guid.NewGuid(), 0, ExcelDateSystem.Windows1900, [new WorksheetSnapshot(SheetId.New(), "Validation")], styles: region.Cells.Select(c => c.Style!).Distinct());
+        return region;
     }
     [GeneratedRegex(@"([^{}]+)\{([^{}]*)\}", RegexOptions.CultureInvariant, 100)] private static partial Regex Rules();
     [GeneratedRegex(@"^\.[a-zA-Z_][\w-]*$", RegexOptions.CultureInvariant, 100)] private static partial Regex SimpleClass();
@@ -133,8 +140,18 @@ public static partial class HtmlClipboardCodec
                 case "white-space": style = style with { WrapText = value is "normal" or "pre-wrap" }; break;
                 case "mso-number-format": style = style with { NumberFormatCode = SpreadsheetClipboardStyles.NumberFormat(Unquote(value)) }; break;
                 case "text-decoration": style = style with { Underline = value.Contains("underline") ? "single" : null, Strike = value.Contains("line-through") }; break;
+                case "text-underline-style":
+                    if (value is not ("single" or "double" or "single-accounting" or "double-accounting" or "none")) { limitations.Add("HTML 下划线类型尚未支持"); break; }
+                    style = style with { Underline = value switch { "single-accounting" => "singleAccounting", "double-accounting" => "doubleAccounting", "none" => null, _ => value } }; break;
+                case "mso-char-indent-count": style = style with { Indent = int.Parse(value, CultureInfo.InvariantCulture) }; break;
+                case "mso-rotate": style = style with { TextRotation = SpreadsheetClipboardStyles.Rotation(int.Parse(value, CultureInfo.InvariantCulture)) }; break;
+                case "layout-flow":
+                    if (value == "vertical-ideographic") style = style with { TextRotation = 255 };
+                    else if (value != "horizontal") limitations.Add("HTML 文字排列尚未支持");
+                    break;
                 case "border": case "border-left": case "border-right": case "border-top": case "border-bottom":
-                    var bits = value.Split(' ', StringSplitOptions.RemoveEmptyEntries); var kind = value == "none" ? 0 : value.Contains("double") ? 6 : value.Contains("dashed") ? 3 : value.Contains("dotted") ? 4 : value.Contains("solid") ? 1 : -1;
+                    var bits = value.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                    var kind = BorderKind(bits);
                     if (kind < 0) { limitations.Add("HTML 边框尚未支持"); break; }
                     var color = bits.Length > 2 ? CssColor(bits[^1], limitations) : null;
                     if (key is "border" or "border-left") style = style with { LeftBorder = kind, LeftBorderColor = color };
@@ -143,12 +160,24 @@ public static partial class HtmlClipboardCodec
                     if (key is "border" or "border-bottom") style = style with { BottomBorder = kind, BottomBorderColor = color };
                     break;
                 default:
-                    if (!key.StartsWith("padding") && key is not ("height" or "width" or "mso-ignore" or "mso-generic-font-family" or "mso-font-charset" or "mso-background-source" or "mso-pattern" or "mso-protection" or "mso-rotate")) limitations.Add("HTML 含未支持的样式：" + key);
+                    if (!key.StartsWith("padding") && key is not ("height" or "width" or "mso-ignore" or "mso-generic-font-family" or "mso-font-charset" or "mso-background-source" or "mso-pattern" or "mso-protection")) limitations.Add("HTML 含未支持的样式：" + key);
                     break;
             }
         }
         return style;
     }
+    private static int BorderKind(string[] bits)
+    {
+        if (bits is ["none"]) return 0;
+        if (bits.Length < 2 || !bits[0].EndsWith("pt", StringComparison.OrdinalIgnoreCase) ||
+            !double.TryParse(bits[0].AsSpan(0, bits[0].Length - 2), NumberStyles.Float, CultureInfo.InvariantCulture, out var width)) return -1;
+        return (bits[1], width) switch {
+            ("hairline", .5) => 7, ("solid", .5) => 1, ("solid", 1) => 2, ("solid", 1.5) => 5,
+            ("dashed", .5) => 3, ("dotted", .5) => 4, ("double", 2) => 6, _ => -1 };
+    }
+    private static string BorderCss(int kind) => kind switch {
+        1 => ".5pt solid", 2 => "1.0pt solid", 3 => ".5pt dashed", 4 => ".5pt dotted", 5 => "1.5pt solid", 6 => "2.0pt double", 7 => ".5pt hairline",
+        _ => throw new NotSupportedException("HTML 边框类型尚未支持。") };
     private static string? CssColor(string value, ISet<string> limitations)
     {
         value = value.ToLowerInvariant() switch { "black" or "windowtext" => "#000000", "white" => "#FFFFFF", "red" => "#FF0000", "yellow" => "#FFFF00", "blue" => "#0000FF", "green" => "#008000", "transparent" => "", _ => value };
@@ -172,9 +201,13 @@ public static partial class HtmlClipboardCodec
                 var format = s.NumberFormatCode ?? CellDisplayFormatter.BuiltIn(s.NumberFormatId) ?? "General";
                 var css = $"font-family:'{s.FontName ?? "Calibri"}';font-size:{(s.FontSize ?? 11).ToString(CultureInfo.InvariantCulture)}pt;font-weight:{(s.Bold ? 700 : 400)};font-style:{(s.Italic ? "italic" : "normal")};color:{SpreadsheetClipboardStyles.Rgb(s.FontColor ?? "FF000000")};white-space:{(s.WrapText ? "pre-wrap" : "nowrap")};mso-number-format:'{format.Replace("'", "\\'")}'";
                 if (s.FillColor is { } fill) css += ";background-color:" + SpreadsheetClipboardStyles.Rgb(fill);
+                css += ";text-decoration:" + (s.Underline is not (null or "none") ? (s.Strike ? "underline line-through" : "underline") : s.Strike ? "line-through" : "none");
+                if (s.Underline is not (null or "none")) css += ";text-underline-style:" + (s.Underline switch { "singleAccounting" => "single-accounting", "doubleAccounting" => "double-accounting", _ => s.Underline });
+                css += ";mso-char-indent-count:" + s.Indent.ToString(CultureInfo.InvariantCulture);
+                css += s.TextRotation == 255 ? ";layout-flow:vertical-ideographic" : ";mso-rotate:" + (s.TextRotation <= 90 ? s.TextRotation : 90 - s.TextRotation).ToString(CultureInfo.InvariantCulture);
                 css += ";text-align:" + new[] { "general", "left", "center", "right", "justify" }[s.Horizontal] + ";vertical-align:" + new[] { "top", "middle", "bottom", "middle" }[s.Vertical];
                 foreach (var (side, kind, color) in new[] { ("left", s.LeftBorder, s.LeftBorderColor), ("right", s.RightBorder, s.RightBorderColor), ("top", s.TopBorder, s.TopBorderColor), ("bottom", s.BottomBorder, s.BottomBorderColor) })
-                    if (kind != 0) css += $";border-{side}:.5pt {(kind == 6 ? "double" : kind == 3 ? "dashed" : kind == 4 ? "dotted" : "solid")} {SpreadsheetClipboardStyles.Rgb(color ?? "FF000000")}";
+                    css += $";border-{side}:" + (kind == 0 ? "none" : BorderCss(kind) + " " + SpreadsheetClipboardStyles.Rgb(color ?? "FF000000"));
                 b.Append("<td style=\"").Append(E(css)).Append('"');
                 if (anchors.TryGetValue(new(r, c), out var m)) b.Append($" rowspan=\"{m.Bottom - m.Top + 1}\" colspan=\"{m.Right - m.Left + 1}\"");
                 var display = CellInput.DisplayText(cell.Value);

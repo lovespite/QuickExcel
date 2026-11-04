@@ -27,7 +27,7 @@ internal static class SpreadsheetClipboardStyles
             var known = e.Name.LocalName switch
             {
                 "Font" => new[] { "FontName", "Size", "Color", "Bold", "Italic", "Underline", "StrikeThrough", "CharSet", "Family" },
-                "Alignment" => ["Horizontal", "Vertical", "WrapText", "Rotate", "Indent", "ShrinkToFit"],
+                "Alignment" => ["Horizontal", "Vertical", "WrapText", "Rotate", "VerticalText", "Indent", "ShrinkToFit"],
                 "Interior" => ["Color", "Pattern", "PatternColor"], "NumberFormat" => ["Format"], "Protection" => ["Protected", "HideFormula"], "Borders" => [], _ => null
             };
             if (known is null || e.Attributes().Any(a => !a.IsNamespaceDeclaration && !known.Contains(a.Name.LocalName))) limitations.Add("含未支持的单元格样式属性");
@@ -42,7 +42,7 @@ internal static class SpreadsheetClipboardStyles
                     s = s with { Horizontal = EnumValue(A(e, "Horizontal"), ["Automatic", "Left", "Center", "Right", "Justify"], parent.Horizontal, limitations),
                         Vertical = EnumValue(A(e, "Vertical"), ["Top", "Center", "Bottom", "Justify"], parent.Vertical, limitations),
                         WrapText = Flag(e, "WrapText", parent.WrapText), ShrinkToFit = Flag(e, "ShrinkToFit", parent.ShrinkToFit), Indent = Int(e, "Indent", parent.Indent),
-                        TextRotation = A(e, "Rotate") is { } rot ? Rotation(int.Parse(rot, CultureInfo.InvariantCulture)) : parent.TextRotation };
+                        TextRotation = Flag(e, "VerticalText", false) ? 255 : A(e, "Rotate") is { } rot ? Rotation(int.Parse(rot, CultureInfo.InvariantCulture)) : parent.TextRotation };
                     break;
                 case "Interior":
                     if (A(e, "Pattern") is not (null or "Solid" or "None")) limitations.Add("含未支持的图案填充");
@@ -53,7 +53,9 @@ internal static class SpreadsheetClipboardStyles
                     s = s with { LeftBorder = 0, RightBorder = 0, TopBorder = 0, BottomBorder = 0, LeftBorderColor = null, RightBorderColor = null, TopBorderColor = null, BottomBorderColor = null };
                     foreach (var b in e.Elements())
                     {
-                        var kind = (A(b, "LineStyle"), Int(b, "Weight")) switch { (null or "None", _) => 0, ("Continuous", 0) => 7, ("Continuous", 1) => 1, ("Continuous", 2) => 2, ("Continuous", 3) => 5, ("Dash", _) => 3, ("Dot", _) => 4, ("Double", _) => 6, _ => Unsupported(limitations, 0) };
+                        var kind = (A(b, "LineStyle"), Int(b, "Weight")) switch {
+                            (null or "None", _) => 0, ("Continuous", 0) => 7, ("Continuous", 1) => 1, ("Continuous", 2) => 2, ("Continuous", 3) => 5,
+                            ("Dash", 1) => 3, ("Dot", 1) => 4, ("Double", 3) => 6, _ => Unsupported(limitations, 0) };
                         var color = Color(A(b, "Color"));
                         s = A(b, "Position") switch { "Left" => s with { LeftBorder = kind, LeftBorderColor = color }, "Right" => s with { RightBorder = kind, RightBorderColor = color },
                             "Top" => s with { TopBorder = kind, TopBorderColor = color }, "Bottom" => s with { BottomBorder = kind, BottomBorderColor = color }, _ => Unsupported(limitations, s) };
@@ -64,7 +66,7 @@ internal static class SpreadsheetClipboardStyles
         return s;
     }
     private static T Unsupported<T>(ISet<string> d, T fallback) { d.Add("含未支持的样式或边框"); return fallback; }
-    private static int Rotation(int r) => r >= 0 ? r : 90 - r;
+    internal static int Rotation(int r) => r is < -90 or > 90 ? throw new FormatException("文字旋转须在 -90 至 90 度之间。") : r >= 0 ? r : 90 - r;
     private static int EnumValue(string? text, string[] values, int fallback, ISet<string> d) => text is null ? fallback : Array.IndexOf(values, text) is var i && i >= 0 ? i : Unsupported(d, fallback);
     private static bool Flag(XElement e, string name, bool fallback) => A(e, name) switch { null => fallback, "1" => true, "0" => false, _ => throw new FormatException("无效样式布尔值。") };
     internal static string? Color(string? color)
@@ -88,7 +90,7 @@ internal static class SpreadsheetClipboardStyles
         return new(Ss + "Style", Attr("ID", id),
             new XElement(Ss + "Alignment", Attr("Horizontal", new[] { "Automatic", "Left", "Center", "Right", "Justify" }[s.Horizontal]),
                 Attr("Vertical", new[] { "Top", "Center", "Bottom", "Justify" }[s.Vertical]), Attr("WrapText", s.WrapText ? 1 : 0), Attr("ShrinkToFit", s.ShrinkToFit ? 1 : 0),
-                Attr("Indent", s.Indent), Attr("Rotate", s.TextRotation <= 90 ? s.TextRotation : 90 - s.TextRotation)),
+                Attr("Indent", s.Indent), s.TextRotation == 255 ? Attr("VerticalText", 1) : Attr("Rotate", s.TextRotation <= 90 ? s.TextRotation : 90 - s.TextRotation)),
             new XElement(Ss + "Font", Attr("FontName", s.FontName ?? "Calibri"), Attr("Size", s.FontSize ?? 11), Attr("Color", Rgb(s.FontColor ?? "FF000000")),
                 Attr("Bold", s.Bold ? 1 : 0), Attr("Italic", s.Italic ? 1 : 0), Attr("StrikeThrough", s.Strike ? 1 : 0),
                 s.Underline is null or "none" ? null : Attr("Underline", char.ToUpperInvariant(s.Underline[0]) + s.Underline[1..])),

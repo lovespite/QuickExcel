@@ -92,7 +92,8 @@ public sealed partial class MainWindow
             _workspace.New(); ShowBook(); _clipboard = new AvaloniaClipboard(this);
             await ExecuteAsync(new UpdateScriptModulesCommand(ScriptModuleSet.Single("")));
             _files = new SmokeFiles(); _discardChoice = () => Task.FromResult(SaveDecision.Discard);
-            if (operation == "export")
+            if (operation == "object") await RunDrawingClipboardExchangeAsync(directory, mode, Check);
+            else if (operation == "export")
             {
                 var sheet = Document.Snapshot.ActiveSheetId;
                 await ExecuteAsync(new SetCellsCommand([
@@ -123,11 +124,11 @@ public sealed partial class MainWindow
             else
             {
                 var incoming = await _clipboard.ReadAsync();
-                Check(incoming.SpreadsheetXml is not null, "Avalonia reads typed XML from one real OS data object");
-                await File.WriteAllBytesAsync(Path.Combine(directory, "incoming.xml"), incoming.SpreadsheetXml!);
+                Check(incoming.SpreadsheetXml is not null || incoming.Html is not null, "Avalonia reads XML or HTML from one real OS data object");
+                if (incoming.SpreadsheetXml is { } spreadsheet) await File.WriteAllBytesAsync(Path.Combine(directory, "incoming.xml"), spreadsheet);
                 if (incoming.Html is { } html) await File.WriteAllBytesAsync(Path.Combine(directory, "incoming.cfhtml"), html);
                 if (incoming.Biff8 is { } biff8) await File.WriteAllBytesAsync(Path.Combine(directory, "incoming.biff8"), biff8);
-                var source = SpreadsheetClipboardCodec.Read(incoming.SpreadsheetXml!, incoming.Biff8);
+                var source = incoming.SpreadsheetXml is { } xml ? SpreadsheetClipboardCodec.Read(xml, incoming.Biff8) : HtmlClipboardCodec.Read(incoming.Html!);
                 _grid.Select(new(3, 2)); var before = Document.Snapshot; await PasteAsync(mode);
                 var pasted = Document.Snapshot; Check(pasted.Revision > before.Revision, "Real paste handler commits external data");
                 await File.WriteAllTextAsync(Path.Combine(directory, "paste-status.txt"), _status.Text);
@@ -139,6 +140,8 @@ public sealed partial class MainWindow
                 _grid.SelectRange(new(3, 2, 3 + source.Rows - 1, 2 + source.Columns - 1), new(3, 2));
                 await CopyAsync(false, externalFormulas: mode == "formulas");
             }
+            if (operation != "object")
+            {
             var snapshot = Document.Snapshot;
             foreach (var ext in new[] { "xlsx", "xlsq" })
             {
@@ -153,6 +156,7 @@ public sealed partial class MainWindow
             await File.WriteAllTextAsync(Path.Combine(directory, "model.json"), JsonSerializer.Serialize(snapshot.Sheets[0].Cells.OrderBy(p => p.Key.Row).ThenBy(p => p.Key.Column).Select(p => new
             { row = p.Key.Row, column = p.Key.Column, kind = p.Value.Value.Kind.ToString(), value = CellInput.DisplayText(p.Value.Value), formula = p.Value.Content.Kind == CellContentKind.Formula ? p.Value.Content.FormulaText : null,
                 style = snapshot.Styles[p.Value.Content.StyleId] }), new JsonSerializerOptions { WriteIndented = true }));
+            }
         }
         catch (Exception ex) { error = ex; }
         await File.WriteAllTextAsync(Path.Combine(directory, "result.json"), JsonSerializer.Serialize(new { passed = error is null, checks, error = error?.ToString() }, new JsonSerializerOptions { WriteIndented = true }));

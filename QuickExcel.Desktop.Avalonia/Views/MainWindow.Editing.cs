@@ -68,6 +68,12 @@ public sealed partial class MainWindow
     private async Task CopyAsync(bool cut, bool externalFormulas = false, bool valuesOnly = false)
     {
         if (!await CommitEditorsAsync()) return;
+        if (_grid.SelectedDrawingObject is { } selected)
+        {
+            if (cut) throw new NotSupportedException("对象暂支持复制；粘贴确认后可删除原对象。");
+            if (externalFormulas || valuesOnly) throw new NotSupportedException("对象请使用复制或复制为图片。");
+            await CopyDrawingAsync(selected); return;
+        }
         var view = CurrentView; view.RequireCurrentFilter(Document.Snapshot);
         var range = SelectedRange(); var snapshot = Document.Snapshot; var sheet = snapshot.Sheets[SheetIndex];
         bool Excluded(int row) => sheet.Rows.GetValueOrDefault(row)?.Hidden == true || view.IsFilteredOut(snapshot, SheetIndex, row);
@@ -102,10 +108,14 @@ public sealed partial class MainWindow
     {
         if (!await CommitEditorsAsync()) return;
         string? notice = null;
-        var session = Document.Session.SessionId; var revision = Document.Snapshot.Revision; var target = SelectedRange(); var sheetId = Document.Snapshot.ActiveSheetId;
+        var session = Document.Session.SessionId; var revision = Document.Snapshot.Revision; var target = SelectedRange(allowObject: true); var sheetId = Document.Snapshot.ActiveSheetId;
+        var selectedObject = _grid.SelectedDrawingObject;
         var data = await _clipboard.ReadAsync();
-        if (session != Document.Session.SessionId || revision != Document.Snapshot.Revision || sheetId != Document.Snapshot.ActiveSheetId || target != SelectedRange())
+        if (session != Document.Session.SessionId || revision != Document.Snapshot.Revision || sheetId != Document.Snapshot.ActiveSheetId || target != SelectedRange(allowObject: true) || selectedObject != _grid.SelectedDrawingObject)
             throw new InvalidOperationException("读取剪贴板期间文档、工作表或目标选区已改变，请重试。");
+        if (mode is "image" or "chart" || mode == "all" && data.Token is null && data.SpreadsheetXml is null && data.Html is null && (data.Png is not null || data.OfficeDrawing is not null || data.ChartPackage is not null))
+        { await PasteDrawingAsync(data, mode, new(target.Top, target.Left), revision); return; }
+        if (selectedObject is not null) throw new InvalidOperationException("此操作需要单元格选区；请先取消对象选择。");
         if (data.Token is not null && data.Token == _clipboardToken)
         {
             if (_clipboardCells is not { } cells || _clipboardSession != session || _clipboardRevision != revision)
@@ -187,13 +197,17 @@ public sealed partial class MainWindow
         edit.Items.Add(CommandMenu("复制  Ctrl+C", () => CopyAsync(false))); edit.Items.Add(CommandMenu("剪切  Ctrl+X", () => CopyAsync(true)));
         edit.Items.Add(CommandMenu("复制结果值（对外）", () => CopyAsync(false, valuesOnly: true)));
         edit.Items.Add(CommandMenu("复制公式（对外，相对引用）", () => CopyAsync(false, externalFormulas: true)));
-        foreach (var (title, mode) in new[] { ("粘贴  Ctrl+V", "all"), ("只贴值", "values"), ("粘贴公式", "formulas"), ("只贴格式", "formats"), ("转置粘贴", "transpose") })
+        edit.Items.Add(CommandMenu("复制对象为图片", CopyDrawingPictureAsync));
+        foreach (var (title, mode) in new[] { ("粘贴  Ctrl+V", "all"), ("只贴值", "values"), ("粘贴公式", "formulas"), ("只贴格式", "formats"), ("转置粘贴", "transpose"), ("粘贴为可编辑图表（附带数据快照）", "chart"), ("粘贴为图片", "image") })
             edit.Items.Add(CommandMenu(title, () => PasteAsync(mode)));
         edit.Items.Add(CommandMenu("向下填充  Ctrl+D", () => FillDirectionAsync(false)));
         edit.Items.Add(CommandMenu("向右填充  Ctrl+R", () => FillDirectionAsync(true))); edit.Items.Add(CommandMenu("填充序列", SeriesAsync));
         var menu = new ContextMenu();
         foreach (var (title, action) in new (string, Func<Task>)[] { ("复制", () => CopyAsync(false)), ("剪切", () => CopyAsync(true)), ("粘贴", () => PasteAsync("all")), ("只贴值", () => PasteAsync("values")), ("清除内容", ClearAsync) })
             menu.Items.Add(CommandMenu(title, action));
+        menu.Items.Add(CommandMenu("复制对象为图片", CopyDrawingPictureAsync));
+        menu.Items.Add(CommandMenu("粘贴为可编辑图表（附带数据快照）", () => PasteAsync("chart")));
+        menu.Items.Add(CommandMenu("粘贴为图片", () => PasteAsync("image")));
         InstallPageBreakMenu(menu);
         _grid.ContextMenu = menu;
     }

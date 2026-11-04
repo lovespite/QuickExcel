@@ -7,7 +7,7 @@ using System.Xml.Linq;
 namespace QuickExcel.Storage;
 
 /// <summary>One ledger is shared by the outer package, nested XLSX and all parsers.</summary>
-internal sealed class FileReadBudget(CancellationToken cancellationToken)
+internal sealed class FileReadBudget(CancellationToken cancellationToken, long expandedLimit = 256L * 1024 * 1024, long parsedLimit = 512L * 1024 * 1024)
 {
     public const int MaxFileBytes = 64 * 1024 * 1024;
     public const long MaxExpandedBytes = 256L * 1024 * 1024;
@@ -18,13 +18,13 @@ internal sealed class FileReadBudget(CancellationToken cancellationToken)
     public void Expand(long count)
     {
         Check();
-        if (count < 0 || count > MaxExpandedBytes - _expanded) throw new InvalidDataException("压缩包累计展开量超过 256 MiB。");
+        if (count < 0 || count > expandedLimit - _expanded) throw new InvalidDataException("压缩包累计展开量超过预算。");
         _expanded += count;
     }
     public void Parse(long count)
     {
         Check();
-        if (count < 0 || count > MaxParsedBytes - _parsed) throw new InvalidDataException("XML/JSON 与领域对象累计解析预算超过 512 MiB。");
+        if (count < 0 || count > parsedLimit - _parsed) throw new InvalidDataException("XML/JSON 与领域对象累计解析量超过预算。");
         _parsed += count;
     }
 }
