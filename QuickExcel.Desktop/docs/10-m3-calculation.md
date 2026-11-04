@@ -1,5 +1,7 @@
 # M3 跨表与增量计算 / 0.4 计算预览
 
+2026-11-04 续推：新增 LARGE/SMALL/RANK.EQ，支持数值数据集及标量名次/方向、增量重算和 XLSX/XLSQ；多格名次/方向仍保护来源公式。92 条独立 Excel 公式、15 条参数数量及 736 项原生往返检查通过，语义和双向验证见 [74](74-e5-implementation-log.md)。
+
 2026-11-04：E5 另外完成 LET 顺序词法绑定/按需单次记忆、常量目标 OFFSET/INDIRECT 的静态依赖及 VAR.S/VAR.P/STDEV.S/STDEV.P/MEDIAN。56 条真实 Excel 公式、39 条参数边界、编辑和两格式往返均通过；可移植导出保留显式数组模式，冻结非可移植数组时同时冻结派生格及其消费者。LAMBDA、动态目标引用、旧 CSE、多区域引用及未列出函数仍未支持，具体边界见 [74](74-e5-implementation-log.md)。
 
 2026-11-03：新增 SEQUENCE/FILTER/SORT/UNIQUE、XLOOKUP 单查找值的多格返回、`#` 溢出引用、数组广播和 IF/IFERROR/IFNA 分支；统一所有权与依赖规划、原生文件往返及声明边界见 [E5 实施记录](74-e5-implementation-log.md)。标量工作簿保留原增量/合批路径；数组工作簿先规划纯公式区域，再按最终拓扑执行一次脚本，暂不支持脚本决定数组尺寸。

@@ -1,5 +1,7 @@
 # E5 高级分析与扩展兼容实施记录
 
+2026-11-04 续推：新增透视表 AVERAGE/MIN/MAX，以及 LARGE/SMALL/RANK.EQ 三个统计函数。167 项受影响测试、128 项 Avalonia 检查和真实 Excel 双向对照通过；范围、证据和交付见文末“聚合与顺序统计扩展”。
+
 2026-11-04：XC-0501–0504 的实现与专项验收已按下述范围完成。E5 包含动态数组、基础透视表、LET/静态引用/五个统计函数、Strict OOXML 及线程评论原位保留；每项限制仍独立适用，不代表完整 Excel 兼容。最终集成与本地包证据见文末。源码修改尚未提交 Git。
 
 ## 实施顺序与验收
@@ -103,3 +105,33 @@
 - 使用 `scripts/build-quickexcel.ps1 -SkipTests -RunSmoke -CreateArchive` 生成并激活新的本地 Windows 自包含包。`SkipTests` 跳过与本次修改无关的发布脚本安全/平台组合，前述 764 项专项已独立完成；生产自检仍完整执行。八项自检包括 typed 保存重开、实际隔离 JSC/TS worker、Monaco/PDF.js、PDF 输出和资源清理，全部通过。包证据：`artifacts/avalonia/releases/20261103-160612-6d18c466/evidence/`；生产编译有一条已有诊断关闭构建的 `Program.WebScriptsOnly` 未赋值警告，零错误。首轮命令因相对日志路径随脚本目录变化而失败，改用绝对日志路径后成功，未改动发布逻辑。
 - 新包：`artifacts/avalonia/releases/20261103-160612-6d18c466/application/`，版本 `0.6.0-preview.8`；默认 `Start-QuickExcel.cmd` 通过 `artifacts/avalonia/active-windows.json` 指向该包，旧包保留。归档 `artifacts/avalonia/releases/QuickExcel-Avalonia-0.6.0-preview.8-win-x64-20261103-160612-6d18c466.zip`，SHA-256 `F434B0DFEB6F2819D468476850441E085E37792B9296B036C0D7EE8C8FDF86CB`。这是本机验证的预览包，不是外部发布或干净机器认证。
 - 独立复核激活指针与 release.json 哈希、ZIP 中 736 个清单文件的长度/SHA-256 及无额外文件，全部一致；ZIP 为 228,905,311 字节，记录在 `artifacts/e5/final/release-verification.json`。最终源码身份、未提交 patch 和新增源文件副本由 `scripts/record-baseline.ps1` 采集至 `artifacts/e5/final/baseline-capture-*`；不以本机未提交源码冒充一个 Git 提交。
+
+## 聚合与顺序统计扩展（2026-11-04）
+
+本轮按用户选择同时推进 XC-0502 与 XC-0503，扩展原验收子集。验收代码身份为 `8a3cee2c4b38295ef4af120b023f426265160ea2`，本记录更新仍在工作区。
+
+### 透视表 AVERAGE / MIN / MAX
+
+- 创建对话框增加平均值、最小值、最大值，沿用单行字段、可选列字段、单度量和原子创建/刷新/撤销。总计从源记录汇总，平均值总计不平均各组平均值。
+- 数值参与三种新聚合，引用中的文本/布尔值忽略；纯空白组合保持空白，仅含非空非数值项的平均值为 `#DIV/0!`、最小/最大值为零。混合数值时不因文本/布尔值引入零。求和/平均值的累加超出有限范围仍拒绝原子操作；计数和最小/最大值不再因无用的求和溢出失败。
+- 原生 `dataField subtotal="average|min|max"` 及 XLSQ 往返完成，继续声明 `worksheet-pivots`；旧版未识别的聚合走已有不支持透视定义的原包保护路径。其他聚合、多个度量/层级、外部源及原容量/错误源值限制仍适用。
+- `scripts/test-excel-pivots.ps1 -ExtendedAggregations` 生成五个共享源样本，含空白、数字外观文本、布尔值、重复值、正负数及总计。Excel 16.0 build 20527 初始/编辑/重开稳定，预期在 `Fixtures/excel-pivot-aggregations.json`，原始文件在 `artifacts/e5/pivot-aggregations/excel-oracle-02/`。
+- `native-import-02/` 五个定义全部导入、编辑、刷新和写回；`excel-rewritten-01/` 的真实 Excel 刷新前后和重开结果一致，源哈希未变。首轮脚本对所有文本设置格式而产生未建模表头差异格式，Table 被正确保护；改为仅给数字外观文本设置格式后通过，失败证据保留。
+- 15 项透视测试初验通过，覆盖五种聚合、两格式、过期缓存、刷新撤销/重做及非求和溢出边界；最终纳入下述 167 项组合。Avalonia 新增三种方式的实际对话框路由及整表撤销检查。
+
+### LARGE / SMALL / RANK.EQ
+
+- LARGE/SMALL 支持数值范围、单值、整列稀疏引用、LET/IF 引用及已支持数组表达式作为数据集，k 为标量。RANK.EQ 支持本地引用、LET/IF 返回的引用、重复值同名次及升降序；找不到数值返回 `#N/A`。
+- 引用中的文本（含数字外观文本）、布尔值和空白不计入数值集；直接常量遵循显式转换，错误传播。独立 Excel 表明小数 k 的处理为 LARGE 向上取整、SMALL 向下取整，并先检查原 k 在 `[1, 数值个数]` 内；RANK.EQ 的非零数值/布尔方向为升序，文本方向为 `#VALUE!`。
+- 每调用最多 100,000 个数值，保留取消/计算期限；局部数组形状按绑定 ID 记忆，避免重复局部引用造成指数级验证。增量重算、撤销/重做、补全/参数提示及 `_xlfn.RANK.EQ` 编码已接入。
+- k、待排名数值及方向的多格数组仍在绑定时保护来源公式/旧缓存；不猜测为标量。RANK.EQ 不扩展为任意计算数组；Excel 拒绝本轮直接常量和 SEQUENCE 数据参数。旧 CSE、多区域、LAMBDA、动态目标及其他未列出的财务/统计函数保持原边界。
+- 92 条真实 Excel 公式及编辑后预期在 `Fixtures/order-statistic-spec.json`、`excel-order-statistics.json`；原始证据 `artifacts/e5/order-statistics/excel-oracle-03/`。15 条参数数量证据在 `excel-arity-01/` 及 `Fixtures/excel-order-statistic-arity.json`。前两次生成被 Excel 拒绝的 RANK.EQ 输入保留失败记录，不计支持样本。
+- `native-01/` 完成真实 Excel 输入计算、编辑、撤销/重做、两格式重开，共 736 项检查零失败，输出 Open XML 校验零问题。`excel-output-initial-01/`、`excel-output-edited-01/` 由 Excel 再次重算/保存重开；`excel-verdict.json` 零差异且源哈希不变。独立 ZIP/XML 另覆盖未实现数组参数只读及原包逐字节保留。
+
+### 本轮集成与交付
+
+- 解决方案 Release 构建零警告/错误。167 项受影响的透视、统计、参数边界、LET、数组、编辑、导出、保留公式及 M3 计算/存储测试通过，零跳过：`artifacts/e5/extensions-final/e5-extension-related-01.trx`。未运行全量回归。
+- Avalonia Grid 128 项通过，证据 `artifacts/avalonia/workspace/20261104-120151-f965d881/`，网格截图已查看。实机门禁仍延期。
+- 依据：[微软透视汇总说明](https://support.microsoft.com/en-us/excel/change-the-summary-function-or-custom-calculation-for-a-field-in-a-pivottable)、[RANK.EQ](https://support.microsoft.com/en-us/excel/functions/rank-eq-function)，实际边界以本轮独立 Excel 证据为准。
+- `scripts/build-quickexcel.ps1 -SkipTests -RunSmoke` 已发布并激活 `artifacts/avalonia/releases/20261104-120615-1e12e760/application/`（`0.6.0-preview.8`），12 项生产自检全部通过。证据在该 release 的 `evidence/`；诊断关闭构建有两条已有 `Program.WebScriptsOnly/WebModulesOnly` 未赋值警告，零错误。
+- 已核对 `Start-QuickExcel.cmd` → `scripts/start-quickexcel.ps1` → `active-windows.json` 的新包路径、清单哈希及四个相关生产程序集哈希。清单 SHA-256：`A80F533C006DBD7652AD7D8E8C73CFB4C6C62DDF18EF3B7E939AEDD0FFABBD13`；记录 `artifacts/e5/extensions-final/release-verification.json`。旧包保留，未做外部发布；M4/M5/M6 门禁未因本轮扩展改变。

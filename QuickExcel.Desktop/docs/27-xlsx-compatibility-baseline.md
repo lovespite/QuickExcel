@@ -25,6 +25,7 @@ S = 支持该行限定子集；P = 部分支持；O = 仅原包保留；N = 不�
 | 结构化引用 | P | P | P | P | P | XC-0303 支持连续表列/当前行/特殊行、计算列、改名/插删/复制；20,891 项往返与 Excel/WPF 通过，边界见 [52](52-structured-references-and-table-editing.md) |
 | 动态数组语义 | S | S | S | S | S | XC-0501 的四函数、XLOOKUP 多格输出、原生 XLDAPR 与统一溢出模型已完成；未支持语义仍走原包路径，详见 [74](74-e5-implementation-log.md) |
 | LET、常量目标 OFFSET/INDIRECT、五个统计函数 | S | S | S | S | S | XC-0503：LET 词法绑定/单次记忆、静态依赖引用、VAR.S/P、STDEV.S/P、MEDIAN；56 条真实 Excel、39 条参数边界及往返验证见 [74](74-e5-implementation-log.md) |
+| LARGE / SMALL / RANK.EQ | S | S | S | S | S | 数据集/标量名次与方向的声明子集；92 条真实 Excel、15 条参数边界、增量/两格式及双向 Excel 对照见 [74](74-e5-implementation-log.md)。多格名次/方向仍保护 |
 | LAMBDA、动态引用目标、3D/联合/交叉引用 | O | P | N | N | O | 未建立相应执行/依赖及结构模型，继续原包只读或旧缓存边界，不因 E5 阶段完成而宣称支持 |
 | Strict OOXML 的已建模单元格/公式/样式/元数据 | S | P | S | P | S | XC-0504 保持源变体写回；ISO 日期及明确命名空间/百分比字段，独立输入与真实 Excel 重开见 [74](74-e5-implementation-log.md)；显示/编辑仍受各特性子集限制 |
 | 文档属性白名单 | S | N | — | N | S | XC-0103 支持 core/app/custom 白名单；其他分组/结构仍报告，见 [32](32-xlsx-save-and-metadata.md) |
@@ -35,7 +36,7 @@ S = 支持该行限定子集；P = 部分支持；O = 仅原包保留；N = 不�
 | 外部工作簿/数据链接与其他复杂绘图 | O | P | N | N | O | 既有原包/来源缓存路径，不自动访问或刷新；未新增外部链接或任意绘图可编辑模型 |
 | 数据验证 | P | P | P | P | P | XC-0304 列表/范围/数值/日期/长度/基础公式、输入提示及整批校验；1,370 个真实 Excel 案例通过，范围见 [53](53-data-validation.md) |
 | 条件格式基础 | P | P | P | P | P | XC-0305 比较/公式/重复值/文本、优先级与差异样式；真实 Excel 五阶段对照通过，结构与复制边界见 [54](54-conditional-formatting.md) |
-| 基础透视表 | S | S | S | S | S | XC-0502：一个行字段、可选列字段、单个求和/计数；本地表/区域、显式刷新、过期缓存、XLSX/XLSQ 及 Avalonia 验收见 [74](74-e5-implementation-log.md) |
+| 基础透视表 | S | S | S | S | S | XC-0502：一个行字段、可选列字段、单个求和/计数/平均值/最小值/最大值；本地表/区域、显式刷新、过期缓存、XLSX/XLSQ、真实 Excel 及 Avalonia 验收见 [74](74-e5-implementation-log.md) |
 | 高级条件格式 / 透视扩展 | O | P | N | N | O | 未建模的色阶/数据条/图标集，以及多层透视、切片器、数据模型等继续保留/报告；不自动连接外部数据 |
 | 普通复制/TSV 粘贴、内部剪贴板/冻结 | — | P | — | P | P | 冻结 XC-0104、内部富剪贴板 XC-0201 已完成声明子集 |
 | AutoFilter / sortState | P | P | — | P | P | XC-0301 多列列表/比较、排序设置和手动隐藏区分已持久化；37 个真实 Excel 案例及范围/来源限制见 [50](50-filter-and-sort-persistence.md) |
