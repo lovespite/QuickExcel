@@ -104,8 +104,11 @@ public sealed partial class MainWindow
         page.SaveRequested += () => _ = PerformAsync(async () => await SaveAsync(false));
         page.FocusRequested += FocusScriptNavigation;
         page.ConsoleRequested += ToggleScriptConsole;
+        page.NavigateRequested += NavigateScriptAsync;
         _scriptContent!.Content = page.Browser.View; RefreshScriptChrome();
-        await page.LoadAsync(_selectedModule); RefreshScriptChrome();
+        await page.LoadAsync(_selectedModule);
+        if (_selectedDefinition is { } definition) await page.OpenDefinitionAsync(definition);
+        RefreshScriptChrome();
     }
     private void ScriptPageFailed(Exception error)
     {
@@ -173,13 +176,17 @@ public sealed partial class MainWindow
         _scriptCancellation?.Cancel();
         var window = _scriptWindow; _scriptClosing = true;
         try { if (_scriptPage is not null) await _scriptPage.DisposeAsync(); window.Close(); }
-        finally { _scriptWindow = null; _scriptPage = null; _scriptContent = null; _modulePicker = null; _actionPicker = null; _scriptStatus = null; _scriptDiagnostics = null; _scriptRecovery = null; _scriptClosing = false;
+        finally
+        {
+            _scriptWindow = null; _scriptPage = null; _scriptContent = null; _modulePicker = null; _actionPicker = null; _scriptStatus = null; _scriptDiagnostics = null; _scriptRecovery = null; _scriptClosing = false;
             _scriptExecution = null;
             _scriptEditorPane = null; _scriptOutputSplitter = null; _scriptConsoleToggle = null;
             _scriptModuleGroups.Clear(); _scriptNavigationSelection = null;
+            _definitionPicker = null; _definitionPanel = null; _selectedDefinition = null; _scriptDefinitionFiles.Clear();
             _consoleInput = null; _consoleOutput = null; _consoleRun = null; _consoleCopy = null;
             _consoleFilter = null; _consoleLevel = null; _consoleCount = null; _consoleEmpty = null;
-            _consoleVisibleEntries = []; _scriptOutputTabs = null; }
+            _consoleVisibleEntries = []; _scriptOutputTabs = null;
+        }
     }
     private async Task RefreshScriptPageAfterMutationAsync()
     {
@@ -200,8 +207,11 @@ public sealed partial class MainWindow
         _scriptWindow.Title = (_scriptPage?.Drafts.IsDirty == true ? "* " : "") + "脚本工作区 · QuickExcel";
         RefreshScriptNavigation(revealSelected);
         var modules = Document.Snapshot.ScriptModules;
-        if (_scriptStatus is not null && _scriptPage?.Drafts.Failed != true)
-            _scriptStatus.Text = $"{modules.Modules[_selectedModule].Path} · {ScriptModuleProperties(modules, _selectedModule)} · API v{modules.ScriptApiVersion} · {(Document.ScriptsEnabled ? "已授权" : "未授权")} · {(modules.Signature is null ? "未签名" : "已签名")} · " + (DesktopServices.SupportsScripts ? "独立隔离进程执行" : "此平台尚未开放脚本执行");
+        if (_scriptStatus is not null && _scriptPage?.Drafts.Failed != true && _selectedDefinition is { } definition)
+            _scriptStatus.Text = $"{definition} · 定义文件（只读）";
+        else if (_scriptStatus is not null && _scriptPage?.Drafts.Failed != true)
+            _scriptStatus.Text = $"{modules.Modules[_selectedModule].Path} · {ScriptModuleProperties(modules, _selectedModule)} · API v{modules.ScriptApiVersion} · {(Document.ScriptsEnabled ? "已授权" : "未授权")}" +
+             (DesktopServices.SupportsScripts ? string.Empty : "(此平台尚未开放脚本执行)");
     }
     private void DisableScripts()
     { _scriptCancellation?.Cancel(); Document.DisableScripts(); ClearScriptActions(); RefreshScriptActions(); RefreshScriptChrome(); }
@@ -213,7 +223,7 @@ public sealed partial class MainWindow
         if (document.Snapshot.FileState?.FormulaReadOnly == true) throw new InvalidOperationException(WorkbookFileState.FormulaReadOnlyMessage);
         var dialog = new FieldsDialog("新建模块").Text("id", "模块逻辑 ID", "helpers")
             .Choice("role", "角色", ["辅助", "UDF（公式函数）", "Actions（操作与事件）", "UDF / Actions"])
-            .Choice("language", "语言", ["JavaScript (.js)", "TypeScript (.ts)"])
+            .Choice("language", "语言", ["JavaScript (.js)", "TypeScript (.ts)"], selected: (int)ScriptLanguage.TypeScript)
             .Note("角色和语言在创建后不可更改。");
         ScriptModuleSet BuildModules()
         {
@@ -227,15 +237,15 @@ public sealed partial class MainWindow
             if ((role & 1) != 0) bindings.Add(new(id, "formula-functions"));
             if ((role & 2) != 0) bindings.Add(new(id, "actions"));
             if (role != 0) entries.Add(id);
-            var module = language == ScriptLanguage.TypeScript ? new ScriptModule($"scripts/{id}.ts", "export function example(value: number) {\n    return value;\n}\n", language) :
-                new ScriptModule($"scripts/{id}.js", "export function example(value) {\n    return value;\n}\n");
+            var module = new ScriptModule($"scripts/{id}.{(language == ScriptLanguage.TypeScript ? "ts" : "js")}",
+                ScriptModuleTemplates.Create(id, language, (role & 1) != 0, (role & 2) != 0), language);
             return new(old.Modules.Add(id, module), entries, old.Revision, old.BindingRevision, old.ScriptApiVersion, bindings);
         }
         dialog.Validate = () => BuildModules();
         if (!await dialog.ShowAsync(this) || !await CommitScriptsAsync()) return;
         _workspace.Editor.Execute(new UpdateScriptModulesCommand(BuildModules()));
         // The module set changed; start a new page generation after the existing page has acknowledged every draft.
-        if (_scriptPage is not null) await _scriptPage.DisposeAsync(); _selectedModule = dialog.String("id").Trim();
+        if (_scriptPage is not null) await _scriptPage.DisposeAsync(); _selectedModule = dialog.String("id").Trim(); _selectedDefinition = null;
         await CreateScriptPageAsync(new(Document.Snapshot.ScriptModules)); Synchronize();
     }
     private async Task ApplyScriptsAsync()
@@ -297,8 +307,8 @@ public sealed partial class MainWindow
                 Column: match.Success && int.TryParse(match.Groups[2].Value, out var column) ? column : 1));
         }
         foreach (var sheet in Document.Snapshot.Sheets)
-        foreach (var (position, cell) in sheet.Cells.Where(p => p.Value.Value.Kind == CellValueKind.Error).Take(200 - entries.Count))
-            entries.Add(new($"{sheet.Name}!{WorkbookGrid.ColumnName(position.Column)}{position.Row + 1}: {cell.Value}", modules.Revision, Sheet: sheet.Id, Cell: position));
+            foreach (var (position, cell) in sheet.Cells.Where(p => p.Value.Value.Kind == CellValueKind.Error).Take(200 - entries.Count))
+                entries.Add(new($"{sheet.Name}!{WorkbookGrid.ColumnName(position.Column)}{position.Row + 1}: {cell.Value}", modules.Revision, Sheet: sheet.Id, Cell: position));
         _scriptDiagnostics.ItemsSource = entries;
     }
     private async Task ActivateScriptDiagnosticAsync()
@@ -308,11 +318,11 @@ public sealed partial class MainWindow
         {
             if (entry.Module is not { } id || _scriptPage is null || !_scriptPage.Drafts.Models.TryGetValue(id, out var model) || model.Version != version || model.ObservedVersion != version)
                 throw new InvalidOperationException("此编译诊断属于旧草稿，请重新检查。");
-            await _scriptPage.LocateAsync(id, entry.Line, entry.Column); _selectedModule = id; RefreshScriptChrome(revealSelected: true); return;
+            await _scriptPage.LocateAsync(id, entry.Line, entry.Column); _selectedModule = id; _selectedDefinition = null; RefreshScriptChrome(revealSelected: true); return;
         }
         if (!await CommitEditorsAsync()) return;
         if (entry.Revision != Document.Snapshot.ScriptModules.Revision) throw new InvalidOperationException("此运行诊断属于旧源码，请重新运行后定位。");
         if (entry.Sheet is { } sheet && entry.Cell is { } cell) { Document.Session.UpdateNavigation(sheet, cell); Synchronize(); ShowBook(); Activate(); _grid.Select(cell); }
-        else if (entry.Module is { } module && _scriptPage is not null) { await _scriptPage.LocateAsync(module, entry.Line, entry.Column); _selectedModule = module; RefreshScriptChrome(revealSelected: true); }
+        else if (entry.Module is { } module && _scriptPage is not null) { await _scriptPage.LocateAsync(module, entry.Line, entry.Column); _selectedModule = module; _selectedDefinition = null; RefreshScriptChrome(revealSelected: true); }
     }
 }

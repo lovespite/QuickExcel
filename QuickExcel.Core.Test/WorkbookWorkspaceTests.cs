@@ -1,6 +1,7 @@
 using QuickExcel.Calculation;
 using QuickExcel.Domain;
 using QuickExcel.Presentation;
+using QuickExcel.Runtime;
 using QuickExcel.Storage;
 using static QuickExcel.Core.Test.M3CalculationTests;
 
@@ -8,6 +9,62 @@ namespace QuickExcel.Core.Test;
 
 public sealed class WorkbookWorkspaceTests : IDisposable
 {
+    [Fact]
+    public void DefaultMainSupportsTypedFunctionsAndMainAction()
+    {
+        using var workspace = new WorkbookWorkspace(new(_storage, new WorkbookCalculator(new ScriptWorkerRuntimeFactory()),
+            new ScriptWorkerActionExecutor()), new Files(_storage));
+        var document = workspace.Document;
+        document.ScriptSource = """
+            const value: number = 42;
+            $.functions.register('ENTRYVALUE', () => value);
+            function main(workbook: ExcelScript.Workbook) {
+                workbook.getActiveCell().setValue(value);
+            }
+            """;
+        workspace.Editor.SetCell(0, 0, 1, "=ENTRYVALUE()");
+        document.EnableScriptsAndCalculate();
+        Assert.Equal("42", document.GetCellValue(0, 0, 1));
+        Assert.Equal("main", Assert.Single(document.ListActions()).Name);
+        Assert.True(document.RunAction("main").Changed);
+        Assert.Equal("42", document.GetCellValue(0, 0, 0));
+        Assert.True(document.Undo());
+        Assert.Equal("", document.GetCellInput(0, 0, 0));
+        Assert.Equal("42", document.GetCellValue(0, 0, 1));
+    }
+
+    [Fact]
+    public async Task NewWorkbooksUseTypeScriptMainWithoutRewritingOpenedJavaScript()
+    {
+        using var workspace = Create();
+        CheckMain();
+        var path = FilePath("legacy-js.xlsq");
+        var legacy = ScriptModuleSet.Single("// Existing JavaScript source");
+        _storage.Save(path, Book(Sheet("S")).WithScriptModules(legacy));
+        await workspace.OpenAsync(new(path));
+        var opened = workspace.Document.Snapshot.ScriptModules;
+        Assert.Equal(1, opened.ScriptApiVersion);
+        Assert.Equal(legacy.Modules["main"], opened.Modules["main"]);
+        Assert.Equal(legacy.Bindings.ToArray(), opened.Bindings.ToArray());
+        workspace.New();
+        CheckMain();
+        await workspace.SaveAsync(new(FilePath("typescript-main.xlsq")));
+        await workspace.OpenAsync(new(FilePath("typescript-main.xlsq")));
+        CheckMain();
+
+        void CheckMain()
+        {
+            var modules = workspace.Document.Snapshot.ScriptModules;
+            Assert.Equal(2, modules.ScriptApiVersion);
+            Assert.Equal("main", Assert.Single(modules.EntryModules));
+            Assert.Equal(new ScriptModule("scripts/main.ts", "", ScriptLanguage.TypeScript), Assert.Single(modules.Modules).Value);
+            Assert.Equal("main", Assert.Single(modules.EntriesFor("formula-functions")));
+            Assert.Equal("main", Assert.Single(modules.EntriesFor("actions")));
+            Assert.False(workspace.Document.IsDirty);
+            Assert.False(workspace.Document.ScriptsEnabled);
+        }
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]

@@ -113,3 +113,31 @@ Avalonia 项目的 Web 资源在 build/publish 中改用 `IfDifferent`，修复�
 新建仍通过 `UpdateScriptModulesCommand` 提交，撤销旧授权和签名；取消、重复 ID、非法 ID 和大小写路径碰撞不会创建模块。没有改变隔离执行、编译、信任及只读保护规则。
 
 验证：Avalonia Release 构建 0 警告、0 错误；`scripts/test-avalonia-web.ps1 -ScriptsOnly` 的 123 项脚本专项通过，证据 `artifacts/avalonia/web-tests/20261104-023935-d4d0d227`，包含分类展开/折叠截图、实际 Monaco 切换、原生创建对话框校验、XLSQ 属性往返和授权/签名撤销。首次检查误将新工作簿主入口当作双角色，已按其实际 UDF 默认绑定修正测试；失败证据保留在 `20261104-023725-f78fb996`。未运行全量回归或性能基准。
+
+## 2026-11-04：角色示例、定义导航与紧凑文件列表
+
+新建 UDF / Actions 模块分别使用角色模板，双角色包含两段示例。UDF 示例注册 `JS.<模块名>.DOUBLE`，演示参数校验和数值返回；无效参数抛出明确错误，由既有运行规则报告 `#SCRIPT!`。Actions 示例向当前单元格写入 42 并设置填充色，整体提交且可一次撤销。JS 使用 JSDoc，TS 使用显式类型或上下文推断；辅助模块仍提供可导入函数。模板名称兼容数字开头、大小写不同、带标点和较长的合法模块 ID，避免无效或重复注册。既有源码不自动替换。
+
+诊断悬浮中的 `quickexcel.d.ts(行, 列)` 链接、Ctrl+单击和“转到定义”按钮接入 Monaco 定义提供器，通过宿主确认草稿后导航，并同步左侧选中项。F12 仍为控制台快捷键。左侧新增“定义文件（只读）”，可直接浏览 QuickExcel 声明；经跳转打开的内置 ECMAScript 声明也保留在此列表，支持编辑器内查找。定义模型与源码草稿分开，不进入版本确认、源码预算、保存或执行；只有当前工作簿模块与内置声明可打开，不访问外部 URI、系统文件或网络。QuickExcel 声明注释统一为英文。
+
+所有文件条目改为 28 DIP 高的单行，选中背景铺满面板宽度，移除分类内容的横向留白。逻辑 ID、完整路径和属性保留在提示中；主入口置顶、分类折叠和源码的创建时属性规则保留。
+
+验证：`ScriptModuleTemplateTests` 7 项通过，覆盖 JS/TS 的 UDF、Actions、双角色、错误参数、动作撤销及特殊模块 ID；`scripts/test-avalonia-web.ps1 -ScriptsOnly` 140 项通过，证据 `artifacts/avalonia/web-tests/20261104-031247-e73fa218`，包含真实诊断链接点击、精确行列定位、标准库/跨模块跳转、定义只读及源码保留，紧凑列表截图已复核。仅运行相关专项，未运行全量回归。
+
+### 纯 JavaScript 工作簿首次打开定义文件
+
+Monaco 按语言延迟注册服务。纯 JavaScript 页面首次打开 `quickexcel.d.ts` 时，定义浏览代码在创建 TypeScript 模型之前调用 `getTypeScriptWorker()`，导致 `TypeScript not registered!` 并触发既有页面失败保护。原先定义导航检查在 TypeScript 工作簿中进行，未覆盖此初始化顺序。
+
+QuickExcel 声明现在直接使用已打包的文本；内置标准库声明通过当前源码模块已初始化的语言 worker 获取。定义仍为只读模型，保留原有草稿确认、模块边界和导航规则。新增两个独立冷页面检查，分别从纯 JavaScript 工作簿首次打开 API 声明和 `lib.es5.d.ts`，并验证返回后源码、编辑状态及语言服务正常。
+
+修复前实际 WebView2 检查复现相同错误，证据 `artifacts/avalonia/web-tests/20261104-033141-1d62ad58`；修复后 `scripts/test-avalonia-web.ps1 -ScriptsOnly` **146 项通过**，证据 `artifacts/avalonia/web-tests/20261104-033213-a4cd52f2`。Avalonia Release 构建 0 警告、0 错误；未运行全量回归或性能基准。
+
+`scripts/build-quickexcel.ps1 -SkipTests -RunSmoke` 已生成并激活 `artifacts/avalonia/releases/20261104-033257-b8ec970e/application`，8 项生产自检通过。活动清单身份及正式 Web 资源一致性已核验，开发构建输出也已恢复正式 Web 资源。
+
+## 2026-11-04：默认 TypeScript 与主入口角色
+
+桌面新建空白工作簿使用 API v2 的 `scripts/main.ts`，新建模块对话框默认选择 TypeScript，仍可显式选择 JavaScript。主入口在文件提示和状态栏统一显示“主入口 · TypeScript”（已有 JavaScript 主入口显示相应语言），与顶部固定文件导航使用相同的主入口判定。
+
+新建主入口同时声明 `formula-functions` 和 `actions` 绑定，可注册 UDF、操作和事件，并支持现有 `function main(workbook: ExcelScript.Workbook)` 操作入口。主入口不重复归入 UDF / Actions 分类，未新增文件格式中的绑定种类。打开已有工作簿不改写语言、源码、绑定或签名，API v1 和示例工作簿保留既有执行语义。
+
+验证：`WorkbookWorkspaceTests` 与 `ScriptModuleTemplateTests` 共 **17 项通过**，包括新建/保存重开默认值、旧 JS 保留、TS 主入口内 UDF 计算与 `main()` 操作及撤销；`scripts/test-avalonia-web.ps1 -ScriptsOnly` **148 项通过**，证据 `artifacts/avalonia/web-tests/20261104-035517-3d9e5735`，验证实际 Monaco 语言、主入口属性、创建对话框默认值与分类导航。首次 Web 打包因临时目录重命名失败（EPERM）中止，重试成功。导航截图已复核；测试后恢复正式 Web 资源并完成 Avalonia Release 构建，0 警告、0 错误。未运行全量回归或性能基准。

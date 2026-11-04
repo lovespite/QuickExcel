@@ -11,7 +11,7 @@ interface QxFunctionDescriptor {
 type QxEventName = 'workbook.open' | 'workbook.beforeClose' | 'workbook.close' | 'workbook.activate' | 'workbook.deactivate'
   | 'workbook.beforeSave' | 'workbook.saved' | 'workbook.calculated' | 'sheet.added' | 'sheet.deleted' | 'sheet.renamed'
   | 'sheet.activate' | 'sheet.deactivate' | 'selection.changed' | 'cell.click' | 'cell.edit' | 'cell.commit' | 'cells.changed';
-/** 现有事件的名称。ON_BEFORE_SAVE 在保存前触发，ON_SAVED 在保存成功后触发。 */
+/** Supported event names. ON_BEFORE_SAVE fires before saving; ON_SAVED fires after a successful save. */
 declare enum QxEventNames {
   ON_OPEN = 'workbook.open', ON_BEFORE_CLOSE = 'workbook.beforeClose', ON_CLOSE = 'workbook.close',
   ON_ACTIVATE = 'workbook.activate', ON_DEACTIVATE = 'workbook.deactivate',
@@ -34,12 +34,12 @@ interface QxEvent {
   readonly isUndoOrRedo: boolean;
 }
 interface QxFileInfo { readonly path: string; readonly type: 'file' | 'directory'; readonly size: number }
-/** 通知时的工作表身份；删除事件仍保留删除前的 id/name。 */
+/** Worksheet identity at notification time. Deletion events retain the original id and name. */
 interface QxEventWorksheet { readonly id: string; readonly name: string }
 type QxEventContext = QxActionContext & { readonly event: QxEvent };
 type QxEventHandler = ((event: QxEvent, context: QxEventContext) => void | null) | null;
 type QxWorksheetEventHandler = ((sheet: QxEventWorksheet, context: QxEventContext) => void | null) | null;
-/** 初始化时注册。属性赋值替换该事件的单个处理器，设为 null 移除；与 on() 监听器共存。 */
+/** Register during initialization. Assigning a property replaces its handler; null removes it. Property handlers coexist with on() listeners. */
 interface QxEvents {
   on(name: QxEventName, handler: (context: QxEventContext) => void | null): void;
   onOpen: QxEventHandler; onWorkbookOpen: QxEventHandler;
@@ -47,7 +47,7 @@ interface QxEvents {
   onClose: QxEventHandler; onWorkbookClose: QxEventHandler;
   onActivate: QxEventHandler; onWorkbookActivate: QxEventHandler;
   onDeactivate: QxEventHandler; onWorkbookDeactivate: QxEventHandler;
-  /** 保存前触发；处理器的持久修改包含在此次保存中。 */
+  /** Fires before saving. Persistent changes made by the handler are included in that save. */
   onBeforeSave: QxEventHandler; onWorkbookBeforeSave: QxEventHandler;
   onSaved: QxEventHandler; onWorkbookSaved: QxEventHandler;
   onCalculated: QxEventHandler; onWorkbookCalculated: QxEventHandler;
@@ -66,12 +66,12 @@ interface QxVirtualFiles {
   mkdir(path: string): void;
   /** Directory must be empty. */
   remove(path: string): void;
-  /** 读取虚拟文件的字节内容。路径限于 //xlsq/、//temp/、//mem/。 */
+  /** Reads bytes from a virtual file. Paths are restricted to //xlsq/, //temp/ and //mem/. */
   readBytes(path: string): Uint8Array;
   writeBytes(path: string, bytes: Uint8Array): void;
   /** Strict UTF-8. */
   readText(path: string): string;
-  /** 将文本按 UTF-8 写入虚拟文件，与本次单元格修改一起原子提交。 */
+  /** Writes UTF-8 text to a virtual file and commits atomically with this operation's cell changes. */
   writeText(path: string, text: string): void;
   readJson(path: string): any;
   writeJson(path: string, value: unknown): void;
@@ -79,7 +79,7 @@ interface QxVirtualFiles {
   move(source: string, destination: string): void;
 }
 interface QxActionContext {
-  /** 当前执行的工作簿对象；读取能看到本轮先前的修改，成功后整体提交。 */
+  /** The current workbook transaction. Reads see earlier writes in this operation; all changes commit together on success. */
   readonly workbook: ExcelScript.Workbook;
   /** A transaction-local view; all writes commit atomically with patch. No OS path mapping. */
   readonly fs: QxVirtualFiles;
@@ -88,39 +88,39 @@ interface QxActionContext {
     readonly baseRevision: number;
     readonly dateSystem: 'Windows1900' | 'Mac1904';
     readonly sheets: readonly { readonly id: string; readonly name: string }[];
-    /** 读取不可变快照中的单元格；cell 使用 A1 地址。sheetId 来自 snapshot.sheets。 */
+    /** Reads a cell from the immutable snapshot. Use an A1 address and a sheetId from snapshot.sheets. */
     getCell(sheetId: string, cell: string): Readonly<{ value: QxScalar; formula: string | null; state: string; hasValue: boolean }>;
-    /** 按行返回矩形区域的值，例如 A1:C3；空白为 null。 */
+    /** Returns row-major values for a rectangle such as A1:C3. Blank cells are null. */
     getRange(sheetId: string, range: string): readonly (readonly QxScalar[])[];
   };
   readonly patch: {
-    /** 设置单元格值；操作成功后统一提交，可整次撤销。cell 使用 A1 地址。 */
+    /** Sets a cell value using an A1 address. Changes commit together on success and can be undone as one operation. */
     setValue(sheetId: string, cell: string, value: QxScalar): void;
     setValues(sheetId: string, range: string, values: readonly (readonly QxScalar[])[]): void;
-    /** 设置单元格公式，例如 =SUM(A1:A3)；不直接执行脚本。 */
+    /** Sets a formula such as =SUM(A1:A3). This does not directly execute scripts. */
     setFormula(sheetId: string, cell: string, formula: string): void;
     setFormulas(sheetId: string, range: string, formulas: readonly (readonly string[])[]): void;
   };
 }
-/** QuickExcel 支持的 ExcelScript 对象子集；不包含 Office 服务或网络能力。 */
+/** The ExcelScript object subset supported by QuickExcel. Office services and network access are not available. */
 declare namespace ExcelScript {
   interface RangeFill {
-    /** 设置 #RRGGBB 填充色，例如 #ff0000。 */
+    /** Sets the fill color in #RRGGBB format, for example #ff0000. */
     setColor(color: string): void;
-    /** 返回左上角单元格填充色；没有填充时返回空字符串。 */
+    /** Returns the top-left cell's fill color, or an empty string when it has no fill. */
     getColor(): string;
     clear(): void;
   }
   interface RangeFormat { getFill(): RangeFill }
   interface Range {
-    /** 工作表内的 A1 地址。 */
+    /** Returns the A1 address within the worksheet. */
     getAddress(): string;
     getWorksheet(): Worksheet;
     getFormat(): RangeFormat;
-    /** 返回左上角当前值；必要时先计算事务草稿。受阻公式会抛错，公式错误返回带 kind/code 的错误值。 */
+    /** Returns the top-left cell's current value, calculating the transaction draft if needed. Blocked formulas throw; formula errors return an error value with kind and code. */
     getValue(): QxScalar;
     getValues(): QxScalar[][];
-    /** 将区域中每个单元格设置为同一个值。 */
+    /** Sets every cell in the range to the same value. */
     setValue(value: QxScalar): void;
     setValues(values: readonly (readonly QxScalar[])[]): void;
     getFormula(): string;
@@ -131,14 +131,14 @@ declare namespace ExcelScript {
     getId(): string;
     getName(): string;
     getCell(address: string): Range;
-    /** 行列索引从 0 开始。 */
+    /** Row and column indices are zero-based. */
     getCell(row: number, column: number): Range;
     getRange(address: string): Range;
   }
   interface Workbook {
     getActiveCell(): Range;
     getActiveWorksheet(): Worksheet;
-    /** 当前选区；多区域选择时抛错，改用 getActiveRanges()。 */
+    /** Returns the current selection. Throws for multiple areas; use getActiveRanges() for those selections. */
     getActiveRange(): Range;
     getActiveRanges(): Range[];
     getWorksheet(nameOrId: string): Worksheet | undefined;
@@ -147,7 +147,7 @@ declare namespace ExcelScript {
 }
 declare const quickExcel: ExcelScript.Workbook & {
   readonly functions: {
-    /** 注册工作表函数；仅限模块初始化阶段。UDF 与动作/事件使用独立的持久上下文，不能访问工作簿对象；应只依赖参数。此重载接收标量或展平的区域参数。 */
+    /** Registers a worksheet function during module initialization. UDFs run in a persistent context separate from actions/events, cannot access workbook objects, and should depend only on their arguments. This overload receives scalars or flattened ranges. */
     register(name: string, callback: (...args: any[]) => QxScalar): void;
     /** Descriptor API v2 preserves Blank and rectangular ranges; JS namespace required. */
     register(descriptor: QxFunctionDescriptor, callback: (...args: any[]) => QxScalar): void;
@@ -157,18 +157,18 @@ declare const quickExcel: ExcelScript.Workbook & {
   /** Uses the same API v2 actions entry binding and trust decision. Register only during module initialization. */
   readonly events: QxEvents;
 };
-/** quickExcel 的简写；与 quickExcel 是同一对象，支持 functions、actions 和 events。 */
+/** Alias for the same quickExcel object, including functions, actions and events. */
 declare const $: typeof quickExcel;
-/** 输出到脚本工作区的调试控制台；支持多个参数和对象，执行结束后显示。 */
+/** Writes to the script workspace debug console. Supports multiple arguments and objects; output appears after execution. */
 declare const console: {
-  /** 输出普通日志。 */
+  /** Writes a log message. */
   log(...values: unknown[]): void;
-  /** 输出信息。 */
+  /** Writes an informational message. */
   info(...values: unknown[]): void;
-  /** 输出警告，在控制台以黄色背景显示。 */
+  /** Writes a warning, displayed with a yellow background in the console. */
   warn(...values: unknown[]): void;
-  /** 输出错误，在控制台以红色背景显示；不会抛出异常或中止执行。 */
+  /** Writes an error with a red console background. Does not throw or stop execution. */
   error(...values: unknown[]): void;
-  /** 输出调试信息，可通过级别筛选查看。 */
+  /** Writes a debug message that can be shown with the console level filter. */
   debug(...values: unknown[]): void;
 };

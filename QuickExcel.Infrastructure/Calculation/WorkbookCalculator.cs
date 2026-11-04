@@ -37,13 +37,13 @@ public sealed class WorkbookCalculator(IScriptRuntimeFactory runtimeFactory) : I
             var stamp = request.Stamp;
             var retained = new Dictionary<CellAddress, CellCalculation>();
             foreach (var sheet in request.Snapshot.Sheets)
-            foreach (var (position, cell) in sheet.Cells)
-            {
-                Check();
-                if (cell.Content.Kind != CellContentKind.Formula) continue;
-                retained.Add(new(sheet.Id, position.Row, position.Column), new(cell.Calculation?.Value, CalculationState.Blocked,
-                    stamp.InputRevision, stamp.CalculationGeneration, stamp.ScriptGeneration, ["只读公式及其受影响依赖范围未知；保留来源缓存，未重算。"]));
-            }
+                foreach (var (position, cell) in sheet.Cells)
+                {
+                    Check();
+                    if (cell.Content.Kind != CellContentKind.Formula) continue;
+                    retained.Add(new(sheet.Id, position.Row, position.Column), new(cell.Calculation?.Value, CalculationState.Blocked,
+                        stamp.InputRevision, stamp.CalculationGeneration, stamp.ScriptGeneration, ["只读公式及其受影响依赖范围未知；保留来源缓存，未重算。"]));
+                }
             return new(stamp, retained, [WorkbookFileState.FormulaReadOnlyMessage]);
         }
         if (request.ScriptsEnabled && !request.Snapshot.ScriptModules.CanExecute)
@@ -81,7 +81,8 @@ public sealed class WorkbookCalculator(IScriptRuntimeFactory runtimeFactory) : I
             }
         }
         using var runtime = request.ScriptsEnabled && !request.Snapshot.ScriptModules.EntriesFor("formula-functions").IsEmpty ? _factory.Create(new ScriptRuntimeRequest(request.Snapshot.ScriptModules,
-            request.Stamp, TimeLimit - timer.Elapsed, cancellationToken) { RuntimeLifetime = request.RuntimeLifetime }) : null;
+            request.Stamp, TimeLimit - timer.Elapsed, cancellationToken)
+        { RuntimeLifetime = request.RuntimeLifetime }) : null;
         Check();
         var functions = new Dictionary<string, ScriptFunctionDescriptor>(StringComparer.OrdinalIgnoreCase);
         if (runtime is not null)
@@ -171,7 +172,7 @@ public sealed class WorkbookCalculator(IScriptRuntimeFactory runtimeFactory) : I
                 else if (blocked)
                 {
                     value = node.Cell.Calculation?.Value;
-                    notes.Add("函数不可用、脚本未启用或上游结果受阻；保留旧缓存，不能视为本轮新结果。");
+                    notes.Add("函数不可用、脚本未启用或上游结果受阻。");
                 }
                 else
                 {

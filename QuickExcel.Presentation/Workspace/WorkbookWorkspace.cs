@@ -32,8 +32,9 @@ public sealed class WorkbookWorkspace : IDisposable
     private WorkbookDocument NewDocument()
     {
         using var blank = WorkbookDocument.CreateBlank(_services);
-        var modules = blank.Snapshot.ScriptModules;
-        return new(blank.Snapshot.WithScriptModules(new(modules.Modules, modules.EntryModules, scriptApiVersion: 2)), _services);
+        return new(blank.Snapshot.WithScriptModules(new(
+            [KeyValuePair.Create("main", new ScriptModule("scripts/main.ts", "", ScriptLanguage.TypeScript))],
+            ["main"], scriptApiVersion: 2, bindings: [new("main", "formula-functions"), new("main", "actions")])), _services);
     }
     private void RequireIdle()
     {

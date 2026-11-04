@@ -16,11 +16,22 @@ public sealed partial class MainWindow
     {
         _workspace.New(); await OpenScriptsAsync();
         check(_modulePicker!.Items.Cast<string>().SequenceEqual(["main"]) && _scriptModuleGroups.All(g => g.Picker.Items.Count == 0),
-            "The default main.js stays above all three initially empty script categories");
+            "The default main.ts stays above all three initially empty script categories");
+        var initial = await test(new { action = "inspect" });
+        check(initial.GetProperty("language").GetString() == "typescript" &&
+            Document.Snapshot.ScriptModules.Modules["main"].Path == "scripts/main.ts" &&
+            ScriptModuleProperties(Document.Snapshot.ScriptModules, "main") == "主入口 · TypeScript" &&
+            _scriptStatus!.Text!.Contains("主入口 · TypeScript"),
+            "New workbooks open a TypeScript main entry and show its entry role in the status and file properties");
         check(!_scriptWindow!.GetVisualDescendants().OfType<Button>().Any(b => b.Content is "模块角色" or "JS / TS"),
             "The workspace exposes no post-creation role or language editor");
         var beforeCancel = Document.Snapshot.ScriptModules;
-        _dialogDriver = window => { window.Close(false); return Task.CompletedTask; };
+        _dialogDriver = window =>
+        {
+            check(((FieldsDialog)window).Index("language") == (int)ScriptLanguage.TypeScript,
+                "The module creation dialog defaults to TypeScript");
+            window.Close(false); return Task.CompletedTask;
+        };
         await AddScriptModuleAsync();
         check(ReferenceEquals(beforeCancel, Document.Snapshot.ScriptModules), "Cancelling module creation preserves the complete module set");
         foreach (var (id, role, language) in new[] { ("utility", 0, 0), ("formula", 1, 1), ("action", 2, 0), ("shared", 3, 1) })
@@ -30,7 +41,7 @@ public sealed partial class MainWindow
                 var dialog = (FieldsDialog)window;
                 ((TextBox)dialog.Input("id")).Text = id;
                 ((ComboBox)dialog.Input("role")).SelectedIndex = role;
-                ((ComboBox)dialog.Input("language")).SelectedIndex = language;
+                if (language == 0) ((ComboBox)dialog.Input("language")).SelectedIndex = language;
                 window.GetVisualDescendants().OfType<Button>().Single(b => Equals(b.Content, "确定")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
                 return Task.CompletedTask;
             };
@@ -49,7 +60,7 @@ public sealed partial class MainWindow
             "UDF, Actions and helpers are sorted by ID; dual-role modules appear in both groups and main stays ungrouped");
         var modules = Document.Snapshot.ScriptModules;
         check(modules.EntryModules.SequenceEqual(["main", "formula", "action", "shared"]) && modules.Bindings.ToHashSet().SetEquals(
-            [new("main", "formula-functions"), new("formula", "formula-functions"), new("action", "actions"),
+            [new("main", "formula-functions"), new("main", "actions"), new("formula", "formula-functions"), new("action", "actions"),
                 new("shared", "formula-functions"), new("shared", "actions")]),
             "Creation persists exactly the chosen roles without turning helper modules into execution entries");
         await select("main");
@@ -81,6 +92,7 @@ public sealed partial class MainWindow
         _dialogDriver = window =>
         {
             var dialog = (FieldsDialog)window;
+            ((ComboBox)dialog.Input("language")).SelectedIndex = (int)ScriptLanguage.JavaScript;
             foreach (var id in new[] { "main", "../invalid", "UTILITY" })
             {
                 ((TextBox)dialog.Input("id")).Text = id;

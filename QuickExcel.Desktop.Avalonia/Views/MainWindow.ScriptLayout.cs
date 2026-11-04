@@ -1,11 +1,14 @@
+using Avalonia;
 using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Controls.Templates;
 using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Media;
+using Avalonia.Styling;
 using Avalonia.Threading;
 using QuickExcel.Domain;
+using QuickExcel.Desktop.Avalonia.Web;
 using LayoutGrid = Avalonia.Controls.Grid;
 
 namespace QuickExcel.Desktop.Avalonia;
@@ -18,6 +21,10 @@ public sealed partial class MainWindow
     private GridLength _scriptEditorHeight, _scriptOutputHeight;
     private readonly List<(string Label, string? Kind, Expander Panel, ListBox Picker)> _scriptModuleGroups = [];
     private string? _scriptNavigationSelection;
+    private string? _selectedDefinition;
+    private ListBox? _definitionPicker;
+    private Expander? _definitionPanel;
+    private readonly List<string> _scriptDefinitionFiles = [];
 
     private Control CreateScriptWorkspace(Control output)
     {
@@ -35,11 +42,24 @@ public sealed partial class MainWindow
         foreach (var (label, kind) in new (string, string?)[] { ("UDF", "formula-functions"), ("Actions", "actions"), ("辅助", null) })
         {
             var picker = CreateScriptModulePicker(label + " 脚本文件列表");
-            var panel = new Expander { Header = label, Content = picker, IsExpanded = true,
+            var panel = new Expander { Header = label, Content = picker, IsExpanded = true, Padding = new(0),
                 HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Stretch };
             AutomationProperties.SetName(panel, label + " 脚本分类");
             _scriptModuleGroups.Add((label, kind, panel, picker)); groups.Children.Add(panel);
         }
+        _selectedDefinition = null; _scriptDefinitionFiles.Clear(); _scriptDefinitionFiles.Add("quickexcel.d.ts");
+        _definitionPicker = CreateCompactScriptPicker();
+        _definitionPicker.ItemTemplate = new FuncDataTemplate<string>((name, _) => new TextBlock
+            { Text = name, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center });
+        AutomationProperties.SetName(_definitionPicker, "只读定义文件列表");
+        _definitionPicker.SelectionChanged += async (_, _) =>
+        {
+            if (_scriptPicking || _definitionPicker.SelectedItem is not string name || name == _selectedDefinition) return;
+            await NavigateScriptAsync(new(null, name)); RefreshScriptChrome();
+        };
+        _definitionPanel = new Expander { Header = "定义文件（只读）", Content = _definitionPicker, IsExpanded = true, Padding = new(0),
+            HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Stretch };
+        groups.Children.Add(_definitionPanel);
         navigation.Children.Add(new ScrollViewer { Content = groups,
             HorizontalScrollBarVisibility = global::Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled });
         workspace.Children.Add(navigation);
@@ -62,24 +82,37 @@ public sealed partial class MainWindow
         return workspace;
     }
 
+    private static ListBox CreateCompactScriptPicker()
+    {
+        var picker = new ListBox { Background = Brushes.Transparent, BorderThickness = new(0), Padding = new(0),
+            HorizontalAlignment = HorizontalAlignment.Stretch };
+        ScrollViewer.SetHorizontalScrollBarVisibility(picker, global::Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled);
+        picker.Styles.Add(new Style(s => s.OfType<ListBoxItem>()) { Setters =
+        {
+            new Setter(MinHeightProperty, 28d), new Setter(HeightProperty, 28d), new Setter(MarginProperty, new Thickness(0)),
+            new Setter(PaddingProperty, new Thickness(12, 0)), new Setter(HorizontalContentAlignmentProperty, HorizontalAlignment.Stretch),
+            new Setter(VerticalContentAlignmentProperty, VerticalAlignment.Center), new Setter(CornerRadiusProperty, new CornerRadius(0))
+        } });
+        return picker;
+    }
+
     private ListBox CreateScriptModulePicker(string name)
     {
-        var picker = new ListBox { Background = Brushes.Transparent, BorderThickness = new(0),
-            ItemTemplate = new FuncDataTemplate<string>((id, _) =>
+        var picker = CreateCompactScriptPicker();
+        picker.ItemTemplate = new FuncDataTemplate<string>((id, _) =>
             {
                 if (id is null || !Document.Snapshot.ScriptModules.Modules.TryGetValue(id, out var module)) return null;
-                var item = new StackPanel { Spacing = 2, Margin = new(2, 4) };
-                item.Children.Add(new TextBlock { Text = Path.GetFileName(module.Path), TextTrimming = TextTrimming.CharacterEllipsis });
-                item.Children.Add(new TextBlock { Text = id, FontSize = 11, Foreground = Brush.Parse("#70757A"), TextTrimming = TextTrimming.CharacterEllipsis });
+                var item = new TextBlock { Text = Path.GetFileName(module.Path), TextTrimming = TextTrimming.CharacterEllipsis,
+                    VerticalAlignment = VerticalAlignment.Center };
                 ToolTip.SetTip(item, $"{module.Path}\n模块 ID：{id}\n{ScriptModuleProperties(Document.Snapshot.ScriptModules, id)}"); return item;
-            }) };
+            });
         AutomationProperties.SetName(picker, name);
         picker.SelectionChanged += async (_, _) =>
         {
-            if (_scriptPicking || picker.SelectedItem is not string id || id == _selectedModule) return;
+            if (_scriptPicking || picker.SelectedItem is not string id || id == _selectedModule && _selectedDefinition is null) return;
             await PerformAsync(async () =>
             {
-                try { if (await CommitScriptsAsync()) { await _scriptPage!.SelectAsync(id); _selectedModule = id; } }
+                try { if (await CommitScriptsAsync()) { await _scriptPage!.SelectAsync(id); _selectedModule = id; _selectedDefinition = null; } }
                 finally { RefreshScriptChrome(); }
             });
             RefreshScriptChrome();
@@ -90,22 +123,25 @@ public sealed partial class MainWindow
     private static string ScriptModuleProperties(ScriptModuleSet modules, string id)
     {
         var roles = modules.Bindings.Where(b => b.Module == id).Select(b => b.Kind == "formula-functions" ? "UDF" : "Actions").ToArray();
-        return $"{(roles.Length == 0 ? "辅助" : string.Join(" / ", roles))} · {(modules.Modules[id].Language == ScriptLanguage.TypeScript ? "TypeScript" : "JavaScript")}";
+        var role = IsMainScriptModule(id, modules.Modules[id]) ? "主入口" : roles.Length == 0 ? "辅助" : string.Join(" / ", roles);
+        return $"{role} · {(modules.Modules[id].Language == ScriptLanguage.TypeScript ? "TypeScript" : "JavaScript")}";
     }
+
+    private static bool IsMainScriptModule(string id, ScriptModule module) => id == "main" ||
+        Path.GetFileName(module.Path).Equals("main.js", StringComparison.OrdinalIgnoreCase) ||
+        Path.GetFileName(module.Path).Equals("main.ts", StringComparison.OrdinalIgnoreCase);
 
     private void RefreshScriptNavigation(bool revealSelected)
     {
         if (_modulePicker is null) return;
         var modules = Document.Snapshot.ScriptModules;
-        var main = modules.Modules.Where(p => p.Key == "main" ||
-            Path.GetFileName(p.Value.Path).Equals("main.js", StringComparison.OrdinalIgnoreCase) ||
-            Path.GetFileName(p.Value.Path).Equals("main.ts", StringComparison.OrdinalIgnoreCase)).Select(p => p.Key).Order(StringComparer.Ordinal).ToArray();
+        var main = modules.Modules.Where(p => IsMainScriptModule(p.Key, p.Value)).Select(p => p.Key).Order(StringComparer.Ordinal).ToArray();
         var others = modules.Modules.Keys.Except(main).Order(StringComparer.Ordinal).ToArray();
         void Update(ListBox picker, string[] ids)
         {
             // Routine draft/status refreshes must retain scroll position and collapsed panels.
             if (picker.ItemsSource is not string[] previous || !previous.SequenceEqual(ids)) picker.ItemsSource = ids;
-            picker.SelectedItem = ids.Contains(_selectedModule) ? _selectedModule : null;
+            picker.SelectedItem = _selectedDefinition is null && ids.Contains(_selectedModule) ? _selectedModule : null;
         }
         _scriptPicking = true;
         try
@@ -116,21 +152,55 @@ public sealed partial class MainWindow
                 var ids = others.Where(id => kind is null ? !modules.Bindings.Any(b => b.Module == id) :
                     modules.Bindings.Any(b => b.Module == id && b.Kind == kind)).ToArray();
                 Update(picker, ids); panel.Header = $"{label} ({ids.Length})";
-                if ((revealSelected || _scriptNavigationSelection != _selectedModule) && ids.Contains(_selectedModule)) panel.IsExpanded = true;
+                if (_selectedDefinition is null && (revealSelected || _scriptNavigationSelection != _selectedModule) && ids.Contains(_selectedModule)) panel.IsExpanded = true;
             }
-            _scriptNavigationSelection = _selectedModule;
+            if (_definitionPicker is not null)
+            {
+                if (_definitionPicker.ItemsSource is not string[] prior || !prior.SequenceEqual(_scriptDefinitionFiles))
+                    _definitionPicker.ItemsSource = _scriptDefinitionFiles.ToArray();
+                _definitionPicker.SelectedItem = _selectedDefinition;
+                if (revealSelected && _selectedDefinition is not null) _definitionPanel!.IsExpanded = true;
+            }
+            _scriptNavigationSelection = _selectedDefinition is null ? _selectedModule : null;
         }
         finally { _scriptPicking = false; }
     }
 
-    private ListBox? SelectedScriptModulePicker => _modulePicker?.SelectedItem is not null ? _modulePicker :
+    private ListBox? SelectedScriptModulePicker => _selectedDefinition is not null ? _definitionPicker : _modulePicker?.SelectedItem is not null ? _modulePicker :
         _scriptModuleGroups.FirstOrDefault(g => g.Picker.SelectedItem is not null).Picker;
 
     private void FocusScriptNavigation()
     {
         var picker = SelectedScriptModulePicker;
+        if (_selectedDefinition is not null) _definitionPanel!.IsExpanded = true;
         foreach (var group in _scriptModuleGroups.Where(g => ReferenceEquals(g.Picker, picker))) group.Panel.IsExpanded = true;
         picker?.Focus();
+    }
+
+    private async Task<bool> NavigateScriptAsync(ScriptEditorPage.Navigation target)
+    {
+        var accepted = false;
+        await PerformAsync(async () =>
+        {
+            try
+            {
+                if (!await CommitScriptsAsync()) return;
+                if (target.Definition is { } definition)
+                {
+                    await _scriptPage!.OpenDefinitionAsync(definition, target.Line, target.Column);
+                    if (!_scriptDefinitionFiles.Contains(definition)) _scriptDefinitionFiles.Add(definition);
+                    _selectedDefinition = definition;
+                }
+                else if (target.Module is { } module)
+                {
+                    await _scriptPage!.LocateAsync(module, target.Line, target.Column);
+                    _selectedModule = module; _selectedDefinition = null;
+                }
+                accepted = true;
+            }
+            finally { RefreshScriptChrome(revealSelected: true); }
+        });
+        return accepted;
     }
 
     private void HandleScriptWorkspaceKey(object? sender, KeyEventArgs e)

@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using QuickExcel.Domain;
 using QuickExcel.Infrastructure.Web;
 using QuickExcel.Presentation.Web;
@@ -11,6 +12,10 @@ internal sealed class ScriptEditorPage : IAsyncDisposable
     internal ScriptDraftSession Drafts { get; }
     internal event Action<Exception>? Failed;
     internal event Action? SaveRequested, FocusRequested, ConsoleRequested, DraftChanged;
+    internal event Func<Navigation, Task<bool>>? NavigateRequested;
+    internal sealed record Navigation(string? Module, string? Definition, int Line = 1, int Column = 1);
+    internal static bool IsDefinition(string name) => name == "quickexcel.d.ts" ||
+        Regex.IsMatch(name, @"\Alib\.(?:es(?:5|6|20\d\d|next)(?:\.[a-z0-9]+)*|decorators(?:\.legacy)?)\.d\.ts\z", RegexOptions.CultureInvariant);
     private Task? _flush;
     private bool _closed;
     private int _holds;
@@ -29,7 +34,7 @@ internal sealed class ScriptEditorPage : IAsyncDisposable
     internal ScriptEditorPage(WebAssetCatalog assets, ScriptDraftSession drafts, string document, long generation, string profileRoot)
     {
         Drafts = drafts;
-        string[] capabilities = ["draftChanged", "draftChunk", "draftAck", "initialized", "loadAck", "loaded", "released", "selected", "located", "save", "focusHost", "console"];
+        string[] capabilities = ["draftChanged", "draftChunk", "draftAck", "initialized", "loadAck", "loaded", "released", "selected", "located", "definitionSelected", "navigate", "save", "focusHost", "console"];
         Browser = new(assets, "script.html", document, generation, profileRoot, Program.WebTestMode ? capabilities.Append("testResult") : capabilities);
         Browser.Message += OnMessage;
         Browser.Failed += ex => { Drafts.MarkFailed(); Failed?.Invoke(ex); };
@@ -50,6 +55,14 @@ internal sealed class ScriptEditorPage : IAsyncDisposable
                 case "save": SaveRequested?.Invoke(); break;
                 case "focusHost": FocusRequested?.Invoke(); break;
                 case "console": ConsoleRequested?.Invoke(); break;
+                case "navigate":
+                    var target = message.Payload.Deserialize<Navigation>(WebMessage.Json) ?? throw new InvalidDataException("缺少定义导航目标。");
+                    if ((target.Module is null) == (target.Definition is null) || target.Line < 1 || target.Column < 1 ||
+                        target.Module is { } module && !Drafts.Models.ContainsKey(module) ||
+                        target.Definition is { } definition && (definition.Length > 128 || !IsDefinition(definition)))
+                        throw new InvalidDataException("无效的定义导航目标。");
+                    var accepted = NavigateRequested is { } navigate && await navigate(target);
+                    await Browser.SendAsync("navigated", new { accepted }, message.RequestId); break;
                 default: throw new InvalidDataException("脚本页发送了未请求的响应。");
             }
         }
@@ -90,6 +103,8 @@ internal sealed class ScriptEditorPage : IAsyncDisposable
         }
     }
     internal Task SelectAsync(string module) => Browser.RequestAsync("select", "selected", new { module });
+    internal Task OpenDefinitionAsync(string name, int? line = null, int? column = null) => IsDefinition(name) ?
+        Browser.RequestAsync("definition", "definitionSelected", new { name, line, column }) : throw new InvalidDataException("未知定义文件。");
     internal Task LocateAsync(string module, int line, int column) => Browser.RequestAsync("locate", "located", new { module, line, column, version = Drafts.Models[module].Version });
     public async ValueTask DisposeAsync() { _closed = true; await Browser.DisposeAsync(); }
 }

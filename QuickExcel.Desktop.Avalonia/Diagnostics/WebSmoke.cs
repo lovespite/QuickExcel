@@ -36,6 +36,7 @@ public sealed partial class MainWindow
             var inspected = await Test(new { action = "inspect" });
             Check(inspected.GetProperty("workers").GetInt32() > 0 && inspected.GetProperty("source").GetString()!.Contains("DOUBLE"), "Language worker and initial module source are available");
             Check(inspected.GetProperty("diagnostics").GetArrayLength() == 0, "Declared logical module imports and actual QuickExcel API type-check without DOM or Node libraries");
+            await CheckColdJavaScriptDefinitionsAsync(Test, Check);
             var revision = Document.Snapshot.Revision;
             const string changed = "import { twice } from 'helpers';\nquickExcel.functions.register('DOUBLE', value => twice(value) + 1);\n";
             await Test(new { action = "edit", module = "main", text = changed });
@@ -133,6 +134,7 @@ public sealed partial class MainWindow
             inspected = await Test(new { action = "inspect" });
             Check(inspected.GetProperty("language").GetString() == "typescript", "Monaco creates a TypeScript model with the actual TS language worker");
             await CheckScriptIntelligenceAsync(Test, Check, directory);
+            await CheckScriptDefinitionsAsync(Test, Check, directory);
             var beforeCompile = Document.Snapshot.ScriptModules;
             await Test(new { action = "edit", module = "main", text = "export const value:number='类型错误';" });
             Check(!await CommitScriptsAsync(validateTypeScript: true) && ReferenceEquals(beforeCompile, Document.Snapshot.ScriptModules) && _scriptPage!.Drafts.IsDirty,

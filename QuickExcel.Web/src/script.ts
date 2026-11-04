@@ -7,6 +7,9 @@ import 'monaco-editor/features/codicon/register';
 import 'monaco-editor/features/hover/register';
 import 'monaco-editor/features/parameterHints/register';
 import 'monaco-editor/features/gotoError/register';
+import 'monaco-editor/features/gotoSymbol/register';
+import 'monaco-editor/features/contextmenu/register';
+import 'monaco-editor/features/find/register';
 import * as typescript from 'monaco-editor/language/typescript/monaco.contribution';
 import 'monaco-editor/languages/definitions/javascript/register';
 import 'monaco-editor/languages/definitions/typescript/register';
@@ -15,10 +18,12 @@ import { start, post, request, fail, fromBase64, toBase64, hash, Message } from 
 
 type Model = { model: monaco.editor.ITextModel; version: number; accepted: number; state: monaco.editor.ICodeEditorViewState | null };
 const models = new Map<string, Model>();
+const definitions = new Map<string, { model: monaco.editor.ITextModel; state: monaco.editor.ICodeEditorViewState | null }>();
 const workers = new Set<Worker>();
 const utf8 = new TextEncoder();
 let editor: monaco.editor.IStandaloneCodeEditor;
 let selected: string | undefined;
+let selectedDefinition: string | undefined, navigating = false;
 let readOnly = false, locked = true, initialized = false, disposed = false, composing = false;
 let scheduled: ReturnType<typeof setTimeout> | undefined;
 let sync: Promise<void> = Promise.resolve();
@@ -27,6 +32,8 @@ let totalSourceBytes = 0;
 const status = document.getElementById('status')!;
 const assistanceButtons = [...document.querySelectorAll<HTMLButtonElement>('button[data-action]')];
 const baseUri = `file:///quickexcel/${new URLSearchParams(location.hash.slice(1)).get('document')}/`;
+const declarationUri = monaco.Uri.parse(baseUri + 'quickexcel.d.ts');
+const isDefinition = (name: string) => name === 'quickexcel.d.ts' || /^lib\.(?:es(?:5|6|20\d\d|next)(?:\.[a-z0-9]+)*|decorators(?:\.legacy)?)\.d\.ts$/.test(name);
 declare const __QUICKEXCEL_WEB_TEST__: boolean;
 (window as any).MonacoEnvironment = { getWorker(_id: string, label: string) {
   const worker = new Worker(new URL(label === 'typescript' || label === 'javascript' ? 'ts.worker.js' : 'editor.worker.js', location.href), { type: 'module' });
@@ -44,6 +51,7 @@ editor = monaco.editor.create(document.getElementById('editor')!, { model: null,
   quickSuggestions: { other: true, comments: false, strings: false }, suggestOnTriggerCharacters: true,
   parameterHints: { enabled: true }, hover: { enabled: true }, renderValidationDecorations: 'on',
   wordBasedSuggestions: 'off',
+  gotoLocation: { multipleDefinitions: 'goto', multipleDeclarations: 'goto', multipleTypeDefinitions: 'goto' },
   links: false, unicodeHighlight: { ambiguousCharacters: false }, stickyScroll: { enabled: false } });
 editor.onDidCompositionStart(() => { composing = true; updateAssistance(); });
 editor.onDidCompositionEnd(() => { composing = false; updateAssistance(); schedule(); });
@@ -64,33 +72,89 @@ for (const button of assistanceButtons) {
   button.addEventListener('mousedown', event => event.preventDefault()); // Preserve the caret/selection.
   button.addEventListener('click', () => {
     if (button.disabled || disposed) return;
-    editor.focus(); void editor.getAction(button.dataset.action!)?.run().catch(fail);
+    editor.focus();
+    const action = editor.getAction(button.dataset.action!);
+    if (action) void action.run().catch(fail);
+    else editor.trigger('toolbar', button.dataset.action!, {}); // Newer Monaco navigation commands use Action2.
   });
 }
 function updateAssistance() {
   for (const button of assistanceButtons)
-    button.disabled = disposed || !initialized || composing || locked || (readOnly && button.dataset.action === 'editor.action.triggerSuggest');
+    button.disabled = disposed || !initialized || composing || locked || ((readOnly || !!selectedDefinition) && button.dataset.action === 'editor.action.triggerSuggest');
 }
 function updateStatus() {
   if (disposed || !selected || document.body.hasAttribute('data-failed')) return;
-  const model = models.get(selected)!.model;
+  const model = editor.getModel()!;
+  if (selectedDefinition) { status.textContent = `${selectedDefinition} · 定义文件（只读）`; return; }
   const markers = monaco.editor.getModelMarkers({ resource: model.uri });
   const errors = markers.filter(m => m.severity === monaco.MarkerSeverity.Error).length;
   const warnings = markers.filter(m => m.severity === monaco.MarkerSeverity.Warning).length;
   status.textContent = `${selected} · ${model.getLanguageId() === 'typescript' ? 'TypeScript' : 'JavaScript'} · 当前模块 ${errors} 个错误，${warnings} 个警告`;
 }
 const markerListener = monaco.editor.onDidChangeMarkers(resources => {
-  if (selected && resources.some(uri => uri.toString() === models.get(selected)!.model.uri.toString())) updateStatus();
+  if (resources.some(uri => uri.toString() === editor.getModel()?.uri.toString())) updateStatus();
 });
 
-function setLocked(value: boolean) { locked = value; editor.updateOptions({ readOnly: readOnly || locked }); updateAssistance(); }
-function languageWorker() { return editor.getModel()!.getLanguageId() === 'typescript' ? typescript.getTypeScriptWorker() : typescript.getJavaScriptWorker(); }
+function setLocked(value: boolean) { locked = value; editor.updateOptions({ readOnly: readOnly || locked || !!selectedDefinition }); updateAssistance(); }
+function languageWorker(model = editor.getModel()!) { return model.getLanguageId() === 'typescript' ? typescript.getTypeScriptWorker() : typescript.getJavaScriptWorker(); }
+function saveView() {
+  const previous = selectedDefinition ? definitions.get(selectedDefinition) : selected ? models.get(selected) : undefined;
+  if (previous) previous.state = editor.saveViewState();
+}
 function select(id: string) {
   const next = models.get(id); if (!next) throw new Error('Unknown module');
-  if (selected) models.get(selected)!.state = editor.saveViewState();
-  selected = id; editor.setModel(next.model); if (next.state) editor.restoreViewState(next.state); editor.focus();
+  saveView(); selectedDefinition = undefined;
+  selected = id; editor.setModel(next.model); if (next.state) editor.restoreViewState(next.state); setLocked(locked); editor.focus();
   updateStatus();
 }
+async function openDefinition(name: string) {
+  if (!isDefinition(name)) throw new Error('Unknown definition file');
+  let next = definitions.get(name);
+  if (!next) {
+    const uri = name === 'quickexcel.d.ts' ? declarationUri : monaco.Uri.parse('file:///' + name);
+    let model = monaco.editor.getModel(uri);
+    if (!model) {
+      let text: string | undefined = declarations;
+      if (name !== 'quickexcel.d.ts') {
+        // Monaco registers each language service lazily. A JavaScript-only book
+        // has no TypeScript worker yet; its existing worker also owns the libs.
+        const source = models.get(selected!)!.model;
+        const getWorker = await languageWorker(source);
+        const worker = await getWorker(source.uri);
+        text = await worker.getScriptText(name);
+      }
+      if (text === undefined) throw new Error('Definition file is not bundled');
+      model = monaco.editor.createModel(text, 'typescript', uri);
+    }
+    definitions.set(name, next = { model, state: null });
+  }
+  if (disposed) return;
+  saveView(); selectedDefinition = name; editor.setModel(next.model);
+  if (next.state) editor.restoreViewState(next.state);
+  setLocked(locked); updateStatus(); editor.focus();
+}
+function locate(line: number, column: number) {
+  const position = editor.getModel()!.validatePosition({ lineNumber: Math.max(1, line || 1), column: Math.max(1, column || 1) });
+  editor.setPosition(position); editor.revealPositionInCenter(position);
+}
+// Resolve only workbook model identities and bundled declarations. Never open a
+// file path, external URI or workbook-supplied URL through the browser or host.
+const editorOpener = monaco.editor.registerEditorOpener({ async openCodeEditor(_source, resource, position) {
+  if (!initialized || disposed || composing || locked || navigating) return true;
+  if (resource.toString() === editor.getModel()?.uri.toString()) return false;
+  const module = [...models].find(([, item]) => item.model.uri.toString() === resource.toString())?.[0];
+  const name = resource.path.slice(1);
+  const definition = resource.toString() === declarationUri.toString() ? 'quickexcel.d.ts' :
+    resource.scheme === 'file' && !resource.authority && !resource.query && !resource.fragment && isDefinition(name) ? name : undefined;
+  if (!module && !definition) return true;
+  const line = position && ('startLineNumber' in position ? position.startLineNumber : position.lineNumber) || 1;
+  const column = position && ('startColumn' in position ? position.startColumn : position.column) || 1;
+  navigating = true;
+  try { await request('navigate', 'navigated', { module, definition, line, column }); }
+  finally { navigating = false; }
+  return true;
+} });
+const linkOpener = monaco.editor.registerLinkOpener({ open(resource) { return resource.scheme !== 'file'; } });
 function schedule() {
   if (scheduled !== undefined || composing || locked || disposed) return;
   scheduled = setTimeout(() => { scheduled = undefined; enqueue().catch(fail); }, 0);
@@ -160,7 +224,7 @@ async function handle(message: Message) {
       const getWorker = await languageWorker(); const worker = await getWorker(editor.getModel()!.uri);
       const diagnostics = await worker.getSemanticDiagnostics(editor.getModel()!.uri.toString());
       const completion = await worker.getCompletionsAtPosition(editor.getModel()!.uri.toString(), p.offset ?? editor.getModel()!.getValueLength());
-      post('testResult', { selected, language: editor.getModel()!.getLanguageId(), source: editor.getValue(), workers: workers.size, readOnly: editor.getOption(monaco.editor.EditorOption.readOnly),
+      post('testResult', { selected, definition: selectedDefinition ?? null, language: editor.getModel()!.getLanguageId(), source: editor.getValue(), workers: workers.size, readOnly: editor.getOption(monaco.editor.EditorOption.readOnly),
         diagnostics: diagnostics.map(d => ({ code: d.code, text: typeof d.messageText === 'string' ? d.messageText : d.messageText.messageText })), completions: completion?.entries.map(e => e.name).slice(0, 500) ?? [] }, message.requestId); return;
     }
     if (p.action === 'assistance') {
@@ -176,11 +240,17 @@ async function handle(message: Message) {
         if (!button) throw new Error('Unknown assistance button'); button.click();
       }
       if (p.command) editor.trigger('smoke', p.command, {});
+      if (p.link) {
+        const link = [...document.querySelectorAll<HTMLAnchorElement>('.monaco-hover a, .zone-widget a')]
+          .find(a => a.getClientRects().length > 0 && a.textContent?.includes(p.link));
+        if (!link) throw new Error('Definition link is not visible');
+        link.click();
+      }
       const visibleText = (selector: string) => [...document.querySelectorAll<HTMLElement>(selector)]
         .filter(e => e.getClientRects().length > 0 && getComputedStyle(e).visibility !== 'hidden' && getComputedStyle(e).display !== 'none')
         .map(e => e.textContent).join('\n');
-      post('testResult', { source: editor.getValue(), position: editor.getPosition(), status: status.textContent,
-        actions: ['editor.action.triggerSuggest', 'editor.action.triggerParameterHints', 'editor.action.showHover', 'editor.action.marker.next'].filter(id => editor.getAction(id)),
+      post('testResult', { source: editor.getValue(), selected, definition: selectedDefinition ?? null, readOnly: editor.getOption(monaco.editor.EditorOption.readOnly), position: editor.getPosition(), status: status.textContent,
+        actions: ['editor.action.triggerSuggest', 'editor.action.triggerParameterHints', 'editor.action.showHover', 'editor.action.marker.next', 'editor.action.revealDefinition'].filter(id => editor.getAction(id)),
         suggestions: visibleText('.suggest-widget .monaco-list-row'), hover: visibleText('.monaco-hover'),
         parameters: visibleText('.parameter-hints-widget'), problems: visibleText('.monaco-editor .zone-widget'),
         markers: monaco.editor.getModelMarkers({ resource: editor.getModel()!.uri }).map(m => ({ code: m.code, line: m.startLineNumber, column: m.startColumn, message: m.message })),
@@ -237,18 +307,24 @@ async function handle(message: Message) {
     }
     case 'releaseDraft': setLocked(false); post('released', {}, message.requestId); return;
     case 'select': if (!initialized || composing) throw new Error('Cannot switch during composition'); select(p.module); post('selected', {}, message.requestId); return;
+    case 'definition': {
+      if (!initialized || composing) throw new Error('Cannot switch during composition');
+      await openDefinition(p.name);
+      if (p.line != null) locate(p.line, p.column);
+      post('definitionSelected', {}, message.requestId); return;
+    }
     case 'locate': {
       const item = models.get(p.module); if (!item || item.accepted !== p.version || item.version !== p.version) throw new Error('Diagnostic belongs to an older source');
-      select(p.module); const line = Math.max(1, Math.min(item.model.getLineCount(), Number(p.line) || 1));
-      editor.setPosition({ lineNumber: line, column: Math.max(1, Number(p.column) || 1) }); editor.revealLineInCenter(line); post('located', {}, message.requestId); return;
+      if (composing) throw new Error('Cannot switch during composition');
+      select(p.module); locate(p.line, p.column); post('located', {}, message.requestId); return;
     }
     default: throw new Error('Unsupported script page message');
   }
 }
 async function dispose() {
   if (disposed) return; disposed = true; if (scheduled !== undefined) clearTimeout(scheduled);
-  markerListener.dispose(); updateAssistance();
-  editor.dispose(); for (const item of models.values()) item.model.dispose(); models.clear(); for (const lib of extraLibs) lib.dispose();
+  markerListener.dispose(); editorOpener.dispose(); linkOpener.dispose(); updateAssistance();
+  editor.dispose(); for (const model of monaco.editor.getModels()) model.dispose(); models.clear(); definitions.clear(); for (const lib of extraLibs) lib.dispose();
   for (const worker of workers) worker.terminate(); workers.clear();
 }
 start(handle, dispose);
