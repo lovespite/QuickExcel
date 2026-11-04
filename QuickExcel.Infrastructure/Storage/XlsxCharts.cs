@@ -43,7 +43,7 @@ internal static partial class XlsxCharts
                     var styleReader = new ChartStyleReader(colors, package, chartPath, styleParts);
                     if (extended)
                     {
-                        var extendedModel = ReadExtended(xml, styleReader) with { Anchor = XlsxDrawingAnchors.Read(anchor, geometry), OriginalXml = [.. raw], StyleParts = styleParts };
+                        var extendedModel = ReadExtended(xml, styleReader) with { Name = (string?)frame.Element(Drawing + "nvGraphicFramePr")?.Element(Drawing + "cNvPr")?.Attribute("name") ?? "", Anchor = XlsxDrawingAnchors.Read(anchor, geometry), OriginalXml = [.. raw], StyleParts = styleParts };
                         extendedModel = extendedModel with { StyleParts = ExtendedStyleParts(extendedModel, Enumerable.Range(0, 6).Select(styleReader.Palette).ToArray()) };
                         extendedModel.Validate(); package.Budget.Parse(extendedModel.EstimatedBytes); charts.Add(extendedModel); continue;
                     }
@@ -114,7 +114,7 @@ internal static partial class XlsxCharts
                             Value(catAxis, "crossAx") != Value(axis, "axId") || Value(axis, "crossAx") != Value(catAxis, "axId")) throw new NotSupportedException("非标准或多组坐标轴");
                     }
                     double? Limit(string name) => Value(axis?.Element(Chart + "scaling"), name) is { } value ? double.Parse(value, CultureInfo.InvariantCulture) : null;
-                    var model = new WorksheetChart { Kind = kind, Title = string.Concat(titleNode?.Descendants(Art + "t").Select(t => t.Value) ?? []), Anchor = XlsxDrawingAnchors.Read(anchor, geometry), Series = [.. series],
+                    var model = new WorksheetChart { Kind = kind, Title = string.Concat(titleNode?.Descendants(Art + "t").Select(t => t.Value) ?? []), Name = (string?)frame.Element(Drawing + "nvGraphicFramePr")?.Element(Drawing + "cNvPr")?.Attribute("name") ?? "", Anchor = XlsxDrawingAnchors.Read(anchor, geometry), Series = [.. series],
                         Legend = chart.Element(Chart + "legend") is null ? null : Value(chart.Element(Chart + "legend"), "legendPos") ?? "r", VisibleOnly = Value(chart, "plotVisOnly") is not ("0" or "false"), Minimum = Limit("min"), Maximum = Limit("max"),
                         NumberFormat = (string?)axis?.Element(Chart + "numFmt")?.Attribute("formatCode") ?? "General", OriginalXml = [.. raw], StyleParts = styleParts,
                         GapWidth = Value(graph, "gapWidth") is { } gap ? int.Parse(gap, CultureInfo.InvariantCulture) : 150, Overlap = Value(graph, "overlap") is { } overlap ? int.Parse(overlap, CultureInfo.InvariantCulture) : 0,
@@ -196,7 +196,7 @@ internal static partial class XlsxCharts
             var chart = sheet.Data.Charts[i]; var id = $"chart{i + 1}"; var chartPath = $"xl/charts/chart{sheetNumber}-{i + 1}.xml";
             var chartNamespace = chart.IsExtended ? ChartEx : Chart;
             var graphic = new XElement(Drawing + "graphicFrame", new XAttribute("macro", ""), new XElement(Drawing + "nvGraphicFramePr",
-                new XElement(Drawing + "cNvPr", new XAttribute("id", sheet.Images.Length + i + 1), new XAttribute("name", $"Chart {i + 1}")), new XElement(Drawing + "cNvGraphicFramePr")),
+                new XElement(Drawing + "cNvPr", new XAttribute("id", sheet.Images.Length + i + 1), new XAttribute("name", chart.Name)), new XElement(Drawing + "cNvGraphicFramePr")),
                 new XElement(Drawing + "xfrm", new XElement(Art + "off", new XAttribute("x", 0), new XAttribute("y", 0)), new XElement(Art + "ext", new XAttribute("cx", 0), new XAttribute("cy", 0))),
                 new XElement(Art + "graphic", new XElement(Art + "graphicData", new XAttribute("uri", chartNamespace.NamespaceName), new XElement(chartNamespace + "chart", new XAttribute(Rel + "id", id)))));
             drawing.Add(XlsxDrawingAnchors.Write(chart.Anchor, graphic));

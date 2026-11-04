@@ -58,6 +58,7 @@ public static class ProtectionSafety
             if (next is null) continue; // Sheet deletion is governed by workbook, not worksheet protection.
             if (p != next.Data.Protection && command is not SetProtectionCommand) Reject();
             if (command is SetProtectionCommand) continue;
+            if (p.Objects && !old.Data.ThreadComments.SequenceEqual(next.Data.ThreadComments)) Reject();
             if (p.Objects && (!old.Images.SequenceEqual(next.Images) || !old.Annotations.ContentEquals(next.Annotations) || old.Data.Charts.Length != next.Data.Charts.Length || old.Data.Charts.Zip(next.Data.Charts).Any(c => !c.First.ContentEquals(c.Second)))) Reject();
             var structural = command is ShiftAxisCommand shift && shift.TargetSheet == old.Id;
             if (structural)

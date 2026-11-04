@@ -21,6 +21,7 @@ internal sealed class AvaloniaClipboard(TopLevel owner) : IClipboardExchange
         var clipboard = owner.Clipboard ?? throw new NotSupportedException("此环境不提供系统剪贴板。");
         using var data = await clipboard.TryGetDataAsync();
         if (data is null) return new(null);
+        var notices = new List<string>();
         var text = await data.TryGetTextAsync(); var token = await data.TryGetValueAsync(Token);
         var xml = OperatingSystem.IsWindows() ? await data.TryGetValueAsync(Xml) ?? await data.TryGetValueAsync(PortableXml) : null;
         var html = OperatingSystem.IsWindows() ? await data.TryGetValueAsync(Html) : null;
@@ -28,19 +29,29 @@ internal sealed class AvaloniaClipboard(TopLevel owner) : IClipboardExchange
         var chartPackage = await data.TryGetValueAsync(PortableDrawing);
         var drawing = OperatingSystem.IsWindows() ? await data.TryGetValueAsync(OfficeDrawing) : null;
         var png = OperatingSystem.IsWindows() ? await data.TryGetValueAsync(Png) : null;
-        if (png is null && xml is null && html is null)
+        if (png is null)
         {
-            using var bitmap = await data.TryGetBitmapAsync();
-            if (bitmap is not null)
+            try
             {
-                if ((long)bitmap.PixelSize.Width * bitmap.PixelSize.Height > 16_777_216) throw new InvalidDataException("剪贴板图片超过 1600 万像素。");
-                using var output = new MemoryStream(); bitmap.Save(output, PngBitmapEncoderOptions.Default); png = output.ToArray();
+                using var bitmap = await data.TryGetBitmapAsync();
+                if (bitmap is not null)
+                {
+                    if ((long)bitmap.PixelSize.Width * bitmap.PixelSize.Height > 16_777_216) notices.Add("已跳过超过 1600 万像素的图片。");
+                    else { using var output = new MemoryStream(); bitmap.Save(output, PngBitmapEncoderOptions.Default); png = output.ToArray(); }
+                }
             }
+            catch (Exception ex) when (ex is NotSupportedException or InvalidDataException or ArgumentException) { notices.Add("位图不可读取，已尝试其他内容。"); }
         }
-        if (text?.Length > 4 * 1024 * 1024 || xml?.Length > SpreadsheetClipboardCodec.MaxBytes || html?.Length > SpreadsheetClipboardCodec.MaxBytes || biff8?.Length > SpreadsheetClipboardCodec.MaxBytes)
-            throw new InvalidDataException("剪贴板载荷超过上限。");
-        if (png?.Length > OfficeDrawingClipboardCodec.MaxBytes || drawing?.Length > OfficeDrawingClipboardCodec.MaxBytes || chartPackage?.Length > OfficeDrawingClipboardCodec.MaxBytes) throw new InvalidDataException("图片或图表剪贴板超过 16 MiB。");
-        return new(text, token, xml, html, biff8, png, drawing, chartPackage);
+        byte[]? Bounded(byte[]? bytes, int limit, string name)
+        {
+            if (bytes?.Length <= limit || bytes is null) return bytes;
+            notices.Add("已跳过超过大小限制的" + name + "。"); return null;
+        }
+        if (text?.Length > GridClipboard.MaxCharacters) { notices.Add("已跳过超过大小限制的文本。"); text = null; }
+        xml = Bounded(xml, SpreadsheetClipboardCodec.MaxBytes, "表格格式"); html = Bounded(html, SpreadsheetClipboardCodec.MaxBytes, "HTML");
+        biff8 = Bounded(biff8, SpreadsheetClipboardCodec.MaxBytes, "Biff8"); png = Bounded(png, OfficeDrawingClipboardCodec.MaxBytes, "图片");
+        drawing = Bounded(drawing, OfficeDrawingClipboardCodec.MaxBytes, "对象"); chartPackage = Bounded(chartPackage, OfficeDrawingClipboardCodec.MaxBytes, "图表");
+        return new(text, token, xml, html, biff8, png, drawing, chartPackage, notices.Count == 0 ? null : string.Join(" ", notices));
     }
     public async Task WriteAsync(ClipboardExchange value)
     {

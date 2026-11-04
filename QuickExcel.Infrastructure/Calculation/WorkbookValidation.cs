@@ -9,12 +9,16 @@ namespace QuickExcel.Calculation;
 public sealed class WorkbookValidation : IWorkbookValidation
 {
     public IReadOnlyList<ValidationFailure> Check(WorkbookSnapshot snapshot, IReadOnlyList<CellAddress> addresses)
+        => CheckRules(snapshot, addresses, false);
+    public IReadOnlyList<ValidationFailure> CheckAll(WorkbookSnapshot snapshot, IReadOnlyList<CellAddress> addresses)
+        => CheckRules(snapshot, addresses, true);
+    private IReadOnlyList<ValidationFailure> CheckRules(WorkbookSnapshot snapshot, IReadOnlyList<CellAddress> addresses, bool all)
     {
-        var evaluation = new Evaluation(snapshot); var failures = new List<ValidationFailure>();
+        var evaluation = new Evaluation(snapshot, useFreshCaches: all); var failures = new List<ValidationFailure>();
         foreach (var address in addresses)
         {
             var sheet = snapshot.GetSheet(address.SheetId); var position = new CellPosition(address.Row, address.Column);
-            foreach (var rule in sheet.Data.Validations.Where(v => v.Contains(position) && v.ShowError && v.Kind != ValidationKind.None))
+            foreach (var rule in sheet.Data.Validations.Where(v => v.Contains(position) && (all || v.ShowError) && v.Kind != ValidationKind.None))
             {
                 try
                 {

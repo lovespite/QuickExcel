@@ -89,12 +89,14 @@ public static class ExternalClipboardFormula
 
 /// <summary>External values never pass through CellInput and never acquire an internal clipboard identity.</summary>
 public sealed class PasteExternalCellsCommand(ExternalClipboardRegion source, SheetId sheetId, CellRectangle target,
-    long expectedRevision, CellPasteMode mode = CellPasteMode.All) : DocumentCommand
+    long expectedRevision, CellPasteMode mode = CellPasteMode.All, bool allowPartial = false) : DocumentCommand
 {
     internal override CommandDraft Prepare(WorkbookSnapshot snapshot)
     {
         if (snapshot.Revision != expectedRevision) throw new InvalidOperationException("读取剪贴板后文档已改变，请重试。");
-        source.RequireMode(mode); WorkbookClipboard.ValidateRange(target);
+        if (!allowPartial) source.RequireMode(mode);
+        else if (!Enum.IsDefined(mode)) throw new ArgumentException("未知粘贴模式。");
+        WorkbookClipboard.ValidateRange(target);
         var sheet = snapshot.GetSheet(sheetId);
         var scalar = source.Rows == 1 && source.Columns == 1;
         var scalarMerge = scalar && mode != CellPasteMode.Formats && sheet.MergedCells.Select(CellRectangle.Parse)
@@ -107,7 +109,8 @@ public sealed class PasteExternalCellsCommand(ExternalClipboardRegion source, Sh
         var output = new CellRectangle(target.Top, target.Left, checked(target.Top + rows - 1), checked(target.Left + columns - 1));
         WorkbookClipboard.ValidateRange(output);
         if (!scalarMerge) WorkbookClipboard.RequireCompleteMerges(sheet, output);
-        WorkbookClipboard.RequireNoDrawings(sheet, scalarMerge ? target : output);
+        // Partial cell paste leaves floating objects in place; it never copies or removes anchors.
+        if (!allowPartial) WorkbookClipboard.RequireNoDrawings(sheet, scalarMerge ? target : output);
         WorkbookClipboard.RequireVisibleDimensions(sheet, scalarMerge ? target : output);
         if (mode is CellPasteMode.All or CellPasteMode.Formats && sheet.Data.ConditionalFormats.Any(r => r.Ranges.Any(a => ValidationSafety.Overlaps(a, output))))
             throw new NotSupportedException("目标涉及条件格式，完整/格式粘贴尚未支持；可选择只贴值。");
@@ -119,9 +122,17 @@ public sealed class PasteExternalCellsCommand(ExternalClipboardRegion source, Sh
         for (var r = 0; r < rows; r++) for (var c = 0; c < columns; c++)
         {
             var cell = source.Cells[scalar ? 0 : r * source.Columns + c]; var p = new CellPosition(output.Top + r, output.Left + c);
+            // In partial mode, missing caches are holes, never manufactured blank values.
+            var formula = mode == CellPasteMode.Formulas && !source.ValuesAreDisplayText && cell.FormulaRejection is null ? cell.Formula : null;
+            if (formula is not null)
+            {
+                try { ExternalClipboardFormula.Validate(formula); formula = FormulaCopy.Translate(formula, cell.FormulaOrigin, p); }
+                catch (Exception ex) when (allowPartial && ex is NotSupportedException or FormatException or ArgumentException) { formula = null; }
+            }
+            if (allowPartial && (mode != CellPasteMode.Formats && cell.MissingResult && formula is null || mode == CellPasteMode.Formats && cell.Style is null)) continue;
             var current = sheet.GetCell(p.Row, p.Column)?.Content ?? CellContent.FromLiteral(CellValue.Blank);
             var id = sheet.GetStyleId(p.Row, p.Column);
-            if (mode is CellPasteMode.All or CellPasteMode.Formats)
+            if (mode is CellPasteMode.All or CellPasteMode.Formats && cell.Style is not null)
             {
                 if (!ids.TryGetValue(cell.Style!, out id))
                 {
@@ -135,10 +146,9 @@ public sealed class PasteExternalCellsCommand(ExternalClipboardRegion source, Sh
                 if (current.RichText is not null) throw new NotSupportedException("目标富文本不能只贴格式；请先明确转换为普通文本。");
                 content = current.WithStyle(id);
             }
-            else if (mode == CellPasteMode.Formulas && cell.Formula is { } formula)
+            else if (formula is not null)
             {
-                ExternalClipboardFormula.Validate(formula);
-                content = CellContent.FromFormula(FormulaCopy.Translate(formula, cell.FormulaOrigin, p), id);
+                content = CellContent.FromFormula(formula, id);
             }
             else
             {
@@ -155,7 +165,8 @@ public sealed class PasteExternalCellsCommand(ExternalClipboardRegion source, Sh
         var styled = new WorkbookSnapshot(snapshot.DocumentId, snapshot.Revision, snapshot.DateSystem, snapshot.Sheets,
             snapshot.ScriptSource, styles, snapshot.ScriptModules, snapshot.FileState, snapshot.DefinedNames, snapshot.ActiveSheetId,
             snapshot.Window, snapshot.TextCompatibilityVersion, snapshot.PackageFiles);
-        var copyMerges = mode is CellPasteMode.All or CellPasteMode.Formats && !scalarMerge;
+        var copyMerges = mode is CellPasteMode.All or CellPasteMode.Formats && !scalarMerge &&
+            !(allowPartial && mode != CellPasteMode.Formats && source.Cells.Any(c => c.MissingResult));
         var oldMerges = sheet.MergedCells.Select(CellRectangle.Parse).Where(m => ValidationSafety.Overlaps(m, output)).ToHashSet();
         var newMerges = source.Merges.Select(m => new CellRectangle(output.Top + m.Top, output.Left + m.Left, output.Top + m.Bottom, output.Left + m.Right)).ToArray();
         var mergeChanged = copyMerges && !oldMerges.SetEquals(newMerges);

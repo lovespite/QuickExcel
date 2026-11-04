@@ -54,7 +54,7 @@ try {
             $expected | ConvertTo-Json -Depth 5 | Set-Content (Join-Path $dir 'expected.json') -Encoding utf8
             $request = @{operation='import'; mode='all'}
             if ($scenario -eq 'filter') { $request.expectedPasteNotice = '筛选' }
-            if ($scenario -eq 'filter-note') { $request.expectedPasteNotice = '自动改为只贴值' }
+            if ($scenario -eq 'filter-note') { $request.expectedPasteNotice = '支持的部分' }
             $request | ConvertTo-Json | Set-Content (Join-Path $dir 'request.json') -Encoding utf8
             $copy = $sheet.Range('C4:F' + $lastRow); [void]$copy.Copy()
             $exe = Join-Path $root 'artifacts/build/bin/QuickExcel.Desktop.Avalonia/release/QuickExcel.Avalonia.exe'
@@ -68,7 +68,7 @@ try {
             foreach ($cell in $expected) {
                 $found = @($actual | Where-Object { $_.row -eq $cell.row -and $_.column -eq $cell.column })
                 if ($found.Count -ne 1) { $differences += @{Property='Position'; Expected=$cell}; continue }
-                $a = $found[0]; $bold = if ($scenario -eq 'filter-note') {$false} else {$cell.bold}
+                $a = $found[0]; $bold = $cell.bold
                 if ($a.kind -cne $cell.kind -or $a.value -cne $cell.value -or $a.style.Bold -ne $bold -or $null -ne $a.formula) {
                     $differences += @{Property='TypedValueOrStyle'; Expected=$cell; ExpectedBold=$bold; Actual=$a}
                 }

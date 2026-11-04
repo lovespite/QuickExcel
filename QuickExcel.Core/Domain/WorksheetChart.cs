@@ -19,6 +19,7 @@ public sealed record ChartAppearance
 }
 public sealed record ChartSeries(string Name, string? NameReference, string Categories, string Values, string Color = "FF4472C4")
 {
+    public Guid ScriptId { get; init; } = Guid.NewGuid();
     public bool IsFiltered { get; init; }
     // Zero-based positions in the complete source, independent of worksheet row visibility.
     public ImmutableArray<int> HiddenPoints { get; init; } = [];
@@ -37,6 +38,8 @@ public sealed record ChartSeries(string Name, string? NameReference, string Cate
 }
 public sealed record WorksheetChart
 {
+    public Guid ScriptId { get; init; } = Guid.NewGuid();
+    public string Name { get; init; } = "";
     public WorksheetChartKind Kind { get; init; }
     public string Title { get; init; } = "";
     public DrawingAnchor Anchor { get; init; } = new() { Kind = DrawingAnchorKind.OneCell, Width = 5_334_000, Height = 3_048_000 };
@@ -63,7 +66,7 @@ public sealed record WorksheetChart
     public long EstimatedBytes => 1024L + OriginalXml.Length + StyleParts.Sum(p => p.Bytes.Length + 128L) + 2L * (Title.Length + NumberFormat.Length + XNumberFormat.Length) + Series.Sum(s => 384L + (s.TotalPoints.Length + s.HiddenPoints.Length) * 4L + s.PointColors.Length * 48L + (s.Name.Length + (s.NameReference?.Length ?? 0) + s.Categories.Length + s.Values.Length) * 2L);
     public void Validate()
     {
-        Anchor.Validate(); WorkbookLimits.ValidateText(Title); WorkbookLimits.ValidateText(NumberFormat);
+        Anchor.Validate(); WorkbookLimits.ValidateText(Title); WorkbookLimits.ValidateText(NumberFormat); WorkbookLimits.ValidateText(Name);
         if (!Enum.IsDefined(Kind) || Series.IsDefaultOrEmpty || Series.Length > 16 || Kind is WorksheetChartKind.Pie or WorksheetChartKind.Waterfall or WorksheetChartKind.Funnel && Series.Length != 1 ||
             OriginalXml.IsDefault || OriginalXml.Length > 512 * 1024 || Legend is not (null or "l" or "r" or "t" or "b") ||
             Minimum is { } min && !double.IsFinite(min) || Maximum is { } max && !double.IsFinite(max) || Minimum >= Maximum ||
@@ -106,12 +109,12 @@ public sealed record WorksheetChart
     }
     public static int Count(ReferenceNode r) => Math.Max(r.EndRow - r.Row + 1, r.EndColumn - r.Column + 1);
     public WorksheetChart MapReferences(Func<string, string> map) => this with { Series = Series.Select(s => s with { NameReference = s.NameReference is null ? null : map(s.NameReference), Categories = map(s.Categories), Values = map(s.Values) }).ToImmutableArray() };
-    public bool ContentEquals(WorksheetChart other) => Kind == other.Kind && Title == other.Title && Anchor == other.Anchor && Legend == other.Legend && VisibleOnly == other.VisibleOnly &&
+    public bool ContentEquals(WorksheetChart other) => Name == other.Name && Kind == other.Kind && Title == other.Title && Anchor == other.Anchor && Legend == other.Legend && VisibleOnly == other.VisibleOnly &&
         Minimum == other.Minimum && Maximum == other.Maximum && NumberFormat == other.NumberFormat && XMinimum == other.XMinimum && XMaximum == other.XMaximum && XNumberFormat == other.XNumberFormat && GapWidth == other.GapWidth && Overlap == other.Overlap &&
         ShowConnectors == other.ShowConnectors && IncreaseColor == other.IncreaseColor && DecreaseColor == other.DecreaseColor && TotalColor == other.TotalColor && Appearance == other.Appearance &&
         (OriginalXml.IsEmpty && StyleParts.IsEmpty || other.OriginalXml.IsEmpty && other.StyleParts.IsEmpty ||
             StyleParts.Length == other.StyleParts.Length && StyleParts.Zip(other.StyleParts).All(p => p.First.Kind == p.Second.Kind && p.First.Bytes.SequenceEqual(p.Second.Bytes))) && Series.Length == other.Series.Length && Series.Zip(other.Series).All(p =>
-            p.First with { NameReference = null, Categories = "", Values = "", PointColors = [], TotalPoints = [], HiddenPoints = [] } == p.Second with { NameReference = null, Categories = "", Values = "", PointColors = [], TotalPoints = [], HiddenPoints = [] } &&
+            p.First with { ScriptId = Guid.Empty, NameReference = null, Categories = "", Values = "", PointColors = [], TotalPoints = [], HiddenPoints = [] } == p.Second with { ScriptId = Guid.Empty, NameReference = null, Categories = "", Values = "", PointColors = [], TotalPoints = [], HiddenPoints = [] } &&
             p.First.HiddenPoints.Order().SequenceEqual(p.Second.HiddenPoints.Order()) && p.First.PointColors.SequenceEqual(p.Second.PointColors) && p.First.TotalPoints.SequenceEqual(p.Second.TotalPoints) && Same(p.First.NameReference, p.Second.NameReference) && Same(p.First.Categories, p.Second.Categories) && Same(p.First.Values, p.Second.Values));
     private static bool Same(string? a, string? b) => a is null ? b is null : b is not null && FormulaSyntax.Print(FormulaSyntax.Parse("=" + a.TrimStart('='))) == FormulaSyntax.Print(FormulaSyntax.Parse("=" + b.TrimStart('=')));
 }

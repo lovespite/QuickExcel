@@ -8,14 +8,17 @@ using static QuickExcel.Storage.XlsxPackage;
 namespace QuickExcel.Storage;
 
 /// <summary>Validated opaque local thread bundles. Never connects, looks up people or sends notifications.</summary>
-internal static class XlsxThreadedComments
+internal static partial class XlsxThreadedComments
 {
     internal static readonly XNamespace Thread = "http://schemas.microsoft.com/office/spreadsheetml/2018/threadedcomments";
     private const string ThreadRelation = "http://schemas.microsoft.com/office/2017/10/relationships/threadedComment";
     private const string PersonRelation = "http://schemas.microsoft.com/office/2017/10/relationships/person";
     private const string ThreadType = "application/vnd.ms-excel.threadedcomments+xml", PersonType = "application/vnd.ms-excel.person+xml";
     private static readonly XNamespace Revision = "http://schemas.microsoft.com/office/spreadsheetml/2014/revision";
-    internal sealed record Bundle(byte[] Threads, byte[] Persons, byte[]? Fallback, CellPosition[] Positions);
+    internal sealed record Bundle(byte[] Threads, byte[] Persons, byte[]? Fallback, CellPosition[] Positions)
+    {
+        internal System.Collections.Immutable.ImmutableArray<WorksheetComment> Models { get; init; } = [];
+    }
     private static bool Attributes(XElement e, params XName[] names) => e.Attributes().All(a => a.IsNamespaceDeclaration || names.Contains(a.Name));
     private static Guid Identity(XAttribute? a) => Guid.TryParse(a?.Value, out var id) && id != Guid.Empty ? id : throw new InvalidDataException("线程评论标识无效。");
 
@@ -81,11 +84,21 @@ internal static class XlsxThreadedComments
         package.PreservedAttachments.AddRange(roots.Keys.Select(p => new PreservedCellAttachment(ExtendedObjectSafety.ThreadedComments, sheetName, p)));
         package.Notice(new("xlsx.threaded-comments-preserved", CompatibilityKind.PreservedOnly, ExtendedObjectSafety.ThreadedComments,
             "线程评论、回复及作者关联按原位保留；只读显示旧版副本，不发送通知，不支持移动或编辑讨论。", path, sheetName));
-        return new(package.BinaryPart(path), package.BinaryPart(persons), fallback, roots.Keys.ToArray());
+        var authorsById = people.Elements().ToDictionary(p => Identity(p.Attribute("id")));
+        var models = comments.Elements().Select(c =>
+        {
+            var author = authorsById[Identity(c.Attribute("personId"))];
+            return new WorksheetComment(Identity(c.Attribute("id")), TypedWorkbookXml.Position(Attr(c, "ref")), c.Element(Thread + "text")!.Value,
+                Attr(author, "displayName"), XmlConvert.ToDateTimeOffset(Attr(c, "dT")), Identity(c.Attribute("personId")),
+                c.Attribute("parentId") is { } parent ? Identity(parent) : null, (string?)c.Attribute("done") is "1" or "true",
+                (string?)author.Attribute("userId"), (string?)author.Attribute("providerId"));
+        });
+        return new(package.BinaryPart(path), package.BinaryPart(persons), fallback, roots.Keys.ToArray()) { Models = [.. models] };
     }
 
     internal static void Write(WorkbookSnapshot snapshot, Dictionary<string, byte[]> parts, XElement workbookRelationships, XElement types, CancellationToken cancellationToken)
     {
+        if (CommentsChanged(snapshot)) { WriteModeled(snapshot, parts, workbookRelationships, types, cancellationToken); return; }
         if (snapshot.FileState is not { } source || !source.PreservedAttachments.Any(a => a.Feature == ExtendedObjectSafety.ThreadedComments)) return;
         ExtendedObjectSafety.ValidateRetention(snapshot);
         var package = new XlsxPackage(source.OriginalWorkbook.ToArray(), new(cancellationToken)); var workbook = package.RelatedByType("", "officeDocument", true)!; var personsWritten = false;

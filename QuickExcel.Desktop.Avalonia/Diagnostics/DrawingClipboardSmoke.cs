@@ -18,13 +18,19 @@ public sealed partial class MainWindow
         await History(false); check(Document.Snapshot.Sheets[0].Images.Length == 1, "One image paste is one undo"); await History(true);
         _grid.Select(new(3, 4)); var before = Document.Snapshot;
         memory.Value = new(null, Png: png, OfficeDrawing: [1, 2, 3]);
-        try { await PasteAsync("chart"); throw new Exception("Broken chart became a picture"); } catch (InvalidDataException) { }
-        check(ReferenceEquals(before, Document.Snapshot), "Broken editable chart never silently becomes a picture");
-        await PasteAsync("image"); check(Document.Snapshot.Sheets[0].Images.Length == 3, "Explicit picture selection can use PNG independently of unsupported chart data");
+        await PasteAsync("chart");
+        check(Document.Snapshot.Sheets[0].Images.Length == 3 && _status.Text!.Contains("自动降级为图片"), "Unsupported editable chart automatically uses its picture representation");
+        await History(false); check(Document.Snapshot.Sheets[0].Images.Length == 2 && Document.Snapshot.Sheets.Length == 1, "Chart-to-picture fallback has one undo and creates no stray data sheet");
+        await PasteAsync("all"); check(Document.Snapshot.Sheets[0].Images.Length == 3 && _status.Text!.Contains("自动降级为图片"), "Default paste also falls back from unsupported objects to PNG");
+        await PasteAsync("image"); check(Document.Snapshot.Sheets[0].Images.Length == 4, "Explicit picture selection can use PNG independently of unsupported chart data");
         await CopyAsync(false); check(memory.Value.Png is not null && memory.Value.Token is null && memory.Value.SpreadsheetXml is null, "Selected image copies as an image without a stale cell token");
         _grid.Select(new(4, 5)); before = Document.Snapshot; memory.Value = new(null, Png: [1, 2, 3]);
-        try { await PasteAsync("image"); throw new Exception("Invalid image accepted"); } catch (InvalidDataException) { }
-        check(ReferenceEquals(before, Document.Snapshot), "Malformed image does not change history or document");
+        await PasteAsync("image");
+        check(ReferenceEquals(before, Document.Snapshot) && _status.Text!.Contains("保持不变"), "Unreadable image with no alternative leaves history unchanged without a refusal dialog");
+        memory.Value = new("object description", Png: [1, 2, 3], OfficeDrawing: [1, 2, 3]);
+        await PasteAsync("all");
+        check(Document.Snapshot.Sheets[0].GetCell(4, 5)!.Value == CellValue.FromText("object description") && _status.Text!.Contains("降级"), "Unreadable object and image fall back to available text");
+        before = Document.Snapshot;
         _clipboard = new DelayedClipboard(new(null, Png: png), () => _grid.Select(new(8, 8)));
         try { await PasteAsync("image"); throw new Exception("Stale image target accepted"); } catch (InvalidOperationException) { }
         check(before.Revision == Document.Snapshot.Revision && before.Sheets[0].Images.SequenceEqual(Document.Snapshot.Sheets[0].Images), "Image paste rejects a changed destination during clipboard read");

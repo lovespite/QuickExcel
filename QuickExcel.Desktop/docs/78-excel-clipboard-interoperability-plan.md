@@ -234,3 +234,19 @@ SpreadsheetML 与 CF_HTML 现在双向保留下划线（单线、双线、单会
 交付构建使用 `cf40318` 和本次补充检查的隔离 checkout `artifacts/cb-build-1104`。主工作区当时存在并行进行的脚本 API 迁移且尚不能编译；该迁移未被本次交付改动或打包。原生源和 DLL 对照已有构建身份校验，编译器及发布输出各自位于隔离 checkout 的 artifacts；未编辑或复制兄弟 ExcelIO 源码。
 
 已运行 `scripts/build-quickexcel.ps1 -SkipTests -RunSmoke`，正式包 8 项生产自检通过。将完整包及证据复制到 `artifacts/avalonia/releases/20261104-105053-cc51567d/` 后，由 `select-quickexcel-package.ps1` 逐文件校验并激活；主仓库 `active-windows.json` 已指向该 `application`，清单 SHA-256 为 `38A8395DBE68B74D0AF04B5AE0289995BA4087A14345B418800A9F547559C3DF`。`Start-QuickExcel.cmd` 使用该已验证包，前一活动包完整保留。
+
+## 11 默认粘贴可用部分（2026-11-04）
+
+按用户要求，**本节替代前述“来源含未支持内容则拒绝、HTML 必须显式只贴值、可编辑图表失败不转图片”的入口策略**。严格解码器和导出检查仍保留；粘贴入口可独立尝试同一剪贴板中的其他表示，不把一种表示的失败当作整个操作失败。
+
+- 复杂区域、筛选列头、名称、批注、链接、局部富文本和未知样式有诊断时，默认保留已建模的值、单元格格式及合并。未支持的附件／规则不创建，状态栏说明遗漏。缺少来源格式的格子沿用目标格式；缺少公式结果的格子跳过，避免清空目标。仅贴格式仍不写入值。
+- XML 不可读时尝试 HTML；HTML 默认使用显示文本和支持的格式。两者不可用时尝试对象或文本。文本兜底保留前导零、公式形状的字面文本，不推断成公式；HTML 文本兜底只读取所选片段，不扩大到上下文单元格，不执行脚本或加载 URL。小型非矩形文本可以保存在一个单元格中。
+- 图表优先私有快照，再尝试 Office 图表；复杂图表／组合对象或不完整缓存无法编辑时，自动使用附带 PNG。选择“可编辑图表”也允许降级并明确提示；选择“图片”仍优先图片。无图可用时继续尝试单元格／文本；完全没有可读内容时状态栏提示目标保持不变，不弹“不支持”拒绝框。
+- 内部复制的未支持结构可改贴已捕获的支持内容；外部区域支持转置。单元格粘贴保留目标浮动对象及锚点。目标规则／附件阻止格式覆盖时，普通粘贴自动只贴值。粘贴仍通过原子命令提交、一次撤销；只读、保护、隐藏行、目标变化及资源大小限制继续生效，源内容降级不授权修改受保护目标或跨隐藏行映射。剪切移动及目标富文本替换仍遵循原有结构／附件契约。
+- 平台适配器对超限的表示单独跳过，并保留其他可用表示。解码边界及原有预算不放宽；无法读取的表示不会以空白补齐，也不会部分提交后再重试其他表示。
+
+真实 Excel 16.0 build 20527 已通过 9 项对象交换（含新增的面积图默认粘贴、组合图表“可编辑”粘贴自动变图片）：`artifacts/clipboard/object-exchange-20261104-113955-32bf1168/`。6 项筛选区域交换全部通过，带批注区域现在也保留已支持的粗体格式：`artifacts/clipboard/filter-20261104-114201-c4611ff6/`。界面 71 项检查通过：`artifacts/avalonia/workspace/20261104-113919-4d841456/`。
+
+交付使用基于 `09d180d` 的隔离 checkout `artifacts/cb-partial-1104`，仅加入本次剪贴板修改，避免混入主工作区正在进行的脚本对象 API 修改。原生 DLL 和对应源与已有构建身份逐项校验，未修改原生实现；独立生成编译器载荷。最终检查为 **247/247** 剪贴板／图表定向测试（`artifacts/cb-partial-1104/artifacts/tests/clipboard-partial/clipboard-partial.trx`）、**74/74** Workspace（`artifacts/cb-partial-1104/artifacts/avalonia/workspace/20261104-114523-5c2a3cae/`）和 **9/9** 真实 Excel 对象交换（`artifacts/cb-partial-1104/artifacts/clipboard/object-exchange-20261104-114549-8677339f/`）。未运行全量回归。
+
+已运行 `scripts/build-quickexcel.ps1 -SkipTests -RunSmoke`，**10 项生产自检通过**。包与完整证据复制到 `artifacts/avalonia/releases/20261104-114631-71d77b7b/`，经 `select-quickexcel-package.ps1` 逐文件验证后激活。`active-windows.json` 指向其 `application`，清单 SHA-256 为 `3E1148D91697BB97CB0B54725DAC55E2EC50D965FF610DA24E549BB4C51DBFC6`；`Start-QuickExcel.cmd` 使用此包，前一活动包 `20261104-112512-75d6b7ff` 保留。

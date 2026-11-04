@@ -32,6 +32,7 @@ public sealed record DifferentialStyle(bool? Bold = null, bool? Italic = null, b
 
 public sealed class ConditionalFormatRule
 {
+    public Guid ScriptId { get; init; } = Guid.NewGuid();
     public ConditionalFormatRule(IEnumerable<CellRectangle> ranges, ConditionalFormatKind kind, int priority, DifferentialStyle style,
         string? formula1 = null, string? formula2 = null, ConditionalComparison comparison = ConditionalComparison.Between,
         bool stopIfTrue = false, string? text = null)
@@ -70,10 +71,10 @@ public sealed class ConditionalFormatRule
     public string? Text { get; }
     public CellPosition Anchor => new(Ranges[0].Top, Ranges[0].Left);
     public bool Contains(int row, int column) => Ranges.Any(r => r.Contains(row, column));
-    public ConditionalFormatRule WithPriority(int priority) => new(Ranges, Kind, priority, Style, Formula1, Formula2, Comparison, StopIfTrue, Text);
-    public ConditionalFormatRule WithRanges(IEnumerable<CellRectangle> ranges) => new(ranges, Kind, Priority, Style, Formula1, Formula2, Comparison, StopIfTrue, Text);
+    public ConditionalFormatRule WithPriority(int priority) => new(Ranges, Kind, priority, Style, Formula1, Formula2, Comparison, StopIfTrue, Text) { ScriptId = ScriptId };
+    public ConditionalFormatRule WithRanges(IEnumerable<CellRectangle> ranges) => new(ranges, Kind, Priority, Style, Formula1, Formula2, Comparison, StopIfTrue, Text) { ScriptId = ScriptId };
     public ConditionalFormatRule MapFormulas(Func<string, string> transform) => new(Ranges, Kind, Priority, Style,
-        Formula1 is { } a ? transform(a) : null, Formula2 is { } b ? transform(b) : null, Comparison, StopIfTrue, Text);
+        Formula1 is { } a ? transform(a) : null, Formula2 is { } b ? transform(b) : null, Comparison, StopIfTrue, Text) { ScriptId = ScriptId };
     public void ValidateBinding(WorkbookSnapshot snapshot, SheetId sheet)
     {
         foreach (var text in new[] { Formula1, Formula2 }.OfType<string>())

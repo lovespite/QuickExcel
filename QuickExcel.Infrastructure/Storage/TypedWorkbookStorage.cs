@@ -321,7 +321,7 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage, IW
             .Concat(XlsxDynamicArrays.Present(snapshot) ? ["dynamic-arrays"] : [])
             .Concat(XlsxPivots.Present(snapshot) ? ["worksheet-pivots"] : [])
             .Concat(XlsxStrict.SourceIsStrict(snapshot, cancellationToken) ? ["strict-ooxml"] : [])
-            .Concat(snapshot.FileState?.PreservedAttachments.Any(a => a.Feature == ExtendedObjectSafety.ThreadedComments) == true ? ["preserved-threaded-comments"] : [])
+            .Concat(snapshot.Sheets.Any(s => !s.Data.ThreadComments.IsEmpty) || snapshot.FileState?.PreservedAttachments.Any(a => a.Feature == ExtendedObjectSafety.ThreadedComments) == true ? ["preserved-threaded-comments"] : [])
             .Concat(snapshot.Sheets.Any(s => s.Data.DefaultColumnWidth is not null) ? ["worksheet-default-width"] : [])
             .Concat(snapshot.Styles.Length > 4096 || snapshot.Sheets.Any(s => s.UsedRowCount > 100_000 || s.UsedColumnCount > 1024 || s.Rows.Keys.Any(r => r >= 100_000) || s.Columns.Keys.Any(c => c >= 1024)) ? ["extended-capacity"] : [])
             .Concat(snapshot.Sheets.Any(s => s.Images.Any(i => i.Anchor.Rotation != 0) || s.Data.Charts.Any(c => c.Anchor.Rotation != 0)) ? ["drawing-transforms"] : [])

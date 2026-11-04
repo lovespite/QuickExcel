@@ -78,11 +78,15 @@ internal sealed partial class ScriptModelAdapter
         var sheet = Model.View.Sheets.FirstOrDefault(s => s.Id.Value == id) ?? throw new ModelFailure("InvalidReference", "工作表句柄已失效。");
         if (name.StartsWith("Worksheet.", StringComparison.Ordinal)) return WorksheetApi(sheet, name[10..], args);
         if (name.StartsWith("WorksheetProtection.", StringComparison.Ordinal)) return ProtectionApi(sheet, name[20..], args);
+        if (name.StartsWith("Chart", StringComparison.Ordinal)) return ChartApi(sheet, data, name, args);
+        if (name.StartsWith("Comment", StringComparison.Ordinal)) return CommentApi(sheet, data, name.Split('.')[1], args);
+        if (data.TryGetProperty("conditionalId", out _)) return ConditionalApi(sheet, data, name, args);
         if (name.StartsWith("Table", StringComparison.Ordinal) || name.StartsWith("AutoFilter.", StringComparison.Ordinal) || name.StartsWith("Filter.", StringComparison.Ordinal))
             return TableApi(sheet, data, name, args);
         var range = Address(data.GetProperty("address"), sheet.Id);
         var split = name.Split('.'); var type = split[0]; var member = split[1];
         if (type == "Range") return RangeApi(sheet, range, member, args);
+        if (type == "DataValidation") return ValidationApi(sheet, range, member, args);
         if (type == "RangeSort") { ApplySort(sheet, range, args, false); return null; }
         if (type == "RangeBorder") return BorderApi(sheet, range, Int(data.GetProperty("side")), member, args);
         if (type == "RangeFormat")

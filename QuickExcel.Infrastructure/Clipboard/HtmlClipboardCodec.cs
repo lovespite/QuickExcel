@@ -24,7 +24,7 @@ public static partial class HtmlClipboardCodec
         if (bytes.Length > SpreadsheetClipboardCodec.MaxBytes) throw new InvalidDataException("HTML 剪贴板超过 8 MiB。");
         return bytes;
     }
-    public static string Unwrap(byte[] bytes)
+    public static string Unwrap(byte[] bytes, bool fragmentOnly = false)
     {
         if (bytes.Length == 0 || bytes.Length > SpreadsheetClipboardCodec.MaxBytes) throw new InvalidDataException("HTML 剪贴板为空或超过 8 MiB。");
         var header = Encoding.ASCII.GetString(bytes, 0, Math.Min(bytes.Length, 4096));
@@ -40,26 +40,61 @@ public static partial class HtmlClipboardCodec
             throw new FormatException("CF_HTML 字节偏移越界。");
         // Context may contain styles and the outer table, but must not add unselected cells.
         var outside = Utf8.GetString(bytes, start, fs - start) + Utf8.GetString(bytes, fe, end - fe);
-        if (Regex.IsMatch(outside, @"<\s*(tr|td|th)(?:\s|>)", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant, TimeSpan.FromMilliseconds(100)))
+        if (!fragmentOnly && Regex.IsMatch(outside, @"<\s*(tr|td|th)(?:\s|>)", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant, TimeSpan.FromMilliseconds(100)))
             throw new NotSupportedException("HTML 片段未包含完整表格，不能扩大粘贴范围。");
         // Decode both slices to reject offsets in the middle of a multibyte character.
-        _ = Utf8.GetString(bytes, fs, fe - fs);
+        var fragment = Utf8.GetString(bytes, fs, fe - fs);
+        if (fragmentOnly) return fragment;
         return Utf8.GetString(bytes, start, end - start);
     }
-    public static ExternalClipboardRegion Read(byte[] bytes)
+    private static IDocument ParseBounded(string html)
     {
-        var html = Unwrap(bytes); var count = 0;
+        var count = 0;
         var parser = new HtmlParser(new HtmlParserOptions { IsScripting = false, MaximumDepth = SpreadsheetClipboardCodec.MaxDepth, OnCreated = (e, _) =>
         {
             if ((count += 1 + e.Attributes.Length) > SpreadsheetClipboardCodec.MaxNodes) throw new InvalidDataException("HTML 节点超过上限。");
         } });
-        using var document = parser.ParseDocument(html);
-        var stack = new Stack<(INode Node, int Depth)>(); stack.Push((document, 0)); count = 0;
-        while (stack.TryPop(out var item))
+        var document = parser.ParseDocument(html);
+        try
         {
-            if (++count > SpreadsheetClipboardCodec.MaxNodes || item.Depth > SpreadsheetClipboardCodec.MaxDepth) throw new InvalidDataException("HTML 节点/深度超过上限。");
-            foreach (var node in item.Node.ChildNodes) stack.Push((node, item.Depth + 1));
+            var stack = new Stack<(INode Node, int Depth)>(); stack.Push((document, 0)); count = 0;
+            while (stack.TryPop(out var item))
+            {
+                if (++count > SpreadsheetClipboardCodec.MaxNodes || item.Depth > SpreadsheetClipboardCodec.MaxDepth) throw new InvalidDataException("HTML 节点/深度超过上限。");
+                foreach (var node in item.Node.ChildNodes) stack.Push((node, item.Depth + 1));
+            }
+            return document;
         }
+        catch { document.Dispose(); throw; }
+    }
+    /// <summary>Last-resort selected-fragment text. Never includes surrounding cells or loads resources.</summary>
+    public static string ReadDisplayText(byte[] bytes)
+    {
+        using var document = ParseBounded(Unwrap(bytes, fragmentOnly: true));
+        var text = new StringBuilder();
+        void Text(INode node)
+        {
+            if (node is IElement { LocalName: "script" or "style" or "head" or "iframe" }) return;
+            if (node is IText value) text.Append(value.Data);
+            else
+            {
+                if (node is IElement { LocalName: "img" } img) text.Append(img.GetAttribute("alt"));
+                foreach (var child in node.ChildNodes) Text(child);
+                if (node is IElement { LocalName: "td" or "th" }) text.Append('\t');
+                else if (node is IElement { LocalName: "br" or "p" or "div" or "tr" or "table" or "li" })
+                {
+                    if (text.Length > 0 && text[^1] == '\t') text.Length--;
+                    if (text.Length > 0 && text[^1] != '\n') text.Append('\n');
+                }
+            }
+            if (text.Length > SpreadsheetClipboardCodec.MaxBytes) throw new InvalidDataException("HTML 显示文本超过上限。");
+        }
+        Text(document.Body ?? (INode)document);
+        return text.ToString().TrimEnd('\t', '\r', '\n');
+    }
+    public static ExternalClipboardRegion Read(byte[] bytes)
+    {
+        using var document = ParseBounded(Unwrap(bytes));
         var tables = document.QuerySelectorAll("table");
         if (tables.Length != 1) throw new NotSupportedException("HTML 必须只包含一个无嵌套表格。");
         var limitations = new HashSet<string>();

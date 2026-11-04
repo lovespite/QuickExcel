@@ -191,6 +191,7 @@ public sealed class WorksheetSnapshot
         Printing = printing ?? new(); Printing.Validate();
         Annotations = annotations ?? new();
         Data = data ?? new();
+        QuickExcel.Core.SetScriptCommentsCommand.Validate(Data.ThreadComments);
         WorkbookLimits.ValidateDimension(Data.DefaultColumnWidth, nameof(data));
         if (Data.ImplicitColumnWidth && Data.DefaultColumnWidth != 8.43) throw new ArgumentException("隐式 Excel 默认列宽需要 8.43 字符的布局基准。", nameof(data));
         Data.Protection?.Validate();

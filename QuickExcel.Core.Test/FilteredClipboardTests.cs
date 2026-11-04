@@ -56,18 +56,17 @@ public sealed class FilteredClipboardTests
     [InlineData("<DataValidation/>")]
     [InlineData("<ConditionalFormatting/>")]
     [InlineData("<NamedCell ss:Name=\"CustomName\"/>")]
-    public void FilterRegionWithOtherLimitationsAutomaticallyUsesTypedValuesAndKeepsTargetStyle(string extra)
+    public void FilterRegionWithOtherLimitationsKeepsSupportedValuesAndFormats(string extra)
     {
         var source = SpreadsheetClipboardCodec.Read(Xml(cellExtra: extra));
         var plan = ExternalClipboardPastePolicy.Prepare(source, CellPasteMode.All);
-        Assert.Equal(CellPasteMode.Values, plan.Mode); Assert.Contains("自动改为只贴值", plan.Notice);
+        Assert.Equal(CellPasteMode.All, plan.Mode); Assert.Contains("支持的部分", plan.Notice);
         Assert.All(source.Limitations, limitation => Assert.Contains(limitation, plan.Notice));
         var style = new StyleDefinition { Italic = true, NumberFormatCode = "0.000" };
         var book = new WorkbookSnapshot(Guid.NewGuid(), 0, ExcelDateSystem.Windows1900, [new(SheetId.New(), "Target")], styles: [style]);
         using var session = new DocumentSession(book);
-        session.Execute(new PasteExternalCellsCommand(source, book.ActiveSheetId, new(0, 0, 0, 0), 0, plan.Mode));
-        Assert.Equal(book.Styles.ToArray(), session.Snapshot.Styles.ToArray());
-        Assert.All(session.Snapshot.Sheets[0].Cells, p => Assert.Equal(0, p.Value.Content.StyleId));
+        session.Execute(new PasteExternalCellsCommand(source, book.ActiveSheetId, new(0, 0, 0, 0), 0, plan.Mode, allowPartial: true));
+        Assert.All(session.Snapshot.Sheets[0].Cells, p => Assert.True(session.Snapshot.Styles[p.Value.Content.StyleId].Bold));
         Assert.Equal(CellValue.FromText("00123"), session.Snapshot.Sheets[0].GetCell(1, 0)!.Value);
         Assert.Equal(CellValue.FromNumber(.12), session.Snapshot.Sheets[0].GetCell(1, 1)!.Value);
     }
@@ -78,35 +77,36 @@ public sealed class FilteredClipboardTests
     public void ExplicitFormatsOrFormulasNeverAutomaticallyBecomeValueWrites(CellPasteMode mode)
     {
         var source = SpreadsheetClipboardCodec.Read(Xml(cellExtra: "<Comment>note</Comment>"));
-        Assert.Throws<NotSupportedException>(() => ExternalClipboardPastePolicy.Prepare(source, mode));
+        Assert.Equal(mode, ExternalClipboardPastePolicy.Prepare(source, mode).Mode);
     }
 
     [Theory]
     [InlineData("<NamedRange ss:Name=\"CustomName\"/>", "")]
     [InlineData("", "<AutoFilter xmlns=\"urn:unknown\"/>")]
     [InlineData("", "<Comment>note</Comment>")]
-    public void UnrelatedLimitationsDoNotAcquireAutomaticValueFallback(string names, string extra)
+    public void OtherComplexRegionsAlsoUsePartialPaste(string names, string extra)
     {
         var source = SpreadsheetClipboardCodec.Read(Xml(names, extra));
         Assert.False(source.HasFilterMetadata);
-        Assert.Throws<NotSupportedException>(() => ExternalClipboardPastePolicy.Prepare(source, CellPasteMode.All));
+        var plan = ExternalClipboardPastePolicy.Prepare(source, CellPasteMode.All);
+        Assert.Equal(CellPasteMode.All, plan.Mode); Assert.Contains("支持的部分", plan.Notice);
     }
 
     [Fact]
-    public void OtherNamesAlongsideFilterMetadataStillRequireValueFallback()
+    public void OtherNamesAlongsideFilterMetadataDoNotDiscardSupportedFormats()
     {
         var source = SpreadsheetClipboardCodec.Read(Xml("<NamedRange ss:Name=\"_FilterDatabase\"/><NamedRange ss:Name=\"UserName\"/>"));
         Assert.NotEmpty(source.Limitations);
-        Assert.Equal(CellPasteMode.Values, ExternalClipboardPastePolicy.Prepare(source, CellPasteMode.All).Mode);
+        Assert.Equal(CellPasteMode.All, ExternalClipboardPastePolicy.Prepare(source, CellPasteMode.All).Mode);
     }
 
     [Fact]
-    public void MissingResultsAndMalformedValuesRemainErrors()
+    public void MissingResultsAreReportedAndMalformedNumericRepresentationRemainsInvalid()
     {
         var xml = Encoding.UTF8.GetString(Xml(cellExtra: "<Comment>note</Comment>", amount: ""))
             .Replace("<Cell></Cell>", "<Cell ss:Formula=\"=1+2\"/>");
         var source = SpreadsheetClipboardCodec.Read(Encoding.UTF8.GetBytes(xml));
-        Assert.Throws<InvalidOperationException>(() => ExternalClipboardPastePolicy.Prepare(source, CellPasteMode.All));
+        Assert.Contains("已跳过", ExternalClipboardPastePolicy.Prepare(source, CellPasteMode.All).Notice);
         Assert.Throws<FormatException>(() => SpreadsheetClipboardCodec.Read(Xml(amount: "<Data ss:Type=\"Number\">NaN</Data>")));
     }
 
@@ -121,7 +121,7 @@ public sealed class FilteredClipboardTests
             data: hidden ? null : new() { Protection = new() });
         var book = new WorkbookSnapshot(Guid.NewGuid(), 0, ExcelDateSystem.Windows1900, [sheet]);
         using var session = new DocumentSession(book);
-        Assert.ThrowsAny<InvalidOperationException>(() => session.Execute(new PasteExternalCellsCommand(source, sheet.Id, new(0, 0, 0, 0), 0, plan.Mode)));
+        Assert.ThrowsAny<InvalidOperationException>(() => session.Execute(new PasteExternalCellsCommand(source, sheet.Id, new(0, 0, 0, 0), 0, plan.Mode, allowPartial: true)));
         Assert.Same(book, session.Snapshot); Assert.False(session.CanUndo);
     }
 }

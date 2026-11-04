@@ -267,7 +267,8 @@ internal static class TypedWorkbookXml
             var dataState = XlsxFiltering.Read(package, workbookPart, path, sheet) with
             { DefaultColumnWidth = modeledDefaultWidth, ImplicitColumnWidth = format?.Attribute("defaultColWidth") is null, Charts = XlsxCharts.Read(package, workbookPart, path, sheet, imageGeometry), Protection = XlsxProtection.Read(package, path, sheet), Outline = XlsxOutline.Read(package, path, sheet), Tables = XlsxTables.Read(package, workbookPart, path, sheet, preservedFormulas, Decode(Attr(definition, "name"))),
                 Validations = XlsxValidation.Read(package, path, sheet), ConditionalFormats = XlsxConditionalFormatting.Read(package, workbookPart, path, sheet) };
-            _ = XlsxThreadedComments.Read(package, workbookPart, path, Decode(Attr(definition, "name")));
+            var threads = XlsxThreadedComments.Read(package, workbookPart, path, Decode(Attr(definition, "name")));
+            dataState = dataState with { ThreadComments = threads?.Models ?? [], CommentFallback = threads?.Fallback is not null };
             var modeledSheet = new WorksheetSnapshot(SheetId.New(), Decode(Attr(definition, "name")), cells, rows, columns, merges, images,
                 view?.Attribute("showGridLines") is null || Bool((string?)view.Attribute("showGridLines")), OptionalDouble(format?.Attribute("defaultRowHeight")) / 0.75, (string?)tabColor?.Attribute("rgb"),
                 viewState, visibility, XlsxPrinting.Read(package, path, sheet), XlsxAnnotations.Read(package, path, sheet, textReader), dataState);

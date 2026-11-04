@@ -107,15 +107,13 @@ public sealed partial class MainWindow
     private async Task PasteAsync(string mode)
     {
         if (!await CommitEditorsAsync()) return;
-        string? notice = null;
         var session = Document.Session.SessionId; var revision = Document.Snapshot.Revision; var target = SelectedRange(allowObject: true); var sheetId = Document.Snapshot.ActiveSheetId;
         var selectedObject = _grid.SelectedDrawingObject;
         var data = await _clipboard.ReadAsync();
         if (session != Document.Session.SessionId || revision != Document.Snapshot.Revision || sheetId != Document.Snapshot.ActiveSheetId || target != SelectedRange(allowObject: true) || selectedObject != _grid.SelectedDrawingObject)
             throw new InvalidOperationException("读取剪贴板期间文档、工作表或目标选区已改变，请重试。");
-        if (mode is "image" or "chart" || mode == "all" && data.Token is null && data.SpreadsheetXml is null && data.Html is null && (data.Png is not null || data.OfficeDrawing is not null || data.ChartPackage is not null))
-        { await PasteDrawingAsync(data, mode, new(target.Top, target.Left), revision); return; }
-        if (selectedObject is not null) throw new InvalidOperationException("此操作需要单元格选区；请先取消对象选择。");
+        if (data.Token != _clipboardToken || data.Token is null || mode is "image" or "chart")
+        { await PasteAvailableClipboardAsync(data, mode, target, sheetId, revision); return; }
         if (data.Token is not null && data.Token == _clipboardToken)
         {
             if (_clipboardCells is not { } cells || _clipboardSession != session || _clipboardRevision != revision)
@@ -128,41 +126,28 @@ public sealed partial class MainWindow
             var rows = fill ? target.Rows : transpose ? cells.Columns : cells.Rows;
             var columns = fill ? target.Columns : transpose ? cells.Rows : cells.Columns;
             RequireVisiblePaste(new(target.Top, target.Left, target.Top + rows - 1, target.Left + columns - 1));
-            if (!await ExecuteAsync(new PasteCellsCommand(cells, Document.Snapshot.ActiveSheetId, Rectangle(target), revision, paste, transpose), revision)) return;
+            try
+            {
+                if (!await ExecuteAsync(new PasteCellsCommand(cells, Document.Snapshot.ActiveSheetId, Rectangle(target), revision, paste, transpose), revision)) return;
+            }
+            catch (NotSupportedException ex) when (!cells.IsCut)
+            {
+                // Keep the internal capture's typed results; do not reparse formatted display strings.
+                var partial = new ExternalClipboardRegion(cells.Rows, cells.Columns, cells.Cells.Select((c, i) =>
+                    new ExternalClipboardCell(c.Value, Document.Snapshot.Styles[c.Content.StyleId],
+                        Formula: c.Content.Kind == CellContentKind.Formula ? c.Content.FormulaText : null,
+                        FormulaOrigin: new(cells.Range.Top + i / cells.Columns, cells.Range.Left + i % cells.Columns),
+                        MissingResult: c.Content.Kind == CellContentKind.Formula && cells.HasOldResults)),
+                    merges: cells.MergedCells.Select(m => new CellRectangle(m.Top - cells.Range.Top, m.Left - cells.Range.Left, m.Bottom - cells.Range.Top, m.Right - cells.Range.Left)),
+                    limitations: ["部分内部结构未复制：" + ex.Message]);
+                await PasteAvailableCellsAsync(partial, mode, target, sheetId, revision, []);
+                _clipboardRevision = Document.Snapshot.Revision;
+                return;
+            }
             _clipboardRevision = Document.Snapshot.Revision; if (cells.IsCut) _clipboardCells = null;
             _grid.SelectRange(new(target.Top, target.Left, target.Top + rows - 1, target.Left + columns - 1), new(target.Top, target.Left));
         }
-        else if (data.SpreadsheetXml is not null || data.Html is not null)
-        {
-            if (mode == "transpose") throw new NotSupportedException("外部转置粘贴尚未支持。");
-            // A damaged rich format is an error, never silent fallback to HTML or text.
-            var source = data.SpreadsheetXml is { } xml ? SpreadsheetClipboardCodec.Read(xml, data.Biff8) : HtmlClipboardCodec.Read(data.Html!);
-            var paste = mode switch { "values" => CellPasteMode.Values, "formulas" => CellPasteMode.Formulas, "formats" => CellPasteMode.Formats, _ => CellPasteMode.All };
-            var plan = ExternalClipboardPastePolicy.Prepare(source, paste);
-            paste = plan.Mode; notice = plan.Notice;
-            if (paste != CellPasteMode.Formats && source.Rows == 1 && source.Columns == 1 &&
-                Document.Snapshot.GetSheet(sheetId).MergedCells.Select(CellRectangle.Parse).Any(m => m == Rectangle(target)))
-                target = new(target.Top, target.Left, target.Top, target.Left);
-            var rows = source.Rows == 1 && source.Columns == 1 ? target.Rows : source.Rows;
-            var columns = source.Rows == 1 && source.Columns == 1 ? target.Columns : source.Columns;
-            RequireVisiblePaste(new(target.Top, target.Left, checked(target.Top + rows - 1), checked(target.Left + columns - 1)));
-            if (!await ExecuteAsync(new PasteExternalCellsCommand(source, sheetId, Rectangle(target), revision, paste), revision)) return;
-            _grid.SelectRange(new(target.Top, target.Left, target.Top + rows - 1, target.Left + columns - 1), new(target.Top, target.Left));
-        }
-        else
-        {
-            if (mode is "formats" or "transpose") throw new InvalidOperationException("只贴格式和转置需要本工作簿内部复制。");
-            if (data.Text is null) return;
-            var sheet = Document.Snapshot.Sheets[SheetIndex];
-            if (sheet.MergedCells.Select(CellRectangle.Parse).Any(m => m == Rectangle(target)) && GridClipboard.Read(data.Text) is [{ Length: 1 }])
-                target = new(target.Top, target.Left, target.Top, target.Left);
-            var values = GridClipboard.Prepare(data.Text, target, mode == "formulas");
-            RequireVisiblePaste(new(target.Top, target.Left, values.Max(v => v.Row), values.Max(v => v.Column)));
-            var edits = values.Select(v => new CellEdit(new(sheet.Id, v.Row, v.Column), CellInput.ParseForCell(v.Value, Document.Snapshot, sheet, v.Row, v.Column)));
-            if (!await ExecuteAsync(new SetCellsCommand(edits), revision)) return;
-            _grid.SelectRange(new(target.Top, target.Left, values.Max(v => v.Row), values.Max(v => v.Column)), new(target.Top, target.Left));
-        }
-        await CalculateAsync(); _status.Text = notice is null ? "已粘贴，可一次撤销。" : notice + " 可一次撤销。";
+        await CalculateAsync(); _status.Text = "已粘贴，可一次撤销。";
     }
     private async Task FillAsync(GridRange source, GridRange extent, long? revision = null)
     {

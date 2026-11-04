@@ -163,7 +163,13 @@ public sealed class ScriptWorkbookModel
             return command;
         });
 
-    private void Write(SheetId sheetId, CellRectangle range, Func<DocumentCommand> create)
+    public void ExecuteObjectCommand(SheetId sheetId, int affectedCells, DocumentCommand command)
+    {
+        if (affectedCells is < 1 or > 20_000) { _invalid = true; throw new InvalidOperationException("对象修改超过 20000 格。"); }
+        Write(sheetId, new(0, 0, 0, 0), () => command, affectedCells);
+    }
+
+    private void Write(SheetId sheetId, CellRectangle range, Func<DocumentCommand> create, int? chargedCells = null)
     {
         try
         {
@@ -173,7 +179,7 @@ public sealed class ScriptWorkbookModel
             if (range.Bottom < range.Top || range.Right < range.Left ||
                 (long)(range.Bottom - range.Top + 1) * (range.Right - range.Left + 1) > 20_000 || _commands.Count >= 4096)
                 throw new InvalidOperationException("每次脚本最多修改 20000 格、提交 4096 个模型命令。");
-            _writes += range.Count;
+            _writes += chargedCells ?? range.Count;
             if (_writes > 20_000) throw new InvalidOperationException("每次脚本累计最多修改 20000 格（重复写入也计数）。");
             if (_working.FileState?.FormulaReadOnly == true) throw new InvalidOperationException(WorkbookFileState.FormulaReadOnlyMessage);
             var command = create();

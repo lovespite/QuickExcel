@@ -10,12 +10,21 @@ public sealed partial class JscSession
         const implemented = capabilities.types;
         const QuickExcel = deepFreeze(capabilities.enums || {});
         Object.defineProperty(globalThis, 'QuickExcel', { value: QuickExcel });
-        function apiArgument(value) {
+        function apiArgument(value, depth = 0) {
+            if (depth > 16) throw new ScriptError('InvalidArgument', '参数嵌套超过限制或存在循环。');
             if (value && typeof value === 'object' && handleData.has(value)) return dataOf(value);
+            if (isArray(value)) return value.map(item => apiArgument(item, depth + 1));
+            if (value && typeof value === 'object') {
+                if (value instanceof Date) throw new ScriptError('UnsupportedApi', '日期验证请传序列值公式；Date 参数尚未支持。');
+                const result = Object.create(null);
+                for (const key of ownKeys(value)) result[key] = apiArgument(value[key], depth + 1);
+                return result;
+            }
             return value;
         }
         function apiResult(value) {
             if (isArray(value)) return value.map(apiResult);
+            if (value && value.scriptHandle === true && value.type === 'RangeAreas') return makeHandle('RangeAreas', { sheetId: value.data.sheetId, addresses: value.data.addresses.map(modelAddress) });
             if (value && typeof value === 'object' && value.scriptHandle === true)
                 return value.type === 'Range' ? range(value.data.sheetId, value.data.address) : makeHandle(value.type, value.data);
             return value === null ? undefined : value;
@@ -190,9 +199,10 @@ public sealed partial class JscSession
                 try {
                     const data = dataOf(this);
                     if (spec.host.startsWith('getApi:') || spec.host.startsWith('setApi:')) {
-                        const result = model(spec.host, data, args.map(apiArgument));
+                        const result = model(spec.host, data, args.map(value => apiArgument(value)));
+                        if (name === 'getCreationDate' && (type === 'Comment' || type === 'CommentReply')) return new Date(result);
                         return result && typeof result === 'object' ? apiResult(result) : result === null &&
-                            ['getTable','getColumn','getColumnById','getColumnByName','getUsedRange'].includes(name) ? undefined : result;
+                            ['getTable','getColumn','getColumnById','getColumnByName','getUsedRange','getChart','getComment','getCommentReply','getConditionalFormat','getCustom','getCellValue','getTextComparison','getPreset'].includes(name) ? undefined : result;
                     }
                     if (type === 'Range') {
                         if (name === 'setValue') args = [checkScalar(args[0])];

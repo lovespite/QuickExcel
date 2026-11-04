@@ -33,14 +33,17 @@ try {
     $objects=$sheet.ChartObjects();$chartObject=$objects.Add(100,100,480,300);Release-Com $objects
     $chart=$chartObject.Chart;$chart.ChartType=51;$chart.SetSourceData($range);$chart.HasTitle=$true;$chart.ChartTitle.Text='Clipboard Chart';Release-Com $range
     $book.SaveAs((Join-Path $run 'source.xlsx'),51)
-    foreach($case in @(@{Name='column';Type=51;Mode='chart'},@{Name='line';Type=4;Mode='chart'},@{Name='pie';Type=5;Mode='chart'},@{Name='scatter';Type=-4169;Mode='chart'},@{Name='chart-image';Type=51;Mode='image'})) {
+    foreach($case in @(@{Name='column';Type=51;Mode='chart'},@{Name='line';Type=4;Mode='chart'},@{Name='pie';Type=5;Mode='chart'},@{Name='scatter';Type=-4169;Mode='chart'},@{Name='chart-image';Type=51;Mode='image'},
+        @{Name='area-fallback';Type=1;Mode='all';Fallback=$true},@{Name='combo-fallback';Type=51;Mode='chart';Fallback=$true})) {
         $book.Activate();for($r=1;$r -lt 4;$r++){$cell=$sheet.Cells.Item($r+1,1);$cell.Value2=$(if($case.Type -eq -4169){[double]$r}else{'Q'+$r});Release-Com $cell}
         $chart.ChartType=$case.Type;$range=$sheet.Range($(if($case.Type -eq 5){'A1:B4'}else{'A1:C4'}));$chart.SetSourceData($range);Release-Com $range
+        if($case.Name -eq 'combo-fallback'){$series=$chart.SeriesCollection(2);try{$series.ChartType=4}finally{Release-Com $series}}
         $chartObject.Copy();$dir=Exchange $case.Name $case.Mode
+        if($case.ContainsKey('Fallback') -and (Get-Content (Join-Path $dir 'paste-status.txt') -Raw) -notmatch '自动降级为图片'){throw 'Unsupported chart did not report image fallback'}
         if($case.Name -eq 'column'){[void](Exchange 'column-private' 'chart');$results+=@{Name='column-private-cross-instance';Passed=$true}}
         $targetBook=$excel.Workbooks.Add();$target=$targetBook.Worksheets.Item(1);$target.Activate();$target.Paste()
         $charts=$target.ChartObjects();$count=$charts.Count;Release-Com $charts
-        if($case.Mode -eq 'chart') {
+        if($case.Mode -eq 'chart' -and -not $case.ContainsKey('Fallback')) {
             if($count -ne 1){throw "Expected editable chart in Excel, got $count"}
             $copy=$target.ChartObjects(1);$copyChart=$copy.Chart;$series=$copyChart.SeriesCollection(1)
             try{

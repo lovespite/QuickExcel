@@ -35,8 +35,10 @@ public sealed partial class MainWindow
             _grid.Select(new(6, 2)); await PasteAsync("values");
             check(Document.Snapshot.Sheets[0].GetCell(6, 2)!.Value == CellValue.FromBoolean(true), "Clipboard replacement cannot reuse the old capture");
             var before = Document.Snapshot; memory.Value = new("fallback", SpreadsheetXml: [1, 2, 3]);
-            try { await PasteAsync("all"); throw new Exception("Damaged XML accepted"); } catch (System.Xml.XmlException) { }
-            check(ReferenceEquals(before, Document.Snapshot), "Damaged rich payload does not silently use text or change history");
+            await PasteAsync("all");
+            check(Document.Snapshot.Sheets[0].GetCell(6, 2)!.Value == CellValue.FromText("fallback") && _status.Text!.Contains("降级"), "Unreadable XML automatically falls back to text and reports the loss");
+            await History(false); check(Document.Snapshot.Sheets[0].GetCell(6, 2)!.Value == CellValue.FromBoolean(true), "Fallback text paste is one undoable operation");
+            before = Document.Snapshot;
             _clipboard = new DelayedClipboard(new("late"), () => _grid.Select(new(8, 8)));
             try { await PasteAsync("all"); throw new Exception("Changed selection accepted"); } catch (InvalidOperationException) { }
             check(before.Revision == Document.Snapshot.Revision && ReferenceEquals(before.Sheets[0].Cells, Document.Snapshot.Sheets[0].Cells), "Async selection change rejects the pending paste");
@@ -70,11 +72,47 @@ public sealed partial class MainWindow
             _grid.Select(new(2, 2)); await PasteAsync("all");
             check(Document.Snapshot.Sheets[0].GetCell(2, 2)!.Value == CellValue.FromText("00123") &&
                 Document.Snapshot.Sheets[0].GetCell(2, 3)!.Value == CellValue.FromNumber(.12) &&
-                !Document.Snapshot.Styles[Document.Snapshot.Sheets[0].GetStyleId(2, 2)].Bold && _status.Text!.Contains("自动改为只贴值"),
-                "Filter-header source with unsupported attachments automatically uses typed values and reports the fallback");
+                Document.Snapshot.Styles[Document.Snapshot.Sheets[0].GetStyleId(2, 2)].Bold && _status.Text!.Contains("支持的部分"),
+                "Filter-header source with unsupported attachments retains modeled styles and typed values");
             before = Document.Snapshot;
-            try { await PasteAsync("formats"); throw new Exception("Format paste became value writes"); } catch (NotSupportedException) { }
-            check(ReferenceEquals(before, Document.Snapshot), "Explicit format paste never silently becomes an automatic value paste");
+            await PasteAsync("formats");
+            check(Document.Snapshot.Sheets[0].GetCell(2, 2)!.Value == before.Sheets[0].GetCell(2, 2)!.Value, "Partial format paste retains destination values");
+            memory.Value = new("wrong text", SpreadsheetXml: [1, 2, 3], Html: HtmlClipboardCodec.Write(source));
+            _grid.Select(new(8, 2)); await PasteAsync("all");
+            check(Document.Snapshot.Sheets[0].GetCell(8, 2)!.Value == CellValue.FromText("00123") &&
+                Document.Snapshot.Styles[Document.Snapshot.Sheets[0].GetStyleId(8, 2)].Bold && _status.Text!.Contains("显示文本"),
+                "Broken XML falls back to supported HTML cells and formats before plain text");
+            const string fragment = "<p>=1+2</p><p>second</p>";
+            memory.Value = new(null, Html: HtmlClipboardCodec.Wrap(fragment, 0, fragment.Length));
+            _grid.Select(new(10, 2)); await PasteAsync("all");
+            check(Document.Snapshot.Sheets[0].GetCell(10, 2)!.Value == CellValue.FromText("=1+2") &&
+                Document.Snapshot.Sheets[0].GetCell(11, 2)!.Value == CellValue.FromText("second"), "Non-table HTML automatically pastes its selected display text without executing formulas");
+            memory.Value = new("=1+2\t00123", SpreadsheetXml: [1, 2, 3]);
+            _grid.Select(new(13, 2)); await PasteAsync("formulas");
+            check(Document.Snapshot.Sheets[0].GetCell(13, 2)!.Value == CellValue.FromText("=1+2") &&
+                Document.Snapshot.Sheets[0].GetCell(13, 3)!.Value == CellValue.FromText("00123"), "Automatic text fallback preserves leading zeros and literal formula-looking data");
+            memory.Value = new(null, SpreadsheetXml: SpreadsheetClipboardCodec.Write(source));
+            _grid.Select(new(15, 2)); await PasteAsync("transpose");
+            check(Document.Snapshot.Sheets[0].GetCell(15, 2)!.Value == CellValue.FromText("00123") &&
+                Document.Snapshot.Sheets[0].GetCell(16, 2)!.Value == CellValue.FromNumber(.12), "External transpose uses the available typed cell data");
+            memory.Value = new(null, SpreadsheetXml: [1, 2, 3]); before = Document.Snapshot;
+            await PasteAsync("all"); check(ReferenceEquals(before, Document.Snapshot) && _status.Text!.Contains("保持不变"), "No usable representation is a reported no-op without a refusal dialog");
+            _workspace.New(); ShowBook(); sheet = Document.Snapshot.ActiveSheetId;
+            await ExecuteAsync(new SetCellsCommand([new(new(sheet, 0, 0), CellContent.FromLiteral(CellValue.FromNumber(42)))]));
+            await ExecuteAsync(new SetNoteCommand(sheet, new(0, 0), new("Author", new([new("source note")]))));
+            _grid.Select(new(0, 0)); await CopyAsync(false); _grid.Select(new(2, 0)); await PasteAsync("all");
+            check(Document.Snapshot.Sheets[0].GetCell(2, 0)!.Value == CellValue.FromNumber(42) &&
+                Document.Snapshot.Sheets[0].Annotations.Notes.Count == 1 && _status.Text!.Contains("支持的部分"),
+                "Internal note-bearing capture pastes available cells while reporting omitted attachments");
+            await History(false);
+            check(Document.Snapshot.Sheets[0].GetCell(2, 0) is null && Document.Snapshot.Sheets[0].Annotations.Notes.Count == 1,
+                "Undo of partial internal paste preserves source data and attachment");
+            await ExecuteAsync(new SetNoteCommand(sheet, new(3, 0), new("Author", new([new("target note")]))));
+            memory.Value = new(null, SpreadsheetXml: SpreadsheetClipboardCodec.Write(source));
+            _grid.Select(new(3, 0)); await PasteAsync("all");
+            check(Document.Snapshot.Sheets[0].GetCell(3, 0)!.Value == CellValue.FromText("00123") &&
+                Document.Snapshot.Sheets[0].Annotations.Notes.Count == 2 && _status.Text!.Contains("自动改为只贴值"),
+                "Default paste falls back to values to retain destination attachments");
             await RunDrawingClipboardChecksAsync(check);
         }
         finally { _clipboard = original; }

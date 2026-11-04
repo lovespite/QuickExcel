@@ -47,31 +47,53 @@ public sealed partial class MainWindow
         using var encoded = bitmap.Encode(SKEncodedImageFormat.Png, 100); var bytes = encoded.ToArray();
         if (bytes.Length > OfficeDrawingClipboardCodec.MaxBytes) throw new NotSupportedException("对象图片超过 16 MiB。"); return bytes;
     }
-    private async Task PasteDrawingAsync(ClipboardExchange data, string mode, CellPosition target, long revision)
+    private async Task<bool> TryPasteDrawingAsync(ClipboardExchange data, string mode, CellPosition target, long revision, List<string> notices)
     {
         var snapshot = Document.Snapshot; var sheet = snapshot.Sheets[SheetIndex];
         RequireVisiblePaste(new(target.Row, target.Column, target.Row, target.Column));
-        var chart = mode == "chart" || mode == "all" && (data.ChartPackage is not null || data.OfficeDrawing is { } office && OfficeDrawingClipboardCodec.ContainsChart(office));
-        if (chart)
+        ChartClipboard? source = null;
+        if (mode != "image")
         {
-            if (data.OfficeDrawing is null && data.ChartPackage is null) throw new NotSupportedException("剪贴板没有可编辑图表。若来源只提供图片，请选择粘贴为图片。");
-            var source = data.ChartPackage is { } package ? OfficeDrawingClipboardCodec.ReadPrivateChart(package) : OfficeDrawingClipboardCodec.ReadChart(data.OfficeDrawing!);
-            if (!await ExecuteAsync(new PasteChartCommand(source, sheet.Id, target), revision)) return;
-            await CalculateAsync();
-            _grid.SelectDrawingObject(new(DrawingObjectKind.Chart, sheet.Data.Charts.Length));
-            _status.Text = "已粘贴可编辑图表，数据快照保存在新增的“图表数据”工作表；不连接源文件，可一次撤销。";
+            if (data.ChartPackage is { } package)
+                try { source = OfficeDrawingClipboardCodec.ReadPrivateChart(package); }
+                catch (Exception ex) when (IsClipboardSourceFailure(ex)) { notices.Add("内部图表格式未采用：" + ex.Message); }
+            if (source is null && data.OfficeDrawing is { } office)
+                try { source = OfficeDrawingClipboardCodec.ReadChart(office); }
+                catch (Exception ex) when (IsClipboardSourceFailure(ex)) { notices.Add("对象的可编辑格式未采用：" + ex.Message); }
         }
-        else
+        if (source is not null)
         {
-            if (data.Png is null) throw new NotSupportedException("剪贴板没有位图；请在源应用中复制图片后重试。");
-            if (data.Png.Length > OfficeDrawingClipboardCodec.MaxBytes) throw new InvalidDataException("图片超过 16 MiB。");
-            if (data.Png.Length < 8 || !data.Png.AsSpan(0, 8).SequenceEqual(new byte[] { 137, 80, 78, 71, 13, 10, 26, 10 })) throw new InvalidDataException("剪贴板 PNG 签名无效。");
-            var image = new SheetImage(data.Png, "png", target.Row, target.Column);
-            using var renderer = new SkiaRenderer(); using var bitmap = renderer.DecodeImage(image);
-            image = image.WithAnchor(DrawingGeometry.FromBounds(sheet, new(DrawingGeometry.ColumnStart(sheet, target.Column), DrawingGeometry.RowStart(sheet, target.Row), bitmap.Width, bitmap.Height), DrawingAnchorKind.OneCell));
-            if (!await ExecuteAsync(new SetImageCommand(sheet.Id, sheet.Images.Length, image), revision)) return;
-            _grid.SelectDrawingObject(new(DrawingObjectKind.Image, sheet.Images.Length));
-            _status.Text = "已粘贴图片，可移动、缩放、旋转，可一次撤销。";
+            // A different date epoch can make an otherwise valid chart unrepresentable.
+            // Only unsupported representation errors fall back; destination protection still applies.
+            try
+            {
+                if (!await ExecuteAsync(new PasteChartCommand(source, sheet.Id, target), revision)) return true;
+            }
+            catch (NotSupportedException ex) { notices.Add(ex.Message); source = null; }
+            if (source is not null)
+            {
+                await CalculateAsync();
+                _grid.SelectDrawingObject(new(DrawingObjectKind.Chart, sheet.Data.Charts.Length));
+                _status.Text = "已粘贴可编辑图表，数据快照保存在新增的“图表数据”工作表；不连接源文件，可一次撤销。 " + string.Join(" ", notices);
+                return true;
+            }
         }
+        SheetImage? image = null;
+        if (data.Png is not null)
+            try
+            {
+                if (data.Png.Length > OfficeDrawingClipboardCodec.MaxBytes) throw new InvalidDataException("图片超过 16 MiB。");
+                if (data.Png.Length < 8 || !data.Png.AsSpan(0, 8).SequenceEqual(new byte[] { 137, 80, 78, 71, 13, 10, 26, 10 })) throw new InvalidDataException("剪贴板 PNG 签名无效。");
+                var candidate = new SheetImage(data.Png, "png", target.Row, target.Column);
+                using var renderer = new SkiaRenderer(); using var bitmap = renderer.DecodeImage(candidate);
+                image = candidate.WithAnchor(DrawingGeometry.FromBounds(sheet, new(DrawingGeometry.ColumnStart(sheet, target.Column), DrawingGeometry.RowStart(sheet, target.Row), bitmap.Width, bitmap.Height), DrawingAnchorKind.OneCell));
+            }
+            catch (Exception ex) when (IsClipboardSourceFailure(ex)) { notices.Add("图片格式未采用：" + ex.Message); }
+        if (image is null) return false;
+        if (!await ExecuteAsync(new SetImageCommand(sheet.Id, sheet.Images.Length, image), revision)) return true;
+        _grid.SelectDrawingObject(new(DrawingObjectKind.Image, sheet.Images.Length));
+        var fallback = mode == "chart" || mode != "image" && (data.OfficeDrawing is not null || data.ChartPackage is not null);
+        _status.Text = (fallback ? "已自动降级为图片，保留对象外观；不能编辑图表数据。" : "已粘贴图片，可移动、缩放、旋转。") + " 可一次撤销。 " + string.Join(" ", notices);
+        return true;
     }
 }

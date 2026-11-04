@@ -8,6 +8,7 @@ internal sealed partial class ScriptModelAdapter
 {
     private object? WorkbookApi(string member, JsonElement[] args)
     {
+        if (member.Contains("Comment", StringComparison.Ordinal)) return Comments(null, member, args);
         if (member is "getTables" or "getTable")
         {
             Arity(args, member == "getTable" ? 1 : 0); Spend(1, false);
@@ -20,6 +21,8 @@ internal sealed partial class ScriptModelAdapter
     }
     private object? WorksheetApi(WorksheetSnapshot sheet, string member, JsonElement[] args)
     {
+        if (member.Contains("Comment", StringComparison.Ordinal)) return Comments(sheet, member, args);
+        if (member is "getCharts" or "getChart" or "addChart") return WorksheetCharts(sheet, member, args);
         switch (member)
         {
             case "getProtection": case "getAutoFilter":
@@ -47,6 +50,8 @@ internal sealed partial class ScriptModelAdapter
     }
     private object? RangeApi(WorksheetSnapshot sheet, CellRectangle range, string member, JsonElement[] args)
     {
+        if (member == "getDataValidation") { Arity(args, 0); return Handle("DataValidation", new { sheetId = sheet.Id.ToString(), address = range.ToString() }); }
+        if (member.Contains("ConditionalFormat", StringComparison.Ordinal)) return RangeConditional(sheet, range, member, args);
         if (member == "clear")
         {
             Arity(args, 0, 1); var mode = args.Length == 0 ? 0 : Int(args[0]);
