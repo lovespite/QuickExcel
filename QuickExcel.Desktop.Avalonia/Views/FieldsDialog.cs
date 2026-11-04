@@ -27,6 +27,7 @@ internal sealed class FieldsDialog : Window
     }
     public Action? Validate { get; set; }
     public FieldsDialog Note(string text) { _fields.Children.Add(new TextBlock { Text = text, TextWrapping = TextWrapping.Wrap }); return this; }
+    public FieldsDialog Preview(Control preview) { _fields.Children.Add(preview); return this; }
     private void Add(string key, string label, Control input)
     {
         _inputs.Add(key, input); AutomationProperties.SetName(input, label);

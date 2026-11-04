@@ -9,6 +9,12 @@ public static class CellInput
     public static CellContent ParseForCell(string text, WorkbookSnapshot snapshot, WorksheetSnapshot sheet, int row, int column)
     {
         var style = sheet.GetStyleId(row, column);
+        var definition = snapshot.Styles[style];
+        if ((definition.NumberFormatCode ?? QuickExcel.Core.CellDisplayFormatter.BuiltIn(definition.NumberFormatId)) == "@")
+        {
+            WorkbookLimits.ValidateText(text);
+            return CellContent.FromLiteral(text.Length == 0 ? CellValue.Blank : CellValue.FromText(text[0] == '\'' ? text[1..] : text), style);
+        }
         if (sheet.Data.Validations.Any(v => v.Kind == ValidationKind.Date && v.Contains(new(row, column))))
         {
             if (text == "1900-02-29" && snapshot.DateSystem == ExcelDateSystem.Windows1900)

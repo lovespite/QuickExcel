@@ -4,6 +4,7 @@ using QuickExcel.CompatibilityProbe;
 
 try
 {
+    if (args is ["verify-conditional-visuals", var visualSource, var visualExcel, var visualReport]) return ConditionalVisualProbe.Compare(visualSource, visualExcel, visualReport);
     if (args is ["threads", var threadSource, var threadDirectory]) return ThreadedCommentsProbe.Run(threadSource, threadDirectory);
     if (args is ["pivots", var pivotSource, var pivotDirectory]) return PivotProbe.Run(pivotSource,pivotDirectory);
     if (args is ["e4-report", var reportSource, var reportDirectory]) return E4Probe.Run(reportSource, reportDirectory);

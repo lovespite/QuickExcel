@@ -82,7 +82,8 @@ public sealed partial class WorkbookGrid
                     using var recorder = new SKPictureRecorder(); var target = recorder.BeginRecording(SKRect.Create((float)bounds.Width + 1, (float)bounds.Height + 1));
                     Renderer.DrawCell(target, new(new(0, 0, bounds.Width, bounds.Height),
                         new(display.Text, style, RichText: cell?.Content.RichText, DefaultFontSize: 14, FillOffset: display.FillOffset, FillCharacter: display.FillCharacter),
-                        Sheet.ShowGridLines, Sheet.Annotations.Notes.ContainsKey(new(range.Top, range.Left))), RenderOutput.Screen);
+                        Sheet.ShowGridLines, Sheet.Annotations.Notes.ContainsKey(new(range.Top, range.Left)),
+                        ResolveConditionalVisual?.Invoke(_snapshot, Sheet, range.Top, range.Left)), RenderOutput.Screen);
                     if (FilterHeader(range.Top, range.Left) is { } marker)
                         Renderer.DrawCell(target, new(new(Math.Max(0, bounds.Width - 22), 0, 22, bounds.Height),
                             new(marker, new() { FillColor = "FFF2F5F4", FontColor = "FF006B59", Horizontal = 2, Vertical = 1 }, DefaultFontSize: 10)), RenderOutput.Screen);

@@ -21,7 +21,8 @@ public sealed class PrintSession : IAsyncDisposable
     private PrintSession(SkiaReport report, string directory) { _report = report; _directory = directory; PdfPath = Path.Combine(directory, "preview.pdf"); }
     public static async Task<PrintSession> CreateAsync(WorkbookSnapshot snapshot, SheetId sheetId, string fileName, string temporaryRoot,
         Func<WorkbookSnapshot, WorksheetSnapshot, int, int, StyleDefinition>? style = null,
-        IEnumerable<string>? fontFiles = null, bool systemFonts = true, CancellationToken cancellationToken = default)
+        IEnumerable<string>? fontFiles = null, bool systemFonts = true, CancellationToken cancellationToken = default,
+        Func<WorkbookSnapshot, WorksheetSnapshot, int, int, ConditionalCellVisual?>? visual = null)
     {
         var root = Path.GetFullPath(temporaryRoot); Directory.CreateDirectory(root);
         if ((File.GetAttributes(root) & FileAttributes.ReparsePoint) != 0) throw new IOException("打印临时目录不能是重解析点。");
@@ -34,7 +35,7 @@ public sealed class PrintSession : IAsyncDisposable
             return await Task.Run(() =>
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                var report = new SkiaReport(snapshot, snapshot.GetSheet(sheetId), fileName, style, fontFiles, systemFonts, cancellationToken: cancellationToken);
+                var report = new SkiaReport(snapshot, snapshot.GetSheet(sheetId), fileName, style, fontFiles, systemFonts, cancellationToken: cancellationToken, visual: visual);
                 session = new(report, directory);
                 report.WritePdf(session.PdfPath, cancellationToken);
                 report.ReleaseDrawingCaches();

@@ -17,7 +17,8 @@ public sealed class SkiaReport : IDisposable
     public SkiaReport(WorkbookSnapshot book, WorksheetSnapshot sheet, string file,
         Func<WorkbookSnapshot, WorksheetSnapshot, int, int, StyleDefinition>? style = null,
         IEnumerable<string>? fontFiles = null, bool systemFonts = true, DateTime? timestamp = null,
-        RenderBudget? budget = null, CancellationToken cancellationToken = default)
+        RenderBudget? budget = null, CancellationToken cancellationToken = default,
+        Func<WorkbookSnapshot, WorksheetSnapshot, int, int, ConditionalCellVisual?>? visual = null)
     {
         Renderer = new(fontFiles, systemFonts, budget);
         try
@@ -51,7 +52,7 @@ public sealed class SkiaReport : IDisposable
                 { warnings.Add($"图表 {i + 1}（{chart.Title}）无法绘制，本次跳过：{ex.Message}"); }
             }
             visible = visible.WithImages(images).WithData(visible.Data with { Charts = [.. charts] });
-            Job = new(book, visible, file, time, warnings, style, cancellationToken);
+            Job = new(book, visible, file, time, warnings, style, cancellationToken, visual);
             if (Job.Layout.Pages.Any(p => (long)p.Rows.Length * p.Columns.Length > Renderer.Budget.MaxPageCells))
                 throw new NotSupportedException($"单页超过 {Renderer.Budget.MaxPageCells:N0} 格渲染预算，请调整打印缩放或区域。");
             _merges = visible.MergedCells.Select(CellRectangle.Parse).ToArray();

@@ -7,9 +7,9 @@ using static QuickExcel.Storage.XlsxPackage;
 
 namespace QuickExcel.Storage;
 
-internal static class XlsxConditionalFormatting
+internal static partial class XlsxConditionalFormatting
 {
-    private static readonly string[] Types = ["cellIs", "expression", "duplicateValues", "uniqueValues", "containsText", "notContainsText", "beginsWith", "endsWith"];
+    private static readonly string[] Types = ["cellIs", "expression", "duplicateValues", "uniqueValues", "containsText", "notContainsText", "beginsWith", "endsWith", "colorScale", "dataBar", "iconSet"];
     private static readonly string[] Operators = ["between", "notBetween", "equal", "notEqual", "lessThan", "lessThanOrEqual", "greaterThan", "greaterThanOrEqual"];
     private static readonly string[] TextOperators = ["containsText", "notContains", "beginsWith", "endsWith"];
     public static ImmutableArray<ConditionalFormatRule> Read(XlsxPackage package, string workbook, string path, XElement sheet)
@@ -19,7 +19,7 @@ internal static class XlsxConditionalFormatting
         if (groups.Length == 0 && extensions.Length == 0) return [];
         try
         {
-            if (extensions.Length > 0) throw new NotSupportedException("扩展条件格式尚未支持。");
+            var extendedBars = ReadExtendedBars(sheet); var usedBars = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             var result = new List<ConditionalFormatRule>();
             var stylePath = package.RelatedByType(workbook, "styles", true)!; var styles = package.XmlPart(stylePath).Root!;
             var dxfs = styles.Element(Main + "dxfs")?.Elements(Main + "dxf").ToArray() ?? [];
@@ -30,20 +30,35 @@ internal static class XlsxConditionalFormatting
                 var ranges = Attr(group, "sqref").Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).Select(CellRectangle.Parse).ToArray();
                 foreach (var rule in group.Elements())
                 {
-                    XlsxTables.Shape(rule, "formula", "type dxfId priority stopIfTrue operator text");
+                    XlsxTables.Shape(rule, "formula colorScale dataBar iconSet extLst", "type dxfId priority stopIfTrue operator text");
                     var type = Array.IndexOf(Types, Attr(rule, "type")); if (type < 0) throw new NotSupportedException("此条件格式类型尚未支持。");
                     var op = (string?)rule.Attribute("operator"); var index = Array.IndexOf(Operators, op ?? "between");
-                    if (type >= 4) { if (op is not null && op != TextOperators[type - 4]) throw new NotSupportedException("文本条件类型和比较符不一致。"); index = 0; }
+                    if (type is >= 4 and <= 7) { if (op is not null && op != TextOperators[type - 4]) throw new NotSupportedException("文本条件类型和比较符不一致。"); index = 0; }
                     if (index < 0) throw new NotSupportedException("条件格式比较符未支持。");
                     var formulas = rule.Elements(Main + "formula").Select(f => { XlsxTables.Shape(f, "", ""); return XlsxStructuredFormula.Read("=" + Decode(f.Value).TrimStart('=')); }).ToArray();
                     if (formulas.Length > 2) throw new NotSupportedException("条件格式公式数量超出基础规则。");
                     var dxf = rule.Attribute("dxfId") is { } id ? ReadStyle(dxfs[Int(id.Value, dxfs.Length - 1)], colors, package, stylePath) : new DifferentialStyle();
+                    var visual = rule.Elements().Where(e => e.Name.LocalName is "colorScale" or "dataBar" or "iconSet").ToArray();
+                    if (type >= 8 ? visual.Length != 1 || visual[0].Name.LocalName != Types[type] : visual.Length != 0)
+                        throw new NotSupportedException("条件格式视觉类型和定义不一致。");
+                    ConditionalColorScale? scale = null; ConditionalDataBar? bar = null; ConditionalIconSet? icons = null;
+                    if (type == 8) scale = ReadScale(visual[0], colors, package, stylePath);
+                    if (type == 9) bar = ReadBar(visual[0], colors, package, stylePath);
+                    if (type == 10) icons = ReadIcons(visual[0]);
+                    if (rule.Element(Main + "extLst") is { } ext)
+                    {
+                        var link = ReadBarLink(ext);
+                        if (bar is null || !extendedBars.TryGetValue(link, out var extended) || !usedBars.Add(link) || !ranges.SequenceEqual(extended.Ranges))
+                            throw new NotSupportedException("数据条扩展缺失、重复或应用区域不匹配。");
+                        bar = ReadExtendedBar(extended.Bar, bar, colors, package, stylePath);
+                    }
                     result.Add(new(ranges, (ConditionalFormatKind)type, Int(Attr(rule, "priority"), int.MaxValue), dxf,
                         formulas.ElementAtOrDefault(0), formulas.ElementAtOrDefault(1), (ConditionalComparison)index,
-                        Bool((string?)rule.Attribute("stopIfTrue")), rule.Attribute("text") is { } text ? Decode(text.Value) : null));
+                        Bool((string?)rule.Attribute("stopIfTrue")), rule.Attribute("text") is { } text ? Decode(text.Value) : null, scale, bar, icons));
                     if (result.Count > 1024) throw new InvalidDataException("条件格式规则超过 1024。");
                 }
             }
+            if (usedBars.Count != extendedBars.Count) throw new NotSupportedException("独立或未关联的扩展条件格式尚未支持。");
             var ordered = result.OrderBy(r => r.Priority).ToImmutableArray();
             _ = new WorksheetSnapshot(SheetId.New(), "Conditional", data: new() { ConditionalFormats = ordered });
             return ordered;
@@ -118,6 +133,11 @@ internal static class XlsxConditionalFormatting
     {
         foreach (var rule in sheet.Data.ConditionalFormats.OrderBy(r => r.Priority))
         {
+            if (rule.Kind >= ConditionalFormatKind.ColorScale)
+            {
+                yield return new(Main + "conditionalFormatting", new XAttribute("sqref", string.Join(" ", rule.Ranges)), WriteVisualRule(rule));
+                continue;
+            }
             var element = new XElement(Main + "cfRule", new XAttribute("type", Types[(int)rule.Kind]), new XAttribute("priority", rule.Priority),
                 new XAttribute("stopIfTrue", rule.StopIfTrue ? 1 : 0), new XAttribute("dxfId", WriteStyle(rule.Style, styles)),
                 rule.Kind == ConditionalFormatKind.CellIs ? new XAttribute("operator", Operators[(int)rule.Comparison]) :

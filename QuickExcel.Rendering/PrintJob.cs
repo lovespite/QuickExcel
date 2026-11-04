@@ -13,12 +13,15 @@ public sealed class PrintJob
     public DateTime Timestamp { get; }
     public IReadOnlyList<string> Warnings { get; }
     private readonly Func<WorkbookSnapshot, WorksheetSnapshot, int, int, StyleDefinition> _style;
+    private readonly Func<WorkbookSnapshot, WorksheetSnapshot, int, int, ConditionalCellVisual?>? _visual;
     public PrintJob(WorkbookSnapshot book, WorksheetSnapshot outputSheet, string file, DateTime timestamp, IEnumerable<string> warnings,
-        Func<WorkbookSnapshot, WorksheetSnapshot, int, int, StyleDefinition>? style = null, CancellationToken cancellationToken = default)
+        Func<WorkbookSnapshot, WorksheetSnapshot, int, int, StyleDefinition>? style = null, CancellationToken cancellationToken = default,
+        Func<WorkbookSnapshot, WorksheetSnapshot, int, int, ConditionalCellVisual?>? visual = null)
     {
         Book = book; Sheet = outputSheet; FileName = Path.GetFileName(file); Timestamp = timestamp;
         Warnings = Array.AsReadOnly(warnings.Distinct().ToArray());
         _style = style ?? ((b, s, r, c) => b.Styles[s.GetStyleId(r, c)]);
+        _visual = visual;
         Layout = PrintingLayout.Create(outputSheet, cancellationToken);
     }
     public CellRenderInput Cell(int row, int column, RenderRect rect)
@@ -29,7 +32,8 @@ public sealed class PrintJob
         if (style.Horizontal == 0 && cell?.Value.Kind == CellValueKind.Number) style = style with { Horizontal = 3 };
         var text = cell?.Value.Kind == CellValueKind.Error ? Sheet.Printing.Setup?.Errors switch
         { "blank" => "", "dash" => "--", "NA" => "#N/A", _ => display.Text } : display.Text;
-        return new(rect, new(text, style, RichText: cell?.Content.RichText, FillOffset: display.FillOffset, FillCharacter: display.FillCharacter), Sheet.Printing.Options?.GridLines == true);
+        return new(rect, new(text, style, RichText: cell?.Content.RichText, FillOffset: display.FillOffset, FillCharacter: display.FillCharacter), Sheet.Printing.Options?.GridLines == true,
+            Conditional: _visual?.Invoke(Book, Sheet, row, column));
     }
 
     public static WorksheetPrinting PreparePrinting(WorksheetPrinting printing, string file, DateTime timestamp, ICollection<string> warnings)

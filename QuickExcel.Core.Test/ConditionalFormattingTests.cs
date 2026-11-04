@@ -105,6 +105,7 @@ public sealed class ConditionalFormattingTests
             Assert.Contains(imported.FileState!.CompatibilityDiagnostics, d => d.Feature == "worksheet/conditionalFormatting");
             using var session = new DocumentSession(imported);
             Assert.Throws<NotSupportedException>(() => session.Execute(new SetConditionalFormatsCommand(imported.Sheets[0].Id, [])));
+            Assert.Throws<NotSupportedException>(() => session.Execute(new ClearConditionalFormatsCommand(imported.Sheets[0].Id)));
             storage.Save(output, imported); Assert.Equal(source, File.ReadAllBytes(output));
         }
         finally { File.Delete(path); File.Delete(output); }

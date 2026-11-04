@@ -55,6 +55,7 @@ public sealed partial class MainWindow : Window
         BuildView(); InstallEditingCommands(); InstallFormulaEditing(); InstallRibbon(); InstallCalculation(); InstallSheetCommands(); InstallSearch(); InstallDataCommands(); InstallValidation(); InstallCleaning(); InstallObjects(); InstallFileCommands(); InstallScriptCommands(); InstallPrintCommands();
         ArrangeRibbonTabs(); InstallScriptEvents(); GroupMainMenus();
         _grid.ResolveStyle = ConditionalPresentation.GetStyle;
+        _grid.ResolveConditionalVisual = ConditionalPresentation.GetVisual;
         _grid.RenderingFailed += Error;
         _grid.CommitCellAsync = CommitCellAsync;
         _grid.BeforeSelection = CommitFormula;
@@ -91,8 +92,10 @@ public sealed partial class MainWindow : Window
             await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Background);
             if (Program.SelfCheckDirectory is { } evidence) { await RunSelfCheckAsync(evidence); return; }
 #if QUICKEXCEL_DIAGNOSTICS
+            if (Program.SmokeDirectory is { } numberDirectory && Program.SmokeMode == "number-format") { await RunNumberFormatSmokeAsync(numberDirectory); return; }
             if (Program.SmokeDirectory is { } menuDirectory && Program.SmokeMode == "menus") { await RunMenuSmokeAsync(menuDirectory); return; }
             if (Program.SmokeDirectory is { } colorDirectory && Program.SmokeMode == "colors") { await RunColorSmokeAsync(colorDirectory); return; }
+            if (Program.SmokeDirectory is { } conditionalDirectory && Program.SmokeMode == "conditional-format") { await RunConditionalFormatSmokeAsync(conditionalDirectory); return; }
             if (Program.SmokeDirectory is { } executionDirectory && Program.SmokeMode == "execution") { await RunExecutionSmokeAsync(executionDirectory); return; }
             if (Program.SmokeDirectory is { } clipboardDirectory && Program.SmokeMode == "clipboard-exchange") { await RunClipboardExchangeAsync(clipboardDirectory); return; }
             if (Program.SmokeDirectory is { } automationDirectory && Program.SmokeMode == "automation") { await RunAutomationSmokeAsync(automationDirectory); return; }
@@ -411,7 +414,7 @@ public sealed partial class MainWindow : Window
             await PerformAsync(e.Key switch { Key.C => () => CopyAsync(false), Key.X => () => CopyAsync(true), Key.V => () => PasteAsync(e.KeyModifiers.HasFlag(KeyModifiers.Shift) ? "formulas" : "all"), Key.D => () => FillDirectionAsync(false), _ => () => FillDirectionAsync(true) });
             return;
         }
-        Func<Task>? action = command ? e.Key switch { Key.S => async () => await SaveAsync(e.KeyModifiers.HasFlag(KeyModifiers.Shift)), Key.O => OpenAsync, Key.F => SearchAsync, Key.H => SearchAsync, Key.G => NavigateAsync,
+        Func<Task>? action = command ? e.Key switch { Key.D1 or Key.NumPad1 => CellFormatAsync, Key.S => async () => await SaveAsync(e.KeyModifiers.HasFlag(KeyModifiers.Shift)), Key.O => OpenAsync, Key.F => SearchAsync, Key.H => SearchAsync, Key.G => NavigateAsync,
             Key.N => async () => { if (await ConfirmDiscardAsync()) { _workspace.New(); ShowBook(); } }, Key.W => async () => { if (await ConfirmDiscardAsync()) { _workspace.New(); ShowHome(); } }, Key.Z => () => History(false), Key.Y => () => History(true), _ => null } : e.Key == Key.F9 ? CalculateAsync : null;
         if (action is null) return; e.Handled = true; await PerformAsync(action);
     }

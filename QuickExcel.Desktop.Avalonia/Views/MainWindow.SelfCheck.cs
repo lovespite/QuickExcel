@@ -7,6 +7,7 @@ using QuickExcel.Infrastructure.Web;
 using QuickExcel.Presentation;
 using QuickExcel.Runtime;
 using QuickExcel.Storage;
+using QuickExcel.Calculation;
 
 namespace QuickExcel.Desktop.Avalonia;
 
@@ -77,6 +78,22 @@ public sealed partial class MainWindow
                     "Published P2 object save/reopen");
                 Check(Document.Undo(), "Published API v3 action undo");
             }
+            var visualSheet = Document.Snapshot.ActiveSheetId;
+            _workspace.Editor.Execute(new SetCellsCommand(Enumerable.Range(0, 3).SelectMany(column => Enumerable.Range(10, 4).Select(row =>
+                new CellEdit(new(visualSheet, row, column), CellContent.FromLiteral(CellValue.FromNumber((row - 11) * 10)))))));
+            _workspace.Editor.Execute(new SetConditionalFormatsCommand(visualSheet, [
+                ConditionalVisualPresets.DataBar(new(10, 0, 13, 0), "FF638EC6", false),
+                ConditionalVisualPresets.ColorScale(new(10, 1, 13, 1), ["FFF8696B", "FFFFEB84", "FF63BE7B"]).WithPriority(2),
+                ConditionalVisualPresets.IconSet(new(10, 2, 13, 2), "3Arrows").WithPriority(3)]));
+            var visuals = Document.Snapshot; var visualModel = visuals.GetSheet(visualSheet);
+            Check(ConditionalPresentation.GetVisual(visuals, visualModel, 10, 0)?.Bar is { Gradient: false, Color: "FFFF0000" } &&
+                ConditionalPresentation.GetStyle(visuals, visualModel, 10, 1).FillColor == "FFF8696B" &&
+                ConditionalPresentation.GetVisual(visuals, visualModel, 13, 2)?.Icon?.Index == 2, "Published data bars, color scales and icon sets project correctly");
+            var visualPath = Path.Combine(directory, "visual-conditionals.xlsq"); var visualStorage = new TypedWorkbookStorage();
+            visualStorage.Save(visualPath, visuals); var visualReopened = visualStorage.Open(visualPath);
+            Check(visualModel.Data.ConditionalFormats.Zip(visualReopened.Sheets[0].Data.ConditionalFormats).All(p => p.First.ContentEquals(p.Second)) &&
+                visualReopened.Sheets[0].Data.ConditionalFormats.Length == 3, "Published visual conditional rules save/reopen");
+            Synchronize();
             await OpenPrintPreviewAsync(); Check(_pdfPage!.Browser.IsReady && _printSession!.Job.Layout.Pages.Length > 0, "Production PDF.js worker and complete print-session PDF");
             await _printSession!.ExportAsync(Path.Combine(directory, "installation.pdf"));
             await ClosePrintPreviewAsync(); Check(true, "PDF export and browser/resource cleanup");

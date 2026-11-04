@@ -8,10 +8,11 @@ namespace QuickExcel.Desktop.Avalonia;
 
 public sealed partial class MainWindow
 {
-    private static readonly string[] ConditionalKinds = ["单元格比较", "公式", "重复值", "唯一值", "包含文本", "不包含文本", "以文本开头", "以文本结尾"];
+    private static readonly string[] ConditionalKinds = ["单元格比较", "公式", "重复值", "唯一值", "包含文本", "不包含文本", "以文本开头", "以文本结尾", "色阶", "数据条", "图标集"];
     private async Task ConditionalFormatsAsync()
     {
         if (!await FlushEditsAsync()) return;
+        RequireConditionalFormatEditing();
         var snapshot = Document.Snapshot; var sheet = snapshot.Sheets[SheetIndex]; var selection = Rectangle(SelectedRange());
         var rules = sheet.Data.ConditionalFormats.OrderBy(r => r.Priority).ToList();
         var window = new Window { Title = "条件格式管理 · " + sheet.Name, Width = 720, Height = 440, WindowStartupLocation = WindowStartupLocation.CenterOwner, ShowInTaskbar = false };
@@ -44,9 +45,10 @@ public sealed partial class MainWindow
     }
     private static FieldsDialog RuleFields(CellRectangle selection, ConditionalFormatRule? old, out Func<ConditionalFormatRule> read)
     {
+        if (old?.Kind >= ConditionalFormatKind.ColorScale) return VisualRuleFields(old, out read);
         static int Tri(bool? value) => value is null ? 0 : value.Value ? 1 : 2;
         var dialog = new FieldsDialog("条件格式规则").Text("ranges", "应用区域（多个区域用空格分隔）", old is null ? selection.ToString() : string.Join(" ", old.Ranges))
-            .Choice("kind", "规则类型", ConditionalKinds, (int)(old?.Kind ?? ConditionalFormatKind.CellIs))
+            .Choice("kind", "规则类型", ConditionalKinds.Take(8).ToArray(), (int)(old?.Kind ?? ConditionalFormatKind.CellIs))
             .Choice("comparison", "比较方式", ["介于", "不介于", "等于", "不等于", "小于", "小于等于", "大于", "大于等于"], (int)(old?.Comparison ?? ConditionalComparison.Between))
             .Text("first", "条件 1 / 公式（相对引用以首格为基准）", old?.Formula1 ?? "=1").Text("second", "条件 2", old?.Formula2 ?? "=10")
             .Text("text", "文本条件", old?.Text ?? "").Text("fill", "填充色（ARGB，留空不改变）", old is null ? "FFFFC7CE" : old.Style.FillColor ?? "")
@@ -72,7 +74,7 @@ public sealed partial class MainWindow
                 NumberFormatId = dialog.String("number").Length == 0 ? old?.Style.NumberFormatId : 0,
                 NumberFormatCode = dialog.String("number").Length == 0 ? old?.Style.NumberFormatCode : dialog.String("number") };
             return new(ranges, kind, old?.Priority ?? 1, style, first, kind == ConditionalFormatKind.CellIs && comparison is ConditionalComparison.Between or ConditionalComparison.NotBetween ? dialog.String("second") : null,
-                comparison, dialog.Boolean("stop"), (int)kind >= 4 ? dialog.String("text") : null);
+                comparison, dialog.Boolean("stop"), (int)kind >= 4 ? dialog.String("text") : null) { ScriptId = old?.ScriptId ?? Guid.NewGuid() };
         };
         return dialog;
     }

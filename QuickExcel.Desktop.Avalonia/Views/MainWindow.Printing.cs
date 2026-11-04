@@ -64,7 +64,7 @@ public sealed partial class MainWindow
         PrintSession? generated = null;
         try
         {
-            generated = await PrintSession.CreateAsync(snapshot, sheet.Id, _workspace.FilePath ?? "未命名.xlsq", Path.Combine(_userDataDirectory, "printing"), ConditionalPresentation.GetStyle, cancellationToken: cancellation.Token);
+            generated = await PrintSession.CreateAsync(snapshot, sheet.Id, _workspace.FilePath ?? "未命名.xlsq", Path.Combine(_userDataDirectory, "printing"), ConditionalPresentation.GetStyle, cancellationToken: cancellation.Token, visual: ConditionalPresentation.GetVisual);
             cancellation.Token.ThrowIfCancellationRequested();
             if (_printWindow != window || identity != Document.Session.SessionId || Document.Snapshot.Revision != snapshot.Revision) throw new OperationCanceledException("工作簿在生成期间改变，请重新生成预览。");
             if (_pdfPage is not null) { await _pdfPage.DisposeAsync(); _pdfPage = null; }

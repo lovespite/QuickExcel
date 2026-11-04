@@ -7,7 +7,7 @@ using QuickExcel.Formulas;
 namespace QuickExcel.Calculation;
 
 /// <summary>Viewport-demanded formatting projection. A new immutable snapshot invalidates the renderer's cache.</summary>
-public static class ConditionalPresentation
+public static partial class ConditionalPresentation
 {
     [ThreadStatic] private static Cache? _cache;
     private static Cache For(WorkbookSnapshot snapshot) => _cache?.Snapshot == snapshot ? _cache : _cache = new(snapshot);
@@ -17,7 +17,9 @@ public static class ConditionalPresentation
         return For(snapshot).Style(sheet, row, column);
     }
     public static IReadOnlyList<string> Diagnostics(WorkbookSnapshot snapshot) => _cache?.Snapshot == snapshot ? _cache.Errors.ToArray() : [];
-    private sealed class Cache(WorkbookSnapshot snapshot)
+    public static ConditionalCellVisual? GetVisual(WorkbookSnapshot snapshot, WorksheetSnapshot sheet, int row, int column) =>
+        sheet.Data.ConditionalFormats.IsEmpty ? null : For(snapshot).Visual(sheet, row, column);
+    private sealed partial class Cache(WorkbookSnapshot snapshot)
     {
         public WorkbookSnapshot Snapshot { get; } = snapshot;
         public HashSet<string> Errors { get; } = [];
@@ -30,7 +32,9 @@ public static class ConditionalPresentation
         {
             public Dictionary<CellValue, long> Wildcards { get; } = [];
         }
-        private sealed record Projection(StyleDefinition Style, long[] Ranks);
+        private sealed record Projection(StyleDefinition Style, long[] Ranks, ConditionalCellVisual? Visual);
+        public ConditionalCellVisual? Visual(WorksheetSnapshot sheet, int row, int column)
+        { _evaluation.ResetBudget(); return Raw(sheet, row, column).Visual; }
         public StyleDefinition Style(WorksheetSnapshot sheet, int row, int column)
         {
             var address = new CellAddress(sheet.Id, row, column);
@@ -61,23 +65,30 @@ public static class ConditionalPresentation
             if (_raw.TryGetValue(address, out var known)) return known;
             var baseline = TablePresentation.GetStyle(Snapshot, sheet, row, column);
             var ranks = new[] { baseline.LeftBorder, baseline.RightBorder, baseline.TopBorder, baseline.BottomBorder }.Select(v => v == 0 ? long.MaxValue : long.MaxValue - 1).ToArray();
-            var matches = new List<ConditionalFormatRule>();
+            var matches = new List<(ConditionalFormatRule Rule, DifferentialStyle Style, ConditionalCellVisual? Visual)>();
             foreach (var rule in sheet.Data.ConditionalFormats.OrderBy(r => r.Priority).Where(r => r.Contains(row, column)))
             {
-                bool match;
-                try { match = Matches(sheet, new(row, column), rule); }
+                bool match; var style = rule.Style; ConditionalCellVisual? visual = null;
+                try
+                {
+                    if (rule.Kind >= ConditionalFormatKind.ColorScale) match = VisualMatch(sheet, new(row, column), rule, out style, out visual);
+                    else match = Matches(sheet, new(row, column), rule);
+                }
                 catch (Exception ex) when (ex is NotSupportedException or FormatException or InvalidOperationException)
                 { Errors.Add(sheet.Name + "：" + ex.Message); break; }
-                if (!match) continue; matches.Add(rule); if (rule.StopIfTrue) break;
+                if (!match) continue; matches.Add((rule, style, visual)); if (rule.StopIfTrue) break;
             }
-            foreach (var rule in matches.AsEnumerable().Reverse())
+            ConditionalBarVisual? bar = null; ConditionalIconVisual? icon = null; var hideBarValue = false; var hideIconValue = false;
+            foreach (var item in matches.AsEnumerable().Reverse())
             {
-                baseline = rule.Style.Apply(baseline);
-                var edges = new[] { rule.Style.Left, rule.Style.Right, rule.Style.Top, rule.Style.Bottom };
-                for (var i = 0; i < edges.Length; i++) if (edges[i] is not null) ranks[i] = rule.Priority;
+                baseline = item.Style.Apply(baseline);
+                var edges = new[] { item.Style.Left, item.Style.Right, item.Style.Top, item.Style.Bottom };
+                for (var i = 0; i < edges.Length; i++) if (edges[i] is not null) ranks[i] = item.Rule.Priority;
+                if (item.Visual?.Bar is { } b) { bar = b; hideBarValue = item.Visual.HideValue; }
+                if (item.Visual?.Icon is { } c) { icon = c; hideIconValue = item.Visual.HideValue; }
             }
             if (_raw.Count >= 16384) _raw.Clear();
-            return _raw[address] = new(baseline, ranks);
+            return _raw[address] = new(baseline, ranks, bar is null && icon is null ? null : new(bar, icon, hideBarValue || hideIconValue));
         }
         private bool Matches(WorksheetSnapshot sheet, CellPosition position, ConditionalFormatRule rule)
         {

@@ -91,7 +91,7 @@ internal static class TypedWorkbookXml
             var visibility = XlsxViews.Visibility(definition);
             var sheet = package.XmlPart(path).Root!;
             if (sheet.Name != Main + "worksheet") throw new InvalidDataException("无效工作表部件。");
-            package.Shape(XlsxFiltering.Shape(sheet), "autoFilter sortState tableParts dataValidations conditionalFormatting dimension sheetPr sheetViews sheetFormatPr cols sheetData sheetProtection mergeCells hyperlinks printOptions pageMargins pageSetup headerFooter rowBreaks colBreaks drawing legacyDrawing", "", path);
+            package.Shape(XlsxConditionalFormatting.Shape(XlsxFiltering.Shape(sheet)), "autoFilter sortState tableParts dataValidations conditionalFormatting dimension sheetPr sheetViews sheetFormatPr cols sheetData sheetProtection mergeCells hyperlinks printOptions pageMargins pageSetup headerFooter rowBreaks colBreaks drawing legacyDrawing", "", path);
             var sharedFormulas = new SharedFormulaExpander(sheet);
             var dynamicRanges = new Dictionary<CellPosition, CellRectangle>();
             var cells = new Dictionary<CellPosition, CellSnapshot>();
@@ -573,6 +573,7 @@ internal static class TypedWorkbookXml
             XlsxAnnotations.Write(sheet.Annotations, i + 1, parts, root, types);
             XlsxTables.Write(sheet, i + 1, parts, root, types, stylePackage.Styles.Root!, valuesOnly);
             root.Add(XlsxFiltering.WriteHidden(sheet, filteredRows));
+            XlsxConditionalFormatting.WriteExtensions(sheet, root);
             parts[path] = XmlBytes(new XDocument(root));
         }
         parts["xl/styles.xml"] = XmlBytes(stylePackage.Styles);

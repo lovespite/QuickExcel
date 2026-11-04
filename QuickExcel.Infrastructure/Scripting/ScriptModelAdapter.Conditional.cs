@@ -35,7 +35,7 @@ internal sealed partial class ScriptModelAdapter
         var rule = sheet.Data.ConditionalFormats.FirstOrDefault(r => r.ScriptId.ToString() == Text(data.GetProperty("conditionalId"))) ?? throw new ModelFailure("InvalidReference", "条件格式句柄已失效。");
         var type = name.Split('.')[0]; var member = name.Split('.')[1];
         object Child(string t) => ConditionalHandle(sheet.Id, rule, t);
-        ConditionalFormatRule Copy(DifferentialStyle? style = null, bool? stop = null, IEnumerable<CellRectangle>? ranges = null) => new(ranges ?? rule.Ranges, rule.Kind, rule.Priority, style ?? rule.Style, rule.Formula1, rule.Formula2, rule.Comparison, stop ?? rule.StopIfTrue, rule.Text) { ScriptId = rule.ScriptId };
+        ConditionalFormatRule Copy(DifferentialStyle? style = null, bool? stop = null, IEnumerable<CellRectangle>? ranges = null) => new(ranges ?? rule.Ranges, rule.Kind, rule.Priority, style ?? rule.Style, rule.Formula1, rule.Formula2, rule.Comparison, stop ?? rule.StopIfTrue, rule.Text, rule.ColorScale, rule.DataBar, rule.IconSet) { ScriptId = rule.ScriptId };
         void Save(ConditionalFormatRule next) => WriteRules(sheet, rule.Ranges.Concat(next.Ranges).Distinct(), new SetConditionalFormatsCommand(sheet.Id, sheet.Data.ConditionalFormats.Replace(rule, next)));
         if (type == "ConditionalFormat")
         {
@@ -52,16 +52,16 @@ internal sealed partial class ScriptModelAdapter
             return member switch
             {
                 "getId" => rule.ScriptId.ToString(), "getPriority" => rule.Priority, "getStopIfTrue" => rule.StopIfTrue,
-                "getType" => EnumNumber("ConditionalFormatType", rule.Kind switch { ConditionalFormatKind.CellIs => "cellValue", ConditionalFormatKind.Expression => "custom", ConditionalFormatKind.DuplicateValues or ConditionalFormatKind.UniqueValues => "presetCriteria", _ => "containsText" }),
+                "getType" => EnumNumber("ConditionalFormatType", rule.Kind switch { ConditionalFormatKind.CellIs => "cellValue", ConditionalFormatKind.Expression => "custom", ConditionalFormatKind.DuplicateValues or ConditionalFormatKind.UniqueValues => "presetCriteria", ConditionalFormatKind.ColorScale => "colorScale", ConditionalFormatKind.DataBar => "dataBar", ConditionalFormatKind.IconSet => "iconSet", _ => "containsText" }),
                 "getCustom" => rule.Kind == ConditionalFormatKind.Expression ? Child("CustomConditionalFormat") : null,
                 "getCellValue" => rule.Kind == ConditionalFormatKind.CellIs ? Child("CellValueConditionalFormat") : null,
                 "getPreset" => rule.Kind is ConditionalFormatKind.DuplicateValues or ConditionalFormatKind.UniqueValues ? Child("PresetCriteriaConditionalFormat") : null,
-                "getTextComparison" => rule.Kind is >= ConditionalFormatKind.ContainsText ? Child("TextConditionalFormat") : null,
+                "getTextComparison" => rule.Kind is >= ConditionalFormatKind.ContainsText and <= ConditionalFormatKind.EndsWith ? Child("TextConditionalFormat") : null,
                 "getRange" => rule.Ranges.Length == 1 ? RangeHandle(sheet.Id, rule.Ranges[0]) : throw Unsupported("多区域规则请使用 getRanges。"),
                 "getRanges" => Handle("RangeAreas", new { sheetId = sheet.Id.ToString(), addresses = rule.Ranges.Select(r => r.ToString()).ToArray() }), _ => throw Unsupported(member)
             };
         }
-        if ((type is "CustomConditionalFormat" or "ConditionalFormatRule") && rule.Kind != ConditionalFormatKind.Expression || type == "CellValueConditionalFormat" && rule.Kind != ConditionalFormatKind.CellIs || type == "PresetCriteriaConditionalFormat" && rule.Kind is not (ConditionalFormatKind.DuplicateValues or ConditionalFormatKind.UniqueValues) || type == "TextConditionalFormat" && rule.Kind < ConditionalFormatKind.ContainsText)
+        if ((type is "CustomConditionalFormat" or "ConditionalFormatRule") && rule.Kind != ConditionalFormatKind.Expression || type == "CellValueConditionalFormat" && rule.Kind != ConditionalFormatKind.CellIs || type == "PresetCriteriaConditionalFormat" && rule.Kind is not (ConditionalFormatKind.DuplicateValues or ConditionalFormatKind.UniqueValues) || type == "TextConditionalFormat" && (rule.Kind < ConditionalFormatKind.ContainsText || rule.Kind > ConditionalFormatKind.EndsWith))
             throw new ModelFailure("InvalidReference", "条件格式规则类型已改变。");
         if (type == "ConditionalRangeFormat" && (member == "getBorders" || member.StartsWith("getConditionalRangeBorder")))
         {

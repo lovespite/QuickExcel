@@ -15,7 +15,7 @@ public sealed record RenderDiagnostic(string Code, string Location, string Messa
 public sealed record TextLayoutRequest(string Text, StyleDefinition Style, double Width = double.PositiveInfinity,
     RichCellText? RichText = null, double DefaultFontSize = 14, int FillOffset = -1, char? FillCharacter = null);
 public sealed record TextMetrics(double Width, double Height, double RotatedWidth, double RotatedHeight, int Lines);
-public sealed record CellRenderInput(RenderRect Bounds, TextLayoutRequest Text, bool GridLines = false, bool Note = false);
+public sealed record CellRenderInput(RenderRect Bounds, TextLayoutRequest Text, bool GridLines = false, bool Note = false, ConditionalCellVisual? Conditional = null);
 
 /// <summary>Budgets apply to each renderer/task, including native pixel memory.</summary>
 public sealed record RenderBudget

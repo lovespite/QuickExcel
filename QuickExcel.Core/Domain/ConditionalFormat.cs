@@ -3,7 +3,7 @@ using QuickExcel.Formulas;
 
 namespace QuickExcel.Domain;
 
-public enum ConditionalFormatKind { CellIs, Expression, DuplicateValues, UniqueValues, ContainsText, NotContainsText, BeginsWith, EndsWith }
+public enum ConditionalFormatKind { CellIs, Expression, DuplicateValues, UniqueValues, ContainsText, NotContainsText, BeginsWith, EndsWith, ColorScale, DataBar, IconSet }
 public enum ConditionalComparison { Between, NotBetween, Equal, NotEqual, LessThan, LessThanOrEqual, GreaterThan, GreaterThanOrEqual }
 
 /// <summary>Nullable properties mean the rule does not change that property; explicit false remains meaningful.</summary>
@@ -35,7 +35,7 @@ public sealed class ConditionalFormatRule
     public Guid ScriptId { get; init; } = Guid.NewGuid();
     public ConditionalFormatRule(IEnumerable<CellRectangle> ranges, ConditionalFormatKind kind, int priority, DifferentialStyle style,
         string? formula1 = null, string? formula2 = null, ConditionalComparison comparison = ConditionalComparison.Between,
-        bool stopIfTrue = false, string? text = null)
+        bool stopIfTrue = false, string? text = null, ConditionalColorScale? colorScale = null, ConditionalDataBar? dataBar = null, ConditionalIconSet? iconSet = null)
     {
         Ranges = ranges.Take(1025).ToImmutableArray();
         if (Ranges.Length is < 1 or > 1024 || priority < 1 || !Enum.IsDefined(kind) || !Enum.IsDefined(comparison) || text?.Length > 255)
@@ -50,16 +50,28 @@ public sealed class ConditionalFormatRule
             kind == ConditionalFormatKind.CellIs && comparison is ConditionalComparison.Between or ConditionalComparison.NotBetween && formula2 is null ||
             kind is ConditionalFormatKind.ContainsText or ConditionalFormatKind.NotContainsText or ConditionalFormatKind.BeginsWith or ConditionalFormatKind.EndsWith && (text is null || formula1 is null))
             throw new ArgumentException("条件格式公式或文本条件缺失。");
-        foreach (var formula in new[] { formula1, formula2 }.OfType<string>())
-        {
-            if (formula.Length > 8192) throw new ArgumentException("条件格式公式超过 8,192 字符。");
-            var expression = FormulaSyntax.Parse(formula);
-            if (FormulaSyntax.Walk(expression).OfType<FunctionNode>().Any(f => !StandardFunctions.Signatures.ContainsKey(f.Name) || f.Name is "NOW" or "TODAY" or "RAND" or "RANDBETWEEN"))
-                throw new NotSupportedException("条件格式仅支持已建模的非易变标准函数。");
-        }
+        if ((kind == ConditionalFormatKind.ColorScale) != (colorScale is not null) || (kind == ConditionalFormatKind.DataBar) != (dataBar is not null) ||
+            (kind == ConditionalFormatKind.IconSet) != (iconSet is not null)) throw new ArgumentException("条件格式类型和视觉规则不一致。");
+        dataBar?.Validate(); ColorScale = colorScale; DataBar = dataBar; IconSet = iconSet;
+        if (kind >= ConditionalFormatKind.ColorScale && (formula1 is not null || formula2 is not null || text is not null)) throw new ArgumentException("视觉规则使用阈值公式。");
+        if (kind >= ConditionalFormatKind.ColorScale && style != new DifferentialStyle()) throw new NotSupportedException("视觉规则不能同时包含差异样式。");
+        if (kind >= ConditionalFormatKind.ColorScale && stopIfTrue) throw new NotSupportedException("数据条、色阶和图标集不支持为真时停止。");
+        foreach (var formula in new[] { formula1, formula2 }.OfType<string>()) ValidateFormula(formula);
         Kind = kind; Priority = priority; Formula1 = Normalize(formula1); Formula2 = Normalize(formula2); Comparison = comparison; StopIfTrue = stopIfTrue; Text = text;
     }
     private static string? Normalize(string? formula) => formula is null ? null : "=" + FormulaSyntax.Print(FormulaSyntax.Parse(formula));
+    internal static void ValidateFormula(string formula)
+    {
+        if (formula.Length > 8192) throw new ArgumentException("条件格式公式超过 8,192 字符。");
+        var expression = FormulaSyntax.Parse(formula);
+        if (FormulaSyntax.Walk(expression).OfType<FunctionNode>().Any(f => !StandardFunctions.Signatures.ContainsKey(f.Name) || f.Name is "NOW" or "TODAY" or "RAND" or "RANDBETWEEN"))
+            throw new NotSupportedException("条件格式仅支持已建模的非易变标准函数。");
+    }
+    public ConditionalColorScale? ColorScale { get; }
+    public ConditionalDataBar? DataBar { get; }
+    public ConditionalIconSet? IconSet { get; }
+    public IEnumerable<ConditionalThreshold> Thresholds => ColorScale?.Thresholds.AsEnumerable() ?? IconSet?.Thresholds.AsEnumerable() ??
+        (DataBar is { } bar ? new[] { bar.Minimum, bar.Maximum } : []);
     public ImmutableArray<CellRectangle> Ranges { get; }
     public ConditionalFormatKind Kind { get; }
     public int Priority { get; }
@@ -71,13 +83,14 @@ public sealed class ConditionalFormatRule
     public string? Text { get; }
     public CellPosition Anchor => new(Ranges[0].Top, Ranges[0].Left);
     public bool Contains(int row, int column) => Ranges.Any(r => r.Contains(row, column));
-    public ConditionalFormatRule WithPriority(int priority) => new(Ranges, Kind, priority, Style, Formula1, Formula2, Comparison, StopIfTrue, Text) { ScriptId = ScriptId };
-    public ConditionalFormatRule WithRanges(IEnumerable<CellRectangle> ranges) => new(ranges, Kind, Priority, Style, Formula1, Formula2, Comparison, StopIfTrue, Text) { ScriptId = ScriptId };
+    public ConditionalFormatRule WithPriority(int priority) => new(Ranges, Kind, priority, Style, Formula1, Formula2, Comparison, StopIfTrue, Text, ColorScale, DataBar, IconSet) { ScriptId = ScriptId };
+    public ConditionalFormatRule WithRanges(IEnumerable<CellRectangle> ranges) => new(ranges, Kind, Priority, Style, Formula1, Formula2, Comparison, StopIfTrue, Text, ColorScale, DataBar, IconSet) { ScriptId = ScriptId };
     public ConditionalFormatRule MapFormulas(Func<string, string> transform) => new(Ranges, Kind, Priority, Style,
-        Formula1 is { } a ? transform(a) : null, Formula2 is { } b ? transform(b) : null, Comparison, StopIfTrue, Text) { ScriptId = ScriptId };
+        Formula1 is { } a ? transform(a) : null, Formula2 is { } b ? transform(b) : null, Comparison, StopIfTrue, Text,
+        ColorScale?.Map(transform), DataBar?.Map(transform), IconSet?.Map(transform)) { ScriptId = ScriptId };
     public void ValidateBinding(WorkbookSnapshot snapshot, SheetId sheet)
     {
-        foreach (var text in new[] { Formula1, Formula2 }.OfType<string>())
+        foreach (var text in new[] { Formula1, Formula2 }.Concat(Thresholds.Select(t => t.Formula)).OfType<string>())
         {
             var expression = FormulaBinding.Bind(FormulaSyntax.Parse(text), snapshot, sheet, Anchor);
             if (FormulaSyntax.Walk(expression).OfType<FunctionNode>().Any(f => !StandardFunctions.Signatures.ContainsKey(f.Name) || f.Name is "NOW" or "TODAY" or "RAND" or "RANDBETWEEN"))
@@ -85,6 +98,9 @@ public sealed class ConditionalFormatRule
         }
     }
     public bool ContentEquals(ConditionalFormatRule other) => Ranges.SequenceEqual(other.Ranges) && Kind == other.Kind && Priority == other.Priority &&
-        Style == other.Style && Formula1 == other.Formula1 && Formula2 == other.Formula2 && Comparison == other.Comparison && StopIfTrue == other.StopIfTrue && Text == other.Text;
-    public long EstimatedBytes => 512L + Ranges.Length * 32L + new[] { Formula1, Formula2, Text, Style.NumberFormatCode }.Sum(s => (s?.Length ?? 0) * 2L);
+        Style == other.Style && Formula1 == other.Formula1 && Formula2 == other.Formula2 && Comparison == other.Comparison && StopIfTrue == other.StopIfTrue && Text == other.Text &&
+        (DataBar is null ? other.DataBar is null : other.DataBar is not null && DataBar.ContentEquals(other.DataBar)) && (ColorScale is null ? other.ColorScale is null : other.ColorScale is not null && ColorScale.ContentEquals(other.ColorScale)) &&
+        (IconSet is null ? other.IconSet is null : other.IconSet is not null && IconSet.ContentEquals(other.IconSet));
+    public long EstimatedBytes => 512L + Ranges.Length * 32L + new[] { Formula1, Formula2, Text, Style.NumberFormatCode }.Sum(s => (s?.Length ?? 0) * 2L) +
+        Thresholds.Sum(t => 128L + (t.Formula?.Length ?? 0) * 2L) + (Kind >= ConditionalFormatKind.ColorScale ? 512 : 0);
 }

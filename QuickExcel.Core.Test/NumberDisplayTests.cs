@@ -38,7 +38,7 @@ public sealed class NumberDisplayTests
     }
 
     [Theory]
-    [InlineData("# ?/?")]
+    [InlineData("# ????/????")]
     [InlineData("[DBNum1]0")]
     [InlineData("[unknown]0")]
     [InlineData("0.0%%")]

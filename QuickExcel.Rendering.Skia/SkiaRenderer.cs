@@ -37,7 +37,8 @@ public sealed partial class SkiaRenderer : IDisposable
             paint.Color = SKColors.LightGray; paint.Style = SKPaintStyle.Stroke; paint.StrokeWidth = output == RenderOutput.Screen ? 1 : .5f;
             canvas.DrawRect(rect, paint); paint.Style = SKPaintStyle.Fill;
         }
-        DrawText(canvas, input.Text, rect, monochrome, location);
+        var textRect = DrawConditional(canvas, input.Conditional, rect, monochrome);
+        if (input.Conditional?.HideValue != true) DrawText(canvas, input.Text, textRect, monochrome, location);
         void Border(int kind, string? color, SKPoint from, SKPoint to)
         {
             if (kind == 0) return;

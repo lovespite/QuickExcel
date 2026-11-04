@@ -23,7 +23,7 @@ public sealed partial class WorkbookGrid
         var maximum = 0d;
         var scaleX = (TopLevel.GetTopLevel(this)?.RenderScaling ?? 1) * _zoom;
         var scaleY = scaleX;
-        var cache = new Dictionary<(string Text, StyleDefinition Style, double Width, RichCellText? Rich), double>();
+        var cache = new Dictionary<(string Text, StyleDefinition Style, double Width, RichCellText? Rich, int IconWidth), double>();
         foreach (var (position, _) in cells)
         {
             var other = Other(position);
@@ -31,17 +31,20 @@ public sealed partial class WorkbookGrid
             if (mergeIndex < merges.Length && merges[mergeIndex].First <= other) continue;
             var style = ResolveStyle?.Invoke(_snapshot!, sheet, position.Row, position.Column) ?? _snapshot!.Styles[sheet.GetStyleId(position.Row, position.Column)];
             var value = CellDisplayFormatter.Format(sheet.GetCell(position.Row, position.Column)!.Value, style, _snapshot!.DateSystem);
-            if (value.Length == 0) continue;
+            var visual = ResolveConditionalVisual?.Invoke(_snapshot!, sheet, position.Row, position.Column);
+            var iconWidth = visual?.Icon is null ? 0 : 21;
+            if (visual?.HideValue == true) value = "";
+            if (value.Length == 0 && iconWidth == 0) continue;
             style = style with { FontName = style.FontName ?? "Microsoft YaHei UI" };
             var width = isRow ? DrawingGeometry.ColumnSize(sheet, position.Column) : 0;
             var rich = sheet.GetCell(position.Row, position.Column)?.Content.RichText;
-            var key = (value, style, width, rich);
+            var key = (value, style, width, rich, iconWidth);
             if (!cache.TryGetValue(key, out var size))
             {
                 using var text = Renderer.Layout(new(value, style,
-                    isRow ? Math.Max(1, Math.Round(width * scaleX) / scaleX - 4) : double.PositiveInfinity,
+                    isRow ? Math.Max(1, Math.Round(width * scaleX) / scaleX - 4 - iconWidth) : double.PositiveInfinity,
                     rich, 14));
-                size = isRow ? text.Metrics.RotatedHeight + 3 : text.Metrics.RotatedWidth + text.Indent + 6;
+                size = isRow ? Math.Max(text.Metrics.RotatedHeight + 3, iconWidth == 0 ? 0 : 20) : text.Metrics.RotatedWidth + text.Indent + 6 + iconWidth;
                 if (cache.Count < 4096) cache[key] = size;
             }
             maximum = Math.Max(maximum, size);

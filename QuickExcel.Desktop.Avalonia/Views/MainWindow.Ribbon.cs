@@ -114,8 +114,9 @@ public sealed partial class MainWindow
             RibbonButton(RibbonIcon.AlignBottom, "底端对齐", () => ApplyStyleAsync(new(Vertical: 2))),
             RibbonButton(RibbonIcon.WrapText, "自动换行", () => ApplyStyleAsync(new(WrapText: !CurrentStyle.WrapText))),
             RibbonButton(RibbonIcon.MergeCells, "合并", () => MergeAsync(false)), RibbonButton(RibbonIcon.SplitCells, "取消合并", () => MergeAsync(true)));
-        RibbonGroup("开始", "数字与单元格", RibbonButton("数字格式", NumberFormatAsync), RibbonButton(RibbonIcon.IncreaseDecimals, "增加小数位", () => PrecisionAsync(1)),
-            RibbonButton(RibbonIcon.DecreaseDecimals, "减少小数位", () => PrecisionAsync(-1)), RibbonButton("设置单元格格式", CellFormatAsync), RibbonButton(RibbonIcon.ClearFormatting, "清除格式", ClearFormatsAsync));
+        InstallNumberFormatRibbon();
+        RibbonGroup("开始", "单元格", RibbonButton("设置单元格格式", CellFormatAsync), RibbonButton(RibbonIcon.ClearFormatting, "清除格式", ClearFormatsAsync));
+        RibbonContentGroup("开始", "样式", ConditionalFormatDropdown());
         RibbonGroup("公式", "公式", RibbonButton(RibbonIcon.AutoSum, "自动求和  Alt+=", () => { BeginAutoSum(); return Task.CompletedTask; }), RibbonButton(RibbonIcon.Calculate, "重算  F9", CalculateAsync, false));
         RibbonGroup("开始", "编辑", RibbonButton("向下填充", () => FillDirectionAsync(false)), RibbonButton("向右填充", () => FillDirectionAsync(true)), RibbonButton("序列", SeriesAsync),
             RibbonButton("转为普通文本", FlattenRichTextAsync));
@@ -134,6 +135,7 @@ public sealed partial class MainWindow
             if (!_font.Items.Cast<string>().Contains(name)) _font.ItemsSource = _font.Items.Cast<string>().Append(name).Order().ToArray();
             if (!_fontSize.Items.Cast<double>().Contains(size)) _fontSize.ItemsSource = _fontSize.Items.Cast<double>().Append(size).Order().ToArray();
             _font.SelectedItem = name; _fontSize.SelectedItem = size;
+            _numberFormatLabel.Text = NumberFormatOptions.Label(style);
             UpdateColorSwatches();
         }
         finally { _updatingRibbon = false; }
@@ -152,34 +154,6 @@ public sealed partial class MainWindow
     { if (await CommitEditorsAsync()) await ExecuteAsync(new ClearCellFormatsCommand(VisibleAddresses())); }
     private async Task MergeAsync(bool remove)
     { if (await CommitEditorsAsync()) await ExecuteAsync(new MergeCellsCommand(Document.Snapshot.ActiveSheetId, Rectangle(SelectedRange()), remove)); }
-    private async Task NumberFormatAsync()
-    {
-        if (!await CommitEditorsAsync()) return;
-        var revision = Document.Snapshot.Revision; var addresses = VisibleAddresses();
-        var dialog = new FieldsDialog("数字格式").Choice("kind", "分类", ["常规", "数字", "千位分隔", "百分比", "科学计数", "日期", "货币", "自定义"])
-            .Text("code", "自定义格式代码", CurrentStyle.NumberFormatCode ?? "#,##0.00");
-        if (!await dialog.ShowAsync(this)) return;
-        var patch = dialog.Index("kind") switch
-        {
-            1 => new CellStylePatch(NumberFormatId: 2), 2 => new(NumberFormatId: 4), 3 => new(NumberFormatId: 10), 4 => new(NumberFormatId: 11),
-            5 => new(NumberFormatId: 0, NumberFormatCode: "yyyy-mm-dd"), 6 => new(NumberFormatId: 0, NumberFormatCode: "\"¥\"#,##0.00;[Red](\"¥\"#,##0.00)"),
-            7 => new(NumberFormatId: 0, NumberFormatCode: dialog.String("code")), _ => new(NumberFormatId: 0)
-        };
-        await ExecuteAsync(new SetCellStyleCommand(addresses, patch), revision);
-    }
-    private async Task CellFormatAsync()
-    {
-        if (!await CommitEditorsAsync()) return;
-        var revision = Document.Snapshot.Revision; var addresses = VisibleAddresses(); var style = CurrentStyle;
-        var dialog = new FieldsDialog("单元格格式").Choice("horizontal", "水平对齐", ["常规", "左对齐", "居中", "右对齐"], Math.Clamp(style.Horizontal, 0, 3))
-            .Choice("vertical", "垂直对齐", ["顶端", "居中", "底端", "两端对齐"], style.Vertical)
-            .Choice("border", "边框", ["保持原样", "四周细边框", "无边框"])
-            .Check("wrap", "自动换行", style.WrapText).Check("bold", "加粗", style.Bold).Check("italic", "倾斜", style.Italic)
-            .Text("size", "字号", (style.FontSize ?? 11).ToString(CultureInfo.CurrentCulture));
-        dialog.Validate = () => dialog.Number("size", .1, 409); if (!await dialog.ShowAsync(this)) return;
-        await ExecuteAsync(new SetCellStyleCommand(addresses, new(Horizontal: dialog.Index("horizontal"), Vertical: dialog.Index("vertical"),
-            Border: dialog.Index("border") == 0 ? null : dialog.Index("border") == 1, WrapText: dialog.Boolean("wrap"), Bold: dialog.Boolean("bold"), Italic: dialog.Boolean("italic"), FontSize: dialog.Number("size", .1, 409))), revision);
-    }
     private async Task FormatBrushAsync()
     {
         if (!await CommitEditorsAsync()) return;

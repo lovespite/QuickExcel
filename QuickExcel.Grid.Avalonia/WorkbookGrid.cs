@@ -44,6 +44,7 @@ public sealed partial class WorkbookGrid : UserControl, IGridSurface, IDisposabl
     public bool IsCommitPending => _pendingCommit is { IsCompleted: false };
     public Func<bool>? BeforeSelection { get; set; }
     public Func<WorkbookSnapshot, WorksheetSnapshot, int, int, StyleDefinition>? ResolveStyle { get; set; }
+    public Func<WorkbookSnapshot, WorksheetSnapshot, int, int, ConditionalCellVisual?>? ResolveConditionalVisual { get; set; }
     public event Action? SelectionChanged;
     public event Action? DraftEnded;
     public event Action? DraftStarted;

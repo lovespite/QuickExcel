@@ -20,7 +20,7 @@ public static partial class CellDisplayFormatter
             code = "0" + (digits == 0 ? "" : "." + new string('0', digits)) + (exponent < 0 ? "" : "E+00");
         }
         var parsed = Parse(code);
-        if (parsed.Sections.Length == 0 || parsed.Sections.Any(s => !s.Supported || s.HasDate || s.Tokens.Any(t => t.Kind == 'g'))) return false;
+        if (parsed.Sections.Length == 0 || parsed.Sections.Any(s => !s.Supported || s.HasDate || s.Tokens.Any(t => t.Kind is 'g' or '/'))) return false;
         var mask = code.ToCharArray();
         for (var i = 0; i < mask.Length; i++)
         {

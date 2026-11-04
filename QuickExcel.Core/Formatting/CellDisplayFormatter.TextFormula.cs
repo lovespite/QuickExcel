@@ -19,6 +19,8 @@ public static partial class CellDisplayFormatter
         if (invalid) return TextFormatSupport.Invalid;
         var format = Parse(local);
         if (format.Sections.Length == 0 || format.Sections.Any(s => !s.Supported)) return TextFormatSupport.Unsupported;
+        // Cell display supports bounded fractions; TEXT keeps its separately verified formula contract.
+        if (format.Sections.Any(s => s.Tokens.Any(t => t.Kind == '/'))) return TextFormatSupport.Unsupported;
         for (var i = 0; i < format.Sections.Length; i++)
         {
             var section = format.Sections[i];
@@ -60,7 +62,7 @@ public static partial class CellDisplayFormatter
         return text is null ? CellValue.FromError(CellErrorCode.Value) : CellValue.FromText(text);
     }
 
-    private static string LocalTextCode(string code, out bool invalid)
+    private static string LocalTextCode(string code, out bool invalid, bool numberFormat = false)
     {
         invalid = false;
         var output = new StringBuilder(); var quoted = false;
@@ -77,7 +79,7 @@ public static partial class CellDisplayFormatter
                 if (token is "青色" or "青绿" or "青绿色" or "紫红色") invalid = true;
                 if (colors.TryGetValue(token, out var color)) { output.Append('[').Append(color).Append(']'); i = end; continue; }
                 if (token.StartsWith("颜色", StringComparison.Ordinal) && int.TryParse(token.AsSpan(2), NumberStyles.None, CultureInfo.InvariantCulture, out var index) && index is >= 1 and <= 56)
-                { i = end; continue; }
+                { if (numberFormat) invalid = true; i = end; continue; }
             }
             output.Append(code[i]);
         }

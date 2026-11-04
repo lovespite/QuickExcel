@@ -12,16 +12,17 @@ public static partial class CellDisplayFormatter
     };
 
     // A bounded, width-independent representation. '*' repetition is supplied by the view;
-    // '_' and '?' reserve spaces in copied text. Fractions and calendars are deliberately not guessed.
+    // '_' and '?' reserve spaces in copied text. Unsupported calendars are not guessed.
     private static string? RenderNumber(double value, Section section, CultureInfo culture, out int fillOffset)
     {
         fillOffset = -1;
         var tokens = section.Tokens;
+        if (tokens.Any(t => t.Kind == '/')) return RenderFraction(value, section, culture, out fillOffset);
         if (tokens.Count(t => t.Kind == '%') > 1) return null;
         if (tokens.Any(t => t.Kind == 'g'))
             return tokens.All(t => t.Kind is 'g' or 'l')
                 ? string.Concat(tokens.Select(t => t.Kind == 'g' ? value.ToString("G15", culture) : t.Text)) : null;
-        if (tokens.Any(t => t.Kind == '@')) return value.ToString("G15", culture);
+        if (tokens.Any(t => t.Kind == '@')) return tokens.All(t => t.Kind is '@' or 'l' or '*') ? value.ToString("G15", culture) : null;
         var first = tokens.FindIndex(t => t.Kind is '0' or '#' or '?');
         if (first < 0)
         {

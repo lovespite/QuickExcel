@@ -66,7 +66,7 @@ public static partial class CellDisplayFormatter
         1 => "0", 2 => "0.00", 3 => "#,##0", 4 => "#,##0.00",
         5 => "\"$\"#,##0;(\"$\"#,##0)", 6 => "\"$\"#,##0;[Red](\"$\"#,##0)",
         7 => "\"$\"#,##0.00;(\"$\"#,##0.00)", 8 => "\"$\"#,##0.00;[Red](\"$\"#,##0.00)",
-        9 => "0%", 10 => "0.00%", 11 => "0.00E+00",
+        9 => "0%", 10 => "0.00%", 11 => "0.00E+00", 12 => "# ?/?", 13 => "# ??/??",
         37 => "#,##0 ;(#,##0)", 38 => "#,##0 ;[Red](#,##0)",
         39 => "#,##0.00;(#,##0.00)", 40 => "#,##0.00;[Red](#,##0.00)",
         41 => "_(* #,##0_);_(* (#,##0);_(* \"-\"_);_(@_)",
@@ -223,8 +223,10 @@ public static partial class CellDisplayFormatter
             }
             if (code.AsSpan(i).StartsWith("General", StringComparison.OrdinalIgnoreCase))
             { tokens.Add(new('g', "General")); i += 7; continue; }
-            if (c is '0' or '#' or '?' or '.' or ',' or '%' or '@')
+            if (c is '0' or '#' or '?' or '.' or ',' or '%' or '@' or '/')
             { tokens.Add(new(c, code[i..(i + 1)])); i++; continue; }
+            if (c is >= '1' and <= '9')
+            { tokens.Add(new('v', code[i..(i + 1)])); i++; continue; }
             if (c == 'e' && i + 2 < code.Length && code[i + 1] is '+' or '-' && code[i + 2] == '0')
             {
                 var end = i + 2;
@@ -236,11 +238,11 @@ public static partial class CellDisplayFormatter
                 section.Supported = false;
             Literal(code[i..(i + 1)]); i++;
         }
-        if (section.HasDate && tokens.Any(t => t.Kind is '0' or '#' or '?' or '%' or 'g' or 'e' or '@')) section.Supported = false;
+        if (section.HasDate && tokens.Any(t => t.Kind is '0' or '#' or '?' or '%' or 'g' or 'e' or '@' or 'v')) section.Supported = false;
         // A dot/comma in a date is punctuation, not a numeric placeholder.
         if (section.HasDate)
             for (var i = 0; i < tokens.Count; i++)
-                if (tokens[i].Kind is '.' or ',') tokens[i] = tokens[i] with { Kind = 'l' };
+                if (tokens[i].Kind is '.' or ',' or '/') tokens[i] = tokens[i] with { Kind = 'l' };
         for (var i = 0; i < tokens.Count; i++)
         {
             if (tokens[i].Kind != 'm' || tokens[i].Length > 2) continue;
