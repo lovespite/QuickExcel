@@ -1,4 +1,9 @@
 param([ValidateRange(1, 16)][int]$Parallel = 6, [switch]$PrepareOnly, [switch]$IncludeProbe)
+# dotnet launched from PowerShell 7 can pass a module path incompatible with 5.1.
+if ($PSVersionTable.PSVersion.Major -eq 5) {
+    $env:PSModulePath = (Join-Path $PSHOME 'Modules') + [IO.Path]::PathSeparator + $env:PSModulePath
+    Import-Module (Join-Path $PSHOME 'Modules/Microsoft.PowerShell.Utility/Microsoft.PowerShell.Utility.psd1') -ErrorAction Stop
+}
 $ErrorActionPreference = 'Stop'
 $repo = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..'))
 $root = Join-Path $repo 'artifacts\jsc'

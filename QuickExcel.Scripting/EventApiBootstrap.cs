@@ -27,7 +27,7 @@ public sealed partial class JscSession
         const eventConstants = freeze(Object.fromEntries(eventDefinitions.map(([key,name]) => [key,name])));
         Object.defineProperty(globalThis, 'QxEventNames', { value: eventConstants });
         function registerEvent(name, handler) {
-            if (!actionMode) return;
+            if (!actionMode || sharedMode && !(registrationRole() & 2)) return;
             if (loaded || !eventNames.includes(name) || typeof handler !== 'function') throw new TypeErrorCtor('Invalid event registration.');
             const key = '@event/' + name;
             if (!eventHandlers[name]) {
@@ -57,7 +57,7 @@ public sealed partial class JscSession
                     enumerable: true,
                     get() { return handler; },
                     set(value) {
-                        if (!actionMode) return;
+                        if (!actionMode || sharedMode && !(registrationRole() & 2)) return;
                         if (loaded || value !== null && typeof value !== 'function') throw new TypeErrorCtor('Event handlers must be functions or null and set during initialization.');
                         if (value === null && handler !== null) {
                             const list = eventHandlers[name]; list.splice(list.indexOf(listener), 1);

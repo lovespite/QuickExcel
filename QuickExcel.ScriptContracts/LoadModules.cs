@@ -9,12 +9,14 @@ public sealed record ModuleSource(string Id, string Path, string Source);
 /// <summary>API v2 package source, never filenames to open. Digest covers identities, paths, sources and entry order.</summary>
 public sealed record LoadModules(ModuleSource[] Modules, string[] EntryModules, string Sha256)
 {
+    public string[] FunctionEntries { get; init; } = [];
+    public string[] ActionEntries { get; init; } = [];
     public string ComputeDigest()
     {
         ValidateMapping();
         return Convert.ToHexString(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(new
         {
-            apiVersion = 2, entries = EntryModules,
+            apiVersion = 2, entries = EntryModules, functionEntries = FunctionEntries, actionEntries = ActionEntries,
             modules = Modules.OrderBy(m => m.Id, StringComparer.Ordinal).Select(m => new
             { id = m.Id, path = m.Path, sha256 = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(m.Source))) })
         })));
@@ -45,5 +47,8 @@ public sealed record LoadModules(ModuleSource[] Modules, string[] EntryModules, 
         if (sourceBytes > 1024 * 1024) throw new ProtocolException("Combined module source exceeds 1 MiB UTF-8.");
         if (EntryModules.Any(id => id is null || !ids.Contains(id)) || EntryModules.Distinct(StringComparer.Ordinal).Count() != EntryModules.Length)
             throw new ProtocolException("Invalid entry module mapping.");
+        foreach (var entries in new[] { FunctionEntries, ActionEntries })
+            if (entries is null || entries.Length > 64 || entries.Any(id => !EntryModules.Contains(id)) || entries.Distinct(StringComparer.Ordinal).Count() != entries.Length)
+                throw new ProtocolException("Invalid bound module mapping.");
     }
 }

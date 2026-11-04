@@ -66,6 +66,7 @@ public sealed partial class WorkbookGrid : UserControl, IGridSurface, IDisposabl
         Focusable = true;
         _artwork = new(this); _overlay = new(this) { IsHitTestVisible = false };
         _canvas.Children.Add(_artwork); _canvas.Children.Add(_overlay); _canvas.Children.Add(CellEditor);
+        InstallChartControls();
         var layout = new global::Avalonia.Controls.Grid { RowDefinitions = new("*,16"), ColumnDefinitions = new("*,16") };
         layout.Children.Add(_canvas); layout.Children.Add(_vertical); layout.Children.Add(_horizontal);
         global::Avalonia.Controls.Grid.SetColumn(_vertical, 1); global::Avalonia.Controls.Grid.SetRow(_horizontal, 1);
@@ -248,7 +249,7 @@ public sealed partial class WorkbookGrid : UserControl, IGridSurface, IDisposabl
         var row = _rows.HitTest(point.Y / _zoom - HeaderHeight, ViewHeight); var col = _columns.HitTest(point.X / _zoom - HeaderWidth, ViewWidth);
         return row >= 0 && col >= 0 ? new(row, col) : null;
     }
-    private void InvalidateContent() { _artwork.Release(); _artwork.InvalidateVisual(); _overlay.InvalidateVisual(); }
+    private void InvalidateContent() { _artwork.Release(); _artwork.InvalidateVisual(); _overlay.InvalidateVisual(); PositionChartControls(); }
     public static string ColumnName(int column)
     {
         var text = ""; for (column++; column > 0; column = (column - 1) / 26) text = (char)('A' + (column - 1) % 26) + text; return text;

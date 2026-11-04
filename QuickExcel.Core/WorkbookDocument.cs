@@ -34,7 +34,7 @@ public sealed class WorkbookDocument : IDisposable
         ArgumentNullException.ThrowIfNull(services.Storage);
         ArgumentNullException.ThrowIfNull(services.Calculator);
         _services = services;
-        Session = new(snapshot, historyBudgetBytes, services.Calculator as IWorkbookValidation, services.Storage as IWorkbookVirtualFiles);
+        Session = new(snapshot, historyBudgetBytes, services.Calculator as IWorkbookValidation, services.Storage as IWorkbookVirtualFiles, services.Calculator);
     }
 
     public DocumentSession Session { get; }
@@ -193,10 +193,13 @@ public sealed class WorkbookDocument : IDisposable
         {
             var result = _services.Calculator.Calculate(request, lifetime.Token);
             cancellationToken.ThrowIfCancellationRequested();
-            return Session.TryCommitCalculation(result);
+            var committed = Session.TryCommitCalculation(result);
+            if (!committed) Session.InvalidateScriptRuntime(request.RuntimeLifetime);
+            return committed;
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested && request.CancellationToken.IsCancellationRequested)
         {
+            Session.InvalidateScriptRuntime(request.RuntimeLifetime);
             return false; // Superseded/closed session: preserve the existing stale-result contract.
         }
         catch (OperationCanceledException)
@@ -225,7 +228,7 @@ public sealed class WorkbookDocument : IDisposable
             Session.ConfigureScriptEvents(_eventModules, _eventNames.Select(n => n[ScriptEventNames.Prefix.Length..]));
             return actions.Where(a => !a.Name.StartsWith(ScriptEventNames.Prefix, StringComparison.Ordinal)).ToArray();
         }
-        catch (Exception e) { Session.TryFailCalculation(request.Stamp, e.Message, disableScripts: false); throw; }
+        catch (Exception e) { Session.InvalidateScriptRuntime(request.RuntimeLifetime); Session.TryFailCalculation(request.Stamp, e.Message, disableScripts: false); throw; }
     }
 
     public CommandResult RunAction(string name, CancellationToken cancellationToken = default)
@@ -245,7 +248,7 @@ public sealed class WorkbookDocument : IDisposable
             lifetime.Token.ThrowIfCancellationRequested();
             return Session.CommitAction(request, result, lifetime.Token);
         }
-        catch (Exception e) { Session.TryFailCalculation(request.Stamp, e.Message, disableScripts: false, logs: (e as ScriptRuntimeFailureException)?.Logs); throw; }
+        catch (Exception e) { Session.InvalidateScriptRuntime(request.RuntimeLifetime); Session.TryFailCalculation(request.Stamp, e.Message, disableScripts: false, logs: (e as ScriptRuntimeFailureException)?.Logs); throw; }
     }
 
     private int _dispatchingEvents;
@@ -275,6 +278,7 @@ public sealed class WorkbookDocument : IDisposable
                 }
                 catch (Exception error)
                 {
+                    Session.InvalidateScriptRuntime(request.RuntimeLifetime);
                     Session.TryFailCalculation(request.Stamp, $"事件 {item.Name} 失败：{error.Message}", disableScripts: false, logs: (error as ScriptRuntimeFailureException)?.Logs);
                     throw;
                 }

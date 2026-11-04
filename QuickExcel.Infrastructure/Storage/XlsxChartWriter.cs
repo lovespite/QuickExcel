@@ -37,11 +37,13 @@ internal static partial class XlsxCharts
 
     private static XElement StandardXml(WorkbookSnapshot book, WorksheetChart model)
     {
-        var data = ChartData.Read(book, model with { VisibleOnly = false });
+        var data = ChartData.Read(book, model with { VisibleOnly = false }, includeFiltered: true);
         var graphName = model.Kind switch { WorksheetChartKind.Column => "barChart", WorksheetChartKind.Line or WorksheetChartKind.SmoothLine => "lineChart", WorksheetChartKind.Scatter => "scatterChart", _ => "pieChart" };
         var prior = model.OriginalXml.IsEmpty ? null : Xml(model.OriginalXml.ToArray(), new(CancellationToken.None)).Root;
+        if (prior?.Name == Chart + "chartSpace") NormalizeStandardFilters(prior);
         var root = prior?.Name == Chart + "chartSpace" ? prior : new XElement(Chart + "chartSpace", new XAttribute(XNamespace.Xmlns + "c", Chart), new XAttribute(XNamespace.Xmlns + "a", Art),
             Val("date1904", book.DateSystem == ExcelDateSystem.Mac1904 ? 1 : 0), new XElement(Chart + "chart", new XElement(Chart + "plotArea", new XElement(Chart + "layout"))));
+        if (root.Element(Chart + "roundedCorners") is null) Put(root, Val("roundedCorners", 0), "date1904 lang roundedCorners style chart spPr txPr printSettings extLst");
         var chart = root.Element(Chart + "chart")!; var plot = chart.Element(Chart + "plotArea")!;
         var title = chart.Element(Chart + "title");
         if (TitleText(title) != model.Title)
@@ -69,6 +71,7 @@ internal static partial class XlsxCharts
             ser.Elements(Chart + "dPt").Where(p => !int.TryParse(Value(p, "idx"), out var index) || index >= values.Values.Length).Remove();
             Put(ser, Val("idx", i), seriesOrder); Put(ser, Val("order", i), seriesOrder);
             Put(ser, new XElement(Chart + "tx", s.NameReference is { } name ? Cache(name, [values.Name], false, "General") : new XElement(Chart + "v", s.Name)), seriesOrder);
+            if (model.Kind == WorksheetChartKind.Column) Put(ser, Val("invertIfNegative", 0), seriesOrder);
             if (ser.Element(Chart + "spPr") is null) Put(ser, model.Kind is WorksheetChartKind.Line or WorksheetChartKind.SmoothLine or WorksheetChartKind.Scatter ?
                 new XElement(Chart + "spPr", new XElement(Art + "ln", new XAttribute("w", (int)Math.Round(s.LineWidth * 9525)), s.ConnectPoints ? Solid(s.Color) : new XElement(Art + "noFill"))) : Shape(Chart, s.Color), seriesOrder);
             if (model.Kind is WorksheetChartKind.Line or WorksheetChartKind.SmoothLine or WorksheetChartKind.Scatter)
@@ -84,6 +87,8 @@ internal static partial class XlsxCharts
                 var after = ser.Elements().LastOrDefault(e => e.Name.LocalName is "idx" or "order" or "tx" or "spPr" or "invertIfNegative" or "marker" or "dPt");
                 if (after is null) ser.AddFirst(node); else after.AddAfterSelf(node);
             }
+            if (model.Kind == WorksheetChartKind.Column)
+                foreach (var point in ser.Elements(Chart + "dPt")) Put(point, Val("invertIfNegative", 0), "idx invertIfNegative marker bubble3D explosion spPr pictureOptions extLst");
             var labels = ser.Element(Chart + "dLbls");
             if (labels is not null || s.ShowValues || s.ShowCategories || s.ShowSeriesName)
             {
@@ -125,6 +130,7 @@ internal static partial class XlsxCharts
         Put(chart, Val("dispBlanksAs", "gap"), "title autoTitleDeleted plotArea legend plotVisOnly dispBlanksAs showDLblsOverMax extLst");
         if (root.Element(Chart + "spPr") is null) Put(root, Shape(Chart, model.Appearance.Background, model.Appearance.BorderColor, model.Appearance.BorderWidth), "date1904 lang roundedCorners style chart spPr txPr printSettings extLst");
         if (plot.Element(Chart + "spPr") is null) plot.Add(Shape(Chart, model.Appearance.PlotBackground));
+        WriteStandardFilters(graph, model);
         return root;
     }
 }

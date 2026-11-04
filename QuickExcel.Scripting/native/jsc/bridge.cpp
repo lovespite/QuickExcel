@@ -9,6 +9,7 @@
 #include "ErrorInstance.h"
 #include "Exception.h"
 #include "InitializeThreading.h"
+#include "Interpreter.h"
 #include "JSCInlines.h"
 #include "JSGlobalObjectInlines.h"
 #include "JSArray.h"
@@ -28,6 +29,7 @@
 #include <chrono>
 #include <condition_variable>
 #include <cstring>
+#include <functional>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -50,6 +52,8 @@ struct Module {
     String id;
     String source;
     Strong<JSModuleRecord> record;
+    unsigned declaredRoles { 3 };
+    unsigned roles { 0 };
 };
 
 struct qx_session {
@@ -63,6 +67,7 @@ struct qx_session {
     bool compiler { false };
     bool poisoned { false };
     bool asyncRejected { false };
+    const char* (*hostCall)(const char*) { nullptr };
     std::atomic<bool> interrupted { false };
     std::mutex timerMutex;
     std::condition_variable timerChanged;
@@ -96,6 +101,20 @@ struct qx_session {
 
 static thread_local qx_session* activeSession = nullptr;
 
+static Module* findModule(qx_session&, const String&);
+
+static JSValueRef registrationRole(JSContextRef context, JSObjectRef, JSObjectRef, size_t, const JSValueRef[], JSValueRef*)
+{
+    if (!activeSession) return JSValueMakeNumber(context, 0);
+    Vector<StackFrame> frames;
+    activeSession->vm().interpreter.getStackTrace(activeSession->global(), frames, 0, 64);
+    for (const auto& frame : frames) {
+        auto* module = findModule(*activeSession, frame.sourceURL(activeSession->vm(), AllowURLOverride::No));
+        if (module) return JSValueMakeNumber(context, module->roles);
+    }
+    return JSValueMakeNumber(context, 0);
+}
+
 static char* copyText(std::string_view text)
 {
     auto* result = static_cast<char*>(malloc(text.size() + 1));
@@ -109,6 +128,31 @@ static void setError(char** error, std::string_view message)
     size_t length = std::min(message.size(), diagnosticLimit);
     while (length && length < message.size() && (static_cast<unsigned char>(message[length]) & 0xc0) == 0x80) --length;
     *error = copyText(message.substr(0, length));
+}
+
+// A bounded synchronous message to the worker's managed IPC client. No OS or
+// CLR object is exposed to JavaScript. The managed reply lives until this call returns.
+static JSValueRef hostModelCall(JSContextRef context, JSObjectRef, JSObjectRef, size_t count, const JSValueRef values[], JSValueRef* exception)
+{
+    auto fail = [&](const char* message) -> JSValueRef {
+        auto text = JSStringCreateWithUTF8CString(message);
+        auto value = JSValueMakeString(context, text); JSStringRelease(text);
+        *exception = JSObjectMakeError(context, 1, &value, nullptr);
+        return JSValueMakeUndefined(context);
+    };
+    if (!activeSession || !activeSession->hostCall || count != 1 || !JSValueIsString(context, values[0]))
+        return fail("Workbook model is unavailable outside an action.");
+    auto text = JSValueToStringCopy(context, values[0], exception);
+    if (!text) return JSValueMakeUndefined(context);
+    if (JSStringGetLength(text) > messageLimit) { JSStringRelease(text); return fail("Model request exceeds its budget."); }
+    std::string request(JSStringGetMaximumUTF8CStringSize(text), '\0');
+    auto size = JSStringGetUTF8CString(text, request.data(), request.size()); JSStringRelease(text);
+    if (!size || size - 1 > messageLimit) return fail("Model request exceeds its budget.");
+    auto* reply = activeSession->hostCall(request.c_str());
+    if (!reply || strnlen(reply, messageLimit + 1) > messageLimit) return fail("Invalid model response.");
+    auto json = JSStringCreateWithUTF8CString(reply);
+    auto value = JSValueMakeFromJSONString(context, json); JSStringRelease(json);
+    return value ? value : fail("Invalid model response JSON.");
 }
 
 class Operation {
@@ -318,6 +362,16 @@ static qx_session* createSession(const char* bootstrap, char** error, bool compi
         s->methods.deriveShadowRealmGlobalObject = rejectRealm;
         auto* global = JSGlobalObject::createWithCustomMethodTable(s->vm(), JSGlobalObject::createStructure(s->vm(), jsNull()), &s->methods);
         s->context = JSGlobalContextRetain(toGlobalRef(global));
+        if (!compiler) {
+            auto name = JSStringCreateWithUTF8CString("__qxModelCall");
+            auto function = JSObjectMakeFunctionWithCallback(s->context, name, hostModelCall);
+            JSObjectSetProperty(s->context, JSContextGetGlobalObject(s->context), name, function, kJSPropertyAttributeDontEnum, nullptr);
+            JSStringRelease(name);
+            name = JSStringCreateWithUTF8CString("__qxRegistrationRole");
+            function = JSObjectMakeFunctionWithCallback(s->context, name, registrationRole);
+            JSObjectSetProperty(s->context, JSContextGetGlobalObject(s->context), name, function, kJSPropertyAttributeDontEnum, nullptr);
+            JSStringRelease(name);
+        }
         // notifyNeedTermination assumes this preallocated uncatchable exception
         // exists (the stock Watchdog creates it when initialized).
         s->vm().ensureTerminationException();
@@ -345,6 +399,7 @@ static qx_session* createSession(const char* bootstrap, char** error, bool compi
 
 QX_EXPORT qx_session* qx_create(const char* bootstrap, char** error) { return createSession(bootstrap, error, false); }
 QX_EXPORT qx_session* qx_create_compiler(const char* bootstrap, char** error) { return createSession(bootstrap, error, true); }
+QX_EXPORT void qx_set_host_call(qx_session* s, const char* (*callback)(const char*)) { if (s && !s->compiler) s->hostCall = callback; }
 
 QX_EXPORT int qx_load_modules(qx_session* s, const char* json, char** error)
 {
@@ -378,13 +433,15 @@ QX_EXPORT int qx_load_modules(qx_session* s, const char* json, char** error)
         if (!item.isObject()) { setError(error, "Invalid module."); return fail(); }
         auto id = asObject(item)->get(s->global(), Identifier::fromString(s->vm(), "id"_s));
         auto source = asObject(item)->get(s->global(), Identifier::fromString(s->vm(), "source"_s));
+        auto role = asObject(item)->get(s->global(), Identifier::fromString(s->vm(), "roles"_s));
+        if (!role.isUndefined() && (!role.isInt32() || role.asInt32() < 0 || role.asInt32() > 3)) { setError(error, "Invalid module role."); return fail(); }
         if (!id.isString() || !source.isString()) { setError(error, "Invalid module source."); return fail(); }
         auto idText = asString(id)->value(s->global()).data;
         auto text = asString(source)->value(s->global()).data;
         if (scope.exception() || !validId(idText) || findModule(*s, idText) || (bytes += text.utf8().length()) > 1024 * 1024) {
             setError(error, "Invalid module mapping or source budget."); return fail();
         }
-        s->modules.push_back({ idText, text, { } });
+        s->modules.push_back({ idText, text, { }, role.isUndefined() ? 3u : static_cast<unsigned>(role.asInt32()), 0 });
     }
     std::vector<Module*> roots;
     for (unsigned i = 0; i < entryArray->length(); ++i) {
@@ -395,6 +452,13 @@ QX_EXPORT int qx_load_modules(qx_session* s, const char* json, char** error)
         if (!prepareModule(*s, *root, error)) return fail();
     }
     // Native record operations preserve ES linking, cycles, TDZ and live bindings.
+    std::function<void(Module&, unsigned)> bind = [&](Module& module, unsigned roles) {
+        if ((module.roles & roles) == roles) return;
+        module.roles |= roles;
+        for (const auto& request : module.record->requestedModules())
+            if (auto* dependency = findModule(*s, request.m_specifier.string())) bind(*dependency, roles);
+    };
+    for (auto* root : roots) bind(*root, root->declaredRoles);
     // No loader promise jobs or user jobs are advanced, even during cleanup.
     for (auto* root : roots) {
         root->record->link(s->global(), nullptr);
@@ -462,4 +526,4 @@ QX_EXPORT char* qx_call(qx_session* s, const char* method, const char* json, cha
 QX_EXPORT void qx_free_string(char* text) { free(text); }
 QX_EXPORT int qx_was_interrupted(qx_session* s) { return s && s->interrupted.load(); }
 QX_EXPORT int qx_is_usable(qx_session* s) { return s && !s->poisoned; }
-QX_EXPORT const char* qx_engine_identity() { return "JavaScriptCore/2.54.2/b95c91b1/qx-sync-1"; }
+QX_EXPORT const char* qx_engine_identity() { return "JavaScriptCore/2.54.2/b95c91b1/qx-sync-2"; }

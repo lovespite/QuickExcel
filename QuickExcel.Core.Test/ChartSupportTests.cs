@@ -177,6 +177,51 @@ public sealed class ChartSupportTests : IDisposable
         return output.ToArray();
     }
 
+    [Theory]
+    [InlineData("waterfall", false)] [InlineData("funnel", false)]
+    [InlineData("waterfall", true)] [InlineData("funnel", true)]
+    public void UnchangedLegacyChartExSaveRepairsExcelDependenciesWithoutRebuildingOtherParts(string layout, bool partialStyles)
+    {
+        // Independent legacy package: explicit axisId values and absent/incomplete style
+        // dependencies are known to make Excel reject these otherwise readable files.
+        var xml = $"""
+            <cx:chartSpace xmlns:cx="{Cx}"><cx:chartData><cx:data id="0"><cx:strDim type="cat"><cx:f>Sheet1!$A$2:$A$3</cx:f></cx:strDim>
+            <cx:numDim type="val"><cx:f>Sheet1!$B$2:$B$3</cx:f></cx:numDim></cx:data></cx:chartData><cx:chart><cx:plotArea><cx:plotAreaRegion>
+            <cx:series layoutId="{layout}"><cx:dataId val="0"/><cx:axisId>0</cx:axisId><cx:axisId>1</cx:axisId></cx:series>
+            </cx:plotAreaRegion></cx:plotArea></cx:chart></cx:chartSpace>
+            """;
+        using var stream = new MemoryStream(); stream.Write(ReplaceChart(Fixture(), xml, true)); stream.Position = 0;
+        using (var zip = new ZipArchive(stream, ZipArchiveMode.Update, true))
+        {
+            if (!partialStyles)
+            {
+                foreach (var path in new[] { "xl/charts/style1.xml", "xl/charts/colors1.xml", "xl/charts/_rels/chart1.xml.rels" }) zip.GetEntry(path)!.Delete();
+                var entry = zip.GetEntry("[Content_Types].xml")!; XDocument types;
+                using (var input = entry.Open()) types = XDocument.Load(input);
+                types.Root!.Elements().Where(e => ((string?)e.Attribute("PartName")) is "/xl/charts/style1.xml" or "/xl/charts/colors1.xml").Remove();
+                entry.Delete(); using var output = zip.CreateEntry("[Content_Types].xml").Open(); types.Save(output);
+            }
+            using var opaque = new StreamWriter(zip.CreateEntry("custom/opaque.xml").Open()); opaque.Write("<keep value=\"untouched\"/>");
+        }
+        var inputPath = Path.Combine(_folder, "legacy.xlsx"); File.WriteAllBytes(inputPath, stream.ToArray());
+        var storage = new TypedWorkbookStorage(); var read = storage.Open(inputPath); var chart = Assert.Single(read.Sheets[0].Data.Charts);
+        Assert.Contains(TypedWorkbookStorage.InspectSavePlan(read), p => p.Action == "repair-excel-compatibility");
+        var outputPath = Path.Combine(_folder, "repaired.xlsx"); storage.SaveChecked(outputPath, read, false, new(null));
+        var reopened = storage.Open(outputPath); Assert.True(chart.ContentEquals(Assert.Single(reopened.Sheets[0].Data.Charts)));
+        using (var before = ZipFile.OpenRead(inputPath))
+        using (var after = ZipFile.OpenRead(outputPath))
+        {
+            foreach (var entry in before.Entries.Where(e => e.FullName != "[Content_Types].xml" && !e.FullName.StartsWith("xl/charts/", StringComparison.Ordinal)))
+            {
+                using var original = new StreamReader(entry.Open()); using var saved = new StreamReader(after.GetEntry(entry.FullName)!.Open());
+                Assert.Equal(original.ReadToEnd(), saved.ReadToEnd());
+            }
+            using var chartXml = after.GetEntry("xl/charts/chart1.xml")!.Open(); Assert.Empty(XDocument.Load(chartXml).Descendants(Cx + "axisId"));
+        }
+        var copy = Path.Combine(_folder, "already-compatible.xlsx"); storage.Save(copy, reopened);
+        Assert.Equal(File.ReadAllBytes(outputPath), File.ReadAllBytes(copy)); // Idempotent original-package save.
+    }
+
     private static byte[] Fixture(string mode = "")
     {
         const string rel = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";

@@ -8,13 +8,44 @@ using var output = Console.OpenStandardOutput();
 var hello = await WorkerProtocol.ReadAsync(input);
 await WorkerProtocol.WriteAsync(output, hello);
 var loadEnvelope = await WorkerProtocol.ReadAsync(input);
-if (loadEnvelope.Kind == "loadActions")
+if (loadEnvelope.Kind is "loadActions" or "loadWorkbook")
 {
     var modules = WorkerProtocol.Payload<LoadModules>(loadEnvelope);
-    var fault = modules.Modules[0].Source;
-    await WorkerProtocol.WriteAsync(output, WorkerProtocol.Message(loadEnvelope.Identity, "loadActions", new LoadedActions(modules.Sha256, [new("A", "")])));
+    var fault = modules.Modules[0].Source.Split('\n')[0];
+    if (loadEnvelope.Kind == "loadWorkbook")
+        await WorkerProtocol.WriteAsync(output, WorkerProtocol.Message(loadEnvelope.Identity, "loadWorkbook", new LoadedWorkbook(modules.Sha256, [], [new("A", "")])));
+    else await WorkerProtocol.WriteAsync(output, WorkerProtocol.Message(loadEnvelope.Identity, "loadActions", new LoadedActions(modules.Sha256, [new("A", "")])));
     var envelope = await WorkerProtocol.ReadAsync(input);
     var action = WorkerProtocol.Payload<RunAction>(envelope);
+    if (fault.StartsWith("model-", StringComparison.Ordinal))
+    {
+        // Stage one valid mutation before injecting a bad callback. No partial edit may escape.
+        var sheet = action.Snapshot.Sheets[0].Id;
+        var first = new ModelCall(action.OperationId, 1, WorkerProtocol.EncodePayload(new { method = "setValue", args = new object[] { sheet, "A1", 9 } }));
+        await WorkerProtocol.WriteAsync(output, WorkerProtocol.Message(envelope.Identity, "model", first));
+        var firstReply = WorkerProtocol.Payload<ModelReply>(await WorkerProtocol.ReadAsync(input));
+        if (!firstReply.Ok) throw new InvalidOperationException("Fault fixture could not stage its initial write.");
+        var next = new ModelCall(action.OperationId, 2, WorkerProtocol.EncodePayload(new { method = "setValue", args = new object[] { sheet, "A1", 10 } }));
+        next = fault switch
+        {
+            "model-operation" => next with { OperationId = Guid.NewGuid() },
+            "model-sequence" => next with { Sequence = 1 },
+            "model-method" => next with { Request = WorkerProtocol.EncodePayload(new { method = "setUnknown", args = new object[] { sheet, "A1", 10 } }) },
+            "model-sheet" => next with { Request = WorkerProtocol.EncodePayload(new { method = "setValue", args = new object[] { Guid.NewGuid().ToString(), "A1", 10 } }) },
+            "model-value" => next with { Request = WorkerProtocol.EncodePayload(new { method = "setValue", args = new object[] { sheet, "A1", new { kind = "number", value = "wrong" } } }) },
+            _ => next
+        };
+        var modelIdentity = fault == "model-round" ? envelope.Identity with { RoundId = Guid.NewGuid() } : envelope.Identity;
+        await WorkerProtocol.WriteAsync(output, WorkerProtocol.Message(modelIdentity, "model", next));
+        await WorkerProtocol.ReadAsync(input);
+        // Pretend the script caught an error and succeeded; host validation must still reject the transaction.
+        await WorkerProtocol.WriteAsync(output, WorkerProtocol.Message(envelope.Identity, "runAction", new ActionPatch(action.OperationId, action.Snapshot.BaseRevision, action.Name, [])));
+        var logs = await WorkerProtocol.ReadAsync(input);
+        await WorkerProtocol.WriteAsync(output, WorkerProtocol.Message(logs.Identity, "logs", new WorkerLogs([])));
+        var end = await WorkerProtocol.ReadAsync(input);
+        await WorkerProtocol.WriteAsync(output, WorkerProtocol.Message(end.Identity, "endRound", new EmptyPayload()));
+        return;
+    }
     if (fault is "failure-log-count" or "failure-log-bytes")
     {
         var logs = fault == "failure-log-count" ? Enumerable.Repeat("line", 101).ToArray() : [new string('中', 2000)];

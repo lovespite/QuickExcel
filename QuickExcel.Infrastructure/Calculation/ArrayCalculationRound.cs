@@ -13,7 +13,7 @@ internal static class ArrayCalculationRound
     {
         var snapshot = request.Snapshot;
         using var runtime = request.ScriptsEnabled && !snapshot.ScriptModules.EntriesFor("formula-functions").IsEmpty
-            ? factory.Create(new ScriptRuntimeRequest(snapshot.ScriptModules, request.Stamp, WorkbookCalculator.TimeLimit - timer.Elapsed, request.CancellationToken)) : null;
+            ? factory.Create(new ScriptRuntimeRequest(snapshot.ScriptModules, request.Stamp, WorkbookCalculator.TimeLimit - timer.Elapsed, request.CancellationToken) { RuntimeLifetime = request.RuntimeLifetime }) : null;
         var functions = new Dictionary<string, ScriptFunctionDescriptor>(StringComparer.OrdinalIgnoreCase);
         if (runtime is not null)
         foreach (var descriptor in runtime.FunctionDescriptors)

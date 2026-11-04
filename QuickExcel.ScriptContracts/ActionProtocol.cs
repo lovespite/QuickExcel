@@ -11,6 +11,7 @@ public sealed record RunAction(Guid OperationId, string Name, ActionSnapshot Sna
 {
     public VirtualEntry[] Files { get; init; } = [];
     public ActionEvent? Event { get; init; }
+    public bool LiveModel { get; init; }
 }
 public sealed record ActionWrite(string SheetId, int Row, int Column, WireValue? Value, string? Formula);
 public sealed record ActionPatch(Guid OperationId, long BaseRevision, string Name, ActionWrite[] Edits)

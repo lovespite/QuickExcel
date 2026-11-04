@@ -8,9 +8,10 @@ namespace QuickExcel.ScriptContracts;
 public sealed record RequestIdentity(Guid SessionId, Guid WorkerInstanceId, Guid RequestId,
     long Revision, long? CalculationGeneration, long ScriptGeneration)
 {
+    [JsonRequired] public Guid RoundId { get; init; } = Guid.NewGuid();
     public void Validate()
     {
-        if (SessionId == Guid.Empty || WorkerInstanceId == Guid.Empty || RequestId == Guid.Empty ||
+        if (SessionId == Guid.Empty || WorkerInstanceId == Guid.Empty || RequestId == Guid.Empty || RoundId == Guid.Empty ||
             Revision < 0 || CalculationGeneration is < 0 || ScriptGeneration < 0)
             throw new ProtocolException("Invalid request identity.");
     }
@@ -22,6 +23,8 @@ public sealed record WorkerHello(string Engine, string Policy, int[] ApiVersions
 public sealed record LoadScript(string Source, string Sha256);
 public sealed record FunctionInfo(string Name, int ApiVersion, int MinArguments, int MaxArguments, string ReturnType, string Profile);
 public sealed record LoadedScript(string Sha256, FunctionInfo[] Functions);
+public sealed record LoadedWorkbook(string Sha256, FunctionInfo[] Functions, ActionInfo[] Actions);
+public sealed record BeginWorkerRound;
 public sealed record FunctionCall(string Name, WireValue[] Arguments);
 public sealed record InvokeBatch(FunctionCall[] Calls);
 public sealed record InvocationResult(WireValue? Value, string? Error, bool ValueTooLong = false);
@@ -36,8 +39,8 @@ public sealed class ProtocolException(string message, Exception? inner = null) :
 
 public static class WorkerProtocol
 {
-    public const int Version = 7;
-    public const string Engine = "JavaScriptCore/2.54.2/b95c91b1/qx-sync-1";
+    public const int Version = 9;
+    public const string Engine = "JavaScriptCore/2.54.2/b95c91b1/qx-sync-2";
     public const string Policy = "conservative-jsc-v1-memory-issue-open";
     public const int MaxFrameBytes = 16 * 1024 * 1024;
     public const int MaxBatchCalls = 256;
@@ -119,7 +122,7 @@ public static class WorkerProtocol
     {
         if (message.ProtocolVersion != Version || message.Identity is null ||
             message.Kind is not ("hello" or "load" or "loadModules" or "loadActions" or "runAction" or "invokeBatch" or "logs" or "shutdown" or "failure"
-                or "compile"
+                or "compile" or "model" or "loadWorkbook" or "beginRound" or "endRound"
                 ) ||
             message.Payload.ValueKind != JsonValueKind.Object)
             throw new ProtocolException("Unsupported protocol message.");

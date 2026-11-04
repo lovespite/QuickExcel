@@ -103,3 +103,13 @@ Avalonia 项目的 Web 资源在 build/publish 中改用 `IfDifferent`，修复�
 - 本地资源/草稿协议 **18 项通过**（包含等长修改仍被 SHA-256 拒绝），`artifacts/avalonia/web-resource-fix/6b208bda62f04bb38e18fd2435d4bd4a/web-resource-fix.trx`；修复前的真实宿主失败保留在同目录 `before/result.json`。
 - 真实 WebView2 页面 **42 项通过**，覆盖 Monaco worker/编辑/保存/恢复和 PDF.js 预览/搜索/导出，证据 `artifacts/avalonia/web-tests/20261103-014946-27126167`。只运行相关专项，未运行全量回归或性能基准。
 - 正式包 `artifacts/avalonia/releases/20261103-015012-6f4cdc85/application` 已通过生产自检并激活；开发输出已恢复正式资源。实机输入/打印等延期范围不变。
+
+## 2026-11-04：脚本分类导航与创建时属性
+
+脚本工作区左侧将主入口 `main.js` / `main.ts` 固定在顶部，下方为 UDF、Actions、辅助三个可独立折叠的分类，显示各组模块数量。主入口不重复进入分类；其余模块按既有绑定归类，双角色模块同时出现在 UDF 和 Actions 中。分类内按逻辑 ID 排序，折叠和展开不修改文档，普通草稿/状态刷新保留折叠状态。选择文件仍先确认草稿；诊断定位同步导航选中项，并展开目标分类。
+
+“添加模块”在同一个对话框中定义逻辑 ID、角色和 JavaScript / TypeScript，创建对应扩展名和 Monaco 模型。角色和语言在创建后固定：移除原工具栏的“模块角色”和“JS / TS”修改入口，当前属性通过状态栏和文件提示只读展示。辅助模块不新增执行入口；UDF、Actions 或双角色在创建时一次性建立相应入口/绑定。已有模块属性和旧包/API v1 读取语义保留，包级替换与签名验证合同不变。
+
+新建仍通过 `UpdateScriptModulesCommand` 提交，撤销旧授权和签名；取消、重复 ID、非法 ID 和大小写路径碰撞不会创建模块。没有改变隔离执行、编译、信任及只读保护规则。
+
+验证：Avalonia Release 构建 0 警告、0 错误；`scripts/test-avalonia-web.ps1 -ScriptsOnly` 的 123 项脚本专项通过，证据 `artifacts/avalonia/web-tests/20261104-023935-d4d0d227`，包含分类展开/折叠截图、实际 Monaco 切换、原生创建对话框校验、XLSQ 属性往返和授权/签名撤销。首次检查误将新工作簿主入口当作双角色，已按其实际 UDF 默认绑定修正测试；失败证据保留在 `20261104-023725-f78fb996`。未运行全量回归或性能基准。

@@ -148,16 +148,47 @@ internal static partial class XlsxCharts
         }
     }
 
-    private static void WriteStyleParts(WorksheetChart chart, string chartPath, Dictionary<string, byte[]> parts, XElement types)
+    // Excel requires both style and color-style parts for ChartEx, even when all visible
+    // formatting is inline. Keep imported parts; synthesize only the missing defaults.
+    private static ImmutableArray<ChartStylePart> ExtendedStyleParts(WorksheetChart chart, string[]? themePalette = null)
     {
         var styleParts = chart.StyleParts;
-        if (chart.Kind == WorksheetChartKind.Waterfall && !styleParts.Any(p => p.Kind == "chartColorStyle"))
+        string Id(string seed) { while (styleParts.Any(p => p.RelationshipId == seed)) seed += "1"; return seed; }
+        if (!styleParts.Any(p => p.Kind == "chartColorStyle"))
         {
+            string[] colors = chart.Kind == WorksheetChartKind.Waterfall ? [chart.IncreaseColor, chart.DecreaseColor, chart.TotalColor] : themePalette ??
+                ["FF4472C4", "FFED7D31", "FFA5A5A5", "FFFFC000", "FF5B9BD5", "FF70AD47"];
             var palette = new XElement(ChartStyle + "colorStyle", new XAttribute(XNamespace.Xmlns + "cs", ChartStyle), new XAttribute(XNamespace.Xmlns + "a", Art), new XAttribute("meth", "cycle"), new XAttribute("id", 10),
-                new[] { chart.IncreaseColor, chart.DecreaseColor, chart.TotalColor }.Select(c => new XElement(Art + "srgbClr", new XAttribute("val", c[2..]))), new XElement(ChartStyle + "variation"));
-            var id = "chartColors"; while (styleParts.Any(p => p.RelationshipId == id)) id += "1";
-            styleParts = styleParts.Add(new(id, "chartColorStyle", [.. XmlBytes(new XDocument(palette))]));
+                colors.Select(c => new XElement(Art + "srgbClr", new XAttribute("val", c[2..]))), new XElement(ChartStyle + "variation"));
+            styleParts = styleParts.Add(new(Id("chartColors"), "chartColorStyle", [.. XmlBytes(new XDocument(palette))]));
         }
+        var existing = styleParts.FirstOrDefault(p => p.Kind == "chartStyle");
+        {
+            // Complete CT_ChartStyle slots, with no overrides of the modeled inline styles.
+            var style = existing is null ? new XElement(ChartStyle + "chartStyle", new XAttribute(XNamespace.Xmlns + "cs", ChartStyle), new XAttribute(XNamespace.Xmlns + "a", Art), new XAttribute("id", 395)) : Xml(existing.Bytes.ToArray(), new(CancellationToken.None)).Root!;
+            var changed = existing is null;
+            const string slots = "axisTitle categoryAxis chartArea dataLabel dataLabelCallout dataPoint dataPoint3D dataPointLine dataPointMarker dataPointMarkerLayout dataPointWireframe dataTable downBar dropLine errorBar floor gridlineMajor gridlineMinor hiLoLine leaderLine legend plotArea plotArea3D seriesAxis seriesLine title trendline trendlineLabel upBar valueAxis wall";
+            foreach (var slot in slots.Split(' '))
+            {
+                var defaults = slot == "dataPointMarkerLayout" ? new XElement(ChartStyle + slot, new XAttribute("symbol", "circle"), new XAttribute("size", 5)) :
+                    new XElement(ChartStyle + slot, new XElement(ChartStyle + "lnRef", new XAttribute("idx", 0)), new XElement(ChartStyle + "fillRef", new XAttribute("idx", 0)),
+                        new XElement(ChartStyle + "effectRef", new XAttribute("idx", 0)), new XElement(ChartStyle + "fontRef", new XAttribute("idx", "minor"), new XElement(Art + "srgbClr", new XAttribute("val", "404040"))));
+                if (style.Element(defaults.Name) is not { } node) { Put(style, defaults, slots); changed = true; }
+                else foreach (var reference in defaults.Elements().ToArray())
+                    if (node.Element(reference.Name) is null) { Put(node, reference, "lnRef fillRef effectRef fontRef spPr defRPr bodyPr extLst"); changed = true; }
+            }
+            if (changed)
+            {
+                var completed = new ChartStylePart(existing?.RelationshipId ?? Id("chartStyle"), "chartStyle", [.. XmlBytes(new XDocument(style))]);
+                styleParts = existing is null ? styleParts.Add(completed) : styleParts.Replace(existing, completed);
+            }
+        }
+        return styleParts;
+    }
+
+    private static void WriteStyleParts(WorksheetChart chart, string chartPath, Dictionary<string, byte[]> parts, XElement types)
+    {
+        var styleParts = chart.IsExtended ? ExtendedStyleParts(chart) : chart.StyleParts;
         if (styleParts.IsEmpty) return;
         var rels = new XElement(PackageRel + "Relationships");
         foreach (var part in styleParts)

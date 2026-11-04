@@ -19,7 +19,7 @@ internal static partial class XlsxCharts
         // ChartEx has its own data/dimension and axis schema. Do not accept other statistical layouts as ordinary bars.
         var containers = new Dictionary<string, string>
         {
-            ["chartSpace"] = "chartData chart spPr txPr printSettings", ["chartData"] = "data", ["data"] = "numDim strDim",
+            ["chartSpace"] = "chartData chart spPr txPr printSettings extLst", ["extLst"] = "ext", ["chartData"] = "data", ["data"] = "numDim strDim",
             ["numDim"] = "f lvl", ["strDim"] = "f lvl", ["lvl"] = "pt", ["f"] = "", ["pt"] = "", ["v"] = "",
             ["chart"] = "title plotArea legend", ["title"] = "tx spPr txPr", ["tx"] = "txData rich", ["txData"] = "f v",
             ["plotArea"] = "plotAreaRegion axis spPr", ["plotAreaRegion"] = "plotSurface series", ["plotSurface"] = "spPr",
@@ -33,6 +33,8 @@ internal static partial class XlsxCharts
         };
         foreach (var e in root.DescendantsAndSelf())
         {
+            if (e.Ancestors().Any(IsExtendedFilter)) continue;
+            if (e.Name == ChartEx + "ext") { if (!IsExtendedFilter(e) || e.Parent?.Parent != root) throw new NotSupportedException("未知 ChartEx 扩展。"); continue; }
             if (e.Name.Namespace == Art) { ValidateDrawingElement(e); continue; }
             if (e.Name.Namespace != ChartEx) throw new NotSupportedException("未知 ChartEx 命名空间");
             if (e.Attributes().Any(a => !a.IsNamespaceDeclaration && a.Name.Namespace != XNamespace.None)) throw new NotSupportedException("未知 ChartEx 引用");
@@ -49,7 +51,7 @@ internal static partial class XlsxCharts
                 "majorTickMarks" or "minorTickMarks" => "type", "pageMargins" => "b l r t header footer", "pageSetup" => "paperSize orientation", _ => ""
             };
             if (e.Attributes().Any(a => !a.IsNamespaceDeclaration && !attributes.Split(' ').Contains(a.Name.LocalName))) throw new NotSupportedException("未建模 ChartEx 属性 " + name);
-            if ((string?)e.Attribute("hidden") is "1" or "true" || (string?)e.Attribute("overlay") is "1" or "true") throw new NotSupportedException("隐藏或叠加 ChartEx 元素");
+            if (name != "series" && (string?)e.Attribute("hidden") is "1" or "true" || (string?)e.Attribute("overlay") is "1" or "true") throw new NotSupportedException("隐藏或叠加 ChartEx 元素");
             if (name == "valScaling" && e.Attributes().Any(a => a.Name.LocalName is "majorUnit" or "minorUnit" && a.Value != "auto")) throw new NotSupportedException("ChartEx 自定义刻度");
         }
     }
@@ -58,6 +60,7 @@ internal static partial class XlsxCharts
     {
         if (root.Name != ChartEx + "chartSpace") throw new InvalidDataException("ChartEx 根元素无效。");
         ValidateExtended(root);
+        var filter = NormalizeExtendedFilters(root);
         var chart = root.Element(ChartEx + "chart")!; var plot = chart.Element(ChartEx + "plotArea")!;
         var seriesNodes = plot.Element(ChartEx + "plotAreaRegion")?.Elements(ChartEx + "series").ToArray() ?? [];
         if (seriesNodes.Length != 1) throw new NotSupportedException("瀑布图和漏斗图仅支持一个系列");
@@ -91,7 +94,7 @@ internal static partial class XlsxCharts
             Kind = kind, Title = title?.Descendants(ChartEx + "v").FirstOrDefault()?.Value ?? TitleText(title), Legend = chart.Element(ChartEx + "legend") is { } legend ? (string?)legend.Attribute("pos") ?? "r" : null,
             Series = [new(nameRef is null ? tx?.Element(ChartEx + "v")?.Value ?? "" : "", nameRef is null ? null : "=" + nameRef.TrimStart('='), Reference(category), values, color)
             {
-                NumericCategories = category.Name.LocalName == "numDim", PointColors = [.. points],
+                IsFiltered = filter.Hidden, HiddenPoints = filter.Points, NumericCategories = category.Name.LocalName == "numDim", PointColors = [.. points],
                 TotalPoints = [.. layout?.Element(ChartEx + "subtotals")?.Elements(ChartEx + "idx").Select(e => TypedStyles.Int((string?)e.Attribute("val") ?? "", count - 1)) ?? []],
                 ShowValues = (string?)visibility?.Attribute("value") is "1" or "true", ShowCategories = (string?)visibility?.Attribute("categoryName") is "1" or "true", ShowSeriesName = (string?)visibility?.Attribute("seriesName") is "1" or "true"
             }],
@@ -104,8 +107,9 @@ internal static partial class XlsxCharts
 
     private static XElement ExtendedXml(WorkbookSnapshot book, WorksheetChart model)
     {
-        var data = ChartData.Read(book, model with { VisibleOnly = false })[0]; var series = model.Series[0];
+        var data = ChartData.Read(book, model with { VisibleOnly = false }, includeFiltered: true)[0]; var series = model.Series[0];
         var old = model.OriginalXml.IsEmpty ? null : Xml(model.OriginalXml.ToArray(), new(CancellationToken.None)).Root;
+        if (old?.Name == ChartEx + "chartSpace") NormalizeExtendedFilters(old);
         var root = old?.Name == ChartEx + "chartSpace" ? old : new XElement(ChartEx + "chartSpace", new XAttribute(XNamespace.Xmlns + "cx", ChartEx), new XAttribute(XNamespace.Xmlns + "a", Art),
             new XElement(ChartEx + "chartData"), new XElement(ChartEx + "chart", new XElement(ChartEx + "plotArea", new XElement(ChartEx + "plotAreaRegion"))));
         var chart = root.Element(ChartEx + "chart")!; var plot = chart.Element(ChartEx + "plotArea")!; var region = plot.Element(ChartEx + "plotAreaRegion")!;
@@ -139,9 +143,11 @@ internal static partial class XlsxCharts
             ser.Element(ChartEx + "dataLabels")!.AddBeforeSelf(point);
         }
         if (ser.Parent is null) region.Add(ser);
+        // Waterfall/funnel use their layout's implicit axes. Explicit series axisId entries
+        // pass the OOXML schema but make Excel reject the entire workbook.
+        ser.Elements(ChartEx + "axisId").Remove();
         if (model.Kind == WorksheetChartKind.Waterfall)
         {
-            ser.Elements(ChartEx + "axisId").Remove(); ser.Add(new XElement(ChartEx + "axisId", 0), new XElement(ChartEx + "axisId", 1));
             var axes = plot.Elements(ChartEx + "axis").ToArray();
             if (axes.Length == 0) { region.AddAfterSelf(new XElement(ChartEx + "axis", new XAttribute("id", 0), new XElement(ChartEx + "catScaling"), new XElement(ChartEx + "tickLabels")),
                 new XElement(ChartEx + "axis", new XAttribute("id", 1), new XElement(ChartEx + "valScaling"), new XElement(ChartEx + "majorGridlines", Shape(ChartEx, "00FFFFFF", model.Appearance.GridColor)), new XElement(ChartEx + "tickLabels"))); axes = plot.Elements(ChartEx + "axis").ToArray(); }
@@ -153,7 +159,7 @@ internal static partial class XlsxCharts
                 if (axis.Element(ChartEx + "txPr") is null) Put(axis, TextProperties(ChartEx, model.Appearance.Axis), "catScaling valScaling title units majorGridlines minorGridlines majorTickMarks minorTickMarks tickLabels numFmt spPr txPr extLst");
             }
         }
-        else { ser.Elements(ChartEx + "axisId").Remove(); plot.Elements(ChartEx + "axis").Remove(); }
+        else plot.Elements(ChartEx + "axis").Remove();
         var title = chart.Element(ChartEx + "title"); var oldTitle = title?.Descendants(ChartEx + "v").FirstOrDefault()?.Value ?? TitleText(title);
         if (oldTitle != model.Title)
         {
@@ -165,6 +171,7 @@ internal static partial class XlsxCharts
         else { var legend = chart.Element(ChartEx + "legend") ?? new XElement(ChartEx + "legend", new XAttribute("align", "ctr"), new XAttribute("overlay", 0)); legend.SetAttributeValue("pos", model.Legend); if (legend.Element(ChartEx + "txPr") is null) legend.Add(TextProperties(ChartEx, model.Appearance.Legend)); if (legend.Parent is null) chart.Add(legend); }
         if (root.Element(ChartEx + "spPr") is null) root.Add(Shape(ChartEx, model.Appearance.Background, model.Appearance.BorderColor, model.Appearance.BorderWidth));
         if (plot.Element(ChartEx + "spPr") is null) plot.Add(Shape(ChartEx, model.Appearance.PlotBackground));
+        WriteExtendedFilters(root, model);
         return root;
     }
 }

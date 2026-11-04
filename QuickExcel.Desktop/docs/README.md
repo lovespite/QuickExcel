@@ -111,6 +111,12 @@ E1 七项实现及各自真实 Excel 对照已完成；[行列样式优先级](2
 
 源码入口：[Desktop 目录约定](../README.md#源码目录)、[桌面组合根](../Composition/DesktopComposition.cs)、[编辑控制器](../Editing/EditorController.cs)、[文档 facade](../../QuickExcel.Core/WorkbookDocument.cs)、[会话](../../QuickExcel.Core/DocumentSession.cs)、`存储适配`（历史代码，已移除）、`包封装`（历史代码，已移除）、[原生桥](../../QuickExcel.Scripting/QuickJsSession.cs)。
 
+图表选中时的数据源彩色标记、系列/类别筛选、文件恢复、定向验证及 Excel 互操作限制见 [75：图表数据源标记与持久筛选](75-chart-source-highlights-and-filters.md)。
+
+实时对象 API、整次成功提交/失败回滚、Windows 每工作簿 worker，以及事件耗时测量见 [76：实时工作簿脚本模型](76-live-workbook-script-model.md)。
+
+当前 UDF 与 actions/events 的持久上下文隔离、事务内公式读取和 IPC 9 契约见 [77：UDF 上下文隔离与事务内计算](77-udf-context-isolation-and-transaction-calculation.md)。
+
 ## 文档维护
 
 任务状态在实施计划统一更新，契约与验证证据留在对应专题；入口文档同步摘要和链接，历史记录标明当时范围。用户确认关闭的缺陷须注明确认日期和来源，不冒充新增自动测试或扩展其他门禁。修改格式、授权或编译边界时同步 ADR 与专题。发布包元数据记录实际 Git HEAD 和工作树状态，文档更新不能重写旧包身份或将其视为新包。

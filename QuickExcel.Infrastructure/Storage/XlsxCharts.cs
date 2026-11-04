@@ -44,9 +44,11 @@ internal static partial class XlsxCharts
                     if (extended)
                     {
                         var extendedModel = ReadExtended(xml, styleReader) with { Anchor = XlsxDrawingAnchors.Read(anchor, geometry), OriginalXml = [.. raw], StyleParts = styleParts };
+                        extendedModel = extendedModel with { StyleParts = ExtendedStyleParts(extendedModel, Enumerable.Range(0, 6).Select(styleReader.Palette).ToArray()) };
                         extendedModel.Validate(); package.Budget.Parse(extendedModel.EstimatedBytes); charts.Add(extendedModel); continue;
                     }
                     if (xml.Name != Chart + "chartSpace") throw new InvalidDataException("图表根元素无效。");
+                    var filters = NormalizeStandardFilters(xml);
                     ValidateShape(xml);
                     var chart = xml.Element(Chart + "chart") ?? throw new InvalidDataException("图表定义缺失。"); var plot = chart.Element(Chart + "plotArea") ?? throw new InvalidDataException("图表绘图区缺失。");
                     var kinds = plot.Elements().Where(e => e.Name.LocalName.EndsWith("Chart", StringComparison.Ordinal)).ToArray();
@@ -57,7 +59,7 @@ internal static partial class XlsxCharts
                     var unsupported = new HashSet<string>(["trendline", "errBars", "explosion", "dateAx", "serAx", "manualLayout", "logBase", "dispUnits", "majorUnit", "minorUnit", "externalData", "pivotSource", "view3D", "userShapes", "pictureOptions", "multiLvlStrRef", "numLit", "strLit", "titleRef"]);
                     if (xml.Descendants().Any(e => unsupported.Contains(e.Name.LocalName)) || xml.Descendants(Chart + "scaling").Any(e => Value(e, "orientation") is not (null or "minMax")) ||
                         xml.Descendants(Chart + "dLbls").Elements().Any(e => e.Name.LocalName is "showLegendKey" or "showPercent" or "showBubbleSize" && (string?)e.Attribute("val") is "1" or "true") ||
-                        xml.Descendants(Chart + "delete").Any(e => (string?)e.Attribute("val") == "1") || Value(chart, "dispBlanksAs") is not (null or "gap")) throw new NotSupportedException("图表含尚未显示的轴、标记、标签或其他语义");
+                        xml.Descendants(Chart + "delete").Any(e => (string?)e.Attribute("val") is "1" or "true") || Value(chart, "dispBlanksAs") is not (null or "gap")) throw new NotSupportedException("图表含尚未显示的轴、标记、标签或其他语义");
                     // Office's known identity and NA-as-blank extensions carry no source references.
                     foreach (var ext in xml.Descendants(Chart + "ext"))
                     {
@@ -66,7 +68,7 @@ internal static partial class XlsxCharts
                         var valid = (string?)ext.Attribute("uri") switch
                         {
                             "{C3380CC4-5D6E-409C-BE32-E72D297353CC}" => child?.Name == c16 + "uniqueId" && !child.HasElements && Guid.TryParse((string?)child.Attribute("val"), out _),
-                            "{56B9EC1D-385E-4148-901F-78D8002777C0}" => child?.Name == c16r3 + "dataDisplayOptions16" && child.Elements().Count() == 1 && child.Element(c16r3 + "dispNaAsBlank") is { HasElements: false } na && (string?)na.Attribute("val") is "0" or "1",
+                            "{56B9EC1D-385E-4148-901F-78D8002777C0}" => child?.Name == c16r3 + "dataDisplayOptions16" && child.Elements().Count() == 1 && child.Element(c16r3 + "dispNaAsBlank") is { HasElements: false } na && (string?)na.Attribute("val") is "0" or "1" or "false" or "true",
                             _ => false
                         };
                         if (!valid || ext.Elements().Count() != 1 || ext.DescendantsAndSelf().Any(e => e.Attributes().Any(a => !a.IsNamespaceDeclaration && a.Name != (e == ext ? "uri" : "val")))) throw new NotSupportedException("未知图表扩展结构");
@@ -87,14 +89,14 @@ internal static partial class XlsxCharts
                             .Select(i => kind == WorksheetChartKind.Pie ? styleReader.Palette(i) : color).ToArray() : [];
                         foreach (var point in ser.Elements(Chart + "dPt"))
                         {
-                            if (point.Elements().Any(e => e.Name != Chart + "idx" && e.Name != Chart + "spPr")) throw new NotSupportedException("自定义数据点");
+                            if (point.Elements().Any(e => e.Name != Chart + "idx" && e.Name != Chart + "spPr" && e.Name != Chart + "extLst")) throw new NotSupportedException("自定义数据点");
                             var pointIndex = TypedStyles.Int(Value(point, "idx") ?? "", pointColors.Length - 1);
                             pointColors[pointIndex] = styleReader.Fill(point.Element(Chart + "spPr"), pointColors[pointIndex]);
                         }
                         var scatterStyle = Value(graph, "scatterStyle") ?? "marker";
                         if (kind == WorksheetChartKind.Scatter && scatterStyle is not ("marker" or "line" or "lineMarker" or "smooth" or "smoothMarker")) throw new NotSupportedException("未知散点图布局");
                         var marker = ser.Element(Chart + "marker"); var labels = ser.Element(Chart + "dLbls") ?? graph.Element(Chart + "dLbls");
-                        series.Add(new(name, nameRef, catRef, valueRef, color) { PointColors = [.. pointColors], NumericCategories = numericCategories,
+                        series.Add(new(name, nameRef, catRef, valueRef, color) { IsFiltered = filters[ser].Hidden, HiddenPoints = filters[ser].Points, PointColors = [.. pointColors], NumericCategories = numericCategories,
                             ConnectPoints = (kind != WorksheetChartKind.Scatter || scatterStyle != "marker") && shape?.Element(Art + "ln")?.Element(Art + "noFill") is null,
                             Smooth = Value(ser, "smooth") is { } smooth ? smooth is "1" or "true" : Value(graph, "smooth") is "1" or "true" || kind == WorksheetChartKind.Scatter && scatterStyle.StartsWith("smooth", StringComparison.Ordinal),
                             Marker = Value(marker, "symbol") ?? (kind == WorksheetChartKind.Scatter && scatterStyle is "marker" or "lineMarker" or "smoothMarker" || Value(graph, "marker") is "1" or "true" ? "circle" : "none"),
@@ -113,7 +115,7 @@ internal static partial class XlsxCharts
                     }
                     double? Limit(string name) => Value(axis?.Element(Chart + "scaling"), name) is { } value ? double.Parse(value, CultureInfo.InvariantCulture) : null;
                     var model = new WorksheetChart { Kind = kind, Title = string.Concat(titleNode?.Descendants(Art + "t").Select(t => t.Value) ?? []), Anchor = XlsxDrawingAnchors.Read(anchor, geometry), Series = [.. series],
-                        Legend = chart.Element(Chart + "legend") is null ? null : Value(chart.Element(Chart + "legend"), "legendPos") ?? "r", VisibleOnly = Value(chart, "plotVisOnly") is not "0", Minimum = Limit("min"), Maximum = Limit("max"),
+                        Legend = chart.Element(Chart + "legend") is null ? null : Value(chart.Element(Chart + "legend"), "legendPos") ?? "r", VisibleOnly = Value(chart, "plotVisOnly") is not ("0" or "false"), Minimum = Limit("min"), Maximum = Limit("max"),
                         NumberFormat = (string?)axis?.Element(Chart + "numFmt")?.Attribute("formatCode") ?? "General", OriginalXml = [.. raw], StyleParts = styleParts,
                         GapWidth = Value(graph, "gapWidth") is { } gap ? int.Parse(gap, CultureInfo.InvariantCulture) : 150, Overlap = Value(graph, "overlap") is { } overlap ? int.Parse(overlap, CultureInfo.InvariantCulture) : 0,
                         XMinimum = kind == WorksheetChartKind.Scatter && Value(catAxis?.Element(Chart + "scaling"), "min") is { } xmin ? double.Parse(xmin, CultureInfo.InvariantCulture) : null,
@@ -141,7 +143,7 @@ internal static partial class XlsxCharts
             ["scatterChart"] = "scatterStyle varyColors ser dLbls axId",
             ["pieChart"] = "varyColors ser dLbls firstSliceAng", ["ser"] = "idx order tx spPr invertIfNegative marker dPt dLbls cat val xVal yVal smooth extLst",
             ["cat"] = "strRef numRef", ["val"] = "numRef", ["xVal"] = "numRef", ["yVal"] = "numRef", ["strRef"] = "f strCache", ["numRef"] = "f numCache",
-            ["strCache"] = "ptCount pt", ["numCache"] = "formatCode ptCount pt", ["pt"] = "v", ["marker"] = "symbol size spPr", ["dPt"] = "idx spPr",
+            ["strCache"] = "ptCount pt", ["numCache"] = "formatCode ptCount pt", ["pt"] = "v", ["marker"] = "symbol size spPr", ["dPt"] = "idx spPr extLst",
             ["dLbls"] = "showLegendKey showVal showCatName showSerName showPercent showBubbleSize showLeaderLines dLblPos numFmt spPr txPr separator",
             ["catAx"] = "axId scaling delete axPos numFmt majorTickMark minorTickMark tickLblPos crossAx crosses auto lblAlgn lblOffset noMultiLvlLbl spPr txPr",
             ["valAx"] = "axId scaling delete axPos majorGridlines numFmt majorTickMark minorTickMark tickLblPos crossAx crosses crossBetween spPr txPr",
@@ -177,7 +179,7 @@ internal static partial class XlsxCharts
         {
             var v = (string?)e.Attribute("val");
             if (e.Name.Namespace != Chart) continue;
-            if (e.Name.LocalName is "overlay" or "roundedCorners" or "invertIfNegative" && v is not (null or "0") ||
+            if (e.Name.LocalName is "overlay" or "roundedCorners" or "invertIfNegative" && v is not (null or "0" or "false") ||
                 e.Name.LocalName == "crosses" && v != "autoZero" || e.Name.LocalName == "crossBetween" && v != "between") throw new NotSupportedException("非基础图表布局 " + e.Name.LocalName);
         }
     }

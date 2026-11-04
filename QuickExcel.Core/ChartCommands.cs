@@ -57,12 +57,14 @@ public sealed class SetChartCommand(SheetId sheetId, int index, WorksheetChart? 
 
 public sealed record ChartSeriesData(string Name, string[] Categories, double?[] Values, string Color, string[] PointColors)
 {
+    public int SeriesIndex { get; init; }
+    public int[] SourceIndices { get; init; } = [];
     public double?[] XValues { get; init; } = [];
     public bool[] Totals { get; init; } = [];
 }
 public static class ChartData
 {
-    public static IReadOnlyList<ChartSeriesData> Read(WorkbookSnapshot book, WorksheetChart chart)
+    public static IReadOnlyList<ChartSeriesData> Read(WorkbookSnapshot book, WorksheetChart chart, bool includeFiltered = false)
     {
         CellSnapshot?[] Read(string formula, out WorksheetSnapshot source, out ReferenceNode reference)
         {
@@ -81,23 +83,45 @@ public static class ChartData
         }
         string Display(CellSnapshot? cell, WorksheetSnapshot source, int row, int col) => CellDisplayFormatter.Format(cell?.Value ?? CellValue.Blank, book.Styles[source.GetStyleId(row, col)], book.DateSystem);
         var output = new List<ChartSeriesData>();
-        foreach (var series in chart.Series)
+        foreach (var (series, seriesIndex) in chart.Series.Select((s, i) => (s, i)))
         {
+            if (series.IsFiltered && !includeFiltered) continue;
             var values = Read(series.Values, out var valueSheet, out var vr); var categories = Read(series.Categories, out var categorySheet, out var cr);
             var hidden = chart.VisibleOnly ? WorksheetFilterEngine.Evaluate(book, valueSheet.Id) : [];
             var categoryHidden = chart.VisibleOnly ? WorksheetFilterEngine.Evaluate(book, categorySheet.Id) : [];
             bool Visible(WorksheetSnapshot sheet, ReferenceNode r, int i, IReadOnlySet<int> excluded) =>
                 !excluded.Contains(r.Row + (r.EndRow > r.Row ? i : 0)) && sheet.Rows.GetValueOrDefault(r.Row + (r.EndRow > r.Row ? i : 0))?.Hidden != true && sheet.Columns.GetValueOrDefault(r.Column + (r.EndColumn > r.Column ? i : 0))?.Hidden != true;
-            var selected = Enumerable.Range(0, values.Length).Where(i => !chart.VisibleOnly || Visible(valueSheet, vr, i, hidden) && Visible(categorySheet, cr, i, categoryHidden)).ToArray();
+            var excluded = series.HiddenPoints.ToHashSet();
+            var selected = Enumerable.Range(0, values.Length).Where(i => (includeFiltered || !excluded.Contains(i)) &&
+                (!chart.VisibleOnly || Visible(valueSheet, vr, i, hidden) && Visible(categorySheet, cr, i, categoryHidden))).ToArray();
             var name = series.Name;
             if (series.NameReference is { } title) { var cell = Read(title, out var s, out var r)[0]; name = Display(cell, s, r.Row, r.Column); }
             output.Add(new(name, selected.Select(i => Display(categories[i], categorySheet, cr.Row + (cr.EndRow > cr.Row ? i : 0), cr.Column + (cr.EndColumn > cr.Column ? i : 0))).ToArray(),
                 selected.Select(i => values[i]?.Value.Kind == CellValueKind.Number ? (double?)values[i]!.Value.NumberValue : null).ToArray(), series.Color,
                 selected.Select(i => series.PointColors.IsEmpty ? series.Color : series.PointColors[i]).ToArray())
             {
+                SeriesIndex = seriesIndex, SourceIndices = selected,
                 XValues = selected.Select(i => categories[i]?.Value.Kind == CellValueKind.Number ? (double?)categories[i]!.Value.NumberValue : null).ToArray(),
                 Totals = selected.Select(i => series.TotalPoints.Contains(i)).ToArray()
             });
+        }
+        if (output.Count > 1 && chart.Kind is WorksheetChartKind.Column or WorksheetChartKind.Line or WorksheetChartKind.SmoothLine &&
+            output.Select(s => FormulaSyntax.Print(WorksheetChart.ParseReference(chart.Series[s.SeriesIndex].Categories))).Distinct(StringComparer.OrdinalIgnoreCase).Count() == 1)
+        {
+            // Different series can exclude different source points. Keep a shared category axis;
+            // a missing value is a gap, never a shift onto the neighboring category.
+            var positions = output.SelectMany(s => s.SourceIndices).Distinct().Order().ToArray();
+            var labels = output.SelectMany(s => s.SourceIndices.Select((p, i) => (Position: p, Label: s.Categories[i]))).GroupBy(p => p.Position).ToDictionary(g => g.Key, g => g.First().Label);
+            for (var s = 0; s < output.Count; s++)
+            {
+                var data = output[s]; if (data.SourceIndices.SequenceEqual(positions)) continue;
+                var index = data.SourceIndices.Select((p, i) => (Position: p, Index: i)).ToDictionary(p => p.Position, p => p.Index);
+                output[s] = data with { SourceIndices = positions, Categories = positions.Select(p => labels[p]).ToArray(),
+                    Values = positions.Select(p => index.TryGetValue(p, out var i) ? data.Values[i] : null).ToArray(),
+                    XValues = positions.Select(p => index.TryGetValue(p, out var i) ? data.XValues[i] : null).ToArray(),
+                    PointColors = positions.Select(p => index.TryGetValue(p, out var i) ? data.PointColors[i] : data.Color).ToArray(),
+                    Totals = positions.Select(p => index.TryGetValue(p, out var i) && data.Totals[i]).ToArray() };
+            }
         }
         return output;
     }

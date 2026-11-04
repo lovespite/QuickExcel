@@ -7,13 +7,15 @@ using QuickExcel.ScriptContracts;
 
 namespace QuickExcel.Runtime;
 
-/// <summary>Creates a dedicated worker for one authorized round, with no fallback or automatic replay.</summary>
+/// <summary>Leases the isolated formula worker on Windows API v2; actions use a separate worker and context.
+/// No in-process fallback or automatic replay.</summary>
 public sealed class ScriptWorkerRuntimeFactory(string? executablePath = null) : IScriptRuntimeFactory
 {
     private readonly string _executable = Path.GetFullPath(executablePath ??
         Path.Combine(AppContext.BaseDirectory, "ScriptWorker", OperatingSystem.IsWindows() ? "QuickExcel.ScriptWorker.exe" : "QuickExcel.ScriptWorker"));
     public IScriptRuntime Create(string source) => Create(new ScriptRuntimeRequest(source, new(Guid.NewGuid(), 0, 0, 0), TimeSpan.FromSeconds(5), default));
-    public IScriptRuntime Create(ScriptRuntimeRequest request) => ScriptWorkerRuntime.Start(_executable, request);
+    public IScriptRuntime Create(ScriptRuntimeRequest request) => OperatingSystem.IsWindows() && request.Modules.ScriptApiVersion == 2 && request.RuntimeLifetime.CanBeCanceled
+        ? SharedScriptWorkers.Acquire(_executable, request, actions: false) : ScriptWorkerRuntime.Start(_executable, request);
 
     /// <summary>Reclaims abandoned rounds for the current Windows user, without executing scripts.</summary>
     public static int RecoverAbandonedSandboxes(CancellationToken cancellation = default)
@@ -28,16 +30,19 @@ public sealed class ScriptWorkerRuntimeFactory(string? executablePath = null) : 
 
 public sealed class ScriptWorkerRuntime : IScriptBatchRuntime
 {
-    private readonly ScriptRuntimeRequest _request;
+    private ScriptRuntimeRequest _request;
     private IWorkerProcess? _process;
     private readonly object _processGate = new();
     private readonly SemaphoreSlim _exchangeGate = new(1, 1);
     private readonly CancellationTokenSource _deadline = new();
-    private readonly CancellationTokenSource _lifetime;
+    private CancellationTokenSource _lifetime;
+    private readonly CancellationTokenSource _processLifetime = new();
     private CancellationTokenRegistration _registration;
     private bool _stopped, _disposed;
-    private readonly RequestIdentity _identity;
-    private readonly bool _actionsMode;
+    private RequestIdentity _identity;
+    private bool _actionsMode;
+    private readonly bool _shared;
+    internal bool IsStopped => _stopped || _disposed;
     private readonly Dictionary<string, LogicalSourceMap> _sourceMaps = new(StringComparer.Ordinal);
     private string OriginalDiagnostic(string message) => System.Text.RegularExpressions.Regex.Replace(message,
         @"(?<=\n at )([A-Za-z0-9_.-]{1,128}):([1-9][0-9]{0,8}):([1-9][0-9]{0,8})", match =>
@@ -47,13 +52,14 @@ public sealed class ScriptWorkerRuntime : IScriptBatchRuntime
             return position is { } p ? $"{match.Groups[1].Value}:{p.Line}:{p.Column}" : match.Value + " (生成 JS 位置)";
         });
 
-    private ScriptWorkerRuntime(ScriptRuntimeRequest request, bool actionsMode)
+    private ScriptWorkerRuntime(ScriptRuntimeRequest request, bool actionsMode, bool shared)
     {
         _request = request;
         _actionsMode = actionsMode;
+        _shared = shared;
         _identity = new(request.Stamp.SessionId, Guid.NewGuid(), Guid.NewGuid(), request.Stamp.InputRevision,
             actionsMode ? null : request.Stamp.CalculationGeneration, request.Stamp.ScriptGeneration);
-        _lifetime = CancellationTokenSource.CreateLinkedTokenSource(request.CancellationToken, _deadline.Token);
+        _lifetime = CancellationTokenSource.CreateLinkedTokenSource(request.CancellationToken, _deadline.Token, _processLifetime.Token);
     }
 
     public int ProcessId { get; private set; }
@@ -66,7 +72,7 @@ public sealed class ScriptWorkerRuntime : IScriptBatchRuntime
     public int InvocationBatchCount { get; private set; }
     public int InvocationCount { get; private set; }
 
-    internal static ScriptWorkerRuntime Start(string executable, ScriptRuntimeRequest request, bool actionsMode = false)
+    internal static ScriptWorkerRuntime Start(string executable, ScriptRuntimeRequest request, bool actionsMode = false, bool shared = false)
     {
         request.CancellationToken.ThrowIfCancellationRequested();
         if (request.TimeLimit <= TimeSpan.Zero) throw new TimeoutException("重算已达到时间限制。");
@@ -79,7 +85,7 @@ public sealed class ScriptWorkerRuntime : IScriptBatchRuntime
         if (actionsMode && !request.Modules.HasActions) throw new InvalidOperationException("没有 actions 绑定。");
         var compiled = ScriptCompilation.PrepareAsync(request.Modules, request.Stamp, request.CancellationToken).GetAwaiter().GetResult();
         var executableSources = compiled?.Result.Outputs.ToDictionary(o => o.Id, o => o.Javascript, StringComparer.Ordinal);
-        var runtime = new ScriptWorkerRuntime(request, actionsMode);
+        var runtime = new ScriptWorkerRuntime(request, actionsMode, shared);
         if (compiled is not null)
             foreach (var item in compiled.Result.Outputs)
             {
@@ -107,24 +113,40 @@ public sealed class ScriptWorkerRuntime : IScriptBatchRuntime
             if (request.Modules.ScriptApiVersion == 2)
             {
                 var bundle = new LoadModules(request.Modules.Modules.Select(m => new ModuleSource(m.Key, m.Value.Path,
-                    executableSources is null ? m.Value.Source : executableSources[m.Key]
+                    (executableSources is null ? m.Value.Source : executableSources[m.Key]) +
+                    (actionsMode && request.Modules.EntriesFor("actions").Contains(m.Key)
+                        ? "\n;if (typeof main === 'function') quickExcel.actions.register(" + System.Text.Json.JsonSerializer.Serialize(request.Modules.EntriesFor("actions").Length == 1 ? "main" : m.Key + ".main") + ", () => main(quickExcel));" : "")
                     )).ToArray(),
-                    request.Modules.EntriesFor(actionsMode ? "actions" : "formula-functions").ToArray(), "");
+                    request.Modules.EntriesFor(actionsMode ? "actions" : "formula-functions").ToArray(), "")
+                { FunctionEntries = shared && !actionsMode ? request.Modules.EntriesFor("formula-functions").ToArray() : [],
+                    ActionEntries = shared && actionsMode ? request.Modules.EntriesFor("actions").ToArray() : [] };
                 digest = bundle.ComputeDigest();
-                if (actionsMode)
+                if (shared)
+                {
+                    var workbook = runtime.Exchange<LoadModules, LoadedWorkbook>("loadWorkbook", bundle with { Sha256 = digest });
+                    if (actionsMode ? workbook.Functions.Length != 0 : workbook.Actions.Length != 0)
+                        throw new ProtocolException("Worker registered capabilities outside its role.");
+                    ValidateActions(workbook.Sha256, workbook.Actions);
+                    loaded = new(workbook.Sha256, workbook.Functions);
+                }
+                else if (actionsMode)
                 {
                     var actions = runtime.Exchange<LoadModules, LoadedActions>("loadActions", bundle with { Sha256 = digest });
-                    if (actions.Sha256 != digest || actions.Actions.Length > 256) throw new ProtocolException("Invalid action registry.");
+                    ValidateActions(actions.Sha256, actions.Actions);
+                    return runtime;
+                }
+                else loaded = runtime.Exchange<LoadModules, LoadedScript>("loadModules", bundle with { Sha256 = digest });
+                void ValidateActions(string sha256, ActionInfo[] actions)
+                {
+                    if (sha256 != digest || actions.Length > 256) throw new ProtocolException("Invalid action registry.");
                     var names = new HashSet<string>(StringComparer.Ordinal);
-                    foreach (var action in actions.Actions)
+                    foreach (var action in actions)
                     {
                         if (action is null || !names.Add(action.Name) || action.Description is null || action.Description.Length > 1000) throw new ProtocolException("Invalid action descriptor.");
                         ActionProtocol.Name(action.Name);
                     }
-                    runtime.ActionDescriptors = Array.AsReadOnly(actions.Actions.Select(a => new ScriptActionDescriptor(a.Name, a.Description)).ToArray());
-                    return runtime;
+                    runtime.ActionDescriptors = Array.AsReadOnly(actions.Select(a => new ScriptActionDescriptor(a.Name, a.Description)).ToArray());
                 }
-                loaded = runtime.Exchange<LoadModules, LoadedScript>("loadModules", bundle with { Sha256 = digest });
             }
             else
             {
@@ -154,6 +176,29 @@ public sealed class ScriptWorkerRuntime : IScriptBatchRuntime
             if (e is OperationCanceledException or TimeoutException or ScriptRuntimeFailureException) throw;
             throw new ScriptRuntimeFailureException("WorkerStart", "脚本 worker 启动或握手失败。", e);
         }
+    }
+
+    internal void BeginRound(ScriptRuntimeRequest request, bool actions)
+    {
+        if (!_shared || IsStopped || actions != _actionsMode || request.Stamp.SessionId != _identity.SessionId || request.Stamp.ScriptGeneration != _identity.ScriptGeneration ||
+            !ReferenceEquals(request.Modules, _request.Modules)) throw new InvalidOperationException("工作簿脚本上下文已失效。");
+        request.CancellationToken.ThrowIfCancellationRequested(); request.RuntimeLifetime.ThrowIfCancellationRequested();
+        if (request.TimeLimit <= TimeSpan.Zero) throw new TimeoutException("脚本已达到本轮时间限制。");
+        _request = request; _actionsMode = actions;
+        _identity = _identity with { RequestId = Guid.NewGuid(), RoundId = Guid.NewGuid(), Revision = request.Stamp.InputRevision,
+            CalculationGeneration = actions ? null : request.Stamp.CalculationGeneration };
+        _lifetime = CancellationTokenSource.CreateLinkedTokenSource(request.CancellationToken, _deadline.Token, _processLifetime.Token);
+        _deadline.CancelAfter(request.TimeLimit < TimeSpan.FromSeconds(5) ? request.TimeLimit : TimeSpan.FromSeconds(5));
+        _registration = _lifetime.Token.Register(Abort);
+        InvocationBatchCount = InvocationCount = 0;
+        _ = Exchange<BeginWorkerRound, EmptyPayload>("beginRound", new());
+    }
+
+    internal void EndRound()
+    {
+        if (!_shared || IsStopped) return;
+        _ = Exchange<EmptyPayload, EmptyPayload>("endRound", new());
+        _registration.Dispose(); _deadline.CancelAfter(Timeout.InfiniteTimeSpan); _lifetime.Dispose();
     }
 
     public object? Invoke(string name, IReadOnlyList<object> arguments)
@@ -239,15 +284,18 @@ public sealed class ScriptWorkerRuntime : IScriptBatchRuntime
         return Array.AsReadOnly(logs);
     }
 
-    public ActionPatch RunAction(RunAction request)
+    private Func<ModelCall, ModelReply>? _model;
+    private Guid _modelOperation;
+    public ActionPatch RunAction(RunAction request, Func<ModelCall, ModelReply>? model = null)
     {
         if (!_actionsMode) throw new InvalidOperationException("Formula workers cannot run actions.");
         ActionProtocol.Name(request.Name);
         ActionProtocol.ValidateSnapshot(request.Snapshot);
         if (request.OperationId == Guid.Empty || request.Snapshot.BaseRevision != _request.Stamp.InputRevision) throw new ProtocolException("Action input identity mismatch.");
-        var patch = Exchange<RunAction, ActionPatch>("runAction", request);
-        try { ActionProtocol.ValidatePatch(patch, request); return patch; }
+        _model = model; _modelOperation = request.OperationId;
+        try { var patch = Exchange<RunAction, ActionPatch>("runAction", request); ActionProtocol.ValidatePatch(patch, request); return patch; }
         catch (ProtocolException e) { Abort(); throw new ScriptRuntimeFailureException("Protocol", "动作变更校验失败，本次未提交。", e); }
+        finally { _model = null; _modelOperation = Guid.Empty; }
     }
 
     private TReply Exchange<TRequest, TReply>(string kind, TRequest payload)
@@ -284,13 +332,36 @@ public sealed class ScriptWorkerRuntime : IScriptBatchRuntime
             if (_deadline.IsCancellationRequested) throw new TimeoutException("脚本 worker 达到本轮时间上限，已终止；结果未提交。", e);
             throw new ScriptRuntimeFailureException(e is ProtocolException ? "Protocol" : "WorkerExit", "脚本 worker 退出或通信中断，本轮结果未提交。", e);
         }
+        catch
+        {
+            // A host model callback can fail while the worker is waiting for its reply
+            // (for example, a provisional UDF calculation timed out). That exchange
+            // cannot be resumed or followed by endRound; preserve the original failure.
+            Abort();
+            throw;
+        }
         finally { _exchangeGate.Release(); }
     }
 
     private async Task<WorkerEnvelope> RoundTripAsync(WorkerEnvelope request)
     {
         await WorkerProtocol.WriteAsync(_process!.Input, request, _lifetime.Token).ConfigureAwait(false);
-        return await WorkerProtocol.ReadAsync(_process.Output, _lifetime.Token).ConfigureAwait(false);
+        var sequence = 0; long bytes = 0;
+        while (true)
+        {
+            var reply = await WorkerProtocol.ReadAsync(_process.Output, _lifetime.Token).ConfigureAwait(false);
+            if (reply.Kind != "model") return reply;
+            WorkerProtocol.ValidateReply(reply, request.Identity, "model");
+            if (request.Kind != "runAction" || _model is null || ++sequence > 4096) throw new ProtocolException("Unexpected model request.");
+            var call = WorkerProtocol.Payload<ModelCall>(reply);
+            if (call.OperationId != _modelOperation || call.Sequence != sequence) throw new ProtocolException("Model request identity mismatch.");
+            bytes += Encoding.UTF8.GetByteCount(reply.Payload.GetRawText());
+            if (bytes > WorkerProtocol.MaxFrameBytes) throw new ProtocolException("Model round exceeds its byte budget.");
+            var response = WorkerProtocol.Message(request.Identity, "model", _model(call));
+            bytes += Encoding.UTF8.GetByteCount(response.Payload.GetRawText());
+            if (bytes > WorkerProtocol.MaxFrameBytes) throw new ProtocolException("Model round exceeds its byte budget.");
+            await WorkerProtocol.WriteAsync(_process.Input, response, _lifetime.Token).ConfigureAwait(false);
+        }
     }
 
     private async Task DrainStderrAsync()
@@ -299,18 +370,19 @@ public sealed class ScriptWorkerRuntime : IScriptBatchRuntime
         try
         {
             int count;
-            while ((count = await _process!.Error.ReadAsync(buffer, _lifetime.Token).ConfigureAwait(false)) > 0)
+            while ((count = await _process!.Error.ReadAsync(buffer, _processLifetime.Token).ConfigureAwait(false)) > 0)
                 if ((total += count) > 16 * 1024) { Abort(); return; }
         }
         catch (Exception e) when (e is IOException or OperationCanceledException or ObjectDisposedException or InvalidOperationException) { }
     }
 
-    private void Abort()
+    internal void Abort()
     {
         lock (_processGate)
         {
             if (_stopped) return;
             _stopped = true;
+            _processLifetime.Cancel();
             _process?.Kill(); // KILL_ON_JOB_CLOSE also cleans up if the desktop process dies.
         }
     }
@@ -326,7 +398,7 @@ public sealed class ScriptWorkerRuntime : IScriptBatchRuntime
             _registration.Dispose();
             try { _process?.Dispose(); }
             catch (IOException e) { throw new ScriptRuntimeFailureException("WorkerCleanup", "脚本 worker 隔离资源清理失败。", e); }
-            finally { _lifetime.Dispose(); _deadline.Dispose(); }
+            finally { _lifetime.Dispose(); _deadline.Dispose(); _processLifetime.Dispose(); }
         }
         finally { _exchangeGate.Release(); }
     }

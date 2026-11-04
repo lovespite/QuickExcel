@@ -8,7 +8,7 @@ public sealed partial class SkiaRenderer
 {
     public void DrawChart(SKCanvas canvas, RenderRect rectangle, WorkbookSnapshot book, WorksheetChart chart, bool monochrome = false)
     {
-        var b = Rect(rectangle); var series = ChartData.Read(book, chart); var count = series.Max(s => s.Values.Length);
+        var b = Rect(rectangle); var series = ChartData.Read(book, chart); var count = series.Select(s => s.Values.Length).DefaultIfEmpty().Max();
         using var paint = new SKPaint { IsAntialias = true };
         SKColor ChartColor(string value)
         {
@@ -28,7 +28,7 @@ public sealed partial class SkiaRenderer
         string Number(double value) => CellDisplayFormatter.Format(CellValue.FromNumber(value), new() { NumberFormatCode = chart.NumberFormat }, book.DateSystem);
         void DataLabel(int s, int i, float x, float y, float width)
         {
-            var options = chart.Series[s]; var data = series[s]; var parts = new List<string>();
+            var data = series[s]; var options = chart.Series[data.SeriesIndex]; var parts = new List<string>();
             if (options.ShowSeriesName) parts.Add(data.Name); if (options.ShowCategories) parts.Add(data.Categories[i]);
             if (options.ShowValues && data.Values[i] is { } value) parts.Add(Number(value));
             if (parts.Count > 0) Label(string.Join(" · ", parts), x, y, width, align: 2);
@@ -51,8 +51,42 @@ public sealed partial class SkiaRenderer
             Fill(b, ChartColor(chart.Appearance.Background)); paint.Style = SKPaintStyle.Stroke; paint.Color = ChartColor(chart.Appearance.BorderColor); paint.StrokeWidth = (float)chart.Appearance.BorderWidth;
             if (paint.StrokeWidth > 0) canvas.DrawRect(b, paint); paint.Style = SKPaintStyle.Fill;
             Label(chart.Title, b.Left + 12, b.Top + 10, b.Width - 24, chart.Appearance.Title, 2);
+            if (series.Count == 0) { Label("没有可显示的数据", b.Left + 20, b.Top + 60, b.Width - 40); return; }
             var lw = chart.Legend is "r" or "l" ? Math.Min(130, b.Width * .25f) : 0; var lh = chart.Legend is "t" or "b" ? 32 : 0;
-            var p = SKRect.Create(b.Left + 62 + (chart.Legend == "l" ? lw : 0), b.Top + 42 + (chart.Legend == "t" ? lh : 0), Math.Max(1, b.Width - 82 - lw), Math.Max(1, b.Height - 82 - lh));
+            var categoryAxis = chart.Kind is WorksheetChartKind.Column or WorksheetChartKind.Line or WorksheetChartKind.SmoothLine or WorksheetChartKind.Waterfall;
+            var axisStyle = chart.Appearance.Axis;
+            var categoryStyle = new StyleDefinition { FontSize = axisStyle.Size, FontName = axisStyle.FontFamily, FontColor = axisStyle.Color,
+                Bold = axisStyle.Bold, Italic = axisStyle.Italic, Horizontal = 2, Vertical = 0, ShrinkToFit = true };
+            var categorySizes = categoryAxis ? series[0].Categories.Select(text =>
+            {
+                // Use the same shaping and point-to-pixel conversion as the rendered labels.
+                using var layout = Layout(new(text, categoryStyle, Math.Max(1, b.Width - lw - 12)), $"chart:{chart.Title}");
+                return new SKSize((float)layout.Metrics.Width + 4, (float)layout.Metrics.Height + 2);
+            }).ToArray() : [];
+            var categoryWidth = categorySizes.Select(size => size.Width).DefaultIfEmpty().Max();
+            var categoryHeight = categorySizes.Select(size => size.Height).DefaultIfEmpty().Max();
+            var leftMargin = Math.Max(62, categoryWidth / 2 + 4); var rightMargin = Math.Max(20, categoryWidth / 2 + 4);
+            const float diagonal = .70710678f;
+            // Keep all categories horizontal, then at 45 degrees, then at 90 degrees before thinning.
+            // Parallel diagonal labels need one line height of perpendicular separation.
+            var categoryAngle = 0; var categorySpacing = categoryWidth + 4; var categoryExtent = categoryHeight;
+            bool Crowded() => categoryAxis && count > 0 && categorySpacing > Math.Max(1, b.Width - leftMargin - rightMargin - lw) / count;
+            if (Crowded())
+            {
+                // The top-right corner stays at the data point; text extends down and left.
+                categoryAngle = 45; categorySpacing = categoryHeight / diagonal + 4;
+                categoryExtent = (categoryWidth + categoryHeight) * diagonal;
+                leftMargin = Math.Max(62, categoryWidth * diagonal + 4);
+                rightMargin = Math.Max(20, categoryHeight * diagonal + 4);
+            }
+            if (Crowded())
+            {
+                categoryAngle = 90; categorySpacing = categoryHeight + 4; categoryExtent = categoryWidth;
+                leftMargin = Math.Max(62, categoryHeight / 2 + 4); rightMargin = Math.Max(20, categoryHeight / 2 + 4);
+            }
+            var bottomMargin = Math.Max(40, categoryExtent + 10);
+            var p = SKRect.Create(b.Left + leftMargin + (chart.Legend == "l" ? lw : 0), b.Top + 42 + (chart.Legend == "t" ? lh : 0),
+                Math.Max(1, b.Width - leftMargin - rightMargin - lw), Math.Max(1, b.Height - 42 - bottomMargin - lh));
             Fill(p, ChartColor(chart.Appearance.PlotBackground));
             var labels = chart.Kind is WorksheetChartKind.Pie or WorksheetChartKind.Funnel ? series[0].Categories : chart.Kind == WorksheetChartKind.Waterfall ? new[] { "增加", "减少", "总计" } : series.Select(s => s.Name).ToArray();
             var colors = chart.Kind is WorksheetChartKind.Pie or WorksheetChartKind.Funnel ? series[0].PointColors : chart.Kind == WorksheetChartKind.Waterfall ? new[] { chart.IncreaseColor, chart.DecreaseColor, chart.TotalColor } : series.Select(s => s.Color).ToArray();
@@ -114,19 +148,37 @@ public sealed partial class SkiaRenderer
                 Label(Number(value), b.Left + (chart.Legend == "l" ? lw : 0), y - 7, 56, align: 3);
             }
             Line(p.Left, p.Top, p.Left, p.Bottom, SKColors.Gray); Line(p.Left, baseline, p.Right, baseline, SKColors.Gray);
-            var step = p.Width / count; var labelStep = Math.Max(1, (int)Math.Ceiling(60 / step));
+            var step = p.Width / count;
+            var labelStep = Math.Max(1, (int)Math.Ceiling(categorySpacing / step));
             var (xmin, xmax) = Limits(series.SelectMany(s => s.XValues).OfType<double>().ToArray(), chart.XMinimum, chart.XMaximum, false);
             float X(double v) => (float)(p.Left + Fraction(v, xmin, xmax) * p.Width);
             if (chart.Kind == WorksheetChartKind.Scatter)
                 for (var i = 0; i <= 5; i++)
                 { var value = xmin * (1 - i / 5d) + xmax * (i / 5d); var text = CellDisplayFormatter.Format(CellValue.FromNumber(value), new() { NumberFormatCode = chart.XNumberFormat }, book.DateSystem); Label(text, X(value) - 30, p.Bottom + 6, 60, align: 2); }
-            else for (var i = 0; i < series[0].Categories.Length; i += labelStep) Label(series[0].Categories[i], p.Left + i * step, p.Bottom + 6, step * labelStep, align: 2);
+            else for (var i = 0; i < series[0].Categories.Length; i += labelStep)
+            {
+                var size = categorySizes[i]; var center = p.Left + (i + .5f) * step;
+                // Skipping crowded labels must not move the surviving labels away from their data points.
+                if (categoryAngle != 0)
+                {
+                    using var layout = Layout(new(series[0].Categories[i], categoryStyle, Math.Max(1, size.Width - 4)), $"chart:{chart.Title}");
+                    canvas.Save();
+                    try
+                    {
+                        canvas.Translate(center, p.Bottom + 6); canvas.RotateDegrees(-categoryAngle);
+                        layout.Draw(canvas, -size.Width + 2, categoryAngle == 90 ? 1 - size.Height / 2 : 1, monochrome);
+                    }
+                    finally { canvas.Restore(); }
+                }
+                else DrawText(canvas, new(series[0].Categories[i], categoryStyle),
+                        SKRect.Create(center - size.Width / 2, p.Bottom + 6, size.Width, size.Height), monochrome, $"chart:{chart.Title}");
+            }
             canvas.Save(); canvas.ClipRect(p);
             try
             {
                 for (var s = 0; s < series.Count; s++)
                 {
-                    var options = chart.Series[s]; var data = series[s]; var segment = new List<SKPoint>();
+                    var data = series[s]; var options = chart.Series[data.SeriesIndex]; var segment = new List<SKPoint>();
                     void Flush()
                     {
                         if (segment.Count > 1 && options.ConnectPoints)

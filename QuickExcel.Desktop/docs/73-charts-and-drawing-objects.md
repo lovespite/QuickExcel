@@ -60,3 +60,13 @@ UI 事件检查不是物理鼠标、多显示器 DPI 或真实 Excel 逐像素�
 ## 本地交付
 
 执行 `scripts/build-quickexcel.ps1 -SkipTests -RunSmoke`，沿用上述定向测试结果，避免发布脚本重复运行全量回归。生产包为 `artifacts/avalonia/releases/20261103-133506-0132d638/application`，已通过 8 项生产自检并更新默认 Windows 启动指针。原发布包仍保留。生产自检覆盖资源完整性、文件保存重开、隔离 JSC/TypeScript worker、Monaco、PDF 和资源清理。发布构建仍有既有的 `Program.WebScriptsOnly` 未赋值警告；解决方案常规 Release 构建无警告。此次工作未提交 Git。
+
+## 横轴标签布局修复（2026-11-04）
+
+柱形、折线、平滑曲线和瀑布图的分类标签改用实际字体排版尺寸。原先固定按 60 像素跳过标签，并将标签居中到多个分类的区间，造成短标签缺失和位置偏右；现在各标签始终锚定自己的数据点，空间充足时显示全部分类。
+
+密集时按水平、45°、90°的顺序尝试完整显示，90°仍会重叠时才按间隔减少标签。旋转后重新计算绘图区边距，为首尾文字、完整文字高度和底部图例预留空间。网格、报表、PDF 和打印继续共用此 Skia 路径。
+
+验证：Release 解决方案构建无警告、无错误；`ChartRenderingTests` 与 `RenderingTests.Report` 共 15 项通过，覆盖四种分类图的对应点居中、三级角度选择、90°后的间隔显示、完整标签内容、长标签、大字号及底部图例边界。未运行完整回归。只读加载原样例，已目视检查修复后的 `artifacts/chart-axis-fix/sample1-fixed.png` 与四种布局的 `artifacts/chart-axis-fix/label-layouts.png`。
+
+执行 `scripts/build-quickexcel.ps1 -SkipTests -RunSmoke`，8 项生产自检通过，默认启动指针已更新至 `artifacts/avalonia/releases/20261104-002958-93ac10f4/application`。旧发布包保留；发布构建仅有上述既有的 `Program.WebScriptsOnly` 警告。此次修复未提交 Git。

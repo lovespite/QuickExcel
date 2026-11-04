@@ -19,14 +19,14 @@ public sealed class ScriptWorkerActionExecutor(string? executablePath = null) : 
         return new(new Dictionary<string, ScriptModule> { ["console"] = new("scripts/console.js", text) }, ["console"],
             scriptApiVersion: 2, bindings: [new("console", "actions")]);
     }
-    private ScriptWorkerRuntime Create(ScriptActionRequest request, CancellationToken token) => ScriptWorkerRuntime.Start(_executable,
-        new ScriptRuntimeRequest(ExecutionModules(request), request.Stamp, TimeSpan.FromSeconds(5), token), actionsMode: true);
+    private ScriptWorkerLease Create(ScriptActionRequest request, CancellationToken token) => SharedScriptWorkers.Acquire(_executable,
+        new ScriptRuntimeRequest(ExecutionModules(request), request.Stamp, TimeSpan.FromSeconds(5), token) { RuntimeLifetime = request.RuntimeLifetime }, actions: true);
 
     public IReadOnlyList<ScriptActionDescriptor> List(ScriptActionRequest request, CancellationToken cancellationToken)
     {
         using var linked = CancellationTokenSource.CreateLinkedTokenSource(request.CancellationToken, cancellationToken);
-        using var runtime = Create(request, linked.Token);
-        return runtime.ActionDescriptors;
+        using var lease = Create(request, linked.Token);
+        return lease.Runtime.ActionDescriptors;
     }
 
     public ScriptActionResult Run(ScriptActionRequest request, CancellationToken cancellationToken)
@@ -36,15 +36,16 @@ public sealed class ScriptWorkerActionExecutor(string? executablePath = null) : 
         linked.CancelAfter(TimeSpan.FromSeconds(5));
         linked.Token.ThrowIfCancellationRequested();
         if (request.Name is null) throw new InvalidOperationException("Missing action name.");
-        if (request.Snapshot.Sheets.Sum(s => (long)s.Cells.Count) > ActionProtocol.MaxSnapshotCells)
+        if (request.Model is null && request.Snapshot.Sheets.Sum(s => (long)s.Cells.Count) > ActionProtocol.MaxSnapshotCells)
             throw new InvalidOperationException("动作快照最多支持 100000 个存储单元格。");
         var snapshot = new ActionSnapshot(request.Stamp.InputRevision, request.Snapshot.DateSystem.ToString(), request.Snapshot.Sheets.Select(s => new ActionSheet(s.Id.ToString(), s.Name,
-            s.Cells.OrderBy(c => c.Key.Row).ThenBy(c => c.Key.Column).Select(c => new ActionCell(c.Key.Row, c.Key.Column, ToWire(c.Value.Value),
+            request.Model is not null ? [] : s.Cells.OrderBy(c => c.Key.Row).ThenBy(c => c.Key.Column).Select(c => new ActionCell(c.Key.Row, c.Key.Column, ToWire(c.Value.Value),
                 c.Value.Content.Kind == CellContentKind.Formula ? c.Value.Content.FormulaText : null,
                 c.Value.Content.Kind == CellContentKind.Formula ? (c.Value.Calculation?.State.ToString() ?? "Dirty") : "literal",
                 c.Value.Content.Kind == CellContentKind.Literal || c.Value.Calculation?.Value is not null)).ToArray())).ToArray());
         ActionProtocol.ValidateSnapshot(snapshot);
-        using var runtime = Create(request, linked.Token);
+        using var lease = Create(request, linked.Token);
+        var runtime = lease.Runtime;
         if (!runtime.ActionDescriptors.Any(a => a.Name == request.Name))
         {
             if (request.Event is not null) return new(request.OperationId, request.Stamp.InputRevision, request.Name, [], []);
@@ -52,9 +53,10 @@ public sealed class ScriptWorkerActionExecutor(string? executablePath = null) : 
         }
         var patch = runtime.RunAction(new(request.OperationId, request.Name, snapshot)
         {
-            Files = request.Files.Entries.Values.Select(e => new VirtualEntry(e.Path, e.IsDirectory ? null : Convert.ToBase64String(e.Data.AsSpan()), e.IsDirectory)).ToArray(),
+            LiveModel = request.Model is not null,
+            Files = request.Model is not null ? [] : request.Files.Entries.Values.Select(e => new VirtualEntry(e.Path, e.IsDirectory ? null : Convert.ToBase64String(e.Data.AsSpan()), e.IsDirectory)).ToArray(),
             Event = request.Event is { } ev ? new(ev.Name, ev.SessionId, ev.Sequence, ev.Revision, ev.SheetId, ev.SheetName, ev.Ranges.ToArray(), ev.IsUndoOrRedo) : null
-        });
+        }, request.Model is null ? null : new ScriptModelAdapter(request, linked.Token).Call);
         var logs = runtime.GetLogs().ToImmutableArray();
         linked.Token.ThrowIfCancellationRequested();
         return new(patch.OperationId, patch.BaseRevision, patch.Name, patch.Edits.Select(e => new ScriptActionEdit(

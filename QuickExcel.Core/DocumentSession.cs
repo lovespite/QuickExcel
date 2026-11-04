@@ -18,6 +18,7 @@ public sealed partial class DocumentSession : IDisposable
     private long _calculationGeneration;
     private long _scriptGeneration;
     private CancellationTokenSource? _activeCalculation;
+    private CancellationTokenSource _runtimeLifetime = new();
     private Guid _activeActionId;
     private bool _scriptsEnabled;
     private bool _closed;
@@ -26,8 +27,9 @@ public sealed partial class DocumentSession : IDisposable
     private bool _publishing;
 
     private readonly IWorkbookValidation? _validation;
+    private readonly IWorkbookCalculator? _calculator;
     private readonly IWorkbookVirtualFiles? _virtualFiles;
-    public DocumentSession(WorkbookSnapshot snapshot, long historyBudgetBytes = 32 * 1024 * 1024, IWorkbookValidation? validation = null, IWorkbookVirtualFiles? virtualFiles = null)
+    public DocumentSession(WorkbookSnapshot snapshot, long historyBudgetBytes = 32 * 1024 * 1024, IWorkbookValidation? validation = null, IWorkbookVirtualFiles? virtualFiles = null, IWorkbookCalculator? calculator = null)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(historyBudgetBytes);
@@ -35,6 +37,7 @@ public sealed partial class DocumentSession : IDisposable
         _savedRevision = snapshot.FileState?.RequiresMigration == true ? -1 : snapshot.Revision;
         HistoryBudgetBytes = historyBudgetBytes;
         _validation = validation;
+        _calculator = calculator;
         _virtualFiles = virtualFiles;
     }
 
@@ -135,39 +138,43 @@ public sealed partial class DocumentSession : IDisposable
                 if (action is not null) { AdvanceCalculationGeneration(); _diagnostics = diagnostics; AppendConsole(diagnostics); if (transientFiles is not null) _transientFiles = transientFiles; }
                 return new(false, before.Revision);
             }
-            var sourceChanged = command is UpdateScriptSourceCommand or UpdateScriptModulesCommand or UpdateScriptSignatureCommand || !ReferenceEquals(before.ScriptModules, draft.Snapshot.ScriptModules);
-            var revised = draft.Snapshot.WithRevision(checked(before.Revision + 1));
-            var after = draft.CalculationUnchanged ? CarryCalculationRevision(revised, before.Revision) : Invalidate(revised);
-            var entry = sourceChanged ? null : new HistoryEntry(before, after, draft.Changes, draft.StructureChanged, draft.CalculationUnchanged);
-            if (entry is not null && entry.Bytes > HistoryBudgetBytes)
-                throw new InvalidOperationException("此操作超过撤销历史容量，尚未修改工作簿。请缩小操作范围。");
-            cancellationToken.ThrowIfCancellationRequested();
-            if (!sourceChanged)
+            else
             {
-                foreach (var redo in _redo) _historyBytes -= redo.Bytes;
-                _redo.Clear();
+                var sourceChanged = command is UpdateScriptSourceCommand or UpdateScriptModulesCommand or UpdateScriptSignatureCommand || !ReferenceEquals(before.ScriptModules, draft.Snapshot.ScriptModules);
+                var revised = draft.Snapshot.WithRevision(checked(before.Revision + 1));
+                var after = draft.CalculationUnchanged ? CarryCalculationRevision(revised, before.Revision) : Invalidate(revised);
+                var entry = sourceChanged ? null : new HistoryEntry(before, after, draft.Changes, draft.StructureChanged, draft.CalculationUnchanged);
+                if (entry is not null && entry.Bytes > HistoryBudgetBytes)
+                    throw new InvalidOperationException("此操作超过撤销历史容量，尚未修改工作簿。请缩小操作范围。");
+                cancellationToken.ThrowIfCancellationRequested();
+                if (!sourceChanged)
+                {
+                    foreach (var redo in _redo) _historyBytes -= redo.Bytes;
+                    _redo.Clear();
+                }
+                if (entry is not null)
+                {
+                    _undo.AddLast(entry);
+                    _historyBytes += entry.Bytes;
+                    TrimHistory();
+                }
+                if (sourceChanged)
+                {
+                    ResetScriptRuntime();
+                    _scriptsEnabled = false;
+                    _scriptEvents.Clear();
+                    _scriptGeneration = checked(_scriptGeneration + 1);
+                }
+                AdvanceCalculationGeneration();
+                _snapshot = after;
+                if (transientFiles is not null) _transientFiles = transientFiles;
+                if (action is null) QueueChangeEvents(before, after, draft.Changes);
+                if (action is not null || !draft.CalculationUnchanged) { _diagnostics = diagnostics.IsDefault ? [] : diagnostics; AppendConsole(_diagnostics); }
+                change = new(after.Revision, ActualChanges(before, after, draft.Changes), draft.StructureChanged)
+                { CalculationUnchanged = draft.CalculationUnchanged };
+                QueueNotification(change);
+                result = new(true, after.Revision) { CalculationUnchanged = draft.CalculationUnchanged };
             }
-            if (entry is not null)
-            {
-                _undo.AddLast(entry);
-                _historyBytes += entry.Bytes;
-                TrimHistory();
-            }
-            if (sourceChanged)
-            {
-                _scriptsEnabled = false;
-                _scriptEvents.Clear();
-                _scriptGeneration = checked(_scriptGeneration + 1);
-            }
-            AdvanceCalculationGeneration();
-            _snapshot = after;
-            if (transientFiles is not null) _transientFiles = transientFiles;
-            if (action is null) QueueChangeEvents(before, after, draft.Changes);
-            if (!draft.CalculationUnchanged) { _diagnostics = diagnostics.IsDefault ? [] : diagnostics; AppendConsole(_diagnostics); }
-            change = new(after.Revision, ActualChanges(before, after, draft.Changes), draft.StructureChanged)
-            { CalculationUnchanged = draft.CalculationUnchanged };
-            QueueNotification(change);
-            result = new(true, after.Revision) { CalculationUnchanged = draft.CalculationUnchanged };
         }
         PublishNotifications();
         return result;
@@ -196,14 +203,17 @@ public sealed partial class DocumentSession : IDisposable
             _activeConsoleSource = consoleSource;
             if (consoleSource is not null) AppendConsole([consoleSource], "input");
             request = new(new(SessionId, _snapshot.Revision, _calculationGeneration, _scriptGeneration), _activeActionId, name, _snapshot, _activeCalculation.Token)
-            { Files = _transientFiles, Event = scriptEvent, ConsoleSource = consoleSource };
+            { Files = _transientFiles, Event = scriptEvent, ConsoleSource = consoleSource,
+                RuntimeLifetime = consoleSource is null ? _runtimeLifetime.Token : default };
+            if (name is not null) request = request with { Model = CreateScriptModel(request) };
         }
         try
         {
             if (_virtualFiles is not null && name is not null)
             {
                 request.CancellationToken.ThrowIfCancellationRequested();
-                request = request with { Files = new VirtualFileSet(_virtualFiles.Capture(request.Snapshot).Entries.Values.Concat(request.Files.Entries.Values)) };
+                var captured = request;
+                request = request with { DeferredFiles = new(() => new VirtualFileSet(_virtualFiles.Capture(captured.Snapshot).Entries.Values.Concat(captured.Files.Entries.Values))) };
                 request.CancellationToken.ThrowIfCancellationRequested();
             }
             return request;
@@ -236,14 +246,21 @@ public sealed partial class DocumentSession : IDisposable
             if (result.FileEdits.IsDefault) throw new InvalidOperationException("缺少文件变更。");
             if (request.ConsoleSource is not null && request.Snapshot.FileState?.FormulaReadOnly == true && (!result.Edits.IsEmpty || !result.FileEdits.IsEmpty))
                 throw new InvalidOperationException(WorkbookFileState.FormulaReadOnlyMessage);
-            var files = request.Files.Apply(result.FileEdits);
-            var transient = new VirtualFileSet(files.Entries.Values.Where(e => !e.Path.StartsWith("//xlsq/", StringComparison.Ordinal)));
+            var transient = result.FileEdits.IsEmpty ? null : new VirtualFileSet(request.Files.Apply(result.FileEdits).Entries.Values.Where(e => !e.Path.StartsWith("//xlsq/", StringComparison.Ordinal)));
             return ExecuteCore(new ApplyActionPatchCommand(request, result, _virtualFiles), request.Stamp.InputRevision, request, cancellationToken, result.Logs, transientFiles: transient);
         }
         catch (Exception error)
         {
             lock (_gate)
             {
+                if (request.RuntimeLifetime.CanBeCanceled && request.RuntimeLifetime == _runtimeLifetime.Token)
+                {
+                    ResetScriptRuntime();
+                    // A rejected transaction discards its execution contexts, including
+                    // any UDF work performed by provisional formula reads.
+                    _snapshot = Invalidate(_snapshot);
+                    QueueNotification(new(_snapshot.Revision, [], false, CalculationOnly: true));
+                }
                 if (Matches(request.Stamp) && _activeActionId == request.OperationId)
                 {
                     AdvanceCalculationGeneration();
@@ -252,6 +269,7 @@ public sealed partial class DocumentSession : IDisposable
                     AppendConsole([error.Message], level: ScriptConsoleLevel.Error);
                 }
             }
+            PublishNotifications();
             throw;
         }
     }
@@ -303,6 +321,7 @@ public sealed partial class DocumentSession : IDisposable
             if (enabled && _snapshot.FileState?.FormulaReadOnly == true) throw new InvalidOperationException(WorkbookFileState.FormulaReadOnlyMessage);
             if (enabled && !_snapshot.ScriptModules.CanExecute) throw new NotSupportedException("多模块执行需要显式声明脚本 API v2。");
             // Reapply also invalidates an in-flight compile of the same source.
+            ResetScriptRuntime();
             _scriptsEnabled = enabled;
             _registeredEvents = null;
             _scriptEvents.Clear();
@@ -325,7 +344,7 @@ public sealed partial class DocumentSession : IDisposable
             AdvanceCalculationGeneration();
             _activeCalculation = new CancellationTokenSource();
             return new(new(SessionId, _snapshot.Revision, _calculationGeneration, _scriptGeneration), _snapshot, _scriptsEnabled)
-            { CancellationToken = _activeCalculation.Token };
+            { CancellationToken = _activeCalculation.Token, RuntimeLifetime = _runtimeLifetime.Token };
         }
     }
 
@@ -336,74 +355,7 @@ public sealed partial class DocumentSession : IDisposable
         lock (_gate)
         {
             if (!Matches(result.Stamp)) return false;
-            var sheets = _snapshot.Sheets.ToArray();
-            var builders = new Dictionary<SheetId, ImmutableDictionary<CellPosition, CellSnapshot>.Builder>();
-            var changes = ImmutableArray.CreateBuilder<CellChange>();
-            var allocation = new FormulaSpillAllocator(_snapshot);
-            foreach (var (address, calculation) in result.Cells.OrderBy(p => p.Key.SheetId.Value).ThenBy(p => p.Key.Row).ThenBy(p => p.Key.Column))
-                if (calculation.Array is { } array)
-                {
-                    if (calculation.State is not (CalculationState.Fresh or CalculationState.Error) ||
-                        !allocation.TryReserve(new(address, array), out _))
-                        throw new InvalidOperationException("数组结果未通过溢出区域校验，整轮结果未提交。");
-                }
-            foreach (var sheet in sheets)
-            foreach (var (position, cell) in sheet.Cells)
-                if (cell.SpillOwner is { } owner && result.Cells.TryGetValue(owner, out var ownerResult))
-                {
-                    if (!builders.TryGetValue(sheet.Id, out var builder)) builders[sheet.Id] = builder = sheet.Cells.ToBuilder();
-                    if (ownerResult.State == CalculationState.Blocked)
-                    {
-                        var retained = new CellSnapshot(cell.Content, new(cell.Calculation!.Value, CalculationState.Blocked,
-                            result.Stamp.InputRevision, result.Stamp.CalculationGeneration, result.Stamp.ScriptGeneration, ownerResult.Diagnostics), owner);
-                        builder[position] = retained; changes.Add(new(new(sheet.Id,position.Row,position.Column),cell,retained)); continue;
-                    }
-                    var after = cell.Content.StyleId == sheet.GetInheritedStyleId(position.Row, position.Column) ? null : new CellSnapshot(cell.Content);
-                    if (after is null) builder.Remove(position); else builder[position] = after;
-                    changes.Add(new(new(sheet.Id, position.Row, position.Column), cell, after));
-                }
-            foreach (var (address, calculation) in result.Cells)
-            {
-                WorkbookLimits.ValidatePosition(address.Row, address.Column);
-                var sheet = _snapshot.GetSheet(address.SheetId);
-                var before = sheet.GetCell(address.Row, address.Column);
-                if (before?.Content.Kind != CellContentKind.Formula)
-                    throw new InvalidOperationException("计算结果只能提交到本轮快照的公式单元格。");
-                if (calculation.InputRevision != result.Stamp.InputRevision || calculation.CalculationGeneration != result.Stamp.CalculationGeneration || calculation.ScriptGeneration != result.Stamp.ScriptGeneration)
-                    throw new InvalidOperationException("计算单元格的修订或代次不匹配。");
-                if (calculation.Value is { Kind: CellValueKind.Text } text && text.TextValue.Length > WorkbookLimits.MaxCellTextLength)
-                    throw new InvalidOperationException("计算结果超过单元格文本容量。");
-                if (_snapshot.FileState?.FormulaReadOnly == true && (calculation.State != CalculationState.Blocked || calculation.Value != before.Calculation?.Value))
-                    throw new InvalidOperationException("只读公式工作簿只能保留原缓存并标记受阻，不能发布新结果。");
-                if (!builders.TryGetValue(sheet.Id, out var builder)) builders[sheet.Id] = builder = sheet.Cells.ToBuilder();
-                var committed = calculation.State == CalculationState.Blocked && before.Calculation?.Array is { } oldArray && calculation.Value == oldArray[0,0]
-                    ? new CellCalculation(calculation.Value, calculation.State, calculation.InputRevision, calculation.CalculationGeneration,
-                        calculation.ScriptGeneration, calculation.Diagnostics, oldArray, calculation.BlockedSpill) : calculation;
-                var content = calculation.Array is not null && !before.Content.DynamicArray
-                    ? CellContent.FromFormula(before.Content.FormulaText, before.Content.StyleId, dynamicArray: true) : before.Content;
-                var after = new CellSnapshot(content, committed);
-                builder[new(address.Row, address.Column)] = after;
-                changes.Add(new(address, before, after));
-            }
-            foreach (var spill in allocation.Spills.Values)
-            {
-                var sheet = _snapshot.GetSheet(spill.Anchor.SheetId); var builder = builders[sheet.Id];
-                for (var row = 0; row < spill.Array.Rows; row++)
-                for (var column = 0; column < spill.Array.Columns; column++)
-                {
-                    if (row == 0 && column == 0) continue;
-                    var position = new CellPosition(spill.Anchor.Row + row, spill.Anchor.Column + column);
-                    var before = sheet.GetCell(position.Row, position.Column); var value = spill.Array[row, column];
-                    var calculation = new CellCalculation(value, value.Kind == CellValueKind.Error ? CalculationState.Error : CalculationState.Fresh,
-                        result.Stamp.InputRevision, result.Stamp.CalculationGeneration, result.Stamp.ScriptGeneration);
-                    var after = new CellSnapshot(CellContent.FromLiteral(CellValue.Blank, sheet.GetStyleId(position.Row, position.Column)), calculation, spill.Anchor);
-                    builder[position] = after;
-                    changes.Add(new(new(sheet.Id, position.Row, position.Column), before, after));
-                }
-            }
-            for (var index = 0; index < sheets.Length; index++)
-                if (builders.TryGetValue(sheets[index].Id, out var builder)) sheets[index] = sheets[index].WithCells(builder.ToImmutable());
-            _snapshot = PivotSafety.MarkSourceChanges(_snapshot,_snapshot.WithSheets(sheets));
+            _snapshot = ApplyCalculation(_snapshot, result, out var changes);
             _diagnostics = result.Diagnostics;
             AppendConsole(_diagnostics);
             AdvanceCalculationGeneration(); // A completed request is single-use.
@@ -416,7 +368,7 @@ public sealed partial class DocumentSession : IDisposable
                 TrimHistory();
             }
             EnqueueScriptEvent("workbook.calculated");
-            change = new(_snapshot.Revision, changes.ToImmutable(), false, CalculationOnly: true);
+            change = new(_snapshot.Revision, changes, false, CalculationOnly: true);
             QueueNotification(change);
         }
         PublishNotifications();
@@ -429,6 +381,7 @@ public sealed partial class DocumentSession : IDisposable
         lock (_gate)
         {
             if (!Matches(stamp)) return false;
+            ResetScriptRuntime();
             _diagnostics = [message.Length > 4000 ? message[..4000] : message];
             if (logs is not null) AppendConsole(logs.Take(100));
             AppendConsole(_diagnostics, level: ScriptConsoleLevel.Error);
@@ -465,6 +418,7 @@ public sealed partial class DocumentSession : IDisposable
 
     private static WorkbookSnapshot Invalidate(WorkbookSnapshot snapshot)
     {
+        var anyChanged = false;
         var sheets = snapshot.Sheets.Select(sheet =>
         {
             var cells = sheet.Cells.ToBuilder();
@@ -485,9 +439,10 @@ public sealed partial class DocumentSession : IDisposable
                     old?.CalculationGeneration ?? 0, old?.ScriptGeneration ?? 0, old?.Diagnostics, old?.Array, old?.BlockedSpill), cell.SpillOwner);
                 changed = true;
             }
+            anyChanged |= changed;
             return changed ? sheet.WithCells(cells.ToImmutable()) : sheet;
-        });
-        return snapshot.WithSheets(sheets);
+        }).ToArray();
+        return anyChanged ? snapshot.WithSheets(sheets) : snapshot;
     }
 
     private static WorkbookSnapshot RestoreCurrentCalculations(WorkbookSnapshot restored, WorkbookSnapshot current) =>
@@ -592,6 +547,7 @@ public sealed partial class DocumentSession : IDisposable
         {
             if (_closed) return;
             _closed = true;
+            _runtimeLifetime.Cancel(); _runtimeLifetime.Dispose();
             CancelActiveCalculation();
             _scriptsEnabled = false;
             _undo.Clear(); _redo.Clear(); _historyBytes = 0;
@@ -599,6 +555,18 @@ public sealed partial class DocumentSession : IDisposable
             Changed = null;
             _scriptEvents.Clear(); _transientFiles = VirtualFileSet.Empty;
         }
+    }
+
+    private void ResetScriptRuntime()
+    {
+        var previous = _runtimeLifetime; _runtimeLifetime = new();
+        previous.Cancel(); previous.Dispose();
+    }
+
+    internal void InvalidateScriptRuntime(CancellationToken lifetime)
+    {
+        lock (_gate)
+            if (!_closed && lifetime.CanBeCanceled && lifetime == _runtimeLifetime.Token) ResetScriptRuntime();
     }
 
     private sealed record HistoryEntry(WorkbookSnapshot Before, WorkbookSnapshot After, ImmutableArray<CellChange> Changes, bool StructureChanged, bool CalculationUnchanged)

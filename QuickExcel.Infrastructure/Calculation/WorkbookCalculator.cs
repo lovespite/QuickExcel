@@ -81,7 +81,7 @@ public sealed class WorkbookCalculator(IScriptRuntimeFactory runtimeFactory) : I
             }
         }
         using var runtime = request.ScriptsEnabled && !request.Snapshot.ScriptModules.EntriesFor("formula-functions").IsEmpty ? _factory.Create(new ScriptRuntimeRequest(request.Snapshot.ScriptModules,
-            request.Stamp, TimeLimit - timer.Elapsed, cancellationToken)) : null;
+            request.Stamp, TimeLimit - timer.Elapsed, cancellationToken) { RuntimeLifetime = request.RuntimeLifetime }) : null;
         Check();
         var functions = new Dictionary<string, ScriptFunctionDescriptor>(StringComparer.OrdinalIgnoreCase);
         if (runtime is not null)
@@ -221,7 +221,7 @@ public sealed class WorkbookCalculator(IScriptRuntimeFactory runtimeFactory) : I
         var result = new CalculationResult(request.Stamp, cells, diagnostics)
         { Statistics = new(index.Nodes.Count, evaluated + index.CycleMembers.Count, reused, !reusable, timer.Elapsed) };
         // A cancelled/failed round never becomes a reuse source. An older concurrent round cannot replace a newer cache.
-        lock (_gate)
+        if (!request.IsProvisional) lock (_gate)
             if (_cache is null || _cache.Request.Stamp.SessionId != request.Stamp.SessionId
                 || _cache.Request.Stamp.CalculationGeneration <= request.Stamp.CalculationGeneration)
                 _cache = new(request, result);

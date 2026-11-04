@@ -25,7 +25,10 @@ public sealed partial class TypedWorkbookStorage
     public static IReadOnlyList<WorkbookSavePart> InspectSavePlan(WorkbookSnapshot snapshot)
     {
         if (snapshot.FileState is { } original && ContentEquals(snapshot, original.OriginalModel))
-            return [new("*", "preserve-package", "工作簿内容未变，原 XLSX 整包保留；脚本另由 XLSQ 保存。")];
+            return snapshot.Sheets.Any(s => s.Data.Charts.Any(c => c.IsExtended)) ?
+                [new("*", "preserve-package", "工作簿内容未变，保留原包部件；脚本另由 XLSQ 保存。"),
+                 new("ChartEx", "repair-excel-compatibility", "写出 XLSX 时补齐缺失的图表样式依赖，并移除会导致 Excel 拒绝文件的系列轴引用；保留筛选和完整源数据。")] :
+                [new("*", "preserve-package", "工作簿内容未变，原 XLSX 整包保留；脚本另由 XLSQ 保存。")];
         var result = new List<WorkbookSavePart>
         {
             new("xl/workbook.xml; xl/worksheets/*; relationships", "rebuild", "由当前模型重建工作表、公式、名称、行列与关系。"),
@@ -63,7 +66,7 @@ public sealed partial class TypedWorkbookStorage
                 ValidateArity(cell.Content.FormulaText, sheet.Name + "!" + TypedWorkbookXml.Reference(position));
             }
         }
-        var bytes = preserve ? snapshot.FileState!.OriginalWorkbook.ToArray() : TypedWorkbookXml.Write(snapshot, false, cancellationToken);
+        var bytes = preserve ? XlsxCharts.RepairPreservedExtendedCharts(snapshot.FileState!.OriginalWorkbook.ToArray(), snapshot, cancellationToken) : TypedWorkbookXml.Write(snapshot, false, cancellationToken);
         PackageIO.AtomicWrite(path, bytes, temp =>
         {
             var saved = PackageIO.ReadFile(temp, new(cancellationToken));

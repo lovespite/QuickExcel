@@ -4,12 +4,14 @@ using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Input;
 using Avalonia.Input.Raw;
+using Avalonia.Interactivity;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using QuickExcel.Core;
 using QuickExcel.Domain;
 using QuickExcel.Presentation;
 using QuickExcel.Storage;
+using Avalonia.VisualTree;
 using SkiaSharp;
 
 namespace QuickExcel.Desktop.Avalonia;
@@ -77,6 +79,71 @@ public sealed partial class MainWindow
             var hit = _grid.GetDrawingObjectHandle(imageTarget, DrawingHandle.Move)!.Value; Down(hit); Move(hit + new Vector(40, 30)); Up(hit); await Ready();
             Check(Document.Snapshot.Sheets[0].Images[0].Anchor == protectedAnchor && !_grid.CanEditDrawingObjects, "Protected objects remain selectable and cannot be transformed");
             await Capture("protected-objects");
+            // Chart selection, filter popup, history and file persistence through the actual desktop handlers.
+            var cells = new List<KeyValuePair<CellPosition, CellSnapshot>>();
+            void Cell(int r, int c, CellValue value) => cells.Add(new(new(r, c), new(CellContent.FromLiteral(value))));
+            Cell(0, 0, CellValue.FromText("货号")); Cell(0, 1, CellValue.FromText("价格")); Cell(0, 2, CellValue.FromText("数量"));
+            for (var r = 1; r <= 9; r++) { Cell(r, 0, CellValue.FromText("X" + (126 + r))); Cell(r, 1, CellValue.FromNumber(r == 9 ? 3556.11 : r * 80)); Cell(r, 2, CellValue.FromNumber(r * 5)); }
+            sheet = new WorksheetSnapshot(SheetId.New(), "图表筛选", cells);
+            chart = SetChartCommand.FromRange(sheet, new(0, 0, 9, 2), WorksheetChartKind.Column,
+                DrawingGeometry.FromBounds(sheet, new(355, 10, 580, 340), DrawingAnchorKind.OneCell), "价格与数量");
+            snapshot = new(Guid.NewGuid(), 0, ExcelDateSystem.Windows1900, [sheet.WithData(sheet.Data with { Charts = [chart] })]);
+            path = Path.Combine(directory, "chart-filters.xlsx"); new TypedWorkbookStorage().Save(path, snapshot); await OpenPathAsync(path); await Ready();
+            var chartTarget = new DrawingObjectId(DrawingObjectKind.Chart, 0); var chartCenter = _grid.GetDrawingObjectHandle(chartTarget, DrawingHandle.Move)!.Value;
+            Down(chartCenter); Up(chartCenter); await Ready(); var chartRevision = Document.Snapshot.Revision;
+            Check(_grid.SelectedChartSources.Count == 5 && _grid.ChartFilterButtonBounds is not null && !Document.IsDirty, "Chart selection marks complete names/categories/values and exposes filter button without dirtying");
+            await Capture("chart-sources");
+            _chartFilterDriver = async panel =>
+            {
+                panel.SeriesItems[1].Selected = false; panel.CategoryItems[1].Selected = false;
+                Check(Document.Snapshot.Revision == chartRevision, "Chart filter edits remain a draft until Apply");
+                await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Background);
+                using var menuImage = new RenderTargetBitmap(new PixelSize((int)panel.Bounds.Width, (int)panel.Bounds.Height), new Vector(96, 96)); menuImage.Render(panel); menuImage.Save(Path.Combine(directory, "chart-filter-panel.png"), PngBitmapEncoderOptions.Default);
+                panel.ApplyButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            };
+            canvas.Children.OfType<Button>().Single().RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); await Ready();
+            var filteredChart = Document.Snapshot.Sheets[0].Data.Charts[0];
+            Check(filteredChart.Series[1].IsFiltered && filteredChart.Series.All(s => s.HiddenPoints.SequenceEqual([1])) && Document.Snapshot.Revision == chartRevision + 1,
+                "Chart filter button applies series and category choices as one document command");
+            Check(ChartData.Read(Document.Snapshot, filteredChart).Single().Values.Length == 8 && Document.Snapshot.Sheets[0].Cells.Count == cells.Count, "Chart filter removes plotted data without changing worksheet cells");
+            await Capture("chart-filtered");
+            chartRevision = Document.Snapshot.Revision;
+            _chartFilterDriver = panel =>
+            {
+                Check(panel.SeriesItems[1].Selected == false && panel.CategoryItems[1].Selected == false, "Reopening chart filter restores saved checkbox choices");
+                panel.CategoryItems[0].Selected = false; panel.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.Escape }); return Task.CompletedTask;
+            };
+            await ChartFilterAsync(); Check(Document.Snapshot.Revision == chartRevision, "Escape discards unapplied chart filter changes");
+            await History(false); Check(Document.Snapshot.Sheets[0].Data.Charts[0].Series.All(s => !s.IsFiltered && s.HiddenPoints.IsEmpty), "Undo restores all chart data");
+            await History(true); Check(Document.Snapshot.Sheets[0].Data.Charts[0].Series[1].IsFiltered, "Redo restores chart filtering");
+            foreach (var ext in new[] { ".xlsx", ".xlsq" })
+            {
+                var saved = Path.Combine(directory, "chart-filter-saved" + ext); new TypedWorkbookStorage().Save(saved, Document.Snapshot);
+                await OpenPathAsync(saved); await Ready(); chartCenter = _grid.GetDrawingObjectHandle(chartTarget, DrawingHandle.Move)!.Value; Down(chartCenter); Up(chartCenter); await Ready();
+                _chartFilterDriver = panel => { Check(panel.SeriesItems[1].Selected == false && panel.CategoryItems[1].Selected == false, ext + " reopen restores chart filter panel"); panel.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.Escape }); return Task.CompletedTask; };
+                await ChartFilterAsync();
+            }
+            _chartFilterDriver = async panel =>
+            {
+                var search = panel.GetVisualDescendants().OfType<TextBox>().Single(t => t.Name == "ChartFilterSearch"); search.Text = "X127";
+                await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Background);
+                panel.GetVisualDescendants().OfType<CheckBox>().Single(c => c.Name == "ChartCategoriesAll").IsChecked = false;
+                Check(panel.CategoryItems[0].Selected == false && panel.CategoryItems[2].Selected == true, "Search select-all only changes matching chart categories");
+                panel.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.Escape });
+            };
+            await ChartFilterAsync();
+            _chartFilterDriver = async panel =>
+            {
+                panel.CategoryItems[0].Selected = false;
+                await ExecuteAsync(new SetCellsCommand([new(new(Document.Snapshot.ActiveSheetId, 1, 1), CellContent.FromLiteral(CellValue.FromNumber(77)))]));
+                Check(_chartFilterPopup?.IsOpen == false, "Source edit closes stale chart filter panel");
+            };
+            await ChartFilterAsync(); Check(Document.Snapshot.Sheets[0].Data.Charts[0].Series[0].HiddenPoints.SequenceEqual([1]), "Stale chart filter draft cannot overwrite current state");
+            PressKey(Key.Escape); await Ready(); Check(_grid.SelectedChartSources.Count == 0 && _grid.ChartFilterButtonBounds is null, "Deselecting chart removes source marks and filter button");
+            chartCenter = _grid.GetDrawingObjectHandle(chartTarget, DrawingHandle.Move)!.Value; Down(chartCenter); Up(chartCenter); await Ready();
+            await ExecuteAsync(new SetProtectionCommand(Document.Snapshot.ActiveSheetId, new() { Objects = true }));
+            _chartFilterDriver = panel => { Check(!panel.ApplyButton.IsEnabled, "Protected chart filter is inspectable but cannot apply"); panel.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.Escape }); return Task.CompletedTask; };
+            await ChartFilterAsync();
         }
         catch (Exception ex) { error = ex; }
         await File.WriteAllTextAsync(Path.Combine(directory, "result.json"), JsonSerializer.Serialize(new { passed = error is null, checks, error = error?.ToString() }, new JsonSerializerOptions { WriteIndented = true }));

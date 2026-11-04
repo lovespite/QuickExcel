@@ -79,6 +79,8 @@ interface QxVirtualFiles {
   move(source: string, destination: string): void;
 }
 interface QxActionContext {
+  /** 当前执行的工作簿对象；读取能看到本轮先前的修改，成功后整体提交。 */
+  readonly workbook: ExcelScript.Workbook;
   /** A transaction-local view; all writes commit atomically with patch. No OS path mapping. */
   readonly fs: QxVirtualFiles;
   readonly event: QxEvent | null;
@@ -100,9 +102,52 @@ interface QxActionContext {
     setFormulas(sheetId: string, range: string, formulas: readonly (readonly string[])[]): void;
   };
 }
-declare const quickExcel: {
+/** QuickExcel 支持的 ExcelScript 对象子集；不包含 Office 服务或网络能力。 */
+declare namespace ExcelScript {
+  interface RangeFill {
+    /** 设置 #RRGGBB 填充色，例如 #ff0000。 */
+    setColor(color: string): void;
+    /** 返回左上角单元格填充色；没有填充时返回空字符串。 */
+    getColor(): string;
+    clear(): void;
+  }
+  interface RangeFormat { getFill(): RangeFill }
+  interface Range {
+    /** 工作表内的 A1 地址。 */
+    getAddress(): string;
+    getWorksheet(): Worksheet;
+    getFormat(): RangeFormat;
+    /** 返回左上角当前值；必要时先计算事务草稿。受阻公式会抛错，公式错误返回带 kind/code 的错误值。 */
+    getValue(): QxScalar;
+    getValues(): QxScalar[][];
+    /** 将区域中每个单元格设置为同一个值。 */
+    setValue(value: QxScalar): void;
+    setValues(values: readonly (readonly QxScalar[])[]): void;
+    getFormula(): string;
+    setFormula(formula: string): void;
+    setFormulas(formulas: readonly (readonly string[])[]): void;
+  }
+  interface Worksheet {
+    getId(): string;
+    getName(): string;
+    getCell(address: string): Range;
+    /** 行列索引从 0 开始。 */
+    getCell(row: number, column: number): Range;
+    getRange(address: string): Range;
+  }
+  interface Workbook {
+    getActiveCell(): Range;
+    getActiveWorksheet(): Worksheet;
+    /** 当前选区；多区域选择时抛错，改用 getActiveRanges()。 */
+    getActiveRange(): Range;
+    getActiveRanges(): Range[];
+    getWorksheet(nameOrId: string): Worksheet | undefined;
+    getWorksheets(): Worksheet[];
+  }
+}
+declare const quickExcel: ExcelScript.Workbook & {
   readonly functions: {
-    /** 注册工作表函数；仅限模块初始化阶段。此重载接收标量或展平的区域参数。 */
+    /** 注册工作表函数；仅限模块初始化阶段。UDF 与动作/事件使用独立的持久上下文，不能访问工作簿对象；应只依赖参数。此重载接收标量或展平的区域参数。 */
     register(name: string, callback: (...args: any[]) => QxScalar): void;
     /** Descriptor API v2 preserves Blank and rectangular ranges; JS namespace required. */
     register(descriptor: QxFunctionDescriptor, callback: (...args: any[]) => QxScalar): void;

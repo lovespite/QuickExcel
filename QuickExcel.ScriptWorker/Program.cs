@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using QuickExcel.ScriptContracts;
 using QuickExcel.Scripting;
 
@@ -14,6 +15,8 @@ using var input = Console.OpenStandardInput();
 using var output = Console.OpenStandardOutput();
 JscSession? runtime = null;
 var actionsMode = false;
+var sharedMode = false;
+var roundOpen = true;
 var actionRan = false;
 RequestIdentity? round = null;
 var requests = new HashSet<Guid>();
@@ -23,9 +26,22 @@ try
     while (true)
     {
         var request = await WorkerProtocol.ReadAsync(input);
+        if (request.Kind == "beginRound")
+        {
+            _ = WorkerProtocol.Payload<BeginWorkerRound>(request);
+            if (!sharedMode || roundOpen || runtime is null || round is null || request.Identity.SessionId != round.SessionId ||
+                request.Identity.WorkerInstanceId != round.WorkerInstanceId || request.Identity.ScriptGeneration != round.ScriptGeneration || request.Identity.RoundId == round.RoundId ||
+                actionsMode != (request.Identity.CalculationGeneration is null))
+                throw new ProtocolException("Invalid shared-worker round.");
+            round = request.Identity; requests.Clear(); requests.Add(request.Identity.RequestId);
+            roundOpen = true; actionRan = false; timer.Restart(); runtime.BeginRound();
+            await WorkerProtocol.WriteAsync(output, WorkerProtocol.Message(request.Identity, "beginRound", new EmptyPayload()));
+            continue;
+        }
         if (requests.Count >= 100_000 || !requests.Add(request.Identity.RequestId) ||
             round is not null && !round.SameRound(request.Identity))
             throw new ProtocolException("Duplicate request or changed round identity.");
+        if (!roundOpen && request.Kind != "shutdown") throw new ProtocolException("Worker has no active round.");
         if (round is null)
         {
             if (request.Kind != "hello") throw new ProtocolException("Handshake required.");
@@ -38,18 +54,24 @@ try
             await WorkerProtocol.WriteAsync(output, WorkerProtocol.Message(round, "hello", hello));
             continue;
         }
-        if (request.Kind is "load" or "loadModules" or "loadActions" && runtime is null)
+        if (request.Kind is "load" or "loadModules" or "loadActions" or "loadWorkbook" && runtime is null)
         {
-            actionsMode = request.Kind == "loadActions";
+            sharedMode = request.Kind == "loadWorkbook";
+            actionsMode = request.Kind == "loadActions" || sharedMode && request.Identity.CalculationGeneration is null;
             if (actionsMode != (request.Identity.CalculationGeneration is null)) throw new ProtocolException("Context identity disagrees with load kind.");
             string digest;
             Func<JscSession> create;
-            if (request.Kind is "loadModules" or "loadActions")
+            if (request.Kind is "loadModules" or "loadActions" or "loadWorkbook")
             {
                 var bundle = WorkerProtocol.Payload<LoadModules>(request);
                 bundle.Validate();
+                if (sharedMode && (actionsMode
+                    ? bundle.FunctionEntries.Length != 0 || !bundle.EntryModules.SequenceEqual(bundle.ActionEntries)
+                    : bundle.ActionEntries.Length != 0 || !bundle.EntryModules.SequenceEqual(bundle.FunctionEntries)))
+                    throw new ProtocolException("A reusable worker must load exactly one bound role.");
                 digest = bundle.Sha256;
-                create = () => new JscSession(bundle.Modules.ToDictionary(m => m.Id, m => m.Source, StringComparer.Ordinal), bundle.EntryModules, actionsMode);
+                create = () => new JscSession(bundle.Modules.ToDictionary(m => m.Id, m => m.Source, StringComparer.Ordinal), bundle.EntryModules, actionsMode,
+                    sharedMode ? bundle.Modules.ToDictionary(m => m.Id, m => (bundle.FunctionEntries.Contains(m.Id) ? 1 : 0) | (bundle.ActionEntries.Contains(m.Id) ? 2 : 0)) : null);
             }
             else
             {
@@ -71,12 +93,15 @@ try
             if (runtime.FunctionDescriptors.Count > WorkerProtocol.MaxFunctions) throw new ProtocolException("Too many functions.");
             var descriptors = runtime.FunctionDescriptors.Select(d => new FunctionInfo(d.Name, d.ApiVersion,
                 d.MinArguments, d.MaxArguments, d.ReturnType, d.Profile)).ToArray();
-            if (actionsMode)
+            if (sharedMode)
+                await WorkerProtocol.WriteAsync(output, WorkerProtocol.Message(request.Identity, request.Kind,
+                    new LoadedWorkbook(digest, descriptors, runtime.ActionDescriptors.Select(a => new ActionInfo(a.Name, a.Description)).ToArray())));
+            else if (actionsMode)
                 await WorkerProtocol.WriteAsync(output, WorkerProtocol.Message(request.Identity, request.Kind,
                     new LoadedActions(digest, runtime.ActionDescriptors.Select(a => new ActionInfo(a.Name, a.Description)).ToArray())));
             else await WorkerProtocol.WriteAsync(output, WorkerProtocol.Message(request.Identity, request.Kind, new LoadedScript(digest, descriptors)));
         }
-        else if (request.Kind == "invokeBatch" && runtime is not null && !actionsMode)
+        else if (request.Kind == "invokeBatch" && runtime is not null && !actionsMode && request.Identity.CalculationGeneration is not null)
         {
             var batch = WorkerProtocol.Payload<InvokeBatch>(request);
             if (batch.Calls.Length is < 1 or > WorkerProtocol.MaxBatchCalls) throw new ProtocolException("Invalid batch size.");
@@ -117,7 +142,7 @@ try
             }
             await WorkerProtocol.WriteAsync(output, WorkerProtocol.Message(request.Identity, "invokeBatch", new BatchResult(results.ToArray())));
         }
-        else if (request.Kind == "runAction" && runtime is not null && actionsMode && !actionRan)
+        else if (request.Kind == "runAction" && runtime is not null && actionsMode && request.Identity.CalculationGeneration is null && !actionRan)
         {
             actionRan = true;
             var action = WorkerProtocol.Payload<RunAction>(request);
@@ -129,6 +154,19 @@ try
             if (action.OperationId == Guid.Empty || action.Snapshot.BaseRevision != request.Identity.Revision) throw new ProtocolException("Action revision mismatch.");
             try
             {
+                var modelSequence = 0;
+                runtime.HostRequest = action.LiveModel ? json =>
+                {
+                    if (++modelSequence > 4096) throw new InvalidOperationException("模型请求超过 4096 次。");
+                    using var parsed = JsonDocument.Parse(json);
+                    var call = new ModelCall(action.OperationId, modelSequence, parsed.RootElement.Clone());
+                    WorkerProtocol.WriteAsync(output, WorkerProtocol.Message(request.Identity, "model", call)).GetAwaiter().GetResult();
+                    var response = WorkerProtocol.ReadAsync(input).GetAwaiter().GetResult();
+                    WorkerProtocol.ValidateReply(response, request.Identity, "model");
+                    var reply = WorkerProtocol.Payload<ModelReply>(response);
+                    if (reply.OperationId != action.OperationId || reply.Sequence != modelSequence) throw new ProtocolException("Model reply identity mismatch.");
+                    return JsonSerializer.Serialize(new { ok = reply.Ok, value = reply.Value, error = reply.Error }, WorkerProtocol.Json);
+                } : null;
                 var raw = runtime.RunAction(action.Name, WorkerProtocol.EncodePayload(action));
                 var patch = WorkerProtocol.Payload<ActionPatch>(request with { Payload = raw });
                 ActionProtocol.ValidatePatch(patch, action);
@@ -145,12 +183,19 @@ try
                     new WorkerFailure(runtime.LastOperationInterrupted ? "Timeout" : "Action", Bounded("操作脚本失败，本次变更未提交：" + error.Message)) { Logs = failureLogs }));
                 return 7;
             }
+            finally { runtime.HostRequest = null; }
         }
         else if (request.Kind == "logs" && runtime is not null)
         {
             _ = WorkerProtocol.Payload<EmptyPayload>(request);
             var logs = runtime.GetLogs().Take(WorkerProtocol.MaxLogs).Select(Bounded).ToArray();
             await WorkerProtocol.WriteAsync(output, WorkerProtocol.Message(request.Identity, "logs", new WorkerLogs(logs)));
+        }
+        else if (request.Kind == "endRound" && sharedMode && runtime is not null)
+        {
+            _ = WorkerProtocol.Payload<EmptyPayload>(request);
+            roundOpen = false;
+            await WorkerProtocol.WriteAsync(output, WorkerProtocol.Message(request.Identity, "endRound", new EmptyPayload()));
         }
         else if (request.Kind == "shutdown")
         {

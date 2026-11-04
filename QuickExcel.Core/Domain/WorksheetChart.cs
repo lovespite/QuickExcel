@@ -19,6 +19,9 @@ public sealed record ChartAppearance
 }
 public sealed record ChartSeries(string Name, string? NameReference, string Categories, string Values, string Color = "FF4472C4")
 {
+    public bool IsFiltered { get; init; }
+    // Zero-based positions in the complete source, independent of worksheet row visibility.
+    public ImmutableArray<int> HiddenPoints { get; init; } = [];
     // Empty entries in waterfall charts retain automatic increase/decrease/total colors.
     public ImmutableArray<string> PointColors { get; init; } = [];
     public ImmutableArray<int> TotalPoints { get; init; } = [];
@@ -57,7 +60,7 @@ public sealed record WorksheetChart
     public ImmutableArray<ChartStylePart> StyleParts { get; init; } = [];
     public ImmutableArray<byte> OriginalXml { get; init; } = [];
     public bool IsExtended => Kind is WorksheetChartKind.Waterfall or WorksheetChartKind.Funnel;
-    public long EstimatedBytes => 1024L + OriginalXml.Length + StyleParts.Sum(p => p.Bytes.Length + 128L) + 2L * (Title.Length + NumberFormat.Length + XNumberFormat.Length) + Series.Sum(s => 384L + s.TotalPoints.Length * 4L + s.PointColors.Length * 48L + (s.Name.Length + (s.NameReference?.Length ?? 0) + s.Categories.Length + s.Values.Length) * 2L);
+    public long EstimatedBytes => 1024L + OriginalXml.Length + StyleParts.Sum(p => p.Bytes.Length + 128L) + 2L * (Title.Length + NumberFormat.Length + XNumberFormat.Length) + Series.Sum(s => 384L + (s.TotalPoints.Length + s.HiddenPoints.Length) * 4L + s.PointColors.Length * 48L + (s.Name.Length + (s.NameReference?.Length ?? 0) + s.Categories.Length + s.Values.Length) * 2L);
     public void Validate()
     {
         Anchor.Validate(); WorkbookLimits.ValidateText(Title); WorkbookLimits.ValidateText(NumberFormat);
@@ -85,7 +88,8 @@ public sealed record WorksheetChart
             WorkbookLimits.ValidateText(series.Name);
             var categories = ParseReference(series.Categories); var values = ParseReference(series.Values);
             if (Count(categories) != Count(values) || Count(values) > 4096 || series.NameReference is { } name && Count(ParseReference(name)) != 1 ||
-                !Color(series.Color) || series.PointColors.IsDefault || series.TotalPoints.IsDefault ||
+                !Color(series.Color) || series.PointColors.IsDefault || series.TotalPoints.IsDefault || series.HiddenPoints.IsDefault ||
+                series.HiddenPoints.Distinct().Count() != series.HiddenPoints.Length || series.HiddenPoints.Any(i => i < 0 || i >= Count(values)) ||
                 series.TotalPoints.Distinct().Count() != series.TotalPoints.Length || series.TotalPoints.Any(i => i < 0 || i >= Count(values)) ||
                 series.Marker is not ("none" or "auto" or "circle" or "square" or "diamond" or "triangle" or "x" or "plus" or "star" or "dot" or "dash") ||
                 !double.IsFinite(series.MarkerSize) || series.MarkerSize is < 2 or > 72 || !double.IsFinite(series.LineWidth) || series.LineWidth is < 0 or > 100 ||
@@ -107,7 +111,7 @@ public sealed record WorksheetChart
         ShowConnectors == other.ShowConnectors && IncreaseColor == other.IncreaseColor && DecreaseColor == other.DecreaseColor && TotalColor == other.TotalColor && Appearance == other.Appearance &&
         (OriginalXml.IsEmpty && StyleParts.IsEmpty || other.OriginalXml.IsEmpty && other.StyleParts.IsEmpty ||
             StyleParts.Length == other.StyleParts.Length && StyleParts.Zip(other.StyleParts).All(p => p.First.Kind == p.Second.Kind && p.First.Bytes.SequenceEqual(p.Second.Bytes))) && Series.Length == other.Series.Length && Series.Zip(other.Series).All(p =>
-            p.First with { NameReference = null, Categories = "", Values = "", PointColors = [], TotalPoints = [] } == p.Second with { NameReference = null, Categories = "", Values = "", PointColors = [], TotalPoints = [] } &&
-            p.First.PointColors.SequenceEqual(p.Second.PointColors) && p.First.TotalPoints.SequenceEqual(p.Second.TotalPoints) && Same(p.First.NameReference, p.Second.NameReference) && Same(p.First.Categories, p.Second.Categories) && Same(p.First.Values, p.Second.Values));
+            p.First with { NameReference = null, Categories = "", Values = "", PointColors = [], TotalPoints = [], HiddenPoints = [] } == p.Second with { NameReference = null, Categories = "", Values = "", PointColors = [], TotalPoints = [], HiddenPoints = [] } &&
+            p.First.HiddenPoints.Order().SequenceEqual(p.Second.HiddenPoints.Order()) && p.First.PointColors.SequenceEqual(p.Second.PointColors) && p.First.TotalPoints.SequenceEqual(p.Second.TotalPoints) && Same(p.First.NameReference, p.Second.NameReference) && Same(p.First.Categories, p.Second.Categories) && Same(p.First.Values, p.Second.Values));
     private static bool Same(string? a, string? b) => a is null ? b is null : b is not null && FormulaSyntax.Print(FormulaSyntax.Parse("=" + a.TrimStart('='))) == FormulaSyntax.Print(FormulaSyntax.Parse("=" + b.TrimStart('=')));
 }

@@ -154,6 +154,7 @@ public sealed partial class MainWindow : Window
     {
         if (_synchronizing) return;
         if (_filterContextCurrent?.Invoke() == false) CloseFilterPanel();
+        if (_chartFilterContextCurrent?.Invoke() == false) CloseChartFilter();
         ObserveDocument();
         _synchronizing = true;
         try
@@ -376,7 +377,7 @@ public sealed partial class MainWindow : Window
     }
     private async void Shortcuts(object? sender, KeyEventArgs e)
     {
-        if (_filterPopup?.IsOpen == true) return;
+        if (_filterPopup?.IsOpen == true || _chartFilterPopup?.IsOpen == true) return;
         if (e.Handled || _grid.IsComposing || _formula.IsComposing) return;
         if (e.Key == Key.Escape && _calculationCancellation is not null) { _calculationCancellation.Cancel(); e.Handled = true; return; }
         if (e.Key == Key.F6)
@@ -412,6 +413,7 @@ public sealed partial class MainWindow : Window
     {
         if (_allowClose) return;
         CloseFilterPanel();
+        CloseChartFilter();
         e.Cancel = true; if (_closePending) return; _closePending = true;
         try
         {

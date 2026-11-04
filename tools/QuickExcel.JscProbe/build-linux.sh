@@ -52,7 +52,7 @@ mkdir -p "$payload"
 cp -L "$out/build/linux-x64/lib/libJavaScriptCore.so" "$payload/libJavaScriptCore.so"
 for name in libicudata.so.77 libicuuc.so.77 libicui18n.so.77; do cp -L "$out/icu-linux/lib/$name" "$payload/$name"; done
 {
-  printf 'JavaScriptCore/2.54.2/b95c91b1/qx-sync-1 Linux x64; JSC-MEM-001 open\n'
+  printf 'JavaScriptCore/2.54.2/b95c91b1/qx-sync-2 Linux x64; JSC-MEM-001 open\n'
   "$CXX" --version | head -1
   cmake --version | head -1
   ruby --version

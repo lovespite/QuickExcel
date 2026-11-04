@@ -41,6 +41,7 @@ public interface IScriptRuntimeFactory
 
 public sealed record ScriptRuntimeRequest(ScriptModuleSet Modules, CalculationStamp Stamp, TimeSpan TimeLimit, CancellationToken CancellationToken)
 {
+    public CancellationToken RuntimeLifetime { get; init; }
     public ScriptRuntimeRequest(string source, CalculationStamp stamp, TimeSpan timeLimit, CancellationToken cancellationToken)
         : this(ScriptModuleSet.Single(source), stamp, timeLimit, cancellationToken) { }
     public string Source => Modules.PrimarySource;
@@ -80,6 +81,9 @@ public sealed record ScriptCallResult(object? Value, string? Error, bool ValueTo
 public readonly record struct CalculationStamp(Guid SessionId, long InputRevision, long CalculationGeneration, long ScriptGeneration);
 public sealed record CalculationRequest(CalculationStamp Stamp, WorkbookSnapshot Snapshot, bool ScriptsEnabled)
 {
+    /// <summary>Private transaction results must not become the document calculator's reuse source.</summary>
+    public bool IsProvisional { get; init; }
+    public CancellationToken RuntimeLifetime { get; init; }
     public bool ForceFull { get; init; }
     public CancellationToken CancellationToken { get; init; }
 }

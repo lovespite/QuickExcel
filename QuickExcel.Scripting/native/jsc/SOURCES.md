@@ -9,10 +9,19 @@ See its [build README](../../../tools/QuickExcel.JscProbe/README.md) and
 
 `bridge.cpp` is QuickExcel-owned code compiled into the JSC shared library.
 Managed callers see only `qx_create`, `qx_create_compiler`, `qx_load_modules`,
-`qx_call`, `qx_destroy`, `qx_free_string`, `qx_was_interrupted`, `qx_is_usable`
+`qx_call`, `qx_set_host_call`, `qx_destroy`, `qx_free_string`, `qx_was_interrupted`, `qx_is_usable`
 and `qx_engine_identity`. No JSC C++ type crosses this ABI. UTF-8 buffers are
 copied across it and released by the same allocator; native/IPC output is capped
 at 16 MiB and diagnostic text at 16 KiB.
+
+The live model bridge identity is `JavaScriptCore/2.54.2/b95c91b1/qx-sync-2`
+(introduced with IPC 8; also used by IPC 9, with no native ABI change). `qx_set_host_call` accepts a bounded synchronous UTF-8 callback; its
+reply is owned by the managed caller until the native operation returns, never
+freed by the engine allocator. The worker forwards only the validated model
+protocol through its inherited IPC pipes, exposing no CLR objects or OS paths.
+Registration roles come from native module source stack frames, with URL overrides
+disabled; scripts cannot grant themselves another entry's binding by replacing
+global properties. Source pins, hashes and licenses are unchanged.
 
 Private version adaptation points are `JSModuleLoader::makeModule`, module
 record `loadedModules`/link/evaluateSync, `GlobalObjectMethodTable`, `Strong`,
@@ -38,7 +47,10 @@ and the host kills the round without replay. Error inspection does not invoke
 user message/stack/toString getters. Script text cannot forge the native invalid flag.
 
 Execution has 1 second per native operation, 256 KiB JS stack and independent
-5-second host / 256 MiB process enforcement. Compiler processes lock their role
+5-second active-round host / 256 MiB process enforcement. Windows API v2 retains
+one worker and module context per authorized workbook between rounds; idle time
+does not consume a round deadline. Linux retains its five-second OS process
+lifetime and one-shot workers. Compiler processes lock their role
 on first creation and use the same library with 5-second operations, 5 MiB JS
 stack, 1 GiB process and 6-second host deadline. Only the hash-verified compiler
 bundle is evaluated in that role; user input is data. OS isolation is mandatory

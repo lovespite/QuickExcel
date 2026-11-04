@@ -55,7 +55,7 @@ public sealed class M4ActionTests
     }
 
     [Fact]
-    public void FunctionAndActionContextsIgnoreOtherRegistrationsAndResetState()
+    public void WindowsWorkbookFunctionsAndActionsReuseSeparateStateAcrossRounds()
     {
         var source = """
             let n=0;
@@ -66,8 +66,8 @@ public sealed class M4ActionTests
         doc.EnableScriptsAndCalculate(); Assert.Equal("1", doc.GetCellValue(0, 0, 0));
         Assert.Single(doc.ListActions()); Assert.Null(doc.Snapshot.Sheets[0].GetCell(0, 1));
         doc.RunAction("写入"); Assert.Equal("1", doc.GetCellValue(0, 0, 1));
-        Assert.False(doc.RunAction("写入").Changed); // fresh context, n starts at zero again
-        doc.Calculate(); Assert.Equal("1", doc.GetCellValue(0, 0, 0));
+        Assert.Equal(OperatingSystem.IsWindows(), doc.RunAction("写入").Changed);
+        doc.Calculate(); Assert.Equal(OperatingSystem.IsWindows() ? "2" : "1", doc.GetCellValue(0, 0, 0));
     }
 
     [Theory]
@@ -190,6 +190,8 @@ public sealed class M4ActionTests
     [InlineData("base")] [InlineData("name")] [InlineData("count")] [InlineData("session")]
     [InlineData("worker")] [InlineData("request")] [InlineData("revision")] [InlineData("generation")]
     [InlineData("calculation")]
+    [InlineData("model-operation")] [InlineData("model-sequence")] [InlineData("model-round")]
+    [InlineData("model-method")] [InlineData("model-sheet")] [InlineData("model-value")]
     public void FaultyWorkerCannotBypassProtocolOrHostValidation(string fault)
     {
         var executor = new ScriptWorkerActionExecutor(Path.Combine(AppContext.BaseDirectory, "WorkerFixture", "WorkerFixture.exe"));
@@ -200,18 +202,20 @@ public sealed class M4ActionTests
     }
 
     [Fact]
-    public void ActionRootsImportHelpersWithoutExecutingFunctionOnlyEntrypoints()
+    public void SharedModuleDependenciesInitializeSeparatelyForEachRoleAndRespectBindings()
     {
         var modules = new ScriptModuleSet(new Dictionary<string, ScriptModule>
         {
-            ["action"] = new("scripts/action.js", "import { next } from 'helper'; quickExcel.actions.register('A',({snapshot,patch})=>{console.log('committed');patch.setValue(snapshot.sheets[0].id,'A1',next());});"),
+            ["action"] = new("scripts/action.js", "import { next } from 'helper'; quickExcel.functions.register('UNBOUND',()=>0); quickExcel.actions.register('A',({snapshot,patch})=>{console.log('committed');patch.setValue(snapshot.sheets[0].id,'A1',next());});"),
             ["helper"] = new("scripts/helper.js", "let n=6; export const next=()=>++n;"),
-            ["udf"] = new("scripts/udf.js", "throw new Error('must not initialize in action context');")
+            ["udf"] = new("scripts/udf.js", "import { next } from 'helper'; quickExcel.actions.register('unbound',()=>{}); quickExcel.functions.register('NEXTVALUE',()=>next());")
         }, ["udf", "action"], scriptApiVersion: 2, bindings: [new("udf", "formula-functions"), new("action", "actions")]);
         using var doc = new WorkbookDocument(Book(Sheet("S")).WithScriptModules(modules), Services());
         doc.Session.SetScriptsEnabled(true);
         Assert.Single(doc.ListActions()); doc.RunAction("A");
         Assert.Equal("7", doc.GetCellValue(0, 0, 0)); Assert.Contains("committed", doc.Session.Diagnostics);
+        doc.SetCell(0, 1, 0, "=NEXTVALUE()"); doc.Calculate();
+        Assert.Equal("7", doc.GetCellValue(0, 1, 0));
     }
 
     [Fact]
@@ -246,7 +250,7 @@ public sealed class M4ActionTests
             images: image ? [new SheetImage([1], "png", 0, 0, placeInCell: true)] : []);
         using var doc = Document("quickExcel.actions.register('A',({snapshot,patch})=>{patch.setValue(snapshot.sheets[0].id,'A1',1);patch.setValue(snapshot.sheets[1].id,'A1',2);});", Sheet("Safe"), target);
         doc.Session.SetScriptsEnabled(true);
-        Assert.Throws<InvalidOperationException>(() => doc.RunAction("A"));
+        Assert.Throws<ScriptRuntimeFailureException>(() => doc.RunAction("A"));
         Assert.Empty(doc.Snapshot.Sheets[0].Cells); Assert.False(doc.Session.CanUndo);
     }
 

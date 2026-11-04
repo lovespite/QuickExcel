@@ -16,10 +16,13 @@ public sealed partial class MainWindow
         });
         _grid.DrawingObjectSelectionChanged += () =>
         {
+            if (_chartFilterContextCurrent?.Invoke() == false) CloseChartFilter();
             UpdateFormula();
             if (_grid.SelectedDrawingObject is { } target) _status.Text = $"已选择{(target.Kind == DrawingObjectKind.Image ? "图片" : "图表")} {target.Index + 1}：拖动移动，边框控制点缩放，顶部圆点旋转；Shift 保持比例或按 15° 旋转，Esc 取消。";
         };
-        RibbonGroup("插入", "对象", RibbonButton("图片管理", ImagesAsync), RibbonButton("图表管理", ChartsAsync), RibbonButton("批注", NoteAsync));
+        _grid.ChartFilterRequested += () => _ = PerformAsync(ChartFilterAsync);
+        _grid.ViewportChanged += CloseChartFilter;
+        RibbonGroup("插入", "对象", RibbonButton("图片管理", ImagesAsync), RibbonButton("图表管理", ChartsAsync), RibbonButton("图表筛选", ChartFilterAsync), RibbonButton("批注", NoteAsync));
         RibbonGroup("页面布局", "页面设置", RibbonButton("页面设置", PageSettingsAsync), RibbonButton("设为打印区域", () => PrintAreaAsync(false)),
             RibbonButton("清除打印区域", () => PrintAreaAsync(true)), RibbonButton("分页", PageBreaksAsync));
     }
@@ -98,6 +101,7 @@ public sealed partial class MainWindow
         if (old is not null && !string.IsNullOrWhiteSpace(dialog.String("range")) && old.Kind == chart.Kind)
             chart = old with { Title = chart.Title, Series = [.. chart.Series.Select((s, i) => i >= old.Series.Length ? s : old.Series[i] with {
                 Name = s.Name, NameReference = s.NameReference, Categories = s.Categories, Values = s.Values,
+                HiddenPoints = [], IsFiltered = false,
                 TotalPoints = [.. old.Series[i].TotalPoints.Where(p => p < WorksheetChart.Count(WorksheetChart.ParseReference(s.Values)))],
                 PointColors = old.Series[i].PointColors.IsEmpty ? [] : [.. Enumerable.Range(0, WorksheetChart.Count(WorksheetChart.ParseReference(s.Values))).Select(p => p < old.Series[i].PointColors.Length ? old.Series[i].PointColors[p] : old.Kind == WorksheetChartKind.Waterfall ? "" : old.Series[i].Color)] })] };
         if (chart.Kind == WorksheetChartKind.Waterfall)

@@ -50,7 +50,7 @@ for an explicit `ENABLE_API_TESTS=OFF` on Linux. Arbitrary source edits fail ver
 
 JIT/DFG and bundled mimalloc 3.2.8 are enabled; FTL, WebAssembly, remote inspector
 and upstream API tests are disabled. Native identity is
-`JavaScriptCore/2.54.2/b95c91b1/qx-sync-1`; IPC is 6. Build identity files
+`JavaScriptCore/2.54.2/b95c91b1/qx-sync-2`; IPC is 8. Build identity files
 record compiler/options/source/binary hashes. JSC is the sole production engine.
 J5 Windows and Linux isolation/recovery evidence is recorded independently.
 Production build defaults to the JavaScriptCore target; use `-IncludeProbe` only

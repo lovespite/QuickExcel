@@ -93,6 +93,7 @@ public sealed partial class WorkbookGrid
         }
         foreach (var row in rows)
         foreach (var col in columns) Picture(CellRange(new(row.ModelIndex, col.ModelIndex)));
+        PaintChartSources(canvas);
         PaintAttachments(canvas);
         var header = new StyleDefinition { FillColor = "FFF2F5F4", FontColor = "FF42534E", Horizontal = 2, Vertical = 1 };
         var rowBreaks = Sheet.Printing.RowBreaks.Where(b => b.Manual).Select(b => b.Id).ToHashSet();

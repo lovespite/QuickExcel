@@ -22,7 +22,8 @@ public sealed partial class MainWindow
         async Task<JsonElement> Test(object payload) => (await _scriptPage!.Browser.RequestAsync("test", "testResult", payload, TimeSpan.FromSeconds(30))).Payload;
         async Task SelectModule(string module)
         {
-            _modulePicker!.SelectedItem = module; await _operation;
+            var picker = _modulePicker!.Items.Contains(module) ? _modulePicker : _scriptModuleGroups.First(g => g.Picker.Items.Contains(module)).Picker;
+            picker.SelectedItem = module; await _operation;
             for (var retry = 0; retry < 100 && _working; retry++) await Task.Delay(10);
             if (_working) throw new TimeoutException("Module navigation did not release its editor hold.");
         }
@@ -88,6 +89,7 @@ public sealed partial class MainWindow
             await RecoverScriptPageAsync();
             Check(!_scriptPage!.Drafts.Failed && await SaveAsync(false) && Document.Snapshot.ScriptModules.PrimarySource == confirmed, "Explicit recovery creates a new page generation and preserves confirmed Unicode/source");
             await CloseScriptWindowAsync(); Check(_scriptPage is null && _scriptWindow is null, "Closing waits for editor/model/worker disposal and detaches native WebView");
+            await CheckScriptNavigationAsync(Test, SelectModule, Check, directory);
             // Run the migrated actions/role/signature flows through the actual worker and native dialog handlers.
             if (DesktopServices.SupportsScripts)
             {
@@ -105,8 +107,16 @@ public sealed partial class MainWindow
             await ApplyScriptsAsync(); Check(Document.ScriptsEnabled && ScriptTrust.Read().Count == 0, "One-time signed-script consent does not persist a trust pin");
             DisableScripts(); _dialogDriver = window => { var dialog = (FieldsDialog)window; ((ComboBox)dialog.Input("trust")).SelectedIndex = 2; dialog.Close(true); return Task.CompletedTask; };
             await ApplyScriptsAsync(); Check(Document.ScriptsEnabled && ScriptTrust.Read().Count == 1, "Persistent certificate consent uses isolated integrity-protected trust storage");
-            _dialogDriver = window => { var dialog = (FieldsDialog)window; ((ComboBox)dialog.Input("role")).SelectedIndex = 3; dialog.Close(true); return Task.CompletedTask; };
-            await ScriptModuleRoleAsync(); Check(Document.Snapshot.ScriptModules.Signature is null && !Document.ScriptsEnabled && Document.Snapshot.ScriptModules.Bindings.Length == 2, "Role changes flush sources, remove the signature and revoke authorization");
+            _dialogDriver = window =>
+            {
+                var dialog = (FieldsDialog)window;
+                ((TextBox)dialog.Input("id")).Text = "udf"; ((ComboBox)dialog.Input("role")).SelectedIndex = 1;
+                window.GetVisualDescendants().OfType<Button>().Single(b => Equals(b.Content, "确定")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                return Task.CompletedTask;
+            };
+            await AddScriptModuleAsync(); Check(Document.Snapshot.ScriptModules.Signature is null && !Document.ScriptsEnabled &&
+                Document.Snapshot.ScriptModules.Bindings.SequenceEqual([new("main", "actions"), new("udf", "formula-functions")]),
+                "Creating a bound module preserves existing roles, removes the signature and revokes authorization");
             _dialogDriver = window => { var dialog = (FieldsDialog)window; ((CheckBox)dialog.Input("remove")).IsChecked = true; dialog.Close(true); return Task.CompletedTask; };
             await TrustedCertificatesAsync(); Check(ScriptTrust.Read().Count == 0, "Native trust manager removes only the selected isolated trust pin");
             await CloseScriptWindowAsync();

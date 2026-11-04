@@ -66,5 +66,26 @@ public sealed partial class MainWindow
         check(!Document.ScriptsEnabled && _scriptPage!.Drafts.Models["main"].Committed == Document.ScriptSource && await CommitScriptsAsync(),
             "Virtual source edits revoke trust and refresh the open editor without restoring stale source");
         await CloseScriptWindowAsync(); _workspace.New();
+        _workspace.Editor.Execute(new UpdateScriptModulesCommand(new(new Dictionary<string, ScriptModule> { ["main"] = new("scripts/main.ts", """
+            let calls=0;
+            function main(workbook: ExcelScript.Workbook) {
+              const cell=$.getActiveCell(), range=workbook.getActiveRange();
+              if(cell.getAddress()!=='B2' || range.getAddress()!=='B2:C3') throw Error('live selection');
+              cell.getFormat().getFill().setColor('#ff0000');
+              range.getFormat().getFill().setColor('#00ff00');
+              workbook.getActiveWorksheet().getCell('A1').setValue(++calls);
+            }
+            """, ScriptLanguage.TypeScript) }, ["main"], scriptApiVersion: 2, bindings: [new("main", "actions")])));
+        await ApplyScriptsAsync();
+        _grid.SelectRange(new(1, 1, 2, 2), new(1, 1));
+        check(_availableScriptActions.Single().Name == "main", "Typed main(workbook) is discovered as a runnable entry");
+        await RunScriptActionAsync(_availableScriptActions.Single());
+        var book = Document.Snapshot; var sheet = book.GetSheet(book.ActiveSheetId);
+        check(book.Styles[sheet.GetStyleId(1, 1)].FillColor == "FF00FF00" && book.Styles[sheet.GetStyleId(2, 2)].FillColor == "FF00FF00" &&
+            Document.GetCellValue(0, 0, 0) == "1", "Live objects use Avalonia's current selection and commit overlapping fill and value writes");
+        await RunScriptActionAsync(_availableScriptActions.Single());
+        check(Document.GetCellValue(0, 0, 0) == (OperatingSystem.IsWindows() ? "2" : "1"), "Windows workbook module state survives consecutive main executions");
+        check(Document.Undo() && Document.GetCellValue(0, 0, 0) == (OperatingSystem.IsWindows() ? "1" : ""), "One undo restores the complete preceding main transaction");
+        _workspace.New();
     }
 }

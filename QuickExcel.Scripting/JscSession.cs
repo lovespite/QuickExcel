@@ -8,15 +8,22 @@ namespace QuickExcel.Scripting;
 public sealed partial class JscSession : IDisposable
 {
     private const string NativeLibrary = "JavaScriptCore";
-    public const string EngineIdentity = "JavaScriptCore/2.54.2/b95c91b1/qx-sync-1";
+    public const string EngineIdentity = "JavaScriptCore/2.54.2/b95c91b1/qx-sync-2";
     public const int MaxMessageBytes = 16 * 1024 * 1024;
     private readonly object _gate = new();
     private IntPtr _session;
+    private readonly HostCallback _hostCallback;
+    private IntPtr _hostResponse;
+    public Func<string, string>? HostRequest { get; set; }
 
     // The bridge object is held by native code, not exposed on globalThis. Workbook
     // code receives only registration and console APIs, with no host CLR objects.
     private static readonly string Bootstrap = """
         (() => {
+            const nativeModelCall = globalThis.__qxModelCall;
+            delete globalThis.__qxModelCall;
+            const registrationRole = globalThis.__qxRegistrationRole;
+            delete globalThis.__qxRegistrationRole;
             /*VIRTUAL_FILES*/
             const registry = Object.create(null);
             const descriptors = Object.create(null);
@@ -33,8 +40,10 @@ public sealed partial class JscSession : IDisposable
             };
             const isFiniteNumber = Number.isFinite;
             const TypeErrorCtor = TypeError;
+            /*WORKBOOK_MODEL*/
             let loaded = false;
             let actionMode = false;
+            let sharedMode = false;
             let actionInvoked = false;
             const actions = Object.create(null);
             const actionInfo = Object.create(null);
@@ -64,9 +73,9 @@ public sealed partial class JscSession : IDisposable
             };
             const console = freeze({ log: (...v) => logger('', v), info: (...v) => logger('[info] ', v),
                 warn: (...v) => logger('[warn] ', v), error: (...v) => logger('[error] ', v), debug: (...v) => logger('[debug] ', v) });
-            const quickExcel = freeze({ functions: freeze({
+            const quickExcel = freeze({ ...workbookApi, functions: freeze({
                 register(name, fn) {
-                    if (actionMode) return;
+                    if (actionMode || sharedMode && !(registrationRole() & 1)) return;
                     if (loaded) throw new TypeErrorCtor('Functions can only be registered while loading the script.');
                     let descriptor = { apiVersion: 1, minArguments: 0, maxArguments: 255, returnType: 'any', profile: 'conservative', parameters: [] };
                     if (typeof name === 'object' && name !== null) {
@@ -98,7 +107,7 @@ public sealed partial class JscSession : IDisposable
                 }
             }), actions: freeze({
                 register(input, fn) {
-                    if (!actionMode) return;
+                    if (!actionMode || sharedMode && !(registrationRole() & 2)) return;
                     if (loaded) throw new TypeErrorCtor('Actions can only be registered while loading.');
                     const name = typeof input === 'string' ? input : input?.name;
                     const description = typeof input === 'string' ? '' : (input?.description ?? '');
@@ -115,6 +124,8 @@ public sealed partial class JscSession : IDisposable
             function runAction(name, request) {
                 if (!actionMode || !loaded || actionInvoked || !actions[name]) throw new TypeErrorCtor('Action is unavailable.');
                 actionInvoked = true;
+                activeModel = request.liveModel === true;
+                modelWriteFailed = false;
                 const data = deepFreeze(request.snapshot);
                 const sheets = new Map();
                 for (const sheet of data.sheets) {
@@ -124,7 +135,12 @@ public sealed partial class JscSession : IDisposable
                 }
                 let reads = 0, active = true, invalidPatch = false;
                 const edits = [], targets = new Set();
-                const files=createFs(request.files ?? [], ()=>{if(!active) throw new TypeErrorCtor('Expired file context.');}, ()=>{invalidPatch=true;});
+                let files = null;
+                function fileContext() {
+                    if(!active) throw new TypeErrorCtor('Expired file context.');
+                    return files ??= createFs(activeModel ? model('files') : (request.files ?? []),
+                        ()=>{if(!active) throw new TypeErrorCtor('Expired file context.');}, ()=>{invalidPatch=true;});
+                }
                 function range(id, address) {
                     if (!active || !sheets.has(id) || typeof address !== 'string' || address.length > 40) throw new TypeErrorCtor('Invalid sheet or range.');
                     const parts = address.split(':');
@@ -150,8 +166,8 @@ public sealed partial class JscSession : IDisposable
                 function readBudget(count) { reads+=count; if(reads>100000) throw new TypeErrorCtor('Snapshot read budget exceeded.'); }
                 const snapshot=freeze({baseRevision:data.baseRevision,dateSystem:data.dateSystem,
                     sheets:freeze(data.sheets.map(s=>freeze({id:s.id,name:s.name}))),
-                    getCell(id,address) { const r=range(id,address); if(r.rows*r.columns!==1) throw new TypeErrorCtor('Expected one cell.'); readBudget(1); return cell(id,r.row,r.column); },
-                    getRange(id,address) { const r=range(id,address); readBudget(r.rows*r.columns); return freeze(Array.from({length:r.rows},(_,i)=>freeze(Array.from({length:r.columns},(_,j)=>cell(id,r.row+i,r.column+j).value)))); }
+                    getCell(id,address) { const r=range(id,address); if(r.rows*r.columns!==1) throw new TypeErrorCtor('Expected one cell.'); readBudget(1); return activeModel ? deepFreeze(model('snapshotCell',id,address)) : cell(id,r.row,r.column); },
+                    getRange(id,address) { const r=range(id,address); readBudget(r.rows*r.columns); return activeModel ? deepFreeze(model('snapshotValues',id,address)) : freeze(Array.from({length:r.rows},(_,i)=>freeze(Array.from({length:r.columns},(_,j)=>cell(id,r.row+i,r.column+j).value)))); }
                 });
                 function scalar(v) {
                     if(v===null) return {kind:'blank',value:null};
@@ -178,15 +194,16 @@ public sealed partial class JscSession : IDisposable
                             edits.push({sheetId:id,row:r.row+i,column:r.column+j,value:formulas?null:scalar(v),formula:formulas?v:null});
                         }
                     }
+                    if(activeModel) model(formulas?'setFormulas':'setValues',id,address,values);
                 }
                 const patch=freeze({setValues:(id,r,v)=>write(id,r,v,false),setFormulas:(id,r,v)=>write(id,r,v,true),
                     setValue:(id,a,v)=>write(id,a,[[v]],false),setFormula:(id,a,v)=>write(id,a,[[v]],true)});
                 try {
-                    const returned=actions[name](freeze({snapshot,patch,fs:files.fs,event:request.event ? deepFreeze(request.event) : null}));
-                    if(invalidPatch) throw new TypeErrorCtor('An invalid write rejected the entire patch.');
+                    const returned=actions[name](freeze({snapshot,patch,get fs(){return fileContext().fs;},workbook:quickExcel,event:request.event ? deepFreeze(request.event) : null}));
+                    if(invalidPatch || modelWriteFailed) throw new TypeErrorCtor('An invalid write rejected the entire patch.');
                     if(returned!==undefined && returned!==null) throw new TypeErrorCtor('Actions must complete synchronously without a return value.');
-                    return {operationId:request.operationId,baseRevision:data.baseRevision,name,edits,fileEdits:files.edits};
-                } finally { active=false; }
+                    return {operationId:request.operationId,baseRevision:data.baseRevision,name,edits:activeModel?[]:edits,fileEdits:files?.edits ?? []};
+                } finally { active=false; activeModel=false; }
             }
             return freeze({
                 load(source) {
@@ -195,9 +212,10 @@ public sealed partial class JscSession : IDisposable
                     loaded = true;
                     return ownKeys(registry);
                 },
-                prepareModules(useActions) {
+                prepareModules(useActions, share) {
                     if (loaded) throw new TypeErrorCtor('Script has already been loaded.');
                     actionMode = useActions === true;
+                    sharedMode = share === true;
                     Object.defineProperty(globalThis, 'quickExcel', { value: quickExcel });
                     Object.defineProperty(globalThis, 'console', { value: console });
                 },
@@ -228,12 +246,14 @@ public sealed partial class JscSession : IDisposable
                 },
                 descriptors() { return ownKeys(descriptors).map(name => descriptors[name]); },
                 actionDescriptors() { return ownKeys(actionInfo).map(name => actionInfo[name]); },
+                beginRound() { logs.length=0; actionInvoked=false; activeModel=false; modelWriteFailed=false; },
                 runAction,
                 logs() { return logs.slice(); }
             });
         })()
         """.Replace("/*VIRTUAL_FILES*/", VirtualFileBootstrap, StringComparison.Ordinal)
-            .Replace("/*EVENT_API*/", EventApiBootstrap, StringComparison.Ordinal);
+            .Replace("/*EVENT_API*/", EventApiBootstrap, StringComparison.Ordinal)
+            .Replace("/*WORKBOOK_MODEL*/", WorkbookModelBootstrap, StringComparison.Ordinal);
 
     public IReadOnlyList<string> FunctionNames { get; }
     public IReadOnlyList<JsFunctionDescriptor> FunctionDescriptors { get; }
@@ -256,13 +276,14 @@ public sealed partial class JscSession : IDisposable
         }
     }
 
-    public JscSession(string source) : this(source, null, null, false) { }
+    public JscSession(string source) : this(source, null, null, false, null) { }
 
-    public JscSession(IReadOnlyDictionary<string, string> modules, IReadOnlyList<string> entries, bool actions = false)
-        : this(null, modules, entries, actions) { }
+    public JscSession(IReadOnlyDictionary<string, string> modules, IReadOnlyList<string> entries, bool actions = false, IReadOnlyDictionary<string, int>? roles = null)
+        : this(null, modules, entries, actions, roles) { }
 
-    private JscSession(string? source, IReadOnlyDictionary<string, string>? modules, IReadOnlyList<string>? entries, bool actions)
+    private JscSession(string? source, IReadOnlyDictionary<string, string>? modules, IReadOnlyList<string>? entries, bool actions, IReadOnlyDictionary<string, int>? roles)
     {
+        _hostCallback = HostCall;
         if (modules is null) ArgumentNullException.ThrowIfNull(source);
         else
         {
@@ -279,14 +300,15 @@ public sealed partial class JscSession : IDisposable
             throw new InvalidOperationException("Native JSC build identity does not match this worker.");
         _session = NativeCreate(Bootstrap, out var error);
         if (_session == IntPtr.Zero) throw ReadException(error);
+        NativeSetHostCall(_session, _hostCallback);
         try
         {
             string result;
             if (modules is null) result = Call("load", new object?[] { source });
             else
             {
-                Call("prepareModules", [actions]);
-                var json = JsonSerializer.Serialize(new { modules = modules.Select(m => new { id = m.Key, source = m.Value }), entries });
+                Call("prepareModules", [actions, roles is not null]);
+                var json = JsonSerializer.Serialize(new { modules = modules.Select(m => new { id = m.Key, source = m.Value, roles = roles is null ? 3 : roles.GetValueOrDefault(m.Key) }), entries });
                 if (Encoding.UTF8.GetByteCount(json) > MaxMessageBytes) throw new ArgumentException("Module payload exceeds 16 MiB UTF-8.");
                 if (NativeLoadModules(_session, json, out var moduleError) == 0) throw ReadException(moduleError);
                 result = Call("finishModules", []);
@@ -332,6 +354,8 @@ public sealed partial class JscSession : IDisposable
             return JsonSerializer.Deserialize<string[]>(Call("logs", [])) ?? [];
     }
 
+    public void BeginRound() { lock (_gate) Call("beginRound", []); }
+
     public JsonElement RunAction(string name, object request)
     {
         lock (_gate)
@@ -347,10 +371,23 @@ public sealed partial class JscSession : IDisposable
         var json = JsonSerializer.Serialize(arguments);
         if (Encoding.UTF8.GetByteCount(json) > MaxMessageBytes)
             throw new InvalidOperationException("JavaScript arguments exceed the 16 MiB UTF-8 input limit.");
-        var result = NativeCall(_session, method, json, out var error);
+        IntPtr result; IntPtr error;
+        try { result = NativeCall(_session, method, json, out error); }
+        finally { if (_hostResponse != IntPtr.Zero) { Marshal.FreeCoTaskMem(_hostResponse); _hostResponse = IntPtr.Zero; } }
         if (result == IntPtr.Zero) throw ReadException(error);
         try { return Marshal.PtrToStringUTF8(result) ?? "null"; }
         finally { NativeFreeString(result); }
+    }
+
+    private IntPtr HostCall(string request)
+    {
+        // Exceptions must never cross the reverse P/Invoke boundary.
+        string response;
+        try { response = HostRequest?.Invoke(request) ?? throw new InvalidOperationException("此执行阶段没有工作簿模型。"); }
+        catch (Exception error) { response = JsonSerializer.Serialize(new { ok = false, error = error.Message.Length <= 4000 ? error.Message : "模型请求失败。" }); }
+        if (Encoding.UTF8.GetByteCount(response) > MaxMessageBytes) response = "{\"ok\":false,\"error\":\"模型响应超过 16 MiB。\"}";
+        if (_hostResponse != IntPtr.Zero) Marshal.FreeCoTaskMem(_hostResponse);
+        return _hostResponse = Marshal.StringToCoTaskMemUTF8(response);
     }
 
     private static InvalidOperationException ReadException(IntPtr error)
@@ -371,6 +408,11 @@ public sealed partial class JscSession : IDisposable
     }
 
     ~JscSession() => Dispose();
+
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate IntPtr HostCallback([MarshalAs(UnmanagedType.LPUTF8Str)] string request);
+    [DllImport(NativeLibrary, EntryPoint = "qx_set_host_call", CallingConvention = CallingConvention.Cdecl)]
+    private static extern void NativeSetHostCall(IntPtr session, HostCallback callback);
 
     [DllImport(NativeLibrary, EntryPoint = "qx_create", CallingConvention = CallingConvention.Cdecl)]
     private static extern IntPtr NativeCreate([MarshalAs(UnmanagedType.LPUTF8Str)] string bootstrap, out IntPtr error);

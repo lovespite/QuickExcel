@@ -9,6 +9,11 @@ public sealed partial class MainWindow
     private readonly DispatcherTimer _eventTimer = new() { Interval = TimeSpan.FromMilliseconds(100) };
     private void InstallScriptEvents()
     {
+        _grid.SelectionChanged += () =>
+        {
+            if (!_synchronizing && !_windowClosed)
+                Document.Session.UpdateScriptSelection(Document.Snapshot.ActiveSheetId, _grid.Current, _grid.SelectionRanges.Take(64).Select(Rectangle));
+        };
         _grid.CellClicked += () => QueueCellEvent("cell.click");
         _grid.DraftStarted += () => QueueCellEvent("cell.edit");
         Activated += (_, _) => { if (_book.IsVisible) Document.Session.RaiseScriptEvent("workbook.activate"); };

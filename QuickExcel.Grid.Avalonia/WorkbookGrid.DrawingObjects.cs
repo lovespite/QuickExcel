@@ -64,7 +64,7 @@ public sealed partial class WorkbookGrid
     {
         CancelObjectGesture();
         if (_selectedObject is null) return;
-        _selectedObject = null; _overlay.InvalidateVisual(); DrawingObjectSelectionChanged?.Invoke();
+        _selectedObject = null; InvalidateContent(); DrawingObjectSelectionChanged?.Invoke();
     }
     private (DrawingObjectId Id, DrawingHandle Handle, Fragment Fragment)? ObjectHit(Point screen, bool handles = true)
     {
@@ -88,7 +88,7 @@ public sealed partial class WorkbookGrid
     private bool ObjectPointerDown(PointerPressedEventArgs e, Point point)
     {
         if (ObjectHit(point) is not { } hit) { ClearDrawingObjectSelection(); return false; }
-        _selectedObject = hit.Id; CellEditor.IsVisible = false; Focus(); _overlay.InvalidateVisual(); DrawingObjectSelectionChanged?.Invoke(); e.Handled = true;
+        _selectedObject = hit.Id; CellEditor.IsVisible = false; Focus(); InvalidateContent(); DrawingObjectSelectionChanged?.Invoke(); e.Handled = true;
         if (!CanEditDrawingObjects || !e.GetCurrentPoint(_canvas).Properties.IsLeftButtonPressed) return true;
         _objectOriginal = ObjectAnchor(hit.Id)!; _objectPreview = _objectOriginal; _objectRevision = _snapshot!.Revision; _objectHandle = hit.Handle;
         var bounds = _objectOriginal.Bounds(Sheet); _objectPlacement = new(bounds, _objectOriginal.Rotation);
