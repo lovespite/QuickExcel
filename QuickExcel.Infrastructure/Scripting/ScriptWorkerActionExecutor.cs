@@ -19,7 +19,7 @@ public sealed class ScriptWorkerActionExecutor(string? executablePath = null) : 
         var text = "function main(workbook, host) { const result = eval(" +
             JsonSerializer.Serialize(source) + "); console.log('=>', result); }";
         return new(new Dictionary<string, ScriptModule> { ["__console__"] = new("scripts/console.js", text) }, ["__console__"],
-            scriptApiVersion: 2, bindings: [new("__console__", "actions")]);
+            scriptApiVersion: 3, bindings: [new("__console__", "actions")]);
     }
     private ScriptWorkerLease Create(ScriptActionRequest request, CancellationToken token) => SharedScriptWorkers.Acquire(_executable,
         new ScriptRuntimeRequest(ExecutionModules(request), request.Stamp, TimeSpan.FromSeconds(5), token) { RuntimeLifetime = request.RuntimeLifetime }, actions: true);

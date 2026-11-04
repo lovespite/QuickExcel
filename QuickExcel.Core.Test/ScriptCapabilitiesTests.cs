@@ -14,7 +14,7 @@ public sealed class ScriptCapabilitiesTests
         Assert.True(capabilities.AllowsHost("sheet", 1));
         Assert.True(capabilities.AllowsHost("getValues", 2));
         Assert.True(capabilities.AllowsHost("setValues", 3));
-        Assert.True(capabilities.AllowsHost("clear", 2));
+        Assert.True(capabilities.AllowsHost("setApi:Range.clear", 2));
         Assert.False(capabilities.AllowsHost("getValues", 1));
         Assert.False(capabilities.AllowsHost("getApplication", 0));
         Assert.Equal(100_000, capabilities.MaxCost("getValues"));

@@ -2,7 +2,7 @@ using QuickExcel.Core;
 
 namespace QuickExcel.Runtime;
 
-/// <summary>Separate reusable API-v2 workers for formulas and actions in each authorized Windows session.
+/// <summary>Separate reusable API-v3 workers for formulas and actions in each authorized Windows session.
 /// Linux retains its existing OS-enforced five-second process lifetime.</summary>
 internal static class SharedScriptWorkers
 {
@@ -18,7 +18,7 @@ internal static class SharedScriptWorkers
 
     internal static ScriptWorkerLease Acquire(string executable, ScriptRuntimeRequest request, bool actions)
     {
-        if (!OperatingSystem.IsWindows() || request.Modules.ScriptApiVersion != 2 || !request.RuntimeLifetime.CanBeCanceled)
+        if (!OperatingSystem.IsWindows() || request.Modules.ScriptApiVersion != 3 || !request.RuntimeLifetime.CanBeCanceled)
         {
             var isolated = ScriptWorkerRuntime.Start(executable, request, actions);
             return new(isolated, isolated.Dispose);

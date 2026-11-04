@@ -12,12 +12,12 @@ public sealed partial class TypedWorkbookStorage
     private static bool HasWorkbookViews(WorkbookSnapshot snapshot) => snapshot.ActiveSheetId != snapshot.Sheets[0].Id || snapshot.Window != new WorkbookWindow() ||
         snapshot.Sheets.Any(s => s.Visibility != SheetVisibility.Visible || s.View != new WorksheetView());
 
-    // Only the canonical empty v1 module is representable by a script-free XLSX.
+    // Only the canonical empty v3 module is representable by a script-free XLSX.
     // Comments, disabled scripts, custom bindings and signatures are still user content.
     public static bool RequiresScriptContainer(WorkbookSnapshot snapshot)
     {
         var scripts = snapshot.ScriptModules;
-        return snapshot.PackageFiles.Entries.Count != 0 || scripts.ScriptApiVersion != 1 || scripts.Signature is not null || scripts.Modules.Count != 1 ||
+        return snapshot.PackageFiles.Entries.Count != 0 || scripts.ScriptApiVersion != 3 || scripts.Signature is not null || scripts.Modules.Count != 1 ||
             !scripts.Modules.TryGetValue("main", out var main) || main != new ScriptModule("scripts/main.js", "") ||
             !scripts.EntryModules.SequenceEqual(["main"]) || !scripts.Bindings.SequenceEqual([new ScriptBinding("main", "formula-functions")]);
     }

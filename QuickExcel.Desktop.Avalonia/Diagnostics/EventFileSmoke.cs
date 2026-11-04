@@ -30,7 +30,7 @@ public sealed partial class MainWindow
             host.events.on('workbook.close',context=>console.log(context.event.name));
             """;
         _workspace.Editor.Execute(new UpdateScriptModulesCommand(new(new Dictionary<string, ScriptModule> { ["main"] = new("scripts/main.js", source) },
-            ["main"], scriptApiVersion: 2, bindings: [new("main", "actions")])));
+            ["main"], scriptApiVersion: 3, bindings: [new("main", "actions")])));
         await ApplyScriptsAsync();
         check(Document.ScriptsEnabled && _availableScriptActions.Count == 0, "Event registrations load with script consent and stay out of the action picker");
         await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Background);
@@ -61,7 +61,7 @@ public sealed partial class MainWindow
         _discardChoice = null;
         var rewrite = "function main(workbook, host){host.files.writeText('//xlsq/scripts/main.js','// 文件 API 更新后的源码');}";
         _workspace.Editor.Execute(new UpdateScriptModulesCommand(new(new Dictionary<string, ScriptModule> { ["main"] = new("scripts/main.js", rewrite) },
-            ["main"], scriptApiVersion: 2, bindings: [new("main", "actions")])));
+            ["main"], scriptApiVersion: 3, bindings: [new("main", "actions")])));
         await OpenScriptsAsync(); await ApplyScriptsAsync();
         await RunScriptActionAsync(_availableScriptActions.Single());
         check(!Document.ScriptsEnabled && _scriptPage!.Drafts.Models["main"].Committed == Document.ScriptSource && await CommitScriptsAsync(),
@@ -76,7 +76,7 @@ public sealed partial class MainWindow
               range.getFormat().getFill().setColor('#00ff00');
               workbook.getActiveWorksheet().getCell('A1').setValue(++calls);
             }
-            """, ScriptLanguage.TypeScript) }, ["main"], scriptApiVersion: 2, bindings: [new("main", "actions")])));
+            """, ScriptLanguage.TypeScript) }, ["main"], scriptApiVersion: 3, bindings: [new("main", "actions")])));
         await ApplyScriptsAsync();
         _grid.SelectRange(new(1, 1, 2, 2), new(1, 1));
         check(_availableScriptActions.Single().Name == "main", "Typed main(workbook) is discovered as a runnable entry");

@@ -14,7 +14,7 @@ public sealed class ScriptWorkerRuntimeFactory(string? executablePath = null) : 
     private readonly string _executable = Path.GetFullPath(executablePath ??
         Path.Combine(AppContext.BaseDirectory, "ScriptWorker", OperatingSystem.IsWindows() ? "QuickExcel.ScriptWorker.exe" : "QuickExcel.ScriptWorker"));
     public IScriptRuntime Create(string source) => Create(new ScriptRuntimeRequest(source, new(Guid.NewGuid(), 0, 0, 0), TimeSpan.FromSeconds(5), default));
-    public IScriptRuntime Create(ScriptRuntimeRequest request) => OperatingSystem.IsWindows() && request.Modules.ScriptApiVersion == 2 && request.RuntimeLifetime.CanBeCanceled
+    public IScriptRuntime Create(ScriptRuntimeRequest request) => OperatingSystem.IsWindows() && request.Modules.ScriptApiVersion == 3 && request.RuntimeLifetime.CanBeCanceled
         ? SharedScriptWorkers.Acquire(_executable, request, actions: false) : ScriptWorkerRuntime.Start(_executable, request);
 
     /// <summary>Reclaims abandoned rounds for the current Windows user, without executing scripts.</summary>
@@ -79,7 +79,7 @@ public sealed class ScriptWorkerRuntime : IScriptBatchRuntime
         if ((!OperatingSystem.IsWindows() && !OperatingSystem.IsLinux()) || System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture != System.Runtime.InteropServices.Architecture.X64)
             throw new PlatformNotSupportedException("此平台尚未开放脚本隔离。");
         if (!File.Exists(executable)) throw new ScriptRuntimeFailureException("WorkerMissing", "找不到脚本 worker，请重新构建或安装完整发布包。");
-        if (!request.Modules.CanExecute) throw new NotSupportedException("多模块执行需要显式声明脚本 API v2。");
+        if (!request.Modules.CanExecute) throw new NotSupportedException(QuickExcel.Domain.ScriptModuleSet.MigrationMessage);
         if (request.Modules.Modules.Sum(m => (long)Encoding.UTF8.GetByteCount(m.Value.Source)) > 1024 * 1024)
             throw new ScriptRuntimeFailureException("SourceLimit", "脚本源码超过 1 MiB UTF-8 限额。");
         if (actionsMode && !request.Modules.HasActions) throw new InvalidOperationException("没有 actions 绑定。");
@@ -101,7 +101,7 @@ public sealed class ScriptWorkerRuntime : IScriptBatchRuntime
             runtime.ProcessId = runtime._process.Id;
             runtime._registration = runtime._lifetime.Token.Register(runtime.Abort);
             _ = runtime.DrainStderrAsync();
-            var hello = new WorkerHello(WorkerProtocol.Engine, WorkerProtocol.Policy, [1, 2], WorkerProtocol.MaxFrameBytes);
+            var hello = new WorkerHello(WorkerProtocol.Engine, WorkerProtocol.Policy, [3], WorkerProtocol.MaxFrameBytes);
             var accepted = runtime.Exchange<WorkerHello, WorkerHello>("hello", hello);
             if (accepted.Engine != hello.Engine || accepted.Policy != hello.Policy ||
                 accepted.Role != "execute" || accepted.Compiler is not null ||
@@ -110,7 +110,7 @@ public sealed class ScriptWorkerRuntime : IScriptBatchRuntime
             if (OperatingSystem.IsLinux() && runtime._process is LinuxWorkerProcess linux) linux.VerifyBeforeSource();
             string digest;
             LoadedScript loaded;
-            if (request.Modules.ScriptApiVersion == 2)
+            if (request.Modules.ScriptApiVersion == 3)
             {
                 // JscSession appends the main(workbook, host) registration to every
                 // entry module; no QuickExcel global wrapper is generated here.

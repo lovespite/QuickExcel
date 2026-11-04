@@ -7,6 +7,32 @@ namespace QuickExcel.Desktop.Avalonia;
 
 public sealed partial class MainWindow
 {
+    private async Task RunDrawingClipboardChecksAsync(Action<bool, string> check)
+    {
+        _workspace.New(); ShowBook(); var memory = new MemoryClipboard(); _clipboard = memory;
+        using var bitmap = new SkiaSharp.SKBitmap(8, 4); bitmap.Erase(SkiaSharp.SKColors.CornflowerBlue);
+        using var encoded = bitmap.Encode(SkiaSharp.SKEncodedImageFormat.Png, 100); var png = encoded.ToArray();
+        memory.Value = new(null, Png: png); _grid.Select(new(2, 3)); await PasteAsync("all");
+        check(Document.Snapshot.Sheets[0].Images is [{ Anchor.Row: 2, Anchor.Column: 3 }] && Document.Snapshot.Sheets[0].Cells.IsEmpty, "Image paste anchors at the selected cell without overwriting it");
+        await PasteAsync("image"); check(Document.Snapshot.Sheets[0].Images.Length == 2, "Repeated image paste works while the preceding image is selected");
+        await History(false); check(Document.Snapshot.Sheets[0].Images.Length == 1, "One image paste is one undo"); await History(true);
+        _grid.Select(new(3, 4)); var before = Document.Snapshot;
+        memory.Value = new(null, Png: png, OfficeDrawing: [1, 2, 3]);
+        try { await PasteAsync("chart"); throw new Exception("Broken chart became a picture"); } catch (InvalidDataException) { }
+        check(ReferenceEquals(before, Document.Snapshot), "Broken editable chart never silently becomes a picture");
+        await PasteAsync("image"); check(Document.Snapshot.Sheets[0].Images.Length == 3, "Explicit picture selection can use PNG independently of unsupported chart data");
+        await CopyAsync(false); check(memory.Value.Png is not null && memory.Value.Token is null && memory.Value.SpreadsheetXml is null, "Selected image copies as an image without a stale cell token");
+        _grid.Select(new(4, 5)); before = Document.Snapshot; memory.Value = new(null, Png: [1, 2, 3]);
+        try { await PasteAsync("image"); throw new Exception("Invalid image accepted"); } catch (InvalidDataException) { }
+        check(ReferenceEquals(before, Document.Snapshot), "Malformed image does not change history or document");
+        _clipboard = new DelayedClipboard(new(null, Png: png), () => _grid.Select(new(8, 8)));
+        try { await PasteAsync("image"); throw new Exception("Stale image target accepted"); } catch (InvalidOperationException) { }
+        check(before.Revision == Document.Snapshot.Revision && before.Sheets[0].Images.SequenceEqual(Document.Snapshot.Sheets[0].Images), "Image paste rejects a changed destination during clipboard read");
+        _clipboard = memory; memory.Value = new(null, Png: png);
+        await ExecuteAsync(new SetProtectionCommand(Document.Snapshot.ActiveSheetId, new() { Sheet = true, Objects = true })); before = Document.Snapshot;
+        try { await PasteAsync("image"); throw new Exception("Protected image target accepted"); } catch (InvalidOperationException) { }
+        check(ReferenceEquals(before, Document.Snapshot), "Object protection rejects the complete image insertion");
+    }
     private async Task RunDrawingClipboardExchangeAsync(string directory, string mode, Action<bool, string> check)
     {
         var incoming = await _clipboard.ReadAsync();

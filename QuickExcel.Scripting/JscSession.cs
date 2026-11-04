@@ -46,9 +46,11 @@ public sealed partial class JscSession : IDisposable
             let actionInvoked = false;
             let activeModel = false;
             let hostWriteFailed = false;
+            let hostWrote = false;
             class ScriptError extends Error {
                 constructor(code, message, member) {
                     super(message);
+                    if (code === 'InvalidArgument' && hostWrote || code === 'BudgetExceeded' || code === 'Locked') hostWriteFailed = true;
                     Object.defineProperty(this, 'name', { value: 'ScriptError', configurable: true });
                     Object.defineProperty(this, 'code', { value: code, enumerable: true });
                     if (member !== undefined) Object.defineProperty(this, 'member', { value: member, enumerable: true });
@@ -213,7 +215,7 @@ public sealed partial class JscSession : IDisposable
                 // Each entry module registers its own main(workbook, host) binding
                 // during evaluation; the native loader does not expose exports.
                 var rooted = new Dictionary<string, string>(modules, StringComparer.Ordinal);
-                foreach (var entry in entries!)
+                foreach (var entry in actions ? entries! : [])
                     rooted[entry] += "\n;globalThis.__qxRegisterMain && globalThis.__qxRegisterMain(" +
                         JsonSerializer.Serialize(entry) + ", typeof main === 'function' ? main : undefined);";
                 var actionEntries = actions

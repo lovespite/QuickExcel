@@ -48,7 +48,7 @@ try
             var hello = WorkerProtocol.Payload<WorkerHello>(request);
             if (hello.Engine != WorkerProtocol.Engine || hello.Policy != WorkerProtocol.Policy ||
                 hello.Role != "execute" || hello.Compiler is not null ||
-                !hello.ApiVersions.SequenceEqual([1, 2]) || hello.MaxFrameBytes != WorkerProtocol.MaxFrameBytes)
+                !hello.ApiVersions.SequenceEqual([3]) || hello.MaxFrameBytes != WorkerProtocol.MaxFrameBytes)
                 throw new ProtocolException("Incompatible engine, API or execution policy.");
             round = request.Identity;
             await WorkerProtocol.WriteAsync(output, WorkerProtocol.Message(round, "hello", hello));

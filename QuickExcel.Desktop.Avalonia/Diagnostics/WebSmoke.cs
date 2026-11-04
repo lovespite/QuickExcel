@@ -35,7 +35,7 @@ public sealed partial class MainWindow
             {
             _workspace.New(); _files = new SmokeFiles { NextSave = Path.Combine(directory, "script-roundtrip.xlsq") };
             _workspace.Editor.Execute(new UpdateScriptModulesCommand(new(new Dictionary<string, ScriptModule>
-            { ["main"] = new("scripts/main.js", "import { twice } from 'helpers';\nhost.functions.register('DOUBLE', twice);\n"), ["helpers"] = new("scripts/helpers.js", "export function twice(value) { return value * 2; }\n") }, ["main"], scriptApiVersion: 2)));
+            { ["main"] = new("scripts/main.js", "import { twice } from 'helpers';\nhost.functions.register('DOUBLE', twice);\n"), ["helpers"] = new("scripts/helpers.js", "export function twice(value) { return value * 2; }\n") }, ["main"], scriptApiVersion: 3)));
             await OpenScriptsAsync(); Check(_scriptPage!.Browser.IsReady && !_scriptPage.Drafts.Failed, "Actual native WebView loads offline Monaco and a real language worker");
             var inspected = await Test(new { action = "inspect" });
             Check(inspected.GetProperty("workers").GetInt32() > 0 && inspected.GetProperty("source").GetString()!.Contains("DOUBLE"), "Language worker and initial module source are available");
@@ -101,7 +101,7 @@ public sealed partial class MainWindow
             {
             _workspace.New();
             const string actionSource = "function main(workbook) { workbook.getActiveWorksheet().getRange('A1').setValue(42); console.log('原子写入完成'); }";
-            _workspace.Editor.Execute(new UpdateScriptModulesCommand(new(new Dictionary<string, ScriptModule> { ["main"] = new("scripts/main.js", actionSource) }, ["main"], scriptApiVersion: 2, bindings: [new("main", "actions")])));
+            _workspace.Editor.Execute(new UpdateScriptModulesCommand(new(new Dictionary<string, ScriptModule> { ["main"] = new("scripts/main.js", actionSource) }, ["main"], scriptApiVersion: 3, bindings: [new("main", "actions")])));
             await OpenScriptsAsync(); await ApplyScriptsAsync(); await RunScriptActionAsync();
             Check(Document.GetCellValue(0, 0, 0) == "42" && Document.ScriptErrors.Any(e => e.Contains("原子写入完成")), "Migrated action picker executes an immutable worker action and displays logs");
             DisableScripts(); await History(false); Check(Document.GetCellInput(0, 0, 0) == "", "An action remains one undoable transaction after authorization is revoked");
@@ -133,7 +133,7 @@ public sealed partial class MainWindow
             {
                 ["main"] = new("scripts/main.ts", "import {twice} from 'helpers'; host.functions.register('DOUBLE',()=>twice(5));", ScriptLanguage.TypeScript),
                 ["helpers"] = new("scripts/helpers.ts", "export const twice=(n:number):number=>n*2;", ScriptLanguage.TypeScript)
-            }, ["main"], scriptApiVersion: 2)));
+            }, ["main"], scriptApiVersion: 3)));
             _workspace.Editor.Execute(new SetCellsCommand([new(new(Document.Snapshot.ActiveSheetId, 0, 0), CellInput.Parse("=DOUBLE()"))]));
             await OpenScriptsAsync();
             inspected = await Test(new { action = "inspect" });
@@ -209,17 +209,17 @@ public sealed partial class MainWindow
             }
             _workspace.New();
             var boundary = Enumerable.Range(0, 64).ToDictionary(i => "m" + i, i => new ScriptModule($"scripts/m{i}.js", ("export const value = " + i + ";\n//").PadRight(16 * 1024, ' ')));
-            _workspace.Editor.Execute(new UpdateScriptModulesCommand(new(boundary, ["m0"], scriptApiVersion: 2)));
+            _workspace.Editor.Execute(new UpdateScriptModulesCommand(new(boundary, ["m0"], scriptApiVersion: 3)));
             await OpenScriptsAsync();
             Check(_scriptPage!.Drafts.Models.Count == 64 && await CommitScriptsAsync(), "Real Monaco initializes and confirms all 64 modules at the exact 1 MiB total-source boundary");
             await CloseScriptWindowAsync();
             _workspace.New();
-            _workspace.Editor.Execute(new UpdateScriptModulesCommand(ScriptModuleSet.Single("host.functions.register('LEGACY', value => value);")));
+            _workspace.Editor.Execute(new UpdateScriptModulesCommand(ScriptModuleSet.Single("host.functions.register('LEGACY', value => value);", 1)));
             await OpenScriptsAsync();
             Check(await CommitScriptsAsync() && Document.Snapshot.ScriptModules.ScriptApiVersion == 1, "Monaco preserves API v1 sources and does not migrate their execution contract");
             await CloseScriptWindowAsync();
             _workspace.Editor.Execute(new SetCellsCommand([new(new(Document.Snapshot.ActiveSheetId, 0, 0), CellInput.Parse("=SUM(1,2)"))]));
-            var readOnlyFile = Path.Combine(directory, "preserved-array.xlsx"); _services.Storage.Save(readOnlyFile, Document.Snapshot.WithScriptSource(""));
+            var readOnlyFile = Path.Combine(directory, "preserved-array.xlsx"); _services.Storage.Save(readOnlyFile, Document.Snapshot.WithScriptModules(ScriptModuleSet.Single("")));
             using (var zip = ZipFile.Open(readOnlyFile, ZipArchiveMode.Update))
             {
                 XDocument xml; using (var input = zip.GetEntry("xl/worksheets/sheet1.xml")!.Open()) xml = XDocument.Load(input);

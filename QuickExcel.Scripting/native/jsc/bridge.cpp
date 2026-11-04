@@ -438,7 +438,10 @@ QX_EXPORT int qx_load_modules(qx_session* s, const char* json, char** error)
         if (!id.isString() || !source.isString()) { setError(error, "Invalid module source."); return fail(); }
         auto idText = asString(id)->value(s->global()).data;
         auto text = asString(source)->value(s->global()).data;
-        if (scope.exception() || !validId(idText) || findModule(*s, idText) || (bytes += text.utf8().length()) > 1024 * 1024) {
+        // The managed loader validates the 1 MiB raw user-source budget before
+        // appending at most 64 bounded main-registration trailers. Reserve space
+        // for those host-generated trailers without reducing the public budget.
+        if (scope.exception() || !validId(idText) || findModule(*s, idText) || (bytes += text.utf8().length()) > 1024 * 1024 + 32 * 1024) {
             setError(error, "Invalid module mapping or source budget."); return fail();
         }
         s->modules.push_back({ idText, text, { }, role.isUndefined() ? 3u : static_cast<unsigned>(role.asInt32()), 0 });

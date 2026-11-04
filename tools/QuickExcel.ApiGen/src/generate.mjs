@@ -15,7 +15,7 @@ const defaults = {
   coverage: path.join(repoRoot, 'artifacts/api-gen/coverage.json'),
 };
 const lockPath = path.join(repoRoot, 'third_party/office-scripts-docs/source.lock.json');
-const overridesPath = path.join(import.meta.dirname, 'capabilities.overrides.json');
+const overridesPath = path.resolve(argument('--overrides', path.join(import.meta.dirname, 'capabilities.overrides.json')));
 const extensionsPath = path.join(import.meta.dirname, 'quickexcel-extensions.d.ts');
 
 function argument(name, fallback) {
@@ -52,6 +52,8 @@ function sourceIdentity() {
     // A local fixture has no lock; identity is still recorded from the bytes.
   }
   const pinned = lock && path.resolve(repoRoot, lock.localPath) === sourcePath;
+  if (sourcePath === defaults.source && !pinned) fail('Pinned declaration source lock is missing or invalid.');
+  if (pinned && (lock.sha256 !== sha256 || lock.gitBlobSha1 !== gitBlobSha1)) fail('Pinned declaration source hash mismatch.');
   return {
     repository: pinned ? lock.repository : 'local fixture',
     commit: pinned ? lock.commit : null,
@@ -150,11 +152,27 @@ for (const [typeName, typeSpec] of Object.entries(typesOverrides)) {
   }
 }
 
+const enums = {};
+for (const name of overrides.enums ?? []) {
+  const entry = types.get(name);
+  if (!entry || entry.kind !== 'enum') fail(`Unknown runtime enum ${name}.`);
+  let next = 0;
+  enums[name] = {};
+  for (const member of entry.node.members) {
+    if (member.initializer) {
+      if (!ts.isNumericLiteral(member.initializer)) fail(`Unsupported enum initializer ${name}.`);
+      next = Number(member.initializer.text);
+    }
+    enums[name][declarationName(member)] = next++;
+  }
+}
 const manifest = {
   apiVersion: overrides.apiVersion ?? 3,
   source: identity,
   typeCount: types.size,
   types: typesOverrides,
+  enums,
+  limits: overrides.limits ?? { rows: 100000, columns: 1024 },
 };
 const manifestText = `${JSON.stringify(manifest, null, 2)}\n`;
 

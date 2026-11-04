@@ -30,6 +30,9 @@ public interface IScriptActionExecutor
 /// <summary>Only the session's authorized action commit can create this command.</summary>
 internal sealed class ApplyActionPatchCommand(ScriptActionRequest request, ScriptActionResult result, IWorkbookVirtualFiles? files = null) : DocumentCommand
 {
+    // Only host-command edits have already received sequential protection checks.
+    // Raw workbook/package patches must retain the ordinary aggregate validation.
+    internal bool ProtectionValidatedByModel => request.Model is not null && result.Edits.IsEmpty;
     internal override CommandDraft Prepare(WorkbookSnapshot snapshot)
     {
         if (result.OperationId != request.OperationId || result.BaseRevision != request.Stamp.InputRevision || result.Name != request.Name ||
@@ -55,6 +58,9 @@ internal sealed class ApplyActionPatchCommand(ScriptActionRequest request, Scrip
             if (!result.Edits.IsEmpty || request.Model?.HasWrites == true || packageEdits.Any(e => !sourcePaths.Contains(e.Path)))
                 throw new InvalidOperationException("源码、绑定或签名修改必须独立于单元格和其他永久文件修改提交。");
         }
+        // Raw package changes receive aggregate checks first; subsequent model
+        // commands receive sequential checks, including protect/unprotect.
+        ProtectionSafety.Validate(snapshot, package, this);
         var modelDraft = request.Model?.Prepare(package);
         if (modelDraft is not null) package = modelDraft.Snapshot;
         var edits = new List<CellEdit>();

@@ -18,7 +18,7 @@ public sealed class WorkbookWorkspaceTests : IDisposable
         document.ScriptSource = """
             const value: number = 42;
             host.functions.register('ENTRYVALUE', () => value);
-            function main(workbook: ExcelScript.Workbook) {
+            function main(workbook: QuickExcel.Workbook) {
                 workbook.getActiveCell().setValue(value);
             }
             """;
@@ -43,7 +43,7 @@ public sealed class WorkbookWorkspaceTests : IDisposable
         _storage.Save(path, Book(Sheet("S")).WithScriptModules(legacy));
         await workspace.OpenAsync(new(path));
         var opened = workspace.Document.Snapshot.ScriptModules;
-        Assert.Equal(1, opened.ScriptApiVersion);
+        Assert.Equal(3, opened.ScriptApiVersion);
         Assert.Equal(legacy.Modules["main"], opened.Modules["main"]);
         Assert.Equal(legacy.Bindings.ToArray(), opened.Bindings.ToArray());
         workspace.New();
@@ -55,7 +55,7 @@ public sealed class WorkbookWorkspaceTests : IDisposable
         void CheckMain()
         {
             var modules = workspace.Document.Snapshot.ScriptModules;
-            Assert.Equal(2, modules.ScriptApiVersion);
+            Assert.Equal(3, modules.ScriptApiVersion);
             Assert.Equal("main", Assert.Single(modules.EntryModules));
             Assert.Equal(new ScriptModule("scripts/main.ts", "", ScriptLanguage.TypeScript), Assert.Single(modules.Modules).Value);
             Assert.Equal("main", Assert.Single(modules.EntriesFor("formula-functions")));

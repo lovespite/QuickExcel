@@ -12,7 +12,7 @@ namespace QuickExcel.Core.Test;
 public sealed class M4ActionTests
 {
     internal static ScriptModuleSet Actions(string source, bool functions = false) => new(
-        new Dictionary<string, ScriptModule> { ["A"] = new("scripts/main.js", source) }, ["A"], scriptApiVersion: 2,
+        new Dictionary<string, ScriptModule> { ["A"] = new("scripts/main.js", source) }, ["A"], scriptApiVersion: 3,
         bindings: functions ? [new("A", "formula-functions"), new("A", "actions")] : [new("A", "actions")]);
     private static WorkbookServices Services(IScriptActionExecutor? actions = null) => new(new TypedWorkbookStorage(), new WorkbookCalculator(new ScriptWorkerRuntimeFactory()), actions ?? new ScriptWorkerActionExecutor());
     private static WorkbookDocument Document(string source, params WorksheetSnapshot[] sheets) => new(Book(sheets.Length == 0 ? [Sheet("S")] : sheets).WithScriptModules(Actions(source)), Services());
@@ -74,7 +74,7 @@ public sealed class M4ActionTests
     [InlineData("while(true){}")]
     [InlineData("return Promise.resolve()")]
     [InlineData("Promise.resolve().then(()=>sheet.getRange('A2').setValue(7))")]
-    [InlineData("sheet.getRange('A100001').setValue(2)")]
+    [InlineData("sheet.getRange('A200001').setValue(2)")]
     [InlineData("workbook.getWorksheet('missing').getRange('B1')")]
     [InlineData("sheet.getRange('B1:C1').setValues([[1]])")]
     [InlineData("sheet.getRange('B1').setValue(NaN)")]
@@ -207,7 +207,7 @@ public sealed class M4ActionTests
             ["action"] = new("scripts/action.js", "import { next } from 'helper'; host.functions.register('UNBOUND',()=>0); export function main(workbook){console.log('committed');workbook.getActiveWorksheet().getRange('A1').setValue(next());}"),
             ["helper"] = new("scripts/helper.js", "let n=6; export const next=()=>++n;"),
             ["udf"] = new("scripts/udf.js", "import { next } from 'helper'; host.functions.register('NEXTVALUE',()=>next());")
-        }, ["udf", "action"], scriptApiVersion: 2, bindings: [new("udf", "formula-functions"), new("action", "actions")]);
+        }, ["udf", "action"], scriptApiVersion: 3, bindings: [new("udf", "formula-functions"), new("action", "actions")]);
         using var doc = new WorkbookDocument(Book(Sheet("S")).WithScriptModules(modules), Services());
         doc.Session.SetScriptsEnabled(true);
         Assert.Equal("action", Assert.Single(doc.ListActions()).Name); doc.RunAction("action");
@@ -265,7 +265,7 @@ public sealed class M4ActionTests
             using (var reader = new StreamReader(zip.GetEntry("manifest.json")!.Open()))
             {
                 var manifest = JsonNode.Parse(reader.ReadToEnd())!;
-                Assert.Equal(2, manifest["scriptApiVersion"]!.GetValue<int>());
+                Assert.Equal(3, manifest["scriptApiVersion"]!.GetValue<int>());
                 Assert.Contains("script-actions", manifest["requiredFeatures"]!.AsArray().Select(v => v!.GetValue<string>()));
             }
             using var reopened = WorkbookDocument.Open(path, Services());

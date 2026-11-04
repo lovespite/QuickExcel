@@ -1,10 +1,10 @@
 # 脚本 JavaScript API 重新设计（API v3）
 
-2026-11-04。本文替换 [76](76-live-workbook-script-model.md) 中的对象 API 部分：旧 `$` / `ExcelScript` 子集整体废弃，不提供兼容层。文件 `scriptApiVersion` 目标为 3（本轮运行时切片仍写 2，存储升级随迁移切片完成），IPC 提升为 10；隔离、事务、限额和 worker 生命周期契约沿用 11/15/16/69/72/77 号文档，本文只改变脚本可见的对象模型、类型声明与宿主派发方式。
+2026-11-04。本文替换 [76](76-live-workbook-script-model.md) 中的对象 API 部分：旧 `$` / `ExcelScript` 子集整体废弃，不提供兼容层。文件 `scriptApiVersion = 3`、IPC 10；隔离、事务、限额和 worker 生命周期契约沿用 11/15/16/69/72/77 号文档。P0 与 P1 已实现；P1 的成员与参数支持边界见 §7.1。
 
 ## 1. 现状与问题
 
-当前脚本只能看到 5 个对象、14 个方法（Workbook / Worksheet / Range / RangeFormat / RangeFill），声明写在 `QuickExcel.Web/src/quickexcel.d.ts`，实现写在 `WorkbookModelBootstrap.cs` 的 C# 原始字符串里，宿主白名单写在 `ScriptModelAdapter.cs`。同一套接口在三个地方手工维护，任何新增成员都要同步修改，且无法覆盖工作表结构、表格、图表、条件格式等 Excel 文档模型。这正是本次重做的直接原因。
+重做前脚本只能看到 5 个对象、14 个方法（Workbook / Worksheet / Range / RangeFormat / RangeFill），声明、JS 实现与宿主白名单分别手工维护。现在以固定声明与能力清单生成代理、类型和白名单；当前实现 16 个类型的 174 个成员。
 
 ## 2. 已确认的决策
 
@@ -61,12 +61,12 @@ function main(workbook: QuickExcel.Workbook, host: QuickExcel.Host) {
 | 场景 | 行为 |
 | --- | --- |
 | `getValues()` | `(string \| number \| boolean)[][]`；空单元格为空字符串，错误单元格为 `#DIV/0!` 等显示字符串 |
-| 精确类型 | 首期未实现 `getValueTypes()`（P1）；脚本可用 `getValue()` 的返回类型与 `getFormula()` 区分空白、文本、数值、布尔与错误 |
+| 精确类型 | `getValueType()` / `getValueTypes()` 返回 `QuickExcel.RangeValueType`，区分空白、文本、整数、浮点、布尔与错误 |
 | 日期 | 按序列值（number）返回；需要日期语义时读取数字格式分类 |
 | `null` / `undefined` | 不作为单元格值出现；参数校验失败抛出 `InvalidArgument` |
 | 公式 | `getFormula()` / `getFormulas()` 只读文本，不触发计算；`getValues()` 在事务草稿内按需计算 |
 
-这意味着旧 API 的 `{ kind: 'error', code }` 值被移除。脚本需要错误码时使用 `getValueTypes()` 与公式文本自行判断，或调用 QuickExcel 扩展 `host.values.getErrorCode(range)`（P1 提供）。
+旧 API 的 `{ kind: 'error', code }` 值已移除。`host.values.getErrorCode(range)` 返回左上角单元格的错误显示代码或 `null`；这能区分错误值与内容相同的普通文本。
 
 ### 3.4 名称、地址与区域
 
@@ -183,14 +183,14 @@ function makeHandle(type, data) {
 
 2026-11-04：`tools/QuickExcel.ApiGen` 已落地，包含来源拉取与校验、声明与清单生成、覆盖报告、`--check` 比对和基于合成 fixture 的自测；`third_party/office-scripts-docs` 已固定来源与 SHA-256，根目录新增 `THIRD-PARTY-LICENSES.md`。
 
-真实声明的首次生成结果：315 个类型、1932 个成员，剥离注释并删除 `OfficeScript` 后约 120 KB；能力清单覆盖 6 个类型、30 个成员（含 `Range.clear` 与 `RangeAreas`）。完整类型检查（`lib.es2020` + 声明 + 示例模块）实测 0.86–0.96 秒，在 5 秒预算内。
+固定来源共 315 个类型、1932 个接口成员，剥离注释并删除 `OfficeScript` 后约 120 KB。P0 首次生成覆盖 6 个类型、30 个成员；P1 后覆盖 **16 个类型、174 个成员（9.01%）**。覆盖率按能力清单计数，不表示全部参数组合或 Microsoft 运行时语义均已实现；未支持的组合显式拒绝。`host` 扩展与枚举值不计入 174。完整类型检查（`lib.es2020` + 声明 + 示例模块）首次实测 0.86–0.96 秒，在 5 秒预算内。
 
-P0 运行时已实施并发布声明：能力清单嵌入 `QuickExcel.Scripting`，JS 侧由 Proxy 按清单生成 local/host 成员，宿主 `ScriptModelAdapter` 用同一清单校验方法名与参数个数；`scriptApiVersion` 仍写 2、IPC 升至 10，存储格式与 1/2 迁移提示留待存储切片；`QuickExcel.Web/src/quickexcel.d.ts` 已替换为生成物。
+能力清单嵌入 `QuickExcel.Scripting`，JS 侧由 Proxy 按清单生成 local/host 成员，宿主用同一清单校验方法名与参数个数。P1 成员通过 `getApi:类型.成员` / `setApi:类型.成员` 分发，传输参数为句柄和脚本参数数组。所用枚举从固定 AST 生成，注入不可变 `QuickExcel` 全局对象。几何边界与 Core 一致：200000 行、2048 列。生成器验证来源锁、SHA-256 与 git blob SHA-1；合成 fixture 使用独立覆盖输入。
 
 ## 6. 版本与迁移
 
-- `scriptApiVersion = 3`。文件写入 3；读取 3 正常执行。当前运行时切片尚未切换文件版本，见 §5.5。
-- 读取 1/2 时允许打开工作簿但禁用脚本执行，给出明确诊断"脚本使用已废弃的 API v2，需要重写"；保存时要求移除旧脚本或改写为 v3，不自动转换源码。
+- `scriptApiVersion = 3`。新建文件、示例、执行与编译 worker 均使用 3；worker 握手只宣告 3。函数注册描述符中的 `apiVersion: 1/2` 是独立的函数参数语义，继续保留。
+- 文件版本 1/2 允许打开和查看源码，但禁用脚本执行与保存。诊断为“脚本使用已废弃的 API v1/v2，需要按 QuickExcel API v3 重写，或移除全部脚本后保存。”不自动转换源码。脚本窗口提供“确认使用 API v3”和“移除全部脚本”：前者由用户确认源码已改写，后者移除脚本；两者均走可撤销命令，清除旧签名并撤销既有授权。只编辑旧源码不会偷偷变更文件版本。
 - IPC 版本提升为 10，桥标识同步更新；旧 host/worker/native 混用继续拒绝。
 - 模块导入、签名、事件、虚拟文件、控制台的存储与授权规则不变；签名仍覆盖源码原文，不覆盖生成声明。
 - 示例、模板、诊断页与文档中的脚本片段全部重写为新 API。
@@ -199,12 +199,38 @@ P0 运行时已实施并发布声明：能力清单嵌入 `QuickExcel.Scripting`
 
 | 阶段 | 对象范围 | 退出条件 |
 | --- | --- | --- |
-| P0 | 生成器、命名空间、代理运行时、Workbook / Worksheet / Range / RangeAreas、v3 存储与 IPC | 生成物可复现；核心示例可编译执行；未实现成员稳定报 `UnsupportedApi`；旧 API 完全移除。2026-11-04：除 v3 存储/迁移外已完成，`RangeAreas` 已支持多区域选区的本地句柄 |
-| P1 | RangeFormat / Font / Fill / Border / Alignment / NumberFormat / Protection、Table / Sort / AutoFilter | 格式化与表格脚本通过定向用例；预算映射验证 |
+| P0 | 生成器、命名空间、代理运行时、Workbook / Worksheet / Range / RangeAreas、v3 存储与 IPC | 已完成：确定性生成、JS/TS 示例、UnsupportedApi、v1/v2 查看与迁移保存门禁、v3 执行/存储与旧入口移除 |
+| P1 | RangeFormat / Font / Fill / Border / Alignment / NumberFormat / Protection、Table / Sort / AutoFilter | 已完成 §7.1 范围：格式化、表操作、预算、原子提交/失败回滚、保存重开与撤销的定向用例；生产包自检覆盖真实隔离 worker |
 | P2 | Chart、ConditionalFormat、DataValidation、Comment | 对象句柄与宿主模型对齐；未实现成员清单收敛 |
 | P3 | PivotTable、Shape、Slicer/Timeline、PageLayout、DocumentProperties、CustomXml、Query | 按实际需求推进；其余继续显式拒绝 |
 
 每个阶段只声明已实现成员；类型骨架始终是全量的，两者通过能力清单区分。
+
+### 7.1 P1 支持矩阵与限制
+
+| 范围 | 已支持 | 明确未支持 |
+| --- | --- | --- |
+| 字体、填充 | 字体名/大小/颜色、粗体、斜体、删除线、下划线；纯色填充和清除；混合格式标量读取返回 null | 上下标、色调与图案填充 |
+| 边框 | 四周与内部横/纵线、颜色、已建模的实线/虚线/点线/双线及可保存的粗细 | 对角线、点划线等未建模线型，以及无法无损保存的线型/粗细组合 |
+| 区域格式 | 对齐、换行、缩小、缩进、旋转、行高列宽（API 点与 Core DIP 换算）；数字格式标量/矩阵读写和分类；文本/值类型/公式矩阵 | 自动适应、阅读顺序、自动缩进和区域设置转换；颜色参数使用 #RRGGBB |
+| 保护 | 单元格 locked/formulaHidden；无密码工作表 protect/unprotect、选项与状态读取 | 密码、暂停保护、可编辑范围 |
+| 表和列 | 按名称/ID 获取、稳定表/列句柄、创建、重命名、范围/行数、样式/条纹/首尾列标记、底边 resize、表尾 addRow/addRows、convertToRange/delete | 创建时必须有唯一普通文本表头和至少一行数据；暂不自动生成表头、中间插入、增删列或切换汇总/表头 |
+| 表尾追加 | 空白目标区追加并保持已有行；显式值矩阵或单空行 | 含汇总行、覆盖目标数据/链接/批注；不隐式移动表外数据 |
+| 排序 | 区域/表的稳定多键行排序，键为区域内列偏移；值/字体色/填充色、大小写、表排序状态清除/重用 | 按列、图标、textAsNumber、显式拼音/笔画 method；默认文本为序数比较 |
+| 筛选 | 工作表与表 AutoFilter、列 Filter；值集合、自定义条件/AND/OR/通配符、状态/条件读取、清除/重新应用 | Top/Bottom、动态日期、颜色、图标等高级筛选 |
+| 清除与错误值 | clear(all/formats/contents)、host.values.getErrorCode | all 遇到链接/批注拒绝，不能静默删除附件；其他 clear 模式未实现 |
+
+格式写入沿用 Core 命令，保留富文本继承字体。表样式解析使用既有主题/样式定义，转换为区域时固化有效样式，并将结构化引用转换为 A1；删除表将其引用变为 #REF!。带活动筛选的表必须先清除筛选再转换。表 ID 在会话内预留，删除后新建不复用旧句柄身份。
+
+所有写入在宿主私有草稿中验证，保护状态按命令顺序检查，成功一次提交/撤销，失败连同虚拟文件整体回滚；捕获的写入失败仍不可提交。公式排序/筛选使用草稿中的当前值，提交复用已校验的键/条件，不因提交重复调用 UDF。计算后的格式、保护与筛选更新同步到私有值视图。
+
+单轮累计读 100000 格、写 20000 格（重复操作重复计数）、最多 4096 请求；大范围格式、排序、筛选和表结构操作也计费，不按单次标量请求绕过预算。原始模块源码总额仍为 1 MiB；原生加载器额外预留 32 KiB，仅用于宿主为最多 64 个动作入口追加的注册代码，用户输入限制不变。AppContainer、编译/执行进程和时间预算均未放宽，JSC-MEM-001 仍 OPEN。
+
+定向证据位于 `artifacts/test-results/api-p0-p1/`。新增 `ScriptP1Tests` 覆盖 JS/TS 格式/枚举、表转换和有效格式、尾部追加、公式排序/筛选、保护与虚拟文件原子性、失效句柄、累计预算和 1 MiB 源码；`ScriptApiMigrationTests` 用独立 ZIP/JSON 构造 v1/v2 输入。发布自检增加 API v3 TypeScript 格式、表、排序、筛选和撤销检查。
+
+2026-11-04 验证：解决方案 Release 构建零警告/错误，生成物 `--check` 与生成器 fixture 自测通过，JSC smoke 通过（10000 次调用 98 ms）。`verified-summary.json` 汇总定向运行与修复后局部复测的每个用例最新结果：701 通过、0 失败、1 跳过（已知 JSC-MEM-001）；不是全量回归，也不表示单次运行 701 项。旧批次故障注入工具已适配 v3 持久 worker，模块状态测试改为 Windows 跨轮保留/Linux 单轮重建的既有契约。
+
+交付：`scripts/build-quickexcel.ps1 -SkipTests -RunSmoke` 已发布并激活 `artifacts/avalonia/releases/20261104-112512-75d6b7ff/application`，生产自检 10 项通过，`active-windows.json` 的目录和发布清单 SHA-256 已核对。首次自检曾因测试流程未持有正常 UI 执行门禁，被自动重算取消；补上同一执行门禁后重新发布通过，未放宽取消或隔离契约，失败包保留证据且从未激活。
 
 ## 8. 验证计划
 
@@ -212,7 +238,7 @@ P0 运行时已实施并发布声明：能力清单嵌入 `QuickExcel.Scripting`
 | --- | --- | --- |
 | 声明来源 | SHA-256 与固定 commit 比对 | 完全一致 |
 | 生成确定性 | 连续两次生成并比对，`--check` 模式 | 无差异 |
-| 类型可用性 | 用固定 TS 5.9.3 编译新 API 示例 | 零错误，且提示包含成员文档 |
+| 类型可用性 | 用固定 TS 5.9.3 编译新 API 示例 | 零错误，提示包含完整成员签名；上游文档注释不复制 |
 | 编译预算 | 记录完整检查耗时分布 | 在截止时间内；超出则按 5.4 处理 |
 | 运行时 | JSC/隔离 worker 冒烟 | 支持成员可用；未实现成员抛 `UnsupportedApi`；事务回滚正确 |
 | 预算 | 4096 次请求边界与单元格预算 | 与 76 号文档一致，代理开销可测 |
@@ -225,10 +251,9 @@ P0 运行时已实施并发布声明：能力清单嵌入 `QuickExcel.Scripting`
 - **编译时限**：500 KB 声明与 5 秒截止时间可能冲突，P0 必须先测量再决定是否调整预算。
 - **API 漂移**：官方定义随 Excel 更新；固定版本后每季度做一次差异报告，不自动跟随。
 - **语义差异**：空单元格、错误字符串、区域设置、日期与浮点精度都可能与 Microsoft 运行时不同；这些差异必须在声明注释和用户文档中逐条列出，不能用"兼容 ExcelScript"一句话带过。
-- **全量骨架的误导**：类型全量、实现少量，用户可能认为都能用。除了 `UnsupportedApi`，编辑器还需在未实现成员上显示能力标记，文档提供覆盖矩阵。官方声明中的枚举尚不作为运行时值注入，首期已实现成员不接受枚举参数；P1 实现枚举型成员时需同时提供 `QuickExcel` 枚举值对象。
+- **全量骨架的误导**：类型全量、实现少量，用户可能认为都能用。运行时 `UnsupportedApi` 和本页覆盖矩阵已提供；Monaco 的逐成员能力标记仍未实施。P1 使用的枚举已注入运行时，其余类型骨架中的枚举不代表已有运行时能力。
 
 ## 10. 待确认
 
-- `Host` 是作为 `main` 的第二参数，还是挂在 `workbook` 上；本文按第二参数设计。
-- `host.values.getErrorCode()` 这类 QuickExcel 扩展是否纳入 P1。
+- `Host` 已确定为 `main` 的第二参数；`host.values.getErrorCode(range)` 已纳入 P1。
 - 未实现成员是否在 Monaco 中以删除线或警告标记，而不是仅靠运行时错误。

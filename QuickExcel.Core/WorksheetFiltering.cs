@@ -96,13 +96,15 @@ public static class WorksheetFilterEngine
 
 public sealed class SetAutoFilterCommand(SheetId sheetId, WorksheetAutoFilter? filter) : DocumentCommand
 {
+    private bool _valuesValidated;
+    internal SetAutoFilterCommand WithValidatedValues() => new(sheetId, filter) { _valuesValidated = true };
     internal override CommandDraft Prepare(WorkbookSnapshot snapshot)
     {
         WorksheetOutline.RequireEditable(snapshot);
         var sheet = snapshot.GetSheet(sheetId); var data = sheet.Data with { Filter = filter };
         if (sheet.Data.ContentEquals(data)) return new(snapshot, [], false);
         var next = sheet.WithData(data);
-        if (filter is not null) _ = WorksheetFilterEngine.Evaluate(next, snapshot.Styles, snapshot.DateSystem, snapshot.Revision);
+        if (filter is not null && !_valuesValidated) _ = WorksheetFilterEngine.Evaluate(next, snapshot.Styles, snapshot.DateSystem, snapshot.Revision);
         return new(snapshot.WithSheets(snapshot.Sheets.Select(s => s.Id == sheetId ? next : s)), [], false) { CalculationUnchanged = true };
     }
 }

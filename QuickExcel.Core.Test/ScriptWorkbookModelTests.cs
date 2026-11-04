@@ -14,7 +14,7 @@ public sealed class ScriptWorkbookModelTests
     {
         var modules = new ScriptModuleSet(new Dictionary<string, ScriptModule>
         { ["main"] = new(language == ScriptLanguage.TypeScript ? "scripts/main.ts" : "scripts/main.js", source, language) },
-            ["main"], scriptApiVersion: 2, bindings: [new("main", "actions")]);
+            ["main"], scriptApiVersion: 3, bindings: [new("main", "actions")]);
         return new(Book(Sheet("Data", (0, 0, N(42)))).WithScriptModules(modules),
             new(storage ?? new TypedWorkbookStorage(), new WorkbookCalculator(new ScriptWorkerRuntimeFactory()), new ScriptWorkerActionExecutor()));
     }
@@ -29,7 +29,7 @@ public sealed class ScriptWorkbookModelTests
         using var doc = Document("function main(" + parameter + ") {" + """
             const selectedCell=workbook.getActiveCell(), selectedSheet=workbook.getActiveWorksheet(), selectedRange=workbook.getSelectedRange();
             if(selectedCell.getAddress() !== 'B2' || selectedRange.getAddress() !== 'B2:C3') throw Error('selection');
-            if(selectedSheet.getName() !== 'Data' || selectedSheet.getCell('A1').getValue() !== 42) throw Error('read');
+            if(selectedSheet.getName() !== 'Data' || selectedSheet.getCell(0,0).getValue() !== 42) throw Error('read');
             selectedCell.getFormat().getFill().setColor('#ff0000');
             if(selectedCell.getFormat().getFill().getColor() !== '#FF0000') throw Error('first write');
             selectedRange.getFormat().getFill().setColor('#00ff00');
@@ -67,7 +67,7 @@ public sealed class ScriptWorkbookModelTests
             }
             """, storage: storage);
         doc.EnableScriptsAndCalculate(); doc.RunAction("main");
-        Assert.Equal(0, storage.Captures);
+        Assert.Equal(1, storage.Captures);
         Assert.Equal("7", doc.GetCellValue(0, 0, 0)); Assert.Equal("9", doc.GetCellValue(0, 0, 1));
         Assert.True(doc.Undo()); Assert.Equal("42", doc.GetCellValue(0, 0, 0)); Assert.Null(doc.Snapshot.Sheets[0].GetCell(0, 1));
     }
@@ -190,7 +190,7 @@ public sealed class ScriptWorkbookModelTests
             .WithScriptModules(M4ActionTests.Actions(source, true)),
             new(new TypedWorkbookStorage(), new WorkbookCalculator(new ScriptWorkerRuntimeFactory()), new ScriptWorkerActionExecutor()));
         doc.EnableScriptsAndCalculate(); var revision = doc.Snapshot.Revision;
-        Assert.Throws<TimeoutException>(() => doc.RunAction("main"));
+        Assert.Throws<TimeoutException>(() => doc.RunAction("A"));
         Assert.Equal(revision, doc.Snapshot.Revision); Assert.Equal("5", doc.GetCellValue(0, 0, 0));
         Assert.Equal("", doc.GetCellValue(0, 0, 1)); Assert.False(doc.CanUndo);
     }
@@ -217,7 +217,7 @@ public sealed class ScriptWorkbookModelTests
         using var doc = new WorkbookDocument(Book(Sheet("Data", (0, 0, N(2)), (0, 1, F("=SEQUENCE(A1)"))))
             .WithScriptModules(M4ActionTests.Actions(source)),
             new(new TypedWorkbookStorage(), new WorkbookCalculator(new ScriptWorkerRuntimeFactory()), new ScriptWorkerActionExecutor()));
-        doc.Session.SetScriptsEnabled(true); doc.RunAction("main");
+        doc.Session.SetScriptsEnabled(true); doc.RunAction("A");
         Assert.Equal("3", doc.GetCellValue(0, 0, 0));
     }
 
@@ -238,7 +238,7 @@ public sealed class ScriptWorkbookModelTests
         using var doc = new WorkbookDocument(Book(Sheet("Data", (0, 0, N(5)), (0, 1, F("=MISSING(A1)", 123))))
             .WithScriptModules(M4ActionTests.Actions(source)),
             new(new TypedWorkbookStorage(), new WorkbookCalculator(new ScriptWorkerRuntimeFactory()), new ScriptWorkerActionExecutor()));
-        doc.Session.SetScriptsEnabled(true); doc.RunAction("main");
+        doc.Session.SetScriptsEnabled(true); doc.RunAction("A");
         Assert.Equal("6", doc.GetCellValue(0, 0, 0));
         Assert.NotEqual(CalculationState.Fresh, doc.Snapshot.Sheets[0].GetCell(0, 1)!.Calculation!.State);
     }

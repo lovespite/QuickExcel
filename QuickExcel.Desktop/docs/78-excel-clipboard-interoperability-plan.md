@@ -209,3 +209,28 @@ P1 可独立交付。P2 的准确范围以 P0 样本和依赖信息为依据；�
 这些场景支持的是带筛选列头的数据搬运，不表示筛选条件、表对象或附件已能完整复制；实际键鼠/IME 和其他 Excel 版本仍需独立验收。
 
 修复已通过 `build-quickexcel.ps1 -SkipTests -RunSmoke` 发布并激活到本地包 `artifacts/avalonia/releases/20261104-084829-5962acc3/application`。打包复用上述定向测试，正式包 8 项安装自检通过；启动器活动清单哈希已核验。旧包保留，重新启动 `Start-QuickExcel.cmd` 使用该包。
+
+## 10 样式及图片／图表互通（2026-11-04）
+
+SpreadsheetML 与 CF_HTML 现在双向保留下划线（单线、双线、单会计、双会计）、删除线、细／中／粗实线及发丝线、已建模的虚线／点线／双边框、缩进和正负文字旋转。Excel `VerticalText` 与 HTML `layout-flow` 的竖排编码可以保留，但竖排显示仍受原有渲染限制。HTML 中整格 `<s>`／`<strike>`／`<u>` 可以导入；局部文字装饰仍有诊断，不视为完整富文本支持。未建模的中虚线／点划线等不会伪装为细线。HTML 仍遵循显示文本策略，样式验证使用显式“只贴格式”，不推断原始类型。
+
+编辑菜单和右键菜单增加“粘贴为可编辑图表（附带数据快照）”“粘贴为图片”和“复制对象为图片”。选中图片／图表可以 Ctrl+C；普通粘贴优先可编辑图表，用户可明确选择图片。对象剪切暂未开放。图片作为浮动对象插入当前单元格位置，使用 PNG／平台位图通道，沿用 16 MiB 载荷和 1600 万像素解码限制；不从 HTML URL、本地文件引用或 OLE 关系加载图片。
+
+可编辑图表有两条通道：
+
+- **Excel → QuickExcel**：解析有界 Office `Art::GVML ClipFormat`，将源缓存导入独立的“图表数据”工作表。支持闭合模型认可的单个柱形图、折线／平滑折线图、饼图和散点图；所有源引用改写为新数据表引用，不打开源工作簿或外部链接。图片与可编辑选择互相独立；可编辑失败不静默转图片。
+- **QuickExcel → Excel**：同时发布 Office 图表和 PNG。图表系列使用 `strLit`／`numLit` 值数组，因此 Excel 中可以修改图表和系列值，且不引用不存在的源工作表、不误连到目标同名区域。GVML 的 `graphicFrame` 子节点顺序与 XLSX 的顺序不同，已由真实 Excel 粘贴验证。
+- **QuickExcel → QuickExcel（含跨实例）**：额外使用私有、有界 XLSX 数据快照，保留全部已建模图表类型、系列／点筛选和旋转。完整数据与图表作为一个命令提交、一次撤销／重做；数据表可继续编辑。源公式必须已有新鲜结果，复制不会携带脚本或源公式；主题颜色和字体转为模型的具体值。
+
+图表包最多 16 MiB，累计展开 16 MiB、解析预算 32 MiB、128 条目；图表 XML 最多 512 KiB，系列和点数沿用 16／4096 限制，引用值最多 20,000 格。未知绘图属性、附加关系、组合图表、复杂布局和坏缓存明确拒绝。外部图表筛选可能缺少隐藏点缓存，因此要求选择图片或取消图表筛选后再复制；QuickExcel 私有通道使用完整数据，不受此限制。瀑布图、漏斗图及筛选图表目前对外发布图片，在 QuickExcel 中保留可编辑形式。含对象的整片单元格区域、任意富文本及仅 EMF／SVG 的复制仍未开放，不放宽原有附件保护。
+
+验证（Excel 16.0 build 20527，本机 Windows x64）：
+
+- 23 项 XML 导入 → HTML 导出 → Excel 样式往返：`artifacts/clipboard/styles-20261104-101012-5dfea63e/`。
+- 23 项真实 CF_HTML 只贴格式及反向 Excel 检查：`artifacts/clipboard/styles-20261104-103948-6a34c559/`。复现：`scripts/test-excel-clipboard-styles.ps1 -ImportFormat Xml|Html`。
+- 7 项实际对象交换：柱形、折线、饼图、散点图、图表转图片、普通图片，以及 QuickExcel 关闭后由另一实例继续粘贴。验证 Excel 的系列值可编辑且公式不含工作表／文件引用，XLSX／XLSQ 保存重开，原子历史。证据：`artifacts/cb-build-1104/artifacts/clipboard/object-exchange-20261104-104949-96677532/`；复现：`scripts/test-excel-object-clipboard.ps1`。
+- 240 项剪贴板／图表定向测试通过；62 项 Workspace 处理器检查通过，包含重复图片粘贴、坏数据、目标变动和保护。界面证据：`artifacts/cb-build-1104/artifacts/avalonia/workspace/20261104-104728-1bb201dc/`。
+
+交付构建使用 `cf40318` 和本次补充检查的隔离 checkout `artifacts/cb-build-1104`。主工作区当时存在并行进行的脚本 API 迁移且尚不能编译；该迁移未被本次交付改动或打包。原生源和 DLL 对照已有构建身份校验，编译器及发布输出各自位于隔离 checkout 的 artifacts；未编辑或复制兄弟 ExcelIO 源码。
+
+已运行 `scripts/build-quickexcel.ps1 -SkipTests -RunSmoke`，正式包 8 项生产自检通过。将完整包及证据复制到 `artifacts/avalonia/releases/20261104-105053-cc51567d/` 后，由 `select-quickexcel-package.ps1` 逐文件校验并激活；主仓库 `active-windows.json` 已指向该 `application`，清单 SHA-256 为 `38A8395DBE68B74D0AF04B5AE0289995BA4087A14345B418800A9F547559C3DF`。`Start-QuickExcel.cmd` 使用该已验证包，前一活动包完整保留。

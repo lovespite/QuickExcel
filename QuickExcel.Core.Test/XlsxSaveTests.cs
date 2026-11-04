@@ -230,7 +230,7 @@ public sealed class XlsxSaveTests : IDisposable
     {
         var original = Model();
         Assert.True(TypedWorkbookStorage.RequiresScriptContainer(original.WithScriptModules(new(
-            [new("entry", new("scripts/empty.js", ""))], ["entry"], scriptApiVersion: 2))));
+            [new("entry", new("scripts/empty.js", ""))], ["entry"], scriptApiVersion: 3))));
         Assert.True(TypedWorkbookStorage.RequiresScriptContainer(original.WithScriptModules(original.ScriptModules.WithSignature(new(1, "test", "certificate", "signature")))));
         using var blank = WorkbookDocument.CreateBlank(new(_storage, new UnusedCalculator()));
         Assert.False(TypedWorkbookStorage.RequiresScriptContainer(blank.Snapshot));

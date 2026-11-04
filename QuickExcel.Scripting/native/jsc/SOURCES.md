@@ -31,6 +31,14 @@ inspection and raw stack-frame formatting. All are confined to this bridge.
 Upgrading WebKit requires rerunning native and isolated-worker contracts.
 
 Modules resolve declared logical IDs entirely from immutable in-memory source.
+With file API v3 / IPC 10, managed and IPC validation still cap raw user module
+sources at 1 MiB. The native executable-source aggregate permits an additional
+32 KiB for host-generated `main` registration trailers (at most 64 declared
+action entries). UDF contexts receive no action trailers. This preserves the
+full raw-source allowance without increasing the user-input budget; engine,
+process, stack and time limits remain unchanged. The exact 1 MiB action case
+is covered by `ScriptP1Tests.MaximumRawActionSourceBudgetIncludesRoomForHostRegistration`.
+
 The bridge consumes an already settled internal parse Promise, links records
 directly, then synchronously evaluates entries in order. It never drains user
 microtasks. Records stay rooted before recursive linking, preserving cycles,

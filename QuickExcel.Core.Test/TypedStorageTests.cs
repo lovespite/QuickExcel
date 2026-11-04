@@ -177,6 +177,9 @@ public sealed partial class TypedStorageTests : IDisposable
         Assert.False(session.ScriptsEnabled);
         Assert.Throws<InvalidOperationException>(() => _storage.Save(oldPath, migrated));
         var newPath = PathFor("migrated.xlsq");
+        Assert.Throws<NotSupportedException>(() => session.SetScriptsEnabled(true));
+        Assert.Throws<NotSupportedException>(() => _storage.Save(newPath, migrated));
+        migrated = migrated.WithScriptModules(ScriptModuleSet.Single("")); // Explicit script removal, never source conversion.
         _storage.Save(newPath, migrated);
         Assert.Equal(original, File.ReadAllBytes(oldPath));
         Assert.Equal(migrated.Sheets[0].Id, _storage.Open(newPath).Sheets[0].Id);
@@ -187,7 +190,7 @@ public sealed partial class TypedStorageTests : IDisposable
     [InlineData("formatVersion", "3")]
     [InlineData("formatVersion", "\"2\"")]
     [InlineData("minReaderVersion", "3")]
-    [InlineData("scriptApiVersion", "3")]
+    [InlineData("scriptApiVersion", "4")]
     [InlineData("requiredFeatures", "[\"typed-workbook\",\"stable-sheet-ids\",\"script-actions\"]")]
     [InlineData("workbook", "{\"path\":\"../workbook.xlsx\",\"sha256\":\"bad\"}")]
     public void UnsupportedAndMalformedManifestFieldsAreRejected(string field, string json)
@@ -229,7 +232,7 @@ public sealed partial class TypedStorageTests : IDisposable
     }
 
     [Fact]
-    public void MultiModuleSourceAndBindingsRoundTripButCannotRunInLegacyRuntime()
+    public void MultiModuleSourceAndBindingsRoundTripInV3WithoutExecutingOnOpen()
     {
         var modules = new ScriptModuleSet(new Dictionary<string, ScriptModule>
         {
@@ -245,7 +248,7 @@ public sealed partial class TypedStorageTests : IDisposable
         Assert.Equal("", new ScriptModule("scripts/plain.js", "").Description);
         Assert.Equal(4, result.ScriptModules.Revision);
         using var document = new WorkbookDocument(result, new(_storage, new NoCalculation()));
-        Assert.Throws<NotSupportedException>(document.EnableScriptsAndCalculate);
+        Assert.True(result.ScriptModules.CanExecute);
         Assert.False(document.ScriptsEnabled);
         var changed = result.WithScriptSource("// edited main").WithRevision(13);
         _storage.Save(path, changed);
@@ -260,9 +263,9 @@ public sealed partial class TypedStorageTests : IDisposable
         {
             ["main"] = new("scripts/main.js", "import 'price';"),
             ["price"] = new("scripts/lib/price.js", "throw new Error('opening never executes');")
-        }, ["main"], scriptApiVersion: 2);
+        }, ["main"], scriptApiVersion: 3);
         var path = PathFor("module-mode.xlsq"); _storage.Save(path, Model().WithScriptModules(modules));
-        Assert.Equal(2, _storage.Open(path).ScriptModules.ScriptApiVersion);
+        Assert.Equal(3, _storage.Open(path).ScriptModules.ScriptApiVersion);
         var parts = ReadZip(File.ReadAllBytes(path));
         var manifest = JsonNode.Parse(parts["manifest.json"])!;
         if (change == "version") manifest["scriptApiVersion"] = 1;

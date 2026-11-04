@@ -65,7 +65,8 @@ public sealed class StorageAdapterTests : IDisposable
         var storage = new TypedWorkbookStorage();
         var imported = storage.Open(path);
         var upgraded = FilePath("upgraded.xlsq");
-        storage.Save(upgraded, imported);
+        Assert.Throws<NotSupportedException>(() => storage.Save(upgraded, imported));
+        storage.Save(upgraded, imported.WithScriptModules(ScriptModuleSet.Single("")));
         var loaded = storage.Open(upgraded);
         Assert.Equal(2, loaded.Sheets[0].Cells.Count);
         Assert.Null(loaded.Sheets[0].GetCell(3, 0));

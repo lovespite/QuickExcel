@@ -57,7 +57,7 @@ public sealed partial class MainWindow
         var root = new DockPanel(); var toolbar = new WrapPanel { Margin = new(8), Orientation = Orientation.Horizontal };
         void Button(string text, Func<Task> action)
         { var button = new Button { Content = text, Margin = new(4) }; button.Click += async (_, _) => await PerformAsync(action); toolbar.Children.Add(button); }
-        Button("添加模块", AddScriptModuleAsync); Button("应用并重算", ApplyScriptsAsync);
+        Button("确认使用 API v3", MigrateScriptApiAsync); Button("移除全部脚本", RemoveScriptsAsync); Button("添加模块", AddScriptModuleAsync); Button("应用并重算", ApplyScriptsAsync);
         Button("停用", () => { DisableScripts(); return Task.CompletedTask; }); Button("保存", async () => await SaveAsync(false));
         _actionPicker = new ComboBox
         {
@@ -223,15 +223,36 @@ public sealed partial class MainWindow
             _scriptStatus.Text = $"{definition} · 定义文件（只读）";
         else if (_scriptStatus is not null && _scriptPage?.Drafts.Failed != true)
             _scriptStatus.Text = $"{modules.Modules[_selectedModule].Path} · {ScriptModuleProperties(modules, _selectedModule)} · API v{modules.ScriptApiVersion} · {(Document.ScriptsEnabled ? "已授权" : "未授权")}" +
-             (DesktopServices.SupportsScripts ? string.Empty : "(此平台尚未开放脚本执行)");
+             (!modules.CanExecute ? " · " + ScriptModuleSet.MigrationMessage : DesktopServices.SupportsScripts ? string.Empty : "(此平台尚未开放脚本执行)");
     }
     private void DisableScripts()
     { _scriptCancellation?.Cancel(); Document.DisableScripts(); ClearScriptActions(); RefreshScriptActions(); RefreshScriptChrome(); }
+    private async Task MigrateScriptApiAsync()
+    {
+        if (!await CommitEditorsAsync()) return;
+        var old = Document.Snapshot.ScriptModules;
+        if (old.CanExecute) return;
+        var dialog = new FieldsDialog("确认脚本已重写")
+            .Note("请先将全部模块重写为 QuickExcel API v3。此操作仅更新版本声明，不转换源码；原签名和执行授权将失效。");
+        if (!await dialog.ShowAsync(this)) return;
+        _workspace.Editor.Execute(new UpdateScriptModulesCommand(new(old.Modules, old.EntryModules,
+            old.Revision, old.BindingRevision, 3, old.Bindings)));
+        Synchronize(); RefreshScriptChrome();
+    }
+    private async Task RemoveScriptsAsync()
+    {
+        if (!await CommitEditorsAsync()) return;
+        var dialog = new FieldsDialog("移除全部脚本").Note("移除全部模块和签名，工作表数据保留。此操作可撤销。");
+        if (!await dialog.ShowAsync(this)) return;
+        _workspace.Editor.Execute(new UpdateScriptModulesCommand(ScriptModuleSet.Single("")));
+        _selectedModule = "main";
+        await RefreshScriptPageAfterMutationAsync(); Synchronize();
+    }
     private async Task AddScriptModuleAsync()
     {
         if (!await CommitEditorsAsync()) return;
         var document = Document;
-        if (document.Snapshot.ScriptModules.ScriptApiVersion != 2) throw new InvalidOperationException("API v1 工作簿保持原有执行语义；添加模块需要 API v2 工作簿。");
+        if (document.Snapshot.ScriptModules.ScriptApiVersion != 3) throw new InvalidOperationException("请先重写旧脚本，并选择“确认使用 API v3”；添加模块需要 API v3。");
         if (document.Snapshot.FileState?.FormulaReadOnly == true) throw new InvalidOperationException(WorkbookFileState.FormulaReadOnlyMessage);
         var dialog = new FieldsDialog("新建模块").Text("id", "模块逻辑 ID")
             .Text("description", "描述（可选）", "")

@@ -35,7 +35,7 @@ public interface IWorkbookCalculator
 public interface IScriptRuntimeFactory
 {
     IScriptRuntime Create(string source);
-    IScriptRuntime Create(ScriptRuntimeRequest request) => request.Modules.CanExecuteLegacy
+    IScriptRuntime Create(ScriptRuntimeRequest request) => request.Modules.CanExecuteSingleSource
         ? Create(request.Source) : throw new NotSupportedException("This runtime does not support package modules.");
 }
 

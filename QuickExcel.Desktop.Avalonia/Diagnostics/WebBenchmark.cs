@@ -26,7 +26,7 @@ public sealed partial class MainWindow
             {
             var boundary = Enumerable.Range(0, 64).ToDictionary(i => "m" + i, i => new ScriptModule($"scripts/m{i}.js",
                 (i == 0 ? "host.functions.register('SMOKE', value => value);\n//" : $"export const value = {i};\n//").PadRight(16 * 1024, ' ')));
-            _workspace.Editor.Execute(new UpdateScriptModulesCommand(new(boundary, ["m0"], scriptApiVersion: 2)));
+            _workspace.Editor.Execute(new UpdateScriptModulesCommand(new(boundary, ["m0"], scriptApiVersion: 3)));
             var cold = new List<double>();
             for (var run = 0; run < 5; run++)
             {

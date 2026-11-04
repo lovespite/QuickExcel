@@ -77,7 +77,7 @@ public sealed partial class MainWindow
             };
             for (var i = 0; i < 24; i++) dictionary[$"extra{i:00}"] = new($"scripts/extra{i:00}.js", "function main(){}");
             var names = dictionary.Keys.ToArray();
-            var modules = new ScriptModuleSet(dictionary, names, scriptApiVersion: 2,
+            var modules = new ScriptModuleSet(dictionary, names, scriptApiVersion: 3,
                 bindings: names.Select(name => new ScriptBinding(name, "actions")).ToArray());
             _workspace.Editor.Execute(new UpdateScriptModulesCommand(modules)); Synchronize();
             var path = Path.Combine(directory, "automation.xlsq"); new TypedWorkbookStorage().Save(path, Document.Snapshot);
@@ -183,10 +183,10 @@ public sealed partial class MainWindow
             await Layout();
             Check(Document.Snapshot.Revision == revision && _status.Text!.Contains("请先加载"), "A stale action cannot execute after source changes");
             await Click(_automationLoad!);
-            _workspace.Editor.Execute(new UpdateScriptModulesCommand(new(Document.Snapshot.ScriptModules.Modules, ["increment"], scriptApiVersion: 2)));
+            _workspace.Editor.Execute(new UpdateScriptModulesCommand(new(Document.Snapshot.ScriptModules.Modules, ["increment"], scriptApiVersion: 3)));
             Synchronize();
             Check(_automationActions.ItemCount == 0 && !_automationRun.IsEnabled, "Changing action bindings clears previously discovered actions");
-            _workspace.Editor.Execute(new UpdateScriptModulesCommand(new(new Dictionary<string, ScriptModule> { ["main"] = new("scripts/main.js", "// no registrations") }, ["main"], scriptApiVersion: 2, bindings: [new("main", "actions")])));
+            _workspace.Editor.Execute(new UpdateScriptModulesCommand(new(new Dictionary<string, ScriptModule> { ["main"] = new("scripts/main.js", "// no registrations") }, ["main"], scriptApiVersion: 3, bindings: [new("main", "actions")])));
             Synchronize(); await Click(_automationLoad!);
             Check(_automationActions.ItemCount == 0 && _automationEmpty.Text!.Contains("没有可用") && !_automationRun.IsEnabled, "An action entry with no registrations displays an empty state after discovery");
             await OpenPathAsync(path); await Click(_automationLoad!); _workspace.New();

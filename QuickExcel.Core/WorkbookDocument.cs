@@ -178,7 +178,7 @@ public sealed class WorkbookDocument : IDisposable
     public void EnableScriptsAndCalculate() => EnableScriptsAndCalculate(CancellationToken.None);
     public void EnableScriptsAndCalculate(CancellationToken cancellationToken)
     {
-        if (!Snapshot.ScriptModules.CanExecute) throw new NotSupportedException("多模块源码已保留；执行需要显式声明脚本 API v2。");
+        if (!Snapshot.ScriptModules.CanExecute) throw new NotSupportedException(ScriptModuleSet.MigrationMessage);
         Session.SetScriptsEnabled(true);
         Calculate(cancellationToken);
     }

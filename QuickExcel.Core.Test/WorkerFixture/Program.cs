@@ -8,7 +8,8 @@ using var output = Console.OpenStandardOutput();
 var hello = await WorkerProtocol.ReadAsync(input);
 await WorkerProtocol.WriteAsync(output, hello);
 var loadEnvelope = await WorkerProtocol.ReadAsync(input);
-if (loadEnvelope.Kind is "loadActions" or "loadWorkbook")
+var sharedFormula = loadEnvelope.Kind == "loadWorkbook" && WorkerProtocol.Payload<LoadModules>(loadEnvelope).FunctionEntries.Length > 0;
+if (loadEnvelope.Kind is "loadActions" or "loadWorkbook" && !sharedFormula)
 {
     var modules = WorkerProtocol.Payload<LoadModules>(loadEnvelope);
     var fault = modules.Modules[0].Source.Split('\n')[0];
@@ -89,7 +90,9 @@ if (loadEnvelope.Kind is "loadActions" or "loadWorkbook")
     await WorkerProtocol.WriteAsync(output, WorkerProtocol.Message(logRequest.Identity, "logs", new WorkerLogs([])));
     return;
 }
-var load = WorkerProtocol.Payload<LoadScript>(loadEnvelope);
+var load = loadEnvelope.Kind is "loadModules" or "loadWorkbook"
+    ? new LoadScript(WorkerProtocol.Payload<LoadModules>(loadEnvelope).Modules[0].Source, WorkerProtocol.Payload<LoadModules>(loadEnvelope).Sha256)
+    : WorkerProtocol.Payload<LoadScript>(loadEnvelope);
 var mode = load.Source;
 if (mode == "duplicate") { await WorkerProtocol.WriteAsync(output, hello); return; }
 if (mode == "oversize")
@@ -110,8 +113,12 @@ var identity = mode switch
     "script" => loadEnvelope.Identity with { ScriptGeneration = 999 },
     _ => loadEnvelope.Identity
 };
-await WorkerProtocol.WriteAsync(output, WorkerProtocol.Message(identity, "load", new LoadedScript(load.Sha256,
-    [new("F", 1, 0, 255, "any", "conservative")])));
+if (sharedFormula)
+    await WorkerProtocol.WriteAsync(output, WorkerProtocol.Message(identity, loadEnvelope.Kind, new LoadedWorkbook(load.Sha256,
+        [new("F", 1, 0, 255, "any", "conservative")], [])));
+else
+    await WorkerProtocol.WriteAsync(output, WorkerProtocol.Message(identity, loadEnvelope.Kind, new LoadedScript(load.Sha256,
+        [new("F", 1, 0, 255, "any", "conservative")])));
 var invoke = await WorkerProtocol.ReadAsync(input);
 if (mode == "isolation")
 {

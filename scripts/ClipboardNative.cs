@@ -38,7 +38,8 @@ public static class ClipboardNative
         try { Open(window); try { if(!EmptyClipboard()) throw new InvalidOperationException("EmptyClipboard failed");
             for(int i=0;i<names.Length;i++) { var h=GlobalAlloc(0x42,(UIntPtr)payloads[i].Length); var p=GlobalLock(h); if(p==IntPtr.Zero) throw new InvalidOperationException("Allocation failed");
                 Marshal.Copy(payloads[i],0,p,payloads[i].Length); GlobalUnlock(h);
-                if(SetClipboardData(names[i]=="CF_13"?13:RegisterClipboardFormat(names[i]),h)==IntPtr.Zero) { GlobalFree(h); throw new InvalidOperationException("SetClipboardData failed"); }
+                uint format=names[i]=="CF_13"?13u:names[i]=="CF_8"?8u:names[i]=="CF_17"?17u:RegisterClipboardFormat(names[i]);
+                if(SetClipboardData(format,h)==IntPtr.Zero) { GlobalFree(h); throw new InvalidOperationException("SetClipboardData failed"); }
             }
         } finally { CloseClipboard(); } } finally { DestroyWindow(window); }
     }

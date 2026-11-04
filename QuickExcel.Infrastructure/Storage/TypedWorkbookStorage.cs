@@ -66,12 +66,12 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage, IW
                         root.TryGetProperty("script", out _) && String(root, "script") != "scripts/functions.js") throw new InvalidDataException("v1 入口路径无效。");
                     if (parts.Count != 3) throw new InvalidDataException("v1 包包含未声明条目。");
                     workbookBytes = Required(parts, "workbook.xlsx");
-                    modules = ScriptModuleSet.Single(Utf8.GetString(Required(parts, "scripts/functions.js", 1024 * 1024)));
+                    modules = ScriptModuleSet.Single(Utf8.GetString(Required(parts, "scripts/functions.js", 1024 * 1024)), 1);
                 }
                 else
                 {
-                    var scriptApiVersion = checked((int)Integer(root, "scriptApiVersion", 2));
-                    if (String(root, "format") != "QuickExcel" || Integer(root, "minReaderVersion", 2) != 2 || scriptApiVersion is not (1 or 2))
+                    var scriptApiVersion = checked((int)Integer(root, "scriptApiVersion", 3));
+                    if (String(root, "format") != "QuickExcel" || Integer(root, "minReaderVersion", 2) != 2 || scriptApiVersion is not (1 or 2 or 3))
                         throw new InvalidDataException("XLSQ 格式、读取器版本或脚本 API 不受支持。");
                     var features = Array(root, "requiredFeatures").Select(e => e.GetString() ?? throw new InvalidDataException("能力名称必须为字符串。")).ToArray();
                     declaredViews = features.Contains("workbook-views");
@@ -82,7 +82,7 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage, IW
                     declaredStrict = features.Contains("strict-ooxml");
                     declaredThreads = features.Contains("preserved-threaded-comments");
                     if (features.Distinct().Count() != features.Length || Features.Except(features).Any() || features.Except(Features.Concat(["strict-ooxml", "preserved-threaded-comments", "worksheet-pivots", "dynamic-arrays", "typescript-sources", "virtual-files", "script-actions", "script-signatures", "workbook-views", "worksheet-printing", "preserved-formulas", "cell-text-annotations", "worksheet-data", "worksheet-tables", "worksheet-validation", "worksheet-conditional-formatting", "worksheet-outline", "text-compatibility-v2", "extended-cell-errors", "drawing-anchors", "drawing-transforms", "worksheet-protection", "worksheet-charts", "worksheet-charts-v2", "chart-filters", "worksheet-default-width", "extended-capacity"])).Any() ||
-                        features.Contains("script-actions") && scriptApiVersion != 2)
+                        features.Contains("script-actions") && scriptApiVersion < 2)
                         throw new InvalidDataException("XLSQ 缺少必要能力或包含未知必需能力。");
                     var referenced = new HashSet<string>(StringComparer.Ordinal) { "manifest.json" };
                     byte[] Reference(JsonElement reference, string? expectedPath = null)
@@ -278,6 +278,7 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage, IW
 
     private static Dictionary<string, byte[]> BuildPackage(WorkbookSnapshot snapshot, bool discardUnsupported, CancellationToken cancellationToken)
     {
+        if (!snapshot.ScriptModules.CanExecute) throw new NotSupportedException(ScriptModuleSet.MigrationMessage);
         if (snapshot.ScriptModules.Modules.Sum(m => (long)Utf8.GetByteCount(m.Value.Source)) > 1024 * 1024) throw new InvalidOperationException("Combined script source exceeds 1 MiB.");
         var unchanged = snapshot.FileState is { } state && ContentEquals(snapshot, state.OriginalModel);
         var issues = SaveIssues(snapshot);
@@ -509,18 +510,18 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage, IW
     {
         if (modules.HasTypeScript) return Hash(JsonSerializer.SerializeToUtf8Bytes(new
         {
-            scriptApiVersion = 2, compilerOptions = ScriptModuleSet.TypeScriptOptions, entries = modules.EntryModules,
+            scriptApiVersion = modules.ScriptApiVersion, compilerOptions = ScriptModuleSet.TypeScriptOptions, entries = modules.EntryModules,
             modules = modules.Modules.OrderBy(m => m.Key, StringComparer.Ordinal).Select(m => new { id = m.Key, path = m.Value.Path,
                 language = m.Value.Language == ScriptLanguage.TypeScript ? "typescript" : "javascript", sha256 = Hash(Utf8.GetBytes(m.Value.Source)) }),
             bindings = modules.Bindings.OrderBy(b => b.Module, StringComparer.Ordinal).ThenBy(b => b.Kind, StringComparer.Ordinal)
         }));
         var sources = modules.Modules.OrderBy(m => m.Key, StringComparer.Ordinal).Select(m => new { id = m.Key, path = m.Value.Path, sha256 = Hash(Utf8.GetBytes(m.Value.Source)) });
-        if (modules.HasActions) return Hash(JsonSerializer.SerializeToUtf8Bytes(new { scriptApiVersion = 2, entries = modules.EntryModules, modules = sources,
+        if (modules.HasActions) return Hash(JsonSerializer.SerializeToUtf8Bytes(new { scriptApiVersion = modules.ScriptApiVersion, entries = modules.EntryModules, modules = sources,
             bindings = modules.Bindings.OrderBy(b => b.Module, StringComparer.Ordinal).ThenBy(b => b.Kind, StringComparer.Ordinal).Select(b => new { module = b.Module, kind = b.Kind }) }));
         // Preserve existing API v1 digests; module-mode digests also bind the execution semantics.
         return modules.ScriptApiVersion == 1
             ? Hash(JsonSerializer.SerializeToUtf8Bytes(new { entries = modules.EntryModules, modules = sources }))
-            : Hash(JsonSerializer.SerializeToUtf8Bytes(new { scriptApiVersion = 2, entries = modules.EntryModules, modules = sources }));
+            : Hash(JsonSerializer.SerializeToUtf8Bytes(new { scriptApiVersion = modules.ScriptApiVersion, entries = modules.EntryModules, modules = sources }));
     }
     private static ScriptLanguage ReadScriptLanguage(string? value) => value switch
     {

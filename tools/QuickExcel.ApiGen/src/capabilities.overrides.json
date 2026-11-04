@@ -38,6 +38,18 @@
           "host": "active",
           "arity": 0,
           "cost": 1
+        },
+        "getTables": {
+          "kind": "host",
+          "host": "getApi:Workbook.getTables",
+          "arity": 2,
+          "cost": 100000
+        },
+        "getTable": {
+          "kind": "host",
+          "host": "getApi:Workbook.getTable",
+          "arity": 2,
+          "cost": 100000
         }
       }
     },
@@ -57,6 +69,42 @@
         },
         "getRange": {
           "kind": "local"
+        },
+        "getUsedRange": {
+          "kind": "host",
+          "host": "getApi:Worksheet.getUsedRange",
+          "arity": 2,
+          "cost": 100000
+        },
+        "getProtection": {
+          "kind": "host",
+          "host": "getApi:Worksheet.getProtection",
+          "arity": 2,
+          "cost": 100000
+        },
+        "getAutoFilter": {
+          "kind": "host",
+          "host": "getApi:Worksheet.getAutoFilter",
+          "arity": 2,
+          "cost": 100000
+        },
+        "getTables": {
+          "kind": "host",
+          "host": "getApi:Worksheet.getTables",
+          "arity": 2,
+          "cost": 100000
+        },
+        "getTable": {
+          "kind": "host",
+          "host": "getApi:Worksheet.getTable",
+          "arity": 2,
+          "cost": 100000
+        },
+        "addTable": {
+          "kind": "host",
+          "host": "setApi:Worksheet.addTable",
+          "arity": 2,
+          "cost": 20000
         }
       }
     },
@@ -114,10 +162,112 @@
           "cost": 20000
         },
         "clear": {
+          "arity": 2,
+          "cost": 20000,
+          "host": "setApi:Range.clear",
+          "kind": "host"
+        },
+        "getRowIndex": {
           "kind": "host",
-          "host": "clear",
+          "host": "getApi:Range.getRowIndex",
+          "arity": 2,
+          "cost": 100000
+        },
+        "getColumnIndex": {
+          "kind": "host",
+          "host": "getApi:Range.getColumnIndex",
+          "arity": 2,
+          "cost": 100000
+        },
+        "getRowCount": {
+          "kind": "host",
+          "host": "getApi:Range.getRowCount",
+          "arity": 2,
+          "cost": 100000
+        },
+        "getColumnCount": {
+          "kind": "host",
+          "host": "getApi:Range.getColumnCount",
+          "arity": 2,
+          "cost": 100000
+        },
+        "getCellCount": {
+          "kind": "host",
+          "host": "getApi:Range.getCellCount",
+          "arity": 2,
+          "cost": 100000
+        },
+        "getSort": {
+          "kind": "host",
+          "host": "getApi:Range.getSort",
+          "arity": 2,
+          "cost": 100000
+        },
+        "getNumberFormat": {
+          "kind": "host",
+          "host": "getApi:Range.getNumberFormat",
+          "arity": 2,
+          "cost": 100000
+        },
+        "getNumberFormats": {
+          "kind": "host",
+          "host": "getApi:Range.getNumberFormats",
+          "arity": 2,
+          "cost": 100000
+        },
+        "getFormulas": {
+          "kind": "host",
+          "host": "getApi:Range.getFormulas",
+          "arity": 2,
+          "cost": 100000
+        },
+        "getValueType": {
+          "kind": "host",
+          "host": "getApi:Range.getValueType",
+          "arity": 2,
+          "cost": 100000
+        },
+        "getValueTypes": {
+          "kind": "host",
+          "host": "getApi:Range.getValueTypes",
+          "arity": 2,
+          "cost": 100000
+        },
+        "getText": {
+          "kind": "host",
+          "host": "getApi:Range.getText",
+          "arity": 2,
+          "cost": 100000
+        },
+        "getTexts": {
+          "kind": "host",
+          "host": "getApi:Range.getTexts",
+          "arity": 2,
+          "cost": 100000
+        },
+        "setNumberFormat": {
+          "kind": "host",
+          "host": "setApi:Range.setNumberFormat",
           "arity": 2,
           "cost": 20000
+        },
+        "setNumberFormats": {
+          "kind": "host",
+          "host": "setApi:Range.setNumberFormats",
+          "arity": 2,
+          "cost": 20000
+        },
+        "getNumberFormatCategory": {
+          "arity": 2,
+          "cost": 100000,
+          "host": "getApi:Range.getNumberFormatCategory",
+          "kind": "host"
+        },
+        "getNumberFormatCategories": {
+          "arity": 2,
+          "cost": 100000,
+          "host": "getApi:Range.getNumberFormatCategories",
+          "kind": "host"
         }
       }
     },
@@ -125,6 +275,126 @@
       "members": {
         "getFill": {
           "kind": "local"
+        },
+        "getFont": {
+          "kind": "host",
+          "host": "getApi:RangeFormat.getFont",
+          "arity": 2,
+          "cost": 100000
+        },
+        "getProtection": {
+          "kind": "host",
+          "host": "getApi:RangeFormat.getProtection",
+          "arity": 2,
+          "cost": 100000
+        },
+        "getBorders": {
+          "kind": "host",
+          "host": "getApi:RangeFormat.getBorders",
+          "arity": 2,
+          "cost": 100000
+        },
+        "getRangeBorder": {
+          "kind": "host",
+          "host": "getApi:RangeFormat.getRangeBorder",
+          "arity": 2,
+          "cost": 100000
+        },
+        "getHorizontalAlignment": {
+          "kind": "host",
+          "host": "getApi:RangeFormat.getHorizontalAlignment",
+          "arity": 2,
+          "cost": 100000
+        },
+        "getVerticalAlignment": {
+          "kind": "host",
+          "host": "getApi:RangeFormat.getVerticalAlignment",
+          "arity": 2,
+          "cost": 100000
+        },
+        "getWrapText": {
+          "kind": "host",
+          "host": "getApi:RangeFormat.getWrapText",
+          "arity": 2,
+          "cost": 100000
+        },
+        "getShrinkToFit": {
+          "kind": "host",
+          "host": "getApi:RangeFormat.getShrinkToFit",
+          "arity": 2,
+          "cost": 100000
+        },
+        "getIndentLevel": {
+          "kind": "host",
+          "host": "getApi:RangeFormat.getIndentLevel",
+          "arity": 2,
+          "cost": 100000
+        },
+        "getTextOrientation": {
+          "kind": "host",
+          "host": "getApi:RangeFormat.getTextOrientation",
+          "arity": 2,
+          "cost": 100000
+        },
+        "getRowHeight": {
+          "kind": "host",
+          "host": "getApi:RangeFormat.getRowHeight",
+          "arity": 2,
+          "cost": 100000
+        },
+        "getColumnWidth": {
+          "kind": "host",
+          "host": "getApi:RangeFormat.getColumnWidth",
+          "arity": 2,
+          "cost": 100000
+        },
+        "setHorizontalAlignment": {
+          "kind": "host",
+          "host": "setApi:RangeFormat.setHorizontalAlignment",
+          "arity": 2,
+          "cost": 20000
+        },
+        "setVerticalAlignment": {
+          "kind": "host",
+          "host": "setApi:RangeFormat.setVerticalAlignment",
+          "arity": 2,
+          "cost": 20000
+        },
+        "setWrapText": {
+          "kind": "host",
+          "host": "setApi:RangeFormat.setWrapText",
+          "arity": 2,
+          "cost": 20000
+        },
+        "setShrinkToFit": {
+          "kind": "host",
+          "host": "setApi:RangeFormat.setShrinkToFit",
+          "arity": 2,
+          "cost": 20000
+        },
+        "setIndentLevel": {
+          "kind": "host",
+          "host": "setApi:RangeFormat.setIndentLevel",
+          "arity": 2,
+          "cost": 20000
+        },
+        "setTextOrientation": {
+          "kind": "host",
+          "host": "setApi:RangeFormat.setTextOrientation",
+          "arity": 2,
+          "cost": 20000
+        },
+        "setRowHeight": {
+          "kind": "host",
+          "host": "setApi:RangeFormat.setRowHeight",
+          "arity": 2,
+          "cost": 20000
+        },
+        "setColumnWidth": {
+          "kind": "host",
+          "host": "setApi:RangeFormat.setColumnWidth",
+          "arity": 2,
+          "cost": 20000
         }
       }
     },
@@ -134,7 +404,7 @@
           "kind": "host",
           "host": "getFill",
           "arity": 2,
-          "cost": 1
+          "cost": 100000
         },
         "setColor": {
           "kind": "host",
@@ -168,6 +438,662 @@
           "kind": "local"
         }
       }
+    },
+    "RangeFont": {
+      "members": {
+        "getBold": {
+          "kind": "host",
+          "host": "getApi:RangeFont.getBold",
+          "arity": 2,
+          "cost": 100000
+        },
+        "getItalic": {
+          "kind": "host",
+          "host": "getApi:RangeFont.getItalic",
+          "arity": 2,
+          "cost": 100000
+        },
+        "getColor": {
+          "kind": "host",
+          "host": "getApi:RangeFont.getColor",
+          "arity": 2,
+          "cost": 100000
+        },
+        "getName": {
+          "kind": "host",
+          "host": "getApi:RangeFont.getName",
+          "arity": 2,
+          "cost": 100000
+        },
+        "getSize": {
+          "kind": "host",
+          "host": "getApi:RangeFont.getSize",
+          "arity": 2,
+          "cost": 100000
+        },
+        "getStrikethrough": {
+          "kind": "host",
+          "host": "getApi:RangeFont.getStrikethrough",
+          "arity": 2,
+          "cost": 100000
+        },
+        "getUnderline": {
+          "kind": "host",
+          "host": "getApi:RangeFont.getUnderline",
+          "arity": 2,
+          "cost": 100000
+        },
+        "setBold": {
+          "kind": "host",
+          "host": "setApi:RangeFont.setBold",
+          "arity": 2,
+          "cost": 20000
+        },
+        "setItalic": {
+          "kind": "host",
+          "host": "setApi:RangeFont.setItalic",
+          "arity": 2,
+          "cost": 20000
+        },
+        "setColor": {
+          "kind": "host",
+          "host": "setApi:RangeFont.setColor",
+          "arity": 2,
+          "cost": 20000
+        },
+        "setName": {
+          "kind": "host",
+          "host": "setApi:RangeFont.setName",
+          "arity": 2,
+          "cost": 20000
+        },
+        "setSize": {
+          "kind": "host",
+          "host": "setApi:RangeFont.setSize",
+          "arity": 2,
+          "cost": 20000
+        },
+        "setStrikethrough": {
+          "kind": "host",
+          "host": "setApi:RangeFont.setStrikethrough",
+          "arity": 2,
+          "cost": 20000
+        },
+        "setUnderline": {
+          "kind": "host",
+          "host": "setApi:RangeFont.setUnderline",
+          "arity": 2,
+          "cost": 20000
+        }
+      }
+    },
+    "RangeBorder": {
+      "members": {
+        "getColor": {
+          "kind": "host",
+          "host": "getApi:RangeBorder.getColor",
+          "arity": 2,
+          "cost": 100000
+        },
+        "getSideIndex": {
+          "kind": "host",
+          "host": "getApi:RangeBorder.getSideIndex",
+          "arity": 2,
+          "cost": 100000
+        },
+        "getStyle": {
+          "kind": "host",
+          "host": "getApi:RangeBorder.getStyle",
+          "arity": 2,
+          "cost": 100000
+        },
+        "getWeight": {
+          "kind": "host",
+          "host": "getApi:RangeBorder.getWeight",
+          "arity": 2,
+          "cost": 100000
+        },
+        "setColor": {
+          "kind": "host",
+          "host": "setApi:RangeBorder.setColor",
+          "arity": 2,
+          "cost": 20000
+        },
+        "setStyle": {
+          "kind": "host",
+          "host": "setApi:RangeBorder.setStyle",
+          "arity": 2,
+          "cost": 20000
+        },
+        "setWeight": {
+          "kind": "host",
+          "host": "setApi:RangeBorder.setWeight",
+          "arity": 2,
+          "cost": 20000
+        }
+      }
+    },
+    "FormatProtection": {
+      "members": {
+        "getLocked": {
+          "kind": "host",
+          "host": "getApi:FormatProtection.getLocked",
+          "arity": 2,
+          "cost": 100000
+        },
+        "getFormulaHidden": {
+          "kind": "host",
+          "host": "getApi:FormatProtection.getFormulaHidden",
+          "arity": 2,
+          "cost": 100000
+        },
+        "setLocked": {
+          "kind": "host",
+          "host": "setApi:FormatProtection.setLocked",
+          "arity": 2,
+          "cost": 20000
+        },
+        "setFormulaHidden": {
+          "kind": "host",
+          "host": "setApi:FormatProtection.setFormulaHidden",
+          "arity": 2,
+          "cost": 20000
+        }
+      }
+    },
+    "WorksheetProtection": {
+      "members": {
+        "getProtected": {
+          "kind": "host",
+          "host": "getApi:WorksheetProtection.getProtected",
+          "arity": 2,
+          "cost": 100000
+        },
+        "getIsPasswordProtected": {
+          "kind": "host",
+          "host": "getApi:WorksheetProtection.getIsPasswordProtected",
+          "arity": 2,
+          "cost": 100000
+        },
+        "getCanPauseProtection": {
+          "kind": "host",
+          "host": "getApi:WorksheetProtection.getCanPauseProtection",
+          "arity": 2,
+          "cost": 100000
+        },
+        "getIsPaused": {
+          "kind": "host",
+          "host": "getApi:WorksheetProtection.getIsPaused",
+          "arity": 2,
+          "cost": 100000
+        },
+        "getOptions": {
+          "kind": "host",
+          "host": "getApi:WorksheetProtection.getOptions",
+          "arity": 2,
+          "cost": 100000
+        },
+        "getSavedOptions": {
+          "kind": "host",
+          "host": "getApi:WorksheetProtection.getSavedOptions",
+          "arity": 2,
+          "cost": 100000
+        },
+        "protect": {
+          "kind": "host",
+          "host": "setApi:WorksheetProtection.protect",
+          "arity": 2,
+          "cost": 20000
+        },
+        "unprotect": {
+          "kind": "host",
+          "host": "setApi:WorksheetProtection.unprotect",
+          "arity": 2,
+          "cost": 20000
+        }
+      }
+    },
+    "Table": {
+      "members": {
+        "getId": {
+          "kind": "host",
+          "host": "getApi:Table.getId",
+          "arity": 2,
+          "cost": 100000
+        },
+        "getLegacyId": {
+          "kind": "host",
+          "host": "getApi:Table.getLegacyId",
+          "arity": 2,
+          "cost": 100000
+        },
+        "getName": {
+          "kind": "host",
+          "host": "getApi:Table.getName",
+          "arity": 2,
+          "cost": 100000
+        },
+        "getRowCount": {
+          "kind": "host",
+          "host": "getApi:Table.getRowCount",
+          "arity": 2,
+          "cost": 100000
+        },
+        "getShowHeaders": {
+          "kind": "host",
+          "host": "getApi:Table.getShowHeaders",
+          "arity": 2,
+          "cost": 100000
+        },
+        "getShowTotals": {
+          "kind": "host",
+          "host": "getApi:Table.getShowTotals",
+          "arity": 2,
+          "cost": 100000
+        },
+        "getHighlightFirstColumn": {
+          "kind": "host",
+          "host": "getApi:Table.getHighlightFirstColumn",
+          "arity": 2,
+          "cost": 100000
+        },
+        "getHighlightLastColumn": {
+          "kind": "host",
+          "host": "getApi:Table.getHighlightLastColumn",
+          "arity": 2,
+          "cost": 100000
+        },
+        "getShowBandedColumns": {
+          "kind": "host",
+          "host": "getApi:Table.getShowBandedColumns",
+          "arity": 2,
+          "cost": 100000
+        },
+        "getShowBandedRows": {
+          "kind": "host",
+          "host": "getApi:Table.getShowBandedRows",
+          "arity": 2,
+          "cost": 100000
+        },
+        "getPredefinedTableStyle": {
+          "kind": "host",
+          "host": "getApi:Table.getPredefinedTableStyle",
+          "arity": 2,
+          "cost": 100000
+        },
+        "getShowFilterButton": {
+          "kind": "host",
+          "host": "getApi:Table.getShowFilterButton",
+          "arity": 2,
+          "cost": 100000
+        },
+        "getWorksheet": {
+          "kind": "host",
+          "host": "getApi:Table.getWorksheet",
+          "arity": 2,
+          "cost": 100000
+        },
+        "getSort": {
+          "kind": "host",
+          "host": "getApi:Table.getSort",
+          "arity": 2,
+          "cost": 100000
+        },
+        "getAutoFilter": {
+          "kind": "host",
+          "host": "getApi:Table.getAutoFilter",
+          "arity": 2,
+          "cost": 100000
+        },
+        "getColumns": {
+          "kind": "host",
+          "host": "getApi:Table.getColumns",
+          "arity": 2,
+          "cost": 100000
+        },
+        "getColumn": {
+          "kind": "host",
+          "host": "getApi:Table.getColumn",
+          "arity": 2,
+          "cost": 100000
+        },
+        "getColumnById": {
+          "kind": "host",
+          "host": "getApi:Table.getColumnById",
+          "arity": 2,
+          "cost": 100000
+        },
+        "getColumnByName": {
+          "kind": "host",
+          "host": "getApi:Table.getColumnByName",
+          "arity": 2,
+          "cost": 100000
+        },
+        "getRange": {
+          "kind": "host",
+          "host": "getApi:Table.getRange",
+          "arity": 2,
+          "cost": 100000
+        },
+        "getHeaderRowRange": {
+          "kind": "host",
+          "host": "getApi:Table.getHeaderRowRange",
+          "arity": 2,
+          "cost": 100000
+        },
+        "getTotalRowRange": {
+          "kind": "host",
+          "host": "getApi:Table.getTotalRowRange",
+          "arity": 2,
+          "cost": 100000
+        },
+        "getRangeBetweenHeaderAndTotal": {
+          "kind": "host",
+          "host": "getApi:Table.getRangeBetweenHeaderAndTotal",
+          "arity": 2,
+          "cost": 100000
+        },
+        "setName": {
+          "kind": "host",
+          "host": "setApi:Table.setName",
+          "arity": 2,
+          "cost": 20000
+        },
+        "setPredefinedTableStyle": {
+          "kind": "host",
+          "host": "setApi:Table.setPredefinedTableStyle",
+          "arity": 2,
+          "cost": 20000
+        },
+        "setHighlightFirstColumn": {
+          "kind": "host",
+          "host": "setApi:Table.setHighlightFirstColumn",
+          "arity": 2,
+          "cost": 20000
+        },
+        "setHighlightLastColumn": {
+          "kind": "host",
+          "host": "setApi:Table.setHighlightLastColumn",
+          "arity": 2,
+          "cost": 20000
+        },
+        "setShowBandedColumns": {
+          "kind": "host",
+          "host": "setApi:Table.setShowBandedColumns",
+          "arity": 2,
+          "cost": 20000
+        },
+        "setShowBandedRows": {
+          "kind": "host",
+          "host": "setApi:Table.setShowBandedRows",
+          "arity": 2,
+          "cost": 20000
+        },
+        "resize": {
+          "kind": "host",
+          "host": "setApi:Table.resize",
+          "arity": 2,
+          "cost": 20000
+        },
+        "clearFilters": {
+          "kind": "host",
+          "host": "setApi:Table.clearFilters",
+          "arity": 2,
+          "cost": 20000
+        },
+        "reapplyFilters": {
+          "kind": "host",
+          "host": "setApi:Table.reapplyFilters",
+          "arity": 2,
+          "cost": 20000
+        },
+        "convertToRange": {
+          "kind": "host",
+          "host": "setApi:Table.convertToRange",
+          "arity": 2,
+          "cost": 20000
+        },
+        "delete": {
+          "kind": "host",
+          "host": "setApi:Table.delete",
+          "arity": 2,
+          "cost": 20000
+        },
+        "addRow": {
+          "host": "setApi:Table.addRow",
+          "arity": 2,
+          "kind": "host",
+          "cost": 20000
+        },
+        "addRows": {
+          "host": "setApi:Table.addRows",
+          "arity": 2,
+          "kind": "host",
+          "cost": 20000
+        }
+      }
+    },
+    "TableColumn": {
+      "members": {
+        "getId": {
+          "kind": "host",
+          "host": "getApi:TableColumn.getId",
+          "arity": 2,
+          "cost": 100000
+        },
+        "getIndex": {
+          "kind": "host",
+          "host": "getApi:TableColumn.getIndex",
+          "arity": 2,
+          "cost": 100000
+        },
+        "getName": {
+          "kind": "host",
+          "host": "getApi:TableColumn.getName",
+          "arity": 2,
+          "cost": 100000
+        },
+        "getFilter": {
+          "kind": "host",
+          "host": "getApi:TableColumn.getFilter",
+          "arity": 2,
+          "cost": 100000
+        },
+        "getRange": {
+          "kind": "host",
+          "host": "getApi:TableColumn.getRange",
+          "arity": 2,
+          "cost": 100000
+        },
+        "getHeaderRowRange": {
+          "kind": "host",
+          "host": "getApi:TableColumn.getHeaderRowRange",
+          "arity": 2,
+          "cost": 100000
+        },
+        "getTotalRowRange": {
+          "kind": "host",
+          "host": "getApi:TableColumn.getTotalRowRange",
+          "arity": 2,
+          "cost": 100000
+        },
+        "getRangeBetweenHeaderAndTotal": {
+          "kind": "host",
+          "host": "getApi:TableColumn.getRangeBetweenHeaderAndTotal",
+          "arity": 2,
+          "cost": 100000
+        },
+        "setName": {
+          "kind": "host",
+          "host": "setApi:TableColumn.setName",
+          "arity": 2,
+          "cost": 20000
+        }
+      }
+    },
+    "RangeSort": {
+      "members": {
+        "apply": {
+          "kind": "host",
+          "host": "setApi:RangeSort.apply",
+          "arity": 2,
+          "cost": 20000
+        }
+      }
+    },
+    "TableSort": {
+      "members": {
+        "getFields": {
+          "kind": "host",
+          "host": "getApi:TableSort.getFields",
+          "arity": 2,
+          "cost": 100000
+        },
+        "getMatchCase": {
+          "kind": "host",
+          "host": "getApi:TableSort.getMatchCase",
+          "arity": 2,
+          "cost": 100000
+        },
+        "getMethod": {
+          "kind": "host",
+          "host": "getApi:TableSort.getMethod",
+          "arity": 2,
+          "cost": 100000
+        },
+        "apply": {
+          "kind": "host",
+          "host": "setApi:TableSort.apply",
+          "arity": 2,
+          "cost": 20000
+        },
+        "clear": {
+          "kind": "host",
+          "host": "setApi:TableSort.clear",
+          "arity": 2,
+          "cost": 20000
+        },
+        "reapply": {
+          "kind": "host",
+          "host": "setApi:TableSort.reapply",
+          "arity": 2,
+          "cost": 20000
+        }
+      }
+    },
+    "AutoFilter": {
+      "members": {
+        "getCriteria": {
+          "kind": "host",
+          "host": "getApi:AutoFilter.getCriteria",
+          "arity": 2,
+          "cost": 100000
+        },
+        "getEnabled": {
+          "kind": "host",
+          "host": "getApi:AutoFilter.getEnabled",
+          "arity": 2,
+          "cost": 100000
+        },
+        "getIsDataFiltered": {
+          "kind": "host",
+          "host": "getApi:AutoFilter.getIsDataFiltered",
+          "arity": 2,
+          "cost": 100000
+        },
+        "getRange": {
+          "kind": "host",
+          "host": "getApi:AutoFilter.getRange",
+          "arity": 2,
+          "cost": 100000
+        },
+        "apply": {
+          "kind": "host",
+          "host": "setApi:AutoFilter.apply",
+          "arity": 2,
+          "cost": 20000
+        },
+        "clearColumnCriteria": {
+          "kind": "host",
+          "host": "setApi:AutoFilter.clearColumnCriteria",
+          "arity": 2,
+          "cost": 20000
+        },
+        "clearCriteria": {
+          "kind": "host",
+          "host": "setApi:AutoFilter.clearCriteria",
+          "arity": 2,
+          "cost": 20000
+        },
+        "reapply": {
+          "kind": "host",
+          "host": "setApi:AutoFilter.reapply",
+          "arity": 2,
+          "cost": 20000
+        },
+        "remove": {
+          "kind": "host",
+          "host": "setApi:AutoFilter.remove",
+          "arity": 2,
+          "cost": 20000
+        }
+      }
+    },
+    "Filter": {
+      "members": {
+        "getCriteria": {
+          "kind": "host",
+          "host": "getApi:Filter.getCriteria",
+          "arity": 2,
+          "cost": 100000
+        },
+        "apply": {
+          "kind": "host",
+          "host": "setApi:Filter.apply",
+          "arity": 2,
+          "cost": 20000
+        },
+        "applyValuesFilter": {
+          "kind": "host",
+          "host": "setApi:Filter.applyValuesFilter",
+          "arity": 2,
+          "cost": 20000
+        },
+        "applyCustomFilter": {
+          "kind": "host",
+          "host": "setApi:Filter.applyCustomFilter",
+          "arity": 2,
+          "cost": 20000
+        },
+        "clear": {
+          "kind": "host",
+          "host": "setApi:Filter.clear",
+          "arity": 2,
+          "cost": 20000
+        }
+      }
     }
+  },
+  "enums": [
+    "BorderIndex",
+    "BorderLineStyle",
+    "BorderWeight",
+    "HorizontalAlignment",
+    "VerticalAlignment",
+    "RangeUnderlineStyle",
+    "RangeValueType",
+    "SortOrientation",
+    "SortOn",
+    "SortDataOption",
+    "SortMethod",
+    "FilterOn",
+    "FilterOperator",
+    "ProtectionSelectionMode",
+    "ClearApplyTo",
+    "NumberFormatCategory"
+  ],
+  "limits": {
+    "rows": 200000,
+    "columns": 2048
   }
 }

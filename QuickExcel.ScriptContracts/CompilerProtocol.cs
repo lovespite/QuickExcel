@@ -36,7 +36,7 @@ public static class CompilerProtocol
     public const string Options = "ts5.9.3-es2022-esnext-strict-isolated-verbatim-define-v1";
     public const string Policy = "typescript-check-1024m-5s-v1";
     public static string Identity { get; } = ReadIdentity();
-    public static WorkerHello Hello => new(WorkerProtocol.Engine, Policy, [2], WorkerProtocol.MaxFrameBytes, "compile", Identity);
+    public static WorkerHello Hello => new(WorkerProtocol.Engine, Policy, [3], WorkerProtocol.MaxFrameBytes, "compile", Identity);
     private static string ReadIdentity()
     {
         using var stream = typeof(CompilerProtocol).Assembly.GetManifestResourceStream("QuickExcel.Compiler.Identity")

@@ -9,18 +9,20 @@
 
 ## 命令
 
+以下命令从仓库根目录执行。
+
 ```powershell
 # 1. 下载并校验固定来源（首次带 --update-lock 写入 SHA-256）
-node .\src\fetch-source.mjs --update-lock
+node .\tools\QuickExcel.ApiGen\src\fetch-source.mjs --update-lock
 
 # 2. 生成声明与能力清单
-node .\src\generate.mjs --out .\QuickExcel.Web\src\quickexcel.d.ts --capabilities .\QuickExcel.Scripting\capabilities.json
+node .\tools\QuickExcel.ApiGen\src\generate.mjs --out .\QuickExcel.Web\src\quickexcel.d.ts --capabilities .\QuickExcel.Scripting\capabilities.json
 
 # 3. 仅校验仓库中的生成物是否最新
-node .\src\generate.mjs --check
+node .\tools\QuickExcel.ApiGen\src\generate.mjs --check --out .\QuickExcel.Web\src\quickexcel.d.ts --capabilities .\QuickExcel.Scripting\capabilities.json
 
 # 4. 生成器自测（不访问网络）
-npm test
+node .\tools\QuickExcel.ApiGen\test\generate.test.mjs
 ```
 
 默认输出到 `artifacts/api-gen/`，避免误覆盖产品文件；确认差异后再用 `--out` / `--capabilities` 指向实际位置。
@@ -28,7 +30,7 @@ npm test
 ## 生成内容
 
 - `quickexcel.d.ts`：全量类型骨架，命名空间改为 `QuickExcel`，移除 Microsoft 的注释与 `OfficeScript` 命名空间，追加手写扩展。
-- `capabilities.json`：只列已实现成员，供 worker 代理与宿主白名单使用。
+- `capabilities.json`：只列已实现成员，供 worker 代理与宿主白名单使用；同时生成所选枚举的数值与工作表边界。
 - `coverage.json`：已实现类型/成员与全量类型/成员的覆盖统计，用于评估"类型全量、实现少量"的差距。
 
 ## 维护能力清单
@@ -40,12 +42,15 @@ npm test
 - `kind` 为 `host` 时，`host` 必须是 `ScriptModelAdapter` 的方法名；
 - `arity` 是宿主调用参数个数，包含 `sheetId`、地址等句柄上下文；
 - `cost` 映射到 76 号文档的单元格预算。
+- `enums` 从固定声明 AST 生成运行时数值，注入只读 `QuickExcel` 对象；不手写第二套枚举。
+- `limits` 必须与 Core 的 `WorkbookLimits` 一致。单次调用与累计预算仍由宿主强制验证。
+- `--overrides` 只用于选择其他手写输入（例如合成 fixture），产品默认使用上述文件。固定产品来源每次生成和 `--check` 都校验 SHA-256 与 git blob SHA-1，缺失或不匹配即失败。
 
 未列出的成员保留在类型骨架中，运行时抛 `UnsupportedApi`。
 
 ## 测试
 
-`npm test` 使用 `fixtures/mini.d.ts` 验证命名空间重写、注释剥离、成员保留、清单过滤和 TypeScript 编译。测试不下载真实声明。
+生成器自测使用 `fixtures/mini.d.ts` 与独立 `fixtures/capabilities.json` 验证命名空间重写、注释剥离、成员保留、清单过滤、生成确定性和 TypeScript 完整编译。测试不下载真实声明。
 
 ## 许可
 

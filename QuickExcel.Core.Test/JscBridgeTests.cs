@@ -65,7 +65,7 @@ public sealed class JscBridgeTests
         var modules = new ScriptModuleSet(new Dictionary<string, ScriptModule>
         {
             ["main"] = new("scripts/main.js", "host.functions.register('F',x=>{if(x===2)Promise.resolve().then(()=>{while(true){}});return x;});")
-        }, ["main"], scriptApiVersion: 2);
+        }, ["main"], scriptApiVersion: 3);
         using var session = new DocumentSession(Book(sheet).WithScriptModules(modules));
         session.SetScriptsEnabled(true);
         var before = session.Snapshot;

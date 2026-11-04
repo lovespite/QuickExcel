@@ -56,7 +56,7 @@ internal static class TableSafety
     }
 }
 
-public sealed class CreateTableCommand(SheetId sheetId, CellRectangle range, string name, TableStyleInfo? style = null) : DocumentCommand
+public sealed class CreateTableCommand(SheetId sheetId, CellRectangle range, string name, TableStyleInfo? style = null, int? reservedId = null) : DocumentCommand
 {
     internal override CommandDraft Prepare(WorkbookSnapshot snapshot)
     {
@@ -69,7 +69,7 @@ public sealed class CreateTableCommand(SheetId sheetId, CellRectangle range, str
                 throw new ArgumentException("表头须是非空且不重复的普通文本；请先整理表头。");
             return new TableColumn(c - range.Left + 1, cell.Value.TextValue);
         }).ToArray();
-        var id = checked(snapshot.Sheets.SelectMany(s => s.Data.Tables).Select(t => t.Id).DefaultIfEmpty().Max() + 1);
+        var id = reservedId ?? checked(snapshot.Sheets.SelectMany(s => s.Data.Tables).Select(t => t.Id).DefaultIfEmpty().Max() + 1);
         var table = new WorksheetTable(id, name, range, columns, style: style, filter: new(range));
         var data = sheet.Data with { Tables = sheet.Data.Tables.Add(table) };
         var next = snapshot.WithSheets(snapshot.Sheets.Select(s => s.Id == sheetId ? s.WithData(data) : s));
@@ -101,13 +101,15 @@ public sealed class ResizeTableCommand(SheetId sheetId, int tableId, int bottomR
 
 public sealed class SetTableFilterCommand(SheetId sheetId, int tableId, WorksheetAutoFilter? filter) : DocumentCommand
 {
+    private bool _valuesValidated;
+    internal SetTableFilterCommand WithValidatedValues() => new(sheetId, tableId, filter) { _valuesValidated = true };
     internal override CommandDraft Prepare(WorkbookSnapshot snapshot)
     {
         WorksheetOutline.RequireEditable(snapshot);
         var sheet = snapshot.GetSheet(sheetId); var table = sheet.Data.Tables.Single(t => t.Id == tableId); var updated = table.WithFilter(filter);
         if (table.ContentEquals(updated)) return new(snapshot, [], false);
         var next = snapshot.WithSheets(snapshot.Sheets.Select(s => s.Id == sheetId ? s.WithData(sheet.Data with { Tables = sheet.Data.Tables.Replace(table, updated) }) : s));
-        _ = WorksheetFilterEngine.Evaluate(next, sheetId);
+        if (!_valuesValidated) _ = WorksheetFilterEngine.Evaluate(next, sheetId);
         return new(next, [], false) { CalculationUnchanged = true };
     }
 }

@@ -113,7 +113,8 @@ public sealed partial class DocumentSession : IDisposable
             FormulaSpillSafety.ValidateEdit(before, draft.Snapshot, draft.StructureChanged);
             if (draft.StructureChanged && command is not (CreatePivotCommand or RefreshPivotCommand or RemovePivotCommand) && !draft.CalculationUnchanged && !ReferenceEquals(before,draft.Snapshot))
                 draft = draft with { Snapshot = FormulaSpillSafety.DropDerivedAfterStructure(draft.Snapshot) };
-            ProtectionSafety.Validate(before, draft.Snapshot, command);
+            if (command is not ApplyActionPatchCommand { ProtectionValidatedByModel: true })
+                ProtectionSafety.Validate(before, draft.Snapshot, command);
             if (draft.Snapshot.Sheets.Any(s => WorksheetOutline.HasGroups(s) && s.Data.AllFilters.Any(f => f.Columns.Count > 0)))
                 throw new NotSupportedException("分组与活动筛选的混合编辑暂未对齐 Excel；请先展开并取消分组，或清除筛选条件。");
             // Visibility aggregates also depend on filter metadata and displayed filter labels.
@@ -319,7 +320,7 @@ public sealed partial class DocumentSession : IDisposable
         {
             ThrowIfClosed();
             if (enabled && _snapshot.FileState?.FormulaReadOnly == true) throw new InvalidOperationException(WorkbookFileState.FormulaReadOnlyMessage);
-            if (enabled && !_snapshot.ScriptModules.CanExecute) throw new NotSupportedException("多模块执行需要显式声明脚本 API v2。");
+            if (enabled && !_snapshot.ScriptModules.CanExecute) throw new NotSupportedException(ScriptModuleSet.MigrationMessage);
             // Reapply also invalidates an in-flight compile of the same source.
             ResetScriptRuntime();
             _scriptsEnabled = enabled;

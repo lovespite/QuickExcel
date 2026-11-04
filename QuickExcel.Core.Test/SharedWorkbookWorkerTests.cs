@@ -101,7 +101,7 @@ public sealed class SharedWorkbookWorkerTests
             ["a"] = new("scripts/a.js", "globalThis.__qxRegistrationRole=()=>3; host.functions.register('WRONG',()=>77); export function main(workbook){ workbook.getActiveCell().setValue(1); }"),
             ["f"] = new("scripts/f.js", "host.functions.register('BOUNDVALUE',()=>42);"),
             ["unbound"] = new("scripts/unbound.js", "throw Error('unbound entry must not initialize');")
-        }, ["a", "f"], scriptApiVersion: 2, bindings: [new("a", "actions"), new("f", "formula-functions")]);
+        }, ["a", "f"], scriptApiVersion: 3, bindings: [new("a", "actions"), new("f", "formula-functions")]);
         using var doc = new WorkbookDocument(Book(Sheet("Data", (1, 0, F("=BOUNDVALUE()")), (2, 0, F("=WRONG()")))).WithScriptModules(modules),
             new(new TypedWorkbookStorage(), new WorkbookCalculator(new ScriptWorkerRuntimeFactory()), new ScriptWorkerActionExecutor()));
         doc.EnableScriptsAndCalculate();
@@ -149,7 +149,7 @@ public sealed class SharedWorkbookWorkerTests
                 host.functions.register('READ',()=>workbook.getActiveWorksheet().getCell('A1').getValue());
                 host.functions.register('WRITE',()=>{workbook.getActiveWorksheet().getCell('A1').setValue(99);return 0;});
                 """)
-        }, ["actions", "formulas"], scriptApiVersion: 2, bindings: [new("actions", "actions"), new("formulas", "formula-functions")]);
+        }, ["actions", "formulas"], scriptApiVersion: 3, bindings: [new("actions", "actions"), new("formulas", "formula-functions")]);
         using var doc = new WorkbookDocument(Book(Sheet("Data", (0, 0, N(7)), (0, 1, F("=SAFE()")), (0, 2, F("=READ()")), (0, 3, F("=WRITE()")))).WithScriptModules(modules),
             new(new TypedWorkbookStorage(), new WorkbookCalculator(new ScriptWorkerRuntimeFactory()), new ScriptWorkerActionExecutor()));
         doc.EnableScriptsAndCalculate();
@@ -174,7 +174,7 @@ public sealed class SharedWorkbookWorkerTests
             identity = identity with { RequestId = Guid.NewGuid() };
             await WorkerProtocol.WriteAsync(process.Input, WorkerProtocol.Message(identity, kind, payload), timeout.Token);
         }
-        await Send("hello", new WorkerHello(WorkerProtocol.Engine, WorkerProtocol.Policy, [1, 2], WorkerProtocol.MaxFrameBytes));
+        await Send("hello", new WorkerHello(WorkerProtocol.Engine, WorkerProtocol.Policy, [3], WorkerProtocol.MaxFrameBytes));
         _ = await WorkerProtocol.ReadAsync(process.Output, timeout.Token);
         var bundle = new LoadModules([new("main", "scripts/main.js", mixedBindings ? "while(true){}" : "")], ["main"], "")
         { FunctionEntries = !actions || mixedBindings ? ["main"] : [], ActionEntries = actions || mixedBindings ? ["main"] : [] };

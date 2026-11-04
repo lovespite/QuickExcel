@@ -34,7 +34,7 @@ public sealed class M4ModuleTests
     private static ScriptModuleSet Package(string main, params (string Id, string Source)[] helpers) => new(
         new[] { new KeyValuePair<string, ScriptModule>("main", new("scripts/main.js", main)) }
             .Concat(helpers.Select(h => new KeyValuePair<string, ScriptModule>(h.Id, new($"scripts/lib/{h.Id}.js", h.Source)))),
-        ["main"], scriptApiVersion: 2);
+        ["main"], scriptApiVersion: 3);
     private static IScriptRuntime Create(ScriptModuleSet modules, bool worker = true, CancellationToken token = default) =>
         (worker ? (IScriptRuntimeFactory)new ScriptWorkerRuntimeFactory() : new JscRuntimeFactory())
             .Create(new ScriptRuntimeRequest(modules, new(Guid.NewGuid(), 1, 2, 3), TimeSpan.FromSeconds(5), token));
@@ -68,7 +68,7 @@ public sealed class M4ModuleTests
             ("second", "import { next } from 'shared'; console.log('second:' + next());"),
             ("shared", "import { odd } from 'cycle'; console.log('shared'); let n=0; export function next(){return ++n}; export function even(n){return n===0 || odd(n-1)}; host.functions.register('EVEN',even);"),
             ("cycle", "import { even } from 'shared'; export function odd(n){return n!==0 && even(n-1)};"));
-        package = new(package.Modules, ["second", "main", "shared"], scriptApiVersion: 2);
+        package = new(package.Modules, ["second", "main", "shared"], scriptApiVersion: 3);
         for (var round = 0; round < 2; round++)
         {
             using var runtime = Create(package, worker);
@@ -103,7 +103,7 @@ public sealed class M4ModuleTests
     public void FailedEntryDiscardsWholeRegistryAndCachedCalculation(string badEntry)
     {
         var package = Package("host.functions.register('MODULEVALUE',()=>7);", ("bad", badEntry));
-        package = new(package.Modules, ["main", "bad"], scriptApiVersion: 2);
+        package = new(package.Modules, ["main", "bad"], scriptApiVersion: 3);
         var sheet = Sheet("S", (0, 0, F("=MODULEVALUE()", 42)), (0, 1, F("=3", 9)));
         using var document = new WorkbookDocument(Book(sheet).WithScriptModules(package),
             new(new TypedWorkbookStorage(), new WorkbookCalculator(new ScriptWorkerRuntimeFactory())));
@@ -141,7 +141,7 @@ public sealed class M4ModuleTests
             document.Save(path);
             using var reopened = WorkbookDocument.Open(path, services);
             Assert.False(reopened.ScriptsEnabled);
-            Assert.Equal(2, reopened.Snapshot.ScriptModules.ScriptApiVersion);
+            Assert.Equal(3, reopened.Snapshot.ScriptModules.ScriptApiVersion);
             Assert.Equal(modules.Modules, reopened.Snapshot.ScriptModules.Modules);
             Assert.Equal(modules.EntryModules.ToArray(), reopened.Snapshot.ScriptModules.EntryModules.ToArray());
             for (var round = 0; round < 2; round++)
@@ -152,7 +152,7 @@ public sealed class M4ModuleTests
             }
             reopened.ScriptSource += "\n// changed";
             Assert.False(reopened.ScriptsEnabled);
-            Assert.Equal(2, reopened.Snapshot.ScriptModules.ScriptApiVersion);
+            Assert.Equal(3, reopened.Snapshot.ScriptModules.ScriptApiVersion);
             reopened.Save(path);
             Assert.Equal(modules.Modules["state"], services.Storage.Open(path).ScriptModules.Modules["state"]);
         }
@@ -176,7 +176,7 @@ public sealed class M4ModuleTests
         Assert.False(session.CanUndo);
         session.SetScriptsEnabled(true);
         var binding = session.BeginCalculation();
-        session.Execute(new UpdateScriptModulesCommand(new(changed.Modules, ["helper", "main"], scriptApiVersion: 2)));
+        session.Execute(new UpdateScriptModulesCommand(new(changed.Modules, ["helper", "main"], scriptApiVersion: 3)));
         Assert.True(binding.CancellationToken.IsCancellationRequested);
         Assert.False(session.ScriptsEnabled);
         Assert.Equal(1, session.Snapshot.ScriptModules.BindingRevision);
@@ -236,7 +236,7 @@ public sealed class M4ModuleTests
         var modules = Enumerable.Range(0, 64).ToDictionary(i => "m" + i, i => new ScriptModule($"scripts/{i}.js", ""));
         var source = "host.functions.register('VALUE',()=>64); //";
         modules["m0"] = modules["m0"] with { Source = source + new string('x', 1024 * 1024 - Encoding.UTF8.GetByteCount(source)) };
-        using var runtime = Create(new ScriptModuleSet(modules, modules.Keys, scriptApiVersion: 2));
+        using var runtime = Create(new ScriptModuleSet(modules, modules.Keys, scriptApiVersion: 3));
         Assert.Equal(64d, runtime.Invoke("VALUE", []));
     }
 
@@ -250,7 +250,7 @@ public sealed class M4ModuleTests
         try
         {
             var identity = M4ProtocolTests.Identity();
-            var hello = WorkerProtocol.Message(identity, "hello", new WorkerHello(WorkerProtocol.Engine, WorkerProtocol.Policy, [1, 2], WorkerProtocol.MaxFrameBytes));
+            var hello = WorkerProtocol.Message(identity, "hello", new WorkerHello(WorkerProtocol.Engine, WorkerProtocol.Policy, [3], WorkerProtocol.MaxFrameBytes));
             if (fault == "legacy-protocol")
             {
                 var bytes = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(hello with { ProtocolVersion = 1 }, WorkerProtocol.Json);

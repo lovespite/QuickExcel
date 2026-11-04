@@ -27,8 +27,14 @@ declare namespace QuickExcel {
   interface Host {
     readonly events: Events;
     readonly functions: Functions;
+    readonly values: ValueUtilities;
     /** Available only inside an action, event or console transaction. */
     readonly files: VirtualFiles;
+  }
+
+  interface ValueUtilities {
+    /** Returns the top-left cell's current error string, or null for a non-error value. */
+    getErrorCode(range: Range): string | null;
   }
 
   interface Functions {

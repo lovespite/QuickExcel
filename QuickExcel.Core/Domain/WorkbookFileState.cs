@@ -16,12 +16,12 @@ public sealed class ScriptModuleSet
     /// <summary>Descriptions are inert single-line metadata shown in the action picker; they never affect execution.</summary>
     public const int MaximumDescriptionLength = 200;
     public ScriptModuleSet(IEnumerable<KeyValuePair<string, ScriptModule>> modules, IEnumerable<string> entryModules,
-        long revision = 0, long bindingRevision = 0, int scriptApiVersion = 1, IEnumerable<ScriptBinding>? bindings = null,
+        long revision = 0, long bindingRevision = 0, int scriptApiVersion = 3, IEnumerable<ScriptBinding>? bindings = null,
         ScriptSignature? signature = null)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(revision);
         ArgumentOutOfRangeException.ThrowIfNegative(bindingRevision);
-        if (scriptApiVersion is not (1 or 2)) throw new ArgumentException("Unsupported script API version.");
+        if (scriptApiVersion is not (1 or 2 or 3)) throw new ArgumentException("Unsupported script API version.");
         Modules = modules.ToImmutableDictionary(StringComparer.Ordinal);
         EntryModules = entryModules.ToImmutableArray();
         if (Modules.Count is < 1 or > 64 || EntryModules.Length is < 1 or > 64 ||
@@ -31,13 +31,13 @@ public sealed class ScriptModuleSet
         if (Bindings.Length is < 1 or > 128 || Bindings.Distinct().Count() != Bindings.Length ||
             Bindings.Any(b => b is null || !EntryModules.Contains(b.Module) || b.Kind is not ("formula-functions" or "actions")) ||
             EntryModules.Any(id => !Bindings.Any(b => b.Module == id)) ||
-            scriptApiVersion != 2 && Bindings.Any(b => b.Kind == "actions"))
+            scriptApiVersion < 2 && Bindings.Any(b => b.Kind == "actions"))
             throw new ArgumentException("Invalid script bindings or action API version.");
         var paths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var (id, module) in Modules)
         {
             if (string.IsNullOrEmpty(id) || id.Length > 128 || id is "." or ".." || id.Any(c => !char.IsAsciiLetterOrDigit(c) && c is not ('_' or '-' or '.')) ||
-                module is null || !Enum.IsDefined(module.Language) || module.Language == ScriptLanguage.TypeScript && scriptApiVersion != 2 ||
+                module is null || !Enum.IsDefined(module.Language) || module.Language == ScriptLanguage.TypeScript && scriptApiVersion < 2 ||
                 module.Description is null || module.Description.Length > MaximumDescriptionLength || module.Description.Any(char.IsControl) ||
                 module.Source is null || module.Path is null || module.Path.Length > 512 || module.Path.Any(char.IsControl) || !module.Path.StartsWith("scripts/", StringComparison.Ordinal) ||
                 module.Path.Split('/').Any(s => s.Length == 0 || s is "." or "..") ||
@@ -62,10 +62,11 @@ public sealed class ScriptModuleSet
     public bool HasTypeScript => Modules.Values.Any(m => m.Language == ScriptLanguage.TypeScript);
     public ImmutableArray<string> EntriesFor(string kind) => EntryModules.Where(id => Bindings.Any(b => b.Module == id && b.Kind == kind)).ToImmutableArray();
     public string PrimarySource => Modules[EntryModules[0]].Source;
-    public bool CanExecuteLegacy => ScriptApiVersion == 1 && Modules.Count == 1 && EntryModules.Length == 1;
-    public bool CanExecute => CanExecuteLegacy || ScriptApiVersion == 2;
-    public static ScriptModuleSet Single(string source) => new(
-        [new KeyValuePair<string, ScriptModule>("main", new("scripts/main.js", source))], ["main"]);
+    public bool CanExecuteSingleSource => ScriptApiVersion == 3 && Modules.Count == 1 && EntryModules.Length == 1;
+    public bool CanExecute => ScriptApiVersion == 3;
+    public const string MigrationMessage = "脚本使用已废弃的 API v1/v2，需要按 QuickExcel API v3 重写，或移除全部脚本后保存。";
+    public static ScriptModuleSet Single(string source, int scriptApiVersion = 3) => new(
+        [new KeyValuePair<string, ScriptModule>("main", new("scripts/main.js", source))], ["main"], scriptApiVersion: scriptApiVersion);
     public ScriptModuleSet WithPrimarySource(string source) => source == PrimarySource ? this : new(
         Modules.SetItem(EntryModules[0], Modules[EntryModules[0]] with { Source = source }), EntryModules,
         checked(Revision + 1), BindingRevision, ScriptApiVersion, Bindings);

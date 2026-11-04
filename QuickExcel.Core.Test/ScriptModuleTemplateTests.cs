@@ -14,7 +14,7 @@ public sealed class ScriptModuleTemplateTests
     {
         ScriptModuleSet Build(string description) => new(
             new Dictionary<string, ScriptModule> { ["main"] = new("scripts/main.js", "export const value = 1;", Description: description) },
-            ["main"], scriptApiVersion: 2);
+            ["main"], scriptApiVersion: 3);
         Assert.Equal("填充示例单元格", Build("填充示例单元格").Modules["main"].Description);
         Assert.Throws<ArgumentException>(() => Build(new string('x', ScriptModuleSet.MaximumDescriptionLength + 1)));
         Assert.Throws<ArgumentException>(() => Build("第一行\n第二行"));
@@ -26,7 +26,7 @@ public sealed class ScriptModuleTemplateTests
         string[] ids = ["123", "sample", "Sample", "sample-name", new('x', 128)];
         var modules = new ScriptModuleSet(ids.Select((id, index) => KeyValuePair.Create(id,
             new ScriptModule($"scripts/module{index}.js", ScriptModuleTemplates.Create(id, ScriptLanguage.JavaScript, true, true)))),
-            ids, scriptApiVersion: 2, bindings: ids.SelectMany(id => new[] { new ScriptBinding(id, "formula-functions"), new(id, "actions") }));
+            ids, scriptApiVersion: 3, bindings: ids.SelectMany(id => new[] { new ScriptBinding(id, "formula-functions"), new(id, "actions") }));
         using var document = new WorkbookDocument(Book(Sheet("Data", (0, 0, F("=JS._123.DOUBLE(21)")))).WithScriptModules(modules),
             new(new TypedWorkbookStorage(), new WorkbookCalculator(new ScriptWorkerRuntimeFactory()), new ScriptWorkerActionExecutor()));
         document.EnableScriptsAndCalculate();
@@ -49,7 +49,7 @@ public sealed class ScriptModuleTemplateTests
         if (actions) bindings.Add(new("sample", "actions"));
         var modules = new ScriptModuleSet(new Dictionary<string, ScriptModule>
         { ["sample"] = new($"scripts/sample.{(language == ScriptLanguage.TypeScript ? "ts" : "js")}", source, language) },
-            ["sample"], scriptApiVersion: 2, bindings: bindings);
+            ["sample"], scriptApiVersion: 3, bindings: bindings);
         var sheet = functions ? Sheet("Data", (0, 0, F("=JS.sample.DOUBLE(21)")), (0, 1, F("=JS.sample.DOUBLE(\"invalid\")"))) : Sheet("Data");
         using var document = new WorkbookDocument(Book(sheet).WithScriptModules(modules),
             new(new TypedWorkbookStorage(), new WorkbookCalculator(new ScriptWorkerRuntimeFactory()), new ScriptWorkerActionExecutor()));

@@ -18,12 +18,23 @@ public sealed class ScriptWorkbookModel
     private long _writes;
     private long _reads;
     private bool _invalid;
+    private readonly HashSet<int> _reservedTableIds;
     internal ScriptWorkbookModel(WorkbookSnapshot snapshot, Action check, ImmutableArray<CellRectangle> selection,
-        Func<WorkbookSnapshot, CancellationToken, CalculationResult>? calculate)
-    { _original = _working = snapshot; _check = check; Selection = selection; _calculate = calculate; }
+        Func<WorkbookSnapshot, CancellationToken, CalculationResult>? calculate, HashSet<int> reservedTableIds)
+    { _original = _working = snapshot; _check = check; Selection = selection; _calculate = calculate; _reservedTableIds = reservedTableIds; }
+    public int ReserveTableId()
+    {
+        _check();
+        lock (_reservedTableIds)
+        {
+            _reservedTableIds.UnionWith(_working.Sheets.SelectMany(s => s.Data.Tables).Select(t => t.Id));
+            var id = checked(_reservedTableIds.DefaultIfEmpty().Max() + 1); _reservedTableIds.Add(id); return id;
+        }
+    }
     public ImmutableArray<CellRectangle> Selection { get; }
     public bool HasPendingCalculation { get; private set; }
     public WorkbookSnapshot View { get { _check(); return _working; } }
+    public WorkbookSnapshot ValueView { get { _check(); return _calculatedView ?? _working; } }
     internal bool HasWrites => _commands.Count > 0;
 
     public CellSnapshot? ReadCell(SheetId sheet, CellPosition position, bool original = false, bool calculated = false)
@@ -117,6 +128,41 @@ public sealed class ScriptWorkbookModel
                 : new(FillColor: "FF" + color[1..].ToUpperInvariant()));
         });
 
+    /// <summary>Apply a validated adapter command to this private transaction, with the same
+    /// protection, cumulative cell budget and rollback rules as value writes.</summary>
+    public void ExecuteCommand(SheetId sheetId, CellRectangle affected, DocumentCommand command)
+        => Write(sheetId, affected, () =>
+        {
+            if (command is SetAutoFilterCommand or SetTableFilterCommand)
+            {
+                PrepareValueRead(sheetId, affected, CancellationToken.None);
+                foreach (var filter in _working.GetSheet(sheetId).Data.AllFilters)
+                    PrepareValueRead(sheetId, filter.Range, CancellationToken.None);
+                _ = command.Prepare(ValueView); // Validate current values once, without publishing or replaying UDFs.
+                return command is SetAutoFilterCommand worksheetFilter ? worksheetFilter.WithValidatedValues() : ((SetTableFilterCommand)command).WithValidatedValues();
+            }
+            if (command is SortRangeCommand sort)
+            {
+                // Freeze only the evaluated keys. Commit reuses them instead of
+                // running UDFs a second time or sorting against stale caches.
+                PrepareValueRead(sheetId, affected, CancellationToken.None);
+                var descriptor = sort.Descriptor;
+                var keys = new Dictionary<CellPosition, CellValue>();
+                for (var row = affected.Top + (descriptor.HasHeader ? 1 : 0); row <= affected.Bottom; row++)
+                foreach (var key in descriptor.Keys)
+                {
+                    var position = new CellPosition(row, key.Column);
+                    var cell = ReadCell(sheetId, position, calculated: true);
+                    if ((cell?.Content.Kind == CellContentKind.Formula || cell?.SpillOwner is not null) &&
+                        (cell!.Calculation?.State is not (CalculationState.Fresh or CalculationState.Error) || cell.Calculation.Value is null))
+                        throw new InvalidOperationException("排序键无法获得当前结果。");
+                    keys[position] = cell?.Value ?? CellValue.Blank;
+                }
+                return sort.WithKeyValues(keys);
+            }
+            return command;
+        });
+
     private void Write(SheetId sheetId, CellRectangle range, Func<DocumentCommand> create)
     {
         try
@@ -132,11 +178,21 @@ public sealed class ScriptWorkbookModel
             if (_working.FileState?.FormulaReadOnly == true) throw new InvalidOperationException(WorkbookFileState.FormulaReadOnlyMessage);
             var command = create();
             var draft = command.Prepare(_working);
+            ExtendedObjectSafety.ValidateEdit(_working, draft.Snapshot, command, draft.StructureChanged);
+            PivotSafety.ValidateEdit(_working, draft.Snapshot, command, draft.StructureChanged);
+            FormulaSpillSafety.ValidateEdit(_working, draft.Snapshot, draft.StructureChanged);
             ProtectionSafety.Validate(_working, draft.Snapshot, command);
+            TableSafety.ValidateEdit(_working, draft.Snapshot);
             if (!draft.CalculationUnchanged && !ReferenceEquals(_working, draft.Snapshot))
             {
                 HasPendingCalculation = true;
                 _calculatedView = null;
+            }
+            else if (_calculatedView is not null && !ReferenceEquals(_working, draft.Snapshot))
+            {
+                // Keep presentation/protection/filter state in step with the
+                // private values without recalculating or publishing the draft.
+                _calculatedView = command.Prepare(_calculatedView).Snapshot;
             }
             _commands.Add(command); _working = draft.Snapshot;
         }
@@ -157,6 +213,7 @@ public sealed class ScriptWorkbookModel
         {
             _check();
             var draft = command.Prepare(current);
+            ProtectionSafety.Validate(current, draft.Snapshot, command);
             foreach (var change in draft.Changes)
                 changes[change.Address] = changes.TryGetValue(change.Address, out var prior) ? change with { Before = prior.Before } : change;
             current = draft.Snapshot; structure |= draft.StructureChanged; calculationUnchanged &= draft.CalculationUnchanged;
@@ -173,6 +230,7 @@ public sealed class ScriptWorkbookModel
 
 public sealed partial class DocumentSession
 {
+    private readonly HashSet<int> _scriptTableIds = [];
     private SheetId? _scriptSelectionSheet;
     private CellPosition _scriptSelectionCell;
     private ImmutableArray<CellRectangle> _scriptSelection = [];
@@ -204,6 +262,6 @@ public sealed partial class DocumentSession
             }
         }, selection, _calculator is null ? null : (snapshot, cancellation) => _calculator.Calculate(
             new CalculationRequest(request.Stamp, snapshot, request.ConsoleSource is null)
-            { CancellationToken = request.CancellationToken, RuntimeLifetime = request.RuntimeLifetime, IsProvisional = true }, cancellation));
+            { CancellationToken = request.CancellationToken, RuntimeLifetime = request.RuntimeLifetime, IsProvisional = true }, cancellation), _scriptTableIds);
     }
 }

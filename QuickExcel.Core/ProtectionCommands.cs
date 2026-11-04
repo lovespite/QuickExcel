@@ -97,7 +97,9 @@ public static class ProtectionSafety
             if (old.Data.Filter is { } filter && next.Data.Filter is { } newFilter && !filter.ContentEquals(newFilter))
             { if (p.AutoFilter || filter.Range != newFilter.Range) Reject(); }
             else if ((old.Data.Filter is null) != (next.Data.Filter is null)) Reject();
-            if (old.Data.Tables.Length != next.Data.Tables.Length || old.Data.Tables.Zip(next.Data.Tables).Any(t => !t.First.ContentEquals(t.Second)) ||
+            bool AllowedTableFilter(WorksheetTable a, WorksheetTable b) => command is SetTableFilterCommand && !p.AutoFilter &&
+                a.Filter is not null && b.Filter is not null && a.Filter.Range == b.Filter.Range && a.ContentEquals(b.WithFilter(a.Filter));
+            if (old.Data.Tables.Length != next.Data.Tables.Length || old.Data.Tables.Zip(next.Data.Tables).Any(t => !t.First.ContentEquals(t.Second) && !AllowedTableFilter(t.First, t.Second)) ||
                 old.Data.Validations.Length != next.Data.Validations.Length || old.Data.Validations.Zip(next.Data.Validations).Any(v => !v.First.ContentEquals(v.Second)) ||
                 !old.Data.ConditionalFormats.SequenceEqual(next.Data.ConditionalFormats) && p.FormatCells || old.Data.Outline != next.Data.Outline) Reject();
             foreach (var position in old.Cells.Keys.Union(next.Cells.Keys))

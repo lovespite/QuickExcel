@@ -8,10 +8,21 @@ public sealed partial class JscSession
     // before any workbook state is touched.
     private const string WorkbookModelBootstrap = """
         const implemented = capabilities.types;
+        const QuickExcel = deepFreeze(capabilities.enums || {});
+        Object.defineProperty(globalThis, 'QuickExcel', { value: QuickExcel });
+        function apiArgument(value) {
+            if (value && typeof value === 'object' && handleData.has(value)) return dataOf(value);
+            return value;
+        }
+        function apiResult(value) {
+            if (isArray(value)) return value.map(apiResult);
+            if (value && typeof value === 'object' && value.scriptHandle === true)
+                return value.type === 'Range' ? range(value.data.sheetId, value.data.address) : makeHandle(value.type, value.data);
+            return value === null ? undefined : value;
+        }
         const prototypes = Object.create(null);
         const handleData = new WeakMap();
         const actionEntries = [];
-        let hostWrote = false;
 
         function unsupported(type, member) {
             return new ScriptError('UnsupportedApi', type + '.' + String(member) + ' 尚未实现。', type + '.' + String(member));
@@ -38,7 +49,8 @@ public sealed partial class JscSession
                 !/^[A-Za-z]+[1-9][0-9]*(?::[A-Za-z]+[1-9][0-9]*)?$/.test(address))
                 throw new ScriptError('InvalidArgument', '需要 A1 单元格或矩形 A1:B2 区域。');
             const parts = address.toUpperCase().split(':');
-            return parts.length === 2 && parts[0] === parts[1] ? parts[0] : parts.join(':');
+            const normalized = parts.length === 2 && parts[0] === parts[1] ? parts[0] : parts.join(':');
+            rangeSize(normalized); return normalized;
         }
         function rangeSize(address) {
             const parts = address.split(':');
@@ -48,7 +60,7 @@ public sealed partial class JscSession
                 let column = 0;
                 for (const c of match[1]) column = column * 26 + c.charCodeAt(0) - 64;
                 const row = Number(match[2]);
-                if (!Number.isSafeInteger(row) || row > 100000 || column > 1024)
+                if (!Number.isSafeInteger(row) || row > capabilities.limits.rows || column > capabilities.limits.columns)
                     throw new ScriptError('InvalidArgument', 'A1 地址超出范围。');
                 return [row, column];
             }
@@ -108,7 +120,7 @@ public sealed partial class JscSession
             return freeze(proxy);
         }
         function worksheet(sheetId) { return makeHandle('Worksheet', { sheetId }); }
-        function range(sheetId, address) { return makeHandle('Range', { sheetId, address }); }
+        function range(sheetId, address) { return makeHandle('Range', { sheetId, address: modelAddress(address) }); }
 
         const localMembers = {
             Worksheet: {
@@ -117,8 +129,8 @@ public sealed partial class JscSession
                     const data = dataOf(this);
                     let text;
                     if (typeof address === 'number') {
-                        if (!Number.isInteger(address) || address < 0 || address >= 100000 ||
-                            !Number.isInteger(column) || column < 0 || column >= 1024)
+                        if (!Number.isInteger(address) || address < 0 || address >= capabilities.limits.rows ||
+                            !Number.isInteger(column) || column < 0 || column >= capabilities.limits.columns)
                             throw new ScriptError('InvalidArgument', '行列索引必须是零基整数。');
                         let name = '', n = column + 1;
                         while (n > 0) { n--; name = String.fromCharCode(65 + n % 26) + name; n = Math.floor(n / 26); }
@@ -177,6 +189,11 @@ public sealed partial class JscSession
             return function (...args) {
                 try {
                     const data = dataOf(this);
+                    if (spec.host.startsWith('getApi:') || spec.host.startsWith('setApi:')) {
+                        const result = model(spec.host, data, args.map(apiArgument));
+                        return result && typeof result === 'object' ? apiResult(result) : result === null &&
+                            ['getTable','getColumn','getColumnById','getColumnByName','getUsedRange'].includes(name) ? undefined : result;
+                    }
                     if (type === 'Range') {
                         if (name === 'setValue') args = [checkScalar(args[0])];
                         else if (name === 'setValues') args = [checkMatrix(args[0], data.address, checkScalar)];
@@ -258,13 +275,21 @@ public sealed partial class JscSession
         let runFiles = null;
         let fileFailed = false;
         function fileContext() {
-            if (!runFiles) throw new ScriptError('InvalidReference', '虚拟文件只在该事务内可用。');
+            if (!activeModel) throw new ScriptError('InvalidReference', '虚拟文件只在该事务内可用。');
+            if (!runFiles) runFiles = createFs(model('files'),
+                () => { if (!activeModel) throw new ScriptError('InvalidReference', '文件上下文已失效。'); },
+                () => { fileFailed = true; });
             return runFiles.fs;
         }
 
         const workbook = makeHandle('Workbook', {});
         const host = freeze({
             functions: freeze({ register(name, fn) { registerFunction(name, fn); } }),
+            values: freeze({ getErrorCode(value) {
+                const data = dataOf(value);
+                if (typeof data.address !== 'string' || typeof data.sheetId !== 'string') throw new ScriptError('InvalidArgument', '需要 Range。');
+                return model('errorCode', data.sheetId, data.address);
+            } }),
             events,
             get files() { return fileContext(); }
         });
@@ -278,9 +303,6 @@ public sealed partial class JscSession
             fileFailed = false;
             const baseRevision = request && request.snapshot ? request.snapshot.baseRevision : 0;
             try {
-                runFiles = createFs(model('files'),
-                    () => { if (!activeModel) throw new ScriptError('InvalidReference', '文件上下文已失效。'); },
-                    () => { fileFailed = true; });
                 let returned;
                 if (request && request.event) {
                     const handlers = eventHandlers[request.event.name] || [];
@@ -299,7 +321,7 @@ public sealed partial class JscSession
                 }
                 if (hostWriteFailed || fileFailed)
                     throw new ScriptError('TransactionAborted', '有一次写入失败，本次变更未提交。');
-                return { operationId: request.operationId, baseRevision, name, edits: [], fileEdits: runFiles.edits };
+                return { operationId: request.operationId, baseRevision, name, edits: [], fileEdits: runFiles ? runFiles.edits : [] };
             } finally {
                 activeModel = false;
                 runFiles = null;

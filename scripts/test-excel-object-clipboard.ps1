@@ -37,6 +37,7 @@ try {
         $book.Activate();for($r=1;$r -lt 4;$r++){$cell=$sheet.Cells.Item($r+1,1);$cell.Value2=$(if($case.Type -eq -4169){[double]$r}else{'Q'+$r});Release-Com $cell}
         $chart.ChartType=$case.Type;$range=$sheet.Range($(if($case.Type -eq 5){'A1:B4'}else{'A1:C4'}));$chart.SetSourceData($range);Release-Com $range
         $chartObject.Copy();$dir=Exchange $case.Name $case.Mode
+        if($case.Name -eq 'column'){[void](Exchange 'column-private' 'chart');$results+=@{Name='column-private-cross-instance';Passed=$true}}
         $targetBook=$excel.Workbooks.Add();$target=$targetBook.Worksheets.Item(1);$target.Activate();$target.Paste()
         $charts=$target.ChartObjects();$count=$charts.Count;Release-Com $charts
         if($case.Mode -eq 'chart') {

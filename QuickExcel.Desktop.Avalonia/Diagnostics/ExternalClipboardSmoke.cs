@@ -75,6 +75,7 @@ public sealed partial class MainWindow
             before = Document.Snapshot;
             try { await PasteAsync("formats"); throw new Exception("Format paste became value writes"); } catch (NotSupportedException) { }
             check(ReferenceEquals(before, Document.Snapshot), "Explicit format paste never silently becomes an automatic value paste");
+            await RunDrawingClipboardChecksAsync(check);
         }
         finally { _clipboard = original; }
     }
@@ -82,6 +83,9 @@ public sealed partial class MainWindow
     // Development-only end-to-end driver: all OS exchange uses the production adapter and real handlers.
     private async Task RunClipboardExchangeAsync(string directory)
     {
+        // Drive the handlers as one UI operation, just like PerformAsync. Prevent the debounce timer
+        // from racing the diagnostic's immediate copy/undo/read and process shutdown.
+        _working = true;
         var checks = new List<string>(); Exception? error = null;
         void Check(bool value, string description) { if (!value) throw new InvalidOperationException(description); checks.Add(description); }
         try
@@ -159,6 +163,7 @@ public sealed partial class MainWindow
             }
         }
         catch (Exception ex) { error = ex; }
+        _calculationTimer.Stop(); _working = false;
         await File.WriteAllTextAsync(Path.Combine(directory, "result.json"), JsonSerializer.Serialize(new { passed = error is null, checks, error = error?.ToString() }, new JsonSerializerOptions { WriteIndented = true }));
         _allowClose = true; (Application.Current!.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)!.Shutdown(error is null ? 0 : 1);
     }

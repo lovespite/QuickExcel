@@ -17,7 +17,7 @@ public sealed class TypeScriptStorageTests : IDisposable
     {
         ["main"] = new("scripts/main.ts", "import {n} from 'helper'; const value:number=n; host.functions.register('F',()=>value);", ScriptLanguage.TypeScript),
         ["helper"] = new("scripts/helper.js", "export const n=7;")
-    }, ["main"], scriptApiVersion: 2);
+    }, ["main"], scriptApiVersion: 3);
 
     [Fact]
     public void OriginalSourcesLanguagesAndV2SignatureSurviveSaveReopen()
@@ -78,7 +78,7 @@ public sealed class TypeScriptStorageTests : IDisposable
         using var cert = ScriptSignatures.CreateSelfSigned("语言绑定");
         modules = modules.WithSignature(ScriptSignatures.Sign(modules, cert));
         var changed = new ScriptModuleSet(modules.Modules.SetItem("helper", modules.Modules["helper"] with { Language = ScriptLanguage.TypeScript }),
-            modules.EntryModules, scriptApiVersion: 2, signature: modules.Signature);
+            modules.EntryModules, scriptApiVersion: 3, signature: modules.Signature);
         Assert.Equal(ScriptSignatureStatus.Invalid, ScriptSignatures.Verify(changed).Status);
         using var session = new DocumentSession(Book(Sheet("S")).WithScriptModules(modules));
         session.SetScriptsEnabled(true);

@@ -21,6 +21,8 @@ public sealed class WorkbookCalculator(IScriptRuntimeFactory runtimeFactory) : I
     {
         using var lifetime = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, request.CancellationToken);
         cancellationToken = lifetime.Token;
+        if (request.ScriptsEnabled && !request.Snapshot.ScriptModules.CanExecute)
+            throw new NotSupportedException(ScriptModuleSet.MigrationMessage);
         // Compilation has its own bounded isolated role. The execution round's
         // existing five-second clock starts after accepted artifacts exist.
         if (request.ScriptsEnabled && request.Snapshot.ScriptModules.HasTypeScript)
@@ -47,7 +49,7 @@ public sealed class WorkbookCalculator(IScriptRuntimeFactory runtimeFactory) : I
             return new(stamp, retained, [WorkbookFileState.FormulaReadOnlyMessage]);
         }
         if (request.ScriptsEnabled && !request.Snapshot.ScriptModules.CanExecute)
-            throw new NotSupportedException("多模块执行需要显式声明脚本 API v2。");
+            throw new NotSupportedException(ScriptModuleSet.MigrationMessage);
         var index = new WorkbookDependencyIndex(request.Snapshot, Check);
         if (index.Nodes.Values.Any(n => n.Cell.Content.DynamicArray || DynamicArrayFunctions.UsesArrays(n.Expression)))
             return ArrayCalculationRound.Calculate(request with { CancellationToken = cancellationToken }, _factory, Check, timer);

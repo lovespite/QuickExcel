@@ -9,6 +9,8 @@ public sealed class SortRangeCommand : DocumentCommand
 {
     public const int MaxCells = 20_000;
     private readonly SortDescriptor _descriptor;
+    private IReadOnlyDictionary<CellPosition, CellValue>? _keyValues;
+    internal SortRangeCommand WithKeyValues(IReadOnlyDictionary<CellPosition, CellValue> values) => new(_descriptor) { _keyValues = values };
     internal SortDescriptor Descriptor => _descriptor;
     public SortRangeCommand(SheetId sheetId, CellPosition first, CellPosition last, int keyColumn, bool descending = false)
         : this(new SortDescriptor(sheetId, first, last, [new SortKey(keyColumn, descending)])) { }
@@ -73,6 +75,7 @@ public sealed class SortRangeCommand : DocumentCommand
             throw new InvalidOperationException("表排序必须覆盖完整数据区，保留表头和汇总行；本次没有修改。");
         (CellValue Value, StyleDefinition Style) Key(int row, SortKey key)
         {
+            if (_keyValues is not null) return (_keyValues[new(row, key.Column)], snapshot.Styles[sheet.GetStyleId(row, key.Column)]);
             var cell = sheet.GetCell(row, key.Column);
             if (cell?.Content.Kind == CellContentKind.Formula && (cell.Calculation?.Value is null ||
                 cell.Calculation.State is not (CalculationState.Fresh or CalculationState.Error) || cell.Calculation.InputRevision != snapshot.Revision))
@@ -145,7 +148,11 @@ public sealed record CellStylePatch(bool? Bold = null, bool? Italic = null, stri
     string? FillColor = null, int? Horizontal = null, int? NumberFormatId = null, string? NumberFormatCode = null,
     bool? Border = null, double? FontSize = null, bool Reset = false,
     string? FontName = null, int? Vertical = null, bool? WrapText = null,
-    bool ClearFontColor = false, bool ClearFillColor = false)
+    bool ClearFontColor = false, bool ClearFillColor = false,
+    string? Underline = null, bool? Strike = null, int? TextRotation = null, int? Indent = null, bool? ShrinkToFit = null,
+    bool? Locked = null, bool? FormulaHidden = null,
+    int? LeftBorder = null, int? RightBorder = null, int? TopBorder = null, int? BottomBorder = null,
+    string? LeftBorderColor = null, string? RightBorderColor = null, string? TopBorderColor = null, string? BottomBorderColor = null)
 {
     internal StyleDefinition Apply(StyleDefinition style)
     {
@@ -154,6 +161,10 @@ public sealed record CellStylePatch(bool? Bold = null, bool? Italic = null, stri
             throw new ArgumentException("字体名称不能为空且不能超过 256 个字符。");
         if (FontSize is <= 0 or > 409 || FontSize.HasValue && !double.IsFinite(FontSize.Value))
             throw new ArgumentException("字号必须大于 0 且不超过 409。");
+        if (Horizontal is < 0 or > 7 || TextRotation is < 0 or > 180 && TextRotation != 255 || Indent is < 0 or > 250 ||
+            new[] { LeftBorder, RightBorder, TopBorder, BottomBorder }.Any(v => v is < 0 or > 7) ||
+            Underline is not null && Underline is not ("none" or "single" or "double" or "singleAccounting" or "doubleAccounting"))
+            throw new ArgumentException("格式属性超出支持范围。");
         if (Vertical is < 0 or > 3) throw new ArgumentException("不支持的垂直对齐方式。");
         if (NumberFormatId is < 0 or >= 164) throw new ArgumentException("自定义数字格式使用代码和规范化 ID 0，内置格式 ID 必须小于 164。");
         static string? Color(string? color)
@@ -165,6 +176,11 @@ public sealed record CellStylePatch(bool? Bold = null, bool? Italic = null, stri
         return style with
         {
             Bold = Bold ?? style.Bold, Italic = Italic ?? style.Italic,
+            Underline = Underline == "none" ? null : Underline ?? style.Underline, Strike = Strike ?? style.Strike,
+            TextRotation = TextRotation ?? style.TextRotation, Indent = Indent ?? style.Indent, ShrinkToFit = ShrinkToFit ?? style.ShrinkToFit,
+            Locked = Locked ?? style.Locked, FormulaHidden = FormulaHidden ?? style.FormulaHidden,
+            LeftBorderColor = Color(LeftBorderColor) ?? style.LeftBorderColor, RightBorderColor = Color(RightBorderColor) ?? style.RightBorderColor,
+            TopBorderColor = Color(TopBorderColor) ?? style.TopBorderColor, BottomBorderColor = Color(BottomBorderColor) ?? style.BottomBorderColor,
             FontColor = ClearFontColor ? null : Color(FontColor) ?? style.FontColor,
             FillColor = ClearFillColor ? null : Color(FillColor) ?? style.FillColor,
             FontSize = FontSize ?? style.FontSize, Horizontal = Horizontal ?? style.Horizontal,
@@ -174,10 +190,10 @@ public sealed record CellStylePatch(bool? Bold = null, bool? Italic = null, stri
             WrapText = WrapText ?? style.WrapText,
             NumberFormatId = NumberFormatId ?? style.NumberFormatId,
             NumberFormatCode = NumberFormatId.HasValue ? NumberFormatCode : style.NumberFormatCode,
-            LeftBorder = Border.HasValue ? (Border.Value ? 1 : 0) : style.LeftBorder,
-            RightBorder = Border.HasValue ? (Border.Value ? 1 : 0) : style.RightBorder,
-            TopBorder = Border.HasValue ? (Border.Value ? 1 : 0) : style.TopBorder,
-            BottomBorder = Border.HasValue ? (Border.Value ? 1 : 0) : style.BottomBorder
+            LeftBorder = Border.HasValue ? (Border.Value ? 1 : 0) : LeftBorder ?? style.LeftBorder,
+            RightBorder = Border.HasValue ? (Border.Value ? 1 : 0) : RightBorder ?? style.RightBorder,
+            TopBorder = Border.HasValue ? (Border.Value ? 1 : 0) : TopBorder ?? style.TopBorder,
+            BottomBorder = Border.HasValue ? (Border.Value ? 1 : 0) : BottomBorder ?? style.BottomBorder
         };
     }
 }
@@ -208,7 +224,7 @@ public sealed class SetCellStyleCommand : DocumentCommand
                 id = styles.Count; styles.Add(style); styleIds.Add(style, id);
             }
             var content = sheet.GetCell(address.Row, address.Column)?.Content ?? CellContent.FromLiteral(CellValue.Blank);
-            if (content.RichText is { } rich && (_patch.Reset || _patch.Bold.HasValue || _patch.Italic.HasValue || _patch.FontName is not null || _patch.FontSize.HasValue || _patch.FontColor is not null || _patch.ClearFontColor))
+            if (content.RichText is { } rich && (_patch.Reset || _patch.Bold.HasValue || _patch.Italic.HasValue || _patch.FontName is not null || _patch.FontSize.HasValue || _patch.FontColor is not null || _patch.ClearFontColor || _patch.Underline is not null || _patch.Strike.HasValue))
             {
                 // Whole-cell font commands explicitly override every run, like Excel; other patches leave runs intact.
                 var runs = rich.Runs.Select(run =>
@@ -221,7 +237,8 @@ public sealed class SetCellStyleCommand : DocumentCommand
                     var clearColor = _patch.ClearFontColor;
                     return run with { Font = font with
                     {
-                        Bold = _patch.Bold ?? font.Bold, Italic = _patch.Italic ?? font.Italic, Size = _patch.FontSize ?? font.Size,
+                        Bold = _patch.Bold ?? font.Bold, Italic = _patch.Italic ?? font.Italic,
+                        Underline = _patch.Underline == "none" ? null : _patch.Underline ?? font.Underline, Strike = _patch.Strike ?? font.Strike, Size = _patch.FontSize ?? font.Size,
                         Name = _patch.FontName ?? font.Name, ResolvedName = _patch.FontName ?? font.ResolvedName,
                         EastAsianName = _patch.FontName is null ? font.EastAsianName : null, Scheme = _patch.FontName is null ? font.Scheme : null,
                         Color = clearColor ? null : _patch.FontColor ?? font.Color, RawRgb = clearColor ? null : _patch.FontColor ?? font.RawRgb,

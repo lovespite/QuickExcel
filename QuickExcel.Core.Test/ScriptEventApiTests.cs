@@ -18,7 +18,7 @@ public sealed class ScriptEventApiTests
     ];
     private static ScriptModuleSet Modules(string source, ScriptLanguage language = ScriptLanguage.JavaScript) => new(
         new Dictionary<string, ScriptModule> { ["main"] = new(language == ScriptLanguage.TypeScript ? "scripts/main.ts" : "scripts/main.js", source, language) },
-        ["main"], scriptApiVersion: 2, bindings: [new("main", "actions")]);
+        ["main"], scriptApiVersion: 3, bindings: [new("main", "actions")]);
 
     [Fact]
     public void AllExistingEventsHaveContextHandlersWithCorrectArguments()
@@ -82,7 +82,7 @@ public sealed class ScriptEventApiTests
         var modules = Modules("host.events.on('cell.click',()=>{}); function main(){ host.events.on('cell.click',()=>{}); }");
         var snapshot = Book(Sheet("Data")).WithScriptModules(modules); var executor = new ScriptWorkerActionExecutor();
         var request = new ScriptActionRequest(new(Guid.NewGuid(), snapshot.Revision, 1, 1), Guid.NewGuid(), null, snapshot, default);
-        Assert.Equal("main", Assert.Single(executor.List(request, default)).Name);
+        Assert.Equal("main", Assert.Single(executor.List(request, default), a => !a.Name.StartsWith("@event/", StringComparison.Ordinal)).Name);
         Assert.Throws<ScriptRuntimeFailureException>(() => executor.Run(request with { Name = "main" }, default));
     }
 }

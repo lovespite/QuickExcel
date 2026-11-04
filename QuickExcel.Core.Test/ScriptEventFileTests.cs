@@ -70,7 +70,7 @@ public sealed class ScriptEventFileTests
                   workbook.getActiveWorksheet().getRange('A2').setValue(fs.readJson('//temp/session.json').count);
                 }
                 """)
-        }, ["write", "next"], scriptApiVersion: 2, bindings: [new("write", "actions"), new("next", "actions")]);
+        }, ["write", "next"], scriptApiVersion: 3, bindings: [new("write", "actions"), new("next", "actions")]);
         using var doc = Document(modules);
         doc.EnableScriptsAndCalculate();
         doc.RunAction("write");

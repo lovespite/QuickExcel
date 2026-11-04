@@ -90,7 +90,7 @@ public sealed class WebDraftContractTests
     [Fact]
     public void AllModulesShareExistingOneMiBSourceBudget()
     {
-        var modules = new ScriptModuleSet(new Dictionary<string, ScriptModule> { ["main"] = new("scripts/main.js", new string('x', 800_000)), ["other"] = new("scripts/other.js", "") }, ["main"], scriptApiVersion: 2);
+        var modules = new ScriptModuleSet(new Dictionary<string, ScriptModule> { ["main"] = new("scripts/main.js", new string('x', 800_000)), ["other"] = new("scripts/other.js", "") }, ["main"], scriptApiVersion: 3);
         var session = new ScriptDraftSession(modules); session.Observe("other", 2);
         var chunks = ScriptDraftSession.Split("other", new string('y', 300_000), 1, 2).ToArray(); foreach (var chunk in chunks[..^1]) session.Receive(chunk);
         Assert.Throws<InvalidDataException>(() => session.Receive(chunks[^1])); Assert.Equal("", session.Models["other"].Text);

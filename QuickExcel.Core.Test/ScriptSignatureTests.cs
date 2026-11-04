@@ -14,7 +14,7 @@ public sealed class ScriptSignatureTests : IDisposable
 {
     private readonly string _folder = Path.Combine(Path.GetTempPath(), "QuickExcel-signatures-" + Guid.NewGuid().ToString("N"));
     private readonly X509Certificate2 _certificate = ScriptSignatures.CreateSelfSigned("签名测试");
-    private static ScriptModuleSet Modules(int api = 2) => new(new Dictionary<string, ScriptModule>
+    private static ScriptModuleSet Modules(int api = 3) => new(new Dictionary<string, ScriptModule>
     {
         ["main"] = new("scripts/main.js", "import {value} from 'helper';\nconsole.log(value);"),
         ["helper"] = new("scripts/helper.js", "export const value = '中文';")
@@ -251,7 +251,7 @@ public sealed class ScriptSignatureTests : IDisposable
     public void CanonicalPayloadIgnoresMapOrderAndRevisionButBindsCertificate()
     {
         var signed = Signed();
-        var reordered = new ScriptModuleSet(signed.Modules.Reverse(), signed.EntryModules, 99, 8, 2, signed.Bindings.Reverse(), signed.Signature);
+        var reordered = new ScriptModuleSet(signed.Modules.Reverse(), signed.EntryModules, 99, 8, 3, signed.Bindings.Reverse(), signed.Signature);
         Assert.Equal(ScriptSignatureStatus.UntrustedSelfSigned, ScriptSignatures.Verify(reordered).Status);
         using var replacement = ScriptSignatures.CreateSelfSigned("replacement");
         Assert.Equal(ScriptSignatureStatus.Invalid, ScriptSignatures.Verify(signed.WithSignature(signed.Signature! with { Certificate = Convert.ToBase64String(replacement.RawData) })).Status);
@@ -373,7 +373,7 @@ public sealed class ScriptSignatureTests : IDisposable
         session.SetScriptsEnabled(true);
         session.Execute(new UpdateScriptSignatureCommand(modules, signature));
         Assert.True(session.IsDirty); Assert.False(session.CanUndo); Assert.False(session.ScriptsEnabled);
-        session.Execute(new UpdateScriptModulesCommand(new ScriptModuleSet(modules.Modules, modules.EntryModules, scriptApiVersion: 2, bindings: [new("main", "actions"), new("helper", "actions")])));
+        session.Execute(new UpdateScriptModulesCommand(new ScriptModuleSet(modules.Modules, modules.EntryModules, scriptApiVersion: 3, bindings: [new("main", "actions"), new("helper", "actions")])));
         Assert.Null(session.Snapshot.ScriptModules.Signature);
         Assert.Throws<InvalidOperationException>(() => session.Execute(new UpdateScriptSignatureCommand(modules, signature)));
     }

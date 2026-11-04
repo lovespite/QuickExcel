@@ -43,7 +43,7 @@ public sealed class TypeScriptCompilerTests
             });
             """;
         var modules = new ScriptModuleSet(new Dictionary<string, ScriptModule>
-        { ["main"] = new("scripts/main.ts", source, ScriptLanguage.TypeScript) }, ["main"], scriptApiVersion: 2, bindings: [new("main", "actions")]);
+        { ["main"] = new("scripts/main.ts", source, ScriptLanguage.TypeScript) }, ["main"], scriptApiVersion: 3, bindings: [new("main", "actions")]);
         using var doc = new WorkbookDocument(Book(Sheet("Data")).WithScriptModules(modules),
             new(new TypedWorkbookStorage(), new WorkbookCalculator(new ScriptWorkerRuntimeFactory()), new ScriptWorkerActionExecutor()));
         doc.EnableScriptsAndCalculate();
@@ -77,7 +77,7 @@ public sealed class TypeScriptCompilerTests
         var identity = M4ProtocolTests.Identity();
         var hello = fault switch
         {
-            "execute-hello" => new WorkerHello(WorkerProtocol.Engine, WorkerProtocol.Policy, [1, 2], WorkerProtocol.MaxFrameBytes),
+            "execute-hello" => new WorkerHello(WorkerProtocol.Engine, WorkerProtocol.Policy, [3], WorkerProtocol.MaxFrameBytes),
             "compile-role" => CompilerProtocol.Hello with { Role = "execute" },
             "compiler-identity" => CompilerProtocol.Hello with { Compiler = new string('0', 64) },
             _ => CompilerProtocol.Hello
@@ -109,7 +109,7 @@ public sealed class TypeScriptCompilerTests
             new("main", "typescript", "import {twice} from 'shared'; host.functions.register('F',()=>twice(4));"));
         var result = await compiler.CompileAsync(request, Stamp);
         Assert.True(result.Result.Success);
-        var modules = new ScriptModuleSet(result.Result.Outputs.ToDictionary(m => m.Id, m => new ScriptModule("scripts/" + m.Id + ".js", m.Javascript)), ["main"], scriptApiVersion: 2);
+        var modules = new ScriptModuleSet(result.Result.Outputs.ToDictionary(m => m.Id, m => new ScriptModule("scripts/" + m.Id + ".js", m.Javascript)), ["main"], scriptApiVersion: 3);
         using var runtime = new ScriptWorkerRuntimeFactory().Create(new ScriptRuntimeRequest(modules, Stamp, TimeSpan.FromSeconds(5), default));
         Assert.Equal(8d, runtime.Invoke("F", []));
         var hit = await compiler.CompileAsync(request, Stamp);
@@ -186,7 +186,7 @@ public sealed class TypeScriptCompilerTests
     {
         const string source = "enum E { A, B }\n\nhost.functions.register('F',()=>{\n  const n:number=E.B;\n  throw new Error('mapped '+n);\n});";
         var modules = new ScriptModuleSet(new Dictionary<string, ScriptModule>
-        { ["main"] = new("scripts/main.ts", source, ScriptLanguage.TypeScript) }, ["main"], scriptApiVersion: 2);
+        { ["main"] = new("scripts/main.ts", source, ScriptLanguage.TypeScript) }, ["main"], scriptApiVersion: 3);
         using var runtime = new ScriptWorkerRuntimeFactory().Create(new ScriptRuntimeRequest(modules, Stamp, TimeSpan.FromSeconds(5), default));
         var error = Assert.Throws<InvalidOperationException>(() => runtime.Invoke("F", []));
         Assert.Contains("main:5:", error.Message);

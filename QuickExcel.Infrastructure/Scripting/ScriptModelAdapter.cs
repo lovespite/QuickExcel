@@ -6,7 +6,7 @@ using QuickExcel.Scripting;
 
 namespace QuickExcel.Runtime;
 
-internal sealed class ScriptModelAdapter(ScriptActionRequest request, CancellationToken cancellation)
+internal sealed partial class ScriptModelAdapter(ScriptActionRequest request, CancellationToken cancellation)
 {
     private const int MaxReadCells = 100_000;
     private const int MaxWriteCells = 20_000;
@@ -30,11 +30,13 @@ internal sealed class ScriptModelAdapter(ScriptActionRequest request, Cancellati
             // Virtual-file snapshots are an internal transaction request, not an
             // Office object-model member. Keep their zero-argument contract explicit;
             // object-model calls use the generated capability whitelist.
-            if (!(method == "files" && args.Length == 0) && !ScriptCapabilities.Current.AllowsHost(method, args.Length))
+            if (!(method == "files" && args.Length == 0 || method == "errorCode" && args.Length == 2) && !ScriptCapabilities.Current.AllowsHost(method, args.Length))
                 throw new ModelFailure("InvalidArgument", "未知的工作簿模型方法或参数个数。");
             var view = model.View;
             object? value;
-            if (method == "active")
+            if (method.StartsWith("getApi:", StringComparison.Ordinal) || method.StartsWith("setApi:", StringComparison.Ordinal))
+                value = CallApi(method, args);
+            else if (method == "active")
             {
                 Spend(1, write: false);
                 var sheet = view.GetSheet(view.ActiveSheetId); var cell = sheet.View.ActiveCell;
@@ -78,12 +80,12 @@ internal sealed class ScriptModelAdapter(ScriptActionRequest request, Cancellati
                         Spend(cells, write: false);
                         var metadata = model.ReadCell(sheetId, new(range.Top, range.Left));
                         value = metadata?.Content.Kind == CellContentKind.Formula ? metadata.Content.FormulaText : ""; break;
-                    case "getCell":
+                    case "getCell": case "errorCode":
                         Spend(1, write: false);
                         model.PrepareValueRead(sheetId, new(range.Top, range.Left, range.Top, range.Left), cancellation);
                         var cell = model.ReadCell(sheetId, new(range.Top, range.Left), false, calculated: true);
                         EnsureReadable(cell);
-                        value = Scalar(cell?.Value ?? CellValue.Blank); break;
+                        value = method == "errorCode" ? cell?.Value.Kind == CellValueKind.Error ? DisplayError(cell.Value.ErrorCode) : null : Scalar(cell?.Value ?? CellValue.Blank); break;
                     case "getValues":
                         Spend(cells, write: false);
                         model.PrepareValueRead(sheetId, range, cancellation);
@@ -100,9 +102,7 @@ internal sealed class ScriptModelAdapter(ScriptActionRequest request, Cancellati
                         }
                         value = values; break;
                     case "getFill":
-                        Spend(1, write: false);
-                        var color = view.Styles[sheet.GetStyleId(range.Top, range.Left)].FillColor;
-                        value = color is { Length: 8 } ? "#" + color[2..] : ""; break;
+                        value = Uniform(sheet, range, style => Rgb(style.FillColor)); break;
                     case "clear":
                         Spend(cells, write: true);
                         model.SetValues(sheetId, range, Enumerable.Range(0, rows).Select(_ => (IReadOnlyList<CellValue>)Enumerable.Repeat(CellValue.Blank, columns).ToArray()).ToArray()); value = null; break;
@@ -136,12 +136,13 @@ internal sealed class ScriptModelAdapter(ScriptActionRequest request, Cancellati
             if (IsWrite(method)) model.RejectWrite();
             return new(call.OperationId, call.Sequence, false, JsonSerializer.SerializeToElement<object?>(null), Bounded(failure.Message)) { Code = failure.Code };
         }
-        catch (Exception error) when (error is ArgumentException or InvalidOperationException or IOException or FormatException or KeyNotFoundException or OverflowException)
+        catch (Exception error) when (error is ArgumentException or InvalidOperationException or IOException or FormatException or KeyNotFoundException or OverflowException or NotSupportedException)
         {
             if (IsWrite(method)) model.RejectWrite();
             var code = error switch
             {
                 KeyNotFoundException => "ItemNotFound",
+                NotSupportedException => "UnsupportedApi",
                 ArgumentException or FormatException or OverflowException => "InvalidArgument",
                 _ => "InvalidReference"
             };

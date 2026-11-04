@@ -9,9 +9,9 @@ internal sealed class JscRuntimeFactory : IScriptRuntimeFactory
 {
     public IScriptRuntime Create(string source) => new Runtime(new JscSession(source));
     public IScriptRuntime Create(ScriptRuntimeRequest request) => request.Modules.HasTypeScript
-        ? throw new NotSupportedException("TypeScript 必须通过隔离编译和执行 worker。") : request.Modules.ScriptApiVersion == 2
+        ? throw new NotSupportedException("TypeScript 必须通过隔离编译和执行 worker。") : request.Modules.ScriptApiVersion == 3
         ? new Runtime(new JscSession(request.Modules.Modules.ToDictionary(m => m.Key, m => m.Value.Source, StringComparer.Ordinal), request.Modules.EntriesFor("formula-functions")))
-        : request.Modules.CanExecuteLegacy ? Create(request.Source) : throw new NotSupportedException("多模块执行需要显式声明脚本 API v2。");
+        : request.Modules.CanExecuteSingleSource ? Create(request.Source) : throw new NotSupportedException("多模块执行需要显式声明脚本 API v2。");
 
     private sealed class Runtime(JscSession session) : IScriptRuntime
     {

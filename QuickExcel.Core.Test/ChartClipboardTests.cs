@@ -87,6 +87,27 @@ public sealed class ChartClipboardTests
         Assert.Equal(30, copy.Chart.Anchor.Rotation); Assert.Equal(new[] { 1 }, copy.Chart.Series[0].HiddenPoints);
         Assert.Equal(new double?[] { 10, 30 }, ChartData.Read(copy.Book, copy.Chart)[0].Values);
     }
+    [Theory]
+    [InlineData(WorksheetChartKind.Column)] [InlineData(WorksheetChartKind.Line)] [InlineData(WorksheetChartKind.Pie)] [InlineData(WorksheetChartKind.Scatter)]
+    public void OfficeOutputContainsEditableLiteralDataWithoutCellOrFileLinks(WorksheetChartKind kind)
+    {
+        var bytes = OfficeDrawingClipboardCodec.WriteOfficeChart(Capture(kind)); Assert.NotNull(bytes);
+        using var stream = new MemoryStream(bytes); using var zip = new ZipArchive(stream);
+        using var chartStream = zip.GetEntry("xl/charts/chart1-1.xml")!.Open(); var xml = XDocument.Load(chartStream);
+        Assert.Empty(xml.Descendants(C + "f")); Assert.Empty(xml.Descendants(C + "externalData")); Assert.NotEmpty(xml.Descendants(C + "numLit"));
+        var incoming = OfficeDrawingClipboardCodec.ReadChart(bytes);
+        Assert.Equal(new double?[] { 10, 20, 30 }, ChartData.Read(incoming.Book, incoming.Chart)[0].Values);
+    }
+    [Fact]
+    public void ExternalFilteredCacheIsRejectedAndPrivateSnapshotKeepsHiddenValues()
+    {
+        var bytes = Rewrite(NativeFixture(), "xl/charts/chart1-1.xml", xml => xml.Root!.Add(new XElement(XName.Get("fullRef", "http://schemas.microsoft.com/office/drawing/2012/chart"))));
+        Assert.Throws<NotSupportedException>(() => OfficeDrawingClipboardCodec.ReadChart(bytes));
+        var (book, chart) = Create(); chart = chart with { Series = [chart.Series[0] with { HiddenPoints = [1] }] };
+        var source = ChartClipboard.Capture(book, chart); Assert.Null(OfficeDrawingClipboardCodec.WriteOfficeChart(source));
+        var copy = OfficeDrawingClipboardCodec.ReadPrivateChart(OfficeDrawingClipboardCodec.WritePrivateChart(source));
+        Assert.Equal(new double?[] { 10, 20, 30 }, ChartData.Read(copy.Book, copy.Chart, includeFiltered: true)[0].Values);
+    }
     [Fact]
     public void StaleSourceFormulaCannotBeExportedAsFreshChartData()
     {

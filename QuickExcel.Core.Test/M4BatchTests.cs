@@ -11,8 +11,12 @@ public sealed class M4BatchTests
     {
         public ScriptWorkerRuntime? Runtime { get; private set; }
         public IScriptRuntime Create(string source) => throw new NotSupportedException();
-        public IScriptRuntime Create(ScriptRuntimeRequest request) => Runtime =
-            (ScriptWorkerRuntime)new ScriptWorkerRuntimeFactory(executable).Create(request);
+        public IScriptRuntime Create(ScriptRuntimeRequest request)
+        {
+            var runtime = new ScriptWorkerRuntimeFactory(executable).Create(request);
+            Runtime = runtime as ScriptWorkerRuntime; // Metrics below use explicit one-shot requests.
+            return runtime;
+        }
     }
 
     private static CalculationRequest Request(WorkbookSnapshot book) => new(new(Guid.NewGuid(), 0, 1, 1), book, true);
