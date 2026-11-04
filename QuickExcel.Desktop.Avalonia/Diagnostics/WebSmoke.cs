@@ -111,8 +111,32 @@ public sealed partial class MainWindow
                 _workspace.Editor.Execute(new UpdateScriptSignatureCommand(modules, ScriptSignatures.Sign(modules, certificate)));
             _dialogDriver = window => { var dialog = (FieldsDialog)window; ((ComboBox)dialog.Input("trust")).SelectedIndex = 1; dialog.Close(true); return Task.CompletedTask; };
             await ApplyScriptsAsync(); Check(Document.ScriptsEnabled && ScriptTrust.Read().Count == 0, "One-time signed-script consent does not persist a trust pin");
+            Check(!ScriptTrust.Verify(Document.Snapshot.ScriptModules).ExecutionPolicyAccepted, "One-time consent does not persist engine-policy consent");
             DisableScripts(); _dialogDriver = window => { var dialog = (FieldsDialog)window; ((ComboBox)dialog.Input("trust")).SelectedIndex = 2; dialog.Close(true); return Task.CompletedTask; };
             await ApplyScriptsAsync(); Check(Document.ScriptsEnabled && ScriptTrust.Read().Count == 1, "Persistent certificate consent uses isolated integrity-protected trust storage");
+            Check(ScriptTrust.Verify(Document.Snapshot.ScriptModules).ExecutionPolicyAccepted, "Explicit Apply remembers the current engine policy for the trusted signer");
+            var signedPath = Path.Combine(directory, "signed-policy.xlsq");
+            _files = new SmokeFiles { NextSave = signedPath };
+            Check(await SaveAsync(true), "Signed workbook saves for the reopen policy regression");
+            await CloseScriptWindowAsync();
+            _dialogDriver = _ => throw new InvalidOperationException("Already accepted policy must not ask for trust again.");
+            for (var reopen = 0; reopen < 2; reopen++)
+            {
+                await OpenPathAsync(signedPath);
+                Check(Document.ScriptsEnabled && ScriptActionsCurrent && _availableScriptActions.Count == 1 &&
+                    !_status.Text!.Contains("显式应用一次"), "Reopening a signed workbook reuses policy consent and discovers actions without another Apply");
+                Check(!Document.IsDirty && Document.GetCellValue(0, 0, 0) == "42", "Automatic authorization does not run action bodies or modify workbook data");
+            }
+            var signedModules = Document.Snapshot.ScriptModules;
+            ScriptTrust.Remove(ScriptTrust.Read().Single().Fingerprint);
+            ScriptTrust.Trust(signedModules); // Certificate trust without current engine-policy consent.
+            await OpenPathAsync(signedPath);
+            Check(!Document.ScriptsEnabled && _status.Text!.Contains("显式应用一次"), "A certificate pin alone still requires explicit policy acceptance");
+            await ApplyScriptsAsync();
+            await OpenPathAsync(signedPath);
+            Check(Document.ScriptsEnabled && ScriptTrust.Verify(Document.Snapshot.ScriptModules).ExecutionPolicyAccepted,
+                "Applying a previously trusted signature persists consent and removes the repeated prompt");
+            await OpenScriptsAsync();
             _dialogDriver = window =>
             {
                 var dialog = (FieldsDialog)window;

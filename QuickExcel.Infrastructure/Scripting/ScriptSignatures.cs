@@ -11,6 +11,7 @@ public sealed record ScriptSignatureVerification(ScriptSignatureStatus Status, s
     string? Subject = null, string? Issuer = null, string? Fingerprint = null, DateTime? NotAfter = null)
 {
     public bool CanAutoEnable => Status == ScriptSignatureStatus.Trusted;
+    public bool ExecutionPolicyAccepted { get; init; }
 }
 
 /// <summary>Versioned, detached signatures over script semantics, independent of cells and caches.</summary>

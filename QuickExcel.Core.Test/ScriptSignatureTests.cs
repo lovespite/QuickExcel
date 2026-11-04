@@ -44,6 +44,67 @@ public sealed class ScriptSignatureTests : IDisposable
     }
 
     [Fact]
+    public void ExecutionConsentSurvivesReopenButRequiresTheSameSignerAndPolicy()
+    {
+        var path = PathFor("trust.json"); var modules = Signed();
+        ScriptCertificateTrustStore Store(char policy) => new(path, TrustDataProtection.Create(), new string(policy, 64));
+        var store = Store('A'); store.Trust(modules);
+        Assert.True(store.Verify(modules).CanAutoEnable);
+        Assert.False(store.Verify(modules).ExecutionPolicyAccepted);
+        store.AcceptExecutionPolicy(modules);
+        Assert.True(Store('A').Verify(modules).ExecutionPolicyAccepted);
+        Assert.True(Store('A').Verify(Signed(Modules().WithPrimarySource("// another signed workbook"))).ExecutionPolicyAccepted);
+        using var otherCertificate = ScriptSignatures.CreateSelfSigned("Other publisher");
+        var other = Modules().WithSignature(ScriptSignatures.Sign(Modules(), otherCertificate));
+        store.Trust(other);
+        Assert.False(store.Verify(other).ExecutionPolicyAccepted);
+        Assert.False(Store('B').Verify(modules).ExecutionPolicyAccepted);
+        Store('B').AcceptExecutionPolicy(modules);
+        Assert.True(Store('B').Verify(modules).ExecutionPolicyAccepted);
+        Assert.False(Store('A').Verify(modules).ExecutionPolicyAccepted);
+    }
+
+    [Fact]
+    public void ExecutionConsentCannotReplaceSignatureTrustAndIsRemovedWithThePin()
+    {
+        var modules = Signed(); var store = new ScriptCertificateTrustStore(PathFor("trust.json"));
+        Assert.Throws<InvalidOperationException>(() => store.AcceptExecutionPolicy(modules));
+        store.Trust(modules); store.AcceptExecutionPolicy(modules);
+        var changed = Modules().WithPrimarySource("// tampered").WithSignature(modules.Signature);
+        Assert.False(store.Verify(changed).ExecutionPolicyAccepted);
+        Assert.Throws<InvalidOperationException>(() => store.AcceptExecutionPolicy(changed));
+        store.Remove(store.Read().Single().Fingerprint);
+        Assert.False(store.Verify(modules).ExecutionPolicyAccepted);
+        store.Trust(modules);
+        Assert.False(store.Verify(modules).ExecutionPolicyAccepted);
+    }
+
+    [Fact]
+    public void LegacyProtectedPinsRequireExplicitPolicyConsentWithoutLosingCertificateTrust()
+    {
+        var path = PathFor("trust.json"); var modules = Signed();
+        var entries = new[] { new TrustedScriptCertificate(Convert.ToHexString(SHA256.HashData(_certificate.RawData)), _certificate.Subject, _certificate.NotAfter) };
+        var protection = TrustDataProtection.Create(); var dpapi = protection.Id == "dpapi-current-user-v1";
+        var purpose = Encoding.UTF8.GetBytes(dpapi ? "QuickExcel.ScriptCertificateTrust.v1\0" + Path.GetFullPath(path).ToUpperInvariant()
+            : "QuickExcel.ScriptCertificateTrust.v2\0" + protection.Id + "\0" + Path.GetFullPath(path));
+        var envelope = new JsonObject
+        {
+            ["Version"] = dpapi ? 1 : 2,
+            ["Data"] = Convert.ToBase64String(protection.Protect(System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(entries), purpose))
+        };
+        if (!dpapi) envelope["Protection"] = protection.Id;
+        File.WriteAllText(path, envelope.ToJsonString());
+        var original = File.ReadAllBytes(path);
+        var store = new ScriptCertificateTrustStore(path);
+        Assert.True(store.Verify(modules).CanAutoEnable);
+        Assert.False(store.Verify(modules).ExecutionPolicyAccepted);
+        Assert.Equal(original, File.ReadAllBytes(path));
+        store.AcceptExecutionPolicy(modules);
+        Assert.Equal(entries, store.Read());
+        Assert.True(new ScriptCertificateTrustStore(path).Verify(modules).ExecutionPolicyAccepted);
+    }
+
+    [Fact]
     public void ForgedPlaintextTrustListCannotAuthorizeScripts()
     {
         var modules = Signed();
@@ -70,6 +131,7 @@ public sealed class ScriptSignatureTests : IDisposable
         var path = PathFor("trust.json");
         var store = new ScriptCertificateTrustStore(path);
         store.Trust(Signed());
+        store.AcceptExecutionPolicy(Signed());
         using var attacker = ScriptSignatures.CreateSelfSigned("Injected signer");
         var modules = Modules();
         modules = modules.WithSignature(ScriptSignatures.Sign(modules, attacker));
@@ -104,15 +166,18 @@ public sealed class ScriptSignatureTests : IDisposable
         {
             Assert.ThrowsAny<System.Text.Json.JsonException>(() => reopened.Verify(modules));
             Assert.ThrowsAny<System.Text.Json.JsonException>(() => reopened.Trust(Signed()));
+            Assert.ThrowsAny<System.Text.Json.JsonException>(() => reopened.AcceptExecutionPolicy(Signed()));
         }
         else
         {
             Assert.Throws<InvalidDataException>(() => reopened.Verify(modules));
             Assert.Throws<InvalidDataException>(() => reopened.Trust(Signed()));
+            Assert.Throws<InvalidDataException>(() => reopened.AcceptExecutionPolicy(Signed()));
         }
         Assert.Equal(tampered, File.ReadAllText(path));
         File.WriteAllText(path, original);
         Assert.True(reopened.Verify(Signed()).CanAutoEnable);
+        Assert.True(reopened.Verify(Signed()).ExecutionPolicyAccepted);
         Assert.Equal(ScriptSignatureStatus.UntrustedSelfSigned, reopened.Verify(modules).Status);
     }
 

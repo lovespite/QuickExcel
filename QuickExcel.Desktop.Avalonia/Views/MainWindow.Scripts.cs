@@ -298,6 +298,20 @@ public sealed partial class MainWindow
         if (!DesktopServices.SupportsScripts) throw new PlatformNotSupportedException("此平台的脚本隔离尚未开放，不能执行脚本。");
         ClearScriptActions(); RefreshScriptActions();
         if (!await CheckScriptTrustAsync()) return;
+        var modules = Document.Snapshot.ScriptModules;
+        await EnableVerifiedScriptsAsync();
+        if (!ReferenceEquals(modules, Document.Snapshot.ScriptModules) || !Document.ScriptsEnabled || modules.Signature is null) return;
+        try
+        {
+            var trust = await Task.Run(() => ScriptTrust.Verify(modules));
+            if (trust.CanAutoEnable && !trust.ExecutionPolicyAccepted && ReferenceEquals(modules, Document.Snapshot.ScriptModules))
+                await Task.Run(() => ScriptTrust.AcceptExecutionPolicy(modules));
+        }
+        catch (QuickExcel.Security.UserProtectionUnavailableException ex)
+        { _status.Text = "脚本已应用；无法记住当前引擎策略，下次打开仍需手动应用：" + ex.Message; }
+    }
+    private async Task EnableVerifiedScriptsAsync()
+    {
         await ScriptWorkAsync(async token =>
         {
             var document = Document; var modules = document.Snapshot.ScriptModules;

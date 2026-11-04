@@ -284,10 +284,12 @@ public sealed partial class MainWindow : Window
             try
             {
                 var trust = await Task.Run(() => ScriptTrust.Verify(modules));
-                // Source signatures remain verifiable, but existing certificate
-                // pins do not silently consent to a new engine policy.
                 if (ReferenceEquals(modules, Document.Snapshot.ScriptModules) && trust.CanAutoEnable)
-                    _status.Text = "脚本签名有效；引擎策略已更新，请在脚本页显式应用一次。";
+                {
+                    if (!modules.CanExecute) _status.Text = ScriptModuleSet.MigrationMessage;
+                    else if (trust.ExecutionPolicyAccepted) await EnableVerifiedScriptsAsync();
+                    else _status.Text = "脚本签名有效；尚未确认当前引擎策略，请在脚本页显式应用一次。";
+                }
             }
             catch (QuickExcel.Security.UserProtectionUnavailableException ex) { _status.Text = "文件已打开；无法读取持久信任，脚本保持停用：" + ex.Message; }
         }
