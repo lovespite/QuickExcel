@@ -30,7 +30,8 @@ internal sealed class FieldsDialog : Window
     private void Add(string key, string label, Control input)
     {
         _inputs.Add(key, input); AutomationProperties.SetName(input, label);
-        _fields.Children.Add(new TextBlock { Text = label }); _fields.Children.Add(input);
+        if (input is not CheckBox) _fields.Children.Add(new TextBlock { Text = label });
+        _fields.Children.Add(input);
     }
     public FieldsDialog Text(string key, string label, string initial = "", bool multiline = false)
     {
