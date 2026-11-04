@@ -15,9 +15,6 @@ public sealed partial class MainWindow
 
     private void InstallFileCommands()
     {
-        var file = (MenuItem)_menu.Items[0]!;
-        file.Items.Insert(5, CommandMenu("导出值快照", () => ExportAsync(false))); file.Items.Insert(6, CommandMenu("导出可移植公式", () => ExportAsync(true)));
-        file.Items.Insert(7, CommandMenu("打开恢复副本", RecoveryAsync)); file.Items.Insert(8, CommandMenu("兼容性报告", CompatibilityAsync));
         RibbonGroup("审阅", "文件兼容性", RibbonButton("兼容性报告", CompatibilityAsync, false), RibbonButton("导出值快照", () => ExportAsync(false), false), RibbonButton("导出可移植公式", () => ExportAsync(true), false));
     }
     private async Task RecoveryAsync()

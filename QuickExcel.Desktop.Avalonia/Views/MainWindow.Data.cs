@@ -23,10 +23,10 @@ public sealed partial class MainWindow
     private void CloseFilterPanel() { if (_filterPopup is { } popup) popup.IsOpen = false; }
     private void InstallDataCommands()
     {
-        RibbonGroup("数据", "排序和筛选", RibbonButton("升序", () => SortAsync(false)), RibbonButton("降序", () => SortAsync(true)),
-            RibbonButton("多级排序", () => SortAsync(null)), RibbonButton("筛选区域", EstablishFilterAsync), RibbonButton("当前列筛选", () => FilterAsync(_grid.Current.Column)),
+        RibbonGroup("数据", "排序和筛选", RibbonButton(RibbonIcon.SortAscending, "升序", () => SortAsync(false)), RibbonButton(RibbonIcon.SortDescending, "降序", () => SortAsync(true)),
+            RibbonButton("多级排序", () => SortAsync(null)), RibbonButton(RibbonIcon.Filter, "筛选区域", EstablishFilterAsync), RibbonButton("当前列筛选", () => FilterAsync(_grid.Current.Column)),
             RibbonButton("清除全部筛选条件", ClearFiltersAsync), RibbonButton("取消筛选区域", RemoveFilterAsync), RibbonButton("清除排序标记", ClearSortAsync));
-        RibbonGroup("插入", "表格", RibbonButton("创建表", CreateTableAsync), RibbonButton("调整表范围", ResizeTableAsync), RibbonButton("重命名表", () => EditTableAsync(0)),
+        RibbonGroup("插入", "表格", RibbonButton(RibbonIcon.CreateTable, "创建表", CreateTableAsync), RibbonButton("调整表范围", ResizeTableAsync), RibbonButton("重命名表", () => EditTableAsync(0)),
             RibbonButton("重命名表列", () => EditTableAsync(1)), RibbonButton("设置计算列", () => EditTableAsync(2)));
         RibbonGroup("数据","透视表",RibbonButton("创建透视表",CreatePivotAsync),RibbonButton("刷新透视表",RefreshPivotAsync),RibbonButton("透视表转换为值",ConvertPivotToValuesAsync));
         _grid.FilterRequested += column => _ = PerformAsync(() => FilterAsync(column));

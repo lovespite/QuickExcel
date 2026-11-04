@@ -171,10 +171,25 @@ public sealed partial class MainWindow
             var oldWidth = DrawingGeometry.ColumnSize(Document.Snapshot.Sheets[0], 0); await AutoFitAsync(SheetAxis.Column, 0);
             Check(DrawingGeometry.ColumnSize(Document.Snapshot.Sheets[0], 0) > oldWidth, "Auto-fit measures offscreen stored content");
             await History(false); Check(DrawingGeometry.ColumnSize(Document.Snapshot.Sheets[0], 0) == oldWidth, "Auto-fit is undoable dimension metadata");
-            var bold = _mutationControls.OfType<Button>().Single(b => b.Content as string == "加粗");
+            var bold = _mutationControls.OfType<Button>().Single(b => global::Avalonia.Automation.AutomationProperties.GetName(b) == "加粗");
             bold.RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); await _operation;
             Check(CurrentStyle.Bold, "Native ribbon click reaches shared style command");
             await History(false); Check(!CurrentStyle.Bold, "Ribbon style is one undo entry");
+            _grid.SelectRange(new(35, 0, 36, 1), new(35, 0));
+            await ApplyStyleAsync(new(Horizontal: 3, Vertical: 3, Bold: true));
+            bool Aligned(int vertical) => new[] { new CellPosition(35, 0), new(35, 1), new(36, 0), new(36, 1) }
+                .All(p => Document.Snapshot.Styles[Document.Snapshot.Sheets[SheetIndex].GetStyleId(p.Row, p.Column)]
+                    is { Horizontal: 3, Bold: true } style && style.Vertical == vertical);
+            foreach (var (title, vertical) in new[] { ("顶端对齐", 0), ("垂直居中", 1), ("底端对齐", 2) })
+            {
+                var button = _mutationControls.OfType<Button>().Single(b => global::Avalonia.Automation.AutomationProperties.GetName(b) == title);
+                button.RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); await _operation;
+                Check(Aligned(vertical), $"{title} formats the whole selection without changing horizontal alignment or font");
+                await History(false); Check(Aligned(3), $"{title} undoes the entire selection in one step");
+                await History(true); Check(Aligned(vertical), $"{title} redoes the entire selection in one step");
+                await History(false);
+            }
+            await History(false); _grid.Select(new(35, 0));
             await FreezeAsync(2, 2); Check(Document.Snapshot.Sheets[0].View.FrozenRows == 2 && Document.Snapshot.Sheets[0].View.FrozenColumns == 2, "Native freeze command persists both axes");
             _grid.ScrollTo(180, 100); Check(Document.Snapshot.Sheets[0].View.PaneTopLeftCell.Row >= 2, "Scroll captures persisted pane navigation");
             await Capture("native-ribbon");

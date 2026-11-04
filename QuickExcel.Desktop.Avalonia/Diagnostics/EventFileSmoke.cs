@@ -13,7 +13,7 @@ namespace QuickExcel.Desktop.Avalonia;
 
 public sealed partial class MainWindow
 {
-    private async Task CheckEventFilesAsync(string directory, Action<bool, string> check)
+    private async Task CheckEventFilesAsync(string directory, Action<bool, string> check, Func<Task> idle)
     {
         _eventTimer.Stop(); _calculationTimer.Stop();
         _workspace.New(); ShowBook();
@@ -66,7 +66,7 @@ public sealed partial class MainWindow
         await RunScriptActionAsync(_availableScriptActions.Single());
         check(!Document.ScriptsEnabled && _scriptPage!.Drafts.Models["main"].Committed == Document.ScriptSource && await CommitScriptsAsync(),
             "Virtual source edits revoke trust and refresh the open editor without restoring stale source");
-        await CloseScriptWindowAsync(); _workspace.New();
+        await CloseScriptWindowAsync(); await idle(); _workspace.New();
         _workspace.Editor.Execute(new UpdateScriptModulesCommand(new(new Dictionary<string, ScriptModule> { ["main"] = new("scripts/main.ts", """
             let calls=0;
             function main(workbook: QuickExcel.Workbook) {
@@ -74,7 +74,7 @@ public sealed partial class MainWindow
               if(cell.getAddress()!=='B2' || range.getAddress()!=='B2:C3') throw Error('live selection');
               cell.getFormat().getFill().setColor('#ff0000');
               range.getFormat().getFill().setColor('#00ff00');
-              workbook.getActiveWorksheet().getCell('A1').setValue(++calls);
+              workbook.getActiveWorksheet().getCell(0, 0).setValue(++calls);
             }
             """, ScriptLanguage.TypeScript) }, ["main"], scriptApiVersion: 3, bindings: [new("main", "actions")])));
         await ApplyScriptsAsync();

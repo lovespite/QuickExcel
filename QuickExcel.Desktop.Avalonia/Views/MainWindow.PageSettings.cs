@@ -21,14 +21,15 @@ public sealed partial class MainWindow
     {
         menu.Items.Add(new Separator());
         var items = new List<(MenuItem Item, SheetAxis Axis, bool Remove)>();
-        WorkbookSnapshot? snapshot = null; var session = Guid.Empty; var cell = new CellPosition(0, 0);
+        // The context menu is rebuilt by its Opening handler after the target selection commits.
+        var snapshot = Document.Snapshot; var session = Document.Session.SessionId; var cell = _grid.Current;
         foreach (var axis in new[] { SheetAxis.Row, SheetAxis.Column })
         foreach (var remove in new[] { false, true })
         {
             var name = axis == SheetAxis.Row ? "行" : "列";
             var item = CommandMenu(remove ? $"删除{name}分页符" : $"在当前{name}前插入分页符", async () =>
             {
-                if (snapshot is null || session != Document.Session.SessionId || snapshot.ActiveSheetId != Document.Snapshot.ActiveSheetId)
+                if (session != Document.Session.SessionId || snapshot.ActiveSheetId != Document.Snapshot.ActiveSheetId)
                     throw new InvalidOperationException("工作表已切换，请重新打开右键菜单。");
                 var sheet = snapshot.GetSheet(snapshot.ActiveSheetId);
                 var printing = ChangePageBreak(sheet.Printing, axis, axis == SheetAxis.Row ? cell.Row : cell.Column, remove);
@@ -36,19 +37,14 @@ public sealed partial class MainWindow
             });
             menu.Items.Add(item); items.Add((item, axis, remove));
         }
-        menu.Opening += (_, e) =>
+        var printing = snapshot.GetSheet(snapshot.ActiveSheetId).Printing;
+        var editable = snapshot.FileState?.FormulaReadOnly != true && !_grid.IsComposing && !_grid.IsCommitPending && !_formula.IsComposing && !_workspace.IsBusy && !_execution.IsRunning;
+        foreach (var (item, axis, remove) in items)
         {
-            if (_grid.IsContextSelectionBlocked) { e.Cancel = true; return; }
-            snapshot = Document.Snapshot; session = Document.Session.SessionId; cell = _grid.Current;
-            var printing = snapshot.GetSheet(snapshot.ActiveSheetId).Printing;
-            var editable = snapshot.FileState?.FormulaReadOnly != true && !_grid.IsComposing && !_grid.IsCommitPending && !_formula.IsComposing && !_workspace.IsBusy && !_execution.IsRunning;
-            foreach (var (item, axis, remove) in items)
-            {
-                var row = axis == SheetAxis.Row; var index = row ? cell.Row : cell.Column;
-                var existing = (row ? printing.RowBreaks : printing.ColumnBreaks).FirstOrDefault(b => b.Id == index);
-                item.IsEnabled = editable && (remove ? existing is not null : index > 0 && existing?.Manual != true);
-            }
-        };
+            var row = axis == SheetAxis.Row; var index = row ? cell.Row : cell.Column;
+            var existing = (row ? printing.RowBreaks : printing.ColumnBreaks).FirstOrDefault(b => b.Id == index);
+            item.IsEnabled = editable && (remove ? existing is not null : index > 0 && existing?.Manual != true);
+        }
     }
     private async Task PageSettingsAsync()
     {

@@ -22,7 +22,7 @@ public sealed partial class MainWindow
         };
         _grid.ChartFilterRequested += () => _ = PerformAsync(ChartFilterAsync);
         _grid.ViewportChanged += CloseChartFilter;
-        RibbonGroup("插入", "对象", RibbonButton("图片管理", ImagesAsync), RibbonButton("图表管理", ChartsAsync), RibbonButton("图表筛选", ChartFilterAsync), RibbonButton("批注", NoteAsync));
+        RibbonGroup("插入", "对象", RibbonButton("图片管理", ImagesAsync), RibbonButton("图表管理", ChartsAsync), RibbonButton("图表筛选", ChartFilterAsync), RibbonButton(RibbonIcon.Comment, "批注", NoteAsync));
         RibbonGroup("页面布局", "页面设置", RibbonButton("页面设置", PageSettingsAsync), RibbonButton("设为打印区域", () => PrintAreaAsync(false)),
             RibbonButton("清除打印区域", () => PrintAreaAsync(true)), RibbonButton("分页", PageBreaksAsync));
     }

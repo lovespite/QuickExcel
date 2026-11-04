@@ -24,11 +24,22 @@ public sealed partial class MainWindow
     private Guid _formatBrushSession;
     private StyleDefinition CurrentStyle => Document.Snapshot.Styles[Document.Snapshot.Sheets[SheetIndex].GetStyleId(_grid.Current.Row, _grid.Current.Column)];
     private Button RibbonButton(string title, Func<Task> action, bool mutation = true)
+        => RibbonButton(RibbonIcon.Default, title, action, mutation);
+    private Button RibbonButton(RibbonIcon icon, string title, Func<Task> action, bool mutation = true)
     {
-        var button = new Button { Content = title, Padding = new(8, 3), Margin = new(2, 1), Height = 28,
+        Control content = RibbonIcons.Create(icon);
+        if (icon == RibbonIcon.Default)
+        {
+            var labeled = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
+            labeled.Children.Add(content);
+            labeled.Children.Add(new TextBlock { Text = title, VerticalAlignment = VerticalAlignment.Center });
+            content = labeled;
+        }
+        var button = new Button { Content = content, Padding = new(6, 3), Margin = new(2, 1), Height = 28, MinHeight = 28, MinWidth = 32,
             Background = Brushes.Transparent, BorderThickness = new(0),
-            HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Left };
-        AutomationProperties.SetName(button, title);
+            HorizontalAlignment = HorizontalAlignment.Left, HorizontalContentAlignment = HorizontalAlignment.Left };
+        button.Classes.Add("ribbon-command");
+        AutomationProperties.SetName(button, title); ToolTip.SetTip(button, title);
         button.Click += async (_, _) => await PerformAsync(action);
         if (mutation) _mutationControls.Add(button); return button;
     }
@@ -43,14 +54,17 @@ public sealed partial class MainWindow
         }
         if (name == "字体")
         {
-            body.Children.Clear(); body.Width = 244; body.ColumnDefinitions = new("*,*");
+            body.Children.Clear(); body.Width = 236; body.ColumnDefinitions = new("*");
             var selectors = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4 };
             selectors.Children.Add(_font); selectors.Children.Add(_fontSize);
-            global::Avalonia.Controls.Grid.SetColumnSpan(selectors, 2); body.Children.Add(selectors);
+            body.Children.Add(selectors);
+            var formatting = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, VerticalAlignment = VerticalAlignment.Center };
             for (var i = 2; i < controls.Length; i++)
             {
-                global::Avalonia.Controls.Grid.SetRow(controls[i], i / 2); global::Avalonia.Controls.Grid.SetColumn(controls[i], i % 2); body.Children.Add(controls[i]);
+                formatting.Children.Add(controls[i]);
             }
+            global::Avalonia.Controls.Grid.SetRow(formatting, 1);
+            global::Avalonia.Controls.Grid.SetRowSpan(formatting, 2); body.Children.Add(formatting);
         }
         RibbonContentGroup(page, name, body);
     }
@@ -83,22 +97,26 @@ public sealed partial class MainWindow
     private void InstallRibbon()
     {
         AutomationProperties.SetName(_ribbon, "功能区"); DockPanel.SetDock(_ribbon, Dock.Top); _book.Children.Insert(0, _ribbon);
-        RibbonGroup("开始", "剪贴板", RibbonButton("粘贴", () => PasteAsync("all")), RibbonButton("复制", () => CopyAsync(false), false),
-            RibbonButton("剪切", () => CopyAsync(true)), RibbonButton("只贴值", () => PasteAsync("values")), RibbonButton("格式刷", FormatBrushAsync));
+        RibbonGroup("开始", "剪贴板", RibbonButton(RibbonIcon.Paste, "粘贴", () => PasteAsync("all")), RibbonButton(RibbonIcon.Copy, "复制", () => CopyAsync(false), false),
+            RibbonButton(RibbonIcon.Cut, "剪切", () => CopyAsync(true)), RibbonButton("只贴值", () => PasteAsync("values")), RibbonButton(RibbonIcon.FormatBrush, "格式刷", FormatBrushAsync));
         _font.ItemsSource = FontManager.Current.SystemFonts.Select(f => f.Name).Order(StringComparer.CurrentCultureIgnoreCase).ToArray();
         _fontSize.ItemsSource = new double[] { 8, 9, 10, 11, 12, 14, 16, 18, 20, 24, 28, 36, 48, 72 };
         AutomationProperties.SetName(_font, "字体"); AutomationProperties.SetName(_fontSize, "字号");
         _font.SelectionChanged += async (_, _) => { if (!_updatingRibbon && _font.SelectedItem is string name) await PerformAsync(() => ApplyStyleAsync(new(FontName: name))); };
         _fontSize.SelectionChanged += async (_, _) => { if (!_updatingRibbon && _fontSize.SelectedItem is double size) await PerformAsync(() => ApplyStyleAsync(new(FontSize: size))); };
         _mutationControls.AddRange([_font, _fontSize]);
-        RibbonGroup("开始", "字体", _font, _fontSize, RibbonButton("加粗", () => ApplyStyleAsync(new(Bold: !CurrentStyle.Bold))),
-            RibbonButton("倾斜", () => ApplyStyleAsync(new(Italic: !CurrentStyle.Italic))), RibbonButton("字体颜色", () => ColorAsync(false)), RibbonButton("填充颜色", () => ColorAsync(true)));
-        RibbonGroup("开始", "对齐", RibbonButton("左对齐", () => ApplyStyleAsync(new(Horizontal: 1))), RibbonButton("居中", () => ApplyStyleAsync(new(Horizontal: 2))),
-            RibbonButton("右对齐", () => ApplyStyleAsync(new(Horizontal: 3))), RibbonButton("自动换行", () => ApplyStyleAsync(new(WrapText: !CurrentStyle.WrapText))),
-            RibbonButton("合并", () => MergeAsync(false)), RibbonButton("取消合并", () => MergeAsync(true)));
-        RibbonGroup("开始", "数字与单元格", RibbonButton("数字格式", NumberFormatAsync), RibbonButton("增加小数位", () => PrecisionAsync(1)),
-            RibbonButton("减少小数位", () => PrecisionAsync(-1)), RibbonButton("设置单元格格式", CellFormatAsync), RibbonButton("清除格式", ClearFormatsAsync));
-        RibbonGroup("公式", "公式", RibbonButton("自动求和  Alt+=", () => { BeginAutoSum(); return Task.CompletedTask; }), RibbonButton("重算  F9", CalculateAsync, false));
+        RibbonGroup("开始", "字体", _font, _fontSize, RibbonButton(RibbonIcon.Bold, "加粗", () => ApplyStyleAsync(new(Bold: !CurrentStyle.Bold))),
+            RibbonButton(RibbonIcon.Italic, "倾斜", () => ApplyStyleAsync(new(Italic: !CurrentStyle.Italic))), RibbonColorDropdown(false), RibbonColorDropdown(true));
+        RibbonGroup("开始", "对齐", RibbonButton(RibbonIcon.AlignLeft, "左对齐", () => ApplyStyleAsync(new(Horizontal: 1))), RibbonButton(RibbonIcon.AlignCenter, "居中", () => ApplyStyleAsync(new(Horizontal: 2))),
+            RibbonButton(RibbonIcon.AlignRight, "右对齐", () => ApplyStyleAsync(new(Horizontal: 3))),
+            RibbonButton(RibbonIcon.AlignTop, "顶端对齐", () => ApplyStyleAsync(new(Vertical: 0))),
+            RibbonButton(RibbonIcon.AlignMiddle, "垂直居中", () => ApplyStyleAsync(new(Vertical: 1))),
+            RibbonButton(RibbonIcon.AlignBottom, "底端对齐", () => ApplyStyleAsync(new(Vertical: 2))),
+            RibbonButton(RibbonIcon.WrapText, "自动换行", () => ApplyStyleAsync(new(WrapText: !CurrentStyle.WrapText))),
+            RibbonButton(RibbonIcon.MergeCells, "合并", () => MergeAsync(false)), RibbonButton(RibbonIcon.SplitCells, "取消合并", () => MergeAsync(true)));
+        RibbonGroup("开始", "数字与单元格", RibbonButton("数字格式", NumberFormatAsync), RibbonButton(RibbonIcon.IncreaseDecimals, "增加小数位", () => PrecisionAsync(1)),
+            RibbonButton(RibbonIcon.DecreaseDecimals, "减少小数位", () => PrecisionAsync(-1)), RibbonButton("设置单元格格式", CellFormatAsync), RibbonButton(RibbonIcon.ClearFormatting, "清除格式", ClearFormatsAsync));
+        RibbonGroup("公式", "公式", RibbonButton(RibbonIcon.AutoSum, "自动求和  Alt+=", () => { BeginAutoSum(); return Task.CompletedTask; }), RibbonButton(RibbonIcon.Calculate, "重算  F9", CalculateAsync, false));
         RibbonGroup("开始", "编辑", RibbonButton("向下填充", () => FillDirectionAsync(false)), RibbonButton("向右填充", () => FillDirectionAsync(true)), RibbonButton("序列", SeriesAsync),
             RibbonButton("转为普通文本", FlattenRichTextAsync));
         _grid.AutoFitRequested += (axis, index) => _ = PerformAsync(() => AutoFitAsync(axis, index));
@@ -116,6 +134,7 @@ public sealed partial class MainWindow
             if (!_font.Items.Cast<string>().Contains(name)) _font.ItemsSource = _font.Items.Cast<string>().Append(name).Order().ToArray();
             if (!_fontSize.Items.Cast<double>().Contains(size)) _fontSize.ItemsSource = _fontSize.Items.Cast<double>().Append(size).Order().ToArray();
             _font.SelectedItem = name; _fontSize.SelectedItem = size;
+            UpdateColorSwatches();
         }
         finally { _updatingRibbon = false; }
         RefreshScriptActions();
@@ -133,23 +152,6 @@ public sealed partial class MainWindow
     { if (await CommitEditorsAsync()) await ExecuteAsync(new ClearCellFormatsCommand(VisibleAddresses())); }
     private async Task MergeAsync(bool remove)
     { if (await CommitEditorsAsync()) await ExecuteAsync(new MergeCellsCommand(Document.Snapshot.ActiveSheetId, Rectangle(SelectedRange()), remove)); }
-    private async Task ColorAsync(bool fill)
-    {
-        if (!await CommitEditorsAsync()) return;
-        var revision = Document.Snapshot.Revision; var addresses = VisibleAddresses();
-        var dialog = new FieldsDialog(fill ? "填充颜色" : "字体颜色").Choice("kind", "颜色", ["自定义", "自动 / 无填充", "黑色", "白色", "红色", "绿色", "蓝色", "黄色"], 0)
-            .Text("color", "自定义色值（#RRGGBB 或 AARRGGBB）", (fill ? CurrentStyle.FillColor : CurrentStyle.FontColor) ?? "FF000000");
-        string Value()
-        {
-            var value = dialog.Index("kind") switch { 2 => "FF000000", 3 => "FFFFFFFF", 4 => "FFFF0000", 5 => "FF008000", 6 => "FF0000FF", 7 => "FFFFFF00", _ => dialog.String("color").Trim().TrimStart('#') };
-            if (value.Length == 6) value = "FF" + value;
-            if (dialog.Index("kind") != 1 && (value.Length != 8 || value.Any(c => !Uri.IsHexDigit(c)))) throw new ArgumentException("请输入有效的十六进制颜色。");
-            return value.ToUpperInvariant();
-        }
-        dialog.Validate = () => Value(); if (!await dialog.ShowAsync(this)) return;
-        var clear = dialog.Index("kind") == 1;
-        await ExecuteAsync(new SetCellStyleCommand(addresses, fill ? new(FillColor: clear ? null : Value(), ClearFillColor: clear) : new(FontColor: clear ? null : Value(), ClearFontColor: clear)), revision);
-    }
     private async Task NumberFormatAsync()
     {
         if (!await CommitEditorsAsync()) return;

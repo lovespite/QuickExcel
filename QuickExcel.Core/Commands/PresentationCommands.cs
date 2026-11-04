@@ -262,27 +262,32 @@ public sealed class SetCellStyleCommand : DocumentCommand
 
 public sealed class SetAxisMetadataCommand(SheetId sheetId, SheetAxis axis, int first, int count, double? size = null, bool? hidden = null) : DocumentCommand
 {
+    // Optional per-axis sizes keep multi-selection autofit in the same history entry.
+    public ImmutableDictionary<int, double>? Sizes { get; init; }
     internal override CommandDraft Prepare(WorkbookSnapshot snapshot)
     {
         var limit = axis == SheetAxis.Row ? WorkbookLimits.MaxRows : WorkbookLimits.MaxColumns;
         if (!Enum.IsDefined(axis) || first < 0 || count < 1 || first > limit - count) throw new ArgumentOutOfRangeException(nameof(first));
         WorkbookLimits.ValidateDimension(size, nameof(size));
+        if (Sizes is not null)
+            foreach (var (index, value) in Sizes)
+            { if (index < first || index >= first + count) throw new ArgumentOutOfRangeException(nameof(Sizes)); WorkbookLimits.ValidateDimension(value, nameof(Sizes)); }
         var sheet = snapshot.GetSheet(sheetId);
         if (hidden == false && WorksheetOutline.Groups(sheet, axis).Any(g => g.Collapsed && g.First < first + count && g.Last >= first))
             throw new InvalidOperationException("该区域由分组折叠隐藏，请通过展开分组恢复可见性。");
         var rows = sheet.Rows.ToBuilder(); var columns = sheet.Columns.ToBuilder();
         // Showing an axis changes only existing metadata, without materializing every default row.
-        var indexes = size is null && hidden != true
+        var indexes = Sizes?.Keys ?? (size is null && hidden != true
             ? (axis == SheetAxis.Row ? sheet.Rows.Keys : sheet.Columns.Keys).Where(i => i >= first && i < first + count)
-            : Enumerable.Range(first, count);
+            : Enumerable.Range(first, count));
         foreach (var i in indexes)
-            if (axis == SheetAxis.Row) { var old = rows.GetValueOrDefault(i) ?? new(); rows[i] = old with { Height = size ?? old.Height, Hidden = hidden ?? old.Hidden }; }
-            else { var old = columns.GetValueOrDefault(i) ?? new(); columns[i] = old with { Width = size ?? old.Width, Hidden = hidden ?? old.Hidden }; }
+            if (axis == SheetAxis.Row) { var old = rows.GetValueOrDefault(i) ?? new(); rows[i] = old with { Height = Sizes is not null ? Sizes[i] : size ?? old.Height, Hidden = hidden ?? old.Hidden }; }
+            else { var old = columns.GetValueOrDefault(i) ?? new(); columns[i] = old with { Width = Sizes is not null ? Sizes[i] : size ?? old.Width, Hidden = hidden ?? old.Hidden }; }
         if (rows.SequenceEqual(sheet.Rows) && columns.SequenceEqual(sheet.Columns)) return new(snapshot, [], false);
         var updated = new WorksheetSnapshot(sheet.Id, sheet.Name, sheet.Cells, rows, columns, sheet.MergedCells, sheet.Images,
             sheet.ShowGridLines, sheet.DefaultRowHeight, sheet.TabColor, sheet.View, sheet.Visibility, sheet.Printing, sheet.Annotations, sheet.Data);
         return new(snapshot.WithSheets(snapshot.Sheets.Select(s => s.Id == sheetId ? updated : s)), [], true,
-            CalculationUnchanged: size.HasValue && hidden is null);
+            CalculationUnchanged: (size.HasValue || Sizes is not null) && hidden is null);
     }
 }
 

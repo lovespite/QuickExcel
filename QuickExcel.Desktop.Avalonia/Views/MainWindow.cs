@@ -24,9 +24,9 @@ public sealed partial class MainWindow : Window
     private readonly CompositionTextBox _formula = new() { MinHeight = 30 };
     private readonly TextBlock _address = new() { Width = 86, VerticalAlignment = VerticalAlignment.Center };
     private readonly TextBlock _status = new() { Text = "就绪", Margin = new(12, 5) };
-    private readonly ListBox _sheets = new() { MinHeight = 36, SelectionMode = SelectionMode.Single };
+    private readonly ListBox _sheets = new() { MinHeight = 0, Padding = new(0), SelectionMode = SelectionMode.Single };
     private readonly DockPanel _book = new();
-    private readonly StackPanel _start = new() { Margin = new(60), Spacing = 18 };
+    private readonly global::Avalonia.Controls.Grid _start = new() { Margin = new(40, 36), ColumnDefinitions = new("300,40,*") };
     private readonly StackPanel _recent = new() { Spacing = 6 };
     private readonly Menu _menu = new();
     private readonly RecentFileStore _recentFiles;
@@ -53,7 +53,7 @@ public sealed partial class MainWindow : Window
         _settings = new(Path.Combine(userDataDirectory, "settings.json")); _settings.Load();
         _userDataDirectory = userDataDirectory;
         BuildView(); InstallEditingCommands(); InstallFormulaEditing(); InstallRibbon(); InstallCalculation(); InstallSheetCommands(); InstallSearch(); InstallDataCommands(); InstallValidation(); InstallCleaning(); InstallObjects(); InstallFileCommands(); InstallScriptCommands(); InstallPrintCommands();
-        ArrangeRibbonTabs(); InstallScriptEvents();
+        ArrangeRibbonTabs(); InstallScriptEvents(); GroupMainMenus();
         _grid.ResolveStyle = ConditionalPresentation.GetStyle;
         _grid.RenderingFailed += Error;
         _grid.CommitCellAsync = CommitCellAsync;
@@ -91,6 +91,8 @@ public sealed partial class MainWindow : Window
             await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Background);
             if (Program.SelfCheckDirectory is { } evidence) { await RunSelfCheckAsync(evidence); return; }
 #if QUICKEXCEL_DIAGNOSTICS
+            if (Program.SmokeDirectory is { } menuDirectory && Program.SmokeMode == "menus") { await RunMenuSmokeAsync(menuDirectory); return; }
+            if (Program.SmokeDirectory is { } colorDirectory && Program.SmokeMode == "colors") { await RunColorSmokeAsync(colorDirectory); return; }
             if (Program.SmokeDirectory is { } executionDirectory && Program.SmokeMode == "execution") { await RunExecutionSmokeAsync(executionDirectory); return; }
             if (Program.SmokeDirectory is { } clipboardDirectory && Program.SmokeMode == "clipboard-exchange") { await RunClipboardExchangeAsync(clipboardDirectory); return; }
             if (Program.SmokeDirectory is { } automationDirectory && Program.SmokeMode == "automation") { await RunAutomationSmokeAsync(automationDirectory); return; }
@@ -105,36 +107,31 @@ public sealed partial class MainWindow : Window
         };
         Synchronize(); ShowHome();
     }
-    private sealed record SheetItem(SheetId Id, string Name) { public override string ToString() => Name; }
+    private sealed record SheetItem(SheetId Id, string Name, string? TabColor) { public override string ToString() => Name; }
     private void BuildView()
     {
         MenuItem Item(string text, Func<Task> action) { var item = new MenuItem { Header = text }; item.Click += async (_, _) => await PerformAsync(action); return item; }
         _menu.Items.Add(new MenuItem { Header = "文件", Items =
         {
             Item("新建  Ctrl+N", async () => { if (await ConfirmDiscardAsync()) { _workspace.New(); ShowBook(); } }),
-            Item("打开  Ctrl+O", OpenAsync), Item("保存  Ctrl+S", async () => await SaveAsync(false)),
-            Item("另存为", async () => await SaveAsync(true)), Item("最近文件", async () => { if (await ConfirmDiscardAsync()) ShowHome(); }),
+            Item("打开  Ctrl+O", OpenAsync), Item("最近文件", async () => { if (await ConfirmDiscardAsync()) ShowHome(); }),
+            Item("打开恢复副本", RecoveryAsync), new Separator(),
+            Item("保存  Ctrl+S", async () => await SaveAsync(false)), Item("另存为", async () => await SaveAsync(true)), new Separator(),
+            Item("导出值快照", () => ExportAsync(false)), Item("导出可移植公式", () => ExportAsync(true)),
+            Item("打印预览 / PDF", OpenPrintPreviewAsync), new Separator(), Item("兼容性报告", CompatibilityAsync), new Separator(),
             Item("关闭工作簿", async () => { if (await ConfirmDiscardAsync()) { _workspace.New(); ShowHome(); } }), Item("退出", () => { Close(); return Task.CompletedTask; })
         } });
         _menu.Items.Add(new MenuItem { Header = "编辑", Items =
-        { Item("撤销  Ctrl+Z", () => History(false)), Item("重做  Ctrl+Y", () => History(true)), Item("清除内容", ClearAsync) } });
+        { Item("撤销  Ctrl+Z", () => History(false)), Item("重做  Ctrl+Y", () => History(true)) } });
         _menu.Items.Add(new MenuItem { Header = "工作表", Items =
         { Item("添加工作表", AddSheetAsync), Item("重命名", RenameSheetAsync), Item("删除工作表", DeleteSheetAsync) } });
         _menu.Items.Add(new MenuItem { Header = "视图", Items =
         { Item("100%", () => ZoomAsync(100)), Item("125%", () => ZoomAsync(125)), Item("150%", () => ZoomAsync(150)),
           Item("标签在底部", () => PlaceSheets(SheetNavigationPlacement.Bottom)), Item("标签在左侧", () => PlaceSheets(SheetNavigationPlacement.Left)), Item("标签在右侧", () => PlaceSheets(SheetNavigationPlacement.Right)) } });
-        _menu.Items.Add(Item("重算  F9", CalculateAsync));
         var formulaRow = new DockPanel { Margin = new(8, 4) }; DockPanel.SetDock(_address, Dock.Left); formulaRow.Children.Add(_address); formulaRow.Children.Add(_formula);
         DockPanel.SetDock(formulaRow, Dock.Top); _book.Children.Add(formulaRow); _book.Children.Add(_sheets); _book.Children.Add(_grid); ApplySheetPlacement();
-        _start.Children.Add(new TextBlock { Text = "QuickExcel", FontSize = 36, FontWeight = FontWeight.SemiBold });
-        _start.Children.Add(new TextBlock { Text = "工作簿与脚本", FontSize = 18, Foreground = Brushes.Gray });
-        void StartButton(string text, Func<Task> action) { var button = new Button { Content = text, MinWidth = 220 }; button.Click += async (_, _) => await PerformAsync(action); _start.Children.Add(button); }
-        StartButton("新建工作簿", async () => { if (await ConfirmDiscardAsync()) { _workspace.New(); ShowBook(); } });
-        StartButton("打开工作簿", OpenAsync);
-        StartButton("打开示例", async () => { if (await ConfirmDiscardAsync()) { _workspace.New(true); ShowBook(); } });
-        StartButton("返回当前工作簿", () => { ShowBook(); return Task.CompletedTask; });
-        _start.Children.Add(new TextBlock { Text = "最近文件", FontSize = 18 }); _start.Children.Add(_recent);
-        var content = new global::Avalonia.Controls.Grid(); content.Children.Add(_book); content.Children.Add(new ScrollViewer { Content = _start });
+        BuildHome();
+        var content = new global::Avalonia.Controls.Grid(); content.Children.Add(_book); content.Children.Add(new ScrollViewer { Content = _start, HorizontalScrollBarVisibility = global::Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled });
         var root = new DockPanel(); DockPanel.SetDock(_menu, Dock.Top);
         var footer = new DockPanel(); DockPanel.SetDock(_selectionStatistics, Dock.Right); footer.Children.Add(_selectionStatistics); DockPanel.SetDock(_pivotStatus,Dock.Right); footer.Children.Add(_pivotStatus); footer.Children.Add(_status);
         DockPanel.SetDock(footer, Dock.Bottom); root.Children.Add(_menu); root.Children.Add(footer); root.Children.Add(content);
@@ -146,9 +143,15 @@ public sealed partial class MainWindow : Window
         _book.IsVisible = false; ((Control)_start.Parent!).IsVisible = true; _recent.Children.Clear();
         foreach (var path in _recentFiles.Paths)
         {
-            var button = new Button { Content = Path.GetFileName(path), HorizontalAlignment = HorizontalAlignment.Left }; ToolTip.SetTip(button, path);
+            var label = new StackPanel { Spacing = 5 };
+            label.Children.Add(new TextBlock { Text = Path.GetFileName(path), FontSize = 16, FontWeight = FontWeight.Bold, Foreground = Brushes.Black, TextTrimming = TextTrimming.CharacterEllipsis });
+            label.Children.Add(new TextBlock { Text = Path.GetDirectoryName(path), FontSize = 12, Foreground = Brushes.Gray, TextTrimming = TextTrimming.CharacterEllipsis });
+            var button = new Button { Content = label, HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Stretch,
+                Padding = new(16, 12), MinHeight = 70, Background = Brushes.White, BorderBrush = new SolidColorBrush(Color.Parse("#E1E5E3")), BorderThickness = new(1), CornerRadius = new(6) }; ToolTip.SetTip(button, path);
+            AutomationProperties.SetName(button, Path.GetFileName(path) + "，" + Path.GetDirectoryName(path));
             button.Click += async (_, _) => await PerformAsync(async () => { if (await ConfirmDiscardAsync()) await OpenPathAsync(path); }); _recent.Children.Add(button);
         }
+        if (_recent.Children.Count == 0) _recent.Children.Add(new TextBlock { Text = "暂无历史文件，打开工作簿后会显示在这里。", Foreground = Brushes.Gray, TextWrapping = TextWrapping.Wrap, Margin = new(0, 12) });
     }
     private void ShowBook() { if (!_book.IsVisible) Document.Session.RaiseScriptEvent("workbook.activate"); ((Control)_start.Parent!).IsVisible = false; _book.IsVisible = true; }
     private void Synchronize()
@@ -168,7 +171,7 @@ public sealed partial class MainWindow : Window
                 _grid.Bind(Document.Snapshot, SheetIndex, WorkbookLimits.MaxRows, WorkbookLimits.MaxColumns);
             }
             else _grid.Refresh(Document.Snapshot);
-            var items = Document.Snapshot.Sheets.Where(s => s.Visibility == SheetVisibility.Visible).Select(s => new SheetItem(s.Id, s.Name)).ToArray();
+            var items = Document.Snapshot.Sheets.Where(s => s.Visibility == SheetVisibility.Visible).Select(s => new SheetItem(s.Id, s.Name, s.TabColor)).ToArray();
             _sheets.ItemsSource = items; _sheets.SelectedItem = items.FirstOrDefault(s => s.Id == Document.Snapshot.ActiveSheetId);
         }
         finally { _synchronizing = false; }

@@ -23,7 +23,6 @@ public sealed partial class MainWindow
     private Guid _printDocument;
     private void InstallPrintCommands()
     {
-        ((MenuItem)_menu.Items[0]!).Items.Insert(9, CommandMenu("打印预览 / PDF", OpenPrintPreviewAsync));
         RibbonGroup("页面布局", "打印输出", RibbonButton("打印预览 / PDF", OpenPrintPreviewAsync, false));
     }
     private async Task OpenPrintPreviewAsync()

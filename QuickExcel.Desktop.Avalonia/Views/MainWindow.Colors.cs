@@ -1,0 +1,64 @@
+using Avalonia.Automation;
+using Avalonia.Controls;
+using Avalonia.Layout;
+using Avalonia.Media;
+using QuickExcel.Core;
+
+namespace QuickExcel.Desktop.Avalonia;
+
+public sealed partial class MainWindow
+{
+    private Border? _fontColorSwatch, _fillColorSwatch;
+
+    private Control[] ColorMenuItems(string resetLabel, Func<string?, Task> apply, Func<Task> custom)
+    {
+        var items = new List<Control>();
+        var reset = CommandMenu(resetLabel, () => apply(null)); reset.Icon = ColorPalette.Swatch(null); items.Add(reset);
+        items.Add(new Separator());
+        foreach (var (name, value) in ColorPalette.Common)
+        {
+            var item = CommandMenu(name, () => apply(value)); item.Icon = ColorPalette.Swatch(value); items.Add(item);
+        }
+        items.Add(new Separator()); items.Add(CommandMenu("自定义颜色…", custom)); return items.ToArray();
+    }
+
+    private DropDownButton RibbonColorDropdown(bool fill)
+    {
+        var title = fill ? "填充颜色" : "字体颜色";
+        var swatch = ColorPalette.Swatch(null);
+        if (fill) _fillColorSwatch = swatch; else _fontColorSwatch = swatch;
+        var content = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 5 };
+        content.Children.Add(RibbonIcons.Create(fill ? RibbonIcon.FillColor : RibbonIcon.FontColor)); content.Children.Add(swatch);
+        var button = new DropDownButton { Name = fill ? "FillColorDropdown" : "FontColorDropdown", Content = content,
+            Height = 28, MinHeight = 28, Padding = new(4, 2), Margin = new(2, 1), Background = Brushes.Transparent, BorderThickness = new(0),
+            HorizontalAlignment = HorizontalAlignment.Left, HorizontalContentAlignment = HorizontalAlignment.Left,
+            Flyout = new MenuFlyout { ItemsSource = ColorMenuItems(fill ? "无填充" : "自动字体色", color => ApplyCellColorAsync(fill, color), () => CustomCellColorAsync(fill)) } };
+        button.Classes.Add("ribbon-command");
+        AutomationProperties.SetName(button, title); ToolTip.SetTip(button, title); _mutationControls.Add(button); return button;
+    }
+
+    private void UpdateColorSwatches()
+    {
+        void Update(Border? swatch, string? color)
+        {
+            if (swatch is null) return;
+            var sample = ColorPalette.Swatch(color); var child = sample.Child; sample.Child = null;
+            swatch.Background = sample.Background; swatch.Child = child;
+        }
+        Update(_fontColorSwatch, CurrentStyle.FontColor ?? "FF000000"); Update(_fillColorSwatch, CurrentStyle.FillColor);
+    }
+
+    private async Task ApplyCellColorAsync(bool fill, string? color)
+    {
+        if (!await CommitEditorsAsync()) return;
+        await ExecuteAsync(new SetCellStyleCommand(VisibleAddresses(), fill ? new(FillColor: color, ClearFillColor: color is null) : new(FontColor: color, ClearFontColor: color is null)));
+    }
+
+    private async Task CustomCellColorAsync(bool fill)
+    {
+        if (!await CommitEditorsAsync()) return;
+        var revision = Document.Snapshot.Revision; var addresses = VisibleAddresses();
+        var color = await new CustomColorDialog(fill ? CurrentStyle.FillColor : CurrentStyle.FontColor, fill ? "自定义填充颜色" : "自定义字体颜色").ShowAsync(this);
+        if (color is not null) await ExecuteAsync(new SetCellStyleCommand(addresses, fill ? new(FillColor: color) : new(FontColor: color)), revision);
+    }
+}

@@ -58,11 +58,11 @@ public sealed partial class MainWindow
         var body = new StackPanel { Width = 560, Spacing = 4, VerticalAlignment = VerticalAlignment.Center };
         body.Children.Add(_automationSearch); body.Children.Add(picker);
         RibbonContentGroup("自动执行", "Actions", body);
-        _automationRun = RibbonButton("执行", () => RunScriptActionAsync(_automationActions.SelectedItem as ScriptActionDescriptor), false);
+        _automationRun = RibbonButton(RibbonIcon.Run, "执行", () => RunScriptActionAsync(_automationActions.SelectedItem as ScriptActionDescriptor), false);
         _automationRun.Name = "AutomationRun";
         _automationLoad = RibbonButton("加载操作", ApplyScriptsAsync, false); _automationLoad.Name = "AutomationLoad";
         ToolTip.SetTip(_automationLoad, "应用并授权当前脚本、重算工作簿，然后加载全部操作。操作内容仅在执行时运行。");
-        RibbonGroup("自动执行", "操作", _automationRun, _automationLoad, RibbonButton("脚本编辑器", OpenScriptsAsync, false));
+        RibbonGroup("自动执行", "操作", _automationRun, _automationLoad, RibbonButton(RibbonIcon.Code, "脚本编辑器", OpenScriptsAsync, false));
     }
 
     private void ClearScriptActions()

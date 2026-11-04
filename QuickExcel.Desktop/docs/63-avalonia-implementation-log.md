@@ -87,3 +87,25 @@ Windows 组合根保持原 ScriptWorker 路径，非 Windows 明确关闭脚本�
 初版列表验证（后续已移除双击执行）：Avalonia Release 构建 0 警告/0 错误；`scripts/test-avalonia-workspace.ps1 -Mode Automation` **26 项**通过，覆盖真实多入口 worker 发现、按钮/双击、重复请求、单次撤销/重做、异常无部分写入、编辑草稿提交及旧列表失效；证据与截图：`artifacts/avalonia/workspace/20261103-015513-33a0d24e`。复用分组布局后，`-Mode RibbonFilter -SkipBuild` **67 项**通过：`artifacts/avalonia/workspace/20261103-015533-0629e831`。未运行全量回归；这些程序化检查不替代物理鼠标、DPI 或辅助技术验收。
 
 下拉搜索跟进：匹配范围保留当前选择；选择被筛掉时清除选择并禁用执行，清空关键词不会暗中恢复旧选择。停用脚本或列表失效时同时清空关键词并关闭下拉框。搜索编辑和下拉导航保留自己的键盘输入，Delete/剪切不再作用于单元格，Alt+Down 不再误触工作表筛选。更新后的 Automation **62 项**通过，包含名称/描述搜索、空结果、选择失效、双击不执行、键盘选择、最小窗口高度和真实 worker 执行；Release 构建 0 警告/0 错误，证据及复核截图：`artifacts/avalonia/workspace/20261103-021053-c276eaaf`。相关 RibbonFilter **67 项**通过：`artifacts/avalonia/workspace/20261103-021130-2a26764a`。键盘检查等待延迟重算结束后再发出合成按键，避免忙碌状态影响焦点；仍未运行全量回归或进行物理输入验收。
+
+
+## 2026-11-04 Ribbon Fluent 矢量图标
+
+Ribbon 命令使用本地 Fluent UI System Icons 的 20px Regular SVG。37 个选用资源固定在 `third_party/fluentui-system-icons`，清单记录上游 revision、原始路径和 SHA-256；`scripts/generate-ribbon-icons.py` 生成原生几何，`--check` 验证来源与生成物。MIT 许可随应用发布。构建和运行不依赖旁边的图标仓库，也不新增 SVG 渲染依赖。
+
+命令调用处明确指定图标；常用且含义明确的命令仅显示图标，其余采用默认 `apps` 图标并保留完整文字。所有按钮保留无障碍名称和悬停提示（含既有快捷键说明）。字体色/填充色下拉保留当前色样和菜单，字体分组改为上方字体/字号、下方四个格式按钮。按钮高度 28 DIP，图标视口 20×20 DIP；保留 SVG 光学留白及填充规则，前景色随按钮状态继承，Ribbon 仍为 170 DIP 并支持横向滚动。
+
+验证：Avalonia Release 构建 0 警告/0 错误；RibbonFilter **352**、Grid **128**、Colors **35**、Automation **76**，合计 **591** 项通过，未运行全量回归。证据分别为 `artifacts/avalonia/workspace/20261104-130901-bad7334a`、`20261104-130649-b173deca`、`20261104-130755-9a5570a5`、`20261104-130928-62813221`。Ribbon 检查涵盖全部页签的图标尺寸/边界、文字回退、提示/无障碍名称、前景色和禁用继承；已复核 100%/150%/200% 程序化渲染截图，不能替代物理 DPI/辅助技术验收。
+
+相关测试维护：Grid 通过无障碍名称查找“加粗”；Automation 事件样例使用当前 TypeScript `getCell(0, 0)` 签名，并在关闭脚本编辑器后等待已有异步操作结束再替换工作簿。保留前期失败证据；这些修正不改变生产脚本 API。
+
+发布跟进：首次发布 `20261104-131039-00f04fd0` 遇到工作区并行菜单改动尚未提供 `GroupMainMenus` 实现，失败时原活动包未变。该方法写入完成后，重新构建及 RibbonFilter **352** 项通过（`artifacts/avalonia/workspace/20261104-131423-33955573`）。随后执行 `scripts/build-quickexcel.ps1 -SkipTests -RunSmoke`，新包 `artifacts/avalonia/releases/20261104-131436-43983008/application` 通过 **12** 项生产自检并激活；已核验 `active-windows.json`、manifest SHA-256、应用二进制和随包图标许可，`Start-QuickExcel.cmd` 使用此包。发布时有两个现有诊断字段的 CS0649 警告，生产自检结果为通过。
+
+
+### 2026-11-04 垂直对齐按钮
+
+“开始 / 对齐”新增“顶端对齐、垂直居中、底端对齐”，使用同一固定版本的 Fluent `textbox_align_top/middle/bottom_20_regular`，选用资源总数为 40。三个按钮纵向排列在水平对齐与换行/合并之间，保持 20 DIP 图标、提示及无障碍名称。分别通过现有 `ApplyStyleAsync` 设置 `Vertical=0/1/2`，保留水平对齐和其他字体格式，复用选区、只读、输入提交及撤销事务规则。
+
+验证：Release 构建 0 警告/0 错误；RibbonFilter **361** 项通过（`artifacts/avalonia/workspace/20261104-132954-87ee4439`），Grid **137** 项通过（`artifacts/avalonia/workspace/20261104-133008-1a3f5fe8`）。新增真实按钮点击检查覆盖三个方向对 2×2 选区的生效、水平对齐/字体保留以及整块选区一次撤销/重做；已复核 Ribbon 布局截图。图标源文件与固定上游提交一致，生成物校验通过；未运行全量回归。
+
+垂直对齐发布：`scripts/build-quickexcel.ps1 -SkipTests -RunSmoke` 生成 `artifacts/avalonia/releases/20261104-133028-8964dd3e/application`，12 项生产自检通过。已核验活动指针与 manifest SHA-256，`Start-QuickExcel.cmd` 使用新包。

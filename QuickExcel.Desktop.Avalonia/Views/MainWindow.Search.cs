@@ -16,7 +16,7 @@ public sealed partial class MainWindow
 {
     private void InstallSearch()
     {
-        RibbonGroup("开始", "查找", RibbonButton("查找与替换", SearchAsync, false), RibbonButton("定位", NavigateAsync, false));
+        RibbonGroup("开始", "查找", RibbonButton(RibbonIcon.Search, "查找与替换", SearchAsync, false), RibbonButton("定位", NavigateAsync, false));
         var edit = (MenuItem)_menu.Items[1]!; edit.Items.Add(CommandMenu("查找与替换  Ctrl+F", SearchAsync)); edit.Items.Add(CommandMenu("定位  Ctrl+G", NavigateAsync));
     }
     private async Task NavigateAsync()

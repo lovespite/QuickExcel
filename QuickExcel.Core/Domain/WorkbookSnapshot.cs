@@ -256,6 +256,8 @@ public sealed class WorksheetSnapshot
 
     public WorksheetSnapshot WithName(string name) =>
         new(Id, name, Cells, Rows, Columns, MergedCells, Images, ShowGridLines, DefaultRowHeight, TabColor, View, Visibility, Printing, Annotations, Data);
+    public WorksheetSnapshot WithTabColor(string? color) =>
+        new(Id, Name, Cells, Rows, Columns, MergedCells, Images, ShowGridLines, DefaultRowHeight, color, View, Visibility, Printing, Annotations, Data);
     public WorksheetSnapshot WithView(WorksheetView view) =>
         new(Id, Name, Cells, Rows, Columns, MergedCells, Images, ShowGridLines, DefaultRowHeight, TabColor, view, Visibility, Printing, Annotations, Data);
     public WorksheetSnapshot WithVisibility(SheetVisibility visibility) =>

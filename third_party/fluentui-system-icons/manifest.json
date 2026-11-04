@@ -1,0 +1,246 @@
+{
+  "repository": "https://github.com/microsoft/fluentui-system-icons",
+  "revision": "64e5aa757d1b70c24a283256ddcb8269d0f58773",
+  "icons": [
+    {
+      "id": "Default",
+      "source": "assets/Apps/SVG/ic_fluent_apps_20_regular.svg",
+      "file": "icons/ic_fluent_apps_20_regular.svg",
+      "sha256": "bd495f883fb6a9deba49ba1126868740d3dce7940a645ddba59f036fe68ac488"
+    },
+    {
+      "id": "Paste",
+      "source": "assets/Clipboard Paste/SVG/ic_fluent_clipboard_paste_20_regular.svg",
+      "file": "icons/ic_fluent_clipboard_paste_20_regular.svg",
+      "sha256": "1e9b294e1e12580a2a01f2443f563642d0eba84a949745f352ad90fb6590fd2b"
+    },
+    {
+      "id": "Copy",
+      "source": "assets/Copy/SVG/ic_fluent_copy_20_regular.svg",
+      "file": "icons/ic_fluent_copy_20_regular.svg",
+      "sha256": "7bc061c42f26e1e0250a0ff4e0d9642057ebe1f686891ca1a7c0874679e3df59"
+    },
+    {
+      "id": "Cut",
+      "source": "assets/Cut/SVG/ic_fluent_cut_20_regular.svg",
+      "file": "icons/ic_fluent_cut_20_regular.svg",
+      "sha256": "e05ffbee41a64b499d445b38acf51c627fb64a0d3716e08efefde6ef757a92b7"
+    },
+    {
+      "id": "FormatBrush",
+      "source": "assets/Paint Brush/SVG/ic_fluent_paint_brush_20_regular.svg",
+      "file": "icons/ic_fluent_paint_brush_20_regular.svg",
+      "sha256": "93ff42e35a196ac0b92d51fe3715373ce6702891dabfcc253c3377154ba1beb3"
+    },
+    {
+      "id": "Bold",
+      "source": "assets/Text Bold/SVG/ic_fluent_text_bold_20_regular.svg",
+      "file": "icons/ic_fluent_text_bold_20_regular.svg",
+      "sha256": "7984f634ae0a80c1cdb4d3200adc32280faa586f493da93e7c7fac8f86b94733"
+    },
+    {
+      "id": "Italic",
+      "source": "assets/Text Italic/SVG/ic_fluent_text_italic_20_regular.svg",
+      "file": "icons/ic_fluent_text_italic_20_regular.svg",
+      "sha256": "4939f0d8be02832cfda9a64b76ced7b608cd821106383b584a9e73d1ce074baa"
+    },
+    {
+      "id": "FontColor",
+      "source": "assets/Text Color/SVG/ic_fluent_text_color_20_regular.svg",
+      "file": "icons/ic_fluent_text_color_20_regular.svg",
+      "sha256": "8779aa4a2fdd54cd27292e529e6f47019834c6f39815ef66f4d4bbbfaa1ab11c"
+    },
+    {
+      "id": "FillColor",
+      "source": "assets/Paint Bucket/SVG/ic_fluent_paint_bucket_20_regular.svg",
+      "file": "icons/ic_fluent_paint_bucket_20_regular.svg",
+      "sha256": "d152f1a4e9fce8b245d84b1f82e9e23cf7378c9b10f0d1d3f7a669b348bd28a6"
+    },
+    {
+      "id": "AlignLeft",
+      "source": "assets/Text Align Left/SVG/ic_fluent_text_align_left_20_regular.svg",
+      "file": "icons/ic_fluent_text_align_left_20_regular.svg",
+      "sha256": "ad195be0318d98a577eee0ca0ef02e3cdf502b8b57671f23b44b78bbfab01a51"
+    },
+    {
+      "id": "AlignCenter",
+      "source": "assets/Text Align Center/SVG/ic_fluent_text_align_center_20_regular.svg",
+      "file": "icons/ic_fluent_text_align_center_20_regular.svg",
+      "sha256": "659fad61ee73aaea6bee8c5f1b178b149a79ac484f9aa6b553fbf3670960db00"
+    },
+    {
+      "id": "AlignRight",
+      "source": "assets/Text Align Right/SVG/ic_fluent_text_align_right_20_regular.svg",
+      "file": "icons/ic_fluent_text_align_right_20_regular.svg",
+      "sha256": "2e7338734be13529c61b5dda58bec6e1c86c4652767a0cea457bbe67bd4b20bd"
+    },
+    {
+      "id": "WrapText",
+      "source": "assets/Text Wrap/SVG/ic_fluent_text_wrap_20_regular.svg",
+      "file": "icons/ic_fluent_text_wrap_20_regular.svg",
+      "sha256": "6101f5c1f73d461948399e1fa6ac25d703fd464373efe2c6f8002b9f35e9ce81"
+    },
+    {
+      "id": "MergeCells",
+      "source": "assets/Table Cells Merge/SVG/ic_fluent_table_cells_merge_20_regular.svg",
+      "file": "icons/ic_fluent_table_cells_merge_20_regular.svg",
+      "sha256": "5b31bfb378340087df6937048e194cdeb7eb19a3c800e539c09b3ef989414a96"
+    },
+    {
+      "id": "SplitCells",
+      "source": "assets/Table Cells Split/SVG/ic_fluent_table_cells_split_20_regular.svg",
+      "file": "icons/ic_fluent_table_cells_split_20_regular.svg",
+      "sha256": "db7e7e2d78029b96deec2cef003f928166e8cab31144a69b5b5576fe203ff013"
+    },
+    {
+      "id": "IncreaseDecimals",
+      "source": "assets/Decimal Arrow Left/SVG/ic_fluent_decimal_arrow_left_20_regular.svg",
+      "file": "icons/ic_fluent_decimal_arrow_left_20_regular.svg",
+      "sha256": "a955923d30fb9dbc35e157f7f2cfebded2608b4ff450d61cd269861752e4c889"
+    },
+    {
+      "id": "DecreaseDecimals",
+      "source": "assets/Decimal Arrow Right/SVG/ic_fluent_decimal_arrow_right_20_regular.svg",
+      "file": "icons/ic_fluent_decimal_arrow_right_20_regular.svg",
+      "sha256": "b30c1440f713e8972bcde8665b323560740a0fa4d481aaa19de512f747f13a94"
+    },
+    {
+      "id": "ClearFormatting",
+      "source": "assets/Text Clear Formatting/SVG/ic_fluent_text_clear_formatting_20_regular.svg",
+      "file": "icons/ic_fluent_text_clear_formatting_20_regular.svg",
+      "sha256": "402484999da98d4951e687dd8dbd3426806f26d8a54fff92af8c94ffb0ed50c0"
+    },
+    {
+      "id": "AutoSum",
+      "source": "assets/AutoSum/SVG/ic_fluent_autosum_20_regular.svg",
+      "file": "icons/ic_fluent_autosum_20_regular.svg",
+      "sha256": "476a4b71350d8f9c40b87a2980f6fd7ab429b09cec147af94e858090f8acb3df"
+    },
+    {
+      "id": "Calculate",
+      "source": "assets/Arrow Sync/SVG/ic_fluent_arrow_sync_20_regular.svg",
+      "file": "icons/ic_fluent_arrow_sync_20_regular.svg",
+      "sha256": "ef2c8e23d0a70faa677b4ef732030df69efcd74612f551b3601abe55906c08bd"
+    },
+    {
+      "id": "SortAscending",
+      "source": "assets/Text Sort Ascending/SVG/ic_fluent_text_sort_ascending_20_regular.svg",
+      "file": "icons/ic_fluent_text_sort_ascending_20_regular.svg",
+      "sha256": "2efca61911f726dd535291f4426eb4b2478eb40033b4671dac950c21acc5d560"
+    },
+    {
+      "id": "SortDescending",
+      "source": "assets/Text Sort Descending/SVG/ic_fluent_text_sort_descending_20_regular.svg",
+      "file": "icons/ic_fluent_text_sort_descending_20_regular.svg",
+      "sha256": "3660c91e7b6237cceeccf17fe686cad1375de40a1bcefc76221bf8860d491da9"
+    },
+    {
+      "id": "Filter",
+      "source": "assets/Filter/SVG/ic_fluent_filter_20_regular.svg",
+      "file": "icons/ic_fluent_filter_20_regular.svg",
+      "sha256": "6b3c83fd590a26d5ba3b6dccd61415e682a750af713195b330f852cb10a23d26"
+    },
+    {
+      "id": "CreateTable",
+      "source": "assets/Table Add/SVG/ic_fluent_table_add_20_regular.svg",
+      "file": "icons/ic_fluent_table_add_20_regular.svg",
+      "sha256": "101c88ad98de771d12f428df8a2116bd312794f782b042928255c98ac08c664d"
+    },
+    {
+      "id": "Code",
+      "source": "assets/Code/SVG/ic_fluent_code_20_regular.svg",
+      "file": "icons/ic_fluent_code_20_regular.svg",
+      "sha256": "33b0eb60b80b49235e099c9957982f2f3c7c0f5528b74fa04bae8f09b37bc89b"
+    },
+    {
+      "id": "Search",
+      "source": "assets/Search/SVG/ic_fluent_search_20_regular.svg",
+      "file": "icons/ic_fluent_search_20_regular.svg",
+      "sha256": "5ac33d20fce7e4844117468b27c8106a4145a94c8c7732688f1a35f637261c45"
+    },
+    {
+      "id": "Comment",
+      "source": "assets/Comment/SVG/ic_fluent_comment_20_regular.svg",
+      "file": "icons/ic_fluent_comment_20_regular.svg",
+      "sha256": "5420931d8f3a1a4c5cbca6949921e98f256f6eb0b398421e76010e9e3364c74d"
+    },
+    {
+      "id": "Run",
+      "source": "assets/Play/SVG/ic_fluent_play_20_regular.svg",
+      "file": "icons/ic_fluent_play_20_regular.svg",
+      "sha256": "25b14a02677385bb362939e5b1b604cf918e69689d3b83e75f51c3415aa2ca1b"
+    },
+    {
+      "id": "InsertRow",
+      "source": "assets/Table Insert Row/SVG/ic_fluent_table_insert_row_20_regular.svg",
+      "file": "icons/ic_fluent_table_insert_row_20_regular.svg",
+      "sha256": "3adf0bd8bdae8bbd1f60b11d8fe331c69429b96141d27962c931b34059cf2d35"
+    },
+    {
+      "id": "DeleteRow",
+      "source": "assets/Table Delete Row/SVG/ic_fluent_table_delete_row_20_regular.svg",
+      "file": "icons/ic_fluent_table_delete_row_20_regular.svg",
+      "sha256": "c7f1d0cf61e1dfc8fcfbaf3eea8050e05f91d0a40b10301e1384c3f344acdf4d"
+    },
+    {
+      "id": "InsertColumn",
+      "source": "assets/Table Insert Column/SVG/ic_fluent_table_insert_column_20_regular.svg",
+      "file": "icons/ic_fluent_table_insert_column_20_regular.svg",
+      "sha256": "5066863516dceff70ee641b071e534fc4ba77cbe605daf3449cc2cb205cf96ba"
+    },
+    {
+      "id": "DeleteColumn",
+      "source": "assets/Table Delete Column/SVG/ic_fluent_table_delete_column_20_regular.svg",
+      "file": "icons/ic_fluent_table_delete_column_20_regular.svg",
+      "sha256": "0294f8cdd555fb8f9c38e9cb0192df827f2f6926b6758c373c8362e9642bb89f"
+    },
+    {
+      "id": "FreezePanes",
+      "source": "assets/Table Freeze Column And Row/SVG/ic_fluent_table_freeze_column_and_row_20_regular.svg",
+      "file": "icons/ic_fluent_table_freeze_column_and_row_20_regular.svg",
+      "sha256": "fda5cebd5c793b57099c159e852aa1880bdeca431cba85fc3066b4191e3e3a0d"
+    },
+    {
+      "id": "FreezeRow",
+      "source": "assets/Table Freeze Row/SVG/ic_fluent_table_freeze_row_20_regular.svg",
+      "file": "icons/ic_fluent_table_freeze_row_20_regular.svg",
+      "sha256": "1c8f7b5b60f9dfa9b0f5771909a4dfa3a1b6397fe8c5801cf50f5a4c43fe7552"
+    },
+    {
+      "id": "FreezeColumn",
+      "source": "assets/Table Freeze Column/SVG/ic_fluent_table_freeze_column_20_regular.svg",
+      "file": "icons/ic_fluent_table_freeze_column_20_regular.svg",
+      "sha256": "2dd1ae6805eea684adfbe50ff57786d37f9c13cb2338d927e74b732b296d79d8"
+    },
+    {
+      "id": "Unfreeze",
+      "source": "assets/Table Freeze Column And Row Dismiss/SVG/ic_fluent_table_freeze_column_and_row_dismiss_20_regular.svg",
+      "file": "icons/ic_fluent_table_freeze_column_and_row_dismiss_20_regular.svg",
+      "sha256": "6d9fe8ad84b9ca2642ebae0ab9198ff210c5f4fac5b11447f5bec14db833de3e"
+    },
+    {
+      "id": "Zoom",
+      "source": "assets/Zoom In/SVG/ic_fluent_zoom_in_20_regular.svg",
+      "file": "icons/ic_fluent_zoom_in_20_regular.svg",
+      "sha256": "4b51b82e450f27282f6e77f1114ddd51bce6967a71d039e257f272bcbd5e4b94"
+    },
+    {
+      "id": "AlignTop",
+      "source": "assets/TextBox Align Top/SVG/ic_fluent_textbox_align_top_20_regular.svg",
+      "file": "icons/ic_fluent_textbox_align_top_20_regular.svg",
+      "sha256": "3bf83c351bbed6c85f3627ad2f6324728e1b72ba92cd597e3ed2fc3263fb7b86"
+    },
+    {
+      "id": "AlignMiddle",
+      "source": "assets/TextBox Align Middle/SVG/ic_fluent_textbox_align_middle_20_regular.svg",
+      "file": "icons/ic_fluent_textbox_align_middle_20_regular.svg",
+      "sha256": "c597093d49561b77e4966ff0d4179e6bfb976b7d59707d2a099c9df11e14252a"
+    },
+    {
+      "id": "AlignBottom",
+      "source": "assets/TextBox Align Bottom/SVG/ic_fluent_textbox_align_bottom_20_regular.svg",
+      "file": "icons/ic_fluent_textbox_align_bottom_20_regular.svg",
+      "sha256": "82f78bb2df228b04be4bcb1a21a145e266e402a937197a06b8d2adfda34e8810"
+    }
+  ]
+}

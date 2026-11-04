@@ -1,10 +1,12 @@
 using System.Text.Json;
 using Avalonia;
+using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
@@ -24,11 +26,18 @@ public sealed partial class MainWindow
         static Task Layout() => Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Background).GetTask();
         static T Named<T>(Control panel, string name) where T : Control => panel.GetVisualDescendants().OfType<T>().Single(c => c.Name == name);
         static void Click(Control panel, string name) => Named<Button>(panel, name).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
-        async Task Capture(Control control, string name)
+        async Task Capture(Control control, string name, double scale = 1)
         {
-            await Layout();
-            using var bitmap = new RenderTargetBitmap(new PixelSize((int)Math.Ceiling(control.Bounds.Width), (int)Math.Ceiling(control.Bounds.Height)), new Vector(96, 96));
-            bitmap.Render(control); bitmap.Save(Path.Combine(directory, name + ".png"), PngBitmapEncoderOptions.Default);
+            var background = _ribbon.Background;
+            try
+            {
+                // Isolated ribbon captures need the same opaque background as the containing window.
+                if (ReferenceEquals(control, _ribbon)) _ribbon.Background = Background;
+                await Layout();
+                using var bitmap = new RenderTargetBitmap(new PixelSize((int)Math.Ceiling(control.Bounds.Width * scale), (int)Math.Ceiling(control.Bounds.Height * scale)), new Vector(96 * scale, 96 * scale));
+                bitmap.Render(control); bitmap.Save(Path.Combine(directory, name + ".png"), PngBitmapEncoderOptions.Default);
+            }
+            finally { _ribbon.Background = background; }
         }
         try
         {
@@ -41,14 +50,49 @@ public sealed partial class MainWindow
                 var scroll = (ScrollViewer)tab.Content!;
                 Check(scroll.VerticalScrollBarVisibility == ScrollBarVisibility.Disabled && scroll.HorizontalScrollBarVisibility == ScrollBarVisibility.Auto,
                     $"Ribbon scrolls horizontally on {tab.Header}");
+                var buttons = scroll.GetVisualDescendants().OfType<Button>().Where(b => b.Classes.Contains("ribbon-command")).ToArray();
+                Check(buttons.Length > 0 && buttons.All(b => !string.IsNullOrWhiteSpace(AutomationProperties.GetName(b)) && ToolTip.GetTip(b) is string { Length: > 0 }),
+                    $"Every ribbon command has an accessible name and tooltip on {tab.Header}");
+                Check(buttons.All(b => b.GetVisualDescendants().OfType<PathIcon>().Where(i => i.Classes.Contains("fluent-ribbon-icon")).Count() == 1), $"Every ribbon command has one vector icon on {tab.Header}");
+                foreach (var button in buttons)
+                {
+                    var icon = button.GetVisualDescendants().OfType<PathIcon>().Where(i => i.Classes.Contains("fluent-ribbon-icon")).Single();
+                    var origin = icon.TranslatePoint(default, button)!.Value;
+                    Check(icon.Bounds.Size == new Size(20, 20) && origin.X >= 0 && origin.Y >= 0 &&
+                          origin.X + 20 <= button.Bounds.Width && origin.Y + 20 <= button.Bounds.Height,
+                        $"20px icon fits button: {AutomationProperties.GetName(button)}");
+                    var path = icon.GetVisualDescendants().OfType<global::Avalonia.Controls.Shapes.Path>().Single();
+                    Check(path.Stretch == Stretch.None && Equals(path.Fill, icon.Foreground),
+                        $"Vector preserves SVG margins and inherits foreground: {AutomationProperties.GetName(button)}");
+                    // A color swatch can contain a slash for "no fill"; it is not a command label.
+                    var labels = button.Content is StackPanel content ? content.Children.OfType<TextBlock>().ToArray() : [];
+                    if (ReferenceEquals(icon.Data, RibbonIcons.Create(RibbonIcon.Default).Data))
+                        Check(labels.Length == 1 && labels[0].Text == AutomationProperties.GetName(button) && labels[0].Bounds.Width + .1 >= labels[0].DesiredSize.Width,
+                            $"Default icon retains an unclipped command label: {AutomationProperties.GetName(button)}");
+                    else
+                        Check(labels.Length == 0, $"Recognizable icon has no redundant text: {AutomationProperties.GetName(button)}");
+                }
+                await Capture(_ribbon, $"ribbon-tab-{_ribbon.SelectedIndex}");
             }
             _ribbon.SelectedIndex = 0; await Layout();
+            var bold = _ribbon.GetVisualDescendants().OfType<Button>().Single(b => AutomationProperties.GetName(b) == "加粗");
+            var boldIcon = bold.GetVisualDescendants().OfType<PathIcon>().Where(i => i.Classes.Contains("fluent-ribbon-icon")).Single();
+            bold.Foreground = Brushes.Red; await Layout();
+            Check(Equals(boldIcon.Foreground, Brushes.Red) && Equals(boldIcon.GetVisualDescendants().OfType<global::Avalonia.Controls.Shapes.Path>().Single().Fill, Brushes.Red),
+                "Icon foreground follows button styling");
+            bold.ClearValue(ForegroundProperty); await Layout();
+            bold.IsEnabled = false; await Layout();
+            Check(!boldIcon.IsEffectivelyEnabled && Equals(boldIcon.Foreground, boldIcon.GetVisualDescendants().OfType<global::Avalonia.Controls.Shapes.Path>().Single().Fill),
+                "Disabled icon follows the disabled button and foreground");
+            bold.IsEnabled = true; await Layout();
             var firstScroll = (ScrollViewer)((TabItem)_ribbon.Items[0]!).Content!;
             Check(firstScroll.Extent.Width > firstScroll.Viewport.Width, "Narrow ribbon overflows horizontally without wrapping groups");
             firstScroll.Offset = new(firstScroll.Extent.Width - firstScroll.Viewport.Width, 0); await Layout();
             Check(firstScroll.Offset.X > 0, "Last ribbon groups remain reachable by horizontal scrolling");
             firstScroll.Offset = default;
             Width = 1400; await Layout(); Check(Math.Abs(_ribbon.Bounds.Height - ribbonHeight) < .1, "Resizing does not change ribbon height");
+            await Capture(_ribbon, "ribbon-home-150pct", 1.5);
+            await Capture(_ribbon, "ribbon-home-200pct", 2);
             foreach (var selector in new[] { _font, _fontSize })
             {
                 for (var ancestor = selector.GetVisualParent(); ancestor is not null && ancestor != _ribbon; ancestor = ancestor.GetVisualParent())

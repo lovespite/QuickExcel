@@ -1,4 +1,12 @@
+using Avalonia;
+using Avalonia.Automation;
 using Avalonia.Controls;
+using Avalonia.Controls.Templates;
+using Avalonia.Interactivity;
+using Avalonia.Layout;
+using Avalonia.Media;
+using Avalonia.Styling;
+using Avalonia.VisualTree;
 using QuickExcel.Core;
 using QuickExcel.Domain;
 using QuickExcel.Formulas;
@@ -16,15 +24,49 @@ public sealed partial class MainWindow
             ("复制工作表", CopySheetAsync), ("向前移动", () => MoveSheetAsync(-1)), ("向后移动", () => MoveSheetAsync(1)),
             ("隐藏工作表", HideSheetAsync), ("取消隐藏", UnhideSheetAsync), ("保护工作表", ProtectSheetAsync)
         }) sheet.Items.Add(CommandMenu(name, action));
+        sheet.Items.Add(SheetColorMenu());
         var context = new ContextMenu();
         foreach (var (name, action) in new (string, Func<Task>)[] { ("重命名", RenameSheetAsync), ("复制", CopySheetAsync), ("向前移动", () => MoveSheetAsync(-1)), ("向后移动", () => MoveSheetAsync(1)), ("隐藏", HideSheetAsync), ("取消隐藏", UnhideSheetAsync), ("删除", DeleteSheetAsync) })
             context.Items.Add(CommandMenu(name, action));
+        context.Items.Add(SheetColorMenu());
         _sheets.ContextMenu = context;
-        RibbonGroup("视图", "窗口", RibbonButton("冻结至当前格", () => FreezeAsync(_grid.Current.Row, _grid.Current.Column)),
-            RibbonButton("冻结首行", () => FreezeAsync(1, 0)), RibbonButton("冻结首列", () => FreezeAsync(0, 1)), RibbonButton("取消冻结", () => FreezeAsync(0, 0)),
-            RibbonButton("缩放", ZoomDialogAsync));
-        RibbonGroup("开始", "行列", RibbonButton("插入行", () => ShiftAxisAsync(SheetAxis.Row, false)), RibbonButton("删除行", () => ShiftAxisAsync(SheetAxis.Row, true)),
-            RibbonButton("插入列", () => ShiftAxisAsync(SheetAxis.Column, false)), RibbonButton("删除列", () => ShiftAxisAsync(SheetAxis.Column, true)),
+        _sheets.Styles.Add(new Style(s => s.OfType<ListBoxItem>()) { Setters =
+        {
+            new Setter(PaddingProperty, new Thickness(8, 4)), new Setter(MinHeightProperty, 0d),
+            new Setter(MarginProperty, new Thickness(0)), new Setter(BorderThicknessProperty, new Thickness(0))
+        } });
+        _sheets.ItemTemplate = new FuncDataTemplate<SheetItem>((item, _) =>
+        {
+            if (item is null) return null;
+            var label = new TextBlock { Name = "SheetTabLabel", Text = item.Name, VerticalAlignment = VerticalAlignment.Center };
+            var tab = new global::Avalonia.Controls.Grid(); tab.Children.Add(label);
+            // The color line occupies the existing bottom padding instead of adding height.
+            tab.Children.Add(new Border { Height = 2, VerticalAlignment = VerticalAlignment.Bottom, Margin = new(0, 0, 0, -3), BorderThickness = new(0, 0, 0, 2),
+                BorderBrush = item.TabColor is { } color && Color.TryParse("#" + color, out var parsed) ? new SolidColorBrush(parsed) : Brushes.Transparent });
+            AutomationProperties.SetName(tab, item.Name + (item.TabColor is { } value ? $"，标签颜色 #{value}" : "，默认标签颜色"));
+            return tab;
+        });
+        // Resolve the tab under the context request before committing the original
+        // cell draft. Keyboard requests use the selected tab; failed commits do not open a menu.
+        _sheets.AddHandler(ContextRequestedEvent, async (_, e) =>
+        {
+            e.Handled = true;
+            var source = e.Source as Visual;
+            var container = source as ListBoxItem ?? source?.FindAncestorOfType<ListBoxItem>();
+            var target = (container?.DataContext as SheetItem)?.Id ?? Document.Snapshot.ActiveSheetId;
+            await PerformAsync(async () =>
+            {
+                if (!await CommitEditorsAsync()) return;
+                var targetSheet = Document.Snapshot.GetSheet(target);
+                Document.Session.UpdateNavigation(target, targetSheet.View.ActiveCell); Synchronize();
+                context.Open(_sheets);
+            });
+        }, RoutingStrategies.Tunnel);
+        RibbonGroup("视图", "窗口", RibbonButton(RibbonIcon.FreezePanes, "冻结至当前格", () => FreezeAsync(_grid.Current.Row, _grid.Current.Column)),
+            RibbonButton(RibbonIcon.FreezeRow, "冻结首行", () => FreezeAsync(1, 0)), RibbonButton(RibbonIcon.FreezeColumn, "冻结首列", () => FreezeAsync(0, 1)), RibbonButton(RibbonIcon.Unfreeze, "取消冻结", () => FreezeAsync(0, 0)),
+            RibbonButton(RibbonIcon.Zoom, "缩放", ZoomDialogAsync));
+        RibbonGroup("开始", "行列", RibbonButton(RibbonIcon.InsertRow, "插入行", () => ShiftAxisAsync(SheetAxis.Row, false)), RibbonButton(RibbonIcon.DeleteRow, "删除行", () => ShiftAxisAsync(SheetAxis.Row, true)),
+            RibbonButton(RibbonIcon.InsertColumn, "插入列", () => ShiftAxisAsync(SheetAxis.Column, false)), RibbonButton(RibbonIcon.DeleteColumn, "删除列", () => ShiftAxisAsync(SheetAxis.Column, true)),
             RibbonButton("隐藏/显示行列", AxisVisibilityAsync), RibbonButton("移动行列", MoveAxisAsync));
         RibbonGroup("公式", "名称", RibbonButton("名称管理", NamesAsync));
         RibbonGroup("审阅", "保护", RibbonButton("工作表保护", ProtectSheetAsync), RibbonButton("单元格保护", ProtectCellsAsync));
@@ -33,6 +75,24 @@ public sealed partial class MainWindow
             if (!_synchronizing && !_workspace.IsBusy && _grid.ScrollingCell is { } cell)
                 Document.Session.UpdateNavigation(Document.Snapshot.ActiveSheetId, _grid.Current, cell);
         };
+    }
+    private MenuItem SheetColorMenu()
+    {
+        var menu = new MenuItem { Header = "标签颜色" };
+        foreach (var item in ColorMenuItems("恢复默认颜色", SetSheetTabColorAsync, CustomSheetTabColorAsync)) menu.Items.Add(item);
+        return menu;
+    }
+    private async Task SetSheetTabColorAsync(string? color)
+    {
+        if (await CommitEditorsAsync())
+            await ExecuteAsync(new SetSheetTabColorCommand(Document.Snapshot.ActiveSheetId, color));
+    }
+    private async Task CustomSheetTabColorAsync()
+    {
+        if (!await CommitEditorsAsync()) return;
+        var snapshot = Document.Snapshot; var sheet = snapshot.GetSheet(snapshot.ActiveSheetId);
+        var color = await new CustomColorDialog(sheet.TabColor, "自定义标签颜色").ShowAsync(this);
+        if (color is not null) await ExecuteAsync(new SetSheetTabColorCommand(sheet.Id, color), snapshot.Revision);
     }
     private async Task CopySheetAsync()
     {

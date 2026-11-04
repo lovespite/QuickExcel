@@ -101,7 +101,12 @@ public sealed partial class WorkbookGrid
             if (HeaderHit(point) is { } header)
             {
                 // Keep the clicked boundary even when the row/column intersects a merged cell.
-                if (header.Axis == SheetAxis.Row)
+                var selectedAxis = _selection.Ranges.Any(r => header.Axis == SheetAxis.Row
+                    ? r.Left == 0 && r.Right == _columns.Count - 1 && header.Index >= r.Top && header.Index <= r.Bottom
+                    : r.Top == 0 && r.Bottom == _rows.Count - 1 && header.Index >= r.Left && header.Index <= r.Right);
+                if (selectedAxis)
+                    SelectRanges(SelectionRanges, header.Axis == SheetAxis.Row ? new(header.Index, _current.Column) : new(_current.Row, header.Index));
+                else if (header.Axis == SheetAxis.Row)
                     SelectRange(new(header.Index, 0, header.Index, _columns.Count - 1), new(header.Index, _current.Column));
                 else SelectRange(new(0, header.Index, _rows.Count - 1, header.Index), new(_current.Row, header.Index));
                 IsContextSelectionBlocked = (header.Axis == SheetAxis.Row ? _current.Row : _current.Column) != header.Index;

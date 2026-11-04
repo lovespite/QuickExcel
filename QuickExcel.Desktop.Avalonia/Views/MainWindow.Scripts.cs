@@ -45,7 +45,7 @@ public sealed partial class MainWindow
         menu.Items.Add(CommandMenu("签名详情", ScriptSignatureDetailsAsync));
         menu.Items.Add(CommandMenu("签署脚本", SignScriptsAsync));
         menu.Items.Add(CommandMenu("受信任证书", TrustedCertificatesAsync)); _menu.Items.Add(menu);
-        RibbonGroup("公式", "脚本", RibbonButton("脚本编辑器", OpenScriptsAsync, false), RibbonButton("应用并重算", ApplyScriptsAsync, false));
+        RibbonGroup("公式", "脚本", RibbonButton(RibbonIcon.Code, "脚本编辑器", OpenScriptsAsync, false), RibbonButton("应用并重算", ApplyScriptsAsync, false));
         InstallAutomationRibbon();
     }
     private async Task OpenScriptsAsync()

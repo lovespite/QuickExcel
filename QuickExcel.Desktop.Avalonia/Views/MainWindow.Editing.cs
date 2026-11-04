@@ -12,6 +12,7 @@ public sealed partial class MainWindow
 {
     private IClipboardExchange _clipboard = null!;
     private WorkbookClipboard? _clipboardCells;
+    private AxisClipboard? _clipboardAxes;
     private string? _clipboardToken;
     private Guid _clipboardSession;
     private long _clipboardRevision;
@@ -76,12 +77,20 @@ public sealed partial class MainWindow
         }
         var view = CurrentView; view.RequireCurrentFilter(Document.Snapshot);
         var range = SelectedRange(); var snapshot = Document.Snapshot; var sheet = snapshot.Sheets[SheetIndex];
+        AxisClipboard? axes = null;
+        var wholeRow = SelectionPlanning.IsWholeRow(Rectangle(range)); var wholeColumn = SelectionPlanning.IsWholeColumn(Rectangle(range));
+        if (!cut && wholeRow != wholeColumn && !externalFormulas && !valuesOnly)
+        {
+            if (sheet.Data.AllFilters.Any(f => f.Columns.Count > 0)) throw new InvalidOperationException("请先清除筛选条件，再复制完整行列。");
+            axes = AxisClipboard.Capture(snapshot, sheet.Id, wholeRow ? SheetAxis.Row : SheetAxis.Column, wholeRow ? range.Top : range.Left, wholeRow ? range.Rows : range.Columns);
+            var bounded = axes.Cells.Range; range = new(bounded.Top, bounded.Left, bounded.Bottom, bounded.Right);
+        }
         bool Excluded(int row) => sheet.Rows.GetValueOrDefault(row)?.Hidden == true || view.IsFilteredOut(snapshot, SheetIndex, row);
         string? text = GridClipboard.Write(range, (r, c) => Document.GetCellValue(SheetIndex, r, c), Excluded);
         var plain = range.Count > WorkbookClipboard.MaxCells || Enumerable.Range(range.Top, range.Rows).Any(Excluded);
         if (cut && plain) throw new InvalidOperationException("剪切需要不含隐藏行且不超过 20,000 格的连续矩形。");
         if (cut && snapshot.FileState?.FormulaReadOnly == true) throw new InvalidOperationException(WorkbookFileState.FormulaReadOnlyMessage);
-        var capture = plain ? null : WorkbookClipboard.Capture(snapshot, sheet.Id, Rectangle(range), cut);
+        var capture = axes?.Cells ?? (plain ? null : WorkbookClipboard.Capture(snapshot, sheet.Id, Rectangle(range), cut));
         var token = plain || valuesOnly || externalFormulas ? null : Guid.NewGuid().ToString("N");
         byte[]? xml = null, html = null; string? limitation = null;
         if (capture is not null && OperatingSystem.IsWindows())
@@ -99,7 +108,7 @@ public sealed partial class MainWindow
         }
         if (externalFormulas && (plain || !OperatingSystem.IsWindows())) throw new NotSupportedException("公式对外复制需要 Windows 上不超过 20,000 格的完整可见矩形。");
         await _clipboard.WriteAsync(new(text, token, xml, html));
-        _clipboardCells = capture; _clipboardToken = token;
+        _clipboardCells = capture; _clipboardToken = token; _clipboardAxes = axes;
         _clipboardSession = Document.Session.SessionId; _clipboardRevision = snapshot.Revision;
         _status.Text = limitation is not null ? "已内部复制；未发布外部数据。" + limitation : cut ? "已准备内部剪切；跨应用粘贴仅复制，来源不会删除。Esc 取消。" :
             plain ? "已复制可见行显示文本。" : externalFormulas ? "已对外复制公式（相对引用）。" : valuesOnly ? "已复制类型化结果值。" : "已复制；对外粘贴结果值、格式和完整合并区域。";
@@ -112,6 +121,8 @@ public sealed partial class MainWindow
         var data = await _clipboard.ReadAsync();
         if (session != Document.Session.SessionId || revision != Document.Snapshot.Revision || sheetId != Document.Snapshot.ActiveSheetId || target != SelectedRange(allowObject: true) || selectedObject != _grid.SelectedDrawingObject)
             throw new InvalidOperationException("读取剪贴板期间文档、工作表或目标选区已改变，请重试。");
+        if (SelectionPlanning.IsWholeRow(Rectangle(target)) || SelectionPlanning.IsWholeColumn(Rectangle(target)))
+            target = new(target.Top, target.Left, target.Top, target.Left);
         if (data.Token != _clipboardToken || data.Token is null || mode is "image" or "chart")
         { await PasteAvailableClipboardAsync(data, mode, target, sheetId, revision); return; }
         if (data.Token is not null && data.Token == _clipboardToken)
@@ -179,22 +190,17 @@ public sealed partial class MainWindow
             await ExecuteAsync(new SetAxisMetadataCommand(Document.Snapshot.ActiveSheetId, axis, index, 1, axis == SheetAxis.Row ? pixels : Math.Max(.01, (pixels - 5) / 7)), revision));
         _grid.FillRequested += (source, extent, revision) => _ = PerformAsync(() => FillAsync(source, extent, revision));
         var edit = (MenuItem)_menu.Items[1]!;
+        edit.Items.Add(new Separator());
         edit.Items.Add(CommandMenu("复制  Ctrl+C", () => CopyAsync(false))); edit.Items.Add(CommandMenu("剪切  Ctrl+X", () => CopyAsync(true)));
         edit.Items.Add(CommandMenu("复制结果值（对外）", () => CopyAsync(false, valuesOnly: true)));
         edit.Items.Add(CommandMenu("复制公式（对外，相对引用）", () => CopyAsync(false, externalFormulas: true)));
         edit.Items.Add(CommandMenu("复制对象为图片", CopyDrawingPictureAsync));
         foreach (var (title, mode) in new[] { ("粘贴  Ctrl+V", "all"), ("只贴值", "values"), ("粘贴公式", "formulas"), ("只贴格式", "formats"), ("转置粘贴", "transpose"), ("粘贴为可编辑图表（附带数据快照）", "chart"), ("粘贴为图片", "image") })
             edit.Items.Add(CommandMenu(title, () => PasteAsync(mode)));
-        edit.Items.Add(CommandMenu("向下填充  Ctrl+D", () => FillDirectionAsync(false)));
+        edit.Items.Add(new Separator()); edit.Items.Add(CommandMenu("清除内容", ClearAsync)); edit.Items.Add(CommandMenu("清除格式", ClearFormatsAsync));
+        edit.Items.Add(new Separator()); edit.Items.Add(CommandMenu("向下填充  Ctrl+D", () => FillDirectionAsync(false)));
         edit.Items.Add(CommandMenu("向右填充  Ctrl+R", () => FillDirectionAsync(true))); edit.Items.Add(CommandMenu("填充序列", SeriesAsync));
-        var menu = new ContextMenu();
-        foreach (var (title, action) in new (string, Func<Task>)[] { ("复制", () => CopyAsync(false)), ("剪切", () => CopyAsync(true)), ("粘贴", () => PasteAsync("all")), ("只贴值", () => PasteAsync("values")), ("清除内容", ClearAsync) })
-            menu.Items.Add(CommandMenu(title, action));
-        menu.Items.Add(CommandMenu("复制对象为图片", CopyDrawingPictureAsync));
-        menu.Items.Add(CommandMenu("粘贴为可编辑图表（附带数据快照）", () => PasteAsync("chart")));
-        menu.Items.Add(CommandMenu("粘贴为图片", () => PasteAsync("image")));
-        InstallPageBreakMenu(menu);
-        _grid.ContextMenu = menu;
+        InstallGridContextMenu();
     }
     private MenuItem CommandMenu(string title, Func<Task> action)
     { var item = new MenuItem { Header = title }; item.Click += async (_, _) => await PerformAsync(action); return item; }
