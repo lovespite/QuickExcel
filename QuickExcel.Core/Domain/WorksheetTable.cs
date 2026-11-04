@@ -21,7 +21,7 @@ public sealed record TableStyleElement(string Type, int Size = 1, bool? Bold = n
             "firstHeaderCell" or "lastHeaderCell" or "firstTotalCell" or "lastTotalCell") || Size is < 1 or > 9 || NumberFormatId is < 0 or >= 164 || NumberFormatCode?.Length > 32767)
             throw new ArgumentException("表差异样式类型、条纹或数字格式无效。");
         var borders = new[] { Left, Right, Top, Bottom, Horizontal, Vertical };
-        if (borders.Any(b => b is { Style: < 0 or > 7 }) || borders.Select(b => b?.Color).Concat([FontColor, FillColor]).OfType<string>().Any(c => c.Length != 8 || c.Any(v => !char.IsAsciiHexDigit(v))))
+        if (borders.Any(b => b is { Style: < 0 or > 13 }) || borders.Select(b => b?.Color).Concat([FontColor, FillColor]).OfType<string>().Any(c => c.Length != 8 || c.Any(v => !char.IsAsciiHexDigit(v))))
             throw new ArgumentException("表差异样式颜色或边框无效。");
     }
 }

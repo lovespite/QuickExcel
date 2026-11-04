@@ -208,10 +208,10 @@ public static partial class HtmlClipboardCodec
             !double.TryParse(bits[0].AsSpan(0, bits[0].Length - 2), NumberStyles.Float, CultureInfo.InvariantCulture, out var width)) return -1;
         return (bits[1], width) switch {
             ("hairline", .5) => 7, ("solid", .5) => 1, ("solid", 1) => 2, ("solid", 1.5) => 5,
-            ("dashed", .5) => 3, ("dotted", .5) => 4, ("double", 2) => 6, _ => -1 };
+            ("dashed", 1) => 8, ("dashed", .5) => 3, ("dotted", .5) => 4, ("double", 2) => 6, _ => -1 };
     }
     private static string BorderCss(int kind) => kind switch {
-        1 => ".5pt solid", 2 => "1.0pt solid", 3 => ".5pt dashed", 4 => ".5pt dotted", 5 => "1.5pt solid", 6 => "2.0pt double", 7 => ".5pt hairline",
+        1 => ".5pt solid", 2 => "1.0pt solid", 3 => ".5pt dashed", 4 => ".5pt dotted", 5 => "1.5pt solid", 6 => "2.0pt double", 7 => ".5pt hairline", 8 or 10 or 12 or 13 => "1.0pt dashed", 9 or 11 => ".5pt dashed",
         _ => throw new NotSupportedException("HTML 边框类型尚未支持。") };
     private static string? CssColor(string value, ISet<string> limitations)
     {

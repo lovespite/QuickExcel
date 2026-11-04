@@ -26,7 +26,7 @@ public sealed partial class SkiaRenderer : IDisposable
         System.Globalization.NumberStyles.HexNumber, System.Globalization.CultureInfo.InvariantCulture, out var color) ? new SKColor(color) : fallback;
     public static SKRect Rect(RenderRect r) => SKRect.Create((float)r.X, (float)r.Y, (float)r.Width, (float)r.Height);
 
-    public void DrawCell(SKCanvas canvas, CellRenderInput input, RenderOutput output = RenderOutput.Print, bool monochrome = false, string location = "")
+    public void DrawCell(SKCanvas canvas, CellRenderInput input, RenderOutput output = RenderOutput.Print, bool monochrome = false, string location = "", bool borders = true)
     {
         var rect = Rect(input.Bounds); var style = input.Text.Style;
         if (rect.Width <= 0 || rect.Height <= 0) return;
@@ -39,20 +39,7 @@ public sealed partial class SkiaRenderer : IDisposable
         }
         var textRect = DrawConditional(canvas, input.Conditional, rect, monochrome);
         if (input.Conditional?.HideValue != true) DrawText(canvas, input.Text, textRect, monochrome, location);
-        void Border(int kind, string? color, SKPoint from, SKPoint to)
-        {
-            if (kind == 0) return;
-            paint.Color = monochrome ? SKColors.Black : Color(color, SKColors.Black);
-            paint.StrokeWidth = kind is 2 or 5 ? 2 : 1;
-            using var dash = kind is 3 or 4 ? SKPathEffect.CreateDash(kind == 3 ? [4, 3] : [1, 2], 0) : null;
-            paint.PathEffect = dash; canvas.DrawLine(from, to, paint);
-            if (kind == 6) { var delta = from.X == to.X ? new SKPoint(2, 0) : new SKPoint(0, 2); canvas.DrawLine(from + delta, to + delta, paint); }
-            paint.PathEffect = null;
-        }
-        Border(style.LeftBorder, style.LeftBorderColor, new(rect.Left, rect.Top), new(rect.Left, rect.Bottom));
-        Border(style.RightBorder, style.RightBorderColor, new(rect.Right, rect.Top), new(rect.Right, rect.Bottom));
-        Border(style.TopBorder, style.TopBorderColor, new(rect.Left, rect.Top), new(rect.Right, rect.Top));
-        Border(style.BottomBorder, style.BottomBorderColor, new(rect.Left, rect.Bottom), new(rect.Right, rect.Bottom));
+        if (borders) DrawBorders(canvas, input.Bounds, style, monochrome);
         if (input.Note && output == RenderOutput.Screen)
         {
             paint.Color = SKColors.Red; using var marker = new SKPathBuilder();

@@ -65,17 +65,21 @@ public sealed partial class WorkbookGrid
         canvas.Clear(SKColors.White); canvas.Scale((float)_zoom);
         var rows = _rows.Visible(ViewHeight); var columns = _columns.Visible(ViewWidth);
         var drawn = new HashSet<GridCellRange>();
+        var borders = new List<(Rect Bounds, Rect Clip, StyleDefinition Style)>();
         void Picture(GridCellRange range)
         {
             if (!drawn.Add(range)) return;
             foreach (var fragment in Fragments(range))
             {
                 var bounds = fragment.Bounds;
+                var borderStyle = CellBorderProjection.ForRange(new(range.Top, range.Left, range.Bottom, range.Right),
+                    (r, c) => ResolveStyle?.Invoke(_snapshot, Sheet, r, c) ?? _snapshot.Styles[Sheet.GetStyleId(r, c)]);
+                borders.Add((bounds, fragment.Clip, borderStyle));
                 var key = new PictureKey(range, bounds.Width, bounds.Height);
                 if (!_pictures.TryGetValue(key, out var picture))
                 {
                     var cell = Sheet.GetCell(range.Top, range.Left);
-                    var style = ResolveStyle?.Invoke(_snapshot, Sheet, range.Top, range.Left) ?? _snapshot.Styles[Sheet.GetStyleId(range.Top, range.Left)];
+                    var style = borderStyle;
                     var display = CellDisplayFormatter.FormatDisplay(cell?.Value ?? CellValue.Blank, style, _snapshot.DateSystem);
                     if (display.Color is not null) style = style with { FontColor = display.Color };
                     if (style.Horizontal == 0 && cell?.Value.Kind == CellValueKind.Number) style = style with { Horizontal = 3 };
@@ -83,7 +87,7 @@ public sealed partial class WorkbookGrid
                     Renderer.DrawCell(target, new(new(0, 0, bounds.Width, bounds.Height),
                         new(display.Text, style, RichText: cell?.Content.RichText, DefaultFontSize: 14, FillOffset: display.FillOffset, FillCharacter: display.FillCharacter),
                         Sheet.ShowGridLines, Sheet.Annotations.Notes.ContainsKey(new(range.Top, range.Left)),
-                        ResolveConditionalVisual?.Invoke(_snapshot, Sheet, range.Top, range.Left)), RenderOutput.Screen);
+                        ResolveConditionalVisual?.Invoke(_snapshot, Sheet, range.Top, range.Left)), RenderOutput.Screen, borders: false);
                     if (FilterHeader(range.Top, range.Left) is { } marker)
                         Renderer.DrawCell(target, new(new(Math.Max(0, bounds.Width - 22), 0, 22, bounds.Height),
                             new(marker, new() { FillColor = "FFF2F5F4", FontColor = "FF006B59", Horizontal = 2, Vertical = 1 }, DefaultFontSize: 10)), RenderOutput.Screen);
@@ -94,6 +98,11 @@ public sealed partial class WorkbookGrid
         }
         foreach (var row in rows)
         foreach (var col in columns) Picture(CellRange(new(row.ModelIndex, col.ModelIndex)));
+        foreach (var edge in borders)
+        {
+            canvas.Save(); canvas.ClipRect(SkiaRect(edge.Clip));
+            SkiaRenderer.DrawBorders(canvas, new(edge.Bounds.X, edge.Bounds.Y, edge.Bounds.Width, edge.Bounds.Height), edge.Style); canvas.Restore();
+        }
         PaintChartSources(canvas);
         PaintAttachments(canvas);
         var header = new StyleDefinition { FillColor = "FFF2F5F4", FontColor = "FF42534E", Horizontal = 2, Vertical = 1 };

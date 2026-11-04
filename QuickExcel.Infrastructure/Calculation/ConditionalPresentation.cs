@@ -47,7 +47,8 @@ public static partial class ConditionalPresentation
                 var next = Raw(sheet, nr, nc); var other = next.Style;
                 var otherKind = opposite switch { 0 => other.LeftBorder, 1 => other.RightBorder, 2 => other.TopBorder, _ => other.BottomBorder };
                 var otherColor = opposite switch { 0 => other.LeftBorderColor, 1 => other.RightBorderColor, 2 => other.TopBorderColor, _ => other.BottomBorderColor };
-                if (next.Ranks[opposite] < own.Ranks[side]) return (otherKind, otherColor);
+                if (next.Ranks[opposite] < own.Ranks[side] || next.Ranks[opposite] == own.Ranks[side] &&
+                    (CellBorders.Weight(otherKind) > CellBorders.Weight(kind) || CellBorders.Weight(otherKind) == CellBorders.Weight(kind) && side is 0 or 2)) return (otherKind, otherColor);
                 return (kind, color);
             }
             var left = Edge(row, column - 1, 0, 1, style.LeftBorder, style.LeftBorderColor);

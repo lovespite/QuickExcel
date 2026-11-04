@@ -93,12 +93,16 @@ public sealed class SkiaReport : IDisposable
             }
             canvas.Translate(headingWidth, headingHeight);
             long textUnits = 0;
+            var borders = new List<CellRenderInput>();
             void Cell(int row, int column, RenderRect rect)
             {
                 token.ThrowIfCancellationRequested(); var input = Job.Cell(row, column, rect);
                 textUnits += input.Text.Text.Length;
                 if (textUnits > 2_000_000) throw new NotSupportedException("单页文字超过 2,000,000 字符渲染预算。");
-                Renderer.DrawCell(canvas, input, monochrome: monochrome, location: $"{sheet.Name}!R{row + 1}C{column + 1}");
+                var merge = _merges.FirstOrDefault(m => m.Top == row && m.Left == column);
+                if (merge != default) input = input with { Text = input.Text with { Style = CellBorderProjection.ForRange(merge, (r, c) => Job.Cell(r, c, rect).Text.Style) } };
+                borders.Add(input);
+                Renderer.DrawCell(canvas, input, borders: false, monochrome: monochrome, location: $"{sheet.Name}!R{row + 1}C{column + 1}");
             }
             foreach (var rb in Bands(page.Rows, rows))
             foreach (var cb in Bands(page.Columns, columns))
@@ -108,6 +112,7 @@ public sealed class SkiaReport : IDisposable
                 {
                     canvas.ClipRect(SKRect.Create((float)cb.Offset, (float)rb.Offset, (float)cb.Size, (float)rb.Size));
                     canvas.Translate((float)(cb.Offset - DrawingGeometry.ColumnStart(sheet, cb.First)), (float)(rb.Offset - DrawingGeometry.RowStart(sheet, rb.First)));
+                    borders.Clear();
                     var merges = _merges.Where(m => m.Bottom >= rb.First && m.Top <= rb.Last && m.Right >= cb.First && m.Left <= cb.Last).ToArray();
                     var top = DrawingGeometry.RowStart(sheet, rb.First);
                     for (var r = rb.First; r <= rb.Last; r++)
@@ -123,6 +128,7 @@ public sealed class SkiaReport : IDisposable
                     foreach (var merge in merges)
                         Cell(merge.Top, merge.Left, new(DrawingGeometry.ColumnStart(sheet, merge.Left), DrawingGeometry.RowStart(sheet, merge.Top),
                             DrawingGeometry.ColumnStart(sheet, merge.Right + 1) - DrawingGeometry.ColumnStart(sheet, merge.Left), DrawingGeometry.RowStart(sheet, merge.Bottom + 1) - DrawingGeometry.RowStart(sheet, merge.Top)));
+                    foreach (var input in borders) SkiaRenderer.DrawBorders(canvas, input.Bounds, input.Text.Style, monochrome);
                     var band = SKRect.Create((float)DrawingGeometry.ColumnStart(sheet, cb.First), (float)DrawingGeometry.RowStart(sheet, rb.First), (float)cb.Size, (float)rb.Size);
                     foreach (var image in sheet.Images)
                     {

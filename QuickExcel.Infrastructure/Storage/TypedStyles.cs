@@ -10,7 +10,7 @@ internal static class TypedStyles
 {
     private static readonly string[] Horizontal = ["general", "left", "center", "right", "justify"];
     private static readonly string[] Vertical = ["top", "center", "bottom", "justify"];
-    private static readonly string[] Borders = ["none", "thin", "medium", "dashed", "dotted", "thick", "double", "hair"];
+    private static readonly string[] Borders = ["none", "thin", "medium", "dashed", "dotted", "thick", "double", "hair", "mediumDashed", "dashDot", "mediumDashDot", "dashDotDot", "mediumDashDotDot", "slantDashDot"];
 
     public static List<StyleDefinition> Read(XlsxPackage package, string workbookPart)
     {
@@ -79,10 +79,9 @@ internal static class TypedStyles
             package.Shape(font, "name sz color b i u strike family charset scheme", "", path);
             foreach (var item in font.Elements().Where(e => e.Name != Main + "color")) package.Shape(item, "", "val", path);
             package.Shape(fill, "patternFill", "", path);
-            package.Shape(border, "left right top bottom diagonal", "", path);
+            package.Shape(border, "left right top bottom diagonal", "diagonalUp diagonalDown outline", path);
+            if (border.Attribute("outline") is { } outline) _ = Bool(outline.Value);
             foreach (var side in border.Elements()) package.Shape(side, "color", "style", path);
-            if (border.Element(Main + "diagonal") is { } diagonal && (diagonal.HasAttributes || diagonal.HasElements))
-                package.Loss($"{path}: 对角边框未建模", "styles/diagonalBorder", path, range: "cellXfs[" + result.Count + "]");
             var pattern = fill.Element(Main + "patternFill");
             if (pattern is not null)
             {
@@ -121,6 +120,8 @@ internal static class TypedStyles
                 WrapText = Bool((string?)alignment?.Attribute("wrapText")),
                 TextRotation = rotation, Indent = Int((string?)alignment?.Attribute("indent") ?? "0", 250),
                 ShrinkToFit = Bool((string?)alignment?.Attribute("shrinkToFit")),
+                DiagonalBorder = Side("diagonal"), DiagonalBorderColor = SideColor("diagonal"),
+                DiagonalUp = Bool((string?)border.Attribute("diagonalUp")), DiagonalDown = Bool((string?)border.Attribute("diagonalDown")),
                 LeftBorder = Side("left"), RightBorder = Side("right"), TopBorder = Side("top"), BottomBorder = Side("bottom"),
                 LeftBorderColor = SideColor("left"), RightBorderColor = SideColor("right"), TopBorderColor = SideColor("top"), BottomBorderColor = SideColor("bottom")
             });
@@ -152,8 +153,8 @@ internal static class TypedStyles
                 Val("u", style.Underline), Val("sz", style.FontSize), Rgb("color", style.FontColor), Val("name", style.FontName), Val("scheme", style.FontScheme)));
             fills.Add(new XElement(Main + "fill", new XElement(Main + "patternFill", new XAttribute("patternType", style.FillColor is null ? "none" : "solid"), Rgb("fgColor", style.FillColor))));
             XElement Side(string name, int kind, string? color) => new(Main + name, new XAttribute("style", Borders[kind]), Rgb("color", color));
-            borders.Add(new XElement(Main + "border", Side("left", style.LeftBorder, style.LeftBorderColor), Side("right", style.RightBorder, style.RightBorderColor),
-                Side("top", style.TopBorder, style.TopBorderColor), Side("bottom", style.BottomBorder, style.BottomBorderColor)));
+            borders.Add(new XElement(Main + "border", new XAttribute("diagonalUp", style.DiagonalUp ? 1 : 0), new XAttribute("diagonalDown", style.DiagonalDown ? 1 : 0), Side("left", style.LeftBorder, style.LeftBorderColor), Side("right", style.RightBorder, style.RightBorderColor),
+                Side("top", style.TopBorder, style.TopBorderColor), Side("bottom", style.BottomBorder, style.BottomBorderColor), Side("diagonal", style.DiagonalBorder, style.DiagonalBorderColor)));
             xfs.Add(new XElement(Main + "xf", new XAttribute("numFmtId", numFmtId), new XAttribute("fontId", index), new XAttribute("fillId", index + 2),
                 new XAttribute("borderId", index), new XAttribute("xfId", 0), new XAttribute("applyFont", 1), new XAttribute("applyFill", 1), new XAttribute("applyBorder", 1),
                 new XAttribute("applyNumberFormat", 1), new XAttribute("applyAlignment", 1), new XAttribute("applyProtection", 1), new XElement(Main + "alignment", new XAttribute("horizontal", Horizontal[style.Horizontal]),

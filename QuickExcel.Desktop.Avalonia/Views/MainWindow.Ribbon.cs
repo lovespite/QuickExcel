@@ -106,7 +106,7 @@ public sealed partial class MainWindow
         _fontSize.SelectionChanged += async (_, _) => { if (!_updatingRibbon && _fontSize.SelectedItem is double size) await PerformAsync(() => ApplyStyleAsync(new(FontSize: size))); };
         _mutationControls.AddRange([_font, _fontSize]);
         RibbonGroup("开始", "字体", _font, _fontSize, RibbonButton(RibbonIcon.Bold, "加粗", () => ApplyStyleAsync(new(Bold: !CurrentStyle.Bold))),
-            RibbonButton(RibbonIcon.Italic, "倾斜", () => ApplyStyleAsync(new(Italic: !CurrentStyle.Italic))), RibbonColorDropdown(false), RibbonColorDropdown(true));
+            RibbonButton(RibbonIcon.Italic, "倾斜", () => ApplyStyleAsync(new(Italic: !CurrentStyle.Italic))), RibbonColorDropdown(false), RibbonColorDropdown(true), BorderDropdown());
         RibbonGroup("开始", "对齐", RibbonButton(RibbonIcon.AlignLeft, "左对齐", () => ApplyStyleAsync(new(Horizontal: 1))), RibbonButton(RibbonIcon.AlignCenter, "居中", () => ApplyStyleAsync(new(Horizontal: 2))),
             RibbonButton(RibbonIcon.AlignRight, "右对齐", () => ApplyStyleAsync(new(Horizontal: 3))),
             RibbonButton(RibbonIcon.AlignTop, "顶端对齐", () => ApplyStyleAsync(new(Vertical: 0))),

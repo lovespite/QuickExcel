@@ -64,6 +64,10 @@ public sealed record StyleDefinition
     public int TextRotation { get; init; }
     public int Indent { get; init; }
     public bool ShrinkToFit { get; init; }
+    public int DiagonalBorder { get; init; }
+    public string? DiagonalBorderColor { get; init; }
+    public bool DiagonalUp { get; init; }
+    public bool DiagonalDown { get; init; }
     public int LeftBorder { get; init; }
     public int RightBorder { get; init; }
     public int TopBorder { get; init; }
@@ -312,8 +316,8 @@ public sealed class WorkbookSnapshot
                 style.Indent is < 0 or > 250 || style.TextRotation is < 0 or > 180 && style.TextRotation != 255 ||
                 style.FontScheme is not (null or "major" or "minor") ||
                 style.Underline is not (null or "none" or "single" or "double" or "singleAccounting" or "doubleAccounting") ||
-                style.LeftBorder is < 0 or > 7 || style.RightBorder is < 0 or > 7 ||
-                style.TopBorder is < 0 or > 7 || style.BottomBorder is < 0 or > 7)
+                style.DiagonalBorder is < 0 or > 13 || style.LeftBorder is < 0 or > 13 || style.RightBorder is < 0 or > 13 ||
+                style.TopBorder is < 0 or > 13 || style.BottomBorder is < 0 or > 13)
                 throw new ArgumentException("The style contains an unsupported alignment or border.", nameof(styles));
         }
         foreach (var sheet in Sheets)

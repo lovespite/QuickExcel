@@ -10,7 +10,7 @@ namespace QuickExcel.Storage;
 internal static class XlsxTableStyles
 {
     private static readonly Lazy<XElement> Builtins = new(() => XElement.Load(typeof(XlsxTableStyles).Assembly.GetManifestResourceStream("QuickExcel.Infrastructure.Storage.BuiltinTableStyles.xml")!));
-    internal static readonly string[] Borders = ["none", "thin", "medium", "dashed", "dotted", "thick", "double", "hair"];
+    internal static readonly string[] Borders = ["none", "thin", "medium", "dashed", "dotted", "thick", "double", "hair", "mediumDashed", "dashDot", "mediumDashDot", "dashDotDot", "mediumDashDotDot", "slantDashDot"];
     private static readonly HashSet<string> Roles = ["wholeTable", "headerRow", "totalRow", "firstColumn", "lastColumn", "firstRowStripe", "secondRowStripe",
         "firstColumnStripe", "secondColumnStripe", "firstHeaderCell", "lastHeaderCell", "firstTotalCell", "lastTotalCell"];
     public static ImmutableArray<TableStyleElement> Resolve(XlsxPackage package, string workbook, string? name)

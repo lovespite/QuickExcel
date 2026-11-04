@@ -152,7 +152,8 @@ public sealed record CellStylePatch(bool? Bold = null, bool? Italic = null, stri
     string? Underline = null, bool? Strike = null, int? TextRotation = null, int? Indent = null, bool? ShrinkToFit = null,
     bool? Locked = null, bool? FormulaHidden = null,
     int? LeftBorder = null, int? RightBorder = null, int? TopBorder = null, int? BottomBorder = null,
-    string? LeftBorderColor = null, string? RightBorderColor = null, string? TopBorderColor = null, string? BottomBorderColor = null)
+    string? LeftBorderColor = null, string? RightBorderColor = null, string? TopBorderColor = null, string? BottomBorderColor = null,
+    int? DiagonalBorder = null, string? DiagonalBorderColor = null, bool? DiagonalUp = null, bool? DiagonalDown = null)
 {
     internal StyleDefinition Apply(StyleDefinition style)
     {
@@ -162,7 +163,7 @@ public sealed record CellStylePatch(bool? Bold = null, bool? Italic = null, stri
         if (FontSize is <= 0 or > 409 || FontSize.HasValue && !double.IsFinite(FontSize.Value))
             throw new ArgumentException("字号必须大于 0 且不超过 409。");
         if (Horizontal is < 0 or > 7 || TextRotation is < 0 or > 180 && TextRotation != 255 || Indent is < 0 or > 250 ||
-            new[] { LeftBorder, RightBorder, TopBorder, BottomBorder }.Any(v => v is < 0 or > 7) ||
+            new[] { LeftBorder, RightBorder, TopBorder, BottomBorder, DiagonalBorder }.Any(v => v is < 0 or > 13) ||
             Underline is not null && Underline is not ("none" or "single" or "double" or "singleAccounting" or "doubleAccounting"))
             throw new ArgumentException("格式属性超出支持范围。");
         if (Vertical is < 0 or > 3) throw new ArgumentException("不支持的垂直对齐方式。");
@@ -175,6 +176,8 @@ public sealed record CellStylePatch(bool? Bold = null, bool? Italic = null, stri
         }
         return style with
         {
+            DiagonalBorder = DiagonalBorder ?? style.DiagonalBorder, DiagonalBorderColor = Color(DiagonalBorderColor) ?? style.DiagonalBorderColor,
+            DiagonalUp = DiagonalUp ?? style.DiagonalUp, DiagonalDown = DiagonalDown ?? style.DiagonalDown,
             Bold = Bold ?? style.Bold, Italic = Italic ?? style.Italic,
             Underline = Underline == "none" ? null : Underline ?? style.Underline, Strike = Strike ?? style.Strike,
             TextRotation = TextRotation ?? style.TextRotation, Indent = Indent ?? style.Indent, ShrinkToFit = ShrinkToFit ?? style.ShrinkToFit,

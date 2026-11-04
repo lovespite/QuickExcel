@@ -62,13 +62,13 @@ public sealed partial class MainWindow
 
     private Task NumberFormatAsync() => ShowNumberFormatAsync(false);
     private Task CellFormatAsync() => ShowNumberFormatAsync(true);
-    private async Task ShowNumberFormatAsync(bool appearance)
+    private async Task ShowNumberFormatAsync(bool appearance, bool borderTab = false)
     {
         if (!await CommitEditorsAsync()) return;
         var revision = Document.Snapshot.Revision; var addresses = VisibleAddresses(); var session = Document.Session.SessionId;
-        var dialog = new NumberFormatDialog(CurrentStyle, FormatSample, Document.Snapshot.DateSystem, Document.Snapshot.Styles, appearance);
-        if (await dialog.ShowAsync(this) is not { } patch || patch == new CellStylePatch()) return;
+        var dialog = new NumberFormatDialog(CurrentStyle, FormatSample, Document.Snapshot.DateSystem, Document.Snapshot.Styles, appearance, appearance ? SelectionBorders(addresses) : null, borderTab);
+        if (await dialog.ShowAsync(this) is not { } patch || patch == new CellStylePatch() && dialog.BorderPatch is null) return;
         if (session != Document.Session.SessionId) throw new InvalidOperationException("工作簿已切换，请重新设置格式。");
-        await ExecuteAsync(new SetCellStyleCommand(addresses, patch), revision);
+        await ExecuteAsync(new SetCellFormatCommand(addresses, patch, dialog.BorderPatch), revision);
     }
 }

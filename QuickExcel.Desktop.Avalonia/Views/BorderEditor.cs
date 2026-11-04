@@ -1,0 +1,99 @@
+using Avalonia.Automation;
+using Avalonia.Controls;
+using Avalonia.Controls.Templates;
+using Avalonia.Layout;
+using Avalonia.Media;
+using QuickExcel.Core;
+using QuickExcel.Domain;
+
+namespace QuickExcel.Desktop.Avalonia;
+
+internal sealed class BorderEditor : UserControl
+{
+    internal static readonly string[] StyleNames = ["无", "细实线", "中实线", "虚线", "点线", "粗实线", "双线", "发丝线", "中虚线", "点划线", "中点划线", "双点划线", "中双点划线", "斜点划线"];
+    internal static readonly (BorderPreset Preset, string Name)[] Presets = [
+        (BorderPreset.Bottom, "下框线"), (BorderPreset.Top, "上框线"), (BorderPreset.Left, "左框线"), (BorderPreset.Right, "右框线"),
+        (BorderPreset.None, "无框线"), (BorderPreset.All, "所有框线"), (BorderPreset.Outside, "外侧框线"), (BorderPreset.ThickOutside, "粗外侧框线"),
+        (BorderPreset.DoubleBottom, "双底框线"), (BorderPreset.ThickBottom, "粗下框线"), (BorderPreset.TopBottom, "上下框线"),
+        (BorderPreset.TopThickBottom, "上框线和粗下框线"), (BorderPreset.TopDoubleBottom, "上框线和双下框线"),
+        (BorderPreset.Inside, "内部框线"), (BorderPreset.InsideHorizontal, "内部横框线"), (BorderPreset.InsideVertical, "内部竖框线")];
+    private readonly BorderPreview _preview = new() { Name = "BorderPreview", Height = 208, SampleText = true };
+    private readonly ListBox _styles = new() { Name = "BorderStyles", Height = 330 };
+    private string? _color;
+    private readonly bool[] _changed = new bool[8];
+    private readonly Button[] _edges = new Button[8];
+    private readonly BorderStroke?[] _initial;
+    public CellBorderPatch? Patch
+    {
+        get
+        {
+            if (!_changed.Any(c => c)) return null;
+            BorderStroke? Edge(int i) => _changed[i] ? _preview.Lines[i] : null;
+            var diagonal = _changed[6] || _changed[7] ? _preview.Lines[6]?.Style > 0 ? _preview.Lines[6] : _preview.Lines[7] ?? new(0) : null;
+            return new(Edge(0), Edge(1), Edge(2), Edge(3), Edge(4), Edge(5), diagonal,
+                _changed[6] ? _preview.Lines[6]?.Style > 0 : null, _changed[7] ? _preview.Lines[7]?.Style > 0 : null);
+        }
+    }
+    public BorderEditor(BorderStroke?[] initial)
+    {
+        _initial = initial; _preview.Lines = initial.ToArray();
+        var root = new global::Avalonia.Controls.Grid { ColumnDefinitions = new("180,20,*"), Margin = new(4, 16) };
+        var choices = new StackPanel { Spacing = 8 }; root.Children.Add(choices);
+        choices.Children.Add(new TextBlock { Text = "线型", FontWeight = FontWeight.SemiBold });
+        _styles.ItemsSource = Enumerable.Range(0, StyleNames.Length).ToArray(); _styles.SelectedIndex = 1;
+        _styles.ItemTemplate = new FuncDataTemplate<int>((kind, _) =>
+        {
+            var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+            row.Children.Add(new BorderLineSample(kind) { Width = 64, Height = 20 }); row.Children.Add(new TextBlock { Text = StyleNames[kind], FontSize = 12, VerticalAlignment = VerticalAlignment.Center }); return row;
+        });
+        AutomationProperties.SetName(_styles, "边框线型"); choices.Children.Add(_styles);
+        choices.Children.Add(new TextBlock { Text = "颜色", FontWeight = FontWeight.SemiBold });
+        var colorMenu = new MenuFlyout(); var colorButton = new DropDownButton { Name = "BorderColor", Content = "自动（黑色）", Flyout = colorMenu, HorizontalAlignment = HorizontalAlignment.Stretch };
+        void Color(string? value, string name) { _color = value; colorButton.Content = name; }
+        var colors = new List<Control>(); var automatic = new MenuItem { Header = "自动（黑色）" }; automatic.Click += (_, _) => Color(null, "自动（黑色）"); colors.Add(automatic);
+        foreach (var (name, value) in ColorPalette.Common) { var item = new MenuItem { Header = name, Icon = ColorPalette.Swatch(value) }; item.Click += (_, _) => Color(value, name); colors.Add(item); }
+        var custom = new MenuItem { Header = "自定义颜色…" }; custom.Click += async (_, _) =>
+        {
+            if (TopLevel.GetTopLevel(this) is Window owner && await new CustomColorDialog(_color, "边框颜色").ShowDialog<string?>(owner) is { } color) Color(color, "#" + color[2..]);
+        };
+        colors.Add(custom); colorMenu.ItemsSource = colors; choices.Children.Add(colorButton);
+        var detail = new StackPanel { Spacing = 12 }; global::Avalonia.Controls.Grid.SetColumn(detail, 2); root.Children.Add(detail);
+        detail.Children.Add(new TextBlock { Text = "预置", FontWeight = FontWeight.SemiBold });
+        var presets = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+        foreach (var (preset, label) in new[] { (BorderPreset.None, "无"), (BorderPreset.Outside, "外边框"), (BorderPreset.Inside, "内部") })
+        {
+            var button = new Button { Name = "BorderPreset" + preset, Content = label, MinWidth = 90 }; button.Click += (_, _) => Apply(CellBorders.Preset(preset, _styles.SelectedIndex, _color)); presets.Children.Add(button);
+        }
+        detail.Children.Add(presets); detail.Children.Add(new TextBlock { Text = "边框预览 · 点击线段设置或取消" });
+        _preview.Toggle = Toggle; detail.Children.Add(_preview);
+        var buttons = new WrapPanel { Orientation = Orientation.Horizontal };
+        var labels = new[] { "左", "右", "上", "下", "内部横线", "内部竖线", "斜上框线 ↗", "斜下框线 ↘" };
+        for (var i = 0; i < 8; i++)
+        {
+            var edge = i; var button = new Button { Name = "BorderEdge" + i, Content = labels[i], Margin = new(0, 0, 6, 6), Padding = new(8, 4) };
+            AutomationProperties.SetName(button, labels[i]); button.Click += (_, _) => Toggle(edge); _edges[i] = button; buttons.Children.Add(button);
+        }
+        detail.Children.Add(buttons); detail.Children.Add(new TextBlock { Text = "先选择线型和颜色，再点击预置或预览中的边框。灰色虚线表示混合状态；未操作的边框保持原样。", TextWrapping = TextWrapping.Wrap, Foreground = Brushes.Gray, FontSize = 12 });
+        var reset = new Button { Name = "BorderReset", Content = "恢复原有边框" }; reset.Click += (_, _) => { _preview.Lines = _initial.ToArray(); Array.Clear(_changed); Refresh(); }; detail.Children.Add(reset);
+        Content = root; Refresh();
+    }
+    private void Toggle(int edge)
+    {
+        var next = new BorderStroke(Math.Max(0, _styles.SelectedIndex), _color);
+        _preview.Lines[edge] = _preview.Lines[edge] == next ? new(0) : next; _changed[edge] = true;
+        if (edge >= 6 && next.Style > 0 && _preview.Lines[edge]?.Style > 0 && _preview.Lines[13 - edge]?.Style > 0)
+        { _preview.Lines[13 - edge] = next; _changed[13 - edge] = true; }
+        Refresh();
+    }
+    private void Apply(CellBorderPatch patch)
+    {
+        var values = new[] { patch.Left, patch.Right, patch.Top, patch.Bottom, patch.InsideHorizontal, patch.InsideVertical, patch.Diagonal, patch.Diagonal };
+        for (var i = 0; i < 8; i++) if (values[i] is { } stroke) { _preview.Lines[i] = stroke; _changed[i] = true; }
+        Refresh();
+    }
+    private void Refresh()
+    {
+        _preview.InvalidateVisual();
+        for (var i = 0; i < _edges.Length; i++) if (_edges[i] is { } button) button.Background = _preview.Lines[i]?.Style > 0 ? Brush.Parse("#DCEFE8") : Brushes.Transparent;
+    }
+}

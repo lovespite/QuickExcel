@@ -50,14 +50,14 @@ internal static class SpreadsheetClipboardStyles
                 case "NumberFormat": s = s with { NumberFormatId = 0, NumberFormatCode = NumberFormat(A(e, "Format")) }; break;
                 case "Protection": s = s with { Locked = Flag(e, "Protected", true), FormulaHidden = Flag(e, "HideFormula", false) }; break;
                 case "Borders":
-                    s = s with { LeftBorder = 0, RightBorder = 0, TopBorder = 0, BottomBorder = 0, LeftBorderColor = null, RightBorderColor = null, TopBorderColor = null, BottomBorderColor = null };
+                    s = s with { DiagonalBorder = 0, DiagonalBorderColor = null, DiagonalUp = false, DiagonalDown = false, LeftBorder = 0, RightBorder = 0, TopBorder = 0, BottomBorder = 0, LeftBorderColor = null, RightBorderColor = null, TopBorderColor = null, BottomBorderColor = null };
                     foreach (var b in e.Elements())
                     {
                         var kind = (A(b, "LineStyle"), Int(b, "Weight")) switch {
                             (null or "None", _) => 0, ("Continuous", 0) => 7, ("Continuous", 1) => 1, ("Continuous", 2) => 2, ("Continuous", 3) => 5,
-                            ("Dash", 1) => 3, ("Dot", 1) => 4, ("Double", 3) => 6, _ => Unsupported(limitations, 0) };
+                            ("Dash", 2) => 8, ("DashDot", 1) => 9, ("DashDot", 2) => 10, ("DashDotDot", 1) => 11, ("DashDotDot", 2) => 12, ("SlantDashDot", 2) => 13, ("Dash", 1) => 3, ("Dot", 1) => 4, ("Double", 3) => 6, _ => Unsupported(limitations, 0) };
                         var color = Color(A(b, "Color"));
-                        s = A(b, "Position") switch { "Left" => s with { LeftBorder = kind, LeftBorderColor = color }, "Right" => s with { RightBorder = kind, RightBorderColor = color },
+                        s = A(b, "Position") switch { "DiagonalLeft" => s with { DiagonalBorder = kind, DiagonalBorderColor = color, DiagonalDown = kind != 0 }, "DiagonalRight" => s with { DiagonalBorder = kind, DiagonalBorderColor = color, DiagonalUp = kind != 0 }, "Left" => s with { LeftBorder = kind, LeftBorderColor = color }, "Right" => s with { RightBorder = kind, RightBorderColor = color },
                             "Top" => s with { TopBorder = kind, TopBorderColor = color }, "Bottom" => s with { BottomBorder = kind, BottomBorderColor = color }, _ => Unsupported(limitations, s) };
                     }
                     break;
@@ -85,8 +85,8 @@ internal static class SpreadsheetClipboardStyles
         XAttribute Attr(string name, object value) => new(Ss + name, value);
         var format = s.NumberFormatCode ?? CellDisplayFormatter.BuiltIn(s.NumberFormatId) ?? (s.NumberFormatId == 0 ? "General" : throw new NotSupportedException("数字格式无法导出。"));
         XElement Border(string side, int kind, string? color) => new(Ss + "Border", Attr("Position", side),
-            Attr("LineStyle", kind switch { 3 => "Dash", 4 => "Dot", 6 => "Double", _ => "Continuous" }),
-            Attr("Weight", kind switch { 2 => 2, 5 or 6 => 3, 7 => 0, _ => 1 }), color is null ? null : Attr("Color", Rgb(color)));
+            Attr("LineStyle", kind switch { 3 or 8 => "Dash", 9 or 10 => "DashDot", 11 or 12 => "DashDotDot", 13 => "SlantDashDot", 4 => "Dot", 6 => "Double", _ => "Continuous" }),
+            Attr("Weight", kind switch { 2 or 8 or 10 or 12 or 13 => 2, 5 or 6 => 3, 7 => 0, _ => 1 }), color is null ? null : Attr("Color", Rgb(color)));
         return new(Ss + "Style", Attr("ID", id),
             new XElement(Ss + "Alignment", Attr("Horizontal", new[] { "Automatic", "Left", "Center", "Right", "Justify" }[s.Horizontal]),
                 Attr("Vertical", new[] { "Top", "Center", "Bottom", "Justify" }[s.Vertical]), Attr("WrapText", s.WrapText ? 1 : 0), Attr("ShrinkToFit", s.ShrinkToFit ? 1 : 0),
@@ -97,6 +97,8 @@ internal static class SpreadsheetClipboardStyles
             new XElement(Ss + "Interior", s.FillColor is null ? Array.Empty<XAttribute>() : new[] { Attr("Pattern", "Solid"), Attr("Color", Rgb(s.FillColor)) }),
             new XElement(Ss + "NumberFormat", Attr("Format", format)), new XElement(Ss + "Protection", Attr("Protected", s.Locked ? 1 : 0), Attr("HideFormula", s.FormulaHidden ? 1 : 0)),
             new XElement(Ss + "Borders", s.LeftBorder == 0 ? null : Border("Left", s.LeftBorder, s.LeftBorderColor), s.RightBorder == 0 ? null : Border("Right", s.RightBorder, s.RightBorderColor),
-                s.TopBorder == 0 ? null : Border("Top", s.TopBorder, s.TopBorderColor), s.BottomBorder == 0 ? null : Border("Bottom", s.BottomBorder, s.BottomBorderColor)));
+                s.TopBorder == 0 ? null : Border("Top", s.TopBorder, s.TopBorderColor), s.BottomBorder == 0 ? null : Border("Bottom", s.BottomBorder, s.BottomBorderColor),
+                !s.DiagonalDown || s.DiagonalBorder == 0 ? null : Border("DiagonalLeft", s.DiagonalBorder, s.DiagonalBorderColor),
+                !s.DiagonalUp || s.DiagonalBorder == 0 ? null : Border("DiagonalRight", s.DiagonalBorder, s.DiagonalBorderColor)));
     }
 }

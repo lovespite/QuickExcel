@@ -30,15 +30,14 @@ public static class TablePresentation
     public static StyleDefinition GetStyle(WorkbookSnapshot snapshot, WorksheetSnapshot sheet, int row, int column)
     {
         var style = RawStyle(snapshot, sheet, row, column, out var priority);
-        if (!sheet.Data.Tables.Any(t => t.Range.Contains(row, column))) return style;
         (int Kind, string? Color) Edge(int nr, int nc, int side, int opposite, int ownKind, string? ownColor)
         {
             if (nr < 0 || nc < 0 || nr >= WorkbookLimits.MaxRows || nc >= WorkbookLimits.MaxColumns) return (ownKind, ownColor);
             var other = RawStyle(snapshot, sheet, nr, nc, out var rank);
             var kind = opposite switch { 0 => other.LeftBorder, 1 => other.RightBorder, 2 => other.TopBorder, _ => other.BottomBorder };
             var color = opposite switch { 0 => other.LeftBorderColor, 1 => other.RightBorderColor, 2 => other.TopBorderColor, _ => other.BottomBorderColor };
-            int Weight(int k) => k switch { 0 => 0, 7 => 1, 2 => 3, 6 => 4, 5 => 5, _ => 2 };
-            return rank[opposite] > priority[side] || rank[opposite] == priority[side] && Weight(kind) > Weight(ownKind) ? (kind, color) : (ownKind, ownColor);
+            int Weight(int k) => CellBorders.Weight(k);
+            return rank[opposite] > priority[side] || rank[opposite] == priority[side] && (Weight(kind) > Weight(ownKind) || Weight(kind) == Weight(ownKind) && side is 0 or 2) ? (kind, color) : (ownKind, ownColor);
         }
         var left = Edge(row, column - 1, 0, 1, style.LeftBorder, style.LeftBorderColor); var right = Edge(row, column + 1, 1, 0, style.RightBorder, style.RightBorderColor);
         var top = Edge(row - 1, column, 2, 3, style.TopBorder, style.TopBorderColor); var bottom = Edge(row + 1, column, 3, 2, style.BottomBorder, style.BottomBorderColor);
