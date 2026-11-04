@@ -139,6 +139,7 @@ public sealed partial class WorkbookGrid
         _dragAxis = point.X < HeaderWidth * _zoom ? SheetAxis.Row : point.Y < HeaderHeight * _zoom ? SheetAxis.Column : null;
         if (_dragAxis != SheetAxis.Column && row < 0 || _dragAxis != SheetAxis.Row && column < 0) return;
         var position = new CellPosition(row < 0 ? _current.Row : row, column < 0 ? _current.Column : column);
+        if (_dragAxis is null) position = CellAnchor(position);
         if (!ProtectionSafety.CanSelect(_snapshot, Sheet, position.Row, position.Column)) return;
         _addSelection = e.KeyModifiers.HasFlag(KeyModifiers.Control) || e.KeyModifiers.HasFlag(KeyModifiers.Meta);
         _dragBase = _selection.Ranges.ToArray();
@@ -171,7 +172,9 @@ public sealed partial class WorkbookGrid
         };
         if (_addSelection) { _selection.Set(_dragBase); if (initial) _selection.Toggle(range); else _selection.Add(range); }
         else _selection.Set(range);
-        _current = cell; _overlay.InvalidateVisual(); SelectionChanged?.Invoke();
+        // Keep raw hit coordinates for range expansion and header boundaries, but
+        // cell editing/navigation always belongs to the merged cell's anchor.
+        _current = _dragAxis is null ? CellAnchor(cell) : cell; _overlay.InvalidateVisual(); SelectionChanged?.Invoke();
     }
     private void PointerMove(object? sender, PointerEventArgs e)
     {
@@ -186,7 +189,7 @@ public sealed partial class WorkbookGrid
         if (!_dragging) { UpdateHover(_dragPoint); return; }
         var point = new Point(Math.Clamp(_dragPoint.X, HeaderWidth * _zoom, Math.Max(HeaderWidth * _zoom, _canvas.Bounds.Width - 1)),
             Math.Clamp(_dragPoint.Y, HeaderHeight * _zoom, Math.Max(HeaderHeight * _zoom, _canvas.Bounds.Height - 1)));
-        if (Hit(point) is { } cell && (cell != _current || _fillSource is not null || _referenceGesture)) UpdateDragSelection(cell);
+        if (Hit(point) is { } cell && ((_dragAxis is null ? CellAnchor(cell) : cell) != _current || _fillSource is not null || _referenceGesture)) UpdateDragSelection(cell);
         RequestDragFrame();
     }
     private void RequestDragFrame()

@@ -141,9 +141,9 @@ public sealed partial class WorkbookGrid : UserControl, IGridSurface, IDisposabl
         ClearDrawingObjectSelection();
         var row = _rows.NearestVisible(position.Row); var col = _columns.NearestVisible(position.Column);
         if (row < 0 || col < 0) return;
-        if (!ProtectionSafety.CanSelect(_snapshot!, Sheet, row, col)) return;
-        var merge = _merges.FirstOrDefault(m => m.Contains(row, col));
-        _current = merge == default ? new(row, col) : new(merge.Top, merge.Left);
+        var anchor = CellAnchor(new(row, col));
+        if (!ProtectionSafety.CanSelect(_snapshot!, Sheet, anchor.Row, anchor.Column)) return;
+        _current = anchor;
         if (!extend) _anchor = _current;
         var range = GridRange.Between(_anchor, _current);
         _selection.Set(GridMergedSelection.Expand(new(range.Top, range.Left, range.Bottom, range.Right), _merges));
@@ -248,6 +248,11 @@ public sealed partial class WorkbookGrid : UserControl, IGridSurface, IDisposabl
     {
         var row = _rows.HitTest(point.Y / _zoom - HeaderHeight, ViewHeight); var col = _columns.HitTest(point.X / _zoom - HeaderWidth, ViewWidth);
         return row >= 0 && col >= 0 ? new(row, col) : null;
+    }
+    private CellPosition CellAnchor(CellPosition position)
+    {
+        var range = CellRange(position);
+        return new(range.Top, range.Left);
     }
     private void InvalidateContent() { _artwork.Release(); _artwork.InvalidateVisual(); _overlay.InvalidateVisual(); PositionChartControls(); }
     public static string ColumnName(int column)

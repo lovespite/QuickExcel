@@ -89,8 +89,7 @@ public sealed class ScriptWorkbookModel
             if (values.Count != range.Bottom - range.Top + 1 || values.Any(r => r.Count != range.Right - range.Left + 1))
                 throw new ArgumentException("值矩阵必须与区域大小一致。");
             var sheet = _working.GetSheet(sheetId);
-            RejectUnsupportedValueTarget(sheet);
-            return new SetCellsCommand(Addresses(sheetId, range).Select(a => new CellEdit(a,
+            return new SetScriptCellsCommand(Addresses(sheetId, range).Select(a => new CellEdit(a,
                 CellContent.FromLiteral(values[a.Row - range.Top][a.Column - range.Left], sheet.GetStyleId(a.Row, a.Column)))));
         });
 
@@ -105,8 +104,7 @@ public sealed class ScriptWorkbookModel
                 _ = FormulaSyntax.Parse(formula);
             }
             var sheet = _working.GetSheet(sheetId);
-            RejectUnsupportedValueTarget(sheet);
-            return new SetCellsCommand(Addresses(sheetId, range).Select(a => new CellEdit(a,
+            return new SetScriptCellsCommand(Addresses(sheetId, range).Select(a => new CellEdit(a,
                 CellContent.FromFormula(formulas[a.Row - range.Top][a.Column - range.Left], sheet.GetStyleId(a.Row, a.Column)))));
         });
 
@@ -147,12 +145,6 @@ public sealed class ScriptWorkbookModel
 
     /// <summary>Transport validation failures are also fatal to the transaction, even if JS catches them.</summary>
     public void RejectWrite() => _invalid = true;
-
-    private static void RejectUnsupportedValueTarget(WorksheetSnapshot sheet)
-    {
-        if (!sheet.MergedCells.IsEmpty || sheet.Images.Any(i => i.PlaceInCell))
-            throw new InvalidOperationException("动作暂不支持写入含合并区域或单元格内图片的工作表。");
-    }
 
     internal CommandDraft Prepare(WorkbookSnapshot snapshot)
     {

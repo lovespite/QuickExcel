@@ -68,7 +68,10 @@ public sealed class SkiaTextLayout : IDisposable
                 var f = run.Font;
                 var fontRequest = new FontRequest(f?.ResolvedName ?? style.FontName ?? "Microsoft YaHei UI", f?.EastAsianName ?? style.EastAsianFontName,
                     f?.Size ?? style.FontSize ?? request.DefaultFontSize * 72 / 96, f?.Bold ?? style.Bold, f?.Italic ?? style.Italic);
-                var segments = StringInfo.GetTextElementEnumerator(run.Text);
+                // RichTextKit shapes tabs as missing glyphs. Expand only the display
+                // projection, per run, so measuring/wrapping and drawing agree while
+                // the workbook text and inherited rich-run fonts stay untouched.
+                var segments = StringInfo.GetTextElementEnumerator(run.Text.Replace("\t", "    "));
                 SKTypeface? previous = null; var buffer = new StringBuilder();
                 void Flush()
                 {

@@ -59,6 +59,7 @@ public sealed partial class MainWindow
                     Check(color.Red > 180 && color.Green < 80 && color.Blue < 80, $"Merged fill reaches frozen/scrolling quadrant at {x},{y}");
                 }
             }
+            await RunMergedCellInputChecksAsync(Check);
             _grid.Select(new(0, 0));
             Check(_grid.SelectionRanges.Single() == new GridRange(0, 0, 1, 2), "Merged selection expands without per-cell storage");
             PressKey(Key.Right); Check(_grid.Current == new CellPosition(0, 3), "Right arrow exits entire merged range");

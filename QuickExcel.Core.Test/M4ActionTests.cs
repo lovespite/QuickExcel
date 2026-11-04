@@ -244,11 +244,11 @@ public sealed class M4ActionTests
 
     [Theory]
     [InlineData(false)] [InlineData(true)]
-    public void UnsupportedMergedOrInCellImageTargetsRejectTheWholePatch(bool image)
+    public void MergedChildOrInCellImageTargetsRejectTheWholePatch(bool image)
     {
         var target = new WorksheetSnapshot(SheetId.New(), "Protected", mergedCells: image ? [] : ["A1:B1"],
-            images: image ? [new SheetImage([1], "png", 0, 0, placeInCell: true)] : []);
-        using var doc = Document("quickExcel.actions.register('A',({snapshot,patch})=>{patch.setValue(snapshot.sheets[0].id,'A1',1);patch.setValue(snapshot.sheets[1].id,'A1',2);});", Sheet("Safe"), target);
+            images: image ? [new SheetImage([1], "png", 0, 1, placeInCell: true)] : []);
+        using var doc = Document("quickExcel.actions.register('A',({snapshot,patch})=>{patch.setValue(snapshot.sheets[0].id,'A1',1);patch.setValue(snapshot.sheets[1].id,'B1',2);});", Sheet("Safe"), target);
         doc.Session.SetScriptsEnabled(true);
         Assert.Throws<ScriptRuntimeFailureException>(() => doc.RunAction("A"));
         Assert.Empty(doc.Snapshot.Sheets[0].Cells); Assert.False(doc.Session.CanUndo);

@@ -63,16 +63,13 @@ internal sealed class ApplyActionPatchCommand(ScriptActionRequest request, Scrip
             if (edit is null || (edit.Value is null) == (edit.Formula is null)) throw new InvalidOperationException("动作必须指定值或公式。");
             WorkbookLimits.ValidatePosition(edit.Address.Row, edit.Address.Column);
             var sheet = snapshot.GetSheet(edit.Address.SheetId);
-            // Actions change content, never styles, merged cells or image anchors.
-            if (!sheet.MergedCells.IsEmpty || sheet.Images.Any(i => i.PlaceInCell))
-                throw new InvalidOperationException("动作暂不支持写入含合并区域或单元格内图片的工作表。");
             var style = sheet.GetStyleId(edit.Address.Row, edit.Address.Column);
             if (edit.Formula is { } formula && (formula.Length is < 2 or > 8192 || !formula.StartsWith('=')))
                 throw new InvalidOperationException("动作公式必须以 = 开头且不超过 8192 字符。");
             if (edit.Formula is { } syntax) _ = FormulaSyntax.Parse(syntax);
             edits.Add(new(edit.Address, edit.Formula is { } f ? CellContent.FromFormula(f, style) : CellContent.FromLiteral(edit.Value!.Value, style)));
         }
-        var draft = new SetCellsCommand(edits).Prepare(package);
+        var draft = new SetScriptCellsCommand(edits).Prepare(package);
         if (ReferenceEquals(package, snapshot)) return draft;
         if (!packageChanged && modelDraft is not null)
         {

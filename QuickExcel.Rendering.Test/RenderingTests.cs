@@ -55,6 +55,49 @@ public sealed class RenderingTests
         Assert.Equal(3, rich.Runs.Length); Assert.Null(rich.Runs[0].Font);
     }
 
+    [Theory]
+    [InlineData("\t", false, false, 0)]
+    [InlineData("A\tB", false, false, 0)]
+    [InlineData("\tA\t\tB\t", false, false, 0)]
+    [InlineData("A\tB\nC\tD", false, false, 0)]
+    [InlineData("中文\tword\twrapping text", true, false, 0)]
+    [InlineData("A\tB\tC", false, true, 0)]
+    [InlineData("A\tB", false, false, 90)]
+    public void TabsRenderAsWhitespaceWithMatchingLayout(string source, bool wrap, bool shrink, int rotation)
+    {
+        using var renderer = Renderer();
+        var style = Default with { WrapText = wrap, ShrinkToFit = shrink, TextRotation = rotation };
+        var width = wrap || shrink ? 40 : 240;
+        using var actual = renderer.Layout(new(source, style, width));
+        using var expected = renderer.Layout(new(source.Replace("\t", "    "), style, width));
+        Assert.Equal(expected.Metrics, actual.Metrics);
+        Assert.Equal(RenderPixels(expected), RenderPixels(actual));
+        Assert.DoesNotContain(renderer.Diagnostics, d => d.Code == "missing-glyph");
+    }
+
+    [Fact]
+    public void TabsPreserveRichRunStylesAndOriginalText()
+    {
+        using var renderer = Renderer();
+        var rich = new RichCellText([new("A\t"), new("B\t", new(Bold: true, Color: "FFFF0000", Underline: "single")), new("C", new(Size: 8))]);
+        var expanded = new RichCellText(rich.Runs.Select(r => new TextRun(r.Text.Replace("\t", "    "), r.Font)));
+        using var actual = renderer.Layout(new(rich.Text, Default, 240, rich));
+        using var expected = renderer.Layout(new(expanded.Text, Default, 240, expanded));
+        Assert.Equal(expected.Metrics, actual.Metrics);
+        Assert.Equal(RenderPixels(expected), RenderPixels(actual));
+        Assert.Equal("A\tB\tC", rich.Text);
+        Assert.Equal(3, rich.Runs.Length);
+        Assert.Contains(actual.FontIdentities, f => f.Contains("weight=700"));
+    }
+
+    private static SKColor[] RenderPixels(SkiaTextLayout layout)
+    {
+        using var bitmap = new SKBitmap(300, 200);
+        using var canvas = new SKCanvas(bitmap);
+        canvas.Clear(SKColors.White); layout.Draw(canvas, 2, 2);
+        return bitmap.Pixels;
+    }
+
     [Fact]
     public void MissingFontsAndScalarsHaveBoundedLocatedDiagnostics()
     {
