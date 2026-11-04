@@ -36,7 +36,9 @@ public sealed class ScriptP2Tests
               c.setName('Report'); c.getTitle().setText('Totals');c.getTitle().getFormat().getFont().setBold(true);
               c.getTitle().getFormat().getFont().setColor('#123456');c.getFormat().getFill().setSolidColor('#eeeeee');
               c.getLegend().setPosition(QuickExcel.ChartLegendPosition.bottom);c.setWidth(300);c.setHeight(200);c.setPosition('E3');
+              const axis=c.getAxes().getValueAxis();axis.setMinimum(0);axis.setMaximum(10);axis.setNumberFormat('0.00');if(axis.getMaximum()!==10)throw Error('axis');
               const series=c.getSeries()[0];if(series.getName()!=='Value')throw Error('name reference');series.setName('Amount');series.getFormat().getFill().setSolidColor('#00aa00');
+              s.getRange('D1:D2').setValues([[8],[9]]);series.setValues(s.getRange('D1:D2'));
               if(c.getId()!==id||s.getChart('Report').getId()!==id||c.getWidth()!==300||series.getName()!=='Amount'||!c.getTitle().getFormat().getFont().getBold())throw Error('chart state');
             }
             """, language);
@@ -53,6 +55,8 @@ public sealed class ScriptP2Tests
               const a=r.addConditionalFormat(QuickExcel.ConditionalFormatType.cellValue),id=a.getId();
               a.getCellValue().setRule({formula1:'3',operator:QuickExcel.ConditionalCellValueOperator.greaterThan});
               a.getCellValue().getFormat().getFill().setColor('#ff0000');a.getCellValue().getFormat().getFont().setBold(true);a.setStopIfTrue(true);
+              const border=a.getCellValue().getFormat().getConditionalRangeBorder(QuickExcel.ConditionalRangeBorderIndex.edgeBottom);
+              border.setStyle(QuickExcel.ConditionalRangeBorderLineStyle.dash);border.setColor('#123456');if(border.getColor()!=='#123456')throw Error('border');
               const b=r.addConditionalFormat(QuickExcel.ConditionalFormatType.custom);b.getCustom().getRule().setFormula('=B2<2');
               b.getCustom().getFormat().getFont().setItalic(true);b.setPriority(1);
               if(a.getPriority()!==2||a.getId()!==id||r.getConditionalFormat(id).getId()!==id||r.getConditionalFormats().length!==2)throw Error('priority');
@@ -131,6 +135,17 @@ public sealed class ScriptP2Tests
         Run(doc); Assert.Single(doc.Snapshot.Sheets[0].Data.Charts); Assert.Single(doc.Snapshot.Sheets[0].Data.ConditionalFormats);
     }
 
+    [Fact]
+    public void PastedChartReceivesAnIndependentScriptIdentity()
+    {
+        var sheet = Sheet("Data", (0, 0, T("Name")), (0, 1, T("Value")), (1, 0, T("a")), (1, 1, N(1)));
+        var chart = SetChartCommand.FromRange(sheet, new(0, 0, 1, 1), WorksheetChartKind.Column, new() { Kind = DrawingAnchorKind.OneCell, Width = 4_762_500, Height = 2_857_500 });
+        var book = Book(sheet.WithData(sheet.Data with { Charts = [chart] })); using var session = new DocumentSession(book);
+        session.Execute(new PasteChartCommand(ChartClipboard.Capture(book, chart), sheet.Id, new(5, 5)));
+        var pasted = session.Snapshot.GetSheet(sheet.Id).Data.Charts[1]; Assert.NotEqual(chart.ScriptId, pasted.ScriptId);
+        Assert.True(session.Undo()); Assert.True(session.Redo()); Assert.Equal(pasted.ScriptId, session.Snapshot.GetSheet(sheet.Id).Data.Charts[1].ScriptId);
+    }
+
     [Theory]
     [InlineData("s.getRange('B1:B10001').addConditionalFormat(QuickExcel.ConditionalFormatType.custom).getCustom().getFormat().getFont().setBold(true)")]
     [InlineData("const v=s.getRange('B1:B10001').getDataValidation();v.setRule({list:{source:'a,b',inCellDropDown:true}});v.setIgnoreBlanks(false)")]
@@ -138,5 +153,41 @@ public sealed class ScriptP2Tests
     {
         using var doc = Document("function main(workbook){const s=workbook.getActiveWorksheet();" + operations + ";}");
         doc.EnableScriptsAndCalculate(); var error = Assert.ThrowsAny<Exception>(() => doc.RunAction("main")); Assert.Contains("20000", error.Message); Assert.False(doc.CanUndo);
+    }
+
+    [Theory]
+    [InlineData("s.getRange('B1').clearAllConditionalFormats()")]
+    [InlineData("s.getRange('B1').getDataValidation().clear()")]
+    public void PartialRuleRemovalNeverDeletesOutsideTheRequestedRange(string operation)
+    {
+        using var doc = Document("function main(workbook){const s=workbook.getActiveWorksheet(),r=s.getRange('B1:B3');r.addConditionalFormat(QuickExcel.ConditionalFormatType.custom);r.getDataValidation().setRule({list:{source:'a,b',inCellDropDown:true}});" + operation + ";}");
+        doc.EnableScriptsAndCalculate(); Assert.ThrowsAny<Exception>(() => doc.RunAction("main")); Assert.False(doc.CanUndo); Assert.Empty(doc.Snapshot.Sheets[0].Data.Validations); Assert.Empty(doc.Snapshot.Sheets[0].Data.ConditionalFormats);
+    }
+
+    [Theory]
+    [InlineData("s.addComment('D1','blocked')")]
+    [InlineData("s.addChart(QuickExcel.ChartType.line,s.getRange('B1:C2'))")]
+    public void ObjectProtectionCannotBeBypassedThroughTheScriptModel(string operation)
+    {
+        using var doc = Document("function main(workbook){const s=workbook.getActiveWorksheet();s.getRange('B1:C2').setValues([['x','y'],[1,2]]);s.getProtection().protect();" + operation + ";}");
+        doc.EnableScriptsAndCalculate(); Assert.ThrowsAny<Exception>(() => doc.RunAction("main")); Assert.False(doc.CanUndo); Assert.Null(doc.Snapshot.Sheets[0].Data.Protection);
+    }
+
+    [Fact]
+    public void TextConditionalRulesAndMultipleSheetCommentsSaveWithoutLosingNotes()
+    {
+        using var doc = Document("""
+            function main(workbook){const s=workbook.getActiveWorksheet(),r=s.getRange('B1:B2');r.setValues([['prefix'],['other']]);
+              const f=r.addConditionalFormat(QuickExcel.ConditionalFormatType.containsText).getTextComparison();
+              f.setRule({operator:QuickExcel.ConditionalTextOperator.beginsWith,text:'pre'});f.getFormat().getFont().setColor('#123456');
+              s.addComment('D1','sheet one');
+            }
+            """);
+        Run(doc); var second = Sheet("Other");
+        var original = doc.Snapshot; var snapshot = original.WithSheets(original.Sheets.Add(second.WithData(second.Data with {
+            ThreadComments = [new WorksheetComment(Guid.NewGuid(), new(0, 3), "sheet two", "Local", DateTimeOffset.UtcNow, Guid.NewGuid())] })));
+        var reopened = Reopen(snapshot); Assert.Equal(2, reopened.Sheets.Sum(s => s.Data.ThreadComments.Length)); Assert.Equal(ConditionalFormatKind.BeginsWith, reopened.Sheets[0].Data.ConditionalFormats[0].Kind);
+        var path = Path.Combine(AppContext.BaseDirectory, "p2", Guid.NewGuid() + ".xlsx"); new TypedWorkbookStorage().ExportPortable(path, snapshot);
+        Assert.Equal(2, new TypedWorkbookStorage().Open(path).Sheets.Sum(s => s.Data.ThreadComments.Length));
     }
 }

@@ -6,13 +6,14 @@ namespace QuickExcel.Core.Test;
 
 public sealed class PivotReportTests
 {
-    internal static WorkbookSnapshot SourceBook()
+    internal static WorkbookSnapshot SourceBook(bool extended = false)
     {
         object?[][] values=[["Region","Product","Amount"],["North","A",10d],["South","A",20d],["North","B",5d],
             ["South","B",0d],["North","A",7d],["South","A","text"],["East","B",-3d],["East","A",null]];
+        if (extended) values=[..values,["South","C","123"],["North","C",true],["East","C",null]];
         var cells=values.SelectMany((row,r)=>row.Select((v,c)=>KeyValuePair.Create(new CellPosition(r,c),new CellSnapshot(CellContent.FromLiteral(
-            v is double number ? CellValue.FromNumber(number) : v is string text ? CellValue.FromText(text) : CellValue.Blank)))));
-        var data=new WorksheetSnapshot(SheetId.New(),"Data",cells,data:new() { Tables=[new(1,"SalesData",new(0,0,8,2),[new(1,"Region"),new(2,"Product"),new(3,"Amount")])] });
+            v is double number ? CellValue.FromNumber(number) : v is string text ? CellValue.FromText(text) : v is bool boolean ? CellValue.FromBoolean(boolean) : CellValue.Blank)))));
+        var data=new WorksheetSnapshot(SheetId.New(),"Data",cells,data:new() { Tables=[new(1,"SalesData",new(0,0,values.Length-1,2),[new(1,"Region"),new(2,"Product"),new(3,"Amount")])] });
         return new(Guid.NewGuid(),0,ExcelDateSystem.Windows1900,[data,new(SheetId.New(),"Summary")]);
     }
     private static PivotSource Source => new("Data",new(0,0,8,2),"SalesData");

@@ -1,0 +1,160 @@
+{
+  "Version": "16.0",
+  "Build": "20527",
+  "Language": 2052,
+  "SpecSha256": "BA5548FA4888E738D28CE4FD52F9BC3C43D1E9545DDEF54DC41C05FDAA925E40",
+  "WorkbookSha256": "1B56B1CDB794E819E646F847E252ED0A1657D363D5F8FB4FE982C7F3A7EBDAF9",
+  "NormalReopen": true,
+  "Cases": [
+    {
+      "Function": "LARGE",
+      "Count": 0,
+      "Accepted": false,
+      "Formula": "=LARGE()",
+      "Rejection": "0x800A03EC",
+      "ExpectedAccepted": false,
+      "Matches": true,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "LARGE",
+      "Count": 1,
+      "Accepted": false,
+      "Formula": "=LARGE(1)",
+      "Rejection": "0x800A03EC",
+      "ExpectedAccepted": false,
+      "Matches": true,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "LARGE",
+      "Count": 2,
+      "Accepted": true,
+      "Formula": "=LARGE(1,1)",
+      "Rejection": null,
+      "ExpectedAccepted": true,
+      "Matches": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "LARGE",
+      "Count": 3,
+      "Accepted": false,
+      "Formula": "=LARGE(1,1,1)",
+      "Rejection": "0x800A03EC",
+      "ExpectedAccepted": false,
+      "Matches": true,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "LARGE",
+      "Count": 4,
+      "Accepted": false,
+      "Formula": "=LARGE(1,1,1,1)",
+      "Rejection": "0x800A03EC",
+      "ExpectedAccepted": false,
+      "Matches": true,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "SMALL",
+      "Count": 0,
+      "Accepted": false,
+      "Formula": "=SMALL()",
+      "Rejection": "0x800A03EC",
+      "ExpectedAccepted": false,
+      "Matches": true,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "SMALL",
+      "Count": 1,
+      "Accepted": false,
+      "Formula": "=SMALL(1)",
+      "Rejection": "0x800A03EC",
+      "ExpectedAccepted": false,
+      "Matches": true,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "SMALL",
+      "Count": 2,
+      "Accepted": true,
+      "Formula": "=SMALL(1,1)",
+      "Rejection": null,
+      "ExpectedAccepted": true,
+      "Matches": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "SMALL",
+      "Count": 3,
+      "Accepted": false,
+      "Formula": "=SMALL(1,1,1)",
+      "Rejection": "0x800A03EC",
+      "ExpectedAccepted": false,
+      "Matches": true,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "SMALL",
+      "Count": 4,
+      "Accepted": false,
+      "Formula": "=SMALL(1,1,1,1)",
+      "Rejection": "0x800A03EC",
+      "ExpectedAccepted": false,
+      "Matches": true,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "RANK.EQ",
+      "Count": 0,
+      "Accepted": false,
+      "Formula": "=RANK.EQ()",
+      "Rejection": "0x800A03EC",
+      "ExpectedAccepted": false,
+      "Matches": true,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "RANK.EQ",
+      "Count": 1,
+      "Accepted": false,
+      "Formula": "=RANK.EQ(1)",
+      "Rejection": "0x800A03EC",
+      "ExpectedAccepted": false,
+      "Matches": true,
+      "ProductAccepted": false
+    },
+    {
+      "Function": "RANK.EQ",
+      "Count": 2,
+      "Accepted": true,
+      "Formula": "=RANK.EQ(1,B1)",
+      "Rejection": null,
+      "ExpectedAccepted": true,
+      "Matches": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "RANK.EQ",
+      "Count": 3,
+      "Accepted": true,
+      "Formula": "=RANK.EQ(1,B1,1)",
+      "Rejection": null,
+      "ExpectedAccepted": true,
+      "Matches": true,
+      "ProductAccepted": true
+    },
+    {
+      "Function": "RANK.EQ",
+      "Count": 4,
+      "Accepted": false,
+      "Formula": "=RANK.EQ(1,B1,1,1)",
+      "Rejection": "0x800A03EC",
+      "ExpectedAccepted": false,
+      "Matches": true,
+      "ProductAccepted": false
+    }
+  ]
+}

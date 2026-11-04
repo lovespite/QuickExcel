@@ -2,15 +2,15 @@ using QuickExcel.Domain;
 
 namespace QuickExcel.Core;
 
-/// <summary>Opaque threaded comments stay attached to their original cells; content edits do not authorize moving or flattening them.</summary>
+/// <summary>Threaded comments stay attached to their cells; content edits never authorize moving or flattening discussions.</summary>
 public static class ExtendedObjectSafety
 {
     public const string ThreadedComments = "worksheet/threadedComments";
-    private const string Message = "线程评论及回复仅支持原位保留；尚不支持结构移动、复制或编辑旧版批注副本，请在 Excel 中执行该操作。";
+    private const string Message = "线程评论及回复尚不支持结构移动或复制；含旧版显示副本的讨论只支持原位保留，请在 Excel 中执行该操作。";
     private static bool Present(WorkbookSnapshot snapshot) => snapshot.Sheets.Any(s => !s.Data.ThreadComments.IsEmpty) || snapshot.FileState?.PreservedAttachments.Any(a => a.Feature == ThreadedComments) == true;
     public static void ValidateRetention(WorkbookSnapshot snapshot)
     {
-        if (!Present(snapshot) || snapshot.FileState is null) return;
+        if (snapshot.FileState?.PreservedAttachments.Any(a => a.Feature == ThreadedComments) != true) return;
         var original = snapshot.FileState!.OriginalModel;
         if (!snapshot.Sheets.Select(s => (s.Id, s.Name)).SequenceEqual(original.Sheets.Select(s => (s.Id, s.Name))))
             throw new NotSupportedException(Message);

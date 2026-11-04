@@ -75,9 +75,13 @@ public static class PivotReport
         {
             if (value.Kind == CellValueKind.Blank) return;
             var current=sums.GetValueOrDefault((row,column));
-            var sum=current.Sum + (value.Kind == CellValueKind.Number ? value.NumberValue : 0);
-            if (!double.IsFinite(sum)) throw new InvalidOperationException("透视求和超出有限数值范围。");
-            sums[(row,column)]=new(sum,current.Count+1);
+            var numeric=value.Kind == CellValueKind.Number;
+            var number=numeric ? value.NumberValue : 0;
+            var sum=aggregation is PivotAggregation.Sum or PivotAggregation.Average ? current.Sum+number : 0;
+            if (!double.IsFinite(sum)) throw new InvalidOperationException("透视汇总超出有限数值范围。");
+            sums[(row,column)]=new(sum,current.Count+1,current.NumericCount+(numeric ? 1 : 0),
+                numeric ? current.NumericCount==0 ? number : Math.Min(current.Min,number) : current.Min,
+                numeric ? current.NumericCount==0 ? number : Math.Max(current.Max,number) : current.Max);
         }
         foreach (var record in cache.Records)
         {
@@ -102,12 +106,20 @@ public static class PivotReport
         {
             if (columnField is null && key.Column == -1) continue;
             Put(key.Row == -1 ? height-1 : headers+key.Row,key.Column == -1 ? width-1 : key.Column+1,
-                CellValue.FromNumber(aggregation == PivotAggregation.Sum ? value.Sum : value.Count));
+                aggregation switch
+                {
+                    PivotAggregation.Sum=>CellValue.FromNumber(value.Sum),
+                    PivotAggregation.Count=>CellValue.FromNumber(value.Count),
+                    PivotAggregation.Average=>value.NumericCount==0 ? CellInput.FromErrorText("#DIV/0!") : CellValue.FromNumber(value.Sum/value.NumericCount),
+                    PivotAggregation.Min=>CellValue.FromNumber(value.Min),
+                    PivotAggregation.Max=>CellValue.FromNumber(value.Max),
+                    _=>throw new ArgumentOutOfRangeException(nameof(aggregation))
+                });
         }
         return new(range,cells.ToImmutable(),rowItems,columnItems);
     }
 
-    private readonly record struct Aggregate(double Sum,int Count);
+    private readonly record struct Aggregate(double Sum,int Count,int NumericCount,double Min,double Max);
     private sealed class KeyComparer : IEqualityComparer<CellValue>, IComparer<CellValue>
     {
         public bool Equals(CellValue x,CellValue y) => x.Kind == CellValueKind.Text && y.Kind == CellValueKind.Text

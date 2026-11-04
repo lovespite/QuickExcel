@@ -1396,6 +1396,12 @@
           "host": "getApi:Chart.getFormat",
           "arity": 2,
           "cost": 100000
+        },
+        "getAxes": {
+          "arity": 2,
+          "cost": 100000,
+          "kind": "host",
+          "host": "getApi:Chart.getAxes"
         }
       }
     },
@@ -1522,6 +1528,18 @@
           "host": "getApi:ChartSeries.getFormat",
           "arity": 2,
           "cost": 100000
+        },
+        "setValues": {
+          "arity": 2,
+          "cost": 20000,
+          "kind": "host",
+          "host": "setApi:ChartSeries.setValues"
+        },
+        "setXAxisValues": {
+          "arity": 2,
+          "cost": 20000,
+          "kind": "host",
+          "host": "setApi:ChartSeries.setXAxisValues"
         }
       }
     },
@@ -1862,6 +1880,42 @@
           "host": "setApi:ConditionalRangeFormat.clearFormat",
           "arity": 2,
           "cost": 20000
+        },
+        "getBorders": {
+          "arity": 2,
+          "cost": 100000,
+          "kind": "host",
+          "host": "getApi:ConditionalRangeFormat.getBorders"
+        },
+        "getConditionalRangeBorderTop": {
+          "arity": 2,
+          "cost": 100000,
+          "kind": "host",
+          "host": "getApi:ConditionalRangeFormat.getConditionalRangeBorderTop"
+        },
+        "getConditionalRangeBorderBottom": {
+          "arity": 2,
+          "cost": 100000,
+          "kind": "host",
+          "host": "getApi:ConditionalRangeFormat.getConditionalRangeBorderBottom"
+        },
+        "getConditionalRangeBorderLeft": {
+          "arity": 2,
+          "cost": 100000,
+          "kind": "host",
+          "host": "getApi:ConditionalRangeFormat.getConditionalRangeBorderLeft"
+        },
+        "getConditionalRangeBorderRight": {
+          "arity": 2,
+          "cost": 100000,
+          "kind": "host",
+          "host": "getApi:ConditionalRangeFormat.getConditionalRangeBorderRight"
+        },
+        "getConditionalRangeBorder": {
+          "arity": 2,
+          "cost": 100000,
+          "kind": "host",
+          "host": "getApi:ConditionalRangeFormat.getConditionalRangeBorder"
         }
       }
     },
@@ -2102,6 +2156,96 @@
           "cost": 100000
         }
       }
+    },
+    "ConditionalRangeBorder": {
+      "members": {
+        "getColor": {
+          "arity": 2,
+          "cost": 100000,
+          "kind": "host",
+          "host": "getApi:ConditionalRangeBorder.getColor"
+        },
+        "getSideIndex": {
+          "arity": 2,
+          "cost": 100000,
+          "kind": "host",
+          "host": "getApi:ConditionalRangeBorder.getSideIndex"
+        },
+        "setColor": {
+          "arity": 2,
+          "cost": 20000,
+          "kind": "host",
+          "host": "setApi:ConditionalRangeBorder.setColor"
+        },
+        "getStyle": {
+          "arity": 2,
+          "cost": 100000,
+          "kind": "host",
+          "host": "getApi:ConditionalRangeBorder.getStyle"
+        },
+        "setStyle": {
+          "arity": 2,
+          "cost": 20000,
+          "kind": "host",
+          "host": "setApi:ConditionalRangeBorder.setStyle"
+        }
+      }
+    },
+    "ChartAxes": {
+      "members": {
+        "getValueAxis": {
+          "arity": 2,
+          "cost": 100000,
+          "kind": "host",
+          "host": "getApi:ChartAxes.getValueAxis"
+        },
+        "getCategoryAxis": {
+          "arity": 2,
+          "cost": 100000,
+          "kind": "host",
+          "host": "getApi:ChartAxes.getCategoryAxis"
+        }
+      }
+    },
+    "ChartAxis": {
+      "members": {
+        "getNumberFormat": {
+          "arity": 2,
+          "cost": 100000,
+          "kind": "host",
+          "host": "getApi:ChartAxis.getNumberFormat"
+        },
+        "getMaximum": {
+          "arity": 2,
+          "cost": 100000,
+          "kind": "host",
+          "host": "getApi:ChartAxis.getMaximum"
+        },
+        "setMinimum": {
+          "arity": 2,
+          "cost": 20000,
+          "kind": "host",
+          "host": "setApi:ChartAxis.setMinimum"
+        },
+        "setNumberFormat": {
+          "arity": 2,
+          "cost": 20000,
+          "kind": "host",
+          "host": "setApi:ChartAxis.setNumberFormat"
+        },
+        "setMaximum": {
+          "arity": 2,
+          "cost": 20000,
+          "kind": "host",
+          "host": "setApi:ChartAxis.setMaximum"
+        },
+        "getMinimum": {
+          "arity": 2,
+          "cost": 100000,
+          "kind": "host",
+          "host": "getApi:ChartAxis.getMinimum"
+        }
+      }
     }
   },
   "enums": [
@@ -2132,7 +2276,9 @@
     "DataValidationType",
     "DataValidationOperator",
     "DataValidationAlertStyle",
-    "ContentType"
+    "ContentType",
+    "ConditionalRangeBorderIndex",
+    "ConditionalRangeBorderLineStyle"
   ],
   "limits": {
     "rows": 200000,

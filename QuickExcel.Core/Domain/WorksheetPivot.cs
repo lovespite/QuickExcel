@@ -2,7 +2,7 @@ using System.Collections.Immutable;
 
 namespace QuickExcel.Domain;
 
-public enum PivotAggregation { Sum, Count }
+public enum PivotAggregation { Sum, Count, Average, Min, Max }
 
 /// <summary>Workbook-local source. Range includes headers; table sources resolve the current table extent.</summary>
 public sealed record PivotSource(string Sheet, CellRectangle Range, string? TableName = null);
@@ -42,7 +42,7 @@ public sealed class PivotCache
         Records.Zip(other.Records).All(p => p.First.SequenceEqual(p.Second));
 }
 
-/// <summary>Basic tabular report: one row field, optional column field, one sum/count measure, both grand totals.</summary>
+/// <summary>Basic tabular report: one row field, optional column field, one measure, both grand totals.</summary>
 public sealed class WorksheetPivot
 {
     public WorksheetPivot(string name, PivotSource source, CellRectangle range, PivotCache cache, int rowField, int? columnField,

@@ -63,7 +63,24 @@ internal sealed partial class ScriptModelAdapter
         }
         if ((type is "CustomConditionalFormat" or "ConditionalFormatRule") && rule.Kind != ConditionalFormatKind.Expression || type == "CellValueConditionalFormat" && rule.Kind != ConditionalFormatKind.CellIs || type == "PresetCriteriaConditionalFormat" && rule.Kind is not (ConditionalFormatKind.DuplicateValues or ConditionalFormatKind.UniqueValues) || type == "TextConditionalFormat" && rule.Kind < ConditionalFormatKind.ContainsText)
             throw new ModelFailure("InvalidReference", "条件格式规则类型已改变。");
+        if (type == "ConditionalRangeFormat" && (member == "getBorders" || member.StartsWith("getConditionalRangeBorder")))
+        {
+            Arity(args, member == "getConditionalRangeBorder" ? 1 : 0);
+            object Border(int side) => Handle("ConditionalRangeBorder", new { sheetId = sheet.Id.ToString(), conditionalId = rule.ScriptId.ToString(), side });
+            if (member == "getBorders") return Enumerable.Range(0, 4).Select(Border).ToArray();
+            var side = member switch { "getConditionalRangeBorderTop" => 0, "getConditionalRangeBorderBottom" => 1, "getConditionalRangeBorderLeft" => 2, "getConditionalRangeBorderRight" => 3, _ => Int(args[0]) };
+            if (side is < 0 or > 3) throw Invalid("条件边框方向无效。"); return Border(side);
+        }
         Arity(args, member.StartsWith("set") ? 1 : 0); Spend(1, false);
+        if (type == "ConditionalRangeBorder")
+        {
+            var side = Int(data.GetProperty("side")); var border = (side switch { 0 => rule.Style.Top, 1 => rule.Style.Bottom, 2 => rule.Style.Left, _ => rule.Style.Right }) ?? new TableBorder(0, null);
+            if (member == "getSideIndex") return side;
+            if (member == "getColor") return Rgb(border.Color);
+            if (member == "getStyle") return EnumNumber("ConditionalRangeBorderLineStyle", border.Style switch { 0 => "none", 1 or 2 or 5 or 7 => "continuous", 3 => "dash", 4 => "dot", _ => throw Unsupported("此已导入线型不在条件边框枚举中。") });
+            var next = member switch { "setColor" => border with { Color = Argb(args[0]) }, "setStyle" => border with { Style = EnumName("ConditionalRangeBorderLineStyle", args[0]) switch { "none" => 0, "continuous" => 1, "dash" => 3, "dot" => 4, _ => throw Unsupported("此线型尚未建模。") } }, _ => throw Unsupported(member) };
+            Save(Copy(side switch { 0 => rule.Style with { Top = next }, 1 => rule.Style with { Bottom = next }, 2 => rule.Style with { Left = next }, _ => rule.Style with { Right = next } })); return null;
+        }
         if (member == "getFormat") return Child("ConditionalRangeFormat");
         if (member == "getFont") return Child("ConditionalRangeFont");
         if (member == "getFill") return Child("ConditionalRangeFill");

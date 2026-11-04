@@ -209,9 +209,13 @@ internal static partial class XlsxPivots
         }
         var row=Axis("rowFields",true)!.Value; var column=Axis("colFields",false);
         var data=RequiredChild(root,"dataFields"); Shape(data,"dataField","count"); var measures=Items(data,"dataField",128);
-        if (measures.Length!=1) throw new NotSupportedException("仅支持单个求和或计数度量。");
+        if (measures.Length!=1) throw new NotSupportedException("仅支持单个汇总度量。");
         var measure=measures[0]; Shape(measure,"","name fld subtotal baseField baseItem");
-        var aggregation=(string?)measure.Attribute("subtotal") switch {null or "sum"=>PivotAggregation.Sum,"count"=>PivotAggregation.Count,_=>throw new NotSupportedException("此汇总函数尚未支持。")};
+        var aggregation=(string?)measure.Attribute("subtotal") switch
+        {
+            null or "sum"=>PivotAggregation.Sum, "count"=>PivotAggregation.Count, "average"=>PivotAggregation.Average,
+            "min"=>PivotAggregation.Min, "max"=>PivotAggregation.Max, _=>throw new NotSupportedException("此汇总函数尚未支持。")
+        };
         var field=Int(Attr(measure,"fld"),cache.Fields.Length-1); var caption=Decode(Attr(measure,"name"));
         var grand=(string?)root.Attribute("grandTotalCaption") ?? (sheet.GetCell(range.Bottom,range.Left)?.Value is {Kind:CellValueKind.Text} label ? label.TextValue : "总计");
         var output=PivotReport.Build(cache,new(range.Top,range.Left),row,column,field,aggregation,caption,grand);

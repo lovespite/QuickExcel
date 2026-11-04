@@ -16,6 +16,7 @@ public static class FormulaBinding
         ConditionalRanges.ValidateModes(bound);
         LookupModes.Validate(bound, arrayContext);
         DateMathFunctions.Validate(bound);
+        OrderStatisticFunctions.Validate(bound);
         TextFunctions.Validate(bound, snapshot, arrayContext);
         if (!arrayContext && !DynamicArrayFunctions.UsesArrays(bound)) ScalarFormulaModes.Validate(bound);
         return bound;
@@ -129,6 +130,7 @@ public static class StandardFunctions
             ["SEQUENCE"] = (1, 4), ["FILTER"] = (2, 3), ["SORT"] = (1, 4), ["UNIQUE"] = (1, 3),
             ["LET"] = (3, 253), ["OFFSET"] = (3, 5), ["INDIRECT"] = (1, 2),
             ["VAR.S"] = (1, 254), ["VAR.P"] = (1, 254), ["STDEV.S"] = (1, 254), ["STDEV.P"] = (1, 254), ["MEDIAN"] = (1, 255),
+            ["LARGE"] = (2, 2), ["SMALL"] = (2, 2), ["RANK.EQ"] = (2, 3),
             ["COUNT"] = (1, 255), ["COUNTA"] = (1, 255), ["PRODUCT"] = (1, 255),
             ["SUBTOTAL"] = (2, 255),
             ["SUMIF"] = (2, 3), ["SUMIFS"] = (3, 255), ["COUNTIF"] = (2, 2), ["COUNTIFS"] = (2, 254),

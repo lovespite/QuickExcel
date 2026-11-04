@@ -7,7 +7,7 @@ using static QuickExcel.Storage.XlsxPackage;
 
 namespace QuickExcel.Storage;
 
-/// <summary>Validated opaque local thread bundles. Never connects, looks up people or sends notifications.</summary>
+/// <summary>Validated local plain-text threads, with opaque fallback retention. Never connects, looks up people or sends notifications.</summary>
 internal static partial class XlsxThreadedComments
 {
     internal static readonly XNamespace Thread = "http://schemas.microsoft.com/office/spreadsheetml/2018/threadedcomments";
@@ -83,7 +83,7 @@ internal static partial class XlsxThreadedComments
         if (package.PreservedAttachments.Count + roots.Count > 4096) throw new InvalidDataException("工作簿线程评论锚点超过 4096。");
         package.PreservedAttachments.AddRange(roots.Keys.Select(p => new PreservedCellAttachment(ExtendedObjectSafety.ThreadedComments, sheetName, p)));
         package.Notice(new("xlsx.threaded-comments-preserved", CompatibilityKind.PreservedOnly, ExtendedObjectSafety.ThreadedComments,
-            "线程评论、回复及作者关联按原位保留；只读显示旧版副本，不发送通知，不支持移动或编辑讨论。", path, sheetName));
+            "纯文本线程评论、回复及作者关联已建模；含旧版显示副本的讨论只读原位保留，不发送通知，不支持移动或复制。", path, sheetName));
         var authorsById = people.Elements().ToDictionary(p => Identity(p.Attribute("id")));
         var models = comments.Elements().Select(c =>
         {

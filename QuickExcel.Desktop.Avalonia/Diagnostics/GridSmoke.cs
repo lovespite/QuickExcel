@@ -128,6 +128,24 @@ public sealed partial class MainWindow
             Check(new TypedWorkbookStorage().Open(pivotPath).Sheets[0].Data.Pivots.Single().Name=="GridPivot","Native pivot workbook saves and reopens with definition and cache");
             _dialogDriver=window=>{window.GetVisualDescendants().OfType<Button>().Single(b=>b.Content?.ToString()=="确定").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));return Task.CompletedTask;}; await ConvertPivotToValuesAsync();
             Check(CurrentPivot is null && Document.GetCellValue(0,14,12)=="34","Converting pivot to values keeps displayed report");
+            foreach (var (aggregation,index,expected) in new[] {(PivotAggregation.Average,2,6.8),(PivotAggregation.Min,3,-3d),(PivotAggregation.Max,4,20d)})
+            {
+                _grid.Select(new(39,9));
+                _dialogDriver=window=>
+                {
+                    var dialog=(FieldsDialog)window;
+                    ((ComboBox)dialog.Input("column")).SelectedIndex=2;
+                    ((ComboBox)dialog.Input("function")).SelectedIndex=index;
+                    ((TextBox)dialog.Input("name")).Text="Grid"+aggregation;
+                    dialog.Validate!(); window.Close(true); return Task.CompletedTask;
+                };
+                await CreatePivotAsync();
+                var report=CurrentPivot!;
+                Check(report.Aggregation==aggregation && Document.Snapshot.GetSheet(id).GetCell(report.Range.Bottom,report.Range.Right)!.Value==CellValue.FromNumber(expected),
+                    $"Native pivot dialog routes {aggregation} and computes grand total from source records");
+                await History(false);
+                Check(!Document.Snapshot.GetSheet(id).Data.Pivots.Any(),$"Undo removes the complete {aggregation} report");
+            }
             var validation = new WorksheetValidation([new(20, 0, 20, 0)], ValidationKind.Whole, "=1", "=5", alert: ValidationAlert.Warning);
             await ExecuteAsync(new SetValidationCommand(id, validation)); _grid.Select(new(20, 0)); _grid.BeginEdit(); _grid.CellEditor.Text = "9";
             var answer = new TaskCompletionSource<bool>(); _validationChoice = _ => answer.Task;

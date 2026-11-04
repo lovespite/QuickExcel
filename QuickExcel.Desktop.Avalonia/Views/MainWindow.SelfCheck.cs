@@ -6,6 +6,7 @@ using QuickExcel.Domain;
 using QuickExcel.Infrastructure.Web;
 using QuickExcel.Presentation;
 using QuickExcel.Runtime;
+using QuickExcel.Storage;
 
 namespace QuickExcel.Desktop.Avalonia;
 
@@ -49,6 +50,11 @@ public sealed partial class MainWindow
                       table.getSort().apply([{key:1}]);
                       table.getAutoFilter().apply(table.getRange(),1,{filterOn:QuickExcel.FilterOn.values,values:['1']});
                       if(!table.getAutoFilter().getIsDataFiltered()||table.getRangeBetweenHeaderAndTotal().getValues()[0][1]!==1)throw Error('P1 verification');
+                      const chart=sheet.addChart(QuickExcel.ChartType.columnClustered,range);chart.setName('InstallChart');chart.getTitle().setText('Installation');
+                      const conditional=sheet.getRange('C2:C3').addConditionalFormat(QuickExcel.ConditionalFormatType.custom);
+                      conditional.getCustom()!.getRule().setFormula('=C2>0');conditional.getCustom()!.getFormat().getFont().setBold(true);
+                      sheet.getRange('E1:E2').getDataValidation().setRule({list:{source:'yes,no',inCellDropDown:true}});
+                      const comment=sheet.addComment('F1','Installation check');comment.addCommentReply('Verified');comment.setResolved(true);
                     }
                     """, ScriptLanguage.TypeScript) }, ["main"], scriptApiVersion: 3, bindings: [new("main", "actions")]);
                 _workspace.Editor.Execute(new UpdateScriptModulesCommand(action));
@@ -62,6 +68,13 @@ public sealed partial class MainWindow
                 Check(Document.Snapshot.ScriptModules.ScriptApiVersion == 3 && Document.GetCellValue(0, 1, 2) == "1" &&
                     Document.Snapshot.Styles[Document.Snapshot.Sheets[0].GetStyleId(1, 2)].Bold,
                     "Published API v3 enums, formatting, table, sort and filter transaction");
+                var objectSheet = Document.Snapshot.Sheets[0];
+                Check(objectSheet.Data.Charts.Length == 1 && objectSheet.Data.ConditionalFormats.Length == 1 && objectSheet.Data.Validations.Length == 1 &&
+                    objectSheet.Data.ThreadComments.Length == 2, "Published P2 chart, conditional format, validation and threaded comment transaction");
+                var objectFile = Path.Combine(directory, "p2-objects.xlsq"); var objectSnapshot = Document.Snapshot;
+                var reopened = await Task.Run(() => { var storage = new TypedWorkbookStorage(); storage.Save(objectFile, objectSnapshot); return storage.Open(objectFile); });
+                Check(reopened.Sheets[0].Data.ThreadComments.Length == 2 && reopened.Sheets[0].Data.Charts[0].Name == "InstallChart",
+                    "Published P2 object save/reopen");
                 Check(Document.Undo(), "Published API v3 action undo");
             }
             await OpenPrintPreviewAsync(); Check(_pdfPage!.Browser.IsReady && _printSession!.Job.Layout.Pages.Length > 0, "Production PDF.js worker and complete print-session PDF");

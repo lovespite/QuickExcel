@@ -26,6 +26,7 @@ public sealed class SetScriptCommentsCommand(SheetId sheetId, IEnumerable<Worksh
         if (comments.IsDefault || comments.Length > 4096 || comments.Select(c => c.Id).Distinct().Count() != comments.Length || comments.Sum(c => (long)c.Content.Length * 2) > 4 * 1024 * 1024)
             throw new ArgumentException("线程评论数量或容量超限。");
         var ids = comments.ToDictionary(c => c.Id);
+        if (comments.GroupBy(c => c.PersonId).Any(g => g.Select(c => (c.Author, c.UserId, c.ProviderId)).Distinct().Count() != 1)) throw new ArgumentException("同一作者 ID 的身份字段不一致。");
         foreach (var c in comments)
         {
             WorkbookLimits.ValidatePosition(c.Position.Row, c.Position.Column); WorkbookLimits.ValidateText(c.Content);
@@ -42,6 +43,8 @@ public sealed class SetScriptValidationCommand(SheetId sheetId, CellRectangle ra
 {
     internal override CommandDraft Prepare(WorkbookSnapshot snapshot)
     {
+        if (snapshot.FileState?.CompatibilityDiagnostics.Any(d => d.Feature.Contains("dataValidation", StringComparison.OrdinalIgnoreCase)) == true)
+            throw new NotSupportedException("工作簿含未建模的数据验证，不能覆盖其规则。");
         var sheet = snapshot.GetSheet(sheetId);
         bool Inside(CellRectangle r) => range.Contains(r.Top, r.Left) && range.Contains(r.Bottom, r.Right);
         var overlaps = sheet.Data.Validations.Where(v => v.Ranges.Any(r => ValidationSafety.Overlaps(r, range))).ToArray();

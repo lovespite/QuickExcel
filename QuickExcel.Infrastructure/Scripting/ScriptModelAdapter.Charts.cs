@@ -68,7 +68,7 @@ internal sealed partial class ScriptModelAdapter
                 "getId" => chart.ScriptId.ToString(), "getName" => chart.Name, "getChartType" => ChartType(chart.Kind), "getPlotVisibleOnly" => chart.VisibleOnly,
                 "getLeft" => bounds.X * .75, "getTop" => bounds.Y * .75, "getWidth" => bounds.Width * .75, "getHeight" => bounds.Height * .75,
                 "getWorksheet" => Handle("Worksheet", new { sheetId = sheet.Id.ToString() }), "getTitle" => Child("ChartTitle", "title"), "getLegend" => Child("ChartLegend", "legend"),
-                "getFormat" => Child("ChartAreaFormat", "area"), "getSeries" => chart.Series.Select(s => Child("ChartSeries", "series", s)).ToArray(), _ => throw Unsupported(member)
+                "getFormat" => Child("ChartAreaFormat", "area"), "getAxes" => Child("ChartAxes"), "getSeries" => chart.Series.Select(s => Child("ChartSeries", "series", s)).ToArray(), _ => throw Unsupported(member)
             };
             if (member == "setName" && (string.IsNullOrWhiteSpace(Text(args[0])) || sheet.Data.Charts.Any(c => c != chart && c.Name.Equals(Text(args[0]), StringComparison.OrdinalIgnoreCase)))) throw Invalid("图表名称为空或重复。");
             var updated = member switch
@@ -85,6 +85,13 @@ internal sealed partial class ScriptModelAdapter
         if (type == "ChartSeries")
         {
             if (series is null) throw Invalid("缺少系列身份。");
+            if (member is "setValues" or "setXAxisValues")
+            {
+                Arity(args, 1); var source = Address(args[0], sheet.Id); Spend(checked((int)source.Count), false);
+                if (source.Rows != 1 && source.Columns != 1) throw Invalid("系列数据需要单行或单列区域。");
+                var updated = member == "setValues" ? series with { Values = Reference(sheet, source) } : series with { Categories = Reference(sheet, source) };
+                WriteRules(sheet, [source], new SetChartCommand(sheet.Id, index, chart with { Series = chart.Series.Replace(series, updated) })); return null;
+            }
             Arity(args, member.StartsWith("set") ? 1 : 0); Spend(1, false);
             if (member.StartsWith("get")) return member switch
             {
@@ -101,6 +108,18 @@ internal sealed partial class ScriptModelAdapter
             Save(chart with { Series = chart.Series.Replace(series, next) }); return null;
         }
         Arity(args, member.StartsWith("set") ? 1 : 0); Spend(1, false);
+        if (type is "ChartAxes" or "ChartAxis")
+        {
+            if (chart.Kind is WorksheetChartKind.Pie or WorksheetChartKind.Funnel) throw Unsupported("此图表类型没有坐标轴。");
+            if (type == "ChartAxes") return member switch { "getCategoryAxis" => Child("ChartAxis", "categoryAxis"), "getValueAxis" => Child("ChartAxis", "valueAxis"), _ => throw Unsupported(member) };
+            var category = part == "categoryAxis";
+            if (category && chart.Kind != WorksheetChartKind.Scatter) throw Unsupported("分类轴刻度和数字格式仅用于散点图数值 X 轴。");
+            if (member.StartsWith("get")) return member switch { "getMinimum" => category ? chart.XMinimum : chart.Minimum, "getMaximum" => category ? chart.XMaximum : chart.Maximum, "getNumberFormat" => category ? chart.XNumberFormat : chart.NumberFormat, _ => throw Unsupported(member) };
+            Save(member switch {
+                "setMinimum" => category ? chart with { XMinimum = Number(args[0]) } : chart with { Minimum = Number(args[0]) },
+                "setMaximum" => category ? chart with { XMaximum = Number(args[0]) } : chart with { Maximum = Number(args[0]) },
+                "setNumberFormat" => category ? chart with { XNumberFormat = FormatCode(args[0]) } : chart with { NumberFormat = FormatCode(args[0]) }, _ => throw Unsupported(member) }); return null;
+        }
         if (member == "getFormat") return Child(type == "ChartTitle" ? "ChartTitleFormat" : "ChartLegendFormat");
         if (member == "getFont") return Child("ChartFont");
         if (member == "getFill") return Child("ChartFill");

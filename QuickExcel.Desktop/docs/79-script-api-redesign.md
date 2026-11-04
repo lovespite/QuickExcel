@@ -1,10 +1,10 @@
 # 脚本 JavaScript API 重新设计（API v3）
 
-2026-11-04。本文替换 [76](76-live-workbook-script-model.md) 中的对象 API 部分：旧 `$` / `ExcelScript` 子集整体废弃，不提供兼容层。文件 `scriptApiVersion = 3`、IPC 10；隔离、事务、限额和 worker 生命周期契约沿用 11/15/16/69/72/77 号文档。P0 与 P1 已实现；P1 的成员与参数支持边界见 §7.1。
+2026-11-04。本文替换 [76](76-live-workbook-script-model.md) 中的对象 API 部分：旧 `$` / `ExcelScript` 子集整体废弃，不提供兼容层。文件 `scriptApiVersion = 3`、IPC 10；隔离、事务、限额和 worker 生命周期契约沿用 11/15/16/69/72/77 号文档。P0、P1、P2 已实现；成员与参数支持边界见 §7.1 / §7.2。
 
 ## 1. 现状与问题
 
-重做前脚本只能看到 5 个对象、14 个方法（Workbook / Worksheet / Range / RangeFormat / RangeFill），声明、JS 实现与宿主白名单分别手工维护。现在以固定声明与能力清单生成代理、类型和白名单；当前实现 16 个类型的 174 个成员。
+重做前脚本只能看到 5 个对象、14 个方法（Workbook / Worksheet / Range / RangeFormat / RangeFill），声明、JS 实现与宿主白名单分别手工维护。现在以固定声明与能力清单生成代理、类型和白名单；当前实现 **41 个类型的 353 个成员（353/1932，18.27%）**。
 
 ## 2. 已确认的决策
 
@@ -201,7 +201,7 @@ function makeHandle(type, data) {
 | --- | --- | --- |
 | P0 | 生成器、命名空间、代理运行时、Workbook / Worksheet / Range / RangeAreas、v3 存储与 IPC | 已完成：确定性生成、JS/TS 示例、UnsupportedApi、v1/v2 查看与迁移保存门禁、v3 执行/存储与旧入口移除 |
 | P1 | RangeFormat / Font / Fill / Border / Alignment / NumberFormat / Protection、Table / Sort / AutoFilter | 已完成 §7.1 范围：格式化、表操作、预算、原子提交/失败回滚、保存重开与撤销的定向用例；生产包自检覆盖真实隔离 worker |
-| P2 | Chart、ConditionalFormat、DataValidation、Comment | 对象句柄与宿主模型对齐；未实现成员清单收敛 |
+| P2 | Chart、ConditionalFormat、DataValidation、Comment | 已完成 §7.2 范围：真实 Core 对象、稳定会话句柄、事务预算与保护、JS/TS 定向检查、XLSQ/XLSX 往返及生产包自检 |
 | P3 | PivotTable、Shape、Slicer/Timeline、PageLayout、DocumentProperties、CustomXml、Query | 按实际需求推进；其余继续显式拒绝 |
 
 每个阶段只声明已实现成员；类型骨架始终是全量的，两者通过能力清单区分。
@@ -231,6 +231,27 @@ function makeHandle(type, data) {
 2026-11-04 验证：解决方案 Release 构建零警告/错误，生成物 `--check` 与生成器 fixture 自测通过，JSC smoke 通过（10000 次调用 98 ms）。`verified-summary.json` 汇总定向运行与修复后局部复测的每个用例最新结果：701 通过、0 失败、1 跳过（已知 JSC-MEM-001）；不是全量回归，也不表示单次运行 701 项。旧批次故障注入工具已适配 v3 持久 worker，模块状态测试改为 Windows 跨轮保留/Linux 单轮重建的既有契约。
 
 交付：`scripts/build-quickexcel.ps1 -SkipTests -RunSmoke` 已发布并激活 `artifacts/avalonia/releases/20261104-112512-75d6b7ff/application`，生产自检 10 项通过，`active-windows.json` 的目录和发布清单 SHA-256 已核对。首次自检曾因测试流程未持有正常 UI 执行门禁，被自动重算取消；补上同一执行门禁后重新发布通过，未放宽取消或隔离契约，失败包保留证据且从未激活。
+
+### 7.2 P2 支持矩阵与限制
+
+P2 新增 179 个成员，累计 353 个，涉及 41 个类型。枚举与声明仍从固定来源生成；类型骨架中的其他成员及未建模参数继续显式拒绝，不能将该统计解释为全部 Office Scripts 兼容。
+
+| 范围 | 已支持 | 明确限制 |
+| --- | --- | --- |
+| Chart | 工作表图表创建/获取/删除，名称/ID/所属表，类型、位置尺寸、数据范围、可见数据选项；标题、图例、背景/系列填充和标题/图例字体；系列名称、筛选、平滑、标记大小和数据引用；数值轴上下限/数字格式 | 簇状柱形、折线、饼图、散点、瀑布、漏斗；首行标题、首列分类、按列分系列；不支持组合/3D/趋势线/导出图像或按行分系列。系列引用为同表单行/列且与分类长度相同；不隐式补齐数据。分类轴数值属性仅用于散点图 X 轴。自动轴界限读取为 null，不伪造布局结果 |
+| ConditionalFormat | 区域规则集合、稳定 ID、优先级重排、StopIfTrue、范围、删除/清除；自定义公式、数值比较、文本比较、唯一/重复值；条件字体/填充/数字格式/四周边框 | 非易变已建模标准公式；不支持色阶、数据条、图标集、Top/Bottom、日期/平均值预设。setRanges 当前接受单矩形，已导入多区域可用 getRanges 读取；部分覆盖清除拒绝，保留范围外规则 |
+| DataValidation | 整数、小数、日期序列公式、文本长度、列表、自定义公式；提示/错误警告、忽略空白、规则类型、有效性、无效单元格、清除 | 不支持 time 和 JS Date 参数；日期使用序列值公式。列表为直接文本或同表单行/列 Range。混合规则显示 inconsistent，须分块读取；替换/清除不越界删除部分相交规则。getInvalidCells 最多返回 1024 个单格区域；禁用错误提示仍检查有效性 |
+| Comment / CommentReply | 工作簿/工作表创建和查找真正的线程评论；文本、作者显示名、创建日期、位置、ID、回复、解决/重新打开、删除；批注与回复一起撤销、保存重开后继续编辑 | 纯文本、本地作者 QuickExcel，无账户查找/邮件/通知；不虚构邮箱身份，不支持 mentions/rich content。已解决线程需先重新打开才能回复。带旧版显示副本的导入讨论继续只读保留，不写成旧式 Note；未知扩展仍走原包保护路径 |
+
+图表和条件格式的会话 ID 在属性修改及撤销/重做中保留；删除后重建、图表粘贴使用新身份，旧句柄返回 InvalidReference。重新打开文件建立新会话身份；评论 UUID 则保存在 OOXML threadedComments/person 部件中。原始线程未修改时沿用字节保留；编辑纯文本线程时保留作者 ID、账户元数据、父子关系、时间与解决状态。旧版副本和未知内容的保护未放宽，带评论的结构移动/复制仍禁止。
+
+规则写入按实际区域格数累计收费（重复操作重复计数），通过 Core 命令检查保护；图表与批注也不能绕过对象保护。条件格式、验证规则、评论、单元格与虚拟文件属于同一原子动作，捕获写入失败仍整体回滚。新增文本计入历史和 XML 写出预算。嵌套参数中的 Range 通过句柄转换，循环/深层输入被拒绝。
+
+P2 定向证据在 `artifacts/test-results/api-p2/`：`ScriptP2Tests` 覆盖 JS/TS、图表轴与系列、条件边框、线程回复/删除/重新打开/多工作表/XLSX 导出、部分范围保护、预算和失败回滚；现有图表、线程保留、条件格式、验证、存储及 P1 回归保持覆盖。生产自检增加 P2 对象事务及其 XLSQ 保存重开，仍验证整个动作一次撤销。JSC-MEM-001 继续按既有决定延期，P2 不改变隔离、进程/栈/时间限制。
+
+2026-11-04 验证：`api-p2-regression.trx` 237 项、`api-p2-extended.trx` 53 项、`api-p2-final.trx` 49 项均通过；`verified-summary.json` 按用例保留最新结果，去重后 **265 通过、0 失败**，不是全量回归。生成物 `--check` 与生成器 fixture 自测通过；JSC smoke 通过（10000 次调用 91 ms）。发布构建成功，保留两个既有生产配置未赋值字段警告（`Program.WebScriptsOnly` / `WebModulesOnly`）。
+
+交付：`scripts/build-quickexcel.ps1 -SkipTests -RunSmoke` 已发布并激活 `artifacts/avalonia/releases/20261104-120050-b8cbf778/application`。生产自检 **12 项通过**，包括真实隔离 worker 中 P2 对象事务、XLSQ 保存重开和动作撤销；`active-windows.json` 指向该包，发布清单 SHA-256 已核对，与 `Start-QuickExcel.cmd` 使用的启动选择一致。
 
 ## 8. 验证计划
 

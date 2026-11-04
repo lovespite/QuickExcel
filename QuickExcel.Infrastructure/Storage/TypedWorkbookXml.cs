@@ -476,6 +476,7 @@ internal static class TypedWorkbookXml
             foreach (var link in sheet.Annotations.Links.Values)
                 allocation += 512L + 8L * (link.Target?.Length ?? 0) + 8L * (link.Location?.Length ?? 0) + 8L * (link.Display?.Length ?? 0) + 8L * (link.Tooltip?.Length ?? 0);
             foreach (var note in sheet.Annotations.Notes.Values) allocation += 512L + note.Author.Length * 8L + note.Text.Text.Length * 8L + RichAllocation(note.Text);
+            foreach (var comment in sheet.Data.ThreadComments) allocation += 512L + 8L * (comment.Content.Length + comment.Author.Length + (comment.UserId?.Length ?? 0) + (comment.ProviderId?.Length ?? 0));
             imageBytes += sheet.Images.Sum(image => (long)image.Data.Length);
             imageBytes += sheet.Printing.PrinterSettings.Length;
             imageBytes += sheet.Annotations.NoteDrawing.Length;

@@ -20,6 +20,8 @@ internal static partial class XlsxThreadedComments
             throw new NotSupportedException("未建模线程评论不能重写。");
         var all = snapshot.Sheets.SelectMany(s => s.Data.ThreadComments).ToArray();
         if (all.Length == 0) return;
+        if (all.Select(c => c.Id).Distinct().Count() != all.Length || all.GroupBy(c => c.PersonId).Any(g => g.Select(c => (c.Author, c.UserId, c.ProviderId)).Distinct().Count() != 1))
+            throw new InvalidDataException("工作簿评论或作者身份冲突。");
         if (all.Length > 4096 || all.Sum(c => (long)c.Content.Length * 2) > 4 * 1024 * 1024) throw new InvalidDataException("工作簿线程评论容量超限。");
         void Part(string path, string type, XElement xml)
         {

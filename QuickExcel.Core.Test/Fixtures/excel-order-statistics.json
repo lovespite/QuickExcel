@@ -1,0 +1,1675 @@
+{
+  "Version": "16.0",
+  "Build": "20527",
+  "Language": 2052,
+  "Calculation": -2146826246,
+  "FileFormat": 51,
+  "SpecSha256": "83AF79C9D26DD0225EDD835AFEE9E938E8E54807A836700CA193C80F42EA6DC8",
+  "Initial": [
+    {
+      "Id": "order-01",
+      "Sheet": "Data",
+      "Address": "D1",
+      "Formula": "=LARGE(A1:A8,1)",
+      "Formula2": "=LARGE(A1:A8,1)",
+      "Kind": "Number",
+      "Value": 5.0
+    },
+    {
+      "Id": "order-02",
+      "Sheet": "Data",
+      "Address": "D2",
+      "Formula": "=LARGE(A1:A8,2)",
+      "Formula2": "=LARGE(A1:A8,2)",
+      "Kind": "Number",
+      "Value": 2.0
+    },
+    {
+      "Id": "order-03",
+      "Sheet": "Data",
+      "Address": "D3",
+      "Formula": "=LARGE(A1:A8,3)",
+      "Formula2": "=LARGE(A1:A8,3)",
+      "Kind": "Number",
+      "Value": 2.0
+    },
+    {
+      "Id": "order-04",
+      "Sheet": "Data",
+      "Address": "D4",
+      "Formula": "=LARGE(A1:A8,5)",
+      "Formula2": "=LARGE(A1:A8,5)",
+      "Kind": "Number",
+      "Value": -3.0
+    },
+    {
+      "Id": "order-05",
+      "Sheet": "Data",
+      "Address": "D5",
+      "Formula": "=LARGE(A1:A8,6)",
+      "Formula2": "=LARGE(A1:A8,6)",
+      "Kind": "Error",
+      "Value": "#NUM!"
+    },
+    {
+      "Id": "order-06",
+      "Sheet": "Data",
+      "Address": "D6",
+      "Formula": "=LARGE(A1:A8,0)",
+      "Formula2": "=LARGE(A1:A8,0)",
+      "Kind": "Error",
+      "Value": "#NUM!"
+    },
+    {
+      "Id": "order-07",
+      "Sheet": "Data",
+      "Address": "D7",
+      "Formula": "=LARGE(A1:A8,-1)",
+      "Formula2": "=LARGE(A1:A8,-1)",
+      "Kind": "Error",
+      "Value": "#NUM!"
+    },
+    {
+      "Id": "order-08",
+      "Sheet": "Data",
+      "Address": "D8",
+      "Formula": "=LARGE(A1:A8,0.1)",
+      "Formula2": "=LARGE(A1:A8,0.1)",
+      "Kind": "Error",
+      "Value": "#NUM!"
+    },
+    {
+      "Id": "order-09",
+      "Sheet": "Data",
+      "Address": "D9",
+      "Formula": "=LARGE(A1:A8,1.1)",
+      "Formula2": "=LARGE(A1:A8,1.1)",
+      "Kind": "Number",
+      "Value": 2.0
+    },
+    {
+      "Id": "order-10",
+      "Sheet": "Data",
+      "Address": "D10",
+      "Formula": "=LARGE(A1:A8,1.9)",
+      "Formula2": "=LARGE(A1:A8,1.9)",
+      "Kind": "Number",
+      "Value": 2.0
+    },
+    {
+      "Id": "order-11",
+      "Sheet": "Data",
+      "Address": "D11",
+      "Formula": "=LARGE(A1:A8,5.1)",
+      "Formula2": "=LARGE(A1:A8,5.1)",
+      "Kind": "Error",
+      "Value": "#NUM!"
+    },
+    {
+      "Id": "order-12",
+      "Sheet": "Data",
+      "Address": "D12",
+      "Formula": "=LARGE(A1:A8,1E+99)",
+      "Formula2": "=LARGE(A1:A8,1E+99)",
+      "Kind": "Error",
+      "Value": "#NUM!"
+    },
+    {
+      "Id": "order-13",
+      "Sheet": "Data",
+      "Address": "D13",
+      "Formula": "=LARGE(A1:A8,TRUE)",
+      "Formula2": "=LARGE(A1:A8,TRUE)",
+      "Kind": "Number",
+      "Value": 5.0
+    },
+    {
+      "Id": "order-14",
+      "Sheet": "Data",
+      "Address": "D14",
+      "Formula": "=LARGE(A1:A8,FALSE)",
+      "Formula2": "=LARGE(A1:A8,FALSE)",
+      "Kind": "Error",
+      "Value": "#NUM!"
+    },
+    {
+      "Id": "order-15",
+      "Sheet": "Data",
+      "Address": "D15",
+      "Formula": "=LARGE(A1:A8,\"2\")",
+      "Formula2": "=LARGE(A1:A8,\"2\")",
+      "Kind": "Number",
+      "Value": 2.0
+    },
+    {
+      "Id": "order-16",
+      "Sheet": "Data",
+      "Address": "D16",
+      "Formula": "=LARGE(A1:A8,\"x\")",
+      "Formula2": "=LARGE(A1:A8,\"x\")",
+      "Kind": "Error",
+      "Value": "#VALUE!"
+    },
+    {
+      "Id": "order-17",
+      "Sheet": "Data",
+      "Address": "D17",
+      "Formula": "=LARGE(A1:A8,A8)",
+      "Formula2": "=LARGE(A1:A8,A8)",
+      "Kind": "Error",
+      "Value": "#NUM!"
+    },
+    {
+      "Id": "order-18",
+      "Sheet": "Data",
+      "Address": "D18",
+      "Formula": "=LARGE(A1:A8,)",
+      "Formula2": "=LARGE(A1:A8,)",
+      "Kind": "Error",
+      "Value": "#NUM!"
+    },
+    {
+      "Id": "order-19",
+      "Sheet": "Data",
+      "Address": "D19",
+      "Formula": "=LARGE(A1:A8,1/0)",
+      "Formula2": "=LARGE(A1:A8,1/0)",
+      "Kind": "Error",
+      "Value": "#DIV/0!"
+    },
+    {
+      "Id": "order-20",
+      "Sheet": "Data",
+      "Address": "D20",
+      "Formula": "=LARGE(A6:A8,1)",
+      "Formula2": "=LARGE(A6:A8,1)",
+      "Kind": "Error",
+      "Value": "#NUM!"
+    },
+    {
+      "Id": "order-21",
+      "Sheet": "Data",
+      "Address": "D21",
+      "Formula": "=LARGE(A8,1)",
+      "Formula2": "=LARGE(A8,1)",
+      "Kind": "Error",
+      "Value": "#NUM!"
+    },
+    {
+      "Id": "order-22",
+      "Sheet": "Data",
+      "Address": "D22",
+      "Formula": "=LARGE(7,1)",
+      "Formula2": "=LARGE(7,1)",
+      "Kind": "Number",
+      "Value": 7.0
+    },
+    {
+      "Id": "order-23",
+      "Sheet": "Data",
+      "Address": "D23",
+      "Formula": "=LARGE(\"7\",1)",
+      "Formula2": "=LARGE(\"7\",1)",
+      "Kind": "Number",
+      "Value": 7.0
+    },
+    {
+      "Id": "order-24",
+      "Sheet": "Data",
+      "Address": "D24",
+      "Formula": "=LARGE(TRUE,1)",
+      "Formula2": "=LARGE(TRUE,1)",
+      "Kind": "Number",
+      "Value": 1.0
+    },
+    {
+      "Id": "order-25",
+      "Sheet": "Data",
+      "Address": "D25",
+      "Formula": "=LARGE(\"x\",1)",
+      "Formula2": "=LARGE(\"x\",1)",
+      "Kind": "Error",
+      "Value": "#VALUE!"
+    },
+    {
+      "Id": "order-26",
+      "Sheet": "Data",
+      "Address": "D26",
+      "Formula": "=LARGE(B1:B2,1)",
+      "Formula2": "=LARGE(B1:B2,1)",
+      "Kind": "Error",
+      "Value": "#DIV/0!"
+    },
+    {
+      "Id": "order-27",
+      "Sheet": "Data",
+      "Address": "D27",
+      "Formula": "=LARGE(SEQUENCE(4),1)",
+      "Formula2": "=LARGE(SEQUENCE(4),1)",
+      "Kind": "Number",
+      "Value": 4.0
+    },
+    {
+      "Id": "order-28",
+      "Sheet": "Data",
+      "Address": "D28",
+      "Formula": "=LARGE(IF(A1>0,A1:A8,A6:A8),1)",
+      "Formula2": "=LARGE(IF(A1>0,A1:A8,A6:A8),1)",
+      "Kind": "Number",
+      "Value": 5.0
+    },
+    {
+      "Id": "order-29",
+      "Sheet": "Data",
+      "Address": "D29",
+      "Formula": "=LARGE(LET(v,A1:A8,v),1)",
+      "Formula2": "=LARGE(LET(v,A1:A8,v),1)",
+      "Kind": "Number",
+      "Value": 5.0
+    },
+    {
+      "Id": "order-30",
+      "Sheet": "Data",
+      "Address": "D30",
+      "Formula": "=LARGE(A1:B2,2)",
+      "Formula2": "=LARGE(A1:B2,2)",
+      "Kind": "Error",
+      "Value": "#DIV/0!"
+    },
+    {
+      "Id": "order-31",
+      "Sheet": "Data",
+      "Address": "D31",
+      "Formula": "=LARGE(A:A,2)",
+      "Formula2": "=LARGE(A:A,2)",
+      "Kind": "Number",
+      "Value": 2.0
+    },
+    {
+      "Id": "order-32",
+      "Sheet": "Data",
+      "Address": "D32",
+      "Formula": "=LARGE(A1:A8,B2)",
+      "Formula2": "=LARGE(A1:A8,B2)",
+      "Kind": "Error",
+      "Value": "#NUM!"
+    },
+    {
+      "Id": "order-33",
+      "Sheet": "Data",
+      "Address": "D33",
+      "Formula": "=SMALL(A1:A8,1)",
+      "Formula2": "=SMALL(A1:A8,1)",
+      "Kind": "Number",
+      "Value": -3.0
+    },
+    {
+      "Id": "order-34",
+      "Sheet": "Data",
+      "Address": "D34",
+      "Formula": "=SMALL(A1:A8,2)",
+      "Formula2": "=SMALL(A1:A8,2)",
+      "Kind": "Number",
+      "Value": 0.0
+    },
+    {
+      "Id": "order-35",
+      "Sheet": "Data",
+      "Address": "D35",
+      "Formula": "=SMALL(A1:A8,3)",
+      "Formula2": "=SMALL(A1:A8,3)",
+      "Kind": "Number",
+      "Value": 2.0
+    },
+    {
+      "Id": "order-36",
+      "Sheet": "Data",
+      "Address": "D36",
+      "Formula": "=SMALL(A1:A8,5)",
+      "Formula2": "=SMALL(A1:A8,5)",
+      "Kind": "Number",
+      "Value": 5.0
+    },
+    {
+      "Id": "order-37",
+      "Sheet": "Data",
+      "Address": "D37",
+      "Formula": "=SMALL(A1:A8,6)",
+      "Formula2": "=SMALL(A1:A8,6)",
+      "Kind": "Error",
+      "Value": "#NUM!"
+    },
+    {
+      "Id": "order-38",
+      "Sheet": "Data",
+      "Address": "D38",
+      "Formula": "=SMALL(A1:A8,0)",
+      "Formula2": "=SMALL(A1:A8,0)",
+      "Kind": "Error",
+      "Value": "#NUM!"
+    },
+    {
+      "Id": "order-39",
+      "Sheet": "Data",
+      "Address": "D39",
+      "Formula": "=SMALL(A1:A8,-1)",
+      "Formula2": "=SMALL(A1:A8,-1)",
+      "Kind": "Error",
+      "Value": "#NUM!"
+    },
+    {
+      "Id": "order-40",
+      "Sheet": "Data",
+      "Address": "D40",
+      "Formula": "=SMALL(A1:A8,0.1)",
+      "Formula2": "=SMALL(A1:A8,0.1)",
+      "Kind": "Error",
+      "Value": "#NUM!"
+    },
+    {
+      "Id": "order-41",
+      "Sheet": "Data",
+      "Address": "D41",
+      "Formula": "=SMALL(A1:A8,1.1)",
+      "Formula2": "=SMALL(A1:A8,1.1)",
+      "Kind": "Number",
+      "Value": -3.0
+    },
+    {
+      "Id": "order-42",
+      "Sheet": "Data",
+      "Address": "D42",
+      "Formula": "=SMALL(A1:A8,1.9)",
+      "Formula2": "=SMALL(A1:A8,1.9)",
+      "Kind": "Number",
+      "Value": -3.0
+    },
+    {
+      "Id": "order-43",
+      "Sheet": "Data",
+      "Address": "D43",
+      "Formula": "=SMALL(A1:A8,5.1)",
+      "Formula2": "=SMALL(A1:A8,5.1)",
+      "Kind": "Error",
+      "Value": "#NUM!"
+    },
+    {
+      "Id": "order-44",
+      "Sheet": "Data",
+      "Address": "D44",
+      "Formula": "=SMALL(A1:A8,1E+99)",
+      "Formula2": "=SMALL(A1:A8,1E+99)",
+      "Kind": "Error",
+      "Value": "#NUM!"
+    },
+    {
+      "Id": "order-45",
+      "Sheet": "Data",
+      "Address": "D45",
+      "Formula": "=SMALL(A1:A8,TRUE)",
+      "Formula2": "=SMALL(A1:A8,TRUE)",
+      "Kind": "Number",
+      "Value": -3.0
+    },
+    {
+      "Id": "order-46",
+      "Sheet": "Data",
+      "Address": "D46",
+      "Formula": "=SMALL(A1:A8,FALSE)",
+      "Formula2": "=SMALL(A1:A8,FALSE)",
+      "Kind": "Error",
+      "Value": "#NUM!"
+    },
+    {
+      "Id": "order-47",
+      "Sheet": "Data",
+      "Address": "D47",
+      "Formula": "=SMALL(A1:A8,\"2\")",
+      "Formula2": "=SMALL(A1:A8,\"2\")",
+      "Kind": "Number",
+      "Value": 0.0
+    },
+    {
+      "Id": "order-48",
+      "Sheet": "Data",
+      "Address": "D48",
+      "Formula": "=SMALL(A1:A8,\"x\")",
+      "Formula2": "=SMALL(A1:A8,\"x\")",
+      "Kind": "Error",
+      "Value": "#VALUE!"
+    },
+    {
+      "Id": "order-49",
+      "Sheet": "Data",
+      "Address": "D49",
+      "Formula": "=SMALL(A1:A8,A8)",
+      "Formula2": "=SMALL(A1:A8,A8)",
+      "Kind": "Error",
+      "Value": "#NUM!"
+    },
+    {
+      "Id": "order-50",
+      "Sheet": "Data",
+      "Address": "D50",
+      "Formula": "=SMALL(A1:A8,)",
+      "Formula2": "=SMALL(A1:A8,)",
+      "Kind": "Error",
+      "Value": "#NUM!"
+    },
+    {
+      "Id": "order-51",
+      "Sheet": "Data",
+      "Address": "D51",
+      "Formula": "=SMALL(A1:A8,1/0)",
+      "Formula2": "=SMALL(A1:A8,1/0)",
+      "Kind": "Error",
+      "Value": "#DIV/0!"
+    },
+    {
+      "Id": "order-52",
+      "Sheet": "Data",
+      "Address": "D52",
+      "Formula": "=SMALL(A6:A8,1)",
+      "Formula2": "=SMALL(A6:A8,1)",
+      "Kind": "Error",
+      "Value": "#NUM!"
+    },
+    {
+      "Id": "order-53",
+      "Sheet": "Data",
+      "Address": "D53",
+      "Formula": "=SMALL(A8,1)",
+      "Formula2": "=SMALL(A8,1)",
+      "Kind": "Error",
+      "Value": "#NUM!"
+    },
+    {
+      "Id": "order-54",
+      "Sheet": "Data",
+      "Address": "D54",
+      "Formula": "=SMALL(7,1)",
+      "Formula2": "=SMALL(7,1)",
+      "Kind": "Number",
+      "Value": 7.0
+    },
+    {
+      "Id": "order-55",
+      "Sheet": "Data",
+      "Address": "D55",
+      "Formula": "=SMALL(\"7\",1)",
+      "Formula2": "=SMALL(\"7\",1)",
+      "Kind": "Number",
+      "Value": 7.0
+    },
+    {
+      "Id": "order-56",
+      "Sheet": "Data",
+      "Address": "D56",
+      "Formula": "=SMALL(TRUE,1)",
+      "Formula2": "=SMALL(TRUE,1)",
+      "Kind": "Number",
+      "Value": 1.0
+    },
+    {
+      "Id": "order-57",
+      "Sheet": "Data",
+      "Address": "D57",
+      "Formula": "=SMALL(\"x\",1)",
+      "Formula2": "=SMALL(\"x\",1)",
+      "Kind": "Error",
+      "Value": "#VALUE!"
+    },
+    {
+      "Id": "order-58",
+      "Sheet": "Data",
+      "Address": "D58",
+      "Formula": "=SMALL(B1:B2,1)",
+      "Formula2": "=SMALL(B1:B2,1)",
+      "Kind": "Error",
+      "Value": "#DIV/0!"
+    },
+    {
+      "Id": "order-59",
+      "Sheet": "Data",
+      "Address": "D59",
+      "Formula": "=SMALL(SEQUENCE(4),1)",
+      "Formula2": "=SMALL(SEQUENCE(4),1)",
+      "Kind": "Number",
+      "Value": 1.0
+    },
+    {
+      "Id": "order-60",
+      "Sheet": "Data",
+      "Address": "D60",
+      "Formula": "=SMALL(IF(A1>0,A1:A8,A6:A8),1)",
+      "Formula2": "=SMALL(IF(A1>0,A1:A8,A6:A8),1)",
+      "Kind": "Number",
+      "Value": -3.0
+    },
+    {
+      "Id": "order-61",
+      "Sheet": "Data",
+      "Address": "D61",
+      "Formula": "=SMALL(LET(v,A1:A8,v),1)",
+      "Formula2": "=SMALL(LET(v,A1:A8,v),1)",
+      "Kind": "Number",
+      "Value": -3.0
+    },
+    {
+      "Id": "order-62",
+      "Sheet": "Data",
+      "Address": "D62",
+      "Formula": "=SMALL(A1:B2,2)",
+      "Formula2": "=SMALL(A1:B2,2)",
+      "Kind": "Error",
+      "Value": "#DIV/0!"
+    },
+    {
+      "Id": "order-63",
+      "Sheet": "Data",
+      "Address": "D63",
+      "Formula": "=SMALL(A:A,2)",
+      "Formula2": "=SMALL(A:A,2)",
+      "Kind": "Number",
+      "Value": 0.0
+    },
+    {
+      "Id": "order-64",
+      "Sheet": "Data",
+      "Address": "D64",
+      "Formula": "=SMALL(A1:A8,B2)",
+      "Formula2": "=SMALL(A1:A8,B2)",
+      "Kind": "Error",
+      "Value": "#NUM!"
+    },
+    {
+      "Id": "order-65",
+      "Sheet": "Data",
+      "Address": "D65",
+      "Formula": "=RANK.EQ(2,A1:A8)",
+      "Formula2": "=RANK.EQ(2,A1:A8)",
+      "Kind": "Number",
+      "Value": 2.0
+    },
+    {
+      "Id": "order-66",
+      "Sheet": "Data",
+      "Address": "D66",
+      "Formula": "=RANK.EQ(0,A1:A8)",
+      "Formula2": "=RANK.EQ(0,A1:A8)",
+      "Kind": "Number",
+      "Value": 4.0
+    },
+    {
+      "Id": "order-67",
+      "Sheet": "Data",
+      "Address": "D67",
+      "Formula": "=RANK.EQ(-3,A1:A8)",
+      "Formula2": "=RANK.EQ(-3,A1:A8)",
+      "Kind": "Number",
+      "Value": 5.0
+    },
+    {
+      "Id": "order-68",
+      "Sheet": "Data",
+      "Address": "D68",
+      "Formula": "=RANK.EQ(9,A1:A8)",
+      "Formula2": "=RANK.EQ(9,A1:A8)",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "order-69",
+      "Sheet": "Data",
+      "Address": "D69",
+      "Formula": "=RANK.EQ(\"2\",A1:A8)",
+      "Formula2": "=RANK.EQ(\"2\",A1:A8)",
+      "Kind": "Number",
+      "Value": 2.0
+    },
+    {
+      "Id": "order-70",
+      "Sheet": "Data",
+      "Address": "D70",
+      "Formula": "=RANK.EQ(TRUE,A1:A8)",
+      "Formula2": "=RANK.EQ(TRUE,A1:A8)",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "order-71",
+      "Sheet": "Data",
+      "Address": "D71",
+      "Formula": "=RANK.EQ(A8,A1:A8)",
+      "Formula2": "=RANK.EQ(A8,A1:A8)",
+      "Kind": "Number",
+      "Value": 4.0
+    },
+    {
+      "Id": "order-72",
+      "Sheet": "Data",
+      "Address": "D72",
+      "Formula": "=RANK.EQ(1/0,A1:A8)",
+      "Formula2": "=RANK.EQ(1/0,A1:A8)",
+      "Kind": "Error",
+      "Value": "#DIV/0!"
+    },
+    {
+      "Id": "order-73",
+      "Sheet": "Data",
+      "Address": "D73",
+      "Formula": "=RANK.EQ(2,A1:A8,0)",
+      "Formula2": "=RANK.EQ(2,A1:A8,0)",
+      "Kind": "Number",
+      "Value": 2.0
+    },
+    {
+      "Id": "order-74",
+      "Sheet": "Data",
+      "Address": "D74",
+      "Formula": "=RANK.EQ(2,A1:A8,1)",
+      "Formula2": "=RANK.EQ(2,A1:A8,1)",
+      "Kind": "Number",
+      "Value": 3.0
+    },
+    {
+      "Id": "order-75",
+      "Sheet": "Data",
+      "Address": "D75",
+      "Formula": "=RANK.EQ(2,A1:A8,-1)",
+      "Formula2": "=RANK.EQ(2,A1:A8,-1)",
+      "Kind": "Number",
+      "Value": 3.0
+    },
+    {
+      "Id": "order-76",
+      "Sheet": "Data",
+      "Address": "D76",
+      "Formula": "=RANK.EQ(2,A1:A8,0.1)",
+      "Formula2": "=RANK.EQ(2,A1:A8,0.1)",
+      "Kind": "Number",
+      "Value": 3.0
+    },
+    {
+      "Id": "order-77",
+      "Sheet": "Data",
+      "Address": "D77",
+      "Formula": "=RANK.EQ(2,A1:A8,-0.1)",
+      "Formula2": "=RANK.EQ(2,A1:A8,-0.1)",
+      "Kind": "Number",
+      "Value": 3.0
+    },
+    {
+      "Id": "order-78",
+      "Sheet": "Data",
+      "Address": "D78",
+      "Formula": "=RANK.EQ(2,A1:A8,TRUE)",
+      "Formula2": "=RANK.EQ(2,A1:A8,TRUE)",
+      "Kind": "Number",
+      "Value": 3.0
+    },
+    {
+      "Id": "order-79",
+      "Sheet": "Data",
+      "Address": "D79",
+      "Formula": "=RANK.EQ(2,A1:A8,\"1\")",
+      "Formula2": "=RANK.EQ(2,A1:A8,\"1\")",
+      "Kind": "Error",
+      "Value": "#VALUE!"
+    },
+    {
+      "Id": "order-80",
+      "Sheet": "Data",
+      "Address": "D80",
+      "Formula": "=RANK.EQ(2,A1:A8,\"x\")",
+      "Formula2": "=RANK.EQ(2,A1:A8,\"x\")",
+      "Kind": "Error",
+      "Value": "#VALUE!"
+    },
+    {
+      "Id": "order-81",
+      "Sheet": "Data",
+      "Address": "D81",
+      "Formula": "=RANK.EQ(2,A1:A8,)",
+      "Formula2": "=RANK.EQ(2,A1:A8,)",
+      "Kind": "Number",
+      "Value": 2.0
+    },
+    {
+      "Id": "order-82",
+      "Sheet": "Data",
+      "Address": "D82",
+      "Formula": "=RANK.EQ(2,A1:A8,1/0)",
+      "Formula2": "=RANK.EQ(2,A1:A8,1/0)",
+      "Kind": "Error",
+      "Value": "#DIV/0!"
+    },
+    {
+      "Id": "order-86",
+      "Sheet": "Data",
+      "Address": "D86",
+      "Formula": "=RANK.EQ(2,A6:A8)",
+      "Formula2": "=RANK.EQ(2,A6:A8)",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "order-87",
+      "Sheet": "Data",
+      "Address": "D87",
+      "Formula": "=RANK.EQ(2,B1:B2)",
+      "Formula2": "=RANK.EQ(2,B1:B2)",
+      "Kind": "Error",
+      "Value": "#DIV/0!"
+    },
+    {
+      "Id": "order-89",
+      "Sheet": "Data",
+      "Address": "D89",
+      "Formula": "=RANK.EQ(2,LET(v,A1:A8,v))",
+      "Formula2": "=RANK.EQ(2,LET(v,A1:A8,v))",
+      "Kind": "Number",
+      "Value": 2.0
+    },
+    {
+      "Id": "order-90",
+      "Sheet": "Data",
+      "Address": "D90",
+      "Formula": "=RANK.EQ(2,IF(A1>0,A1:A8,A6:A8))",
+      "Formula2": "=RANK.EQ(2,IF(A1>0,A1:A8,A6:A8))",
+      "Kind": "Number",
+      "Value": 2.0
+    },
+    {
+      "Id": "order-91",
+      "Sheet": "Data",
+      "Address": "D91",
+      "Formula": "=LARGE(B1:B2,\"x\")",
+      "Formula2": "=LARGE(B1:B2,\"x\")",
+      "Kind": "Error",
+      "Value": "#VALUE!"
+    },
+    {
+      "Id": "order-92",
+      "Sheet": "Data",
+      "Address": "D92",
+      "Formula": "=SMALL(B1:B2,0)",
+      "Formula2": "=SMALL(B1:B2,0)",
+      "Kind": "Error",
+      "Value": "#DIV/0!"
+    },
+    {
+      "Id": "order-93",
+      "Sheet": "Data",
+      "Address": "D93",
+      "Formula": "=RANK.EQ(\"x\",B1:B2)",
+      "Formula2": "=RANK.EQ(\"x\",B1:B2)",
+      "Kind": "Error",
+      "Value": "#VALUE!"
+    },
+    {
+      "Id": "order-94",
+      "Sheet": "Data",
+      "Address": "D94",
+      "Formula": "=RANK.EQ(2,B1:B2,\"x\")",
+      "Formula2": "=RANK.EQ(2,B1:B2,\"x\")",
+      "Kind": "Error",
+      "Value": "#VALUE!"
+    },
+    {
+      "Id": "order-95",
+      "Sheet": "Data",
+      "Address": "D95",
+      "Formula": "=IFERROR(LARGE(A1:A8,99),42)",
+      "Formula2": "=IFERROR(LARGE(A1:A8,99),42)",
+      "Kind": "Number",
+      "Value": 42.0
+    },
+    {
+      "Id": "order-96",
+      "Sheet": "Data",
+      "Address": "D96",
+      "Formula": "=IFNA(RANK.EQ(99,A1:A8),42)",
+      "Formula2": "=IFNA(RANK.EQ(99,A1:A8),42)",
+      "Kind": "Number",
+      "Value": 42.0
+    }
+  ],
+  "Edited": [
+    {
+      "Id": "order-01",
+      "Sheet": "Data",
+      "Address": "D1",
+      "Formula": "=LARGE(A1:A8,1)",
+      "Formula2": "=LARGE(A1:A8,1)",
+      "Kind": "Number",
+      "Value": 2.0
+    },
+    {
+      "Id": "order-02",
+      "Sheet": "Data",
+      "Address": "D2",
+      "Formula": "=LARGE(A1:A8,2)",
+      "Formula2": "=LARGE(A1:A8,2)",
+      "Kind": "Number",
+      "Value": 2.0
+    },
+    {
+      "Id": "order-03",
+      "Sheet": "Data",
+      "Address": "D3",
+      "Formula": "=LARGE(A1:A8,3)",
+      "Formula2": "=LARGE(A1:A8,3)",
+      "Kind": "Number",
+      "Value": 1.0
+    },
+    {
+      "Id": "order-04",
+      "Sheet": "Data",
+      "Address": "D4",
+      "Formula": "=LARGE(A1:A8,5)",
+      "Formula2": "=LARGE(A1:A8,5)",
+      "Kind": "Number",
+      "Value": -3.0
+    },
+    {
+      "Id": "order-05",
+      "Sheet": "Data",
+      "Address": "D5",
+      "Formula": "=LARGE(A1:A8,6)",
+      "Formula2": "=LARGE(A1:A8,6)",
+      "Kind": "Error",
+      "Value": "#NUM!"
+    },
+    {
+      "Id": "order-06",
+      "Sheet": "Data",
+      "Address": "D6",
+      "Formula": "=LARGE(A1:A8,0)",
+      "Formula2": "=LARGE(A1:A8,0)",
+      "Kind": "Error",
+      "Value": "#NUM!"
+    },
+    {
+      "Id": "order-07",
+      "Sheet": "Data",
+      "Address": "D7",
+      "Formula": "=LARGE(A1:A8,-1)",
+      "Formula2": "=LARGE(A1:A8,-1)",
+      "Kind": "Error",
+      "Value": "#NUM!"
+    },
+    {
+      "Id": "order-08",
+      "Sheet": "Data",
+      "Address": "D8",
+      "Formula": "=LARGE(A1:A8,0.1)",
+      "Formula2": "=LARGE(A1:A8,0.1)",
+      "Kind": "Error",
+      "Value": "#NUM!"
+    },
+    {
+      "Id": "order-09",
+      "Sheet": "Data",
+      "Address": "D9",
+      "Formula": "=LARGE(A1:A8,1.1)",
+      "Formula2": "=LARGE(A1:A8,1.1)",
+      "Kind": "Number",
+      "Value": 2.0
+    },
+    {
+      "Id": "order-10",
+      "Sheet": "Data",
+      "Address": "D10",
+      "Formula": "=LARGE(A1:A8,1.9)",
+      "Formula2": "=LARGE(A1:A8,1.9)",
+      "Kind": "Number",
+      "Value": 2.0
+    },
+    {
+      "Id": "order-11",
+      "Sheet": "Data",
+      "Address": "D11",
+      "Formula": "=LARGE(A1:A8,5.1)",
+      "Formula2": "=LARGE(A1:A8,5.1)",
+      "Kind": "Error",
+      "Value": "#NUM!"
+    },
+    {
+      "Id": "order-12",
+      "Sheet": "Data",
+      "Address": "D12",
+      "Formula": "=LARGE(A1:A8,1E+99)",
+      "Formula2": "=LARGE(A1:A8,1E+99)",
+      "Kind": "Error",
+      "Value": "#NUM!"
+    },
+    {
+      "Id": "order-13",
+      "Sheet": "Data",
+      "Address": "D13",
+      "Formula": "=LARGE(A1:A8,TRUE)",
+      "Formula2": "=LARGE(A1:A8,TRUE)",
+      "Kind": "Number",
+      "Value": 2.0
+    },
+    {
+      "Id": "order-14",
+      "Sheet": "Data",
+      "Address": "D14",
+      "Formula": "=LARGE(A1:A8,FALSE)",
+      "Formula2": "=LARGE(A1:A8,FALSE)",
+      "Kind": "Error",
+      "Value": "#NUM!"
+    },
+    {
+      "Id": "order-15",
+      "Sheet": "Data",
+      "Address": "D15",
+      "Formula": "=LARGE(A1:A8,\"2\")",
+      "Formula2": "=LARGE(A1:A8,\"2\")",
+      "Kind": "Number",
+      "Value": 2.0
+    },
+    {
+      "Id": "order-16",
+      "Sheet": "Data",
+      "Address": "D16",
+      "Formula": "=LARGE(A1:A8,\"x\")",
+      "Formula2": "=LARGE(A1:A8,\"x\")",
+      "Kind": "Error",
+      "Value": "#VALUE!"
+    },
+    {
+      "Id": "order-17",
+      "Sheet": "Data",
+      "Address": "D17",
+      "Formula": "=LARGE(A1:A8,A8)",
+      "Formula2": "=LARGE(A1:A8,A8)",
+      "Kind": "Error",
+      "Value": "#NUM!"
+    },
+    {
+      "Id": "order-18",
+      "Sheet": "Data",
+      "Address": "D18",
+      "Formula": "=LARGE(A1:A8,)",
+      "Formula2": "=LARGE(A1:A8,)",
+      "Kind": "Error",
+      "Value": "#NUM!"
+    },
+    {
+      "Id": "order-19",
+      "Sheet": "Data",
+      "Address": "D19",
+      "Formula": "=LARGE(A1:A8,1/0)",
+      "Formula2": "=LARGE(A1:A8,1/0)",
+      "Kind": "Error",
+      "Value": "#DIV/0!"
+    },
+    {
+      "Id": "order-20",
+      "Sheet": "Data",
+      "Address": "D20",
+      "Formula": "=LARGE(A6:A8,1)",
+      "Formula2": "=LARGE(A6:A8,1)",
+      "Kind": "Error",
+      "Value": "#NUM!"
+    },
+    {
+      "Id": "order-21",
+      "Sheet": "Data",
+      "Address": "D21",
+      "Formula": "=LARGE(A8,1)",
+      "Formula2": "=LARGE(A8,1)",
+      "Kind": "Error",
+      "Value": "#NUM!"
+    },
+    {
+      "Id": "order-22",
+      "Sheet": "Data",
+      "Address": "D22",
+      "Formula": "=LARGE(7,1)",
+      "Formula2": "=LARGE(7,1)",
+      "Kind": "Number",
+      "Value": 7.0
+    },
+    {
+      "Id": "order-23",
+      "Sheet": "Data",
+      "Address": "D23",
+      "Formula": "=LARGE(\"7\",1)",
+      "Formula2": "=LARGE(\"7\",1)",
+      "Kind": "Number",
+      "Value": 7.0
+    },
+    {
+      "Id": "order-24",
+      "Sheet": "Data",
+      "Address": "D24",
+      "Formula": "=LARGE(TRUE,1)",
+      "Formula2": "=LARGE(TRUE,1)",
+      "Kind": "Number",
+      "Value": 1.0
+    },
+    {
+      "Id": "order-25",
+      "Sheet": "Data",
+      "Address": "D25",
+      "Formula": "=LARGE(\"x\",1)",
+      "Formula2": "=LARGE(\"x\",1)",
+      "Kind": "Error",
+      "Value": "#VALUE!"
+    },
+    {
+      "Id": "order-26",
+      "Sheet": "Data",
+      "Address": "D26",
+      "Formula": "=LARGE(B1:B2,1)",
+      "Formula2": "=LARGE(B1:B2,1)",
+      "Kind": "Error",
+      "Value": "#DIV/0!"
+    },
+    {
+      "Id": "order-27",
+      "Sheet": "Data",
+      "Address": "D27",
+      "Formula": "=LARGE(SEQUENCE(4),1)",
+      "Formula2": "=LARGE(SEQUENCE(4),1)",
+      "Kind": "Number",
+      "Value": 4.0
+    },
+    {
+      "Id": "order-28",
+      "Sheet": "Data",
+      "Address": "D28",
+      "Formula": "=LARGE(IF(A1>0,A1:A8,A6:A8),1)",
+      "Formula2": "=LARGE(IF(A1>0,A1:A8,A6:A8),1)",
+      "Kind": "Number",
+      "Value": 2.0
+    },
+    {
+      "Id": "order-29",
+      "Sheet": "Data",
+      "Address": "D29",
+      "Formula": "=LARGE(LET(v,A1:A8,v),1)",
+      "Formula2": "=LARGE(LET(v,A1:A8,v),1)",
+      "Kind": "Number",
+      "Value": 2.0
+    },
+    {
+      "Id": "order-30",
+      "Sheet": "Data",
+      "Address": "D30",
+      "Formula": "=LARGE(A1:B2,2)",
+      "Formula2": "=LARGE(A1:B2,2)",
+      "Kind": "Error",
+      "Value": "#DIV/0!"
+    },
+    {
+      "Id": "order-31",
+      "Sheet": "Data",
+      "Address": "D31",
+      "Formula": "=LARGE(A:A,2)",
+      "Formula2": "=LARGE(A:A,2)",
+      "Kind": "Number",
+      "Value": 2.0
+    },
+    {
+      "Id": "order-32",
+      "Sheet": "Data",
+      "Address": "D32",
+      "Formula": "=LARGE(A1:A8,B2)",
+      "Formula2": "=LARGE(A1:A8,B2)",
+      "Kind": "Number",
+      "Value": 2.0
+    },
+    {
+      "Id": "order-33",
+      "Sheet": "Data",
+      "Address": "D33",
+      "Formula": "=SMALL(A1:A8,1)",
+      "Formula2": "=SMALL(A1:A8,1)",
+      "Kind": "Number",
+      "Value": -3.0
+    },
+    {
+      "Id": "order-34",
+      "Sheet": "Data",
+      "Address": "D34",
+      "Formula": "=SMALL(A1:A8,2)",
+      "Formula2": "=SMALL(A1:A8,2)",
+      "Kind": "Number",
+      "Value": 0.0
+    },
+    {
+      "Id": "order-35",
+      "Sheet": "Data",
+      "Address": "D35",
+      "Formula": "=SMALL(A1:A8,3)",
+      "Formula2": "=SMALL(A1:A8,3)",
+      "Kind": "Number",
+      "Value": 1.0
+    },
+    {
+      "Id": "order-36",
+      "Sheet": "Data",
+      "Address": "D36",
+      "Formula": "=SMALL(A1:A8,5)",
+      "Formula2": "=SMALL(A1:A8,5)",
+      "Kind": "Number",
+      "Value": 2.0
+    },
+    {
+      "Id": "order-37",
+      "Sheet": "Data",
+      "Address": "D37",
+      "Formula": "=SMALL(A1:A8,6)",
+      "Formula2": "=SMALL(A1:A8,6)",
+      "Kind": "Error",
+      "Value": "#NUM!"
+    },
+    {
+      "Id": "order-38",
+      "Sheet": "Data",
+      "Address": "D38",
+      "Formula": "=SMALL(A1:A8,0)",
+      "Formula2": "=SMALL(A1:A8,0)",
+      "Kind": "Error",
+      "Value": "#NUM!"
+    },
+    {
+      "Id": "order-39",
+      "Sheet": "Data",
+      "Address": "D39",
+      "Formula": "=SMALL(A1:A8,-1)",
+      "Formula2": "=SMALL(A1:A8,-1)",
+      "Kind": "Error",
+      "Value": "#NUM!"
+    },
+    {
+      "Id": "order-40",
+      "Sheet": "Data",
+      "Address": "D40",
+      "Formula": "=SMALL(A1:A8,0.1)",
+      "Formula2": "=SMALL(A1:A8,0.1)",
+      "Kind": "Error",
+      "Value": "#NUM!"
+    },
+    {
+      "Id": "order-41",
+      "Sheet": "Data",
+      "Address": "D41",
+      "Formula": "=SMALL(A1:A8,1.1)",
+      "Formula2": "=SMALL(A1:A8,1.1)",
+      "Kind": "Number",
+      "Value": -3.0
+    },
+    {
+      "Id": "order-42",
+      "Sheet": "Data",
+      "Address": "D42",
+      "Formula": "=SMALL(A1:A8,1.9)",
+      "Formula2": "=SMALL(A1:A8,1.9)",
+      "Kind": "Number",
+      "Value": -3.0
+    },
+    {
+      "Id": "order-43",
+      "Sheet": "Data",
+      "Address": "D43",
+      "Formula": "=SMALL(A1:A8,5.1)",
+      "Formula2": "=SMALL(A1:A8,5.1)",
+      "Kind": "Error",
+      "Value": "#NUM!"
+    },
+    {
+      "Id": "order-44",
+      "Sheet": "Data",
+      "Address": "D44",
+      "Formula": "=SMALL(A1:A8,1E+99)",
+      "Formula2": "=SMALL(A1:A8,1E+99)",
+      "Kind": "Error",
+      "Value": "#NUM!"
+    },
+    {
+      "Id": "order-45",
+      "Sheet": "Data",
+      "Address": "D45",
+      "Formula": "=SMALL(A1:A8,TRUE)",
+      "Formula2": "=SMALL(A1:A8,TRUE)",
+      "Kind": "Number",
+      "Value": -3.0
+    },
+    {
+      "Id": "order-46",
+      "Sheet": "Data",
+      "Address": "D46",
+      "Formula": "=SMALL(A1:A8,FALSE)",
+      "Formula2": "=SMALL(A1:A8,FALSE)",
+      "Kind": "Error",
+      "Value": "#NUM!"
+    },
+    {
+      "Id": "order-47",
+      "Sheet": "Data",
+      "Address": "D47",
+      "Formula": "=SMALL(A1:A8,\"2\")",
+      "Formula2": "=SMALL(A1:A8,\"2\")",
+      "Kind": "Number",
+      "Value": 0.0
+    },
+    {
+      "Id": "order-48",
+      "Sheet": "Data",
+      "Address": "D48",
+      "Formula": "=SMALL(A1:A8,\"x\")",
+      "Formula2": "=SMALL(A1:A8,\"x\")",
+      "Kind": "Error",
+      "Value": "#VALUE!"
+    },
+    {
+      "Id": "order-49",
+      "Sheet": "Data",
+      "Address": "D49",
+      "Formula": "=SMALL(A1:A8,A8)",
+      "Formula2": "=SMALL(A1:A8,A8)",
+      "Kind": "Error",
+      "Value": "#NUM!"
+    },
+    {
+      "Id": "order-50",
+      "Sheet": "Data",
+      "Address": "D50",
+      "Formula": "=SMALL(A1:A8,)",
+      "Formula2": "=SMALL(A1:A8,)",
+      "Kind": "Error",
+      "Value": "#NUM!"
+    },
+    {
+      "Id": "order-51",
+      "Sheet": "Data",
+      "Address": "D51",
+      "Formula": "=SMALL(A1:A8,1/0)",
+      "Formula2": "=SMALL(A1:A8,1/0)",
+      "Kind": "Error",
+      "Value": "#DIV/0!"
+    },
+    {
+      "Id": "order-52",
+      "Sheet": "Data",
+      "Address": "D52",
+      "Formula": "=SMALL(A6:A8,1)",
+      "Formula2": "=SMALL(A6:A8,1)",
+      "Kind": "Error",
+      "Value": "#NUM!"
+    },
+    {
+      "Id": "order-53",
+      "Sheet": "Data",
+      "Address": "D53",
+      "Formula": "=SMALL(A8,1)",
+      "Formula2": "=SMALL(A8,1)",
+      "Kind": "Error",
+      "Value": "#NUM!"
+    },
+    {
+      "Id": "order-54",
+      "Sheet": "Data",
+      "Address": "D54",
+      "Formula": "=SMALL(7,1)",
+      "Formula2": "=SMALL(7,1)",
+      "Kind": "Number",
+      "Value": 7.0
+    },
+    {
+      "Id": "order-55",
+      "Sheet": "Data",
+      "Address": "D55",
+      "Formula": "=SMALL(\"7\",1)",
+      "Formula2": "=SMALL(\"7\",1)",
+      "Kind": "Number",
+      "Value": 7.0
+    },
+    {
+      "Id": "order-56",
+      "Sheet": "Data",
+      "Address": "D56",
+      "Formula": "=SMALL(TRUE,1)",
+      "Formula2": "=SMALL(TRUE,1)",
+      "Kind": "Number",
+      "Value": 1.0
+    },
+    {
+      "Id": "order-57",
+      "Sheet": "Data",
+      "Address": "D57",
+      "Formula": "=SMALL(\"x\",1)",
+      "Formula2": "=SMALL(\"x\",1)",
+      "Kind": "Error",
+      "Value": "#VALUE!"
+    },
+    {
+      "Id": "order-58",
+      "Sheet": "Data",
+      "Address": "D58",
+      "Formula": "=SMALL(B1:B2,1)",
+      "Formula2": "=SMALL(B1:B2,1)",
+      "Kind": "Error",
+      "Value": "#DIV/0!"
+    },
+    {
+      "Id": "order-59",
+      "Sheet": "Data",
+      "Address": "D59",
+      "Formula": "=SMALL(SEQUENCE(4),1)",
+      "Formula2": "=SMALL(SEQUENCE(4),1)",
+      "Kind": "Number",
+      "Value": 1.0
+    },
+    {
+      "Id": "order-60",
+      "Sheet": "Data",
+      "Address": "D60",
+      "Formula": "=SMALL(IF(A1>0,A1:A8,A6:A8),1)",
+      "Formula2": "=SMALL(IF(A1>0,A1:A8,A6:A8),1)",
+      "Kind": "Number",
+      "Value": -3.0
+    },
+    {
+      "Id": "order-61",
+      "Sheet": "Data",
+      "Address": "D61",
+      "Formula": "=SMALL(LET(v,A1:A8,v),1)",
+      "Formula2": "=SMALL(LET(v,A1:A8,v),1)",
+      "Kind": "Number",
+      "Value": -3.0
+    },
+    {
+      "Id": "order-62",
+      "Sheet": "Data",
+      "Address": "D62",
+      "Formula": "=SMALL(A1:B2,2)",
+      "Formula2": "=SMALL(A1:B2,2)",
+      "Kind": "Error",
+      "Value": "#DIV/0!"
+    },
+    {
+      "Id": "order-63",
+      "Sheet": "Data",
+      "Address": "D63",
+      "Formula": "=SMALL(A:A,2)",
+      "Formula2": "=SMALL(A:A,2)",
+      "Kind": "Number",
+      "Value": 0.0
+    },
+    {
+      "Id": "order-64",
+      "Sheet": "Data",
+      "Address": "D64",
+      "Formula": "=SMALL(A1:A8,B2)",
+      "Formula2": "=SMALL(A1:A8,B2)",
+      "Kind": "Number",
+      "Value": 0.0
+    },
+    {
+      "Id": "order-65",
+      "Sheet": "Data",
+      "Address": "D65",
+      "Formula": "=RANK.EQ(2,A1:A8)",
+      "Formula2": "=RANK.EQ(2,A1:A8)",
+      "Kind": "Number",
+      "Value": 1.0
+    },
+    {
+      "Id": "order-66",
+      "Sheet": "Data",
+      "Address": "D66",
+      "Formula": "=RANK.EQ(0,A1:A8)",
+      "Formula2": "=RANK.EQ(0,A1:A8)",
+      "Kind": "Number",
+      "Value": 4.0
+    },
+    {
+      "Id": "order-67",
+      "Sheet": "Data",
+      "Address": "D67",
+      "Formula": "=RANK.EQ(-3,A1:A8)",
+      "Formula2": "=RANK.EQ(-3,A1:A8)",
+      "Kind": "Number",
+      "Value": 5.0
+    },
+    {
+      "Id": "order-68",
+      "Sheet": "Data",
+      "Address": "D68",
+      "Formula": "=RANK.EQ(9,A1:A8)",
+      "Formula2": "=RANK.EQ(9,A1:A8)",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "order-69",
+      "Sheet": "Data",
+      "Address": "D69",
+      "Formula": "=RANK.EQ(\"2\",A1:A8)",
+      "Formula2": "=RANK.EQ(\"2\",A1:A8)",
+      "Kind": "Number",
+      "Value": 1.0
+    },
+    {
+      "Id": "order-70",
+      "Sheet": "Data",
+      "Address": "D70",
+      "Formula": "=RANK.EQ(TRUE,A1:A8)",
+      "Formula2": "=RANK.EQ(TRUE,A1:A8)",
+      "Kind": "Number",
+      "Value": 3.0
+    },
+    {
+      "Id": "order-71",
+      "Sheet": "Data",
+      "Address": "D71",
+      "Formula": "=RANK.EQ(A8,A1:A8)",
+      "Formula2": "=RANK.EQ(A8,A1:A8)",
+      "Kind": "Number",
+      "Value": 4.0
+    },
+    {
+      "Id": "order-72",
+      "Sheet": "Data",
+      "Address": "D72",
+      "Formula": "=RANK.EQ(1/0,A1:A8)",
+      "Formula2": "=RANK.EQ(1/0,A1:A8)",
+      "Kind": "Error",
+      "Value": "#DIV/0!"
+    },
+    {
+      "Id": "order-73",
+      "Sheet": "Data",
+      "Address": "D73",
+      "Formula": "=RANK.EQ(2,A1:A8,0)",
+      "Formula2": "=RANK.EQ(2,A1:A8,0)",
+      "Kind": "Number",
+      "Value": 1.0
+    },
+    {
+      "Id": "order-74",
+      "Sheet": "Data",
+      "Address": "D74",
+      "Formula": "=RANK.EQ(2,A1:A8,1)",
+      "Formula2": "=RANK.EQ(2,A1:A8,1)",
+      "Kind": "Number",
+      "Value": 4.0
+    },
+    {
+      "Id": "order-75",
+      "Sheet": "Data",
+      "Address": "D75",
+      "Formula": "=RANK.EQ(2,A1:A8,-1)",
+      "Formula2": "=RANK.EQ(2,A1:A8,-1)",
+      "Kind": "Number",
+      "Value": 4.0
+    },
+    {
+      "Id": "order-76",
+      "Sheet": "Data",
+      "Address": "D76",
+      "Formula": "=RANK.EQ(2,A1:A8,0.1)",
+      "Formula2": "=RANK.EQ(2,A1:A8,0.1)",
+      "Kind": "Number",
+      "Value": 4.0
+    },
+    {
+      "Id": "order-77",
+      "Sheet": "Data",
+      "Address": "D77",
+      "Formula": "=RANK.EQ(2,A1:A8,-0.1)",
+      "Formula2": "=RANK.EQ(2,A1:A8,-0.1)",
+      "Kind": "Number",
+      "Value": 4.0
+    },
+    {
+      "Id": "order-78",
+      "Sheet": "Data",
+      "Address": "D78",
+      "Formula": "=RANK.EQ(2,A1:A8,TRUE)",
+      "Formula2": "=RANK.EQ(2,A1:A8,TRUE)",
+      "Kind": "Number",
+      "Value": 4.0
+    },
+    {
+      "Id": "order-79",
+      "Sheet": "Data",
+      "Address": "D79",
+      "Formula": "=RANK.EQ(2,A1:A8,\"1\")",
+      "Formula2": "=RANK.EQ(2,A1:A8,\"1\")",
+      "Kind": "Error",
+      "Value": "#VALUE!"
+    },
+    {
+      "Id": "order-80",
+      "Sheet": "Data",
+      "Address": "D80",
+      "Formula": "=RANK.EQ(2,A1:A8,\"x\")",
+      "Formula2": "=RANK.EQ(2,A1:A8,\"x\")",
+      "Kind": "Error",
+      "Value": "#VALUE!"
+    },
+    {
+      "Id": "order-81",
+      "Sheet": "Data",
+      "Address": "D81",
+      "Formula": "=RANK.EQ(2,A1:A8,)",
+      "Formula2": "=RANK.EQ(2,A1:A8,)",
+      "Kind": "Number",
+      "Value": 1.0
+    },
+    {
+      "Id": "order-82",
+      "Sheet": "Data",
+      "Address": "D82",
+      "Formula": "=RANK.EQ(2,A1:A8,1/0)",
+      "Formula2": "=RANK.EQ(2,A1:A8,1/0)",
+      "Kind": "Error",
+      "Value": "#DIV/0!"
+    },
+    {
+      "Id": "order-86",
+      "Sheet": "Data",
+      "Address": "D86",
+      "Formula": "=RANK.EQ(2,A6:A8)",
+      "Formula2": "=RANK.EQ(2,A6:A8)",
+      "Kind": "Error",
+      "Value": "#N/A"
+    },
+    {
+      "Id": "order-87",
+      "Sheet": "Data",
+      "Address": "D87",
+      "Formula": "=RANK.EQ(2,B1:B2)",
+      "Formula2": "=RANK.EQ(2,B1:B2)",
+      "Kind": "Error",
+      "Value": "#DIV/0!"
+    },
+    {
+      "Id": "order-89",
+      "Sheet": "Data",
+      "Address": "D89",
+      "Formula": "=RANK.EQ(2,LET(v,A1:A8,v))",
+      "Formula2": "=RANK.EQ(2,LET(v,A1:A8,v))",
+      "Kind": "Number",
+      "Value": 1.0
+    },
+    {
+      "Id": "order-90",
+      "Sheet": "Data",
+      "Address": "D90",
+      "Formula": "=RANK.EQ(2,IF(A1>0,A1:A8,A6:A8))",
+      "Formula2": "=RANK.EQ(2,IF(A1>0,A1:A8,A6:A8))",
+      "Kind": "Number",
+      "Value": 1.0
+    },
+    {
+      "Id": "order-91",
+      "Sheet": "Data",
+      "Address": "D91",
+      "Formula": "=LARGE(B1:B2,\"x\")",
+      "Formula2": "=LARGE(B1:B2,\"x\")",
+      "Kind": "Error",
+      "Value": "#VALUE!"
+    },
+    {
+      "Id": "order-92",
+      "Sheet": "Data",
+      "Address": "D92",
+      "Formula": "=SMALL(B1:B2,0)",
+      "Formula2": "=SMALL(B1:B2,0)",
+      "Kind": "Error",
+      "Value": "#DIV/0!"
+    },
+    {
+      "Id": "order-93",
+      "Sheet": "Data",
+      "Address": "D93",
+      "Formula": "=RANK.EQ(\"x\",B1:B2)",
+      "Formula2": "=RANK.EQ(\"x\",B1:B2)",
+      "Kind": "Error",
+      "Value": "#VALUE!"
+    },
+    {
+      "Id": "order-94",
+      "Sheet": "Data",
+      "Address": "D94",
+      "Formula": "=RANK.EQ(2,B1:B2,\"x\")",
+      "Formula2": "=RANK.EQ(2,B1:B2,\"x\")",
+      "Kind": "Error",
+      "Value": "#VALUE!"
+    },
+    {
+      "Id": "order-95",
+      "Sheet": "Data",
+      "Address": "D95",
+      "Formula": "=IFERROR(LARGE(A1:A8,99),42)",
+      "Formula2": "=IFERROR(LARGE(A1:A8,99),42)",
+      "Kind": "Number",
+      "Value": 42.0
+    },
+    {
+      "Id": "order-96",
+      "Sheet": "Data",
+      "Address": "D96",
+      "Formula": "=IFNA(RANK.EQ(99,A1:A8),42)",
+      "Formula2": "=IFNA(RANK.EQ(99,A1:A8),42)",
+      "Kind": "Number",
+      "Value": 42.0
+    }
+  ],
+  "Guarded": [],
+  "Stable": true,
+  "EditedStable": true,
+  "SourceUnchanged": true,
+  "SourceSha256": null,
+  "ReferenceMatches": null,
+  "InitialSha256": "44DF91C3D355E571787678396F3121A44BAA8151380C843F7F03347CC9ACD010"
+}

@@ -15,7 +15,11 @@ public static class DynamicArrayFunctions
         || expression is ReferenceNode { SourceExpression: FunctionNode } reference && ConditionalRanges.Shape(reference) != (1, 1)
         || FormulaSyntax.Walk(expression).Any(n =>
         n is UnaryNode { Operator: "#" } || n is LetNode let && DateMathFunctions.ArrayResult(let)
-        || n is FunctionNode function && (IsFunction(function.Name) || ReturnsLookupArray(function)));
+        || n is FunctionNode function && (IsFunction(function.Name) || ReturnsLookupArray(function) || UsesOrderStatisticArray(function)));
+
+    private static bool UsesOrderStatisticArray(FunctionNode function) => OrderStatisticFunctions.IsFunction(function.Name)
+        && StandardFunctions.AcceptsArguments(function.Name,function.Arguments.Count)
+        && function.Arguments[function.Name=="RANK.EQ" ? 1 : 0] is var data && data is not ReferenceNode && DateMathFunctions.ArrayResult(data);
 
     private static bool ReturnsLookupArray(FunctionNode function)
     {

@@ -19,7 +19,7 @@ internal static class PivotProbe
             d.Feature.StartsWith("relationship/pivot",StringComparison.OrdinalIgnoreCase) || d.Feature.StartsWith("part/",StringComparison.OrdinalIgnoreCase) && d.Feature.Contains("pivot",StringComparison.OrdinalIgnoreCase)).ToArray();
         ProbeRunner.WriteNew(Path.Combine(directory,"import.json"),JsonSerializer.SerializeToUtf8Bytes(new { Count=pivots.Length, PivotIssues=pivotIssues,
             OtherIssues=session.Snapshot.FileState.CompatibilityDiagnostics.Except(pivotIssues).ToArray(), Pivots=pivots.Select(p=>new{p.Name,p.Source,p.Range,p.Stale,Records=p.Cache.Records.Length}) },new JsonSerializerOptions { WriteIndented=true }));
-        if (pivots.Length!=2 || pivotIssues.Length!=0) throw new InvalidOperationException("Independent Excel pivot import did not fully model both basic reports; inspect import.json.");
+        if (pivots.Length is not (2 or 5) || pivotIssues.Length!=0) throw new InvalidOperationException("Independent Excel pivot import did not fully model the expected reports; inspect import.json.");
         var sheet=session.Snapshot.Sheets.Single(s=>s.Name=="Data");
         session.Execute(new SetCellsCommand([new(new(sheet.Id,1,2),CellContent.FromLiteral(CellValue.FromNumber(12)))]));
         var stale=Path.Combine(directory,"stale.xlsx"); storage.Save(stale,session.Snapshot,discardUnsupported:true);
@@ -29,7 +29,7 @@ internal static class PivotProbe
         var opened=storage.Open(refreshed);
         if (opened.Sheets.SelectMany(s=>s.Data.Pivots).Any(p=>p.Stale) || !SHA256.HashData(File.ReadAllBytes(source)).SequenceEqual(hash))
             throw new InvalidOperationException("Refresh or source preservation failed.");
-        Console.WriteLine("PASS: two independently generated Excel pivots imported, marked stale, refreshed and rewritten; source unchanged.");
+        Console.WriteLine($"PASS: {pivots.Length} independently generated Excel pivots imported, marked stale, refreshed and rewritten; source unchanged.");
         return 0;
     }
 }

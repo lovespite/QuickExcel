@@ -25,7 +25,7 @@ public sealed class PivotStorageTests
     }
 
     [Theory]
-    [InlineData("average",false)]
+    [InlineData("product",false)]
     [InlineData("sum",true)]
     public void UnsupportedAggregationAndExternalSourcePreserveOriginalAndNeverGuessRefresh(string aggregation,bool external)
     {

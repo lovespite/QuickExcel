@@ -14,8 +14,10 @@ public sealed class CalculationBoundaryTests
         using var json = ScalarFormulaFixture.Load("excel-function-arity");
         using var arrays = ScalarFormulaFixture.Load("excel-array-arity");
         using var complex = ScalarFormulaFixture.Load("excel-complex-arity");
+        using var order = ScalarFormulaFixture.Load("excel-order-statistic-arity");
         var cases = json.RootElement.GetProperty("Cases").EnumerateArray().Concat(arrays.RootElement.GetProperty("Cases").EnumerateArray())
-            .Concat(complex.RootElement.GetProperty("Cases").EnumerateArray()).ToArray();
+            .Concat(complex.RootElement.GetProperty("Cases").EnumerateArray())
+            .Concat(order.RootElement.GetProperty("Cases").EnumerateArray()).ToArray();
         Assert.Equal(StandardFunctions.Signatures.Keys.Order(), cases.Select(c => c.GetProperty("Function").GetString()!).Distinct().Order());
         foreach (var item in cases)
         {

@@ -24,12 +24,12 @@ public sealed partial class MainWindow
         if (tables.Length==0) throw new InvalidOperationException("请先将含标题的数据区域创建为表格，再创建透视表。");
         var targets=snapshot.Sheets.Where(s=>s.Visibility==SheetVisibility.Visible).ToArray(); var suffix=1;
         while (snapshot.Sheets.SelectMany(s=>s.Data.Pivots).Any(p=>p.Name.Equals("Pivot"+suffix,StringComparison.OrdinalIgnoreCase))) suffix++;
-        var dialog=new FieldsDialog("创建透视表").Note("选择本地表格、一个行字段、可选列字段及求和或计数。结果需放在空白区域；源数据修改后可显式刷新。")
+        var dialog=new FieldsDialog("创建透视表").Note("选择本地表格、一个行字段、可选列字段及汇总方式。结果需放在空白区域；源数据修改后可显式刷新。")
             .Text("name","透视表名称","Pivot"+suffix).Choice("source","来源表格",tables.Select(t=>$"{t.Sheet.Name} · {t.Table.Name}").ToArray())
             .Choice("row","行字段",tables[0].Table.Columns.Select(c=>c.Name).ToArray())
             .Choice("column","列字段",new[]{"无"}.Concat(tables[0].Table.Columns.Select(c=>c.Name)).ToArray())
             .Choice("value","汇总字段",tables[0].Table.Columns.Select(c=>c.Name).ToArray(),tables[0].Table.Columns.Length-1)
-            .Choice("function","汇总方式",["求和","计数"]).Text("caption","汇总标题","合计")
+            .Choice("function","汇总方式",["求和","计数","平均值","最小值","最大值"]).Text("caption","汇总标题","合计")
             .Choice("target","结果工作表",targets.Select(s=>s.Name).ToArray(),Array.FindIndex(targets,s=>s.Id==snapshot.ActiveSheetId))
             .Text("anchor","结果左上角",QuickExcel.Formulas.FormulaSyntax.ColumnName(_grid.Current.Column)+(_grid.Current.Row+1));
         ((ComboBox)dialog.Input("source")).SelectionChanged+=(_,_)=>

@@ -93,7 +93,11 @@ internal static partial class XlsxPivots
             if (pivot.ColumnField is { } column) root.Add(Axis("colFields",column),Items("colItems",result.ColumnItems.Length));
             else root.Add(new XElement(Main+"colItems",new XAttribute("count",1),new XElement(Main+"i",new XElement(Main+"x"))));
             root.Add(new XElement(Main+"dataFields",new XAttribute("count",1),new XElement(Main+"dataField",new XAttribute("name",Encode(pivot.DataCaption)),
-                new XAttribute("fld",pivot.DataField),new XAttribute("subtotal",pivot.Aggregation==PivotAggregation.Count ? "count" : "sum"),new XAttribute("baseField",0),new XAttribute("baseItem",0))),
+                new XAttribute("fld",pivot.DataField),new XAttribute("subtotal",pivot.Aggregation switch
+                {
+                    PivotAggregation.Sum=>"sum", PivotAggregation.Count=>"count", PivotAggregation.Average=>"average",
+                    PivotAggregation.Min=>"min", PivotAggregation.Max=>"max", _=>throw new InvalidOperationException("透视汇总函数无效。")
+                }),new XAttribute("baseField",0),new XAttribute("baseItem",0))),
                 new XElement(Main+"pivotTableStyleInfo",new XAttribute("showRowHeaders",1),new XAttribute("showColHeaders",1),new XAttribute("showRowStripes",0),new XAttribute("showColStripes",0),new XAttribute("showLastColumn",1)),
                 new XElement(Main+"extLst",new XElement(Main+"ext",new XAttribute("uri","{962EF5D1-5CA2-4c93-8EF4-DBF5C05439D2}"),new XElement(X14+"pivotTableDefinition",new XAttribute("hideValuesRow",1)))));
             parts[pivotPart]=XmlBytes(new(root));

@@ -141,6 +141,7 @@ internal sealed partial class TypedEvaluator(WorkbookSnapshot snapshot, IReadOnl
         if (TextFunctions.IsFunction(function.Name)) return TextFunction(function);
         if (function.Name == "SUBTOTAL") return Subtotal(function);
         if (ComplexFormulaFunctions.IsStatistic(function.Name)) return Statistic(function);
+        if (OrderStatisticFunctions.IsFunction(function.Name)) return OrderStatistic(function);
         var aggregate = function.Name is "SUM" or "AVERAGE" or "MIN" or "MAX" or "COUNT" or "COUNTA" or "PRODUCT";
         var contextual = aggregate || function.Name is "AND" or "OR" ? function.Arguments.Select(AggregateArgument).ToArray() : null;
         var args = contextual is null ? function.Arguments.Select(Evaluate).ToArray() : contextual.Select(a => a.Value).ToArray();

@@ -1,4 +1,4 @@
-param([Parameter(Mandatory)][string]$OutputDirectory, [string]$WorkbookPath, [string]$OraclePath, [ValidateSet('Initial','Edited')][string]$State='Initial')
+param([Parameter(Mandatory)][string]$OutputDirectory, [string]$WorkbookPath, [string]$OraclePath, [ValidateSet('Initial','Edited')][string]$State='Initial', [switch]$ExtendedAggregations)
 $ErrorActionPreference = 'Stop'
 $repo = Split-Path $PSScriptRoot -Parent
 $artifactRoot = [IO.Path]::GetFullPath((Join-Path $repo 'artifacts')) + [IO.Path]::DirectorySeparatorChar
@@ -25,7 +25,8 @@ function Capture-Pivots($book) {
                             $cell = $range.Cells.Item($row,$col)
                             try {
                                 $value = $cell.Value2
-                                $kind = if ($null -eq $value) { 'Blank' } elseif ($value -is [string]) { 'Text' } elseif ($value -is [bool]) { 'Boolean' } else { 'Number' }
+                                $kind = if ($null -eq $value) { 'Blank' } elseif ($value -is [string]) { 'Text' } elseif ($value -is [bool]) { 'Boolean' } elseif ($value -is [int] -and $value -lt -2146820000) { 'Error' } else { 'Number' }
+                                if ($kind -eq 'Error') { $value=[string]$cell.Text }
                                 $values.Add([ordered]@{ Row=$row-1; Column=$col-1; Kind=$kind; Value=$value })
                             } finally { Release-Com $cell }
                         }
@@ -61,15 +62,18 @@ try {
         $data=$book.Worksheets.Item(1); $data.Name='Data'; $summary=$book.Worksheets.Add([Type]::Missing,$data); $summary.Name='Summary'
         try {
             $records=@(@('Region','Product','Amount'),@('North','A',10),@('South','A',20),@('North','B',5),@('South','B',0),@('North','A',7),@('South','A','text'),@('East','B',-3),@('East','A',$null))
+            if ($ExtendedAggregations) { $records+=@(@('South','C','123'),@('North','C',$true),@('East','C',$null)) }
             for ($r=0; $r -lt $records.Count; $r++) { for ($c=0; $c -lt 3; $c++) {
                 $cell=$data.Cells.Item($r+1,$c+1)
-                try { if ($null -ne $records[$r][$c]) { if ($records[$r][$c] -is [int]) {$cell.Value2=[double]$records[$r][$c]} else {$cell.Value2=[string]$records[$r][$c]} } } finally { Release-Com $cell }
+                try { if ($null -ne $records[$r][$c]) { if ($records[$r][$c] -is [int]) {$cell.Value2=[double]$records[$r][$c]} elseif ($records[$r][$c] -is [bool]) {$cell.Value2=$records[$r][$c]} else {if ([string]$records[$r][$c] -match '^\d+$') {$cell.NumberFormat='@'}; $cell.Value2=[string]$records[$r][$c]} } } finally { Release-Com $cell }
             } }
-            $source=$data.Range('A1:C9'); $tables=$data.ListObjects; $table=$tables.Add(1,$source,[Type]::Missing,1); $table.Name='SalesData'
+            $source=$data.Range('A1:C'+$records.Count); $tables=$data.ListObjects; $table=$tables.Add(1,$source,[Type]::Missing,1); $table.Name='SalesData'
             Release-Com $table; Release-Com $tables; Release-Com $source
             $caches=$book.PivotCaches(); $cache=$caches.Create(1,'SalesData',6); $pivots=$summary.PivotTables()
             try {
-                foreach ($spec in @(@('SalesSum','A3',-4157,'Total'),@('SalesCount','A12',-4112,'Count'))) {
+                $specifications=@(@('SalesSum','A3',-4157,'Total'),@('SalesCount','A12',-4112,'Count'))
+                if ($ExtendedAggregations) { $specifications+=@(@('SalesAverage','A21',-4106,'Average'),@('SalesMin','A30',-4139,'Min'),@('SalesMax','A39',-4136,'Max')) }
+                foreach ($spec in $specifications) {
                     $destination=$summary.Range($spec[1]); $pivot=$pivots.Add($cache,$destination,$spec[0]); Release-Com $destination
                     try {
                         $fields=$pivot.PivotFields(); $rows=$fields.Item('Region'); $columns=$fields.Item('Product'); $amount=$fields.Item('Amount')

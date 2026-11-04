@@ -62,6 +62,7 @@ public sealed class ChartClipboard
 /// <summary>Insert the editable chart and its value data sheet as one undoable change.</summary>
 public sealed class PasteChartCommand(ChartClipboard source, SheetId sheetId, CellPosition position) : DocumentCommand
 {
+    private readonly Guid _chartId = Guid.NewGuid();
     internal override CommandDraft Prepare(WorkbookSnapshot snapshot)
     {
         var destination = snapshot.GetSheet(sheetId); WorkbookLimits.ValidatePosition(position.Row, position.Column);
@@ -75,7 +76,7 @@ public sealed class PasteChartCommand(ChartClipboard source, SheetId sheetId, Ce
         var imported = new WorksheetSnapshot(SheetId.New(), name, data.Cells.Select(p => new KeyValuePair<CellPosition, CellSnapshot>(p.Key, new(p.Value.Content.WithStyle(map[p.Value.Content.StyleId])))));
         var chart = source.Chart.MapReferences(f => FormulaSyntax.Print(WorksheetChart.ParseReference(f) with { Sheet = name }));
         var bounds = chart.Anchor.Bounds(data);
-        chart = chart with { Anchor = DrawingGeometry.FromBounds(destination, new(DrawingGeometry.ColumnStart(destination, position.Column), DrawingGeometry.RowStart(destination, position.Row), bounds.Width, bounds.Height), DrawingAnchorKind.OneCell, chart.Anchor.Rotation) };
+        chart = chart with { ScriptId = _chartId, Anchor = DrawingGeometry.FromBounds(destination, new(DrawingGeometry.ColumnStart(destination, position.Column), DrawingGeometry.RowStart(destination, position.Row), bounds.Width, bounds.Height), DrawingAnchorKind.OneCell, chart.Anchor.Rotation) };
         // Values are independent snapshots. Preserve numeric/date-axis interpretation across workbook epochs.
         if (source.Book.DateSystem != snapshot.DateSystem && source.Chart.Series.Any(s => s.NumericCategories))
             throw new NotSupportedException("数值分类图表的数据日期系统与目标不同；请选择粘贴为图片。");

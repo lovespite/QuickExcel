@@ -89,6 +89,8 @@ public static class FormulaEditing
             "SUMIFS" => "sum_range, criteria_range1, criteria1, ",
             "AVERAGEIFS" => "average_range, criteria_range1, criteria1, ",
             "COUNTBLANK" => "range",
+            "LARGE" or "SMALL" => "array, k",
+            "RANK.EQ" => "number, ref, [order]",
             "HLOOKUP" => "lookup_value, table_array, row_index, [range_lookup]",
             "XLOOKUP" => "lookup_value, lookup_array, return_array, [if_not_found], [match_mode], [search_mode: 1/-1]（模式须为常量）",
             "XMATCH" => "lookup_value, lookup_array, [match_mode], [search_mode: 1/-1]（模式须为常量）",
