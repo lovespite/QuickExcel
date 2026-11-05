@@ -71,3 +71,15 @@ Go To Special creates a navigation-only selection. It deduplicates overlapping s
 范围：最多 64 个连续结果区域，空白/可见扫描范围最多 1,000,000 格，比较及访问预算 2,000,000；远端稀疏常量/公式无需枚举完整已用矩形。超限、取消和过期预览均不应用部分结果。后续写入继续受现有 20,000 格编辑预算、隐藏/筛选及保护规则约束。
 
 验证：15 项定位、统计和本地化定向测试通过；8 项 Avalonia SpecialSelection 检查通过，包括取消、统计、多区格式、清除/一次撤销和过期预览。证据 `artifacts/avalonia/workspace/20261105-073642-55d889a4`。生产发布和自检通过，活动包 `artifacts/avalonia/releases/20261105-073652-32784661/application`，清单哈希已核对。
+
+## XC-0604 — 可见行交换 / Visible-row transfer
+
+2026-11-05，1.23.0。编辑菜单新增复制可见单元格和粘贴到可见单元格。跳过手动隐藏及筛除行，按源行顺序映射到目标可见行，目标必须显式选择同样的可见行列数。复制类型值及基本样式，支持单独只贴值；公式模式按每个源格原坐标转换到对应目标位置。目标隐藏/筛除行不写入。预览说明覆盖范围、记录数和跳过行数，整批通过 DocumentSession 提交并可一次撤销。
+
+Visible-row transfers preserve typed identifiers, booleans, errors, dates and basic styles. A portable XML Spreadsheet payload supports another instance; local capture identity expires after any document or filter edit. Preview rechecks session, sheet, revision, calculated sheet identity and selection. Protection, validation and array ownership checks reject the whole transaction on failure.
+
+映射范围：列位置保持不变，隐藏列须先取消隐藏；单次最多 20,000 可见格。富文本、链接、传统批注、源验证/Table 及未映射规则拒绝；目标验证保留并执行，值/公式粘贴保留目标条件格式，格式粘贴拒绝涉及条件格式。合并、浮动对象和线程讨论按整个包围矩形保守检查（包括隐藏行）。数组只可复制有效结果值，公式模式拒绝数组所有权。外部/内部公式统一采用现有外部协议的普通相对引用子集，拒绝名称、跨表、绝对/混合引用；XML 保存每格原始引用偏移。公式模式仅发布 XML，避免 HTML 压缩坐标下负偏移不能表达时悄悄更改语义，界面已提示。
+
+验证：52 项可见行/外部导出/筛选剪贴板/本地化测试通过，涵盖类型、跨表和 XML 往返、日期系统、保存重开、保护与验证回滚、撤销/重做、取消和边界。9 项 Avalonia VisibleTransfer 检查通过，含公式路径、失效本地捕获及过期外部预览；证据 `artifacts/avalonia/workspace/20261105-074503-c289e027`。沿用 78 号 XML 编码协议，本批跨实例证据为序列化后去掉本地身份的接收路径，未将其称为新的实机 Excel 操作样例。
+
+生产发布和自检通过，活动包 `artifacts/avalonia/releases/20261105-074519-26852aec/application`，活动清单哈希已核对。
