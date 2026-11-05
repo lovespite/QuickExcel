@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using QuickExcel.Domain;
+using QuickExcel.Runtime;
 
 namespace QuickExcel.Security;
 
@@ -21,6 +22,54 @@ public static class ScriptSignatures
     public const string CodeSigningOid = "1.3.6.1.5.5.7.3.3";
     private const string RsaAlgorithm = "RSA-PSS-SHA256";
     private const string EcAlgorithm = "ECDSA-P256-SHA256";
+
+    public static async Task<ScriptSignature> SignAsync(ScriptModuleSet modules, X509Certificate2 certificate,
+        CalculationStamp stamp, CancellationToken cancellationToken = default)
+    {
+        ValidateCertificate(certificate);
+        var request = ScriptCompilation.Request(modules);
+        var compiled = await ScriptCompilation.CompileAsync(modules, request, stamp, cancellationToken).ConfigureAwait(false);
+        cancellationToken.ThrowIfCancellationRequested();
+        var signature = Sign(modules, certificate);
+        ScriptCompilationCache.StoreSigned(modules.WithSignature(signature), request, compiled, certificate, cancellationToken);
+        return signature;
+    }
+
+    internal static byte[] SignData(byte[] payload, X509Certificate2 certificate, string algorithm)
+    {
+        if (algorithm == RsaAlgorithm)
+        {
+            using var key = certificate.GetRSAPrivateKey() ?? throw new CryptographicException("Missing RSA private key.");
+            return key.SignData(payload, HashAlgorithmName.SHA256, RSASignaturePadding.Pss);
+        }
+        using var ec = certificate.GetECDsaPrivateKey() ?? throw new CryptographicException("Missing ECDSA private key.");
+        return ec.SignData(payload, HashAlgorithmName.SHA256, DSASignatureFormat.IeeeP1363FixedFieldConcatenation);
+    }
+
+    internal static bool VerifyData(byte[] payload, byte[] value, X509Certificate2 certificate, string algorithm)
+    {
+        using var rsa = certificate.GetRSAPublicKey();
+        using var ec = certificate.GetECDsaPublicKey();
+        return algorithm == RsaAlgorithm
+            ? rsa is { KeySize: >= 2048 } && rsa.VerifyData(payload, value, HashAlgorithmName.SHA256, RSASignaturePadding.Pss)
+            : algorithm == EcAlgorithm && ec is { KeySize: 256 } && ec.ExportParameters(false).Curve.Oid.Value == "1.2.840.10045.3.1.7" &&
+                ec.VerifyData(payload, value, HashAlgorithmName.SHA256, DSASignatureFormat.IeeeP1363FixedFieldConcatenation);
+    }
+
+    // Content authenticity only; execution consent and certificate chain trust remain the host's responsibility.
+    internal static bool VerifyContent(ScriptModuleSet modules)
+    {
+        try
+        {
+            if (modules.Signature is not { } signature || signature.Version != (modules.HasTypeScript ? 2 : 1) ||
+                signature.Certificate is null || signature.Certificate.Length > 24 * 1024 || signature.Value is null || signature.Value.Length > 4096) return false;
+            var der = Convert.FromBase64String(signature.Certificate);
+            using var certificate = X509CertificateLoader.LoadCertificate(der);
+            return der.AsSpan().SequenceEqual(certificate.RawData) && VerifyData(Payload(modules, signature.Algorithm, certificate),
+                Convert.FromBase64String(signature.Value), certificate, signature.Algorithm);
+        }
+        catch (Exception ex) when (ex is CryptographicException or ArgumentException or FormatException) { return false; }
+    }
 
     public static ScriptSignature Sign(ScriptModuleSet modules, X509Certificate2 certificate)
     {

@@ -72,7 +72,10 @@ internal static class PackageIO
             if (entry.FullName.EndsWith('/') && entry.Length != 0) throw new InvalidDataException("目录不能有内容。");
             if (!names.Add(entry.FullName)) throw new InvalidDataException($"重复或大小写歧义条目：{entry.FullName}");
             var limit = !xlsq ? FileReadBudget.MaxFileBytes : entry.FullName switch
-            { "manifest.json" or "security/script-signature.json" => 64 * 1024, "state/document.json" => 1024 * 1024, _ when entry.FullName.StartsWith("scripts/", StringComparison.Ordinal) => 1024 * 1024, _ => FileReadBudget.MaxFileBytes };
+            { "manifest.json" or "security/script-signature.json" => 64 * 1024,
+                "cache/script-compilation.json" => QuickExcel.Runtime.ScriptCompilationCache.LegacyMaximumBytes,
+                "cache/script-compilation.bin" => QuickExcel.Runtime.ScriptCompilationCache.MaximumDataBytes,
+                "state/document.json" => 1024 * 1024, _ when entry.FullName.StartsWith("scripts/", StringComparison.Ordinal) => 1024 * 1024, _ => FileReadBudget.MaxFileBytes };
             if (xlsq && entry.FullName.StartsWith("scripts/", StringComparison.Ordinal) && (scriptBytes += entry.Length) > 1024 * 1024)
                 throw new InvalidDataException("脚本声明总量超过 1 MiB。");
             if (entry.Length > limit || entry.Length < 0 || entry.Length > FileReadBudget.MaxExpandedBytes - declared)

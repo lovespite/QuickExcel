@@ -66,6 +66,7 @@ public sealed partial class MainWindow : Window
         _files = new AvaloniaFileDialogs(this);
         _recentFiles = new(Path.Combine(userDataDirectory, "recent-files.json")); _recentFiles.Load();
         _settings = settings;
+        QuickExcel.Runtime.ScriptCompilation.SourceMapMode = settings.Value.ScriptSourceMap.ToString().ToLowerInvariant();
         _userDataDirectory = userDataDirectory;
         BuildView(); InstallEditingCommands(); InstallFormulaEditing(); InstallRibbon(); InstallCalculation(); InstallSheetCommands(); InstallSearch(); InstallDataCommands(); InstallValidation(); InstallCleaning(); InstallObjects(); InstallFileCommands(); InstallScriptCommands(); InstallPrintCommands();
         ArrangeRibbonTabs(); InstallScriptEvents(); GroupMainMenus();

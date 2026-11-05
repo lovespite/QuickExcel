@@ -25,7 +25,7 @@ public sealed class WorkbookCalculator(IScriptRuntimeFactory runtimeFactory) : I
             throw new NotSupportedException(MessageText.Get(ScriptModuleSet.MigrationMessage));
         // Compilation has its own bounded isolated role. The execution round's
         // existing five-second clock starts after accepted artifacts exist.
-        if (request.ScriptsEnabled && request.Snapshot.ScriptModules.HasTypeScript)
+        if (request.ScriptsEnabled && (request.Snapshot.ScriptModules.HasTypeScript || request.Snapshot.ScriptModules.Signature is not null))
             QuickExcel.Runtime.ScriptCompilation.PrepareAsync(request.Snapshot.ScriptModules, request.Stamp, cancellationToken).GetAwaiter().GetResult();
         var timer = Stopwatch.StartNew();
         void Check()

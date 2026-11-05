@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using QuickExcel.Core;
 using QuickExcel.Domain;
+using QuickExcel.Runtime;
 using static QuickExcel.Storage.PackageIO;
 
 namespace QuickExcel.Storage;
@@ -85,7 +86,7 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage, IW
                     declaredPivots = features.Contains("worksheet-pivots");
                     declaredStrict = features.Contains("strict-ooxml");
                     declaredThreads = features.Contains("preserved-threaded-comments");
-                    if (features.Distinct().Count() != features.Length || Features.Except(features).Any() || features.Except(Features.Concat(["script-storage", "strict-ooxml", "preserved-threaded-comments", "worksheet-pivots", "dynamic-arrays", "typescript-sources", "virtual-files", "script-actions", "script-signatures", "workbook-views", "worksheet-printing", "preserved-formulas", "cell-text-annotations", "worksheet-data", "worksheet-tables", "worksheet-validation", "worksheet-conditional-formatting", "worksheet-outline", "text-compatibility-v2", "extended-cell-errors", "drawing-anchors", "drawing-transforms", "worksheet-protection", "worksheet-charts", "worksheet-charts-v2", "chart-filters", "worksheet-default-width", "extended-capacity"])).Any() ||
+                    if (features.Distinct().Count() != features.Length || Features.Except(features).Any() || features.Except(Features.Concat([ScriptCompilationCache.Feature, "script-storage", "strict-ooxml", "preserved-threaded-comments", "worksheet-pivots", "dynamic-arrays", "typescript-sources", "virtual-files", "script-actions", "script-signatures", "workbook-views", "worksheet-printing", "preserved-formulas", "cell-text-annotations", "worksheet-data", "worksheet-tables", "worksheet-validation", "worksheet-conditional-formatting", "worksheet-outline", "text-compatibility-v2", "extended-cell-errors", "drawing-anchors", "drawing-transforms", "worksheet-protection", "worksheet-charts", "worksheet-charts-v2", "chart-filters", "worksheet-default-width", "extended-capacity"])).Any() ||
                         features.Contains("script-actions") && scriptApiVersion < 2)
                         throw new InvalidDataException(MessageText.Get("XLSQ 缺少必要能力或包含未知必需能力。"));
                     var referenced = new HashSet<string>(StringComparer.Ordinal) { "manifest.json" };
@@ -136,6 +137,24 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage, IW
                             String(signature, "certificate"), String(signature, "value")));
                     }
                     else if (features.Contains("script-signatures")) throw new InvalidDataException(MessageText.Get("缺少脚本签名。"));
+                    byte[]? CompilationPart(string property, string expectedPath, int maximumBytes)
+                    {
+                        if (!root.TryGetProperty(property, out var reference))
+                        {
+                            if (features.Contains(ScriptCompilationCache.Feature) && parts.ContainsKey(expectedPath)) referenced.Add(expectedPath);
+                            return null; // Orphaned derived data is discarded.
+                        }
+                        if (!features.Contains(ScriptCompilationCache.Feature) || String(reference, "path") != expectedPath ||
+                            referenced.Contains(expectedPath)) throw new InvalidDataException("脚本编译缓存路径或能力声明无效。");
+                        if (!parts.TryGetValue(expectedPath, out var content)) return null;
+                        referenced.Add(expectedPath);
+                        // Missing/corrupt/legacy caches are recoverable without parsing executable data as JSON.
+                        return content.Length <= maximumBytes && reference.TryGetProperty("sha256", out var hash) &&
+                            hash.ValueKind == JsonValueKind.String && Hash(content) == hash.GetString() ? content : null;
+                    }
+                    var cacheMetadata = CompilationPart("scriptCompilation", ScriptCompilationCache.Part, ScriptCompilationCache.MaximumMetadataBytes);
+                    var cacheData = CompilationPart("scriptCompilationData", ScriptCompilationCache.DataPart, ScriptCompilationCache.MaximumDataBytes);
+                    if (cacheMetadata is not null && cacheData is not null) ScriptCompilationCache.Import(modules, cacheMetadata, cacheData);
                     if (features.Contains("script-storage"))
                     {
                         var storageParts = Array(root, "localStorage").ToArray();
@@ -150,8 +169,8 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage, IW
                         foreach (var item in Array(root, "files"))
                         {
                             var path = PathName(String(item, "path"));
-                            if (IsStoragePath(path)) throw new InvalidDataException("localStorage 系统路径不能用作虚拟文件。");
                             var directory = Property(item, "directory").GetBoolean();
+                            if (IsStoragePath(path) || IsCompilationCachePath(path, directory)) throw new InvalidDataException("脚本存储或编译缓存系统路径不能用作虚拟文件。");
                             if (directory)
                             {
                                 if (!referenced.Add(path + "/") || Required(parts, path + "/").Length != 0) throw new InvalidDataException(MessageText.Get("无效目录。"));
@@ -160,7 +179,7 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage, IW
                             else files.Add(new("//xlsq/" + path, Reference(item).ToImmutableArray()));
                         }
                         packageFiles = new(files);
-                        _ = new VirtualFileSet(parts.Where(p => !IsStoragePath(p.Key)).Select(p => new VirtualFileEntry("//xlsq/" + p.Key.TrimEnd('/'), p.Value.ToImmutableArray(), p.Key.EndsWith('/'))));
+                        _ = new VirtualFileSet(parts.Where(p => !IsStoragePath(p.Key) && !IsCompilationCachePath(p.Key.TrimEnd('/'), p.Key.EndsWith('/'))).Select(p => new VirtualFileEntry("//xlsq/" + p.Key.TrimEnd('/'), p.Value.ToImmutableArray(), p.Key.EndsWith('/'))));
                     }
                     if (referenced.Count != parts.Count) throw new InvalidDataException(MessageText.Get("XLSQ 包含未声明条目。"));
                     var calculation = Property(state.RootElement, "calculation");
@@ -290,7 +309,7 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage, IW
         return WritePackage(path, snapshot, discardUnsupported, cancellationToken, expected);
     }
 
-    private static Dictionary<string, byte[]> BuildPackage(WorkbookSnapshot snapshot, bool discardUnsupported, CancellationToken cancellationToken)
+    private static Dictionary<string, byte[]> BuildPackage(WorkbookSnapshot snapshot, bool discardUnsupported, CancellationToken cancellationToken, bool includeCompilationCache = true)
     {
         if (!snapshot.ScriptModules.CanExecute) throw new NotSupportedException(MessageText.Get(ScriptModuleSet.MigrationMessage));
         if (snapshot.ScriptModules.Modules.Sum(m => (long)Utf8.GetByteCount(m.Value.Source)) > 1024 * 1024) throw new InvalidOperationException("Combined script source exceeds 1 MiB.");
@@ -365,6 +384,15 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage, IW
             manifest["scriptSignature"] = Reference("security/script-signature.json");
         }
         else manifest.Remove("scriptSignature");
+        if (includeCompilationCache && ScriptCompilationCache.Export(snapshot.ScriptModules) is { } compilation)
+        {
+            parts[ScriptCompilationCache.Part] = compilation.Metadata;
+            parts[ScriptCompilationCache.DataPart] = compilation.Data;
+            manifest["scriptCompilation"] = Reference(ScriptCompilationCache.Part);
+            manifest["scriptCompilationData"] = Reference(ScriptCompilationCache.DataPart);
+            manifest["requiredFeatures"]!.AsArray().Add(ScriptCompilationCache.Feature);
+        }
+        else { manifest.Remove("scriptCompilation"); manifest.Remove("scriptCompilationData"); }
         manifest["workbook"] = Merge(manifest["workbook"], Reference("workbook.xlsx")); manifest["state"] = Merge(manifest["state"], Reference("state/document.json"));
         var modules = new JsonObject();
         foreach (var (id, module) in snapshot.ScriptModules.Modules.OrderBy(m => m.Key, StringComparer.Ordinal))
@@ -390,7 +418,7 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage, IW
             {
                 var name = PathName(entry.Path[7..]);
                 var zipName = name + (entry.IsDirectory ? "/" : "");
-                if (IsStoragePath(name) || name == "manifest.json" || parts.ContainsKey(name) || !parts.TryAdd(zipName, entry.Data.ToArray())) throw new InvalidDataException(MessageText.Get("虚拟文件覆盖了系统条目。"));
+                if (IsStoragePath(name) || IsCompilationCachePath(name, entry.IsDirectory) || name == "manifest.json" || parts.ContainsKey(name) || !parts.TryAdd(zipName, entry.Data.ToArray())) throw new InvalidDataException(MessageText.Get("虚拟文件覆盖了系统条目。"));
                 var reference = entry.IsDirectory ? new JsonObject { ["path"] = name } : Reference(name).AsObject();
                 reference["directory"] = entry.IsDirectory; files.Add(reference);
             }

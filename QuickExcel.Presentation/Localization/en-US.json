@@ -2510,5 +2510,20 @@
   "永久删除所选会话的恢复草稿": "Permanently delete recovery drafts for the selected session",
   "已恢复为未保存的新文档；请另存。脚本未授权。": "Restored into a new unsaved document. Save a copy; scripts are not authorized.",
   " 原文件已改变或不存在，请核对恢复内容。": " The original file changed or no longer exists. Review the recovered content.",
-  " 无法核对原文件版本，请另存后核对。": " The original file version could not be checked. Save a copy and compare it."
+  " 无法核对原文件版本，请另存后核对。": " The original file version could not be checked. Save a copy and compare it.",
+  "Source Map（源码映射）": "Source Map",
+  "精简": "Compact",
+  "完整": "Full",
+  "无：不生成映射，运行错误显示生成 JS 的位置。\n精简（默认）：保留原始行列映射，不重复保存源码。\n完整：保留映射及嵌入的原始源码。": "None: Do not generate source maps. Runtime errors show positions in generated JavaScript.\nCompact (default): Keep original line and column mappings without duplicating source text.\nFull: Keep mappings and embed the original source text.",
+  "仅保存在本机。更改后当前脚本会停用；下次应用或签名时使用新设置，已有签名保持有效。": "Saved on this device only. Changing this setting disables current scripts. The next apply or signing operation uses the new setting; existing signatures remain valid.",
+  "Source Map 设置已保存，关闭设置后生效；请重新应用已启用的脚本。": "Source Map setting saved. It takes effect when Settings closes; reapply any enabled scripts.",
+  "Source Map 设置已更新，编译缓存已失效；请重新应用脚本。": "Source Map setting updated and compilation cache invalidated. Reapply scripts to continue.",
+  " (生成 JS 位置)": " (generated JavaScript position)",
+  "正在编译并签署全部脚本…": "Compiling and signing all scripts…",
+  "工作簿已改变，请重新签名。": "The workbook changed. Sign it again.",
+  "已编译并签署全部脚本，请保存工作簿以写入编译缓存。": "All scripts compiled and signed. Save the workbook to persist the compilation cache.",
+  "脚本编译未通过，未签名：": "Script compilation failed; no signature was created: ",
+  "源码草稿已修改，编译缓存已失效，脚本授权已撤销。": "Source draft changed, compilation cache invalidated, and script authorization revoked.",
+  "脚本签名无效，请审阅源码并重新签名。": "The script signature is invalid. Review the source and sign it again.",
+  "脚本编译缓存超过容量限额。": "The script compilation cache exceeds its size limit."
 }

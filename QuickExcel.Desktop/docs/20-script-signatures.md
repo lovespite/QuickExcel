@@ -34,6 +34,45 @@
 
 ## 文件与算法
 
+### 签名时编译与 XLSQ 编译缓存（3.4.0–3.6.0，2026-11-05）
+
+“签署全部脚本”先在既有零能力编译 worker 内完整检查并生成 JS 和 Source Map，成功后才签名；不会执行初始化、UDF、动作或事件。JavaScript 和 TypeScript、API v3/v4 都适用。失败显示模块和行列诊断，不生成新签名；保存工作簿时将缓存一起写入 XLSQ。
+
+必需能力为 `script-compilation-cache`。3.5.0 改为缓存格式 v2，清单分别以 `scriptCompilation` 和 `scriptCompilationData` 引用两个独立 ZIP 条目，各自带 SHA-256：
+
+- `cache/script-compilation.json`：最多 64 KiB，仅保存完整源码签名摘要、编译器/源/输出身份、数据条目的长度和 SHA-256、各模块 ID 与字节偏移/长度、保护方式及证明；不嵌入 JS 或 Source Map 正文，也不把二进制数据 Base64 塞回 JSON。
+- `cache/script-compilation.bin`：按模块索引顺序连续保存 JS、Source Map 的原始 UTF-8 字节；总计最多 5 MiB，分别遵守 1 MiB JS 和 4 MiB 映射限额。读取先验证元数据、偏移边界、总长度、二进制摘要和证明，之后才解码对应文本及验证映射。
+
+原始源码、语言和固定选项仍为文件的权威内容；缓存不是 JSC 字节码或执行上下文。3.4.0 的格式 v1 单体 JSON 缓存作为失效缓存丢弃，不反序列化其编译正文；执行前重编译，保存时写出 v2 两条目。旧 JSON 仍受原 16 MiB ZIP 展开上限约束，但只有不超过 64 KiB 的 v2 元数据才允许进入缓存 JSON 解析流程。
+
+3.6.0 在“设置 → 脚本与 API → Source Map（源码映射）”提供本机编译选项，中英文名称与说明随界面语言切换：
+
+| 档位 | English | 编译及诊断行为 |
+| --- | --- | --- |
+| 无 | None | `sourceMap: false`，不生成映射，缓存中的映射长度为零；运行错误标注为生成 JS 的位置 |
+| 精简（默认） | Compact | `sourceMap: true, inlineSources: false`，保留行列映射，不含 `sourcesContent`；用 XLSQ 已有原文定位错误 |
+| 完整 | Full | `sourceMap: true, inlineSources: true`，保留行列映射和嵌入的原始源码 |
+
+选项保存到本机 `settings.json` 的 `ScriptSourceMap`，旧设置文件未指定时使用精简。关闭设置窗口后生效：停用当前脚本及其持久上下文、失效当前编译缓存；下次显式应用或签名按新档位编译，不自动重放初始化。选项进入编译请求摘要与缓存元数据/证明，防止三档缓存混用；源码签名格式和有效性不因调试产物选项变化而改变。XLSQ 元数据记录产物实际档位用于验证，打开文件不会覆盖本机偏好。
+
+3.6.0 验证：Release 构建 0 警告 / 0 错误；53 项定向检查通过，`artifacts/source-map-options-tests/source-map-options.trx`，包含三档实际编译/错误位置、本机设置保存与旧设置默认、模式切换后的缓存及签名保存重开，并明确排除 1 MiB 密集输入压测。实际中文、英文 Settings/签名入口各 29 项通过，分别位于 `artifacts/avalonia/workspace/20261105-135750-cd754159/result.json` 和 `artifacts/source-map-options-ui/english-f86b0f2949674e89a33b48d9d4769d24/result.json`；所有用户设置均隔离到测试目录。
+
+3.6.0 正式本地包 `artifacts/avalonia/releases/20261105-135917-b4bb592e/application` 经 `scripts/build-quickexcel.ps1 -SkipTests -RunSmoke` 发布，28 项生产自检通过；active 指针、release.json 摘要和启动 EXE 摘要已核对，默认启动器使用此包。
+
+签名时另以同一发布者证书签署缓存摘要，不修改原有纯 JS v1 / TS v2 源码签名格式。普通 ZIP hash 不能防止攻击者同时改写 JS 与 hash；缓存证明也必须验证。打开只读取数据；在既有证书信任和策略授权通过、准备执行时，源码签名、缓存格式、编译身份、摘要、证明及映射全部匹配则直接使用缓存，不启动编译 worker。
+
+缺少缓存、缓存版本/源码签名/编译身份不符、缓存 hash/证明/JSON/映射损坏时，从已签名原文重新编译，成功替换会话缓存后才执行，下次保存写入新缓存。无需发布者私钥：重建产物使用 Windows DPAPI 当前用户或 Linux Secret Service 的受保护本机凭据认证，不能改变源码签名或授权。此类重建缓存换设备/用户后会重新编译；重新签名可生成可随文件携带的发布者证明。本机保护不可用时仅当前会话复用，下次打开重新编译。源码签名本身无效仍拒绝执行。
+
+编辑器草稿一变化便使缓存失效并撤销执行授权；应用源码、语言、模块或用途变更会移除签名，保存时删除旧缓存的两个条目。缓存派生状态按签名对象隔离，不进入 Core 领域对象、单元格历史或虚拟文件快照；脚本不能通过 `//xlsq/cache/script-compilation.json` 或 `.bin` 写入系统缓存，避免绕过验证或占用虚拟文件/桥接容量，普通 `cache/` 虚拟目录及其他用户文件仍可使用。缓存重建不隐式保存用户文件，保持原有保存冲突检查和原子替换流程。
+
+3.5.0 按用户要求不开展大缓存压测，也不重跑相关回归；同步修改既有测试夹具以适配二进制条目，仅执行构建与仓库规定的发布自检。解决方案 Release 构建 0 警告 / 0 错误，正式包 `artifacts/avalonia/releases/20261105-134542-857b9f2e/application` 的 28 项生产自检通过，已激活并核对 active 指针、release.json 摘要和启动 EXE 摘要。
+
+以下为 **3.4.0 原缓存格式的历史验证**，不能代替 3.5.0 验证。
+
+本轮验证：144 项相关 Core 测试通过（`artifacts/compilation-cache-tests/compilation-contracts.trx`、`cache-drafts-virtual-files.trx`；虚拟目录边界修改后对应 1 项复验见 `cache-virtual-boundary.trx`）。缓存测试覆盖 JS/TS 与 API v3/v4、重开时编译进程启动数为 0、10 类缓存失配/损坏后的重建及再次保存重开、草稿/源码/语言/绑定失效、签名失败/取消、签名时不执行初始化、UDF/Actions 共用产物与虚拟文件边界。首轮夹具将 API v4 UDF 名写成未限定的 `VALUE`，修正为既有 `JS.main.VALUE` 后通过；失败记录 `compilation-cache.trx` 保留。
+
+真实 Avalonia 签名入口 `scripts/test-avalonia-workspace.ps1 -Mode Commands` 24 项通过，证据 `artifacts/avalonia/workspace/20261105-133010-438b23ff/result.json`。按仓库要求执行 `scripts/build-quickexcel.ps1 -SkipTests -RunSmoke`：正式 Windows 包 `artifacts/avalonia/releases/20261105-133201-c88b2dc0/application`，版本 3.4.0，生产自检 28 项通过并激活；未运行全仓回归，也未新增 Linux/macOS 实机结论。
+
 XLSQ 保持格式 v2，新增必需能力 `script-signatures`，清单 `scriptSignature` 指向 `security/script-signature.json` 并带条目 SHA-256。旧读取器拒绝此能力；移除签名后保存删除能力、引用和条目。签名 JSON 上限 64 KiB，复用 ZIP/JSON 累计预算和重复属性检查。
 
 JSON 为 `version: 1`、`algorithm`、Base64 DER `certificate` 和 Base64 `value`。支持 RSA-PSS-SHA256（至少 2048 位）与 ECDSA-P256-SHA256（P1363 固定长度）。私钥/密码不入包，PFX 私钥以 `EphemeralKeySet` 导入。

@@ -5,10 +5,12 @@ namespace QuickExcel.Presentation;
 
 public enum SheetNavigationPlacement { Bottom, Left, Right }
 public enum DesktopCalculationMode { Automatic, Partial, Manual }
+public enum DesktopSourceMapMode { None, Compact, Full }
 public sealed record DesktopPreferences(SheetNavigationPlacement Sheets = SheetNavigationPlacement.Bottom, int Zoom = 100,
-    DesktopCalculationMode Calculation = DesktopCalculationMode.Automatic, string Language = UiText.Chinese)
+    DesktopCalculationMode Calculation = DesktopCalculationMode.Automatic, string Language = UiText.Chinese,
+    DesktopSourceMapMode ScriptSourceMap = DesktopSourceMapMode.Compact)
 {
-    internal bool IsValid => Enum.IsDefined(Sheets) && Zoom is >= 75 and <= 175 && Enum.IsDefined(Calculation);
+    internal bool IsValid => Enum.IsDefined(Sheets) && Zoom is >= 75 and <= 175 && Enum.IsDefined(Calculation) && Enum.IsDefined(ScriptSourceMap);
 }
 
 public sealed class DesktopSettings(string path)

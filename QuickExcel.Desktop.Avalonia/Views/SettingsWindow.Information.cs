@@ -10,6 +10,7 @@ using Avalonia.Media.Imaging;
 using Markdown.Avalonia;
 using QuickExcel.ScriptContracts;
 using QuickExcel.Scripting;
+using QuickExcel.Presentation;
 using LayoutGrid = Avalonia.Controls.Grid;
 
 namespace QuickExcel.Desktop.Avalonia;
@@ -18,6 +19,19 @@ internal sealed partial class SettingsWindow
 {
     private void ScriptInformation()
     {
+        _page.Children.Add(Heading(UiText.Get("Source Map（源码映射）"), 18));
+        var sourceMap = new ComboBox { Name = "ScriptSourceMapMode", HorizontalAlignment = HorizontalAlignment.Stretch,
+            ItemsSource = new[] { UiText.Get("无"), UiText.Get("精简"), UiText.Get("完整") }, SelectedIndex = (int)_settings.Value.ScriptSourceMap };
+        AutomationProperties.SetName(sourceMap, UiText.Get("Source Map（源码映射）"));
+        sourceMap.SelectionChanged += (_, _) =>
+        {
+            if (sourceMap.SelectedIndex < 0) return;
+            Save(_settings.Value with { ScriptSourceMap = (DesktopSourceMapMode)sourceMap.SelectedIndex });
+            if (_settings.Error is null) _feedback.Text = UiText.Get("Source Map 设置已保存，关闭设置后生效；请重新应用已启用的脚本。");
+        };
+        _page.Children.Add(sourceMap);
+        _page.Children.Add(Note(UiText.Get("无：不生成映射，运行错误显示生成 JS 的位置。\n精简（默认）：保留原始行列映射，不重复保存源码。\n完整：保留映射及嵌入的原始源码。")));
+        _page.Children.Add(Note(UiText.Get("仅保存在本机。更改后当前脚本会停用；下次应用或签名时使用新设置，已有签名保持有效。")));
         _page.Children.Add(Heading(UiText.Format($"脚本 API v{ScriptCapabilities.ApiVersion}"), 18));
         _page.Children.Add(Note(DesktopServices.SupportsScripts
             ? UiText.Format($"JSC 内核    {WorkerProtocol.Engine}\nWorker 协议    {WorkerProtocol.Version}")

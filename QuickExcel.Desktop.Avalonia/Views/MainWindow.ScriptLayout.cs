@@ -125,16 +125,23 @@ public sealed partial class MainWindow
         panel.Template = new FuncControlTemplate<Expander>((owner, _) =>
         {
             var rows = new StackPanel();
-            var arrow = new TextBlock { Text = owner.IsExpanded ? "⌄" : "›", Width = 17, FontSize = 16, VerticalAlignment = VerticalAlignment.Center, Foreground = Brush.Parse("#A0A0A0") };
+            // Both chevrons share a centered 12px viewport, independent of font baselines.
+            var expandedArrow = Geometry.Parse("M2,4 L6,8 L10,4");
+            var collapsedArrow = Geometry.Parse("M4,2 L8,6 L4,10");
+            var arrow = new global::Avalonia.Controls.Shapes.Path { Data = owner.IsExpanded ? expandedArrow : collapsedArrow,
+                Width = 12, Height = 12, Stretch = Stretch.None, Stroke = Brush.Parse("#A0A0A0"), StrokeThickness = 1.25,
+                HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Center, IsHitTestVisible = false };
             var label = new TextBlock { Text = owner.Header?.ToString(), FontSize = 14, VerticalAlignment = VerticalAlignment.Center, Foreground = Brush.Parse("#CCCCCC") };
-            var caption = new StackPanel { Orientation = Orientation.Horizontal }; caption.Children.Add(arrow); caption.Children.Add(label);
+            var caption = new LayoutGrid { ColumnDefinitions = new("17,*"), VerticalAlignment = VerticalAlignment.Center };
+            caption.Children.Add(arrow); LayoutGrid.SetColumn(label, 1); caption.Children.Add(label);
             var toggle = new Button { Content = caption, Height = 28, Padding = new(16, 0, 0, 0), Background = Brushes.Transparent,
-                BorderThickness = new(0), HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Left };
+                BorderThickness = new(0), HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Left,
+                VerticalContentAlignment = VerticalAlignment.Center };
             var content = new ContentPresenter { Content = owner.Content, IsVisible = owner.IsExpanded };
             toggle.Click += (_, _) => owner.IsExpanded = !owner.IsExpanded;
             owner.PropertyChanged += (_, change) =>
             {
-                if (change.Property == Expander.IsExpandedProperty) { content.IsVisible = owner.IsExpanded; arrow.Text = owner.IsExpanded ? "⌄" : "›"; }
+                if (change.Property == Expander.IsExpandedProperty) { content.IsVisible = owner.IsExpanded; arrow.Data = owner.IsExpanded ? expandedArrow : collapsedArrow; }
                 else if (change.Property == HeaderedContentControl.HeaderProperty) label.Text = owner.Header?.ToString();
             };
             rows.Children.Add(toggle); rows.Children.Add(content); return rows;

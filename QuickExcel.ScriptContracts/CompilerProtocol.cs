@@ -8,16 +8,17 @@ public sealed record CompilerModule(string Id, string Language, string Source);
 public sealed record CompileRequest(CompilerModule[] Modules, string[] Entries, string Sha256)
 {
     public int ApiVersion { get; init; } = 3;
+    public string SourceMapMode { get; init; } = "full";
     public string ComputeDigest() => CompilerProtocol.Hash(JsonSerializer.Serialize(new
     {
         compiler = CompilerProtocol.Identity, compilerPolicy = CompilerProtocol.Policy, options = CompilerProtocol.Options,
-        engine = WorkerProtocol.Engine, policy = WorkerProtocol.Policy, api = ApiVersion,
+        engine = WorkerProtocol.Engine, policy = WorkerProtocol.Policy, api = ApiVersion, sourceMapMode = SourceMapMode,
         modules = Modules.OrderBy(m => m.Id, StringComparer.Ordinal), entries = Entries
     }, WorkerProtocol.Json));
 
     public void Validate()
     {
-        if (ApiVersion is not (3 or 4) || Modules.Length is < 1 or > 64 || Entries.Length is < 1 or > 64 ||
+        if (ApiVersion is not (3 or 4) || SourceMapMode is not ("none" or "compact" or "full") || Modules.Length is < 1 or > 64 || Entries.Length is < 1 or > 64 ||
             Modules.Any(m => m is null || !CompilerProtocol.ValidId(m.Id) || m.Language is not ("javascript" or "typescript") || m.Source is null) ||
             Modules.Select(m => m.Id).Distinct(StringComparer.Ordinal).Count() != Modules.Length ||
             Entries.Distinct(StringComparer.Ordinal).Count() != Entries.Length || Entries.Any(id => !Modules.Any(m => m.Id == id)) ||
@@ -75,15 +76,22 @@ public static class CompilerProtocol
         {
             var input = request.Modules.SingleOrDefault(m => m.Id == output.Id)
                 ?? throw new ProtocolException("Unknown compiler output module.");
+            if (request.SourceMapMode == "none")
+            {
+                if (output.SourceMap.Length != 0) throw new ProtocolException("Source maps are disabled for this compilation.");
+                continue;
+            }
             using var map = JsonDocument.Parse(output.SourceMap, new() { MaxDepth = 8 });
             var root = map.RootElement;
             var keys = new HashSet<string>(StringComparer.Ordinal);
             if (root.ValueKind != JsonValueKind.Object || root.EnumerateObject().Any(p => !keys.Add(p.Name) || p.Name is not
                 ("version" or "file" or "sourceRoot" or "sources" or "sourcesContent" or "names" or "mappings")) ||
-                keys.Count != 7 || root.GetProperty("version").GetInt32() != 3 ||
+                keys.Count != (request.SourceMapMode == "full" ? 7 : 6) || root.GetProperty("version").GetInt32() != 3 ||
                 root.GetProperty("file").GetString() != output.Id + ".js" || root.GetProperty("sourceRoot").GetString() != "" ||
                 root.GetProperty("sources").GetArrayLength() != 1 || root.GetProperty("sources")[0].GetString() != output.Id ||
-                root.GetProperty("sourcesContent").GetArrayLength() != 1 || root.GetProperty("sourcesContent")[0].GetString() != input.Source ||
+                (request.SourceMapMode == "full"
+                    ? root.GetProperty("sourcesContent").GetArrayLength() != 1 || root.GetProperty("sourcesContent")[0].GetString() != input.Source
+                    : root.TryGetProperty("sourcesContent", out _)) ||
                 root.GetProperty("names").ValueKind != JsonValueKind.Array ||
                 root.GetProperty("names").EnumerateArray().Any(n => n.ValueKind != JsonValueKind.String) ||
                 root.GetProperty("mappings").ValueKind != JsonValueKind.String)

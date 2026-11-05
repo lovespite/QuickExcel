@@ -40,6 +40,8 @@ globalThis.qxCompile = function qxCompile(request) {
         request.modules.length < 1 || request.modules.length > 64) {
         fail('Invalid compiler request'); return result();
     }
+    const sourceMapMode = request.sourceMapMode ?? 'full';
+    if (!['none', 'compact', 'full'].includes(sourceMapMode)) { fail('Invalid source map mode'); return result(); }
     let sourceBytes = 0;
     for (const module of request.modules) {
         if (!module || typeof module.id !== 'string' || !/^[A-Za-z0-9_.-]{1,128}$/.test(module.id) ||
@@ -68,7 +70,7 @@ globalThis.qxCompile = function qxCompile(request) {
         target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext,
         moduleResolution: ts.ModuleResolutionKind.Bundler, moduleDetection: ts.ModuleDetectionKind.Force,
         strict: true, noEmitOnError: true, allowJs: true, checkJs: false,
-        sourceMap: true, inlineSources: true, useDefineForClassFields: true,
+        sourceMap: sourceMapMode !== 'none', inlineSources: sourceMapMode === 'full', useDefineForClassFields: true,
         verbatimModuleSyntax: true, isolatedModules: true, types: [],
         skipLibCheck: false, newLine: ts.NewLineKind.LineFeed, outDir: '/out'
     };
@@ -114,7 +116,7 @@ globalThis.qxCompile = function qxCompile(request) {
         for (const [name] of parsed) {
             const emitted = ts.transpileModule(files.get(name), { compilerOptions: options, fileName: name, reportDiagnostics: true });
             (emitted.diagnostics ?? []).forEach(diagnostic);
-            outputs.push({ id: originalIds.get(name), javascript: emitted.outputText, sourceMap: emitted.sourceMapText });
+            outputs.push({ id: originalIds.get(name), javascript: emitted.outputText, sourceMap: emitted.sourceMapText ?? '' });
         }
     } else {
         const emitted = new Map();
@@ -143,20 +145,24 @@ globalThis.qxCompile = function qxCompile(request) {
             for (const [id, name] of ids) {
                 const outputName = '/out/' + name.split('/').pop().replace(/\.(ts|js)$/, '.js');
                 const javascript = emitted.get(outputName), sourceMap = emitted.get(outputName + '.map');
-                if (javascript === undefined || sourceMap === undefined) fail('Missing compiler output');
-                else outputs.push({ id, javascript, sourceMap });
+                if (javascript === undefined || sourceMapMode !== 'none' && sourceMap === undefined) fail('Missing compiler output');
+                else outputs.push({ id, javascript, sourceMap: sourceMap ?? '' });
             }
         }
     }
     let jsBytes = 0, mapBytes = 0;
     for (const output of outputs) {
-        const map = JSON.parse(output.sourceMap);
-        if (map.version !== 3 || map.sources.length !== 1 || map.sourcesContent.length !== 1) {
-            fail('Unexpected source map shape'); continue;
+        if (sourceMapMode !== 'none') {
+            const map = JSON.parse(output.sourceMap);
+            if (map.version !== 3 || map.sources.length !== 1 ||
+                sourceMapMode === 'full' && map.sourcesContent?.length !== 1 ||
+                sourceMapMode === 'compact' && 'sourcesContent' in map) {
+                fail('Unexpected source map shape'); continue;
+            }
+            map.file = output.id + '.js'; map.sourceRoot = ''; map.sources = [output.id];
+            output.sourceMap = JSON.stringify(map);
+            output.javascript = output.javascript.replace(/\/\/# sourceMappingURL=[^\r\n]*$/, '//# sourceMappingURL=' + output.id + '.js.map');
         }
-        map.file = output.id + '.js'; map.sourceRoot = ''; map.sources = [output.id];
-        output.sourceMap = JSON.stringify(map);
-        output.javascript = output.javascript.replace(/\/\/# sourceMappingURL=[^\r\n]*$/, '//# sourceMappingURL=' + output.id + '.js.map');
         jsBytes += bytes(output.javascript); mapBytes += bytes(output.sourceMap);
     }
     if (jsBytes > 1048576) fail('Generated JavaScript exceeds execution source budget');

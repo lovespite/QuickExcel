@@ -16,7 +16,15 @@ public sealed partial class MainWindow
     private async Task OpenSettingsAsync(SettingsSection section)
     {
         if (!await CommitEditorsAsync()) return;
+        var priorSourceMap = _settings.Value.ScriptSourceMap;
         await ShowOwnedAsync<bool>(new SettingsWindow(_settings, _recentFiles, section));
+        if (_settings.Value.ScriptSourceMap != priorSourceMap)
+        {
+            DisableScripts();
+            QuickExcel.Runtime.ScriptCompilation.InvalidateCache(Document.Snapshot.ScriptModules);
+            QuickExcel.Runtime.ScriptCompilation.SourceMapMode = _settings.Value.ScriptSourceMap.ToString().ToLowerInvariant();
+            _status.Text = UiText.Get("Source Map 设置已更新，编译缓存已失效；请重新应用脚本。");
+        }
         ApplySheetPlacement();
         ScheduleCalculation();
         RefreshRecentFiles();

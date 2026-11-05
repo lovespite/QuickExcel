@@ -44,12 +44,14 @@ public sealed class ScriptWorkerRuntime : IScriptBatchRuntime
     private readonly bool _shared;
     internal bool IsStopped => _stopped || _disposed;
     private readonly Dictionary<string, LogicalSourceMap> _sourceMaps = new(StringComparer.Ordinal);
+    private bool _hasCompiledSources;
     private string OriginalDiagnostic(string message) => System.Text.RegularExpressions.Regex.Replace(message,
         @"(?<=\n at )([A-Za-z0-9_.-]{1,128}):([1-9][0-9]{0,8}):([1-9][0-9]{0,8})", match =>
         {
-            if (!_sourceMaps.TryGetValue(match.Groups[1].Value, out var map)) return match.Value;
+            if (!_sourceMaps.TryGetValue(match.Groups[1].Value, out var map))
+                return _hasCompiledSources ? match.Value + MessageText.Get(" (生成 JS 位置)") : match.Value;
             var position = map.OriginalPosition(int.Parse(match.Groups[2].Value), int.Parse(match.Groups[3].Value));
-            return position is { } p ? $"{match.Groups[1].Value}:{p.Line}:{p.Column}" : match.Value + " (生成 JS 位置)";
+            return position is { } p ? $"{match.Groups[1].Value}:{p.Line}:{p.Column}" : match.Value + MessageText.Get(" (生成 JS 位置)");
         });
 
     private ScriptWorkerRuntime(ScriptRuntimeRequest request, bool actionsMode, bool shared)
@@ -88,9 +90,11 @@ public sealed class ScriptWorkerRuntime : IScriptBatchRuntime
         var compiled = ScriptCompilation.PrepareAsync(request.Modules, request.Stamp, request.CancellationToken).GetAwaiter().GetResult();
         var executableSources = compiled?.Result.Outputs.ToDictionary(o => o.Id, o => o.Javascript, StringComparer.Ordinal);
         var runtime = new ScriptWorkerRuntime(request, actionsMode, shared);
+        runtime._hasCompiledSources = compiled is not null;
         if (compiled is not null)
             foreach (var item in compiled.Result.Outputs)
             {
+                if (item.SourceMap.Length == 0) continue;
                 using var map = System.Text.Json.JsonDocument.Parse(item.SourceMap);
                 runtime._sourceMaps.Add(item.Id, new LogicalSourceMap(map.RootElement.GetProperty("mappings").GetString()!,
                     request.Modules.Modules[item.Id].Source, map.RootElement.GetProperty("names").GetArrayLength()));

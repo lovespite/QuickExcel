@@ -91,7 +91,7 @@ public sealed partial class MainWindow
     {
         var page = _scriptPage = new ScriptEditorPage(WebAssets, drafts, _scriptDocument.ToString("N"), ++_webGeneration, _userDataDirectory);
         page.Failed += ScriptPageFailed;
-        page.DraftChanged += () => { DisableScripts(); UpdateTitle(); if (_scriptWindow is not null) _scriptWindow.Title = UiText.Get("* 脚本工作区 · QuickExcel"); if (_scriptStatus is not null) _scriptStatus.Text = UiText.Get("源码草稿已修改，脚本授权已撤销。"); };
+        page.DraftChanged += () => { ScriptCompilation.InvalidateCache(Document.Snapshot.ScriptModules); DisableScripts(); UpdateTitle(); if (_scriptWindow is not null) _scriptWindow.Title = UiText.Get("* 脚本工作区 · QuickExcel"); if (_scriptStatus is not null) _scriptStatus.Text = UiText.Get("源码草稿已修改，编译缓存已失效，脚本授权已撤销。"); };
         page.SaveRequested += () => _ = PerformAsync(async () => await SaveAsync(false));
         page.FocusRequested += FocusScriptNavigation;
         page.ConsoleRequested += ToggleScriptConsole;

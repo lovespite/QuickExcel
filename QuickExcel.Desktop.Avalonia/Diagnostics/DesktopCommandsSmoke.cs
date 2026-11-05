@@ -3,6 +3,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Input;
+using Avalonia.VisualTree;
 using QuickExcel.Presentation;
 using QuickExcel.Security;
 
@@ -41,6 +42,28 @@ public sealed partial class MainWindow
             _dialogDriver = window => { Check(window is FieldsDialog, "F5 opens the Go To dialog"); window.Close(false); return Task.CompletedTask; };
             await Press(Key.F5); Check(_dialogDriver is null, "F5 reaches the worksheet Go To command");
 
+            Document.EnableScriptsAndCalculate();
+            _dialogDriver = window =>
+            {
+                var selector = ((SettingsWindow)window).GetVisualDescendants().OfType<ComboBox>().Single(c => c.Name == "ScriptSourceMapMode");
+                Check(selector.Items.OfType<string>().SequenceEqual(UiText.Language == UiText.English ? ["None", "Compact", "Full"] : ["无", "精简", "完整"]),
+                    "Source Map choices follow the selected UI language");
+                selector.SelectedIndex = (int)DesktopSourceMapMode.None;
+                window.Close(true); return Task.CompletedTask;
+            };
+            await OpenSettingsAsync(SettingsSection.Scripts);
+            Check(_settings.Value.ScriptSourceMap == DesktopSourceMapMode.None && QuickExcel.Runtime.ScriptCompilation.SourceMapMode == "none" && !Document.ScriptsEnabled,
+                "Changing the Source Map option persists locally and disables the current execution context");
+            _dialogDriver = window =>
+            {
+                var selector = window.GetVisualDescendants().OfType<ComboBox>().Single(c => c.Name == "ScriptSourceMapMode");
+                Check(selector.SelectedIndex == (int)DesktopSourceMapMode.None, "Reopening Settings restores the Source Map choice");
+                selector.SelectedIndex = (int)DesktopSourceMapMode.Compact;
+                window.Close(true); return Task.CompletedTask;
+            };
+            await OpenSettingsAsync(SettingsSection.Scripts);
+            Check(QuickExcel.Runtime.ScriptCompilation.SourceMapMode == "compact", "Compact Source Maps take effect when Settings closes");
+
             var certificate = Path.Combine(directory, "signing-test.pfx"); files.NextSave = certificate;
             const string secret = "local-signing-test-password";
             Task Driver(Window window)
@@ -57,6 +80,7 @@ public sealed partial class MainWindow
             }
             _dialogDriver = Driver; await SignScriptsAsync();
             Check(Document.Snapshot.ScriptModules.Signature is not null && File.Exists(certificate), "Signing creates a certificate and signs the workbook");
+            Check(!QuickExcel.Runtime.ScriptCompilation.IsCacheDirty(Document.Snapshot.ScriptModules), "Signing compiles and authenticates the current source cache immediately");
             var remembered = SigningPreferences.Read();
             Check(remembered.KeyFilePath == certificate && remembered.PasswordForFile(certificate) == secret, "Both signing preferences survive reopening the local store");
             Task Reuse(Window window)
@@ -78,6 +102,10 @@ public sealed partial class MainWindow
             files.NextSave = Path.Combine(directory, "signed-workbook.xlsq"); await SaveAsync(true);
             _workspace.New();
             using var package = System.IO.Compression.ZipFile.OpenRead(files.NextSave);
+            Check(package.GetEntry("cache/script-compilation.json") is { Length: <= 64 * 1024 } &&
+                package.GetEntry("cache/script-compilation.bin") is not null, "Saving a signed workbook stores cache metadata and binary artifacts separately");
+            var reopenedModules = new QuickExcel.Storage.TypedWorkbookStorage().Open(files.NextSave).ScriptModules;
+            Check(!QuickExcel.Runtime.ScriptCompilation.IsCacheDirty(reopenedModules), "Reopening accepts the packaged compilation cache and publisher proof");
             Check(package.Entries.All(entry => !entry.FullName.Contains("signing-preferences") && !entry.FullName.EndsWith(".pfx")), "Workbook package contains no private-key or signing-preferences part");
             foreach (var entry in package.Entries)
             {

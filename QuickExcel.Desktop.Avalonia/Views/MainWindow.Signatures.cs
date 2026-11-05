@@ -88,13 +88,15 @@ public sealed partial class MainWindow
         if (!await dialog.ShowAsync(this)) { ((TextBox)dialog.Input("password")).Text = ""; return; }
         var secret = dialog.String("password"); ((TextBox)dialog.Input("password")).Text = "";
         var rememberFile = dialog.Boolean("rememberFile"); var rememberPassword = dialog.Boolean("rememberPassword");
-        var subject = create ? dialog.String("name") : ""; var modules = Document.Snapshot.ScriptModules;
+        var subject = create ? dialog.String("name") : ""; var document = Document; var modules = document.Snapshot.ScriptModules;
+        var stamp = new CalculationStamp(document.Session.SessionId, document.Snapshot.Revision, 0, modules.Revision);
         try
         {
-            var signature = await Task.Run(() =>
+            _status.Text = UiText.Get("正在编译并签署全部脚本…");
+            var signature = await Task.Run(async () =>
             {
                 using var certificate = create ? ScriptSignatures.CreateSelfSigned(subject) : X509CertificateLoader.LoadPkcs12FromFile(file.Path, secret, X509KeyStorageFlags.EphemeralKeySet);
-                var signature = ScriptSignatures.Sign(modules, certificate);
+                var signature = await ScriptSignatures.SignAsync(modules, certificate, stamp);
                 if (create)
                 {
                     var bytes = certificate.Export(X509ContentType.Pkcs12, secret);
@@ -108,10 +110,16 @@ public sealed partial class MainWindow
                 }
                 return signature;
             });
-            _workspace.Editor.Execute(new UpdateScriptSignatureCommand(modules, signature)); DisableScripts(); Synchronize(); _status.Text = UiText.Get("已签署全部脚本，请保存工作簿。");
+            if (!ReferenceEquals(document, Document)) throw new InvalidOperationException(UiText.Get("工作簿已改变，请重新签名。"));
+            _workspace.Editor.Execute(new UpdateScriptSignatureCommand(modules, signature)); DisableScripts(); Synchronize(); _status.Text = UiText.Get("已编译并签署全部脚本，请保存工作簿以写入编译缓存。");
             try { await Task.Run(() => SigningPreferences.Save(file.Path, secret, rememberFile, rememberPassword)); }
             catch (Exception ex) when (ex is IOException or CryptographicException)
             { _status.Text += UiText.Get(" 未能保存本机签名记忆：") + ex.Message; }
+        }
+        catch (QuickExcel.Runtime.ScriptCompilationException ex)
+        {
+            Error(new InvalidOperationException(UiText.Get("脚本编译未通过，未签名：") + "\n" +
+                string.Join("\n", ex.Diagnostics.Take(20).Select(d => $"{d.Module}:{d.Line}:{d.Column} · {d.Message}")), ex));
         }
         finally { secret = ""; }
     }

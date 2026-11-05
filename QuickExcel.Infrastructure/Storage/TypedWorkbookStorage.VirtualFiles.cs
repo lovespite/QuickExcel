@@ -9,14 +9,21 @@ namespace QuickExcel.Storage;
 
 public sealed partial class TypedWorkbookStorage
 {
-    public VirtualFileSet Capture(WorkbookSnapshot snapshot) => new(BuildPackage(snapshot.WithLocalStorage(ScriptStorage.Empty), false, CancellationToken.None)
+    private static bool IsCompilationCachePath(string path, bool directory = false) =>
+        !directory && path.Equals("cache", StringComparison.OrdinalIgnoreCase) ||
+        path.Equals(QuickExcel.Runtime.ScriptCompilationCache.Part, StringComparison.OrdinalIgnoreCase) ||
+        path.StartsWith(QuickExcel.Runtime.ScriptCompilationCache.Part + "/", StringComparison.OrdinalIgnoreCase) ||
+        path.Equals(QuickExcel.Runtime.ScriptCompilationCache.DataPart, StringComparison.OrdinalIgnoreCase) ||
+        path.StartsWith(QuickExcel.Runtime.ScriptCompilationCache.DataPart + "/", StringComparison.OrdinalIgnoreCase);
+
+    public VirtualFileSet Capture(WorkbookSnapshot snapshot) => new(BuildPackage(snapshot.WithLocalStorage(ScriptStorage.Empty), false, CancellationToken.None, includeCompilationCache: false)
         .Select(p => new VirtualFileEntry("//xlsq/" + p.Key.TrimEnd('/'), p.Value.ToImmutableArray(), p.Key.EndsWith('/'))));
 
     public WorkbookSnapshot Apply(WorkbookSnapshot snapshot, IReadOnlyList<VirtualFileEdit> edits)
     {
         if (edits.Count == 0) return snapshot;
         if (edits.Any(e => !e.Path.StartsWith("//xlsq/", StringComparison.Ordinal))) throw new ArgumentException(MessageText.Get("包编辑只能访问 xlsq 卷。"));
-        if (edits.Any(e => IsStoragePath(e.Path[7..]))) throw new ArgumentException("localStorage 系统路径不能用作虚拟文件。请使用 localStorage 接口。");
+        if (edits.Any(e => IsStoragePath(e.Path[7..]) || IsCompilationCachePath(e.Path[7..], directory: e.Operation != "write"))) throw new ArgumentException("脚本存储或编译缓存系统路径不能用作虚拟文件。");
         var original = Capture(snapshot);
         var updated = original.Apply(edits);
         if (original.ContentEquals(updated)) return snapshot;
