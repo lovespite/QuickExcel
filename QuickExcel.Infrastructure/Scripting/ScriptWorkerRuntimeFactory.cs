@@ -36,8 +36,9 @@ public sealed class ScriptWorkerRuntime : IScriptBatchRuntime
     private readonly SemaphoreSlim _exchangeGate = new(1, 1);
     private readonly CancellationTokenSource _deadline = new();
     private CancellationTokenSource _lifetime;
-    private readonly CancellationTokenSource _processLifetime = new();
+    private readonly CancellationTokenSource _processLifetime = CancellationTokenSource.CreateLinkedTokenSource(ScriptExecutionPolicy.Current.CaptureLifetime());
     private CancellationTokenRegistration _registration;
+    private CancellationTokenRegistration _policyRegistration;
     private bool _stopped, _disposed;
     private RequestIdentity _identity;
     private bool _actionsMode;
@@ -76,6 +77,7 @@ public sealed class ScriptWorkerRuntime : IScriptBatchRuntime
 
     internal static ScriptWorkerRuntime Start(string executable, ScriptRuntimeRequest request, bool actionsMode = false, bool shared = false)
     {
+        ScriptExecutionPolicy.Current.RequireEnabled();
         request.CancellationToken.ThrowIfCancellationRequested();
         if (request.TimeLimit <= TimeSpan.Zero) throw new TimeoutException("重算已达到时间限制。");
         if ((!OperatingSystem.IsWindows() && !OperatingSystem.IsLinux()) || System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture != System.Runtime.InteropServices.Architecture.X64)
@@ -106,6 +108,8 @@ public sealed class ScriptWorkerRuntime : IScriptBatchRuntime
             runtime._process = OperatingSystem.IsWindows() ? WorkerProcess.Start(executable, runtime._lifetime.Token) : OperatingSystem.IsLinux()
                 ? LinuxWorkerProcess.Start(executable, runtime._lifetime.Token) : throw new PlatformNotSupportedException();
             runtime.ProcessId = runtime._process.Id;
+            // This registration remains active between rounds, when the per-round registration is released.
+            runtime._policyRegistration = runtime._processLifetime.Token.Register(runtime.Abort);
             runtime._registration = runtime._lifetime.Token.Register(runtime.Abort);
             _ = runtime.DrainStderrAsync();
             var hello = new WorkerHello(WorkerProtocol.Engine, WorkerProtocol.Policy, [3, 4], WorkerProtocol.MaxFrameBytes);
@@ -313,6 +317,7 @@ public sealed class ScriptWorkerRuntime : IScriptBatchRuntime
 
     private TReply Exchange<TRequest, TReply>(string kind, TRequest payload)
     {
+        ScriptExecutionPolicy.Current.RequireEnabled();
         // One in-flight request, zero waiting requests. Reject overload instead of growing a queue.
         if (!_exchangeGate.Wait(0)) throw new ScriptRuntimeFailureException("Busy", "脚本 worker 已有请求正在执行。");
         try
@@ -409,6 +414,7 @@ public sealed class ScriptWorkerRuntime : IScriptBatchRuntime
             if (_disposed) return;
             _disposed = true;
             _registration.Dispose();
+            _policyRegistration.Dispose();
             try { _process?.Dispose(); }
             catch (IOException e) { throw new ScriptRuntimeFailureException("WorkerCleanup", "脚本 worker 隔离资源清理失败。", e); }
             finally { _lifetime.Dispose(); _deadline.Dispose(); _processLifetime.Dispose(); }

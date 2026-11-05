@@ -18,6 +18,7 @@ public sealed class ScriptCompiler(string? executablePath = null)
 
     public async Task<CompiledReply> CompileAsync(CompileRequest input, CalculationStamp stamp, CancellationToken cancellationToken = default)
     {
+        var policyLifetime = ScriptExecutionPolicy.Current.CaptureLifetime();
         cancellationToken.ThrowIfCancellationRequested();
         // Snapshot caller-owned arrays before validating, hashing or starting asynchronous work.
         var request = input with { Modules = input.Modules.ToArray(), Entries = input.Entries.ToArray() };
@@ -39,7 +40,7 @@ public sealed class ScriptCompiler(string? executablePath = null)
             if (!OperatingSystem.IsWindows() && !OperatingSystem.IsLinux()) throw new PlatformNotSupportedException("此平台尚未验证隔离 TypeScript 编译角色。");
             if (!File.Exists(_executable)) throw new ScriptRuntimeFailureException("WorkerMissing", "找不到完整的脚本 worker。");
             using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(6));
-            using var lifetime = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, deadline.Token);
+            using var lifetime = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, deadline.Token, policyLifetime);
             IWorkerProcess? process = null;
             try
             {

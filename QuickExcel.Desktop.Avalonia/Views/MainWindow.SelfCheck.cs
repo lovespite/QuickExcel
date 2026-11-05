@@ -41,6 +41,7 @@ public sealed partial class MainWindow
             await CloseScriptWindowAsync();
             if (DesktopServices.SupportsScripts)
             {
+                ScriptExecutionPolicy.Current.RequireEnabled();
                 using var runtime = await Task.Run(() => new ScriptWorkerRuntimeFactory().Create("host.functions.register('INSTALLCHECK', value => value + 1);"));
                 Check(Convert.ToDouble(await Task.Run(() => runtime.Invoke("INSTALLCHECK", [41d]))) == 42, "Published native bridge in platform-isolated worker");
                 var modules = new ScriptModuleSet(new Dictionary<string, ScriptModule>

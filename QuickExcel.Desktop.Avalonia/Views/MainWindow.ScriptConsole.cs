@@ -205,6 +205,7 @@ public sealed partial class MainWindow
     }
     private async Task RunConsoleAsync()
     {
+        RequireScriptsEnabled();
         if (_consoleInput is not { } input || input.IsComposing || input.Text is not { } source || string.IsNullOrWhiteSpace(source)) return;
         if (!DesktopServices.SupportsScripts) throw new PlatformNotSupportedException(UiText.Get("此平台的隔离脚本执行尚不可用。"));
         if (_scriptCancellation is not null) return;

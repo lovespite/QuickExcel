@@ -215,6 +215,26 @@ public sealed partial class MainWindow
     }
     private void DisableScripts()
     { _scriptCancellation?.Cancel(); Document.DisableScripts(); ClearScriptActions(); RefreshScriptActions(); RefreshScriptChrome(); }
+    private void RequireScriptsEnabled()
+    {
+        try { ScriptExecutionPolicy.Current.RequireEnabled(); }
+        catch (InvalidOperationException ex)
+        {
+            _status.Text = ex.Message;
+            if (_scriptStatus is not null) _scriptStatus.Text = ex.Message;
+            throw;
+        }
+    }
+    private void UpdateScriptExecutionPolicy()
+    {
+        var policy = ScriptExecutionPolicy.Current;
+        var changed = policy.UserSetting != _settings.Value.DisableScripts;
+        policy.UserSetting = _settings.Value.DisableScripts;
+        if (changed && policy.IsDisabled) DisableScripts();
+        _noScriptsStatus.Text = policy.Status;
+        _noScriptsStatus.IsVisible = policy.IsDisabled;
+        if (changed) { RefreshScriptActions(); RefreshScriptChrome(); }
+    }
     private async Task MigrateScriptApiAsync()
     {
         if (!await CommitEditorsAsync()) return;
@@ -287,6 +307,7 @@ public sealed partial class MainWindow
     }
     private async Task ApplyScriptsAsync()
     {
+        RequireScriptsEnabled();
         await using var hold = _scriptPage?.HoldEdits();
         if (!await CommitEditorsAsync(validateTypeScript: true)) return;
         if (!DesktopServices.SupportsScripts) throw new PlatformNotSupportedException(UiText.Get("此平台的脚本隔离尚未开放，不能执行脚本。"));
@@ -306,6 +327,7 @@ public sealed partial class MainWindow
     }
     private async Task EnableVerifiedScriptsAsync()
     {
+        RequireScriptsEnabled();
         await ScriptWorkAsync(async token =>
         {
             var document = Document; var modules = document.Snapshot.ScriptModules;
@@ -319,6 +341,7 @@ public sealed partial class MainWindow
     }
     private async Task RunScriptActionAsync(ScriptActionDescriptor? action)
     {
+        RequireScriptsEnabled();
         await using var hold = _scriptPage?.HoldEdits();
         if (!await CommitEditorsAsync(validateTypeScript: true)) return;
         if (!ScriptActionsCurrent || action is null || !_availableScriptActions.Contains(action)) throw new InvalidOperationException(UiText.Get("请先加载脚本并选择操作。"));
@@ -332,6 +355,7 @@ public sealed partial class MainWindow
     }
     private async Task ScriptWorkAsync(Func<CancellationToken, Task> work)
     {
+        RequireScriptsEnabled();
         _calculationTimer.Stop(); using var cancellation = new CancellationTokenSource();
         using var feedback = BeginExecution(UiText.Get("正在执行代码…"), cancellation);
         _scriptCancellation = cancellation;

@@ -19,6 +19,17 @@ internal sealed partial class SettingsWindow
 {
     private void ScriptInformation()
     {
+        var disableScripts = new CheckBox { Name = "DisableScripts", Content = UiText.Get("禁用脚本"), IsChecked = _settings.Value.DisableScripts };
+        AutomationProperties.SetName(disableScripts, UiText.Get("禁用脚本"));
+        disableScripts.IsCheckedChanged += (_, _) =>
+        {
+            Save(_settings.Value with { DisableScripts = disableScripts.IsChecked == true });
+            if (_settings.Error is not null) disableScripts.IsChecked = _settings.Value.DisableScripts;
+        };
+        _page.Children.Add(disableScripts);
+        _page.Children.Add(Note(UiText.Get("立即停用所有脚本及编译 worker，包括已签名且受信任的脚本。取消勾选后需重新应用脚本。")));
+        _page.Children.Add(Note(UiText.Get("命令行 --no-scripts 或环境变量 QUICKEXCEL_NO_SCRIPTS=1 也会禁用脚本；任一来源生效时均不可执行。命令行及环境变量在启动时读取。")));
+        _page.Children.Add(new Separator());
         _page.Children.Add(Heading(UiText.Get("Source Map（源码映射）"), 18));
         var sourceMap = new ComboBox { Name = "ScriptSourceMapMode", HorizontalAlignment = HorizontalAlignment.Stretch,
             ItemsSource = new[] { UiText.Get("无"), UiText.Get("精简"), UiText.Get("完整") }, SelectedIndex = (int)_settings.Value.ScriptSourceMap };

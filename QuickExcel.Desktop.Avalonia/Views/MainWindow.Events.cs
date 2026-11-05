@@ -36,7 +36,7 @@ public sealed partial class MainWindow
     }
     private async Task DispatchEventsAsync()
     {
-        if (!Document.Session.HasScriptEvents) return;
+        if (QuickExcel.Runtime.ScriptExecutionPolicy.Current.IsDisabled || !Document.Session.HasScriptEvents) return;
         await using var hold = _scriptPage?.HoldEdits();
         if (!await CommitScriptsAsync() || !Document.Session.HasScriptEvents) return;
         var document = Document;

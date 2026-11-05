@@ -22,6 +22,7 @@ internal sealed class WorkerProcess : IWorkerProcess
 
     internal static WorkerProcess Start(string executable, CancellationToken cancellation, string? ownershipRoot = null, bool compilation = false)
     {
+        ScriptExecutionPolicy.Current.RequireEnabled();
         var child = new WorkerProcess();
         var allocated = new List<IntPtr>();
         var attributes = IntPtr.Zero;
@@ -66,6 +67,7 @@ internal sealed class WorkerProcess : IWorkerProcess
                         };
                         var environment = Marshal.StringToHGlobalUni(child._sandbox.EnvironmentBlock()); allocated.Add(environment);
                         cancellation.ThrowIfCancellationRequested();
+                        ScriptExecutionPolicy.Current.RequireEnabled();
                         Check(CreateProcess(child._sandbox.Executable, new StringBuilder('"' + child._sandbox.Executable + '"' + (compilation ? " --compile" : "")),
                             IntPtr.Zero, IntPtr.Zero, true, 0x80000 | 0x4 | 0x8000000 | 0x400, environment,
                             child._sandbox.PayloadDirectory, ref startup, out var info));

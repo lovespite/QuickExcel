@@ -28,6 +28,9 @@ internal static class Program
     [STAThread]
     public static int Main(string[] args)
     {
+        // Capture the process policy before removing this position-independent switch from file/diagnostic parsing.
+        _ = QuickExcel.Runtime.ScriptExecutionPolicy.Current;
+        args = args.Where(argument => argument != "--no-scripts").ToArray();
 #if !QUICKEXCEL_DIAGNOSTICS
         if (args.FirstOrDefault()?.StartsWith("--", StringComparison.Ordinal) == true &&
             (args.Length < 2 || args[0] is not ("--self-check" or "--user-data"))) return 2;
@@ -41,6 +44,7 @@ internal static class Program
         if (args.Length >= 2 && args[0] == "--closing-smoke") { SmokeDirectory = Path.GetFullPath(args[1]); SmokeMode = "closing"; InitialFile = null; }
         if (args.Length >= 2 && args[0] == "--commands-smoke") { SmokeDirectory = Path.GetFullPath(args[1]); SmokeMode = "commands"; InitialFile = null; }
         if (args.Length >= 2 && args[0] == "--licenses-smoke") { SmokeDirectory = Path.GetFullPath(args[1]); SmokeMode = "licenses"; InitialFile = null; }
+        if (args.Length >= 2 && args[0] == "--no-scripts-smoke") { SmokeDirectory = Path.GetFullPath(args[1]); SmokeMode = "no-scripts"; InitialFile = null; }
         if (SmokeMode == "web-benchmark") WebBenchmarkKind = args.ElementAtOrDefault(2) ?? "all";
         if (SmokeMode == "web")
         {

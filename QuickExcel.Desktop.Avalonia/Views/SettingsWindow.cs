@@ -17,7 +17,7 @@ public sealed partial class MainWindow
     {
         if (!await CommitEditorsAsync()) return;
         var priorSourceMap = _settings.Value.ScriptSourceMap;
-        await ShowOwnedAsync<bool>(new SettingsWindow(_settings, _recentFiles, section));
+        await ShowOwnedAsync<bool>(new SettingsWindow(_settings, _recentFiles, section, UpdateScriptExecutionPolicy));
         if (_settings.Value.ScriptSourceMap != priorSourceMap)
         {
             DisableScripts();
@@ -36,15 +36,17 @@ internal enum SettingsSection { Associations, History, Calculation, Appearance, 
 internal sealed partial class SettingsWindow : Window
 {
     private readonly DesktopSettings _settings;
+    private readonly Action? _preferencesChanged;
     private readonly RecentFileStore _history;
     private readonly ListBox _navigation = new() { Name = "SettingsNavigation", Background = Brushes.Transparent };
     private readonly StackPanel _page = new() { Spacing = 14, Margin = new(24, 20) };
     private readonly LayoutGrid _pageLayout = new() { RowDefinitions = new("*") };
     private readonly TextBlock _feedback = new() { TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Center };
 
-    public SettingsWindow(DesktopSettings settings, RecentFileStore history, SettingsSection initialSection = SettingsSection.Associations)
+    public SettingsWindow(DesktopSettings settings, RecentFileStore history, SettingsSection initialSection = SettingsSection.Associations, Action? preferencesChanged = null)
     {
         _settings = settings; _history = history;
+        _preferencesChanged = preferencesChanged;
         FontFamily = new FontFamily("Segoe UI, Microsoft YaHei UI, Noto Sans CJK SC, sans-serif");
         Title = UiText.Get("设置"); Width = 820; Height = 600; MinWidth = 580; MinHeight = 380;
         WindowStartupLocation = WindowStartupLocation.CenterOwner; ShowInTaskbar = false;
@@ -91,6 +93,7 @@ internal sealed partial class SettingsWindow : Window
     private void Save(DesktopPreferences preferences)
     {
         _settings.Save(preferences);
+        if (_settings.Error is null) _preferencesChanged?.Invoke();
         _feedback.Text = _settings.Error is { } error ? UiText.Get("保存设置失败：") + error : UiText.Get("设置已保存");
     }
 

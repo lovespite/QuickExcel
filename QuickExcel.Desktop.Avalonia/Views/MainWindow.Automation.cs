@@ -89,7 +89,8 @@ public sealed partial class MainWindow
         _automationSearch.IsEnabled = _availableScriptActions.Count > 0;
         _automationEmpty.IsVisible = _automationActions.ItemCount == 0;
         _automationActions.IsVisible = !_automationEmpty.IsVisible;
-        _automationEmpty.Text = _availableScriptActions.Count > 0 ? UiText.Get("没有匹配的操作，请更换或清空关键词。") :
+        _automationEmpty.Text = QuickExcel.Runtime.ScriptExecutionPolicy.Current.IsDisabled ? UiText.Get("当前环境已禁用脚本。") :
+            _availableScriptActions.Count > 0 ? UiText.Get("没有匹配的操作，请更换或清空关键词。") :
             !DesktopServices.SupportsScripts ? UiText.Get("此平台尚未开放脚本执行。") :
             Document.Snapshot.FileState?.FormulaReadOnly == true ? UiText.Get("当前工作簿为只读，无法执行脚本操作。") :
             !Document.Snapshot.ScriptModules.HasActions || ScriptActionsCurrent ? UiText.Get("当前工作簿没有可用的脚本操作。") :
@@ -116,6 +117,6 @@ public sealed partial class MainWindow
         RefreshScriptRunMenu();
         var enabled = !Document.IsReadOnly && DesktopServices.SupportsScripts && !NonExecutionBusy && Document.Snapshot.FileState?.FormulaReadOnly != true;
         if (_automationLoad is not null) _automationLoad.IsEnabled = enabled;
-        if (_automationRun is not null) _automationRun.IsEnabled = enabled && ScriptActionsCurrent && _automationActions.SelectedItem is ScriptActionDescriptor;
+        if (_automationRun is not null) _automationRun.IsEnabled = enabled && (QuickExcel.Runtime.ScriptExecutionPolicy.Current.IsDisabled || ScriptActionsCurrent && _automationActions.SelectedItem is ScriptActionDescriptor);
     }
 }

@@ -30,6 +30,7 @@ public static class ScriptCompilation
 
     public static async Task<CompiledReply?> PrepareAsync(ScriptModuleSet modules, CalculationStamp stamp, CancellationToken cancellationToken)
     {
+        ScriptExecutionPolicy.Current.RequireEnabled();
         cancellationToken.ThrowIfCancellationRequested();
         if (!modules.HasTypeScript && modules.Signature is null) return null;
         var request = Request(modules);

@@ -16,6 +16,7 @@ public sealed partial class MainWindow
         UiText.Format($"{result.Message}\n\n主体：{result.Subject ?? "—"}\n颁发者：{result.Issuer ?? "—"}\n有效期至：{result.NotAfter:yyyy-MM-dd HH:mm:ss}\nSHA-256 指纹：\n{result.Fingerprint ?? "—"}");
     private async Task<bool> CheckScriptTrustAsync()
     {
+        RequireScriptsEnabled();
         var modules = Document.Snapshot.ScriptModules;
         if (modules.Signature is null) return true; // Explicit Apply is required for unsigned sources.
         DisableScripts();
@@ -57,6 +58,7 @@ public sealed partial class MainWindow
     }
     private async Task SignScriptsAsync()
     {
+        RequireScriptsEnabled();
         await using var hold = _scriptPage?.HoldEdits();
         if (!await CommitEditorsAsync()) return;
         ScriptSigningPreferences remembered = new(); string? memoryError = null;

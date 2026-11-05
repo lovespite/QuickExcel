@@ -25,6 +25,7 @@ internal sealed class LinuxWorkerProcess : IWorkerProcess
 
     internal static LinuxWorkerProcess Start(string executable, CancellationToken cancellation, bool compilation = false)
     {
+        ScriptExecutionPolicy.Current.RequireEnabled();
         if (geteuid() == 0) throw new PlatformNotSupportedException("Linux worker 必须在普通用户会话中运行。");
         var child = new LinuxWorkerProcess { _compilation = compilation };
         try
@@ -36,6 +37,8 @@ internal sealed class LinuxWorkerProcess : IWorkerProcess
             start.Environment.Clear();
             start.ArgumentList.Add(child.PayloadDirectory); start.ArgumentList.Add(Environment.ProcessId.ToString(CultureInfo.InvariantCulture));
             if (compilation) start.ArgumentList.Add("compile");
+            cancellation.ThrowIfCancellationRequested();
+            ScriptExecutionPolicy.Current.RequireEnabled();
             child._process = Process.Start(start) ?? throw new IOException("Cannot start Linux sandbox launcher.");
             child._lease.Attach(child._process);
             using var registration = cancellation.Register(child.Kill);

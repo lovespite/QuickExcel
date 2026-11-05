@@ -26,6 +26,7 @@ public sealed partial class MainWindow : Window
         TextWrapping = TextWrapping.Wrap, VerticalContentAlignment = VerticalAlignment.Top };
     private readonly TextBlock _address = new() { Width = 86, VerticalAlignment = VerticalAlignment.Center };
     private readonly TextBlock _status = new() { Text = UiText.Get("就绪"), Margin = new(12, 5) };
+    private readonly TextBlock _noScriptsStatus = new() { Name = "NoScriptsStatus", Margin = new(12, 5), Foreground = Brushes.DarkGoldenrod };
     private readonly ListBox _sheets = new() { MinHeight = 0, Padding = new(0), SelectionMode = SelectionMode.Single };
     private readonly DockPanel _book = new();
     private readonly global::Avalonia.Controls.Grid _start = new() { Margin = new(40, 36), ColumnDefinitions = new("300,40,*") };
@@ -62,6 +63,7 @@ public sealed partial class MainWindow : Window
     {
         Title = "QuickExcel · Avalonia"; Width = 1280; Height = 820; MinWidth = 760; MinHeight = 480;
         FontFamily = new FontFamily("Segoe UI, Noto Sans CJK SC, sans-serif"); FontSize = 13;
+        QuickExcel.Runtime.ScriptExecutionPolicy.Current.UserSetting = settings.Value.DisableScripts;
         var services = _services = DesktopServices.Create(); _workspace = new(services, new WorkbookFileAccess(services.Storage));
         _files = new AvaloniaFileDialogs(this);
         _recentFiles = new(Path.Combine(userDataDirectory, "recent-files.json")); _recentFiles.Load();
@@ -108,6 +110,7 @@ public sealed partial class MainWindow : Window
             await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Background);
             if (Program.SelfCheckDirectory is { } evidence) { await RunSelfCheckAsync(evidence); return; }
 #if QUICKEXCEL_DIAGNOSTICS
+            if (Program.SmokeDirectory is { } noScriptsDirectory && Program.SmokeMode == "no-scripts") { await RunNoScriptsSmokeAsync(noScriptsDirectory); return; }
             if (Program.SmokeDirectory is { } closingDirectory && Program.SmokeMode == "closing") { await RunWindowClosingSmokeAsync(closingDirectory); return; }
             if (Program.SmokeDirectory is { } commandsDirectory && Program.SmokeMode == "commands") { await RunDesktopCommandsSmokeAsync(commandsDirectory); return; }
             if (Program.SmokeDirectory is { } licensesDirectory && Program.SmokeMode == "licenses") { await RunLicenseSmokeAsync(licensesDirectory); return; }
@@ -187,7 +190,10 @@ public sealed partial class MainWindow : Window
         BuildHome();
         var content = new global::Avalonia.Controls.Grid(); content.Children.Add(_book); content.Children.Add(_start);
         var root = new DockPanel(); DockPanel.SetDock(_menu, Dock.Top);
-        var footer = new DockPanel(); DockPanel.SetDock(_selectionStatistics, Dock.Right); footer.Children.Add(_selectionStatistics); DockPanel.SetDock(_pivotStatus,Dock.Right); footer.Children.Add(_pivotStatus); DockPanel.SetDock(_recoveryStatus, Dock.Right); footer.Children.Add(_recoveryStatus); footer.Children.Add(_status);
+        var footer = new DockPanel();
+        UpdateScriptExecutionPolicy();
+        DockPanel.SetDock(_noScriptsStatus, Dock.Right); footer.Children.Add(_noScriptsStatus);
+        DockPanel.SetDock(_selectionStatistics, Dock.Right); footer.Children.Add(_selectionStatistics); DockPanel.SetDock(_pivotStatus,Dock.Right); footer.Children.Add(_pivotStatus); DockPanel.SetDock(_recoveryStatus, Dock.Right); footer.Children.Add(_recoveryStatus); footer.Children.Add(_status);
         DockPanel.SetDock(footer, Dock.Bottom); root.Children.Add(_menu); root.Children.Add(footer); root.Children.Add(content);
         Content = _execution = new ExecutionOverlay(this, root, () => _grid.IsComposing || _formula.IsComposing);
     }
@@ -429,7 +435,7 @@ public sealed partial class MainWindow : Window
         _status.Text = UiText.Get(Document.IsReadOnly ? "已以只读方式打开 " : "已打开 ") + Path.GetFileName(path);
         if (Path.GetExtension(path).Equals(".csv", StringComparison.OrdinalIgnoreCase))
             _status.Text = UiText.Get("已按文本导入 CSV。保存时将写入新的工作簿。");
-        if (!Document.IsReadOnly && DesktopServices.SupportsScripts && Document.Snapshot.ScriptModules.Signature is not null)
+        if (!Document.IsReadOnly && DesktopServices.SupportsScripts && !QuickExcel.Runtime.ScriptExecutionPolicy.Current.IsDisabled && Document.Snapshot.ScriptModules.Signature is not null)
         {
             var modules = Document.Snapshot.ScriptModules;
             try

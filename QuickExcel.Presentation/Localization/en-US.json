@@ -1,4 +1,8 @@
 {
+  "禁用脚本": "Disable scripts",
+  "当前环境已禁用脚本。": "Scripts are disabled in the current environment.",
+  "立即停用所有脚本及编译 worker，包括已签名且受信任的脚本。取消勾选后需重新应用脚本。": "Immediately disable all scripts and compiler workers, including signed and trusted scripts. Apply scripts again after clearing this setting.",
+  "命令行 --no-scripts 或环境变量 QUICKEXCEL_NO_SCRIPTS=1 也会禁用脚本；任一来源生效时均不可执行。命令行及环境变量在启动时读取。": "The --no-scripts command-line option or QUICKEXCEL_NO_SCRIPTS=1 environment variable also disables scripts. Any active source blocks execution. Command-line and environment settings are read at startup.",
   "固定": "Pin",
   "取消固定": "Unpin",
   "无效的历史文件设置。": "Invalid file history settings.",

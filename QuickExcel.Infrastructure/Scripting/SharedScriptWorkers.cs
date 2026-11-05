@@ -18,6 +18,7 @@ internal static class SharedScriptWorkers
 
     internal static ScriptWorkerLease Acquire(string executable, ScriptRuntimeRequest request, bool actions)
     {
+        ScriptExecutionPolicy.Current.RequireEnabled();
         if (!OperatingSystem.IsWindows() || request.Modules.ScriptApiVersion is not (3 or 4) || !request.RuntimeLifetime.CanBeCanceled)
         {
             var isolated = ScriptWorkerRuntime.Start(executable, request, actions);
