@@ -28,6 +28,7 @@ public sealed partial class MainWindow
     private ListBox? _scriptDiagnostics;
     private TextBlock? _scriptStatus;
     private Button? _scriptRecovery;
+    private Button? _scriptApiMigration;
     private Guid _scriptDocument;
     private long _webGeneration;
     private string _selectedModule = "main";
@@ -45,19 +46,22 @@ public sealed partial class MainWindow
         menu.Items.Add(CommandMenu(UiText.Get("签名详情"), ScriptSignatureDetailsAsync));
         menu.Items.Add(CommandMenu(UiText.Get("签署脚本"), SignScriptsAsync));
         menu.Items.Add(CommandMenu(UiText.Get("受信任证书"), TrustedCertificatesAsync)); _menu.Items.Add(menu);
-        RibbonGroup(UiText.Get("公式"), UiText.Get("脚本"), RibbonButton(RibbonIcon.Code, UiText.Get("脚本编辑器"), OpenScriptsAsync, false), RibbonButton(RibbonIcon.ApplyScripts, UiText.Get("应用并重算"), ApplyScriptsAsync, false));
+        RibbonGroup(UiText.Get("公式"), UiText.Get("脚本"), RibbonButton(RibbonIcon.Code, UiText.Get("脚本编辑器"), OpenScriptsAsync, false, readOnlyAllowed: false), RibbonButton(RibbonIcon.ApplyScripts, UiText.Get("应用并重算"), ApplyScriptsAsync, false, readOnlyAllowed: false));
         InstallAutomationRibbon();
     }
     private async Task OpenScriptsAsync()
     {
+        Document.Session.RequireWritable();
         if (_scriptWindow is not null) { _scriptWindow.Activate(); return; }
         if (!await CommitEditorsAsync()) return;
         _scriptDocument = Document.Session.SessionId; _selectedModule = Document.Snapshot.ScriptModules.EntryModules[0];
         var window = _scriptWindow = new Window { Title = UiText.Get("脚本工作区 · QuickExcel"), Width = 1080, Height = 760, MinWidth = 760, MinHeight = 500, WindowStartupLocation = WindowStartupLocation.CenterOwner };
         var root = new DockPanel(); var toolbar = new WrapPanel { Margin = new(8), Orientation = Orientation.Horizontal };
-        void Button(string text, Func<Task> action)
-        { var button = new Button { Content = text, Margin = new(4) }; button.Click += async (_, _) => await PerformAsync(action); toolbar.Children.Add(button); }
-        Button(UiText.Get("确认使用 API v3"), MigrateScriptApiAsync); Button(UiText.Get("移除全部脚本"), RemoveScriptsAsync); Button(UiText.Get("添加模块"), AddScriptModuleAsync); Button(UiText.Get("应用并重算"), ApplyScriptsAsync);
+        Button Button(string text, Func<Task> action)
+        { var button = new Button { Content = text, Margin = new(4) }; button.Click += async (_, _) => await PerformAsync(action); toolbar.Children.Add(button); return button; }
+        _scriptApiMigration = Button(UiText.Get("确认使用 API v3"), MigrateScriptApiAsync);
+        RefreshScriptApiMigrationButton();
+        Button(UiText.Get("移除全部脚本"), RemoveScriptsAsync); Button(UiText.Get("添加模块"), AddScriptModuleAsync); Button(UiText.Get("应用并重算"), ApplyScriptsAsync);
         Button(UiText.Get("停用"), () => { DisableScripts(); return Task.CompletedTask; }); Button(UiText.Get("保存"), async () => await SaveAsync(false));
         _actionPicker = new ComboBox
         {
@@ -191,6 +195,7 @@ public sealed partial class MainWindow
         finally
         {
             _scriptWindow = null; _scriptPage = null; _scriptContent = null; _modulePicker = null; _actionPicker = null; _scriptStatus = null; _scriptDiagnostics = null; _scriptRecovery = null; _scriptClosing = false;
+            _scriptApiMigration = null;
             _scriptExecution = null;
             _scriptEditorPane = null; _scriptOutputSplitter = null; _scriptConsoleToggle = null;
             _scriptModuleGroups.Clear(); _scriptNavigationSelection = null;
@@ -213,9 +218,15 @@ public sealed partial class MainWindow
         try { await CreateScriptPageAsync(new(modules, Document.Snapshot.FileState?.FormulaReadOnly == true)); }
         catch (Exception error) { ScriptPageFailed(error); throw; }
     }
+    private void RefreshScriptApiMigrationButton()
+    {
+        if (_scriptApiMigration is not null)
+            _scriptApiMigration.IsVisible = Document.Snapshot.ScriptModules.ScriptApiVersion is 1 or 2;
+    }
     private void RefreshScriptChrome(bool revealSelected = false)
     {
         if (_scriptWindow is null) return;
+        RefreshScriptApiMigrationButton();
         _scriptWindow.Title = (_scriptPage?.Drafts.IsDirty == true ? "* " : "") + UiText.Get("脚本工作区 · QuickExcel");
         RefreshScriptNavigation(revealSelected);
         var modules = Document.Snapshot.ScriptModules;

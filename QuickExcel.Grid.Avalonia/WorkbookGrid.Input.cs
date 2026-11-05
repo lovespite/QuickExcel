@@ -62,6 +62,7 @@ public sealed partial class WorkbookGrid
     }
     private (SheetAxis Axis, int Index, double Size)? ResizeHit(Point point)
     {
+        if (IsReadOnly) return null;
         var x = point.X / _zoom; var y = point.Y / _zoom;
         if (y < HeaderHeight && x >= HeaderWidth)
             foreach (var cell in _columns.Visible(ViewWidth))
@@ -83,7 +84,7 @@ public sealed partial class WorkbookGrid
     }
     private Rect? FillHandle()
     {
-        if (_snapshot is null || IsComposing || _snapshot.FileState?.FormulaReadOnly == true || _selectedObject is not null ||
+        if (IsReadOnly || _snapshot is null || IsComposing || _snapshot.FileState?.FormulaReadOnly == true || _selectedObject is not null ||
             _selection.Ranges.Count != 1 || _selection.Ranges[0].Count > WorkbookClipboard.MaxCells) return null;
         var range = _selection.Ranges[0];
         foreach (var fragment in Fragments(range))
@@ -126,7 +127,7 @@ public sealed partial class WorkbookGrid
         if (!Commit() || !(BeforeSelection?.Invoke() ?? true)) return;
         if (ObjectPointerDown(e, point)) return;
         _gestureRevision = _snapshot.Revision;
-        if (Hit(point) is { } filterCell && FilterHeader(filterCell.Row, filterCell.Column) is not null &&
+        if (!IsReadOnly && Hit(point) is { } filterCell && FilterHeader(filterCell.Row, filterCell.Column) is not null &&
             CellBounds(filterCell) is { } filterBounds && point.X >= filterBounds.Right - 22 * _zoom)
         { Select(filterCell); FilterRequested?.Invoke(filterCell.Column); e.Handled = true; return; }
         if (ResizeHit(point) is { } resize)

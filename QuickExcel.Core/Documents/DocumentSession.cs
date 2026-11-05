@@ -29,12 +29,13 @@ public sealed partial class DocumentSession : IDisposable
     private readonly IWorkbookValidation? _validation;
     private readonly IWorkbookCalculator? _calculator;
     private readonly IWorkbookVirtualFiles? _virtualFiles;
-    public DocumentSession(WorkbookSnapshot snapshot, long historyBudgetBytes = 32 * 1024 * 1024, IWorkbookValidation? validation = null, IWorkbookVirtualFiles? virtualFiles = null, IWorkbookCalculator? calculator = null)
+    public DocumentSession(WorkbookSnapshot snapshot, long historyBudgetBytes = 32 * 1024 * 1024, IWorkbookValidation? validation = null, IWorkbookVirtualFiles? virtualFiles = null, IWorkbookCalculator? calculator = null, bool readOnly = false)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(historyBudgetBytes);
         _snapshot = snapshot;
-        _savedRevision = snapshot.FileState?.RequiresMigration == true ? -1 : snapshot.Revision;
+        IsReadOnly = readOnly;
+        _savedRevision = !readOnly && snapshot.FileState?.RequiresMigration == true ? -1 : snapshot.Revision;
         HistoryBudgetBytes = historyBudgetBytes;
         _validation = validation;
         _calculator = calculator;
@@ -42,6 +43,12 @@ public sealed partial class DocumentSession : IDisposable
     }
 
     public Guid SessionId { get; } = Guid.NewGuid();
+    public const string ReadOnlyMessage = "工作簿以只读模式打开。请另存为可编辑副本后再修改。";
+    public bool IsReadOnly { get; }
+    public void RequireWritable()
+    {
+        if (IsReadOnly) throw new InvalidOperationException(MessageText.Get(ReadOnlyMessage));
+    }
     public long HistoryBudgetBytes { get; }
     public int DiscardedHistoryCount { get; private set; }
     public event EventHandler<DocumentChange>? Changed;
@@ -102,6 +109,7 @@ public sealed partial class DocumentSession : IDisposable
 
     private CommandResult ExecuteCore(DocumentCommand command, long? expectedRevision, ScriptActionRequest? action = null, CancellationToken cancellationToken = default, ImmutableArray<string> diagnostics = default, bool acceptValidationWarnings = false, VirtualFileSet? transientFiles = null, bool includeWithPreviousEdit = false, bool cellPaste = false, bool replacePreviousPaste = false)
     {
+        RequireWritable();
         ArgumentNullException.ThrowIfNull(command);
         DocumentChange? change = null;
         CommandResult result;
@@ -234,6 +242,7 @@ public sealed partial class DocumentSession : IDisposable
     public ScriptActionRequest BeginAction(string? name, ScriptEvent? scriptEvent = null) => BeginActionCore(name, scriptEvent, null);
     private ScriptActionRequest BeginActionCore(string? name, ScriptEvent? scriptEvent, string? consoleSource)
     {
+        RequireWritable();
         ScriptActionRequest request;
         lock (_gate)
         {
@@ -326,6 +335,7 @@ public sealed partial class DocumentSession : IDisposable
 
     private CommandResult MoveHistory(bool redo, long? expectedRevision)
     {
+        RequireWritable();
         DocumentChange change;
         CommandResult result;
         lock (_gate)
@@ -363,6 +373,8 @@ public sealed partial class DocumentSession : IDisposable
         lock (_gate)
         {
             ThrowIfClosed();
+            if (enabled) RequireWritable();
+            else if (IsReadOnly) return;
             if (enabled && _snapshot.FileState?.FormulaReadOnly == true) throw new InvalidOperationException(MessageText.Get(WorkbookFileState.FormulaReadOnlyMessage));
             if (enabled && !_snapshot.ScriptModules.CanExecute) throw new NotSupportedException(MessageText.Get(ScriptModuleSet.MigrationMessage));
             // Reapply also invalidates an in-flight compile of the same source.
@@ -383,6 +395,7 @@ public sealed partial class DocumentSession : IDisposable
 
     public CalculationRequest BeginCalculation()
     {
+        RequireWritable();
         lock (_gate)
         {
             ThrowIfClosed();
@@ -399,7 +412,7 @@ public sealed partial class DocumentSession : IDisposable
         DocumentChange change;
         lock (_gate)
         {
-            if (!Matches(result.Stamp)) return false;
+            if (IsReadOnly || !Matches(result.Stamp)) return false;
             _snapshot = ApplyCalculation(_snapshot, result, out var changes);
             _diagnostics = result.Diagnostics;
             AppendConsole(_diagnostics);
@@ -425,7 +438,7 @@ public sealed partial class DocumentSession : IDisposable
         DocumentChange change;
         lock (_gate)
         {
-            if (!Matches(stamp)) return false;
+            if (IsReadOnly || !Matches(stamp)) return false;
             ResetScriptRuntime();
             _diagnostics = [message.Length > 4000 ? message[..4000] : message];
             if (logs is not null) AppendConsole(logs.Take(100));

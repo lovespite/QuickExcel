@@ -116,6 +116,7 @@ public sealed partial class MainWindow
 
     private void SheetTabPressed(object? sender, PointerPressedEventArgs e)
     {
+        if (Document.IsReadOnly) return; // Let the ListBox perform ordinary sheet navigation without a drag gesture.
         if (e.Pointer.Type != PointerType.Mouse || e.GetCurrentPoint(_sheetStrip).Properties.PointerUpdateKind != PointerUpdateKind.LeftButtonPressed ||
             _working || _workspace.IsBusy || _execution.IsRunning || e.Source is not Visual visual) return;
         var container = visual as ListBoxItem ?? visual.FindAncestorOfType<ListBoxItem>();

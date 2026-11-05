@@ -124,13 +124,13 @@ public sealed partial class MainWindow
         private void UpdateActions()
         {
             foreach (var (control, allowed) in _availability)
-                control.IsEnabled = !_busy && Book.FileState?.FormulaReadOnly != true && allowed();
+                control.IsEnabled = !_busy && !_main.Document.IsReadOnly && Book.FileState?.FormulaReadOnly != true && allowed();
             _visibility.Content = Selected?.Visibility == SheetVisibility.Hidden ? UiText.Get("取消隐藏") : UiText.Get("隐藏");
         }
 
         private async Task Run(Func<Task> action)
         {
-            if (_busy) return;
+            if (_busy || _main.Document.IsReadOnly) return;
             var index = _list.SelectedIndex; _selectAfter = Selected?.Id;
             _busy = true; UpdateActions(); _message.Text = "";
             try { await action(); }

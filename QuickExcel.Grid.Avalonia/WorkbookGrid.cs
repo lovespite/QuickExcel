@@ -55,6 +55,7 @@ public sealed partial class WorkbookGrid : UserControl, IGridSurface, IDisposabl
     public event Action? ViewportChanged;
     public CellPosition Current => _current;
     public bool IsEditing => _editing;
+    public bool IsReadOnly { get; private set; }
     public bool IsComposing => CellEditor.IsComposing;
     public double Zoom => _zoom;
     public WorksheetSnapshot Sheet => _snapshot!.Sheets[_sheetIndex];
@@ -98,8 +99,9 @@ public sealed partial class WorkbookGrid : UserControl, IGridSurface, IDisposabl
         DetachedFromVisualTree += (_, _) => { CancelGesture(); ReleaseRendering(); };
     }
     public void Bind(WorkbookSnapshot snapshot, int sheetIndex, int rows, int columns) => Bind(snapshot, sheetIndex, rows, columns, snapshot.DocumentId);
-    public void Bind(WorkbookSnapshot snapshot, int sheetIndex, int rows, int columns, Guid sessionId)
+    public void Bind(WorkbookSnapshot snapshot, int sheetIndex, int rows, int columns, Guid sessionId, bool readOnly = false)
     {
+        IsReadOnly = readOnly;
         ClearDrawingObjectSelection();
         Cancel(); ReleaseRendering(); _snapshot = snapshot; _sheetIndex = sheetIndex; _zoom = Sheet.View.Zoom / 100d;
         BindScrollExtent(sessionId);
@@ -211,7 +213,7 @@ public sealed partial class WorkbookGrid : UserControl, IGridSurface, IDisposabl
         }
     }
     public void Cancel() { if (IsCommitPending) return; _editing = false; if (_snapshot is not null) PrepareEditor(false); DraftEnded?.Invoke(); }
-    public bool IsCellReadOnly(CellPosition position) => _snapshot is null || _snapshot.FileState?.FormulaReadOnly == true ||
+    public bool IsCellReadOnly(CellPosition position) => IsReadOnly || _snapshot is null || _snapshot.FileState?.FormulaReadOnly == true ||
         PivotReport.HasUnmodeledDefinitions(_snapshot) ||
         Sheet.GetCell(position.Row, position.Column)?.SpillOwner is not null ||
         Sheet.Data.Pivots.Any(p=>p.Range.Contains(position.Row,position.Column)) ||

@@ -81,10 +81,12 @@ public sealed partial class MainWindow
             catch (Exception ex) when (ex is not InvalidOperationException || ex.Message != "Invalid workbook unexpectedly opened")
             { Check(Document.Session.SessionId == identity && !_workspace.IsBusy, "Failed open retains previous document and releases busy state"); }
             _grid.BeginEdit(); _grid.CellEditor.Text = "保留冲突编辑"; Check(CommitEditors(), "Edit before external conflict commits");
-            await File.AppendAllTextAsync(saved, "external change");
-            Check(!await SaveAsync(false) && Document.IsDirty && Document.Session.SessionId == identity, "External modification rejects save and retains edits");
+            try { await File.AppendAllTextAsync(saved, "external change"); throw new InvalidOperationException("An owned XLSQ allowed external modification"); }
+            catch (IOException) { Check(Document.IsDirty && Document.Session.SessionId == identity, "Exclusive XLSQ ownership blocks external modification and retains edits"); }
+            Check(await SaveAsync(false) && !Document.IsDirty, "The owning workspace can save while retaining exclusive ownership");
             files.NextSave = Path.Combine(directory, "conflict-copy.xlsq");
-            Check(await SaveAsync(true) && !Document.IsDirty, "Save-as resolves conflict without overwriting changed original");
+            Check(await SaveAsync(true) && !Document.IsDirty, "Save-as binds the new copy");
+            using (var released = File.OpenRead(saved)) Check(released.Length > 0, "Save-as releases the old XLSQ file");
             _grid.BeginEdit(); _grid.CellEditor.Text = "关闭时提交";
             _discardChoice = () => Task.FromResult(SaveDecision.Cancel);
             Close();
@@ -96,6 +98,7 @@ public sealed partial class MainWindow
             await RunMergedClipboardChecksAsync(Check);
             await RunExternalClipboardChecksAsync(Check);
             await RunMergedAxisInsertionChecksAsync(Check);
+            await CheckReadOnlyWorkbookAsync(directory, Check);
             await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Background);
             using var screenshot = new RenderTargetBitmap(new PixelSize((int)Bounds.Width, (int)Bounds.Height), new Vector(96, 96));
             screenshot.Render(this); screenshot.Save(Path.Combine(directory, "workspace.png"), PngBitmapEncoderOptions.Default);

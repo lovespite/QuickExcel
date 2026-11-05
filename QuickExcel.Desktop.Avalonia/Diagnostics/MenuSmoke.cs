@@ -72,6 +72,7 @@ public sealed partial class MainWindow
             for (var i = 0; i < 8; i++) _recentFiles.Remember(Path.Combine(directory, "HistoryFolder-" + i, $"历史工作簿-{i:D2}.xlsx"));
             _workspace.New(); _recentFiles.Remember(Path.Combine(directory, "同名文件示例", "年度预算与项目计划.xlsq")); _recentFiles.Remember(recentPath);
             ShowHome(); await Layout();
+            await CheckHomeCommandAvailabilityAsync(recentPath, Check);
             var actions = ((StackPanel)((ScrollViewer)_start.Children[0]).Content!).Children.OfType<Button>().ToArray();
             Check(actions.Length == 5 && actions.All(b => b.Bounds.Height >= 76 && b.GetVisualDescendants().OfType<Viewbox>().Any()), "Home has five large icon buttons including Settings");
             Check(_recent.TranslatePoint(default, _start)!.Value.X > actions[0].Bounds.Right, "Recent files are to the right of the home actions");

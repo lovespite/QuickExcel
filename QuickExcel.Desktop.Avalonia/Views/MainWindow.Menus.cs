@@ -43,6 +43,13 @@ public sealed partial class MainWindow
     private void BuildGridContextMenu(ContextMenu menu, SheetAxis? axis)
     {
         menu.Items.Clear();
+        if (Document.IsReadOnly)
+        {
+            menu.Items.Add(CommandMenu(UiText.Get("复制"), () => CopyAsync(false), true, mutation: false));
+            menu.Items.Add(CommandMenu(UiText.Get("复制结果值（对外）"), () => CopyAsync(false, valuesOnly: true), true, mutation: false));
+            if (_grid.SelectedDrawingObject is not null) menu.Items.Add(CommandMenu(UiText.Get("复制对象为图片"), CopyDrawingPictureAsync, true, mutation: false));
+            return;
+        }
         var snapshot = Document.Snapshot; var session = Document.Session.SessionId;
         var ranges = _grid.SelectionRanges.ToArray(); var drawing = _grid.SelectedDrawingObject;
         MenuItem Item(string title, Func<Task> run) => CommandMenu(title, async () =>

@@ -56,13 +56,14 @@ public sealed partial class MainWindow
     {
         _calculationTimer.Stop();
         if (_settings.Value.Calculation == DesktopCalculationMode.Automatic && _tablesPending) _calculationPending = true;
-        if (!_calculationPending) return;
+        if (Document.IsReadOnly || !_calculationPending) return;
         if (CanAutoCalculate) _calculationTimer.Start();
         else _status.Text = UiText.Get("有待重算的公式，可按 F9 或在保存时计算。");
     }
     private Task CalculatePendingAsync() => CanAutoCalculate ? CalculatePendingCoreAsync(false) : Task.CompletedTask;
     private async Task CalculatePendingCoreAsync(bool forceFull)
     {
+        if (Document.IsReadOnly) return;
         if (!_calculationPending) return;
         _calculationTimer.Stop();
         using var cancellation = new CancellationTokenSource();

@@ -21,6 +21,9 @@ public sealed partial class MainWindow
         void Check(bool passed, string message) { if (!passed) throw new InvalidDataException(message); checks.Add(message); }
         try
         {
+            Check(!_book.IsVisible && _workbookMenuItems.All(item => !item.IsEnabled) &&
+                _menu.Items.OfType<global::Avalonia.Controls.MenuItem>().Skip(1).All(item => !item.IsEnabled),
+                "Home disables workbook commands before a document is opened or created");
             _ = new WebAssetCatalog(Path.Combine(AppContext.BaseDirectory, "Web")); Check(true, "Production resource hashes and mode verified");
             WebRuntimePrerequisite.Require(); Check(true, "Platform browser runtime preflight");
             ShowBook(); _workspace.New();
@@ -29,6 +32,10 @@ public sealed partial class MainWindow
             var file = Path.Combine(directory, "installation.xlsq");
             await _workspace.SaveAsync(new(file)); await _workspace.OpenAsync(new(file));
             Check(Document.GetCellInput(0, 0, 0) == "安装检查 中文 123", "Typed workbook save/reopen");
+            var exclusive = false;
+            try { using var external = File.OpenRead(file); }
+            catch (IOException) { exclusive = true; }
+            Check(exclusive, "Opened XLSQ remains exclusive to its owning workspace");
             _workspace.Editor.Execute(new UpdateScriptModulesCommand(new(new Dictionary<string, ScriptModule> { ["main"] = new("scripts/main.js", "host.functions.register('INSTALLCHECK', value => value + 1);") }, ["main"], scriptApiVersion: 3)));
             await OpenScriptsAsync(); Check(_scriptPage!.Browser.IsReady && await CommitScriptsAsync(), "Production Monaco worker and unchanged draft confirmation");
             await CloseScriptWindowAsync();
@@ -97,6 +104,18 @@ public sealed partial class MainWindow
             await OpenPrintPreviewAsync(); Check(_pdfPage!.Browser.IsReady && _printSession!.Job.Layout.Pages.Length > 0, "Production PDF.js worker and complete print-session PDF");
             await _printSession!.ExportAsync(Path.Combine(directory, "installation.pdf"));
             await ClosePrintPreviewAsync(); Check(true, "PDF export and browser/resource cleanup");
+            await _workspace.OpenAsync(new(file), readOnly: true);
+            Check(Document.IsReadOnly && !Document.IsDirty && _grid.IsCellReadOnly(_grid.Current) && _readOnlyNotice.IsVisible,
+                "Published read-only mode protects the grid and displays its state");
+            var blocked = false;
+            try { Document.SetCell(0, 0, 0, "must not change"); }
+            catch (InvalidOperationException) { blocked = true; }
+            Check(blocked && !Document.IsDirty && Document.GetCellInput(0, 0, 0) == "安装检查 中文 123", "Read-only session rejects edits without changing the source");
+            await OpenPrintPreviewAsync();
+            Check(_pdfPage!.Browser.IsReady && _printSession!.Job.Layout.Pages.Length > 0, "Read-only workbook retains print preview");
+            await ClosePrintPreviewAsync();
+            await _workspace.SaveAsync(new(Path.Combine(directory, "editable-copy.xlsq")));
+            Check(!Document.IsReadOnly && !Document.IsDirty && !_grid.IsReadOnly, "Saving a writable copy restores editing");
         }
         catch (Exception ex) { failure = ex; }
         finally { try { await CloseScriptWindowAsync(); await ClosePrintPreviewAsync(); } catch (Exception ex) { failure ??= ex; } }

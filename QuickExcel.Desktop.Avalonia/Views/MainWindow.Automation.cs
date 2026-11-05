@@ -58,11 +58,11 @@ public sealed partial class MainWindow
         var body = new StackPanel { Width = 560, Spacing = 4, VerticalAlignment = VerticalAlignment.Center };
         body.Children.Add(_automationSearch); body.Children.Add(picker);
         RibbonContentGroup(UiText.Get("自动执行"), "Actions", body);
-        _automationRun = RibbonButton(RibbonIcon.Run, UiText.Get("执行"), () => RunScriptActionAsync(_automationActions.SelectedItem as ScriptActionDescriptor), false);
+        _automationRun = RibbonButton(RibbonIcon.Run, UiText.Get("执行"), () => RunScriptActionAsync(_automationActions.SelectedItem as ScriptActionDescriptor), false, readOnlyAllowed: false);
         _automationRun.Name = "AutomationRun";
-        _automationLoad = RibbonButton(RibbonIcon.LoadActions, UiText.Get("加载操作"), ApplyScriptsAsync, false); _automationLoad.Name = "AutomationLoad";
+        _automationLoad = RibbonButton(RibbonIcon.LoadActions, UiText.Get("加载操作"), ApplyScriptsAsync, false, readOnlyAllowed: false); _automationLoad.Name = "AutomationLoad";
         ToolTip.SetTip(_automationLoad, UiText.Get("应用并授权当前脚本、重算工作簿，然后加载全部操作。操作内容仅在执行时运行。"));
-        RibbonGroup(UiText.Get("自动执行"), UiText.Get("操作"), _automationRun, _automationLoad, RibbonButton(RibbonIcon.Code, UiText.Get("脚本编辑器"), OpenScriptsAsync, false));
+        RibbonGroup(UiText.Get("自动执行"), UiText.Get("操作"), _automationRun, _automationLoad, RibbonButton(RibbonIcon.Code, UiText.Get("脚本编辑器"), OpenScriptsAsync, false, readOnlyAllowed: false));
     }
 
     private void ClearScriptActions()
@@ -115,7 +115,7 @@ public sealed partial class MainWindow
 
     private void RefreshScriptActionButtons()
     {
-        var enabled = DesktopServices.SupportsScripts && !NonExecutionBusy && Document.Snapshot.FileState?.FormulaReadOnly != true;
+        var enabled = !Document.IsReadOnly && DesktopServices.SupportsScripts && !NonExecutionBusy && Document.Snapshot.FileState?.FormulaReadOnly != true;
         if (_automationLoad is not null) _automationLoad.IsEnabled = enabled;
         if (_automationRun is not null) _automationRun.IsEnabled = enabled && ScriptActionsCurrent && _automationActions.SelectedItem is ScriptActionDescriptor;
     }

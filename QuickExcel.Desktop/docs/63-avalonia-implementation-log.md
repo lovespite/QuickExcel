@@ -192,3 +192,27 @@ Ribbon 命令使用本地 Fluent UI System Icons 的 20px Regular SVG。37 个�
 Release 桌面构建无警告/错误，Menus 108 项通过（`artifacts/avalonia/workspace/20261105-055844-8364edc7`），覆盖默认/最小尺寸、滚动末尾、搜索过滤、分区切换及既有历史管理操作。截图已复核；未运行全量回归。具体布局和证据见 [64 号记录](64-avalonia-grid-and-workspace.md)。
 
 已执行 `scripts/build-quickexcel.ps1 -SkipTests -RunSmoke`，发布并激活 `artifacts/avalonia/releases/20261105-055933-6635e65c/application`（1.15.1），14 项生产自检通过。已核对 `active-windows.json`、发布清单哈希、EXE/宿主 DLL 哈希和程序集版本，活动宿主与本次生产构建一致；`Start-QuickExcel.cmd` 使用此新包，旧包保留。生产构建只有两项既有诊断字段 CS0649 警告。
+
+## 2026-11-05 主页命令限制与 XLSQ 独占打开（1.15.2）
+
+主页禁用编辑、工作表、视图、脚本菜单，以及文件菜单中的保存、另存、导出、打印、兼容性报告和关闭工作簿。命令处理器同时检查工作簿是否可见，防止路由事件绕过禁用状态；主页只处理新建、打开快捷键，搜索框保留自身文本编辑按键。创建或打开成功后恢复工作簿菜单，取消关闭保留现状；从文件菜单返回最近文件会先完成原有未保存确认并释放旧工作簿。
+
+`WorkbookWorkspace` 持有 XLSQ 文件租约，读取、版本指纹和保存共用所属 `TypedWorkbookStorage` 实例。打开时持有实际文件的 `FileShare.None` 句柄；同目录的 `.quickexcel-<路径摘要>.lock` 以 `FileShare.None` / `DeleteOnClose` 持有，覆盖临时文件校验与原子替换全过程。锁文件仅是 OS 句柄载体，不凭文件是否存在判断占用；打开失败释放候选，另存成功才释放原文件，关闭、新建、恢复副本脱离路径和退出均释放租约。
+
+继续保留有界读取、写入临时文件后重开验证、版本检查和 `File.Replace` 原子替换。Windows 原子替换时必须短暂关闭目标数据句柄，此期间同路径的 QuickExcel 实例仍被伴随租约阻止；完成后重新独占并核对新指纹，获取失败不能标记已保存。伴随租约要求源目录可创建临时锁文件，不是针对绕过协议的其他程序的跨替换永久文件句柄保证。XLSX/CSV 保持原有行为，已有外部冲突检查继续保留。
+
+定向验证：Release solution 构建零警告/错误；相关 Core 测试覆盖独占读取/写入、第二工作区和独立进程拒绝、保存/重开、另存转移、失败打开/保存、只读目标替换失败后的重获锁及原字节保留。Menus **125** 项通过（`artifacts/avalonia/workspace/20261105-061802-34655096`），Workspace **164** 项通过（`artifacts/avalonia/workspace/20261105-061637-ca96f1f8`）。新增生产自检直接检查启动主页命令和 XLSQ 独占状态。未运行全量回归；物理输入与平台门禁状态不变。
+
+Core 初轮 **133** 项相关测试通过（`artifacts/validation/workbook-ownership/workbook-ownership.trx`）；补充原子替换失败用例后，最终 **8** 项独占生命周期用例全部通过（`exclusive-files-final.trx`），合计覆盖 134 个不同用例。已执行 `scripts/build-quickexcel.ps1 -SkipTests -RunSmoke`，发布并激活 `artifacts/avalonia/releases/20261105-061927-e6fe4acc/application`（1.15.2），**16** 项生产自检通过。已验证活动指针的清单哈希、EXE/宿主/Infrastructure/Presentation 哈希和 1.15.2.0 程序集版本，`Start-QuickExcel.cmd` 使用此新包；旧活动包保留。生产发布仅有两项既有诊断字段 CS0649 警告。
+
+## 2026-11-05 权限不足时只读打开与显式只读模式（1.16.0）
+
+打开 XLSQ 时实际检查文件读写权限及同目录租约创建权限；权限不足且仍能读取时自动改为只读。XLSX/CSV 也检查文件和目录的写入权限，并提供相同回退。文件菜单新增“以只读方式打开…”，可主动只读查看可写文件。只读租约使用 `FileAccess.Read` / `FileShare.Read`，不需要创建伴随锁文件，支持多个读取者；共享冲突不当作权限不足处理，缺少读取权限、损坏文件仍拒绝打开并保留当前文档。
+
+只读状态属于文档会话，不写入工作簿，也不借用或放宽未知公式的 `FormulaReadOnly` 保护。Core 拒绝编辑、结构/样式/脚本修改、撤销重做、计算及动作/控制台请求；浏览导航不标脏，脚本签名也不会自动授权执行。标题和持续提示显示只读状态；网格、公式栏、菜单、功能区、填充/尺寸/对象/工作表拖动、工作表管理器和替换操作同步禁用写入，保留选择、切换工作表、查找、复制、导出和打印。
+
+只读状态下“保存”进入另存副本流程，同一原路径始终拒绝。副本完成版本检查、写入及重开验证后才切换为可编辑会话并绑定新文件的来源/兼容性信息；取消或失败保留原只读会话。原有未知公式、v1 文件及旧脚本版本保护继续适用，不会因另存解除它们的限制。可写 XLSQ 仍维持独占模式。
+
+Release solution 构建零警告/错误；**64** 项相关 Core 测试通过（`artifacts/validation/read-only/read-only-release.trx`），包括实际 Windows 目录禁止创建文件、文件 ACL 禁止写入、只读属性、读取权限拒绝、独占冲突、另存转移，以及既有公式原包保留和只读公式控制台契约。Workspace **182** 项通过（`artifacts/avalonia/workspace/20261105-064358-d3e0b159`），Menus **124** 项通过（`artifacts/avalonia/workspace/20261105-063949-dac42707`）。只读界面截图已复核；新增生产自检覆盖只读编辑拒绝、打印预览和另存恢复编辑。未运行全量回归，物理输入和平台门禁状态不变。
+
+已执行 `scripts/build-quickexcel.ps1 -SkipTests -RunSmoke`，发布并激活 `artifacts/avalonia/releases/20261105-064452-3a190dd5/application`（1.16.0），**20** 项生产自检通过。活动清单哈希及 EXE、宿主、Core、Infrastructure、Presentation、Grid.Avalonia 哈希均匹配，程序集版本为 1.16.0.0；默认启动器已指向新包，旧包保留。生产发布只有两项既有诊断字段 CS0649 警告。

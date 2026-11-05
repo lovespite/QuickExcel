@@ -28,7 +28,7 @@ public sealed partial class WorkbookGrid
     public bool IsDrawingObjectDragging => _objectPointer is not null;
     public event Action<DrawingObjectChange>? DrawingObjectChanged;
     public event Action? DrawingObjectSelectionChanged;
-    public bool CanEditDrawingObjects => _snapshot is not null && _snapshot.FileState?.FormulaReadOnly != true && Sheet.Data.Protection?.Objects != true && !IsComposing && !IsCommitPending;
+    public bool CanEditDrawingObjects => !IsReadOnly && _snapshot is not null && _snapshot.FileState?.FormulaReadOnly != true && Sheet.Data.Protection?.Objects != true && !IsComposing && !IsCommitPending;
 
     private DrawingAnchor? ObjectAnchor(DrawingObjectId id) => id.Index < 0 ? null : id.Kind == DrawingObjectKind.Image
         ? id.Index < Sheet.Images.Length ? Sheet.Images[id.Index].Anchor : null

@@ -24,12 +24,20 @@ internal static class DesktopServices
 
 internal sealed class WorkbookFileAccess(IWorkbookStorage storage) : IWorkbookFileAccess
 {
+    public IDisposable? AcquireExclusive(string path, bool allowMissing = false)
+    {
+        if (!allowMissing && !Path.GetExtension(path).Equals(".xlsq", StringComparison.OrdinalIgnoreCase)) TypedWorkbookStorage.CheckWriteAccess(path);
+        return (storage as TypedWorkbookStorage)?.AcquireExclusiveFile(path, allowMissing);
+    }
+    public IDisposable? AcquireReadOnly(string path) => (storage as TypedWorkbookStorage)?.AcquireReadOnlyFile(path);
     public OpenedWorkbook Open(string path)
     {
+        if (Path.GetExtension(path).Equals(".xlsq", StringComparison.OrdinalIgnoreCase))
+            return new(storage.Open(path), ReadVersion(path));
         using var lease = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
         return new(storage.Open(path), FileVersions.Read(lease));
     }
-    public FileVersion ReadVersion(string path) => FileVersions.Read(path);
+    public FileVersion ReadVersion(string path) => storage is TypedWorkbookStorage typed ? typed.ReadVersion(path) : FileVersions.Read(path);
 }
 
 internal sealed class AvaloniaFileDialogs(TopLevel owner) : ILocalFileDialogs

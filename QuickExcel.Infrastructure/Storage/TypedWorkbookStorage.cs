@@ -27,7 +27,8 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage, IW
             if (Path.GetExtension(path).Equals(".csv", StringComparison.OrdinalIgnoreCase))
                 return ImportCsv(ReadFile(path, new(cancellationToken)), cancellationToken);
             RequireExtension(path, ".xlsx", ".xlsq");
-            return OpenBytes(ReadFile(path, new(cancellationToken)), path, Path.GetExtension(path).Equals(".xlsq", StringComparison.OrdinalIgnoreCase), new(cancellationToken));
+            var bytes = OwnedFile(path)?.Read(new(cancellationToken)) ?? ReadFile(path, new(cancellationToken));
+            return OpenBytes(bytes, path, Path.GetExtension(path).Equals(".xlsq", StringComparison.OrdinalIgnoreCase), new(cancellationToken));
         }
         catch (Exception exception) when (exception is InvalidDataException or IOException or ArgumentException or NotSupportedException)
         {
@@ -268,10 +269,11 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage, IW
     private FileVersion SaveCore(string path, WorkbookSnapshot snapshot, bool discardUnsupported, CancellationToken cancellationToken, FileVersion? expected, bool overwriteOriginal = false)
     {
         RequireExtension(path, ".xlsq", ".xlsx");
+        if (OwnedFile(path)?.IsReadOnly == true) throw new InvalidOperationException(MessageText.Get(DocumentSession.ReadOnlyMessage));
         ArgumentNullException.ThrowIfNull(snapshot);
         cancellationToken.ThrowIfCancellationRequested();
         snapshot = PrepareReadOnlyFormulaSave(snapshot, discardUnsupported);
-        if (expected is not null) FileVersions.Require(path, expected);
+        if (expected is not null) RequireVersion(path, expected);
         GuardOriginal(path, snapshot, discardUnsupported, overwriteOriginal);
         if (Path.GetExtension(path).Equals(".xlsx", StringComparison.OrdinalIgnoreCase))
             return SaveXlsx(path, snapshot, discardUnsupported, cancellationToken, expected);
@@ -390,7 +392,7 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage, IW
 
     private static byte[] SerializePackage(WorkbookSnapshot snapshot, bool discardUnsupported, CancellationToken cancellationToken) => Zip(BuildPackage(snapshot, discardUnsupported, cancellationToken));
 
-    private static FileVersion WritePackage(string path, WorkbookSnapshot snapshot, bool discardUnsupported, CancellationToken cancellationToken, FileVersion? expected)
+    private FileVersion WritePackage(string path, WorkbookSnapshot snapshot, bool discardUnsupported, CancellationToken cancellationToken, FileVersion? expected)
     {
         var bytes = SerializePackage(snapshot, discardUnsupported, cancellationToken);
         PackageIO.AtomicWrite(path, bytes, temp =>
@@ -399,7 +401,7 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage, IW
             if (!ContentEquals(snapshot, checkedSnapshot, allowRowHeightRounding: true) || snapshot.DocumentId != checkedSnapshot.DocumentId || snapshot.Revision != checkedSnapshot.Revision ||
                 !snapshot.Sheets.Select(s => s.Id).SequenceEqual(checkedSnapshot.Sheets.Select(s => s.Id)) || snapshot.ScriptModules.Signature != checkedSnapshot.ScriptModules.Signature || snapshot.ScriptModules.ScriptApiVersion != checkedSnapshot.ScriptModules.ScriptApiVersion || ScriptHash(snapshot.ScriptModules) != ScriptHash(checkedSnapshot.ScriptModules) || !snapshot.PackageFiles.ContentEquals(checkedSnapshot.PackageFiles))
                 throw new InvalidDataException(MessageText.Get("保存后重开校验未能还原完整快照。"));
-        }, cancellationToken, expected);
+        }, cancellationToken, expected, OwnedFile(path) is { } lease ? lease.Commit : null);
         return new(Convert.ToHexString(SHA256.HashData(bytes)));
     }
 

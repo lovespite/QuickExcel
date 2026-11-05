@@ -6,6 +6,8 @@ namespace QuickExcel.Presentation;
 public sealed record OpenedWorkbook(WorkbookSnapshot Snapshot, FileVersion Version);
 public interface IWorkbookFileAccess
 {
+    IDisposable? AcquireExclusive(string path, bool allowMissing = false) => null;
+    IDisposable? AcquireReadOnly(string path) => null;
     OpenedWorkbook Open(string path);
     FileVersion ReadVersion(string path);
 }
@@ -16,12 +18,16 @@ public sealed class WorkbookWorkspace : IDisposable
     private readonly WorkbookServices _services;
     private readonly IWorkbookFileAccess _files;
     private bool _disposed;
+    private IDisposable? _fileLease;
     private static StringComparison PathComparison => OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+    private bool IsCurrentFile(string path) => FilePath is not null &&
+        string.Equals(Path.GetFullPath(FilePath), Path.GetFullPath(path), PathComparison);
     public WorkbookDocument Document { get; private set; }
     public EditorController Editor { get; private set; }
     public string? FilePath { get; private set; }
     public FileVersion? Version { get; private set; }
     public bool IsBusy { get; private set; }
+    public bool IsReadOnly => Document.IsReadOnly;
     public event Action? Changed;
 
     public WorkbookWorkspace(WorkbookServices services, IWorkbookFileAccess files)
@@ -49,35 +55,76 @@ public sealed class WorkbookWorkspace : IDisposable
     {
         RequireIdle(); Replace(new WorkbookDocument(snapshot, _services), null, null);
     }
-    private void Replace(WorkbookDocument document, string? path, FileVersion? version)
+    private void Replace(WorkbookDocument document, string? path, FileVersion? version, IDisposable? lease = null)
     {
-        var previous = Document;
+        var previous = Document; var previousLease = _fileLease;
         Document = document; Editor = new(document); FilePath = path; Version = version;
-        previous.NotifyClosed(); previous.Dispose(); Changed?.Invoke();
+        _fileLease = lease;
+        try { previous.NotifyClosed(); previous.Dispose(); }
+        finally { if (!ReferenceEquals(previousLease, lease)) previousLease?.Dispose(); }
+        Changed?.Invoke();
     }
-    public async Task OpenAsync(LocalFileSelection selected)
+    public async Task OpenAsync(LocalFileSelection selected, bool readOnly = false)
     {
         RequireIdle(); IsBusy = true; Changed?.Invoke();
+        IDisposable? acquired = null;
         try
         {
+            var reuse = IsCurrentFile(selected.Path) && _fileLease is not null;
+            if (reuse) readOnly |= IsReadOnly;
+            else
+            {
+                try { acquired = await Task.Run(() => readOnly ? _files.AcquireReadOnly(selected.Path) : _files.AcquireExclusive(selected.Path)); }
+                catch (UnauthorizedAccessException) when (!readOnly)
+                {
+                    readOnly = true;
+                    acquired = await Task.Run(() => _files.AcquireReadOnly(selected.Path));
+                }
+            }
             var opened = await Task.Run(() => _files.Open(selected.Path));
-            Replace(new(opened.Snapshot, _services), selected.Path, opened.Version);
+            var document = new WorkbookDocument(opened.Snapshot, _services, readOnly: readOnly);
+            var lease = reuse ? _fileLease : acquired; acquired = null;
+            Replace(document, selected.Path, opened.Version, lease);
         }
-        finally { IsBusy = false; Changed?.Invoke(); }
+        finally { acquired?.Dispose(); IsBusy = false; Changed?.Invoke(); }
     }
     public async Task SaveAsync(LocalFileSelection selected, bool discardUnsupported = false, bool overwriteOriginal = false)
     {
         RequireIdle(); IsBusy = true; Changed?.Invoke();
+        IDisposable? acquired = null;
+        WorkbookDocument? editableCopy = null;
         try
         {
-            var sameFile = string.Equals(FilePath, selected.Path, PathComparison);
+            var sameFile = IsCurrentFile(selected.Path);
+            if (sameFile && IsReadOnly) throw new InvalidOperationException(UiText.Get(DocumentSession.ReadOnlyMessage));
             if (overwriteOriginal && (!sameFile || Version?.Sha256 is null))
                 throw new InvalidOperationException(UiText.Get("覆盖只能用于当前已打开且具有版本记录的文件。"));
+            if (!sameFile || _fileLease is null) acquired = await Task.Run(() => _files.AcquireExclusive(selected.Path, allowMissing: true));
             var expected = sameFile ? Version ?? new(null) : await Task.Run(() => _files.ReadVersion(selected.Path));
-            var saved = await Task.Run(() => Document.SaveChecked(selected.Path, expected, discardUnsupported, overwriteOriginal));
+            if (IsReadOnly) editableCopy = new(Document.Snapshot, _services);
+            var saved = await Task.Run(() => (editableCopy ?? Document).SaveChecked(selected.Path, expected, discardUnsupported, overwriteOriginal));
+            if (editableCopy is not null)
+            {
+                // Bind the saved package's compatibility/source metadata, rather than
+                // carrying the read-only original's migration or loss report forward.
+                var reopened = await Task.Run(() => _files.Open(selected.Path));
+                if (reopened.Version != saved) throw new WorkbookFileConflictException();
+                editableCopy.Dispose();
+                editableCopy = new(reopened.Snapshot, _services);
+                var copy = editableCopy; editableCopy = null;
+                var lease = acquired; acquired = null;
+                Replace(copy, selected.Path, saved, lease);
+                return;
+            }
             FilePath = selected.Path; Version = saved;
+            if (!sameFile || acquired is not null)
+            {
+                var previousLease = _fileLease;
+                _fileLease = acquired; acquired = null;
+                previousLease?.Dispose();
+            }
         }
-        finally { IsBusy = false; Changed?.Invoke(); }
+        finally { editableCopy?.Dispose(); acquired?.Dispose(); IsBusy = false; Changed?.Invoke(); }
     }
     public async Task<bool> CalculateAsync(CancellationToken cancellationToken = default, bool forceFull = false)
     {
@@ -100,7 +147,7 @@ public sealed class WorkbookWorkspace : IDisposable
     public async Task ExportAsync(LocalFileSelection selected, bool portable, bool allowStaleCaches = false, bool discardUnsupported = false)
     {
         RequireIdle();
-        if (string.Equals(FilePath, selected.Path, PathComparison)) throw new InvalidOperationException(UiText.Get("导出需要使用新副本路径，不能覆盖当前打开的工作簿。"));
+        if (IsCurrentFile(selected.Path)) throw new InvalidOperationException(UiText.Get("导出需要使用新副本路径，不能覆盖当前打开的工作簿。"));
         IsBusy = true; Changed?.Invoke();
         try
         {
@@ -114,11 +161,14 @@ public sealed class WorkbookWorkspace : IDisposable
     }
     public void DetachFile()
     {
-        RequireIdle(); FilePath = null; Version = null; Document.DisableScripts(); Changed?.Invoke();
+        RequireIdle(); FilePath = null; Version = null; Document.DisableScripts();
+        _fileLease?.Dispose(); _fileLease = null; Changed?.Invoke();
     }
     public void Dispose()
     {
         if (_disposed) return;
-        RequireIdle(); _disposed = true; Document.NotifyClosed(); Document.Dispose();
+        RequireIdle(); _disposed = true;
+        try { Document.NotifyClosed(); Document.Dispose(); }
+        finally { _fileLease?.Dispose(); _fileLease = null; }
     }
 }

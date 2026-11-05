@@ -48,6 +48,11 @@ internal static class PackageIO
     public static byte[] ReadFile(string path, FileReadBudget budget)
     {
         using var input = File.OpenRead(path);
+        return ReadFile(input, budget);
+    }
+
+    public static byte[] ReadFile(Stream input, FileReadBudget budget)
+    {
         if (input.Length > FileReadBudget.MaxFileBytes) throw new InvalidDataException("文件超过 64 MiB。");
         return Read(input, FileReadBudget.MaxFileBytes, budget, countExpanded: false);
     }
@@ -219,7 +224,8 @@ internal static class PackageIO
         return PathName(string.Join('/', pieces));
     }
 
-    public static void AtomicWrite(string path, byte[] bytes, Action<string> validate, CancellationToken cancellationToken, QuickExcel.Core.FileVersion? expected = null)
+    public static void AtomicWrite(string path, byte[] bytes, Action<string> validate, CancellationToken cancellationToken, QuickExcel.Core.FileVersion? expected = null,
+        Action<string, QuickExcel.Core.FileVersion?>? commit = null)
     {
         var fullPath = Path.GetFullPath(path);
         var temp = Path.Combine(Path.GetDirectoryName(fullPath)!, $".{Path.GetFileName(path)}.{Guid.NewGuid():N}.tmp");
@@ -230,6 +236,7 @@ internal static class PackageIO
             { stream.Write(bytes); stream.Flush(true); }
             validate(temp);
             cancellationToken.ThrowIfCancellationRequested();
+            if (commit is not null) { commit(temp, expected); return; }
             if (expected is not null) FileVersions.Require(fullPath, expected);
             if (File.Exists(fullPath)) File.Replace(temp, fullPath, null);
             else File.Move(temp, fullPath);

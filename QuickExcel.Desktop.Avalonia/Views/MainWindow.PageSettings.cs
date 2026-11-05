@@ -38,7 +38,7 @@ public sealed partial class MainWindow
             menu.Items.Add(item); items.Add((item, axis, remove));
         }
         var printing = snapshot.GetSheet(snapshot.ActiveSheetId).Printing;
-        var editable = snapshot.FileState?.FormulaReadOnly != true && !_grid.IsComposing && !_grid.IsCommitPending && !_formula.IsComposing && !_workspace.IsBusy && !_execution.IsRunning;
+        var editable = !Document.IsReadOnly && snapshot.FileState?.FormulaReadOnly != true && !_grid.IsComposing && !_grid.IsCommitPending && !_formula.IsComposing && !_workspace.IsBusy && !_execution.IsRunning;
         foreach (var (item, axis, remove) in items)
         {
             var row = axis == SheetAxis.Row; var index = row ? cell.Row : cell.Column;

@@ -28,13 +28,13 @@ public sealed class WorkbookDocument : IDisposable
 
     private readonly WorkbookServices _services;
     private readonly object _saveGate = new();
-    public WorkbookDocument(WorkbookSnapshot snapshot, WorkbookServices services, long historyBudgetBytes = 32 * 1024 * 1024)
+    public WorkbookDocument(WorkbookSnapshot snapshot, WorkbookServices services, long historyBudgetBytes = 32 * 1024 * 1024, bool readOnly = false)
     {
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(services.Storage);
         ArgumentNullException.ThrowIfNull(services.Calculator);
         _services = services;
-        Session = new(snapshot, historyBudgetBytes, services.Calculator as IWorkbookValidation, services.Storage as IWorkbookVirtualFiles, services.Calculator);
+        Session = new(snapshot, historyBudgetBytes, services.Calculator as IWorkbookValidation, services.Storage as IWorkbookVirtualFiles, services.Calculator, readOnly);
     }
 
     public DocumentSession Session { get; }
@@ -42,6 +42,7 @@ public sealed class WorkbookDocument : IDisposable
     public bool ScriptsEnabled => Session.ScriptsEnabled;
     public IReadOnlyList<string> ScriptErrors => Session.Diagnostics;
     public bool IsDirty => Session.IsDirty;
+    public bool IsReadOnly => Session.IsReadOnly;
     public bool CanUndo => Session.CanUndo;
     public bool CanRedo => Session.CanRedo;
     public string ScriptSource
@@ -87,6 +88,7 @@ public sealed class WorkbookDocument : IDisposable
 
     public void Save(string path, bool discardUnsupported = false)
     {
+        Session.RequireWritable();
         // Capture after acquiring the writer so queued saves cannot overwrite a newer capture with an older one.
         WorkbookSnapshot captured;
         lock (_saveGate)
@@ -112,6 +114,7 @@ public sealed class WorkbookDocument : IDisposable
 
     public FileVersion SaveChecked(string path, FileVersion expected, bool discardUnsupported = false, bool overwriteOriginal = false)
     {
+        Session.RequireWritable();
         WorkbookSnapshot captured;
         FileVersion version;
         lock (_saveGate)

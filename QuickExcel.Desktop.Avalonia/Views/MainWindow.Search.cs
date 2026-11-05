@@ -17,7 +17,7 @@ public sealed partial class MainWindow
     private void InstallSearch()
     {
         RibbonGroup(UiText.Get("开始"), UiText.Get("查找"), RibbonButton(RibbonIcon.Search, UiText.Get("查找与替换"), SearchAsync, false), RibbonButton(RibbonIcon.GoTo, UiText.Get("定位"), NavigateAsync, false));
-        var edit = (MenuItem)_menu.Items[1]!; edit.Items.Add(CommandMenu(UiText.Get("查找与替换  Ctrl+F"), SearchAsync)); edit.Items.Add(CommandMenu(UiText.Get("定位  Ctrl+G"), NavigateAsync));
+        var edit = (MenuItem)_menu.Items[1]!; edit.Items.Add(CommandMenu(UiText.Get("查找与替换  Ctrl+F"), SearchAsync, true, mutation: false)); edit.Items.Add(CommandMenu(UiText.Get("定位  Ctrl+G"), NavigateAsync, true, mutation: false));
     }
     private async Task NavigateAsync()
     {
@@ -54,6 +54,7 @@ public sealed partial class MainWindow
         TextBox Field(string label)
         { fields.Children.Add(new TextBlock { Text = label }); var box = new TextBox(); AutomationProperties.SetName(box, label); fields.Children.Add(box); return box; }
         var query = Field(UiText.Get("查找")); var replacement = Field(UiText.Get("替换为"));
+        replacement.IsEnabled = !Document.IsReadOnly;
         var scope = new ComboBox { ItemsSource = new[] { UiText.Get("当前工作表"), UiText.Get("整个工作簿"), UiText.Get("选区") }, SelectedIndex = 0, MinWidth = 140 };
         var target = new ComboBox { ItemsSource = new[] { UiText.Get("显示值"), UiText.Get("公式源码") }, SelectedIndex = 0, MinWidth = 120 };
         AutomationProperties.SetName(scope, UiText.Get("查找范围")); AutomationProperties.SetName(target, UiText.Get("查找对象"));
@@ -78,11 +79,12 @@ public sealed partial class MainWindow
             });
             return (hits, snapshot.Revision, selectedOptions);
         }
-        void Action(string title, Func<Task> action)
+        void Action(string title, Func<Task> action, bool mutation = false)
         {
-            var button = new Button { Content = title, Margin = new(0, 0, 8, 0) }; actions.Children.Add(button);
+            var button = new Button { Content = title, Margin = new(0, 0, 8, 0), IsEnabled = !mutation || !Document.IsReadOnly }; actions.Children.Add(button);
             button.Click += async (_, _) =>
             {
+                if (mutation && Document.IsReadOnly) return;
                 actions.IsEnabled = false;
                 try { await action(); } catch (Exception ex) { status.Text = ex.Message; }
                 finally { actions.IsEnabled = true; }
@@ -96,7 +98,7 @@ public sealed partial class MainWindow
             if (await ExecuteAsync(WorkbookSearch.Replace(hits, found.Options, replacement.Text ?? ""), found.Revision))
             { results.ItemsSource = null; status.Text = UiText.Format($"已替换 {hits.Count:N0} 格，可一次撤销。"); }
         }
-        Action(UiText.Get("替换所选"), () => ReplaceAsync(false)); Action(UiText.Get("全部替换"), () => ReplaceAsync(true));
+        Action(UiText.Get("替换所选"), () => ReplaceAsync(false), true); Action(UiText.Get("全部替换"), () => ReplaceAsync(true), true);
         async Task LocateAsync()
         {
             if (results.SelectedItem is not SearchHit hit) return;
@@ -106,6 +108,6 @@ public sealed partial class MainWindow
         results.DoubleTapped += async (_, _) => await LocateAsync();
         results.KeyDown += async (_, e) => { if (e.Key == Key.Enter) { e.Handled = true; await LocateAsync(); } };
         Action(UiText.Get("定位"), LocateAsync); Action(UiText.Get("关闭"), () => { window.Close(); return Task.CompletedTask; });
-        window.Opened += (_, _) => query.Focus(); await window.ShowDialog(this);
+        window.Opened += (_, _) => query.Focus(); await ShowOwnedAsync<object?>(window);
     }
 }

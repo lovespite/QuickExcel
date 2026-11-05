@@ -72,7 +72,7 @@ public sealed partial class MainWindow
         var source = Path.Combine(directory, "原始 数据.csv");
         var csv = "001,公式\r\n\"引号\"\"与,逗号\n换行\",=1+2\r\n";
         var dialogs = new SmokeFiles { NextSave = Path.Combine(directory, "manual.xlsq") }; _files = dialogs;
-        check(await SaveAsync(false) && new TypedWorkbookStorage().Open(dialogs.NextSave).Sheets[0].GetCell(0, 1)!.Value.NumberValue == 12,
+        check(await SaveAsync(false) && _services.Storage.Open(dialogs.NextSave).Sheets[0].GetCell(0, 1)!.Value.NumberValue == 12,
             "Manual save writes the recalculated result");
         await File.WriteAllTextAsync(source, csv); await OpenPathAsync(source);
         check(Document.GetCellValue(0, 0, 0) == "001" && Document.GetCellValue(0, 1, 0) == "引号\"与,逗号\n换行" &&

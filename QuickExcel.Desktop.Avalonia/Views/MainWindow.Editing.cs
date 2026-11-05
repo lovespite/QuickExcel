@@ -44,6 +44,7 @@ public sealed partial class MainWindow
     }
     private async Task<bool> ExecuteAsync(DocumentCommand command, long? revision = null)
     {
+        if (Document.IsReadOnly) { _status.Text = UiText.Get(DocumentSession.ReadOnlyMessage); return false; }
         if (!await CommitEditorsAsync()) return false;
         var expected = revision ?? Document.Snapshot.Revision;
         try { await _workspace.Editor.ExecuteAsync(command, ConfirmValidationAsync, expected); }
@@ -68,6 +69,7 @@ public sealed partial class MainWindow
     }
     private async Task CopyAsync(bool cut, bool externalFormulas = false, bool valuesOnly = false)
     {
+        if (cut) Document.Session.RequireWritable();
         if (!await CommitEditorsAsync()) return;
         DismissPasteOptions();
         if (_grid.SelectedDrawingObject is { } selected)
@@ -211,10 +213,10 @@ public sealed partial class MainWindow
         _grid.AutoFillDownRequested += (source, revision, mode) => _ = PerformAsync(() => AutoFillDownAsync(source, revision, mode));
         var edit = (MenuItem)_menu.Items[1]!;
         edit.Items.Add(new Separator());
-        edit.Items.Add(CommandMenu(UiText.Get("复制  Ctrl+C"), () => CopyAsync(false))); edit.Items.Add(CommandMenu(UiText.Get("剪切  Ctrl+X"), () => CopyAsync(true)));
-        edit.Items.Add(CommandMenu(UiText.Get("复制结果值（对外）"), () => CopyAsync(false, valuesOnly: true)));
-        edit.Items.Add(CommandMenu(UiText.Get("复制公式（对外，相对引用）"), () => CopyAsync(false, externalFormulas: true)));
-        edit.Items.Add(CommandMenu(UiText.Get("复制对象为图片"), CopyDrawingPictureAsync));
+        edit.Items.Add(CommandMenu(UiText.Get("复制  Ctrl+C"), () => CopyAsync(false), true, mutation: false)); edit.Items.Add(CommandMenu(UiText.Get("剪切  Ctrl+X"), () => CopyAsync(true)));
+        edit.Items.Add(CommandMenu(UiText.Get("复制结果值（对外）"), () => CopyAsync(false, valuesOnly: true), true, mutation: false));
+        edit.Items.Add(CommandMenu(UiText.Get("复制公式（对外，相对引用）"), () => CopyAsync(false, externalFormulas: true), true, mutation: false));
+        edit.Items.Add(CommandMenu(UiText.Get("复制对象为图片"), CopyDrawingPictureAsync, true, mutation: false));
         foreach (var (title, mode) in new[] { (UiText.Get("粘贴  Ctrl+V"), "all"), (UiText.Get("只贴值"), "values"), (UiText.Get("粘贴公式"), "formulas"), (UiText.Get("只贴格式"), "formats"), (UiText.Get("转置粘贴"), "transpose"), (UiText.Get("粘贴为可编辑图表（附带数据快照）"), "chart"), (UiText.Get("粘贴为图片"), "image") })
             edit.Items.Add(CommandMenu(title, () => PasteAsync(mode)));
         edit.Items.Add(new Separator()); edit.Items.Add(CommandMenu(UiText.Get("清除内容"), ClearAsync)); edit.Items.Add(CommandMenu(UiText.Get("清除格式"), ClearFormatsAsync));
@@ -222,6 +224,12 @@ public sealed partial class MainWindow
         edit.Items.Add(CommandMenu(UiText.Get("向右填充  Ctrl+R"), () => FillDirectionAsync(true))); edit.Items.Add(CommandMenu(UiText.Get("填充序列"), SeriesAsync));
         InstallGridContextMenu();
     }
-    private MenuItem CommandMenu(string title, Func<Task> action)
-    { var item = new MenuItem { Header = title }; item.Click += async (_, _) => await PerformAsync(action); return item; }
+    private MenuItem CommandMenu(string title, Func<Task> action) => CommandMenu(title, action, true);
+    private MenuItem CommandMenu(string title, Func<Task> action, bool requiresWorkbook, bool mutation = true)
+    {
+        var item = new MenuItem { Header = title };
+        if (requiresWorkbook && mutation) { item.Classes.Add("workbook-mutation"); item.IsEnabled = !Document.IsReadOnly; }
+        item.Click += async (_, _) => { if ((!requiresWorkbook || _book.IsVisible) && (!requiresWorkbook || !mutation || !Document.IsReadOnly)) await PerformAsync(action); };
+        return item;
+    }
 }

@@ -18,19 +18,21 @@ public sealed partial class MainWindow
     private readonly ComboBox _font = new() { Width = 160, Height = 28, MinHeight = 28, Padding = new(8, 2), VerticalContentAlignment = VerticalAlignment.Center },
         _fontSize = new() { Width = 72, Height = 28, MinHeight = 28, Padding = new(8, 2), VerticalContentAlignment = VerticalAlignment.Center };
     private readonly List<Control> _mutationControls = [];
+    private readonly List<Control> _readOnlyControls = [];
     private readonly Dictionary<string, RibbonPage> _ribbonPages = [];
     private bool _updatingRibbon;
     private WorkbookClipboard? _formatBrush;
     private Guid _formatBrushSession;
     private StyleDefinition CurrentStyle => Document.Snapshot.Styles[Document.Snapshot.Sheets[SheetIndex].GetStyleId(_grid.Current.Row, _grid.Current.Column)];
-    private Button RibbonButton(RibbonIcon icon, string title, Func<Task> action, bool mutation = true)
+    private Button RibbonButton(RibbonIcon icon, string title, Func<Task> action, bool mutation = true, bool readOnlyAllowed = true)
     {
         var button = new Button { Content = new RibbonCommandContent(icon, title), Padding = new(6, 3), Margin = new(2, 1), Height = 28, MinHeight = 28, MinWidth = 32,
             Background = Brushes.Transparent, BorderThickness = new(0),
             HorizontalAlignment = HorizontalAlignment.Left, HorizontalContentAlignment = HorizontalAlignment.Left };
         button.Classes.Add("ribbon-command");
         AutomationProperties.SetName(button, title); ToolTip.SetTip(button, title);
-        button.Click += async (_, _) => await PerformAsync(action);
+        button.Click += async (_, _) => { if (!Document.IsReadOnly || !mutation && readOnlyAllowed) await PerformAsync(action); };
+        if (!readOnlyAllowed) _readOnlyControls.Add(button);
         if (mutation) _mutationControls.Add(button); return button;
     }
     private void RibbonGroup(string page, string name, params Control[] controls)
@@ -106,7 +108,7 @@ public sealed partial class MainWindow
         InstallNumberFormatRibbon();
         InstallCellStyles();
         RibbonGroup(UiText.Get("开始"), UiText.Get("单元格"), RibbonButton(RibbonIcon.FormatCells, UiText.Get("设置单元格格式"), CellFormatAsync), RibbonButton(RibbonIcon.ClearFormatting, UiText.Get("清除格式"), ClearFormatsAsync));
-        RibbonGroup(UiText.Get("公式"), UiText.Get("公式"), RibbonButton(RibbonIcon.AutoSum, UiText.Get("自动求和  Alt+="), () => { BeginAutoSum(); return Task.CompletedTask; }), RibbonButton(RibbonIcon.Calculate, UiText.Get("重算  F9"), CalculateAsync, false));
+        RibbonGroup(UiText.Get("公式"), UiText.Get("公式"), RibbonButton(RibbonIcon.AutoSum, UiText.Get("自动求和  Alt+="), () => { BeginAutoSum(); return Task.CompletedTask; }), RibbonButton(RibbonIcon.Calculate, UiText.Get("重算  F9"), CalculateAsync, false, readOnlyAllowed: false));
         RibbonGroup(UiText.Get("开始"), UiText.Get("编辑"), RibbonButton(RibbonIcon.FillDown, UiText.Get("向下填充"), () => FillDirectionAsync(false)), RibbonButton(RibbonIcon.FillRight, UiText.Get("向右填充"), () => FillDirectionAsync(true)), RibbonButton(RibbonIcon.FillSeries, UiText.Get("序列"), SeriesAsync),
             RibbonButton(RibbonIcon.PlainText, UiText.Get("转为普通文本"), FlattenRichTextAsync));
         _grid.AutoFitRequested += (axis, index) => _ = PerformAsync(() => AutoFitAsync(axis, index));
@@ -119,7 +121,8 @@ public sealed partial class MainWindow
         try
         {
             _ribbon.IsEnabled = !NonExecutionBusy;
-            foreach (var control in _mutationControls) control.IsEnabled = Document.Snapshot.FileState?.FormulaReadOnly != true;
+            foreach (var control in _mutationControls) control.IsEnabled = !Document.IsReadOnly && Document.Snapshot.FileState?.FormulaReadOnly != true;
+            foreach (var control in _readOnlyControls) control.IsEnabled = !Document.IsReadOnly;
             var style = CurrentStyle; var name = style.FontName ?? "Microsoft YaHei UI"; var size = style.FontSize ?? 11;
             if (!_font.Items.Cast<string>().Contains(name)) _font.ItemsSource = _font.Items.Cast<string>().Append(name).Order().ToArray();
             if (!_fontSize.Items.Cast<double>().Contains(size)) _fontSize.ItemsSource = _fontSize.Items.Cast<double>().Append(size).Order().ToArray();

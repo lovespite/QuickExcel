@@ -268,7 +268,7 @@ public sealed class M5WorkspaceTests : IDisposable
         var atomic = typeof(TypedWorkbookStorage).Assembly.GetType("QuickExcel.Storage.PackageIO")!
             .GetMethod("AtomicWrite", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)!;
         var error = Assert.Throws<System.Reflection.TargetInvocationException>(() => atomic.Invoke(null,
-            [path, new byte[] { 1, 2 }, (Action<string>)(_ => File.WriteAllText(path, "external-during-validation")), CancellationToken.None, expected]));
+            [path, new byte[] { 1, 2 }, (Action<string>)(_ => File.WriteAllText(path, "external-during-validation")), CancellationToken.None, expected, null]));
         Assert.IsType<WorkbookFileConflictException>(error.InnerException);
         Assert.Equal("external-during-validation", File.ReadAllText(path));
         Assert.Empty(Directory.GetFiles(_folder, "*.tmp"));

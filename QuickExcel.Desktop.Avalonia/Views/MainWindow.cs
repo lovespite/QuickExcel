@@ -31,6 +31,9 @@ public sealed partial class MainWindow : Window
     private readonly global::Avalonia.Controls.Grid _start = new() { Margin = new(40, 36), ColumnDefinitions = new("300,40,*") };
     private readonly StackPanel _recent = new() { Spacing = 6 };
     private readonly Menu _menu = new();
+    private readonly List<MenuItem> _workbookMenuItems = [];
+    private readonly TextBlock _readOnlyNotice = new() { Text = UiText.Get(DocumentSession.ReadOnlyMessage),
+        Margin = new(12, 8), TextWrapping = TextWrapping.Wrap, Foreground = Brushes.DarkGoldenrod, IsVisible = false };
     private readonly RecentFileStore _recentFiles;
     private readonly DesktopSettings _settings;
     private ILocalFileDialogs _files;
@@ -139,17 +142,23 @@ public sealed partial class MainWindow : Window
     private sealed record SheetItem(SheetId Id, string Name, string? TabColor) { public override string ToString() => Name; }
     private void BuildView()
     {
-        MenuItem Item(string text, Func<Task> action) { var item = new MenuItem { Header = text }; item.Click += async (_, _) => await PerformAsync(action); return item; }
+        MenuItem Item(string text, Func<Task> action, bool requiresWorkbook = true, bool mutation = true)
+        {
+            var item = CommandMenu(text, action, requiresWorkbook, mutation);
+            if (requiresWorkbook) _workbookMenuItems.Add(item);
+            return item;
+        }
         _menu.Items.Add(new MenuItem { Header = UiText.Get("文件"), Items =
         {
-            Item(UiText.Get("新建  Ctrl+N"), async () => { if (await ConfirmDiscardAsync()) { _workspace.New(); ShowBook(); } }),
-            Item(UiText.Get("打开  Ctrl+O"), OpenAsync), Item(UiText.Get("最近文件"), async () => { if (await ConfirmDiscardAsync()) ShowHome(); }),
-            Item(UiText.Get("打开恢复副本"), RecoveryAsync), new Separator(),
-            Item(UiText.Get("保存  Ctrl+S"), async () => await SaveAsync(false)), Item(UiText.Get("另存为"), async () => await SaveAsync(true)), new Separator(),
-            Item(UiText.Get("导出值快照"), () => ExportAsync(false)), Item(UiText.Get("导出可移植公式"), () => ExportAsync(true)),
-            Item(UiText.Get("打印预览 / PDF"), OpenPrintPreviewAsync), new Separator(), Item(UiText.Get("兼容性报告"), CompatibilityAsync), new Separator(),
-            Item(UiText.Get("设置"), OpenSettingsAsync), new Separator(),
-            Item(UiText.Get("关闭工作簿"), async () => { if (await ConfirmDiscardAsync()) { _workspace.New(); ShowHome(); } }), Item(UiText.Get("退出"), () => { Close(); return Task.CompletedTask; })
+            Item(UiText.Get("新建  Ctrl+N"), async () => { if (await ConfirmDiscardAsync()) { _workspace.New(); ShowBook(); } }, false),
+            Item(UiText.Get("打开  Ctrl+O"), OpenAsync, false), Item(UiText.Get("最近文件"), async () => { if (await ConfirmDiscardAsync()) { _workspace.New(); ShowHome(); } }, false),
+            Item(UiText.Get("以只读方式打开…"), () => OpenAsync(readOnly: true), false),
+            Item(UiText.Get("打开恢复副本"), RecoveryAsync, false), new Separator(),
+            Item(UiText.Get("保存  Ctrl+S"), async () => await SaveAsync(false), mutation: false), Item(UiText.Get("另存为"), async () => await SaveAsync(true), mutation: false), new Separator(),
+            Item(UiText.Get("导出值快照"), () => ExportAsync(false), mutation: false), Item(UiText.Get("导出可移植公式"), () => ExportAsync(true), mutation: false),
+            Item(UiText.Get("打印预览 / PDF"), OpenPrintPreviewAsync, mutation: false), new Separator(), Item(UiText.Get("兼容性报告"), CompatibilityAsync, mutation: false), new Separator(),
+            Item(UiText.Get("设置"), OpenSettingsAsync, false), new Separator(),
+            Item(UiText.Get("关闭工作簿"), async () => { if (await ConfirmDiscardAsync()) { _workspace.New(); ShowHome(); } }, mutation: false), Item(UiText.Get("退出"), () => { Close(); return Task.CompletedTask; }, false)
         } });
         _menu.Items.Add(new MenuItem { Header = UiText.Get("编辑"), Items =
         { Item(UiText.Get("撤销  Ctrl+Z"), () => History(false)), Item(UiText.Get("重做  Ctrl+Y"), () => History(true)) } });
@@ -157,7 +166,8 @@ public sealed partial class MainWindow : Window
         { Item(UiText.Get("添加工作表"), AddSheetAsync), Item(UiText.Get("重命名"), RenameSheetAsync), Item(UiText.Get("删除工作表"), DeleteSheetAsync) } });
         _menu.Items.Add(new MenuItem { Header = UiText.Get("视图"), Items =
         { Item("100%", () => ZoomAsync(100)), Item("125%", () => ZoomAsync(125)), Item("150%", () => ZoomAsync(150)),
-          Item(UiText.Get("标签在底部"), () => PlaceSheets(SheetNavigationPlacement.Bottom)), Item(UiText.Get("标签在左侧"), () => PlaceSheets(SheetNavigationPlacement.Left)), Item(UiText.Get("标签在右侧"), () => PlaceSheets(SheetNavigationPlacement.Right)) } });
+          Item(UiText.Get("标签在底部"), () => PlaceSheets(SheetNavigationPlacement.Bottom), mutation: false), Item(UiText.Get("标签在左侧"), () => PlaceSheets(SheetNavigationPlacement.Left), mutation: false), Item(UiText.Get("标签在右侧"), () => PlaceSheets(SheetNavigationPlacement.Right), mutation: false) } });
+        DockPanel.SetDock(_readOnlyNotice, Dock.Top); _book.Children.Add(_readOnlyNotice);
         _book.Children.Add(BuildWorksheetLayout()); ApplySheetPlacement();
         BuildHome();
         var content = new global::Avalonia.Controls.Grid(); content.Children.Add(_book); content.Children.Add(_start);
@@ -203,6 +213,7 @@ public sealed partial class MainWindow : Window
     {
         if (_book.IsVisible) Document.Session.RaiseScriptEvent("workbook.deactivate");
         _book.IsVisible = false; _start.IsVisible = true;
+        UpdateWorkbookMenus();
         RefreshRecentFiles();
     }
     private void RefreshRecentFiles()
@@ -235,7 +246,28 @@ public sealed partial class MainWindow : Window
             Foreground = Brushes.Gray, TextWrapping = TextWrapping.Wrap, Margin = new(0, 12)
         });
     }
-    private void ShowBook() { if (!_book.IsVisible) Document.Session.RaiseScriptEvent("workbook.activate"); _start.IsVisible = false; _book.IsVisible = true; }
+    private void ShowBook() { if (!_book.IsVisible) Document.Session.RaiseScriptEvent("workbook.activate"); _start.IsVisible = false; _book.IsVisible = true; UpdateWorkbookMenus(); }
+    private void UpdateWorkbookMenus()
+    {
+        foreach (var item in _workbookMenuItems) item.IsEnabled = _book.IsVisible;
+        foreach (var menu in _menu.Items.OfType<MenuItem>().Skip(1)) menu.IsEnabled = _book.IsVisible;
+        UpdateReadOnlyMenus(_menu);
+        if (_sheets.ContextMenu is { } tabs) UpdateReadOnlyMenus(tabs);
+        if (Document.IsReadOnly)
+        {
+            ((MenuItem)_menu.Items[2]!).IsEnabled = false;
+            var scripts = _menu.Items.OfType<MenuItem>().FirstOrDefault(menu => Equals(menu.Header, UiText.Get("脚本")));
+            if (scripts is not null) scripts.IsEnabled = false;
+        }
+    }
+    private void UpdateReadOnlyMenus(ItemsControl menu)
+    {
+        foreach (var item in menu.Items.OfType<MenuItem>())
+        {
+            if (item.Classes.Contains("workbook-mutation")) item.IsEnabled = _book.IsVisible && !Document.IsReadOnly;
+            UpdateReadOnlyMenus(item);
+        }
+    }
     private void Synchronize()
     {
         if (_synchronizing) return;
@@ -244,28 +276,31 @@ public sealed partial class MainWindow : Window
         if (_chartFilterContextCurrent?.Invoke() == false) CloseChartFilter();
         if (_lastPaste is not null && !IsPasteOptionsCurrent()) DismissPasteOptions();
         ObserveDocument();
+        RefreshScriptApiMigrationButton();
         _synchronizing = true;
         try
         {
             _book.IsEnabled = !NonExecutionBusy; _menu.IsEnabled = !NonExecutionBusy;
+            UpdateWorkbookMenus();
             if (_boundSession != Document.Session.SessionId || _boundSheet != Document.Snapshot.ActiveSheetId)
             {
                 _formulaDirty = false; _formulaOwner = null;
                 _boundSession = Document.Session.SessionId; _boundSheet = Document.Snapshot.ActiveSheetId;
-                _grid.Bind(Document.Snapshot, SheetIndex, WorkbookLimits.MaxRows, WorkbookLimits.MaxColumns, Document.Session.SessionId);
+                _grid.Bind(Document.Snapshot, SheetIndex, WorkbookLimits.MaxRows, WorkbookLimits.MaxColumns, Document.Session.SessionId, Document.IsReadOnly);
             }
             else _grid.Refresh(Document.Snapshot);
             var items = Document.Snapshot.Sheets.Where(s => s.Visibility == SheetVisibility.Visible).Select(s => new SheetItem(s.Id, s.Name, s.TabColor)).ToArray();
             if (_sheets.ItemsSource is not SheetItem[] prior || !prior.SequenceEqual(items)) _sheets.ItemsSource = items;
             _sheets.SelectedItem = items.FirstOrDefault(s => s.Id == Document.Snapshot.ActiveSheetId);
-            _addSheetButton.IsEnabled = Document.Snapshot.FileState?.FormulaReadOnly != true && Document.Snapshot.Sheets.Length < WorkbookLimits.MaxSheets;
+            _addSheetButton.IsEnabled = !Document.IsReadOnly && Document.Snapshot.FileState?.FormulaReadOnly != true && Document.Snapshot.Sheets.Length < WorkbookLimits.MaxSheets;
+            _readOnlyNotice.IsVisible = Document.IsReadOnly;
         }
         finally { _synchronizing = false; }
         UpdateFormula(); UpdateTitle(); UpdateRibbon(); UpdateValidation(); QueueStatistics(); RefreshPrintStatus(); RefreshScriptConsole(); UpdatePivotStatus();
     }
     private void UpdateTitle()
     {
-        Title = (Document.IsDirty || _scriptPage?.Drafts.IsDirty == true ? "* " : "") + (_workspace.FilePath is { } path ? Path.GetFileName(path) : UiText.Get("未命名.xlsq")) + " — QuickExcel";
+        Title = (Document.IsDirty || _scriptPage?.Drafts.IsDirty == true ? "* " : "") + (_workspace.FilePath is { } path ? Path.GetFileName(path) : UiText.Get("未命名.xlsq")) + (Document.IsReadOnly ? UiText.Get(" [只读]") : "") + " — QuickExcel";
         _address.Text = WorkbookGrid.ColumnName(_grid.Current.Column) + (_grid.Current.Row + 1);
         var sheet = Document.Snapshot.Sheets[SheetIndex];
         var value = Document.GetCellValue(SheetIndex, _grid.Current.Row, _grid.Current.Column);
@@ -309,6 +344,7 @@ public sealed partial class MainWindow : Window
     }
     private async Task<bool> CommitCellAsync(int index, CellPosition owner, string text)
     {
+        if (Document.IsReadOnly) return false;
         if (_workspace.IsBusy || _execution.IsRunning) return false;
         try
         {
@@ -327,6 +363,7 @@ public sealed partial class MainWindow : Window
     private async Task<bool> CommitEditorsAsync(bool validateTypeScript = false) => !_workspace.IsBusy && !_execution.IsRunning && await _grid.CommitAsync() && await CommitFormulaAsync() && await CommitScriptsAsync(validateTypeScript);
     private bool TryEdit(Func<CommandResult> edit)
     {
+        if (Document.IsReadOnly) { _status.Text = UiText.Get(DocumentSession.ReadOnlyMessage); return false; }
         if (_workspace.IsBusy || _execution.IsRunning) return false;
         try { edit(); Synchronize(); _status.Text = UiText.Get("已修改"); return true; }
         catch (Exception ex) { Error(ex); return false; }
@@ -358,18 +395,20 @@ public sealed partial class MainWindow : Window
         if (accepted) await CloseScriptWindowAsync();
         return accepted;
     }
-    private async Task OpenAsync()
+    private Task OpenAsync() => OpenAsync(readOnly: false);
+    private async Task OpenAsync(bool readOnly)
     {
         if (!await CommitEditorsAsync()) return;
         var selected = await _files.OpenAsync(new(UiText.Get("打开工作簿"), [new(UiText.Get("所有支持的文件"), ["*.xlsq", "*.xlsx", "*.csv"]), new(UiText.Get("CSV（UTF-8 文本）"), ["*.csv"])]));
-        if (selected is not null && await ConfirmDiscardAsync()) await OpenPathAsync(selected.Path);
+        if (selected is not null && await ConfirmDiscardAsync()) await OpenPathAsync(selected.Path, readOnly);
     }
-    private async Task OpenPathAsync(string path)
+    private async Task OpenPathAsync(string path, bool readOnly = false)
     {
-        await _workspace.OpenAsync(new(path)); _recentFiles.Remember(path); ShowBook(); _status.Text = UiText.Get("已打开 ") + Path.GetFileName(path);
+        await _workspace.OpenAsync(new(path), readOnly); _recentFiles.Remember(path); ShowBook();
+        _status.Text = UiText.Get(Document.IsReadOnly ? "已以只读方式打开 " : "已打开 ") + Path.GetFileName(path);
         if (Path.GetExtension(path).Equals(".csv", StringComparison.OrdinalIgnoreCase))
             _status.Text = UiText.Get("已按文本导入 CSV。保存时将写入新的工作簿。");
-        if (DesktopServices.SupportsScripts && Document.Snapshot.ScriptModules.Signature is not null)
+        if (!Document.IsReadOnly && DesktopServices.SupportsScripts && Document.Snapshot.ScriptModules.Signature is not null)
         {
             var modules = Document.Snapshot.ScriptModules;
             try
@@ -387,11 +426,16 @@ public sealed partial class MainWindow : Window
     }
     private async Task<bool> SaveAsync(bool saveAs)
     {
+        if (!_book.IsVisible) return false;
         await using var hold = _scriptPage?.HoldEdits();
         if (!await FlushEditsAsync()) return false;
-        Document.Session.RaiseScriptEvent("workbook.beforeSave"); await DispatchEventsAsync();
-        if (_settings.Value.Calculation == DesktopCalculationMode.Manual) _calculationPending = true;
-        await CalculatePendingCoreAsync(_settings.Value.Calculation == DesktopCalculationMode.Manual);
+        if (Document.IsReadOnly) saveAs = true;
+        else
+        {
+            Document.Session.RaiseScriptEvent("workbook.beforeSave"); await DispatchEventsAsync();
+            if (_settings.Value.Calculation == DesktopCalculationMode.Manual) _calculationPending = true;
+            await CalculatePendingCoreAsync(_settings.Value.Calculation == DesktopCalculationMode.Manual);
+        }
         if (_calculationPending && _settings.Value.Calculation != DesktopCalculationMode.Automatic)
         {
             _status.Text = UiText.Get("保存前重算未完成，本次保存已取消。") + _calculationFailure;
@@ -407,7 +451,7 @@ public sealed partial class MainWindow : Window
         {
             var report = await _workspace.InspectAsync(snapshot => TypedWorkbookStorage.InspectCompatibility(snapshot));
             var choice = await ShowCompatibilityReportAsync(report, saveMode: true,
-                canOverwrite: current is not null && _workspace.Version?.Sha256 is not null && !migration && !requiresNewContainer);
+                canOverwrite: !Document.IsReadOnly && current is not null && _workspace.Version?.Sha256 is not null && !migration && !requiresNewContainer);
             if (choice == CompatibilitySaveDecision.Cancel) return false;
             overwrite = choice == CompatibilitySaveDecision.Overwrite;
             discard = true; saveAs = !overwrite;
@@ -419,7 +463,7 @@ public sealed partial class MainWindow : Window
             var preferXlsx = !needsScripts && !migration && string.Equals(Path.GetExtension(current), ".xlsx", StringComparison.OrdinalIgnoreCase);
             var extension = preferXlsx ? ".xlsx" : ".xlsq";
             FileDialogType[] types = needsScripts ? [new(UiText.Get("QuickExcel 工作簿（含脚本）"), ["*.xlsq"])] : [new(UiText.Get("QuickExcel 工作簿"), ["*.xlsq"]), new(UiText.Get("Excel 工作簿"), ["*.xlsx"])];
-            selected = await _files.SaveAsync(new(UiText.Get("保存工作簿"), types, Path.GetFileNameWithoutExtension(current ?? UiText.Get("未命名")) + (migration ? "-v2" : discard ? UiText.Get("-受支持副本") : "") + extension, extension, preferXlsx ? 1 : 0));
+            selected = await _files.SaveAsync(new(UiText.Get("保存工作簿"), types, Path.GetFileNameWithoutExtension(current ?? UiText.Get("未命名")) + (migration ? "-v2" : discard ? UiText.Get("-受支持副本") : Document.IsReadOnly ? UiText.Get("-副本") : "") + extension, extension, preferXlsx ? 1 : 0));
         }
         if (selected is null) return false;
         try { await _workspace.SaveAsync(selected, discard, overwrite); _recentFiles.Remember(selected.Path); _status.Text = UiText.Get("已保存 ") + Path.GetFileName(selected.Path) + (_calculationFailure is null ? "" : UiText.Get(" · 部分结果待重算：") + _calculationFailure); return true; }
@@ -454,11 +498,25 @@ public sealed partial class MainWindow : Window
     private Task PlaceSheets(SheetNavigationPlacement placement) { _settings.Save(_settings.Value with { Sheets = placement }); ApplySheetPlacement(); return Task.CompletedTask; }
     private async Task CalculateAsync()
     {
+        if (Document.IsReadOnly) { _status.Text = UiText.Get(DocumentSession.ReadOnlyMessage); return; }
         if (!await CommitEditorsAsync()) return;
         _calculationPending = true; await CalculatePendingCoreAsync(true);
     }
     private async void Shortcuts(object? sender, KeyEventArgs e)
     {
+        if (!_book.IsVisible)
+        {
+            if (!e.Handled && (e.KeyModifiers.HasFlag(KeyModifiers.Control) || e.KeyModifiers.HasFlag(KeyModifiers.Meta)))
+            {
+                if (e.Key == Key.O) { e.Handled = true; await PerformAsync(OpenAsync); }
+                else if (e.Key == Key.N)
+                {
+                    e.Handled = true;
+                    await PerformAsync(async () => { if (await ConfirmDiscardAsync()) { _workspace.New(); ShowBook(); } });
+                }
+            }
+            return;
+        }
         if (e.Key == Key.Escape && _grid.IsSelectionDragging && !_grid.IsComposing && !_formula.IsComposing)
         { _grid.CancelInputGesture(); e.Handled = true; return; }
         if (e.Key == Key.Escape && _sheetPress is not null) { EndSheetGesture(); e.Handled = true; return; }
@@ -466,6 +524,14 @@ public sealed partial class MainWindow : Window
         if (_pasteOptionsPopup?.IsOpen == true) return;
         if (_filterPopup?.IsOpen == true || _chartFilterPopup?.IsOpen == true) return;
         if (e.Handled || _grid.IsComposing || _formula.IsComposing) return;
+        if (Document.IsReadOnly && ((e.KeyModifiers.HasFlag(KeyModifiers.Control) || e.KeyModifiers.HasFlag(KeyModifiers.Meta)) &&
+                e.Key is Key.X or Key.V or Key.D or Key.R or Key.E or Key.Z or Key.Y or Key.D1 or Key.NumPad1 ||
+                e.Key is Key.Delete or Key.Back or Key.F2 or Key.F9))
+        {
+            // Native text controls retain their own copy/select/navigation behavior.
+            if (e.Source is TextBox text && text != _grid.CellEditor && !text.IsReadOnly) return;
+            e.Handled = true; _status.Text = UiText.Get(DocumentSession.ReadOnlyMessage); return;
+        }
         if (e.Key == Key.Escape && _calculationCancellation is not null) { _calculationCancellation.Cancel(); e.Handled = true; return; }
         if (e.Key == Key.F6)
         {
