@@ -64,8 +64,10 @@ public sealed class CellBorderTests
         var before = session.Snapshot;
         Assert.Throws<InvalidOperationException>(() => session.Execute(new SetCellBordersCommand([new(sheet.Id, 1, 1)], CellBorders.Preset(BorderPreset.All)))); Assert.Same(before, session.Snapshot);
         session.Execute(new SetCellBordersCommand(Area(sheet.Id, 1, 1, 2, 3), CellBorders.Preset(BorderPreset.All, 6) with { Diagonal = new(9), DiagonalDown = true }));
-        var merged = CellBorderProjection.ForRange(new(1, 1, 2, 3), (r, c) => Style(session.Snapshot, r, c));
-        Assert.Equal(6, merged.RightBorder); Assert.Equal(6, merged.BottomBorder); Assert.True(merged.DiagonalDown);
+        var range = new CellRectangle(1, 1, 2, 3);
+        Assert.Equal(6, CellBorderProjection.ForRow(range, 2, (r, c) => Style(session.Snapshot, r, c)).RightBorder);
+        Assert.Equal(6, CellBorderProjection.ForColumn(range, 3, (r, c) => Style(session.Snapshot, r, c)).BottomBorder);
+        Assert.True(CellBorderProjection.ForDiagonals(Style(session.Snapshot, 1, 1)).DiagonalDown);
         Assert.Equal(0, Style(session.Snapshot, 1, 1).RightBorder); Assert.False(Style(session.Snapshot, 2, 3).DiagonalDown);
     }
 
@@ -91,13 +93,30 @@ public sealed class CellBorderTests
     }
 
     [Fact]
-    public void WholeSheetMergeProjectsSparsePerimeterWithoutEnumeratingAllRows()
+    public void WholeSheetMergeProjectsOnlyRequestedVisiblePerimeter()
     {
         var sheet = new WorksheetSnapshot(SheetId.New(), "Huge", cells: [new(new(100_000, 0), new(CellContent.FromLiteral(CellValue.Blank, 1)))], mergedCells: [new CellRectangle(0, 0, WorkbookLimits.MaxRows - 1, WorkbookLimits.MaxColumns - 1).ToString()]);
         var book = new WorkbookSnapshot(Guid.NewGuid(), 0, ExcelDateSystem.Windows1900, [sheet], styles: [new(), new() { LeftBorder = 5 }]);
         var reads = 0;
-        var result = CellBorderProjection.ForRange(new(0, 0, WorkbookLimits.MaxRows - 1, WorkbookLimits.MaxColumns - 1), (r, c) => { reads++; return Style(book, r, c); }, sheet);
-        Assert.Equal(5, result.LeftBorder); Assert.InRange(reads, 1, 20);
+        var range = new CellRectangle(0, 0, WorkbookLimits.MaxRows - 1, WorkbookLimits.MaxColumns - 1);
+        StyleDefinition StyleAt(int r, int c) { reads++; return Style(book, r, c); }
+        Assert.Equal(5, CellBorderProjection.ForRow(range, 100_000, StyleAt).LeftBorder);
+        Assert.Equal(0, CellBorderProjection.ForRow(range, 100_001, StyleAt).LeftBorder);
+        Assert.Equal(0, CellBorderProjection.ForColumn(range, 20, StyleAt).TopBorder);
+        Assert.Equal(6, reads);
+    }
+
+    [Fact]
+    public void MergedRightEdgeDoesNotExtendNeighborBordersAcrossAnUnborderedRow()
+    {
+        var sheet = new WorksheetSnapshot(SheetId.New(), "Merged", cells: Enumerable.Range(2, 6)
+            .Select(r => new KeyValuePair<CellPosition, CellSnapshot>(new(r, 1), new(CellContent.FromLiteral(CellValue.Blank, 1)))), mergedCells: ["A3:A9"]);
+        var book = new WorkbookSnapshot(Guid.NewGuid(), 0, ExcelDateSystem.Windows1900, [sheet], styles: [new(), new() { LeftBorder = 1 }]);
+        var range = CellRectangle.Parse("A3:A9");
+        StyleDefinition StyleAt(int r, int c) => TablePresentation.GetStyle(book, sheet, r, c);
+        Assert.Equal(1, CellBorderProjection.ForRow(range, 7, StyleAt).RightBorder);
+        Assert.Equal(0, CellBorderProjection.ForRow(range, 8, StyleAt).RightBorder);
+        Assert.Equal(0, StyleAt(8, 1).LeftBorder);
     }
 
     [Fact]

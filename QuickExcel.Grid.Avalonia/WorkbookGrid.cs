@@ -26,8 +26,8 @@ public sealed partial class WorkbookGrid : UserControl, IGridSurface, IDisposabl
     private readonly Canvas _canvas = new() { ClipToBounds = true };
     private readonly GridArtwork _artwork;
     private readonly SelectionOverlay _overlay;
-    private readonly ScrollBar _vertical = new() { Orientation = global::Avalonia.Layout.Orientation.Vertical, Width = 16 };
-    private readonly ScrollBar _horizontal = new() { Orientation = global::Avalonia.Layout.Orientation.Horizontal, Height = 16 };
+    private readonly ScrollBar _vertical = new() { Orientation = global::Avalonia.Layout.Orientation.Vertical, Width = 16, AllowAutoHide = false };
+    private readonly ScrollBar _horizontal = new() { Orientation = global::Avalonia.Layout.Orientation.Horizontal, Height = 16, AllowAutoHide = false };
     private SkiaRenderer? _renderer;
     private SkiaRenderer Renderer => _renderer ??= new();
     private WorkbookSnapshot? _snapshot;
@@ -73,7 +73,7 @@ public sealed partial class WorkbookGrid : UserControl, IGridSurface, IDisposabl
         layout.Children.Add(_canvas); layout.Children.Add(_vertical); layout.Children.Add(_horizontal);
         global::Avalonia.Controls.Grid.SetColumn(_vertical, 1); global::Avalonia.Controls.Grid.SetRow(_horizontal, 1);
         Content = layout;
-        _canvas.SizeChanged += (_, _) => { _artwork.Width = _overlay.Width = _canvas.Bounds.Width; _artwork.Height = _overlay.Height = _canvas.Bounds.Height; UpdateScrollbars(); InvalidateContent(); PositionEditor(); };
+        _canvas.SizeChanged += (_, _) => { _artwork.Width = _overlay.Width = _canvas.Bounds.Width; _artwork.Height = _overlay.Height = _canvas.Bounds.Height; RestoreScrollViewport(); UpdateScrollbars(); InvalidateContent(); PositionEditor(); };
         _vertical.ValueChanged += (_, _) => { if (!_scrolling) Scroll(_columns.Offset, _vertical.Value); };
         _horizontal.ValueChanged += (_, _) => { if (!_scrolling) Scroll(_horizontal.Value, _rows.Offset); };
         _canvas.PointerPressed += PointerDown; _canvas.PointerMoved += PointerMove;
@@ -97,17 +97,19 @@ public sealed partial class WorkbookGrid : UserControl, IGridSurface, IDisposabl
         AddHandler(KeyDownEvent, HandleKey, RoutingStrategies.Tunnel);
         DetachedFromVisualTree += (_, _) => { CancelGesture(); ReleaseRendering(); };
     }
-    public void Bind(WorkbookSnapshot snapshot, int sheetIndex, int rows, int columns)
+    public void Bind(WorkbookSnapshot snapshot, int sheetIndex, int rows, int columns) => Bind(snapshot, sheetIndex, rows, columns, snapshot.DocumentId);
+    public void Bind(WorkbookSnapshot snapshot, int sheetIndex, int rows, int columns, Guid sessionId)
     {
         ClearDrawingObjectSelection();
         Cancel(); ReleaseRendering(); _snapshot = snapshot; _sheetIndex = sheetIndex; _zoom = Sheet.View.Zoom / 100d;
+        BindScrollExtent(sessionId);
         Configure(rows, columns); _rows.ScrollTo(0, ViewHeight); _columns.ScrollTo(0, ViewWidth);
         SelectCore(Sheet.View.ActiveCell, false, false);
         if (Sheet.View.Selection is { } selection)
             _selection.Set(GridMergedSelection.Expand(new(selection.Range.Top, selection.Range.Left, selection.Range.Bottom, selection.Range.Right), _merges));
-        var stored = Sheet.View.HasFreeze ? Sheet.View.PaneTopLeftCell : Sheet.View.TopLeftCell;
-        if (_rows.Cell(stored.Row) is { Frozen: false } row) _rows.ScrollTo(_rows.Offset + row.Start - _rows.FrozenSize, ViewHeight);
-        if (_columns.Cell(stored.Column) is { Frozen: false } col) _columns.ScrollTo(_columns.Offset + col.Start - _columns.FrozenSize, ViewWidth);
+        IncludeSelectionExtent();
+        _pendingScrollCell = Sheet.View.HasFreeze ? Sheet.View.PaneTopLeftCell : Sheet.View.TopLeftCell;
+        RestoreScrollViewport();
         InvalidateContent(); UpdateScrollbars(); PositionEditor();
     }
     public void Refresh(WorkbookSnapshot snapshot)
@@ -137,6 +139,7 @@ public sealed partial class WorkbookGrid : UserControl, IGridSurface, IDisposabl
             Sheet.Columns.Keys.Append(0).Distinct().Select(c => new KeyValuePair<int, int>(c, (int)Math.Clamp(DrawingGeometry.ColumnSize(Sheet, c), 1, 10000))),
             Sheet.Columns.Where(p => p.Value.Hidden).Select(p => p.Key).ToHashSet(), Enumerable.Range(0, Math.Min(columns, Sheet.View.FrozenColumns)).ToHashSet());
         _merges = Sheet.MergedCells.Select(CellRectangle.Parse).Select(m => new GridCellRange(m.Top, m.Left, m.Bottom, m.Right)).ToArray();
+        IncludeUsedExtent();
     }
     public void Select(CellPosition position, bool extend = false)
     { if (Commit() && (BeforeSelection?.Invoke() ?? true)) SelectCore(position, extend, true); }
@@ -151,6 +154,7 @@ public sealed partial class WorkbookGrid : UserControl, IGridSurface, IDisposabl
         if (!extend) _anchor = _current;
         var range = GridRange.Between(_anchor, _current);
         _selection.Set(GridMergedSelection.Expand(new(range.Top, range.Left, range.Bottom, range.Right), _merges));
+        IncludeSelectionExtent();
         var offsets = (_rows.Offset, _columns.Offset);
         _rows.EnsureVisible(_current.Row, ViewHeight); _columns.EnsureVisible(_current.Column, ViewWidth);
         UpdateScrollbars();
@@ -163,7 +167,7 @@ public sealed partial class WorkbookGrid : UserControl, IGridSurface, IDisposabl
         if (!Commit() || !(BeforeSelection?.Invoke() ?? true)) return;
         ClearDrawingObjectSelection();
         _selection.Set(GridMergedSelection.Expand(new(range.Top, range.Left, range.Bottom, range.Right), _merges));
-        _current = current; _anchor = new(range.Top, range.Left); _overlay.InvalidateVisual(); PrepareEditor(false); SelectionChanged?.Invoke();
+        _current = current; _anchor = new(range.Top, range.Left); IncludeSelectionExtent(); _overlay.InvalidateVisual(); PrepareEditor(false); SelectionChanged?.Invoke();
     }
     public bool Commit()
     {
@@ -227,6 +231,19 @@ public sealed partial class WorkbookGrid : UserControl, IGridSurface, IDisposabl
         }
         return null;
     }
+    /// <summary>Visible range bounds in grid coordinates, clipped to frozen/scrolling panes.</summary>
+    public Rect? GetVisibleRangeBounds(GridRange range)
+    {
+        Rect? result = null;
+        foreach (var fragment in Fragments(new(range.Top, range.Left, range.Bottom, range.Right)))
+        {
+            var visible = fragment.Bounds.Intersect(fragment.Clip);
+            if (visible.Width <= 0 || visible.Height <= 0) continue;
+            var scaled = new Rect(visible.X * _zoom, visible.Y * _zoom, visible.Width * _zoom, visible.Height * _zoom);
+            result = result is { } previous ? previous.Union(scaled) : scaled;
+        }
+        return result;
+    }
     private void PositionEditor()
     {
         if (_snapshot is null || _rows.Count == 0 || _columns.Count == 0) { CellEditor.IsVisible = false; return; }
@@ -235,18 +252,6 @@ public sealed partial class WorkbookGrid : UserControl, IGridSurface, IDisposabl
         Canvas.SetLeft(CellEditor, rect.X); Canvas.SetTop(CellEditor, rect.Y);
         CellEditor.Width = Math.Max(1, Math.Min(rect.Width, _canvas.Bounds.Width - rect.X)); CellEditor.Height = Math.Max(1, Math.Min(rect.Height, _canvas.Bounds.Height - rect.Y));
         CellEditor.FontSize = 14 * _zoom;
-    }
-    private void Scroll(double x, double y)
-    {
-        _rows.ScrollTo(y, ViewHeight); _columns.ScrollTo(x, ViewWidth); UpdateScrollbars(); InvalidateContent(); PositionEditor(); ViewportChanged?.Invoke();
-    }
-    private void UpdateScrollbars()
-    {
-        _scrolling = true;
-        _rows.ScrollTo(_rows.Offset, ViewHeight); _columns.ScrollTo(_columns.Offset, ViewWidth);
-        _vertical.Maximum = Math.Max(0, _rows.ScrollSize - Math.Max(0, ViewHeight - _rows.FrozenSize)); _vertical.ViewportSize = ViewHeight; _vertical.Value = _rows.Offset;
-        _horizontal.Maximum = Math.Max(0, _columns.ScrollSize - Math.Max(0, ViewWidth - _columns.FrozenSize)); _horizontal.ViewportSize = ViewWidth; _horizontal.Value = _columns.Offset;
-        _scrolling = false;
     }
     private CellPosition? Hit(Point point)
     {

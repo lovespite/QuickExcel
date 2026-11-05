@@ -17,7 +17,7 @@ public sealed partial class WorkbookGrid
     private readonly record struct PictureKey(GridCellRange Range, double Width, double Height, bool Header = false);
     private readonly record struct Fragment(Rect Bounds, Rect Clip);
     private readonly Dictionary<PictureKey, SKPicture> _pictures = [];
-    private readonly Dictionary<GridCellRange, StyleDefinition> _borderStyles = [];
+    private readonly Dictionary<CellPosition, StyleDefinition> _borderStyles = [];
     private readonly Dictionary<SheetImage, SKBitmap?> _images = [];
     private readonly Dictionary<WorksheetChart, SKPicture> _charts = [];
     private long _pictureBytes, _imageBytes;
@@ -67,21 +67,30 @@ public sealed partial class WorkbookGrid
         var rows = _rows.Visible(ViewHeight); var columns = _columns.Visible(ViewWidth);
         var drawn = new HashSet<GridCellRange>();
         var borders = new List<(Rect Bounds, Rect Clip, StyleDefinition Style)>();
+        StyleDefinition StyleAt(int row, int column)
+        {
+            var position = new CellPosition(row, column);
+            if (!_borderStyles.TryGetValue(position, out var style))
+            {
+                if (_borderStyles.Count >= 16384) _borderStyles.Clear();
+                _borderStyles[position] = style = ResolveStyle?.Invoke(_snapshot, Sheet, row, column) ?? TablePresentation.GetStyle(_snapshot, Sheet, row, column);
+            }
+            return style;
+        }
         void Picture(GridCellRange range)
         {
             if (!drawn.Add(range)) return;
+            var anchorStyle = StyleAt(range.Top, range.Left);
+            var merged = range.Top != range.Bottom || range.Left != range.Right;
             foreach (var fragment in Fragments(range))
             {
                 var bounds = fragment.Bounds;
-                if (!_borderStyles.TryGetValue(range, out var borderStyle))
-                    _borderStyles[range] = borderStyle = CellBorderProjection.ForRange(new(range.Top, range.Left, range.Bottom, range.Right),
-                        (r, c) => ResolveStyle?.Invoke(_snapshot, Sheet, r, c) ?? TablePresentation.GetStyle(_snapshot, Sheet, r, c), Sheet);
-                borders.Add((bounds, fragment.Clip, borderStyle));
+                borders.Add((bounds, fragment.Clip, merged ? CellBorderProjection.ForDiagonals(anchorStyle) : anchorStyle));
                 var key = new PictureKey(range, bounds.Width, bounds.Height);
                 if (!_pictures.TryGetValue(key, out var picture))
                 {
                     var cell = Sheet.GetCell(range.Top, range.Left);
-                    var style = borderStyle;
+                    var style = anchorStyle;
                     var display = CellDisplayFormatter.FormatDisplay(cell?.Value ?? CellValue.Blank, style, _snapshot.DateSystem);
                     if (display.Color is not null) style = style with { FontColor = display.Color };
                     if (style.Horizontal == 0 && cell?.Value.Kind == CellValueKind.Number) style = style with { Horizontal = 3 };
@@ -96,6 +105,20 @@ public sealed partial class WorkbookGrid
                     picture = recorder.EndRecording(); AdmitPicture(picture); _pictures[key] = picture; CellDrawingCount++;
                 }
                 canvas.Save(); canvas.ClipRect(SkiaRect(fragment.Clip)); canvas.Translate((float)bounds.X, (float)bounds.Y); canvas.DrawPicture(picture); canvas.Restore();
+            }
+            if (!merged) return;
+            var rectangle = new CellRectangle(range.Top, range.Left, range.Bottom, range.Right);
+            foreach (var row in rows.Where(r => r.ModelIndex >= range.Top && r.ModelIndex <= range.Bottom))
+            {
+                var style = CellBorderProjection.ForRow(rectangle, row.ModelIndex, StyleAt);
+                foreach (var fragment in Fragments(new(row.ModelIndex, range.Left, row.ModelIndex, range.Right)))
+                    borders.Add((fragment.Bounds, fragment.Clip, style));
+            }
+            foreach (var column in columns.Where(c => c.ModelIndex >= range.Left && c.ModelIndex <= range.Right))
+            {
+                var style = CellBorderProjection.ForColumn(rectangle, column.ModelIndex, StyleAt);
+                foreach (var fragment in Fragments(new(range.Top, column.ModelIndex, range.Bottom, column.ModelIndex)))
+                    borders.Add((fragment.Bounds, fragment.Clip, style));
             }
         }
         foreach (var row in rows)

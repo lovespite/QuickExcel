@@ -79,6 +79,7 @@ public sealed partial class MainWindow
             _grid.Select(new(0, 0)); await Layout(); await Capture(this, "border-workspace");
             var file = Path.Combine(directory, "borders.xlsx"); new Storage.TypedWorkbookStorage().Export(file, Document.Snapshot);
             var reopened = new Storage.TypedWorkbookStorage().Open(file); Check(reopened.Styles.Any(s => s.DiagonalUp && s.DiagonalDown && s.DiagonalBorder == 1), "Workspace sample saves and reopens with both diagonals");
+            await RunMergedBorderSmokeAsync(directory, Check);
         }
         catch (Exception ex) { failure = ex; }
         await File.WriteAllTextAsync(Path.Combine(directory, "result.json"), JsonSerializer.Serialize(new { passed = failure is null, checks, error = failure?.ToString() }, new JsonSerializerOptions { WriteIndented = true }));

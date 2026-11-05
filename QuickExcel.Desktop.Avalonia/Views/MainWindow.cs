@@ -104,6 +104,7 @@ public sealed partial class MainWindow : Window
             await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Background);
             if (Program.SelfCheckDirectory is { } evidence) { await RunSelfCheckAsync(evidence); return; }
 #if QUICKEXCEL_DIAGNOSTICS
+            if (Program.SmokeDirectory is { } pasteDirectory && Program.SmokeMode == "paste-options") { await RunPasteOptionsSmokeAsync(pasteDirectory); return; }
             if (Program.SmokeDirectory is { } localizationDirectory && Program.SmokeMode == "localization") { await RunLocalizationSmokeAsync(localizationDirectory); return; }
             if (Program.SmokeDirectory is { } sheetsDirectory && Program.SmokeMode == "sheets") { await RunSheetsSmokeAsync(sheetsDirectory); return; }
             if (Program.SmokeDirectory is { } dataToolsDirectory && Program.SmokeMode == "data-tools") { await RunDataToolsSmokeAsync(dataToolsDirectory); return; }
@@ -218,6 +219,7 @@ public sealed partial class MainWindow : Window
         if (_sheetPress is { } press && !IsCurrentSheetPress(press)) EndSheetGesture();
         if (_filterContextCurrent?.Invoke() == false) CloseFilterPanel();
         if (_chartFilterContextCurrent?.Invoke() == false) CloseChartFilter();
+        if (_lastPaste is not null && !IsPasteOptionsCurrent()) DismissPasteOptions();
         ObserveDocument();
         _synchronizing = true;
         try
@@ -227,7 +229,7 @@ public sealed partial class MainWindow : Window
             {
                 _formulaDirty = false; _formulaOwner = null;
                 _boundSession = Document.Session.SessionId; _boundSheet = Document.Snapshot.ActiveSheetId;
-                _grid.Bind(Document.Snapshot, SheetIndex, WorkbookLimits.MaxRows, WorkbookLimits.MaxColumns);
+                _grid.Bind(Document.Snapshot, SheetIndex, WorkbookLimits.MaxRows, WorkbookLimits.MaxColumns, Document.Session.SessionId);
             }
             else _grid.Refresh(Document.Snapshot);
             var items = Document.Snapshot.Sheets.Where(s => s.Visibility == SheetVisibility.Visible).Select(s => new SheetItem(s.Id, s.Name, s.TabColor)).ToArray();
@@ -435,6 +437,8 @@ public sealed partial class MainWindow : Window
     private async void Shortcuts(object? sender, KeyEventArgs e)
     {
         if (e.Key == Key.Escape && _sheetPress is not null) { EndSheetGesture(); e.Handled = true; return; }
+        if (e.Key == Key.Escape && _lastPaste is not null) { DismissPasteOptions(); e.Handled = true; return; }
+        if (_pasteOptionsPopup?.IsOpen == true) return;
         if (_filterPopup?.IsOpen == true || _chartFilterPopup?.IsOpen == true) return;
         if (e.Handled || _grid.IsComposing || _formula.IsComposing) return;
         if (e.Key == Key.Escape && _calculationCancellation is not null) { _calculationCancellation.Cancel(); e.Handled = true; return; }

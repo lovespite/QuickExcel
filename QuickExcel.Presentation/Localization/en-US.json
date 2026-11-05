@@ -2099,5 +2099,10 @@
   "Web 资源超过读取预算。": "Web resource exceeds the read limit.",
   "脚本使用已废弃的 API v1/v2，需要按 QuickExcel API v3 重写，或移除全部脚本后保存。": "Rewrite the legacy API v1/v2 scripts for QuickExcel API v3, or remove all scripts before saving.",
   "此工作簿含尚不能安全计算或变换的公式，当前以只读模式打开；可查看源码/来源缓存及另存原包，导航不会写入文件。请在 Excel 中修改，或明确导出已有缓存的值快照。": "This workbook opened read-only because some formulas cannot be safely calculated or adjusted. You can inspect the source and cached values or save the original package. Edit it in Excel or explicitly export the cached values.",
-  "Enter 执行，Ctrl+Enter 换行，↑↓ 浏览历史。可用 workbook 和 host；工作簿修改可撤销。": "Enter to run, Ctrl+Enter for a new line, ↑↓ for history. Use workbook and host. Workbook changes can be undone."
+  "Enter 执行，Ctrl+Enter 换行，↑↓ 浏览历史。可用 workbook 和 host；工作簿修改可撤销。": "Enter to run, Ctrl+Enter for a new line, ↑↓ for history. Use workbook and host. Workbook changes can be undone.",
+  "粘贴选项": "Paste options",
+  "粘贴全部": "Paste all",
+  "粘贴数值": "Paste values",
+  "其他粘贴选项": "Other paste options",
+  "粘贴选项已过期，请重新粘贴。": "Paste options have expired. Paste again."
 }

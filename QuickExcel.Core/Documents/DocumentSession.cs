@@ -59,6 +59,15 @@ public sealed partial class DocumentSession : IDisposable
     public CommandResult Execute(DocumentCommand command, long? expectedRevision = null, bool acceptValidationWarnings = false) =>
         ExecuteCore(command, expectedRevision, acceptValidationWarnings: acceptValidationWarnings);
 
+    /// <summary>Records a cell paste, or atomically replaces the latest unsaved paste using its original destination.</summary>
+    public CommandResult ExecuteCellPaste(DocumentCommand command, long expectedRevision, bool replacePrevious = false, bool acceptValidationWarnings = false)
+    {
+        if (command is not (PasteCellsCommand or PasteExternalCellsCommand or SetCellsCommand))
+            throw new ArgumentException("A cell paste command is required.", nameof(command));
+        return ExecuteCore(command, expectedRevision, acceptValidationWarnings: acceptValidationWarnings,
+            cellPaste: true, replacePreviousPaste: replacePrevious);
+    }
+
     // Calculated trial values are literal cells in the saved workbook. Validate them
     // through the ordinary edit path, but let one undo restore the initiating edit.
     public CommandResult ApplyAutomaticDataTableResults(SetCellsCommand results, long expectedRevision) =>
@@ -91,7 +100,7 @@ public sealed partial class DocumentSession : IDisposable
         }
     }
 
-    private CommandResult ExecuteCore(DocumentCommand command, long? expectedRevision, ScriptActionRequest? action = null, CancellationToken cancellationToken = default, ImmutableArray<string> diagnostics = default, bool acceptValidationWarnings = false, VirtualFileSet? transientFiles = null, bool includeWithPreviousEdit = false)
+    private CommandResult ExecuteCore(DocumentCommand command, long? expectedRevision, ScriptActionRequest? action = null, CancellationToken cancellationToken = default, ImmutableArray<string> diagnostics = default, bool acceptValidationWarnings = false, VirtualFileSet? transientFiles = null, bool includeWithPreviousEdit = false, bool cellPaste = false, bool replacePreviousPaste = false)
     {
         ArgumentNullException.ThrowIfNull(command);
         DocumentChange? change = null;
@@ -110,6 +119,16 @@ public sealed partial class DocumentSession : IDisposable
             }
             CheckRevision(expectedRevision);
             var before = _snapshot;
+            var replaced = replacePreviousPaste ? _undo.Last : null;
+            if (replacePreviousPaste)
+            {
+                if (replaced is null || !replaced.Value.IsCellPaste || replaced.Value.After.Revision != before.Revision ||
+                    _redo.Count != 0 || before.Revision <= _savedRevision)
+                    throw new InvalidOperationException(MessageText.Get("粘贴选项已过期，请重新粘贴。"));
+                // Keep navigation while preparing and validating against the original destination.
+                before = replaced.Value.Before.WithSheets(replaced.Value.Before.Sheets.Select(s =>
+                    s.WithView(_snapshot.GetSheet(s.Id).View))).WithActiveSheet(_snapshot.ActiveSheetId).WithRevision(_snapshot.Revision);
+            }
             if (before.FileState?.FormulaReadOnly == true && action?.ConsoleSource is null) throw new InvalidOperationException(MessageText.Get(WorkbookFileState.FormulaReadOnlyMessage));
             var draft = command.Prepare(before); // No session state is changed until every check succeeds.
             ExtendedObjectSafety.ValidateEdit(before, draft.Snapshot, command, draft.StructureChanged);
@@ -139,6 +158,16 @@ public sealed partial class DocumentSession : IDisposable
                     throw new DataValidationException(failures);
             }
             cancellationToken.ThrowIfCancellationRequested();
+            if (replaced is not null)
+            {
+                draft = draft with
+                {
+                    Changes = ActualChanges(_snapshot, draft.Snapshot, replaced.Value.Changes.Concat(draft.Changes).DistinctBy(c => c.Address).ToImmutableArray()),
+                    StructureChanged = replaced.Value.StructureChanged || draft.StructureChanged,
+                    CalculationUnchanged = false
+                };
+                before = _snapshot;
+            }
             if (ReferenceEquals(draft.Snapshot, before))
             {
                 if (action is not null) { AdvanceCalculationGeneration(); _diagnostics = diagnostics; AppendConsole(diagnostics); if (transientFiles is not null) _transientFiles = transientFiles; }
@@ -149,15 +178,15 @@ public sealed partial class DocumentSession : IDisposable
                 var sourceChanged = command is UpdateScriptSourceCommand or UpdateScriptModulesCommand or UpdateScriptSignatureCommand || !ReferenceEquals(before.ScriptModules, draft.Snapshot.ScriptModules);
                 var revised = draft.Snapshot.WithRevision(checked(before.Revision + 1));
                 var after = draft.CalculationUnchanged ? CarryCalculationRevision(revised, before.Revision) : Invalidate(revised);
-                var entry = sourceChanged ? null : new HistoryEntry(before, after, draft.Changes, draft.StructureChanged, draft.CalculationUnchanged);
-                var previous = includeWithPreviousEdit && _redo.Count == 0 && before.Revision > _savedRevision &&
-                    _undo.Last?.Value.After.Revision == before.Revision ? _undo.Last : null;
+                var entry = sourceChanged ? null : new HistoryEntry(before, after, draft.Changes, draft.StructureChanged, draft.CalculationUnchanged) { IsCellPaste = cellPaste };
+                var previous = replaced ?? (includeWithPreviousEdit && _redo.Count == 0 && before.Revision > _savedRevision &&
+                    _undo.Last?.Value.After.Revision == before.Revision ? _undo.Last : null);
                 if (previous is not null && entry is not null)
                 {
                     var first = previous.Value;
                     var addresses = first.Changes.Concat(entry.Changes).DistinctBy(c => c.Address).ToImmutableArray();
                     entry = new(first.Before, after, ActualChanges(first.Before, after, addresses),
-                        first.StructureChanged || entry.StructureChanged, false);
+                        first.StructureChanged || entry.StructureChanged, false) { IsCellPaste = cellPaste || first.IsCellPaste };
                 }
                 if (entry is not null && entry.Bytes > HistoryBudgetBytes)
                     throw new InvalidOperationException(MessageText.Get("此操作超过撤销历史容量，尚未修改工作簿。请缩小操作范围。"));
@@ -587,6 +616,7 @@ public sealed partial class DocumentSession : IDisposable
 
     private sealed record HistoryEntry(WorkbookSnapshot Before, WorkbookSnapshot After, ImmutableArray<CellChange> Changes, bool StructureChanged, bool CalculationUnchanged)
     {
+        public bool IsCellPaste { get; init; }
         // Unchanged immutable input and metadata are shared. Count changed payloads and copied formula caches.
         public long Bytes => 1024L + Changes.Sum(change => Estimate(change.Before) + Estimate(change.After) + 256L)
             + FormulaCaches(Before) + FormulaCaches(After)

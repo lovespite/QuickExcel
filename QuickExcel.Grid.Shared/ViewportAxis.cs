@@ -25,7 +25,20 @@ public sealed class ViewportAxis
             if (item.Key >= 0 && item.Key < count) _sizes.PutSizeOverride(item.Key, Math.Max(1, item.Value));
         _sizes.BuildIndex();
     }
-    public void ScrollTo(double value, double extent) => Offset = Math.Clamp(value, 0, Math.Max(0, ScrollSize - Math.Max(0, extent - FrozenSize)));
+    public double MaximumOffset(double extent, int? lastModel = null)
+    {
+        var end = ScrollSize;
+        if (lastModel is { } last)
+        {
+            if (Count == 0 || last < 0) return 0;
+            var ranges = _sizes.GetRealRanges(0, Math.Min(last, Count - 1));
+            if (ranges.Count == 0 || ranges[^1].Last < _sizes.FrozenCount) return 0;
+            var index = ranges[^1].Last - _sizes.FrozenCount;
+            end = (double)_sizes.GetPositionByScrollIndex(index) + _sizes.GetSizeByScrollIndex(index);
+        }
+        return Math.Max(0, end - Math.Max(0, extent - FrozenSize));
+    }
+    public void ScrollTo(double value, double extent, int? lastModel = null) => Offset = Math.Clamp(value, 0, MaximumOffset(extent, lastModel));
     public IReadOnlyList<AxisCell> Visible(double extent)
     {
         var result = new List<AxisCell>();

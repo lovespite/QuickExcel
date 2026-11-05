@@ -66,19 +66,20 @@ public sealed partial class MainWindow
             await PasteAvailableCellsAsync(region, mode == "transpose" ? "transpose" : "values", target, sheetId, revision, notices); return;
         }
         // Retain ordinary TSV's established numeric parsing and explicit formula-paste semantics.
-        var sheet = Document.Snapshot.GetSheet(sheetId);
+        var sheet = PasteSnapshot.GetSheet(sheetId);
         if (sheet.MergedCells.Select(CellRectangle.Parse).Any(m => m == Rectangle(target)) && values is [{ Length: 1 }])
             target = new(target.Top, target.Left, target.Top, target.Left);
         var edits = GridClipboard.Prepare(text, target, mode == "formulas");
         RequireVisiblePaste(new(target.Top, target.Left, edits.Max(v => v.Row), edits.Max(v => v.Column)));
-        if (!await ExecuteAsync(new SetCellsCommand(edits.Select(v => new CellEdit(new(sheetId, v.Row, v.Column),
-            CellInput.ParseForCell(v.Value, Document.Snapshot, sheet, v.Row, v.Column)))), revision)) return;
+        if (!await ExecuteCellPasteAsync(new SetCellsCommand(edits.Select(v => new CellEdit(new(sheetId, v.Row, v.Column),
+            CellInput.ParseForCell(v.Value, PasteSnapshot, sheet, v.Row, v.Column)))), revision)) return;
         _grid.SelectRange(new(target.Top, target.Left, edits.Max(v => v.Row), edits.Max(v => v.Column)), new(target.Top, target.Left));
         await CalculatePendingAsync(); _status.Text = UiText.Get("已粘贴，可一次撤销。");
     }
 
     private async Task PasteAvailableCellsAsync(ExternalClipboardRegion source, string mode, GridRange target, SheetId sheetId, long revision, List<string> notices)
     {
+        _pasteHasFormats = source.HasFormats;
         if (mode == "transpose")
             source = new(source.Columns, source.Rows,
                 Enumerable.Range(0, source.Columns).SelectMany(c => Enumerable.Range(0, source.Rows).Select(r => source.Cells[r * source.Columns + c])),
@@ -87,19 +88,19 @@ public sealed partial class MainWindow
         var plan = ExternalClipboardPastePolicy.Prepare(source, requested);
         if (plan.Notice is not null) notices.Add(plan.Notice);
         if (plan.Mode != CellPasteMode.Formats && source.Rows == 1 && source.Columns == 1 &&
-            Document.Snapshot.GetSheet(sheetId).MergedCells.Select(CellRectangle.Parse).Any(m => m == Rectangle(target)))
+            PasteSnapshot.GetSheet(sheetId).MergedCells.Select(CellRectangle.Parse).Any(m => m == Rectangle(target)))
             target = new(target.Top, target.Left, target.Top, target.Left);
         var rows = source.Rows == 1 && source.Columns == 1 ? target.Rows : source.Rows;
         var columns = source.Rows == 1 && source.Columns == 1 ? target.Columns : source.Columns;
         RequireVisiblePaste(new(target.Top, target.Left, checked(target.Top + rows - 1), checked(target.Left + columns - 1)));
         try
         {
-            if (!await ExecuteAsync(new PasteExternalCellsCommand(source, sheetId, Rectangle(target), revision, plan.Mode, allowPartial: true), revision)) return;
+            if (!await ExecuteCellPasteAsync(new PasteExternalCellsCommand(source, sheetId, Rectangle(target), revision, plan.Mode, allowPartial: true), revision)) return;
         }
         catch (NotSupportedException) when (plan.Mode == CellPasteMode.All)
         {
             // Preserve destination attachments/rules if copying formats cannot safely coexist with them.
-            if (!await ExecuteAsync(new PasteExternalCellsCommand(source, sheetId, Rectangle(target), revision, CellPasteMode.Values, allowPartial: true), revision)) return;
+            if (!await ExecuteCellPasteAsync(new PasteExternalCellsCommand(source, sheetId, Rectangle(target), revision, CellPasteMode.Values, allowPartial: true), revision)) return;
             notices.Add(UiText.Get("已自动改为只贴值，保留目标格式、附件和规则。"));
         }
         catch (NotSupportedException ex) when (plan.Mode == CellPasteMode.Formats)

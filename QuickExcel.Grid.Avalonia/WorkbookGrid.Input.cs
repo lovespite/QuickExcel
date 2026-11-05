@@ -50,7 +50,7 @@ public sealed partial class WorkbookGrid
         if (!Commit() || !(BeforeSelection?.Invoke() ?? true)) return;
         ClearDrawingObjectSelection();
         _selection.Set(captured.Select(r => GridMergedSelection.Expand(new(r.Top, r.Left, r.Bottom, r.Right), _merges)));
-        _current = current; _anchor = current; _overlay.InvalidateVisual(); PrepareEditor(false); SelectionChanged?.Invoke();
+        _current = current; _anchor = current; IncludeSelectionExtent(); _overlay.InvalidateVisual(); PrepareEditor(false); SelectionChanged?.Invoke();
     }
     private bool CanSelectRanges(IReadOnlyList<GridRange> ranges, CellPosition current)
     {
@@ -159,7 +159,10 @@ public sealed partial class WorkbookGrid
     private void UpdateDragSelection(CellPosition cell, bool initial = false)
     {
         if (_referenceGesture)
-        { var reference = GridRange.Between(_referenceAnchor, cell); ReferenceRequested?.Invoke(reference); HighlightReference(reference); return; }
+        {
+            var reference = GridRange.Between(_referenceAnchor, cell); ReferenceRequested?.Invoke(reference); HighlightReference(reference);
+            _scrollExtent.Include(reference.Bottom, reference.Right); UpdateScrollbars(); return;
+        }
         if (_fillSource is { } source)
         {
             var rowDelta = cell.Row < source.Top ? cell.Row - source.Top : Math.Max(0, cell.Row - source.Bottom);
@@ -167,7 +170,7 @@ public sealed partial class WorkbookGrid
             _fillPreview = Math.Abs(rowDelta) >= Math.Abs(colDelta)
                 ? source with { Top = Math.Min(cell.Row, source.Top), Bottom = Math.Max(cell.Row, source.Bottom) }
                 : source with { Left = Math.Min(cell.Column, source.Left), Right = Math.Max(cell.Column, source.Right) };
-            _overlay.InvalidateVisual(); return;
+            _scrollExtent.Include(_fillPreview.Value.Bottom, _fillPreview.Value.Right); UpdateScrollbars(); _overlay.InvalidateVisual(); return;
         }
         var r = GridRange.Between(_anchor, cell);
         var range = _dragAxis switch
@@ -180,7 +183,7 @@ public sealed partial class WorkbookGrid
         else _selection.Set(range);
         // Keep raw hit coordinates for range expansion and header boundaries, but
         // cell editing/navigation always belongs to the merged cell's anchor.
-        _current = _dragAxis is null ? CellAnchor(cell) : cell; _overlay.InvalidateVisual(); SelectionChanged?.Invoke();
+        _current = _dragAxis is null ? CellAnchor(cell) : cell; IncludeSelectionExtent(); _overlay.InvalidateVisual(); SelectionChanged?.Invoke();
     }
     private void PointerMove(object? sender, PointerEventArgs e)
     {
@@ -214,10 +217,14 @@ public sealed partial class WorkbookGrid
         var y = _dragAxis == SheetAxis.Column ? 0 : Speed(_dragPoint.Y, (HeaderHeight + _rows.FrozenSize) * _zoom, _canvas.Bounds.Height);
         if (x != 0 || y != 0)
         {
-            Scroll(_columns.Offset + x * elapsed / _zoom, _rows.Offset + y * elapsed / _zoom);
+            // Selection gestures can reach new cells. Expand from the hit target
+            // before applying the normal scroll limits; wheels/bars never do this.
+            _columns.ScrollTo(_columns.Offset + x * elapsed / _zoom, ViewWidth);
+            _rows.ScrollTo(_rows.Offset + y * elapsed / _zoom, ViewHeight);
             var point = new Point(Math.Clamp(_dragPoint.X, HeaderWidth * _zoom, Math.Max(HeaderWidth * _zoom, _canvas.Bounds.Width - 1)),
                 Math.Clamp(_dragPoint.Y, HeaderHeight * _zoom, Math.Max(HeaderHeight * _zoom, _canvas.Bounds.Height - 1)));
             if (Hit(point) is { } cell) UpdateDragSelection(cell);
+            Scroll(_columns.Offset, _rows.Offset);
             DragFrameApplied?.Invoke(System.Diagnostics.Stopwatch.GetTimestamp());
         }
         RequestDragFrame();

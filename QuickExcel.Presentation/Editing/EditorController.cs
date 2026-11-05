@@ -54,6 +54,16 @@ public sealed class EditorController(WorkbookDocument document, Func<DataValidat
         }
     }
     public void UpdateScriptSource(string source) => document.ScriptSource = source;
+    public async Task<CommandResult> ExecuteCellPasteAsync(DocumentCommand command, long expectedRevision,
+        bool replacePrevious, Func<DataValidationException, Task<bool>> confirm)
+    {
+        try { return document.Session.ExecuteCellPaste(command, expectedRevision, replacePrevious); }
+        catch (DataValidationException ex) when (ex.CanOverride)
+        {
+            if (!await confirm(ex)) throw;
+            return document.Session.ExecuteCellPaste(command, expectedRevision, replacePrevious, acceptValidationWarnings: true);
+        }
+    }
     public CommandResult Undo() => document.Session.UndoWithResult();
     public CommandResult Redo() => document.Session.RedoWithResult();
 }

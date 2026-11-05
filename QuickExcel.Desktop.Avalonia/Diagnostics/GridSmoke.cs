@@ -196,6 +196,8 @@ public sealed partial class MainWindow
             await RunDataFeatureChecksAsync(Check);
             await RunFileObjectChecksAsync(directory, Check);
             await Capture("data-features");
+            await RunScrollRangeChecksAsync(directory, Check);
+            await Capture("bounded-scrollbars");
         }
         catch (Exception ex) { error = ex; }
         await File.WriteAllTextAsync(Path.Combine(directory, "result.json"), JsonSerializer.Serialize(new { passed = error is null, checks, error = error?.ToString(),

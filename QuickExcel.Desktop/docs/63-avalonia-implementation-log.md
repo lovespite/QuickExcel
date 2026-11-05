@@ -109,3 +109,16 @@ Ribbon 命令使用本地 Fluent UI System Icons 的 20px Regular SVG。37 个�
 验证：Release 构建 0 警告/0 错误；RibbonFilter **361** 项通过（`artifacts/avalonia/workspace/20261104-132954-87ee4439`），Grid **137** 项通过（`artifacts/avalonia/workspace/20261104-133008-1a3f5fe8`）。新增真实按钮点击检查覆盖三个方向对 2×2 选区的生效、水平对齐/字体保留以及整块选区一次撤销/重做；已复核 Ribbon 布局截图。图标源文件与固定上游提交一致，生成物校验通过；未运行全量回归。
 
 垂直对齐发布：`scripts/build-quickexcel.ps1 -SkipTests -RunSmoke` 生成 `artifacts/avalonia/releases/20261104-133028-8964dd3e/application`，12 项生产自检通过。已核验活动指针与 manifest SHA-256，`Start-QuickExcel.cmd` 使用新包。
+
+
+## 2026-11-05 粘贴后的浮动选项
+
+成功粘贴单元格后，在粘贴区域可见部分右下方显示剪贴板按钮，点击才展开浮动面板。面板按“粘贴 / 粘贴数值 / 其他粘贴选项”分组，接入现有的全部、公式、值、格式、转置五种模式，保留提示和无障碍名称；纯文本来源禁用格式项。复用现有 Fluent 图标，无新增第三方组件。剪切以及图片/图表对象粘贴不提供此单元格模式切换入口。
+
+选择选项后关闭图标与面板；开始网格或公式栏编辑、改变选区、复制新内容、撤销、工作簿/工作表切换或输入修订过期也关闭。Esc 关闭；点击面板外由 light dismiss 收起面板。图标随视口移动，位置限制在网格内，目标不可见时暂时隐藏。
+
+选择使用本次粘贴捕获的数据，不重新读取系统剪贴板。EditorController/DocumentSession 的 ExecuteCellPaste 路径在原粘贴前的不可变快照上准备和验证替代命令，成功后一次提交并替换最后一个未保存粘贴的历史条目；值粘贴恢复原目标格式，格式粘贴恢复原目标内容，转置恢复旧区域多出的单元格。失败不先执行撤销、不改变当前工作簿或历史；普通验证、只读、保护及附件规则仍适用。保存、后续编辑或撤销后的旧请求不能替换历史。一次撤销还原最初粘贴前的状态，重做恢复最终选项。
+
+定向验证：粘贴相关 Core 测试 111 项通过；补充验证失败的原子性后，PasteOptions/DocumentSession/DataValidation 45 项通过（包含重复的粘贴用例）。新增 `scripts/test-avalonia-workspace.ps1 -Mode PasteOptions`，面板及既有外部/合并剪贴板共 61 项检查通过，Release 构建 0 警告/0 错误；证据和复核截图：`artifacts/avalonia/workspace/20261105-034556-0963bb2c`。未运行全量回归；程序化检查不替代物理输入和辅助技术验收。
+
+粘贴面板发布：`scripts/build-quickexcel.ps1 -SkipTests -RunSmoke` 已生成并激活 `artifacts/avalonia/releases/20261105-034634-d96344de/application`（产品版本 1.5.0，共享工作区包含并行滚动范围改动），14 项生产自检通过。已核验 `active-windows.json`、release manifest SHA-256 和启动脚本读取路径；旧包保留。生产构建仅有既有 `WebScriptsOnly` / `WebModulesOnly` 两项 CS0649 警告。

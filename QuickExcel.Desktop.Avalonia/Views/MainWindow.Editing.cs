@@ -69,6 +69,7 @@ public sealed partial class MainWindow
     private async Task CopyAsync(bool cut, bool externalFormulas = false, bool valuesOnly = false)
     {
         if (!await CommitEditorsAsync()) return;
+        DismissPasteOptions();
         if (_grid.SelectedDrawingObject is { } selected)
         {
             if (cut) throw new NotSupportedException(UiText.Get("对象暂支持复制；粘贴确认后可删除原对象。"));
@@ -116,6 +117,7 @@ public sealed partial class MainWindow
     private async Task PasteAsync(string mode)
     {
         if (!await CommitEditorsAsync()) return;
+        DismissPasteOptions();
         var session = Document.Session.SessionId; var revision = Document.Snapshot.Revision; var target = SelectedRange(allowObject: true); var sheetId = Document.Snapshot.ActiveSheetId;
         var selectedObject = _grid.SelectedDrawingObject;
         var data = await _clipboard.ReadAsync();
@@ -123,41 +125,51 @@ public sealed partial class MainWindow
             throw new InvalidOperationException(UiText.Get("读取剪贴板期间文档、工作表或目标选区已改变，请重试。"));
         if (SelectionPlanning.IsWholeRow(Rectangle(target)) || SelectionPlanning.IsWholeColumn(Rectangle(target)))
             target = new(target.Top, target.Left, target.Top, target.Left);
-        if (data.Token != _clipboardToken || data.Token is null || mode is "image" or "chart")
+        var cells = data.Token is not null && data.Token == _clipboardToken && mode is not ("image" or "chart") ? _clipboardCells : null;
+        if (data.Token is not null && data.Token == _clipboardToken && mode is not ("image" or "chart") &&
+            (cells is null || _clipboardSession != session || _clipboardRevision != revision))
+            throw new InvalidOperationException(UiText.Get("复制/剪切已取消或文档已改变，请重新复制。"));
+        var before = Document.Snapshot;
+        _cellPasteApplied = false; _pasteHasFormats = false;
+        await PasteCapturedAsync(data, cells, mode, target, sheetId, revision);
+        if (_cellPasteApplied && cells?.IsCut != true && mode is not ("image" or "chart") &&
+            session == Document.Session.SessionId && sheetId == Document.Snapshot.ActiveSheetId &&
+            _cellPasteRevision == Document.Snapshot.Revision && !_grid.IsEditing && !_formulaDirty)
+            ShowPasteOptions(new(session, sheetId, Document.Snapshot.Revision, before, data, cells, target, SelectedRange(), mode, _pasteHasFormats));
+    }
+    private async Task PasteCapturedAsync(ClipboardExchange data, WorkbookClipboard? cells, string mode, GridRange target, SheetId sheetId, long revision)
+    {
+        if (cells is null)
         { await PasteAvailableClipboardAsync(data, mode, target, sheetId, revision); return; }
-        if (data.Token is not null && data.Token == _clipboardToken)
+        _pasteHasFormats = true;
+        var paste = mode switch { "values" => CellPasteMode.Values, "formulas" => CellPasteMode.Formulas, "formats" => CellPasteMode.Formats, _ => CellPasteMode.All };
+        if (paste != CellPasteMode.Formats && !cells.IsCut && cells.Rows == 1 && cells.Columns == 1 &&
+            PasteSnapshot.GetSheet(sheetId).MergedCells.Select(CellRectangle.Parse).Any(m => m == Rectangle(target)))
+            target = new(target.Top, target.Left, target.Top, target.Left);
+        var transpose = mode == "transpose"; var fill = cells.Rows == 1 && cells.Columns == 1 && !cells.IsCut;
+        var rows = fill ? target.Rows : transpose ? cells.Columns : cells.Rows;
+        var columns = fill ? target.Columns : transpose ? cells.Rows : cells.Columns;
+        RequireVisiblePaste(new(target.Top, target.Left, target.Top + rows - 1, target.Left + columns - 1));
+        try
         {
-            if (_clipboardCells is not { } cells || _clipboardSession != session || _clipboardRevision != revision)
-                throw new InvalidOperationException(UiText.Get("复制/剪切已取消或文档已改变，请重新复制。"));
-            var paste = mode switch { "values" => CellPasteMode.Values, "formulas" => CellPasteMode.Formulas, "formats" => CellPasteMode.Formats, _ => CellPasteMode.All };
-            if (paste != CellPasteMode.Formats && !cells.IsCut && cells.Rows == 1 && cells.Columns == 1 &&
-                Document.Snapshot.Sheets[SheetIndex].MergedCells.Select(CellRectangle.Parse).Any(m => m == Rectangle(target)))
-                target = new(target.Top, target.Left, target.Top, target.Left);
-            var transpose = mode == "transpose"; var fill = cells.Rows == 1 && cells.Columns == 1 && !cells.IsCut;
-            var rows = fill ? target.Rows : transpose ? cells.Columns : cells.Rows;
-            var columns = fill ? target.Columns : transpose ? cells.Rows : cells.Columns;
-            RequireVisiblePaste(new(target.Top, target.Left, target.Top + rows - 1, target.Left + columns - 1));
-            try
-            {
-                if (!await ExecuteAsync(new PasteCellsCommand(cells, Document.Snapshot.ActiveSheetId, Rectangle(target), revision, paste, transpose), revision)) return;
-            }
-            catch (NotSupportedException ex) when (!cells.IsCut)
-            {
-                // Keep the internal capture's typed results; do not reparse formatted display strings.
-                var partial = new ExternalClipboardRegion(cells.Rows, cells.Columns, cells.Cells.Select((c, i) =>
-                    new ExternalClipboardCell(c.Value, Document.Snapshot.Styles[c.Content.StyleId],
-                        Formula: c.Content.Kind == CellContentKind.Formula ? c.Content.FormulaText : null,
-                        FormulaOrigin: new(cells.Range.Top + i / cells.Columns, cells.Range.Left + i % cells.Columns),
-                        MissingResult: c.Content.Kind == CellContentKind.Formula && cells.HasOldResults)),
-                    merges: cells.MergedCells.Select(m => new CellRectangle(m.Top - cells.Range.Top, m.Left - cells.Range.Left, m.Bottom - cells.Range.Top, m.Right - cells.Range.Left)),
-                    limitations: [UiText.Get("部分内部结构未复制：") + ex.Message]);
-                await PasteAvailableCellsAsync(partial, mode, target, sheetId, revision, []);
-                _clipboardRevision = Document.Snapshot.Revision;
-                return;
-            }
-            _clipboardRevision = Document.Snapshot.Revision; if (cells.IsCut) _clipboardCells = null;
-            _grid.SelectRange(new(target.Top, target.Left, target.Top + rows - 1, target.Left + columns - 1), new(target.Top, target.Left));
+            if (!await ExecuteCellPasteAsync(new PasteCellsCommand(cells, sheetId, Rectangle(target), revision, paste, transpose), revision)) return;
         }
+        catch (NotSupportedException ex) when (!cells.IsCut)
+        {
+            // Keep the internal capture's typed results; do not reparse formatted display strings.
+            var partial = new ExternalClipboardRegion(cells.Rows, cells.Columns, cells.Cells.Select((c, i) =>
+                new ExternalClipboardCell(c.Value, PasteSnapshot.Styles[c.Content.StyleId],
+                    Formula: c.Content.Kind == CellContentKind.Formula ? c.Content.FormulaText : null,
+                    FormulaOrigin: new(cells.Range.Top + i / cells.Columns, cells.Range.Left + i % cells.Columns),
+                    MissingResult: c.Content.Kind == CellContentKind.Formula && cells.HasOldResults)),
+                merges: cells.MergedCells.Select(m => new CellRectangle(m.Top - cells.Range.Top, m.Left - cells.Range.Left, m.Bottom - cells.Range.Top, m.Right - cells.Range.Left)),
+                limitations: [UiText.Get("部分内部结构未复制：") + ex.Message]);
+            await PasteAvailableCellsAsync(partial, mode, target, sheetId, revision, []);
+            _clipboardRevision = Document.Snapshot.Revision;
+            return;
+        }
+        _clipboardRevision = Document.Snapshot.Revision; if (cells.IsCut) _clipboardCells = null;
+        _grid.SelectRange(new(target.Top, target.Left, target.Top + rows - 1, target.Left + columns - 1), new(target.Top, target.Left));
         await CalculatePendingAsync(); _status.Text = UiText.Get("已粘贴，可一次撤销。");
     }
     private async Task FillAsync(GridRange source, GridRange extent, long? revision = null)
@@ -186,6 +198,7 @@ public sealed partial class MainWindow
     private void InstallEditingCommands()
     {
         _clipboard = new AvaloniaClipboard(this);
+        InstallPasteOptions();
         _grid.DimensionChanged += (axis, index, pixels, revision) => _ = PerformAsync(async () =>
             await ExecuteAsync(new SetAxisMetadataCommand(Document.Snapshot.ActiveSheetId, axis, index, 1, axis == SheetAxis.Row ? pixels : Math.Max(.01, (pixels - 5) / 7)), revision));
         _grid.FillRequested += (source, extent, revision) => _ = PerformAsync(() => FillAsync(source, extent, revision));
