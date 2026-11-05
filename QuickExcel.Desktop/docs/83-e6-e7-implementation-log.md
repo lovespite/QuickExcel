@@ -135,3 +135,11 @@ The immutable date-period model retains priority, stop-if-true, differential sty
 01–04 保留了 COM 文本赋值和 DateOperator 参数调用的失败；05 首次采集完整对照，06 完成双向验证。实现时另由原生公式对照修正单格引用输出，未放宽未知公式保护。参考 [Microsoft XlTimePeriods](https://learn.microsoft.com/en-us/office/vba/api/excel.xltimeperiods)。按用户要求本项独立 commit，最后统一发布。
 
 补核对：午夜刷新同时清理网格场景和绘制缓存，保留选区和编辑归属；桌面专项已重跑通过。 / Calendar refresh invalidates both scene and drawing caches without changing selection or edit ownership.
+
+## XC-0607a — 引用及从属列表 / Formula dependency lists
+
+2026-11-05，1.29.0 源码。视图菜单新增非模态公式审核窗口，列出直接静态值引用和直接从属公式，可双击或点击定位，跨表沿用既有导航、隐藏/筛选及保护检查，不增加编辑历史。审核固定地址，通过“使用当前格”切换；编辑、结构变化、计算结果变化或文档切换后刷新。后台可取消分析，关闭窗口释放计时器与取消源，失败或主动取消不会每半秒自动重试。
+
+The view reuses WorkbookDependencyIndex, including named references, sparse ranges and current array spill ownership. Static position/dimension functions do not create false value dependencies. Current results, errors, missing calculation and stale caches are distinguished. Scripts, unsupported source semantics and missing bindings mark the lists incomplete; no scripts execute. Protected formula source/dependencies are hidden. Display is capped at 500 entries per list with an explicit incomplete notice, under a 10,000,000-step analysis budget. Whole-column navigation is clipped to the supported grid.
+
+29 项引用审核/位置函数/本地化测试通过，涵盖名称、跨表、数组、循环、缺失目标、旧缓存、取消、保护、显示上限及结构编辑后重新绑定。6 项 FormulaAudit 桌面检查通过，证据 `artifacts/avalonia/workspace/20261105-085412-e05fd017`，含正常菜单入口、跨表导航不变脏、输入变化刷新、过期导航拒绝和关闭释放。按用户要求独立提交，网格箭头、错误导航及逐步求值在后续独立功能中继续推进。

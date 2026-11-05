@@ -145,7 +145,7 @@ public sealed class WorkbookDependencyIndex
         return found;
     }
 
-    private IEnumerable<CellAddress> DirectDependents(CellAddress address, Action check) =>
+    internal IEnumerable<CellAddress> DirectDependents(CellAddress address, Action check) =>
         _ranges.TryGetValue(address.SheetId, out var root) && root is not null
             ? root.Query(address.Row, address.Column, check) : [];
 
