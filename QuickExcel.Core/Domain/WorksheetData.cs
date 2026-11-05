@@ -7,13 +7,39 @@ public enum AutoFilterComparison { Equal, NotEqual, LessThan, LessThanOrEqual, G
 public sealed record AutoFilterCondition(AutoFilterComparison Comparison, string Operand);
 public sealed record AutoFilterColor(bool Font, string? Argb);
 public sealed record AutoFilterTop(int Count, bool Percent = false, bool Bottom = false);
+public sealed record AutoFilterDateGroup(int Year, int? Month = null, int? Day = null)
+{
+    public void Validate()
+    {
+        if (Year is < 1900 or > 9999 || Month is < 1 or > 12 || Day is not null &&
+            (Month is null || Day < 1 || Day > (Year == 1900 && Month == 2 ? 29 : DateTime.DaysInMonth(Year, Month.Value))))
+            throw new ArgumentException(MessageText.Get("日期分组必须是有效的 YYYY、YYYY-MM 或 YYYY-MM-DD（1900–9999 年）。"));
+    }
+    public static AutoFilterDateGroup Parse(string text)
+    {
+        var parts = text.Trim().Split('-');
+        if (parts.Length is < 1 or > 3 || parts[0].Length != 4 || parts.Skip(1).Any(p => p.Length != 2) || parts.Any(p => p.Any(c => c is < '0' or > '9')))
+            throw new ArgumentException(MessageText.Get("日期分组必须是有效的 YYYY、YYYY-MM 或 YYYY-MM-DD（1900–9999 年）。"));
+        var group = new AutoFilterDateGroup(int.Parse(parts[0]), parts.Length >= 2 ? int.Parse(parts[1]) : null, parts.Length == 3 ? int.Parse(parts[2]) : null);
+        group.Validate(); return group;
+    }
+    public override string ToString() => Year.ToString("D4", System.Globalization.CultureInfo.InvariantCulture) +
+        (Month is { } month ? "-" + month.ToString("D2", System.Globalization.CultureInfo.InvariantCulture) : "") +
+        (Day is { } day ? "-" + day.ToString("D2", System.Globalization.CultureInfo.InvariantCulture) : "");
+}
 
 /// <summary>Excel checklist labels or one/two custom conditions. Column indexes are absolute model coordinates.</summary>
 public sealed class AutoFilterColumn
 {
     public AutoFilterColumn(IEnumerable<string>? values = null, bool includeBlank = false,
-        AutoFilterCondition? first = null, AutoFilterCondition? second = null, bool useAnd = false, bool showButton = true, AutoFilterColor? color = null, AutoFilterTop? top = null)
+        AutoFilterCondition? first = null, AutoFilterCondition? second = null, bool useAnd = false, bool showButton = true, AutoFilterColor? color = null, AutoFilterTop? top = null,
+        IEnumerable<AutoFilterDateGroup>? dateGroups = null)
     {
+        DateGroups = dateGroups?.Take(10_001).ToImmutableArray() ?? [];
+        if (DateGroups.Length > 10_000 || !DateGroups.IsEmpty && (first is not null || second is not null || color is not null || top is not null))
+            throw new ArgumentException(MessageText.Get("日期分组最多 10,000 项，不能与自定义、颜色或前后项条件混用。"));
+        foreach (var group in DateGroups) group.Validate();
+        if (!DateGroups.IsEmpty) values ??= [];
         if (top is not null && (color is not null || values is not null || includeBlank || first is not null || second is not null || top.Count < 1 || top.Count > (top.Percent ? 100 : 500)))
             throw new ArgumentException(MessageText.Get("前后项筛选需要独立的 1–500 项或 1–100 百分比。"));
         Top = top;
@@ -51,7 +77,7 @@ public sealed class AutoFilterColumn
         if (Values is { } list && (list.Length > 100_000 || list.Any(v => v is null || v.Length > WorkbookLimits.MaxCellTextLength)) ||
             Values is not null && First is not null || Second is not null && First is null || Values is null && includeBlank)
             throw new ArgumentException(MessageText.Get("筛选值列表或条件无效。"));
-        if (Values is { IsEmpty: true } && !includeBlank) throw new ArgumentException(MessageText.Get("请至少选择一个值或空白；Excel 不支持可重应用的空值列表。"));
+        if (Values is { IsEmpty: true } && !includeBlank && DateGroups.IsEmpty) throw new ArgumentException(MessageText.Get("请至少选择一个值或空白；Excel 不支持可重应用的空值列表。"));
         if (Values?.Sum(s => (long)s.Length) > 8 * 1024 * 1024) throw new ArgumentException(MessageText.Get("筛选值文本超过 8 Mi 字符。"));
     }
     public ImmutableArray<string>? Values { get; }
@@ -62,10 +88,11 @@ public sealed class AutoFilterColumn
     public bool ShowButton { get; }
     public AutoFilterColor? Color { get; }
     public AutoFilterTop? Top { get; }
+    public ImmutableArray<AutoFilterDateGroup> DateGroups { get; }
     public bool HasCriteria => Values is not null || First is not null || Color is not null || Top is not null;
-    public AutoFilterColumn WithButton(bool showButton) => new(Values, IncludeBlank, First, Second, UseAnd, showButton, Color, Top);
+    public AutoFilterColumn WithButton(bool showButton) => new(Values, IncludeBlank, First, Second, UseAnd, showButton, Color, Top, DateGroups);
     public bool ContentEquals(AutoFilterColumn other) => IncludeBlank == other.IncludeBlank && First == other.First && Second == other.Second &&
-        Color == other.Color && Top == other.Top && UseAnd == other.UseAnd && ShowButton == other.ShowButton && (Values is null ? other.Values is null : other.Values is { } list && Values.Value.SequenceEqual(list));
+        Color == other.Color && Top == other.Top && DateGroups.SequenceEqual(other.DateGroups) && UseAnd == other.UseAnd && ShowButton == other.ShowButton && (Values is null ? other.Values is null : other.Values is { } list && Values.Value.SequenceEqual(list));
 }
 
 public sealed class WorksheetAutoFilter

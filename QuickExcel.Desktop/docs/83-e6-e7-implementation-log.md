@@ -103,3 +103,13 @@ The preview commits one undoable criterion and rejects stale document identity o
 独立 Excel 8 案例覆盖前 2/3 项、后 2 项、前后 50%、前 1%、与其他列条件组合及 Table；另验证错误列和无数字列拒绝。QuickExcel 文件在 Excel 重新应用结果一致，样本及 SHA-256 为 `Fixtures/excel-top-filters.json`，证据 `artifacts/e6/top-filter-excel-06`。01–04 失败保留了错误列不能应用的发现，05 为首次有效数据对照；没有把失败状态当作排名结果。
 
 32 项前后项/既有筛选/分类汇总/本地化检查通过，8 项 AdvancedFilters 桌面检查通过，证据 `artifacts/avalonia/workspace/20261105-080907-1aa857b5`。生产发布及自检通过，活动包 `artifacts/avalonia/releases/20261105-080951-03b772d4/application`，清单哈希已核对。
+
+## XC-0605c — 日期分组 / Calendar date groups
+
+2026-11-05，1.26.0 源码。支持公历年/月/日、OR 组合、值列表与空白共存、两种日期系统及 1900 虚构闰日。仅日期格式数字匹配，常规数字和文本日期不误判，小时小数仍保留在原值。普通范围与 Table 共用模型，标准 dateGroupItem 输出，以及本机 Excel richdata2 日期包装的严格读取；未知扩展、非公历与小时以下分组保留原包。
+
+The normal filter menu accepts invariant YYYY / YYYY-MM / YYYY-MM-DD lines, applies one undoable edit, and rejects canceled or stale dialogs. History and save budgets include date groups. The 10,000-group limit and script-criteria limitation are explicit. Icons, horizontal sorting and locale collation were evaluated in document 50; their required display/attachment/collation models are not yet complete.
+
+验证：51 项日期/颜色/排名/筛选/分类汇总/本地化测试通过；12 项 AdvancedFilters 桌面检查通过，证据 `artifacts/avalonia/workspace/20261105-082502-09227465`。独立 Excel 8 案例及 QuickExcel 输出重应用通过，证据 `artifacts/e6/date-filter-excel-02`，固定原生 XML、版本和 SHA-256 为 `Fixtures/excel-date-filters.json`。Table 往返为自动化存储验证。桌面初次检查发现测试夹具未设置规范化数字格式 ID，修正为 ID 0 + 自定义代码后通过，失败证据保留。
+
+按用户新的交付要求，本项验证后独立提交，E6/E7 全部完成后统一生产发布；当前活动包仍为 1.25.0。 / This source change is committed independently; production publication is deferred until all requested E6/E7 work is complete.

@@ -69,8 +69,21 @@ public static class WorksheetFilterEngine
         if (column.Values is { } values)
         {
             var labels = values.ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var years = column.DateGroups.Where(g => g.Month is null).Select(g => g.Year).ToHashSet();
+            var months = column.DateGroups.Where(g => g.Month is not null && g.Day is null).Select(g => (g.Year, g.Month!.Value)).ToHashSet();
+            var days = column.DateGroups.Where(g => g.Day is not null).Select(g => (g.Year, g.Month!.Value, g.Day!.Value)).ToHashSet();
+            bool DateMatches(CellValue value, StyleDefinition style, ExcelDateSystem system)
+            {
+                if (column.DateGroups.IsEmpty || value.Kind != CellValueKind.Number || value.NumberValue < 0 || !CellDisplayFormatter.IsDateFormat(style, value.NumberValue)) return false;
+                var serial = new ExcelSerialDate(Math.Floor(value.NumberValue), system);
+                int year, month, day;
+                if (serial.IsFictitiousLeapDay) { year = 1900; month = 2; day = 29; }
+                else if (serial.TryToDateTime(out var date)) { year = date.Year; month = date.Month; day = date.Day; }
+                else return false;
+                return years.Contains(year) || months.Contains((year, month)) || days.Contains((year, month, day));
+            }
             return (value, style, system) => value.Kind == CellValueKind.Blank || value.Kind == CellValueKind.Text && value.TextValue.Length == 0
-                ? column.IncludeBlank : labels.Contains(ValueLabel(value, style, system));
+                ? column.IncludeBlank : DateMatches(value, style, system) || labels.Count > 0 && labels.Contains(ValueLabel(value, style, system));
         }
         if (column.First is null) return (_, _, _) => true;
         var first = Condition(column.First); var second = column.Second is null ? null : Condition(column.Second);

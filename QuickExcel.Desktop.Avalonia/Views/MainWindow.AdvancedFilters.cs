@@ -5,6 +5,23 @@ namespace QuickExcel.Desktop.Avalonia;
 
 public sealed partial class MainWindow
 {
+    private async Task DateGroupFilterAsync(WorkbookSnapshot snapshot, WorksheetSnapshot sheet, WorksheetTable? table, WorksheetAutoFilter filter, int column)
+    {
+        var session = Document.Session.SessionId; var old = filter.Columns.GetValueOrDefault(column);
+        var dialog = new FieldsDialog(UiText.Get("按年月日筛选"))
+            .Note(UiText.Get("每行输入一个 YYYY、YYYY-MM 或 YYYY-MM-DD，任一日期分组命中即可。仅匹配采用日期格式的数值；保留日期的小数时间。确定后替换此列全部筛选条件。"))
+            .Text("dates", UiText.Get("日期分组（每行一项）"), old is null ? "" : string.Join(Environment.NewLine, old.DateGroups), multiline: true)
+            .Check("blank", UiText.Get("包括空白"), old?.IncludeBlank ?? false);
+        AutoFilterColumn Rule() => new(values: [], includeBlank: dialog.Boolean("blank"), showButton: old?.ShowButton ?? true,
+            dateGroups: dialog.String("dates").Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Select(AutoFilterDateGroup.Parse));
+        dialog.Validate = () => _ = Rule();
+        if (!await dialog.ShowAsync(this)) return;
+        if (session != Document.Session.SessionId || Document.Snapshot.ActiveSheetId != sheet.Id || Document.Snapshot.Revision != snapshot.Revision)
+            throw new InvalidOperationException(UiText.Get("文档已改变，请重新预览。"));
+        var next = new WorksheetAutoFilter(filter.Range, filter.Columns.SetItem(column, Rule()));
+        await ExecuteAsync(table is null ? new SetAutoFilterCommand(sheet.Id, next) : new SetTableFilterCommand(sheet.Id, table.Id, next), snapshot.Revision);
+        await CalculatePendingAsync(); _grid.Select(new(filter.Range.Top, column));
+    }
     private async Task TopFilterAsync(WorkbookSnapshot snapshot, WorksheetSnapshot sheet, WorksheetTable? table, WorksheetAutoFilter filter, int column)
     {
         var session = Document.Session.SessionId; var old = filter.Columns.GetValueOrDefault(column)?.Top;

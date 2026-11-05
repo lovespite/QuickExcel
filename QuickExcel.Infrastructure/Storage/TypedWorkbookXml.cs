@@ -462,7 +462,7 @@ internal static class TypedWorkbookXml
             allocation += sheet.Data.Charts.Sum(c => c.EstimatedBytes * 4);
             foreach (var filter in sheet.Data.AllFilters)
                 allocation += (filter.Range.Bottom - filter.Range.Top + 1L) * 256L + filter.Columns.Values.Sum(c =>
-                    (c.Values?.Sum(v => (long)v.Length) ?? 0) * 8L + ((c.First?.Operand.Length ?? 0) + (c.Second?.Operand.Length ?? 0)) * 8L + 512L);
+                    c.DateGroups.Length * 128L + (c.Values?.Sum(v => (long)v.Length) ?? 0) * 8L + ((c.First?.Operand.Length ?? 0) + (c.Second?.Operand.Length ?? 0)) * 8L + 512L);
             allocation += sheet.Data.Tables.Sum(t => 2048L + t.Style.Elements.Length * 512L + t.Columns.Sum(c => 512L + 8L * (c.Name.Length + (c.CalculatedFormula?.Length ?? 0) + (c.TotalsFormula?.Length ?? 0) + (c.TotalsLabel?.Length ?? 0))));
             allocation += sheet.Data.Validations.Sum(v => v.EstimatedBytes * 4);
             allocation += sheet.Data.ConditionalFormats.Sum(v => v.EstimatedBytes * 4);

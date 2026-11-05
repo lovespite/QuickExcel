@@ -60,6 +60,9 @@ internal sealed class FilterPanel : Border
         panel.Children.Add(Command("FilterClearAll", UiText.Get("清除全部筛选条件"), () => Completed?.Invoke(new("clear-all"))));
         panel.Children.Add(Command("FilterColor", UiText.Get("按基础颜色筛选…"), () => Completed?.Invoke(new("color"))));
         panel.Children.Add(Command("FilterTop", UiText.Get("前后 N 项 / 百分比…"), () => Completed?.Invoke(new("top"))));
+        panel.Children.Add(Command("FilterDateGroups", UiText.Get("按年月日筛选…"), () => Completed?.Invoke(new("dates"))));
+        if (current?.Stored is { DateGroups.IsEmpty: false } dates)
+            panel.Children.Add(new TextBlock { Text = UiText.Get("日期分组") + ": " + string.Join(", ", dates.DateGroups.Take(5)) + (dates.DateGroups.Length > 5 ? " …" : ""), Margin = new(8, 0), TextWrapping = TextWrapping.Wrap });
         if (current?.Stored?.Top is { } top)
             panel.Children.Add(new TextBlock { Text = (top.Bottom ? UiText.Get("最小值优先") : UiText.Get("最大值优先")) + " " + top.Count + (top.Percent ? "%" : UiText.Get("项")), Margin = new(8, 0) });
         if (current?.Stored?.Color is { } color)

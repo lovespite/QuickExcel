@@ -36,18 +36,29 @@ internal static class XlsxFiltering
                 var columns = new Dictionary<int, AutoFilterColumn>();
                 foreach (var column in auto.Elements(Main + "filterColumn"))
                 {
-                    Shape(column, "filters customFilters colorFilter top10", "colId hiddenButton showButton");
+                    Shape(column, "filters customFilters colorFilter top10 extLst", "colId hiddenButton showButton");
                     var index = Int(Attr(column, "colId"), range.Right - range.Left) + range.Left;
                     var button = !Bool((string?)column.Attribute("hiddenButton")) && (column.Attribute("showButton") is null || Bool((string?)column.Attribute("showButton")));
                     if (column.Elements().Count() > 1) throw new NotSupportedException("多个筛选条件类型不能混用。");
                     AutoFilterColumn value;
-                    if (column.Element(Main + "filters") is { } values)
+                    if ((column.Element(Main + "filters") ?? ReadDateExtension(column)) is { } values)
                     {
-                        Shape(values, "filter", "blank");
+                        Shape(values, "filter dateGroupItem", "blank calendarType");
+                        if (values.Attribute("calendarType") is { Value: not "gregorian" }) throw new NotSupportedException(MessageText.Get("日期筛选仅支持公历年月日分组。"));
                         var labels = new List<string>();
-                        foreach (var item in values.Elements()) { Shape(item, "", "val"); labels.Add(Decode(item.Attribute("val")?.Value ?? throw new InvalidDataException("筛选值缺失。"))); }
-                        if (labels.Count == 0 && !Bool((string?)values.Attribute("blank"))) throw new NotSupportedException("空筛选列表无法确定可重应用语义。");
-                        value = new(labels, Bool((string?)values.Attribute("blank")), showButton: button);
+                        foreach (var item in values.Elements(Main + "filter")) { Shape(item, "", "val"); labels.Add(Decode(item.Attribute("val")?.Value ?? throw new InvalidDataException("筛选值缺失。"))); }
+                        var groups = new List<AutoFilterDateGroup>();
+                        foreach (var item in values.Elements(Main + "dateGroupItem"))
+                        {
+                            var grouping = Attr(item, "dateTimeGrouping");
+                            Shape(item, "", grouping switch { "year" => "year dateTimeGrouping", "month" => "year month dateTimeGrouping", "day" => "year month day dateTimeGrouping", _ => throw new NotSupportedException(MessageText.Get("日期筛选仅支持公历年月日分组。")) });
+                            var group = new AutoFilterDateGroup(Int(Attr(item, "year"), 9999), grouping is "month" or "day" ? Int(Attr(item, "month"), 12) : null, grouping == "day" ? Int(Attr(item, "day"), 31) : null);
+                            try { group.Validate(); } catch (ArgumentException ex) { throw new NotSupportedException(ex.Message, ex); }
+                            groups.Add(group);
+                            if (groups.Count > 10_000) throw new NotSupportedException(MessageText.Get("日期分组最多 10,000 项，不能与自定义、颜色或前后项条件混用。"));
+                        }
+                        if (labels.Count == 0 && groups.Count == 0 && !Bool((string?)values.Attribute("blank"))) throw new NotSupportedException("空筛选列表无法确定可重应用语义。");
+                        value = new(labels, Bool((string?)values.Attribute("blank")), showButton: button, dateGroups: groups);
                     }
                     else if (column.Element(Main + "customFilters") is { } custom)
                     {
@@ -110,6 +121,26 @@ internal static class XlsxFiltering
             catch (NotSupportedException ex) { package.Loss(ex.Message + " 原排序状态随原包保留。", "worksheet/sortState", path, sorts[0]); }
         }
         return new(filter, sort);
+    }
+
+    // Recent Excel emits this narrowly defined rich-data wrapper even for ordinary dates.
+    // Unknown wrappers, attributes or rich-data properties remain on the preservation path.
+    private static XElement? ReadDateExtension(XElement column)
+    {
+        if (column.Element(Main + "extLst") is not { } list) return null;
+        Shape(list, "ext", "");
+        var extensions = list.Elements().ToArray();
+        if (extensions.Length != 1 || (string?)extensions[0].Attribute("uri") != "{1AD28BCE-077C-4C59-8B6E-1921CE8616D4}")
+            throw new NotSupportedException(MessageText.Get("日期筛选扩展包含未支持的内容。"));
+        XNamespace rich = "http://schemas.microsoft.com/office/spreadsheetml/2017/richdata2";
+        var ext = extensions[0];
+        if (ext.Attributes().Any(a => !a.IsNamespaceDeclaration && a.Name != "uri") || ext.Elements().Count() != 1 || ext.Element(rich + "filterColumn") is not { } wrapper ||
+            wrapper.Attributes().Any(a => !a.IsNamespaceDeclaration) || wrapper.Elements().Count() != 1 || wrapper.Element(rich + "filters") is not { } filters ||
+            filters.DescendantsAndSelf().Any(e => e.Name.Namespace != rich))
+            throw new NotSupportedException(MessageText.Get("日期筛选扩展包含未支持的内容。"));
+        var result = new XElement(filters);
+        foreach (var item in result.DescendantsAndSelf()) item.Name = Main + item.Name.LocalName;
+        return result;
     }
 
     private static WorksheetSortState ReadSort(XlsxPackage package, string workbook, XElement root)
@@ -226,7 +257,10 @@ internal static class XlsxFiltering
                 column.Add(new XElement(Main + "colorFilter", new XAttribute("dxfId", AddDifferentialStyle(styles, dxf)), new XAttribute("cellColor", color.Font ? 0 : 1)));
             }
             else if (value.Values is { } list) column.Add(new XElement(Main + "filters", value.IncludeBlank ? new XAttribute("blank", 1) : null,
-                list.Select(v => new XElement(Main + "filter", new XAttribute("val", Encode(v))))));
+                list.Select(v => new XElement(Main + "filter", new XAttribute("val", Encode(v)))),
+                value.DateGroups.Select(g => new XElement(Main + "dateGroupItem", new XAttribute("year", g.Year),
+                    g.Month is { } month ? new XAttribute("month", month) : null, g.Day is { } day ? new XAttribute("day", day) : null,
+                    new XAttribute("dateTimeGrouping", g.Day is not null ? "day" : g.Month is not null ? "month" : "year")))));
             else if (value.First is not null)
                 column.Add(new XElement(Main + "customFilters", value.UseAnd ? new XAttribute("and", 1) : null,
                     new[] { value.First, value.Second }.OfType<AutoFilterCondition>().Select(c => new XElement(Main + "customFilter",

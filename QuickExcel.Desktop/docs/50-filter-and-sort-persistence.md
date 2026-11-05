@@ -53,3 +53,13 @@ The comparison color is stored in a fill DXF for both fill and font filters, mat
 2026-11-05，1.25.0：前/后 1–500 项、1–100 百分比按完整筛选列的数字排名，包含并列、手动隐藏，独立于其他列条件；百分比向下取整且至少一项。文本、布尔和空白不计数；含错误或没有数值的列拒绝，匹配本机 Excel 行为。Table 支持相同排名语义。旧 filterVal 只作格式验证，阈值重新由当前数据推导；来源隐藏状态与条件不符时仍保留原包。
 
 Ranking filters persist through native top10 elements. SUBTOTAL dependencies include the full ranking column even when its own sum range is smaller, so threshold changes invalidate the correct results. Imported fractional counts or unsupported filter combinations remain preserved and reported.
+
+## XC-0605c 补充 / Calendar date groups
+
+1.26.0 支持 1900–9999 公历年、年月、年月日分组及 OR 组合，与值列表/空白共存。数字必须使用支持的日期格式，常规数字、文本日期、布尔及错误不匹配日期分组；不改变小数时间，包含 1900 虚构闰日。两种日期系统、Table 与普通筛选使用相同模型；最多 10,000 分组并计入历史/存储预算。桌面输入使用不依赖区域的 YYYY、YYYY-MM、YYYY-MM-DD。
+
+Standard dateGroupItem filters and the exact Excel richdata2 date-filter wrapper are read. Output uses standard dateGroupItem elements. Non-Gregorian calendars, finer time groups and unknown extension content remain preserved. Script criteria access reports the unsupported date-group object explicitly.
+
+后续评估：图标筛选依赖条件格式图标集及显示图标身份，目前没有完整渲染/比较模型，保持原包保护；从左到右排序需要按列搬移所有附件、名称与结构引用的专用变换，不能复用按行复制语义；地区排序需要固定 Excel 排序语言、版本和拼音/笔画对照样本，现有固定比较规则不宣称地区一致。这三项属于 82 号文档要求的评估，未开放不可靠的编辑能力。
+
+Icon filtering needs modeled icon-set display identities. Horizontal sorting needs column-specific attachment/reference transforms. Locale sorting needs pinned collation and independent Excel evidence; these evaluated extensions remain outside the editable subset.

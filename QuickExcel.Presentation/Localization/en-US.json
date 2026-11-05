@@ -2313,5 +2313,16 @@
   "单位": "Unit",
   "按完整筛选列的数值计算阈值，包含手动隐藏行，不受其他列条件影响；并列值全部保留。文本、空白和布尔不参与排名；列含错误时拒绝筛选。百分比向下取整且至少保留一项。": "Rank numeric values in the entire filter column, including manually hidden rows, independently of other column criteria. Keep all ties. Text, blanks and booleans are excluded; errors cause rejection. Percent counts are rounded down, with at least one item.",
   "最大值优先": "Largest values",
-  "最小值优先": "Smallest values"
+  "最小值优先": "Smallest values",
+  "日期分组必须是有效的 YYYY、YYYY-MM 或 YYYY-MM-DD（1900–9999 年）。": "Date groups must be valid YYYY, YYYY-MM or YYYY-MM-DD values (years 1900–9999).",
+  "日期分组最多 10,000 项，不能与自定义、颜色或前后项条件混用。": "Date filters support up to 10,000 groups and cannot mix custom, color or top/bottom criteria.",
+  "日期筛选仅支持公历年月日分组。": "Date filters support Gregorian year, month and day groups only.",
+  "日期筛选扩展包含未支持的内容。": "The date filter extension contains unsupported content.",
+  "日期分组筛选条件尚未暴露给脚本 API。请通过桌面筛选入口编辑。": "Date-group criteria are not yet exposed by the script API. Edit them through the desktop filter menu.",
+  "按年月日筛选": "Filter by year, month or day",
+  "按年月日筛选…": "Filter by year, month or day…",
+  "日期分组": "Date groups",
+  "日期分组（每行一项）": "Date groups (one per line)",
+  "包括空白": "Include blanks",
+  "每行输入一个 YYYY、YYYY-MM 或 YYYY-MM-DD，任一日期分组命中即可。仅匹配采用日期格式的数值；保留日期的小数时间。确定后替换此列全部筛选条件。": "Enter one YYYY, YYYY-MM or YYYY-MM-DD per line. Any group may match. Only date-formatted numbers match; time fractions are preserved. Applying replaces all criteria for this column."
 }

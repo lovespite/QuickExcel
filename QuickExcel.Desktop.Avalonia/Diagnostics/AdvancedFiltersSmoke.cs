@@ -59,6 +59,26 @@ public sealed partial class MainWindow
             Check(Document.Snapshot.Sheets[0].Data.Filter!.Columns[0].Top == new AutoFilterTop(2), "Column filter menu applies top N criteria");
             Check(WorksheetFilterEngine.Evaluate(Document.Snapshot, id).SetEquals([1]), "Top N hides rows below the numeric threshold");
             await History(false); Check(Document.Snapshot.Sheets[0].Data.Filter!.Columns.Count == 0, "Top N criteria are one undoable change");
+            _workspace.Editor.SetCells(0, GridClipboard.Prepare("46331\n46356\n46357", new(1, 0, 3, 0), false));
+            await ExecuteAsync(new SetCellStyleCommand([new(id, 1, 0), new(id, 2, 0), new(id, 3, 0)], new(NumberFormatId: 0, NumberFormatCode: "yyyy-mm-dd")));
+            async Task ChooseDates(FilterPanel panel)
+            {
+                await global::Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => { }, global::Avalonia.Threading.DispatcherPriority.Background);
+                panel.GetVisualDescendants().OfType<Button>().Single(b => b.Name == "FilterDateGroups").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            }
+            _filterDriver = ChooseDates; _dialogDriver = w => { w.Close(false); return Task.CompletedTask; };
+            revision = Document.Snapshot.Revision; await FilterAsync(0); Check(Document.Snapshot.Revision == revision, "Cancel date grouping preserves criteria");
+            _filterDriver = ChooseDates; _dialogDriver = w => { ((TextBox)((FieldsDialog)w).Input("dates")).Text = "2026-11"; w.Close(true); return Task.CompletedTask; };
+            await FilterAsync(0);
+            Check(WorksheetFilterEngine.Evaluate(Document.Snapshot, id).SetEquals([3]), "Column menu filters a calendar month without matching December");
+            await History(false); Check(Document.Snapshot.Sheets[0].Data.Filter!.Columns.Count == 0, "Date group is one undoable edit");
+            _filterDriver = ChooseDates; _dialogDriver = w =>
+            {
+                ((TextBox)((FieldsDialog)w).Input("dates")).Text = "2026";
+                _workspace.Editor.SetCell(0, 8, 0, "date newer"); w.Close(true); return Task.CompletedTask;
+            };
+            rejected = false; try { await FilterAsync(0); } catch (InvalidOperationException) { rejected = true; }
+            Check(rejected && Document.Snapshot.Sheets[0].Data.Filter!.Columns.Count == 0, "Stale date dialog does not change filter criteria");
         }
         catch (Exception ex) { failure = ex; }
         finally { _dialogDriver = null; _filterDriver = null; }
