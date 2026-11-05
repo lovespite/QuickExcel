@@ -223,7 +223,7 @@ public sealed class PersistentFilteringTests : IDisposable
     {
         var path = FilePath("unknown.xlsx"); _storage.Save(path, Fixture());
         EditPart(path, root => root.Element(Ns + "sheetData")!.AddAfterSelf(new XElement(Ns + "autoFilter", new XAttribute("ref", "A1:B5"),
-            new XElement(Ns + "filterColumn", new XAttribute("colId", 1), new XElement(Ns + "top10", new XAttribute("val", 2))))));
+            new XElement(Ns + "filterColumn", new XAttribute("colId", 1), new XElement(Ns + "iconFilter", new XAttribute("iconSet", "3Arrows"), new XAttribute("iconId", 2))))));
         var bytes = File.ReadAllBytes(path); var read = _storage.Open(path); Assert.Null(read.Sheets[0].Data.Filter);
         Assert.Contains(read.FileState!.CompatibilityDiagnostics, d => d.Feature == "worksheet/autoFilter");
         _storage.Save(FilePath("unchanged.xlsx"), read); Assert.Equal(bytes, File.ReadAllBytes(FilePath("unchanged.xlsx")));

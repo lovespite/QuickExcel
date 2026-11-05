@@ -7,7 +7,7 @@ namespace QuickExcel.Calculation;
 internal sealed partial class TypedEvaluator
 {
     private readonly Dictionary<CellAddress, bool> _nestedSubtotals = [];
-    private readonly Dictionary<AutoFilterColumn, Func<CellValue, StyleDefinition, ExcelDateSystem, bool>> _filterPredicates = [];
+    private readonly Dictionary<(SheetId, WorksheetAutoFilter, int), Func<CellValue, StyleDefinition, ExcelDateSystem, bool>> _filterPredicates = [];
     private readonly Dictionary<(SheetId, int), bool> _subtotalFiltered = [];
     private Range SubtotalReference(FormulaNode node)
     {
@@ -34,12 +34,21 @@ internal sealed partial class TypedEvaluator
         if (_subtotalFiltered.TryGetValue((sheet.Id, row), out var excluded)) return excluded;
         foreach (var filter in sheet.Data.AllFilters)
         {
-            WorksheetFilterEngine.RequireColorScope(sheet, filter);
             if (row <= filter.Range.Top || row > filter.Range.Bottom) continue;
             foreach (var pair in filter.Columns)
             {
                 check(); var value = Read(sheet, row, pair.Key);
-                if (!_filterPredicates.TryGetValue(pair.Value, out var predicate)) _filterPredicates[pair.Value] = predicate = WorksheetFilterEngine.Compile(pair.Value);
+                var key = (sheet.Id, filter, pair.Key);
+                if (!_filterPredicates.TryGetValue(key, out var predicate))
+                {
+                    try
+                    {
+                        WorksheetFilterEngine.RequireColorScope(sheet, filter);
+                        _filterPredicates[key] = predicate = WorksheetFilterEngine.Compile(pair.Value,
+                            pair.Value.Top is null ? null : Enumerable.Range(filter.Range.Top + 1, filter.Range.Rows - 1).Select(r => { check(); return Read(sheet, r, pair.Key); }));
+                    }
+                    catch (InvalidOperationException ex) { throw new FormulaValueException(CellErrorCode.Value, ex.Message); }
+                }
                 if (!predicate(value, TablePresentation.NumberStyle(sheet, snapshot.Styles, row, pair.Key), snapshot.DateSystem)) return _subtotalFiltered[(sheet.Id, row)] = true;
             }
         }

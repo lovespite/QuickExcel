@@ -21,7 +21,9 @@ public static class SubtotalFunctions
             {
                 var first = Math.Max(reference.Row, filter.Range.Top + 1); var last = Math.Min(reference.EndRow, filter.Range.Bottom);
                 if (first > last) continue;
-                foreach (var column in filter.Columns.Keys) yield return new(sheet.Name, first, column, last, column, IsRange: true);
+                foreach (var (column, rule) in filter.Columns)
+                    yield return new(sheet.Name, rule.Top is null ? first : filter.Range.Top + 1, column,
+                        rule.Top is null ? last : filter.Range.Bottom, column, IsRange: true);
             }
         }
     }

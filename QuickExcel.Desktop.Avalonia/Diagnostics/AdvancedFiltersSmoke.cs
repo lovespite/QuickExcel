@@ -49,6 +49,16 @@ public sealed partial class MainWindow
             };
             var rejected = false; try { await FilterAsync(0); } catch (InvalidOperationException) { rejected = true; }
             Check(rejected && Document.Snapshot.Sheets[0].Data.Filter!.Columns.Count == 0 && Document.GetCellInput(0, 8, 0) == "newer", "Stale color dialog preserves newer edits without applying criteria");
+            _filterDriver = async panel =>
+            {
+                await global::Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => { }, global::Avalonia.Threading.DispatcherPriority.Background);
+                panel.GetVisualDescendants().OfType<Button>().Single(b => b.Name == "FilterTop").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            };
+            _dialogDriver = w => { ((TextBox)((FieldsDialog)w).Input("count")).Text = "2"; w.Close(true); return Task.CompletedTask; };
+            await FilterAsync(0);
+            Check(Document.Snapshot.Sheets[0].Data.Filter!.Columns[0].Top == new AutoFilterTop(2), "Column filter menu applies top N criteria");
+            Check(WorksheetFilterEngine.Evaluate(Document.Snapshot, id).SetEquals([1]), "Top N hides rows below the numeric threshold");
+            await History(false); Check(Document.Snapshot.Sheets[0].Data.Filter!.Columns.Count == 0, "Top N criteria are one undoable change");
         }
         catch (Exception ex) { failure = ex; }
         finally { _dialogDriver = null; _filterDriver = null; }

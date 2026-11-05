@@ -6,13 +6,17 @@ namespace QuickExcel.Domain;
 public enum AutoFilterComparison { Equal, NotEqual, LessThan, LessThanOrEqual, GreaterThan, GreaterThanOrEqual }
 public sealed record AutoFilterCondition(AutoFilterComparison Comparison, string Operand);
 public sealed record AutoFilterColor(bool Font, string? Argb);
+public sealed record AutoFilterTop(int Count, bool Percent = false, bool Bottom = false);
 
 /// <summary>Excel checklist labels or one/two custom conditions. Column indexes are absolute model coordinates.</summary>
 public sealed class AutoFilterColumn
 {
     public AutoFilterColumn(IEnumerable<string>? values = null, bool includeBlank = false,
-        AutoFilterCondition? first = null, AutoFilterCondition? second = null, bool useAnd = false, bool showButton = true, AutoFilterColor? color = null)
+        AutoFilterCondition? first = null, AutoFilterCondition? second = null, bool useAnd = false, bool showButton = true, AutoFilterColor? color = null, AutoFilterTop? top = null)
     {
+        if (top is not null && (color is not null || values is not null || includeBlank || first is not null || second is not null || top.Count < 1 || top.Count > (top.Percent ? 100 : 500)))
+            throw new ArgumentException(MessageText.Get("前后项筛选需要独立的 1–500 项或 1–100 百分比。"));
+        Top = top;
         if (color is not null && (values is not null || includeBlank || first is not null || second is not null ||
             color.Font && color.Argb is null || color.Argb is { } rgb && (rgb.Length != 8 || !rgb.StartsWith("FF", StringComparison.OrdinalIgnoreCase) || rgb.Any(c => !Uri.IsHexDigit(c)))))
             throw new ArgumentException(MessageText.Get("颜色筛选需要独立的不透明 ARGB 颜色，或无填充。"));
@@ -57,10 +61,11 @@ public sealed class AutoFilterColumn
     public bool UseAnd { get; }
     public bool ShowButton { get; }
     public AutoFilterColor? Color { get; }
-    public bool HasCriteria => Values is not null || First is not null || Color is not null;
-    public AutoFilterColumn WithButton(bool showButton) => new(Values, IncludeBlank, First, Second, UseAnd, showButton, Color);
+    public AutoFilterTop? Top { get; }
+    public bool HasCriteria => Values is not null || First is not null || Color is not null || Top is not null;
+    public AutoFilterColumn WithButton(bool showButton) => new(Values, IncludeBlank, First, Second, UseAnd, showButton, Color, Top);
     public bool ContentEquals(AutoFilterColumn other) => IncludeBlank == other.IncludeBlank && First == other.First && Second == other.Second &&
-        Color == other.Color && UseAnd == other.UseAnd && ShowButton == other.ShowButton && (Values is null ? other.Values is null : other.Values is { } list && Values.Value.SequenceEqual(list));
+        Color == other.Color && Top == other.Top && UseAnd == other.UseAnd && ShowButton == other.ShowButton && (Values is null ? other.Values is null : other.Values is { } list && Values.Value.SequenceEqual(list));
 }
 
 public sealed class WorksheetAutoFilter

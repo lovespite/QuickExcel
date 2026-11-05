@@ -36,7 +36,7 @@ internal static class XlsxFiltering
                 var columns = new Dictionary<int, AutoFilterColumn>();
                 foreach (var column in auto.Elements(Main + "filterColumn"))
                 {
-                    Shape(column, "filters customFilters colorFilter", "colId hiddenButton showButton");
+                    Shape(column, "filters customFilters colorFilter top10", "colId hiddenButton showButton");
                     var index = Int(Attr(column, "colId"), range.Right - range.Left) + range.Left;
                     var button = !Bool((string?)column.Attribute("hiddenButton")) && (column.Attribute("showButton") is null || Bool((string?)column.Attribute("showButton")));
                     if (column.Elements().Count() > 1) throw new NotSupportedException("多个筛选条件类型不能混用。");
@@ -63,6 +63,16 @@ internal static class XlsxFiltering
                         }
                         try { value = new(first: Condition(items[0]), second: items.Length == 2 ? Condition(items[1]) : null, useAnd: Bool((string?)custom.Attribute("and")), showButton: button); }
                         catch (ArgumentException ex) { throw new NotSupportedException("自定义筛选不能稳定重新应用：" + ex.Message, ex); }
+                    }
+                    else if (column.Element(Main + "top10") is { } top)
+                    {
+                        Shape(top, "", "top percent val filterVal");
+                        if (!double.TryParse(Attr(top, "val"), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var count) || !double.IsFinite(count) || count != Math.Truncate(count) || count is < 1 or > 500)
+                            throw new NotSupportedException(MessageText.Get("前后项筛选数量超出支持范围。"));
+                        if (top.Attribute("filterVal") is { } threshold && (!double.TryParse(threshold.Value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var oldThreshold) || !double.IsFinite(oldThreshold)))
+                            throw new InvalidDataException(MessageText.Get("前后项筛选缓存阈值无效。"));
+                        try { value = new(showButton: button, top: new((int)count, Bool((string?)top.Attribute("percent")), top.Attribute("top") is not null && !Bool((string?)top.Attribute("top")))); }
+                        catch (ArgumentException ex) { throw new NotSupportedException(ex.Message, ex); }
                     }
                     else if (column.Element(Main + "colorFilter") is { } color)
                     {
@@ -207,7 +217,9 @@ internal static class XlsxFiltering
         {
             var column = new XElement(Main + "filterColumn", new XAttribute("colId", index - filter.Range.Left));
             if (!value.ShowButton) column.Add(new XAttribute("hiddenButton", 1));
-            if (value.Color is { } color)
+            if (value.Top is { } top)
+                column.Add(new XElement(Main + "top10", new XAttribute("val", top.Count), new XAttribute("top", top.Bottom ? 0 : 1), new XAttribute("percent", top.Percent ? 1 : 0)));
+            else if (value.Color is { } color)
             {
                 var dxf = new XElement(Main + "dxf", new XElement(Main + "fill", new XElement(Main + "patternFill", new XAttribute("patternType", color.Argb is null ? "none" : "solid"),
                         color.Argb is null ? null : new XElement(Main + "fgColor", new XAttribute("rgb", color.Argb)))));

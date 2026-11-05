@@ -6,7 +6,7 @@
 
 工作表 `autoFilter` 支持显示值列表、空白、一至两个自定义比较条件及 AND/OR，保留筛选按钮可见性。列之间取 AND。列表依据显示值匹配，文本 `10` 和常规数值 10 可同组，而显示 `10.00` 是另一项；空白及空文本合并。数值关系比较保留类型，不将文本编号自动转数值。文本支持 `*`、`?` 和转义；错误、布尔和不等条件有独立 Excel 固定对照。日期区间转换为序列边界。Excel 将单个等值条件及两个 OR 等值条件归一为显示值列表，模型采用同样转换。
 
-拒绝无法稳定重新应用的空列表、含糊空格等值条件；需要显示值匹配但格式未支持或依赖版面空格时拒绝，不能退回原始数字悄悄改变条件。Top 10、动态/日期分组、图标等未支持筛选保留原包并报告（2026-11-05 新增基础颜色筛选，见下节），不替换为已支持条件。来源保存的隐藏行与条件不一致时同样保留原状态并提示在 Excel 重应用。
+拒绝无法稳定重新应用的空列表、含糊空格等值条件；需要显示值匹配但格式未支持或依赖版面空格时拒绝，不能退回原始数字悄悄改变条件。动态/日期分组、图标等未支持筛选保留原包并报告（2026-11-05 新增基础颜色及前后项筛选，见下节），不替换为已支持条件。来源保存的隐藏行与条件不一致时同样保留原状态并提示在 Excel 重应用。
 
 `sortState` 保留区域、最多 32 个排序键、方向、大小写规则、自定义顺序、填充/字体颜色及对应 dxf；支持工作表级及筛选内排序状态。读入不会再次排序。已有稳定矩形排序同时写入设置；即使记录已排好，第一次设置也产生元数据历史。“清除标记”只清除排序设置，保留记录顺序，可撤销。当前排序比较仍采用 ordinal，并不声称支持 Excel 所有地区拼音/笔画排序；导入的 sortMethod 保留供 Excel 使用。从左到右和图标排序先保留/报告。
 
@@ -47,3 +47,9 @@ Excel 原生文件仍可能含本项之外的元数据。比较工具对这类�
 2026-11-05，1.24.0：列筛选菜单支持基础填充色、字体色及无填充，双语界面可输入十六进制颜色。条件格式或 Table 样式所在列暂拒绝，不将显示颜色误解释为基础颜色。条件为文档历史并持久化于 XLSX/XLSQ，修改基础颜色后重应用及 SUBTOTAL 同步更新；手动隐藏继续独立保留。脚本能识别筛选已启用、清除或重应用，尚不暴露新增颜色条件对象，读取该对象明确报告未支持。
 
 The comparison color is stored in a fill DXF for both fill and font filters, matching independently generated Excel files. The colorFilter cellColor flag chooses the cell property. Unsupported patterns retain their original package. Verification and package evidence are recorded in [83](83-e6-e7-implementation-log.md).
+
+## XC-0605b 补充 / Top and bottom filters
+
+2026-11-05，1.25.0：前/后 1–500 项、1–100 百分比按完整筛选列的数字排名，包含并列、手动隐藏，独立于其他列条件；百分比向下取整且至少一项。文本、布尔和空白不计数；含错误或没有数值的列拒绝，匹配本机 Excel 行为。Table 支持相同排名语义。旧 filterVal 只作格式验证，阈值重新由当前数据推导；来源隐藏状态与条件不符时仍保留原包。
+
+Ranking filters persist through native top10 elements. SUBTOTAL dependencies include the full ranking column even when its own sum range is smaller, so threshold changes invalidate the correct results. Imported fractional counts or unsupported filter combinations remain preserved and reported.

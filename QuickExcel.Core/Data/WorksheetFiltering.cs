@@ -28,17 +28,22 @@ public static class WorksheetFilterEngine
         {
         if (filter.Columns.Count == 0) continue;
         RequireColorScope(sheet, filter);
-        var predicates = filter.Columns.Select(p => (Column: p.Key, Match: Compile(p.Value))).ToArray();
+        CellValue ReadValue(int row, int column)
+        {
+            cancellationToken.ThrowIfCancellationRequested(); var cell = sheet.GetCell(row, column);
+            if ((cell?.Content.Kind == CellContentKind.Formula || cell?.SpillOwner is not null) && (cell.Calculation?.Value is null || !allowSourceCaches &&
+                (cell.Calculation.InputRevision != revision || cell.Calculation.State is not (CalculationState.Fresh or CalculationState.Error))))
+                throw new InvalidOperationException(MessageText.Get("筛选列包含待重算或缺少结果的公式，请重算后重新应用或保存。"));
+            return cell?.Value ?? CellValue.Blank;
+        }
+        var predicates = filter.Columns.Select(p => (Column: p.Key, Match: Compile(p.Value,
+            p.Value.Top is null ? null : Enumerable.Range(filter.Range.Top + 1, filter.Range.Rows - 1).Select(row => ReadValue(row, p.Key))))).ToArray();
         for (var row = filter.Range.Top + 1; row <= filter.Range.Bottom; row++)
         {
             cancellationToken.ThrowIfCancellationRequested(); var matches = true;
             foreach (var (column, match) in predicates)
             {
-                var cell = sheet.GetCell(row, column);
-                if (cell?.Content.Kind == CellContentKind.Formula && (cell.Calculation?.Value is null || !allowSourceCaches &&
-                    (cell.Calculation.InputRevision != revision || cell.Calculation.State is not (CalculationState.Fresh or CalculationState.Error))))
-                    throw new InvalidOperationException(MessageText.Get("筛选列包含待重算或缺少结果的公式，请重算后重新应用或保存。"));
-                matches &= match(cell?.Value ?? CellValue.Blank, TablePresentation.NumberStyle(sheet, styles, row, column), system);
+                matches &= match(ReadValue(row, column), TablePresentation.NumberStyle(sheet, styles, row, column), system);
             }
             if (!matches) hidden.Add(row);
         }
@@ -46,8 +51,19 @@ public static class WorksheetFilterEngine
         return hidden.ToImmutable();
     }
 
-    public static Func<CellValue, StyleDefinition, ExcelDateSystem, bool> Compile(AutoFilterColumn column)
+    public static Func<CellValue, StyleDefinition, ExcelDateSystem, bool> Compile(AutoFilterColumn column, IEnumerable<CellValue>? population = null)
     {
+        if (column.Top is { } top)
+        {
+            if (population is null) throw new InvalidOperationException(MessageText.Get("前后项筛选需要完整筛选列上下文。"));
+            var populationValues = population.ToArray();
+            if (populationValues.Any(v => v.Kind == CellValueKind.Error)) throw new InvalidOperationException(MessageText.Get("前后项筛选列包含错误值，请先修正错误。"));
+            var numbers = populationValues.Where(v => v.Kind == CellValueKind.Number).Select(v => v.NumberValue).Order().ToArray();
+            if (numbers.Length == 0) throw new InvalidOperationException(MessageText.Get("前后项筛选列没有可排名的数值。"));
+            var count = Math.Min(numbers.Length, top.Percent ? Math.Max(1, numbers.Length * top.Count / 100) : top.Count);
+            var threshold = numbers[top.Bottom ? count - 1 : numbers.Length - count];
+            return (value, _, _) => value.Kind == CellValueKind.Number && (top.Bottom ? value.NumberValue <= threshold : value.NumberValue >= threshold);
+        }
         if (column.Color is { } color)
             return (_, style, _) => string.Equals(color.Font ? style.FontColor ?? "FF000000" : style.FillColor, color.Argb, StringComparison.OrdinalIgnoreCase);
         if (column.Values is { } values)

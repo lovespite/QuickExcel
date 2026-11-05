@@ -117,6 +117,7 @@ internal sealed partial class ScriptModelAdapter
     private static object Criteria(AutoFilterColumn? column)
     {
         if (column?.Color is not null) throw Unsupported(MessageText.Get("颜色筛选条件尚未暴露给脚本 API。请通过桌面筛选入口编辑。"));
+        if (column?.Top is not null) throw Unsupported(MessageText.Get("前后项筛选条件尚未暴露给脚本 API。请通过桌面筛选入口编辑。"));
         if (column?.Values is { } values) return new { filterOn = 5, values = column.IncludeBlank ? values.Add("").ToArray() : values.ToArray() };
         if (column?.First is not { } first) return new { };
         static string Expression(AutoFilterCondition c) => (c.Comparison switch { AutoFilterComparison.Equal => "=", AutoFilterComparison.NotEqual => "<>",

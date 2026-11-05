@@ -93,3 +93,13 @@ The normal column filter menu exposes fill, font and no-fill criteria. Color is 
 真实 Excel 对照发现字体颜色筛选同样使用 fill dxf（通过 cellColor=0 指定比较字体），已按独立样本修正。`scripts/test-excel-color-filters.ps1` 验证 QuickExcel 输出在 Excel 重新应用，并生成独立 Excel 原生文件；填充红色、字体红色、无填充三项均通过，来源哈希和 XML 固定在 `Fixtures/excel-color-filters.json`。证据 `artifacts/e6/color-filter-excel-02`；初次字体比较失败保留在 01 目录。参考 [Microsoft AutoFilter operator](https://learn.microsoft.com/office/vba/api/excel.xlautofilteroperator)。
 
 37 项颜色/既有筛选/分类汇总/本地化相关测试通过；5 项 AdvancedFilters 桌面检查通过，证据 `artifacts/avalonia/workspace/20261105-075615-56453940`。生产发布及自检通过，活动包 `artifacts/avalonia/releases/20261105-075637-93e8466e/application`，清单哈希已核对。
+
+## XC-0605b — 前后项及百分比 / Top and bottom filters
+
+2026-11-05，1.25.0。列筛选菜单支持前/后 N 项和百分比，保留所有并列值。排名仅统计完整筛选列的数值，其他列条件及手动隐藏不改变阈值；百分比向下取整，至少一项。数值文本、布尔、空白不参与；错误值或无数字列整批拒绝，与本机 Excel 实测一致。项目数 1–500，百分比 1–100。Table 与普通筛选共用模型及 XLSX/XLSQ top10 读写，非法或小数数量保留原包边界。
+
+The preview commits one undoable criterion and rejects stale document identity or revision. Ranking thresholds are recomputed from current typed values. SUBTOTAL tracks the whole filter column, including ranking inputs outside its own value range; failures become controlled formula errors. Script filter state/clear/reapply recognizes the criteria, while criteria-object access remains explicitly unsupported.
+
+独立 Excel 8 案例覆盖前 2/3 项、后 2 项、前后 50%、前 1%、与其他列条件组合及 Table；另验证错误列和无数字列拒绝。QuickExcel 文件在 Excel 重新应用结果一致，样本及 SHA-256 为 `Fixtures/excel-top-filters.json`，证据 `artifacts/e6/top-filter-excel-06`。01–04 失败保留了错误列不能应用的发现，05 为首次有效数据对照；没有把失败状态当作排名结果。
+
+32 项前后项/既有筛选/分类汇总/本地化检查通过，8 项 AdvancedFilters 桌面检查通过，证据 `artifacts/avalonia/workspace/20261105-080907-1aa857b5`。生产发布及自检通过，活动包 `artifacts/avalonia/releases/20261105-080951-03b772d4/application`，清单哈希已核对。

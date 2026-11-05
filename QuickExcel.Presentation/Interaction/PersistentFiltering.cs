@@ -43,7 +43,9 @@ public static class PersistentFiltering
         var remaining = new WorksheetAutoFilter(filter.Range, filter.Columns.Remove(column));
         var other = sheet.WithData(table is null ? sheet.Data with { Filter = remaining } : sheet.Data with { Tables = sheet.Data.Tables.Replace(table, table.WithFilter(remaining)) });
         var hidden = WorksheetFilterEngine.Evaluate(other, snapshot.Styles, snapshot.DateSystem, snapshot.Revision);
-        var selected = filter.Columns.GetValueOrDefault(column); var match = selected is null ? null : WorksheetFilterEngine.Compile(selected);
+        var selected = filter.Columns.GetValueOrDefault(column);
+        var selectedHidden = selected?.Top is null ? null : WorksheetFilterEngine.Evaluate(sheet, snapshot.Styles, snapshot.DateSystem, snapshot.Revision);
+        var match = selected is null || selected.Top is not null ? null : WorksheetFilterEngine.Compile(selected);
         var values = new Dictionary<CellValue, (string Label, int Count, bool Selected)>(); long characters = 0;
         void Add(CellValue key, string label, bool on, int count)
         {
@@ -61,7 +63,7 @@ public static class PersistentFiltering
             var value = cell?.Value ?? CellValue.Blank; var style = TablePresentation.NumberStyle(sheet, snapshot.Styles, row, column);
             var blank = value.Kind == CellValueKind.Blank || value.Kind == CellValueKind.Text && value.TextValue.Length == 0;
             var label = blank ? UiText.Get("(空白)") : WorksheetFilterEngine.ValueLabel(value, style, snapshot.DateSystem);
-            Add(blank ? CellValue.Blank : CellValue.FromText(label), label, match?.Invoke(value, style, snapshot.DateSystem) ?? true, 1);
+            Add(blank ? CellValue.Blank : CellValue.FromText(label), label, selectedHidden is null ? match?.Invoke(value, style, snapshot.DateSystem) ?? true : !selectedHidden.Contains(row), 1);
         }
         if (selected?.Values is { } oldValues) foreach (var label in oldValues) Add(CellValue.FromText(label), label, true, 0);
         if (selected?.IncludeBlank == true) Add(CellValue.Blank, UiText.Get("(空白)"), true, 0);
