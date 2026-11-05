@@ -75,6 +75,10 @@ public static class FormulaEditing
     {
         var parameters = name.ToUpperInvariant() switch
         {
+            "TEXTBEFORE" or "TEXTAFTER" => UiText.Get("文本, 分隔符, [序号], [匹配模式], [匹配末尾], [未找到值]"),
+            "TEXTSPLIT" => UiText.Get("文本, 列分隔符, [行分隔符], [忽略空白], [匹配模式], [填充值]"),
+            "TAKE" or "DROP" => UiText.Get("数组, 行数, [列数]"),
+            "SORTBY" => UiText.Get("数组, 排序数组1, [排序方向1], …"),
             "ROW" or "COLUMN" => UiText.Get("[引用]"), "ROWS" or "COLUMNS" => UiText.Get("数组或引用"),
             "IFS" => UiText.Get("条件1, 结果1, [条件2, 结果2], …"),
             "SWITCH" => UiText.Get("表达式, 值1, 结果1, [值2, 结果2], [默认值]"),

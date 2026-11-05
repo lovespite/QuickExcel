@@ -40,7 +40,7 @@ ROW and COLUMN return current coordinates or reference coordinates, with bounded
 
 ## XC-0602b — 逻辑与乘积统计 / Logical and product formulas
 
-2026-11-05，1.20.0。IFS 支持 1–127 个条件/结果对，首个匹配返回结果，未匹配为 #N/A；SWITCH 支持相同类型的精确匹配（文本不区分大小写）、默认值和 #N/A。结果按所选分支求值，不以未选数组扩展结果；数组条件及选中结果按既有单行/单列广播契约组合，尺寸缺失为 #N/A。静态依赖仍保守包含全部源码分支，未承诺脚本副作用与 Excel UDF 调度等价。
+2026-11-05，1.20.1（与并行的脚本编辑器 patch 版本合并）。IFS 支持 1–127 个条件/结果对，首个匹配返回结果，未匹配为 #N/A；SWITCH 支持相同类型的精确匹配（文本不区分大小写）、默认值和 #N/A。结果按所选分支求值，不以未选数组扩展结果；数组条件及选中结果按既有单行/单列广播契约组合，尺寸缺失为 #N/A。静态依赖仍保守包含全部源码分支，未承诺脚本副作用与 Excel UDF 调度等价。
 
 SUMPRODUCT 对同形状数组逐项相乘再求和，文本、布尔和空白按零处理，显式算术转换后按数字处理；维度不匹配为 #VALUE!，错误传播，即使另一个乘数为零也不吞掉错误。数组仍有 100,000 元素预算；全列超预算须缩小引用。IFS/SWITCH 的 XLSX `_xlfn` 编码与解码、增量重算、保存重开、撤销和双语参数提示已接入。
 
@@ -49,3 +49,15 @@ IFS and SWITCH select the first matching result and support bounded array condit
 39 项相关测试、31 个累计独立 Excel 公式样例、8 项 Avalonia CommonFunctions 检查通过。Excel 证据 `artifacts/e6/common-functions-excel-04`；桌面证据 `artifacts/avalonia/workspace/20261105-071655-51cafed2`。规范参考 [IFS](https://support.microsoft.com/en-gb/excel/functions/ifs-function)、[SUMPRODUCT](https://support.microsoft.com/en-us/excel/functions/sumproduct-function)。
 
 发布与生产自检通过，活动包 `artifacts/avalonia/releases/20261105-071727-601471eb/application`。
+
+## XC-0602c — 文本及数组函数 / Text and array formulas
+
+2026-11-05，1.21.0。TEXTBEFORE/TEXTAFTER 支持正负序号、匹配大小写、将文本边界视为分隔符和未找到值；按搜索方向处理重叠分隔符。TEXTSPLIT 支持列/行分隔符、忽略空字段、匹配模式及补值；多个分隔符可通过矩形引用提供。SORTBY 支持多个单行或单列排序键、稳定顺序及正反向；TAKE/DROP 支持正负行列数、仅按列处理、截断到输入大小和空数组错误。
+
+The six functions use the existing bounded array model, dependency tracking, spill ownership and XLSX function encoding. Text boundary functions accept scalar arguments. TEXTSPLIT accepts a scalar source and scalar options, with scalar or range delimiters. Array sorting and slicing preserve typed values and support composition with other array functions.
+
+边界：TEXTBEFORE/TEXTAFTER 的数组参数、TEXTSPLIT 的数组源文本/控制参数、TAKE/DROP 的数组尺寸参数和 SORTBY 的数组方向参数尚未支持，导入时保持原有公式只读保留路径；数组字面量仍属于既有语法边界。数组结果最多 100,000 元素和 4 Mi 字符。排序沿用现有类型及不区分大小写文本规则，不声称新增地区排序能力。UTF-16 不拆分中文及非 BMP 文本的分隔字符。
+
+39 项相关测试通过；追加存储/重开/增量缩小与撤销后 CommonFunctionTests 10 项通过。59 个累计真实 Excel 公式样例通过，来源 `artifacts/e6/common-functions-excel-05`；CommonFunctions 桌面检查 12 项通过，证据 `artifacts/avalonia/workspace/20261105-072315-25917d23`。规范参考 [TEXTBEFORE](https://support.microsoft.com/en-us/excel/functions/textbefore-function)、[TEXTSPLIT](https://support.microsoft.com/en-us/excel/functions/textsplit-function)、[TAKE](https://support.microsoft.com/en-us/excel/functions/take-function)。空源文本边界采用本机 Excel 16.0 build 20527 的独立样例（TEXTBEFORE 空源为 #N/A，TEXTSPLIT 空源为 #VALUE!），未以文档示意代替实测。
+
+发布与生产自检通过，活动包 `artifacts/avalonia/releases/20261105-072720-269583df/application`。

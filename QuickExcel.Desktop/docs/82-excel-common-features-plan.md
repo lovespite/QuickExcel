@@ -9,8 +9,9 @@
 - XC-0601a：UTF-8 CSV/TSV 导出已实现，通过定向与桌面检查；独立发布和证据见 [83 号记录](83-e6-e7-implementation-log.md)。
 - XC-0601b：导入预览、编码/分隔符与逐列类型选择完成；19 项定向测试、11 项桌面检查及真实 Excel CSV 双向样例通过。
 - XC-0602a：ROW、COLUMN、ROWS、COLUMNS 完成，1.19.0 已发布。
-- XC-0602b：IFS、SWITCH、SUMPRODUCT 完成，1.20.0 已发布。
-- XC-0602 文本/数组函数、XC-0603–0607 与 E7：待实施。E8/E9 保持原计划。
+- XC-0602b：IFS、SWITCH、SUMPRODUCT 完成，1.20.1 已发布。
+- XC-0602c：TEXTBEFORE、TEXTAFTER、TEXTSPLIT、SORTBY、TAKE、DROP 完成声明子集，1.21.0 已发布。
+- XC-0603–0607 与 E7：待实施。E8/E9 保持原计划。
 
 ## 当前能力与待补范围
 

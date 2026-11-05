@@ -18,6 +18,7 @@ public static class FormulaBinding
         DateMathFunctions.Validate(bound);
         OrderStatisticFunctions.Validate(bound);
         TextFunctions.Validate(bound, snapshot, arrayContext);
+        CommonArrayModes.Validate(bound);
         if (!arrayContext && !DynamicArrayFunctions.UsesArrays(bound)) ScalarFormulaModes.Validate(bound);
         return bound;
     }
@@ -129,6 +130,7 @@ public static class StandardFunctions
         new Dictionary<string, (int, int)>(StringComparer.OrdinalIgnoreCase)
         {
             ["SUM"] = (1, 255), ["AVERAGE"] = (1, 255), ["MIN"] = (1, 255), ["MAX"] = (1, 255),
+            ["TEXTSPLIT"] = (2, 6), ["TAKE"] = (2, 3), ["DROP"] = (2, 3), ["SORTBY"] = (2, 255),
             ["SEQUENCE"] = (1, 4), ["FILTER"] = (2, 3), ["SORT"] = (1, 4), ["UNIQUE"] = (1, 3),
             ["LET"] = (3, 253), ["OFFSET"] = (3, 5), ["INDIRECT"] = (1, 2),
             ["ROW"] = (0, 1), ["COLUMN"] = (0, 1), ["ROWS"] = (1, 1), ["COLUMNS"] = (1, 1),
@@ -150,7 +152,7 @@ public static class StandardFunctions
             ["EDATE"] = (2, 2), ["EOMONTH"] = (2, 2), ["WEEKDAY"] = (1, 2),
             ["WORKDAY"] = (2, 3), ["NETWORKDAYS"] = (2, 3),
             ["ROUNDUP"] = (2, 2), ["ROUNDDOWN"] = (2, 2), ["INT"] = (1, 1), ["MOD"] = (2, 2),
-            ["TEXT"] = (2, 2), ["VALUE"] = (1, 1), ["SUBSTITUTE"] = (3, 4), ["REPLACE"] = (4, 4),
+            ["TEXTBEFORE"] = (2, 6), ["TEXTAFTER"] = (2, 6), ["TEXT"] = (2, 2), ["VALUE"] = (1, 1), ["SUBSTITUTE"] = (3, 4), ["REPLACE"] = (4, 4),
             ["FIND"] = (2, 3), ["SEARCH"] = (2, 3), ["TEXTJOIN"] = (3, 254), ["CONCAT"] = (1, 254),
             ["ISBLANK"] = (1, 1), ["ISNUMBER"] = (1, 1), ["ISTEXT"] = (1, 1), ["ISERROR"] = (1, 1), ["IFNA"] = (2, 2),
             ["TODAY"] = (0, 0), ["NOW"] = (0, 0)

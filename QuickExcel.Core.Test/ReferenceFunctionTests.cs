@@ -34,7 +34,7 @@ public sealed class ReferenceFunctionTests
             Assert.Equal(expected.Length, actual.Length);
             for (var i = 0; i < actual.Length; i++)
             {
-                Assert.Equal(expected[i].GetProperty("kind").GetString(), actual[i].Kind.ToString());
+                Assert.True(expected[i].GetProperty("kind").GetString() == actual[i].Kind.ToString(), item.GetProperty("formula").GetString() + " => " + actual[i]);
                 if (actual[i].Kind == CellValueKind.Number) Assert.Equal(expected[i].GetProperty("value").GetDouble(), actual[i].NumberValue, 10);
                 else Assert.Equal(expected[i].GetProperty("value").GetString(), CellInput.DisplayText(actual[i]));
             }

@@ -5,7 +5,7 @@ namespace QuickExcel.Formulas;
 
 public static class TextFunctions
 {
-    public static bool IsFunction(string name) => name is "TEXT" or "VALUE" or "SUBSTITUTE" or "REPLACE" or "FIND" or "SEARCH" or "TEXTJOIN" or "CONCAT"
+    public static bool IsFunction(string name) => name is "TEXTBEFORE" or "TEXTAFTER" or "TEXT" or "VALUE" or "SUBSTITUTE" or "REPLACE" or "FIND" or "SEARCH" or "TEXTJOIN" or "CONCAT"
         or "ISBLANK" or "ISNUMBER" or "ISTEXT" or "ISERROR" or "IFNA";
     public static void Validate(FormulaNode expression, WorkbookSnapshot snapshot, bool arrayContext = false)
     {

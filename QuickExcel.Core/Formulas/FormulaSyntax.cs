@@ -320,7 +320,7 @@ public static class FormulaSyntax
                 {
                     while (true)
                     {
-                        if (Current.Kind is "," or ")" && (functionName is "OFFSET" or "INDIRECT" || DynamicArrayFunctions.IsFunction(functionName) || functionName == "XLOOKUP" && (args.Count == 0 || args.Count >= 3) || functionName == "XMATCH" && args.Count >= 2 || functionName == "SUBTOTAL" && args.Count == 0 ||
+                        if (Current.Kind is "," or ")" && (functionName is "OFFSET" or "INDIRECT" or "IFS" or "SWITCH" || functionName is "TEXTBEFORE" or "TEXTAFTER" && args.Count >= 2 || DynamicArrayFunctions.IsFunction(functionName) || functionName == "XLOOKUP" && (args.Count == 0 || args.Count >= 3) || functionName == "XMATCH" && args.Count >= 2 || functionName == "SUBTOTAL" && args.Count == 0 ||
                             functionName is "LARGE" or "SMALL" && args.Count==1 || functionName=="RANK.EQ" && args.Count is 0 or 2))
                         {
                             if (++_nodes > 2048) throw new FormatException("公式过长。");

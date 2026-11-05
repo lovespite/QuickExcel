@@ -6,7 +6,7 @@ namespace QuickExcel.Formulas;
 public static partial class ExcelFormulaNames
 {
     private const string Prefix = "_xlfn.";
-    private static readonly string[] Extensions = ["XLOOKUP", "XMATCH", "IFNA", "IFS", "SWITCH", "CONCAT", "TEXTJOIN", "SEQUENCE", "FILTER", "SORT", "UNIQUE", "LET", "VAR.S", "VAR.P", "STDEV.S", "STDEV.P", "RANK.EQ"];
+    private static readonly string[] Extensions = ["TEXTSPLIT", "TEXTBEFORE", "TEXTAFTER", "TAKE", "DROP", "SORTBY", "XLOOKUP", "XMATCH", "IFNA", "IFS", "SWITCH", "CONCAT", "TEXTJOIN", "SEQUENCE", "FILTER", "SORT", "UNIQUE", "LET", "VAR.S", "VAR.P", "STDEV.S", "STDEV.P", "RANK.EQ"];
     private static bool Extension(string name) => Extensions.Contains(name, StringComparer.OrdinalIgnoreCase);
     public static string CanonicalName(string name)
     {

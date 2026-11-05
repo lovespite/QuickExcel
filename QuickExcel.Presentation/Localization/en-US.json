@@ -2232,5 +2232,14 @@
   "数组或引用": "array_or_reference",
   "条件1, 结果1, [条件2, 结果2], …": "logical_test1, value_if_true1, [logical_test2, value_if_true2], …",
   "表达式, 值1, 结果1, [值2, 结果2], [默认值]": "expression, value1, result1, [value2, result2], [default]",
-  "数组1, [数组2], …": "array1, [array2], …"
+  "数组1, [数组2], …": "array1, [array2], …",
+  "文本, 分隔符, [序号], [匹配模式], [匹配末尾], [未找到值]": "text, delimiter, [instance_num], [match_mode], [match_end], [if_not_found]",
+  "文本, 列分隔符, [行分隔符], [忽略空白], [匹配模式], [填充值]": "text, col_delimiter, [row_delimiter], [ignore_empty], [match_mode], [pad_with]",
+  "数组, 行数, [列数]": "array, rows, [columns]",
+  "数组, 排序数组1, [排序方向1], …": "array, by_array1, [sort_order1], …",
+  "函数参数包含错误。": "A function argument contains an error.",
+  "分隔符包含错误。": "A delimiter contains an error.",
+  "分隔符不能为空。": "Delimiters cannot be empty.",
+  "文本分割超过数组预算。": "Text splitting exceeds the array budget.",
+  "此函数的文本或控制参数暂限标量，数组形式保留来源公式。": "Text or control arguments for this function currently require scalars; array forms preserve the source formula."
 }

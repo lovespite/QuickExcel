@@ -111,6 +111,9 @@ internal sealed partial class TypedEvaluator
         var bounds = DynamicArrayFunctions.Signatures[function.Name];
         var args = function.Arguments;
         if (args.Count < bounds.Min || args.Count > bounds.Max) return Error(CellErrorCode.Value);
+        if (function.Name == "TEXTSPLIT") return SplitTextFunction(function);
+        if (function.Name is "TAKE" or "DROP") return SliceArray(function);
+        if (function.Name == "SORTBY") return SortByFunction(function);
         CellValue Option(int index, CellValue fallback) => index >= args.Count || args[index] is MissingNode ? fallback : Scalar(args[index]);
         double NumericOption(int index, double fallback)
         {

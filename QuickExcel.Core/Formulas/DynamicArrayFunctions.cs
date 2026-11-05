@@ -6,6 +6,7 @@ public static class DynamicArrayFunctions
     public static IReadOnlyDictionary<string, (int Min, int Max)> Signatures { get; } =
         new Dictionary<string, (int, int)>(StringComparer.OrdinalIgnoreCase)
         {
+            ["TEXTSPLIT"] = (2, 6), ["TAKE"] = (2, 3), ["DROP"] = (2, 3), ["SORTBY"] = (2, 255),
             ["SEQUENCE"] = (1, 4), ["FILTER"] = (2, 3), ["SORT"] = (1, 4), ["UNIQUE"] = (1, 3)
         };
 

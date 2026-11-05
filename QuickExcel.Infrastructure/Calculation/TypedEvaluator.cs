@@ -142,6 +142,7 @@ internal sealed partial class TypedEvaluator(WorkbookSnapshot snapshot, IReadOnl
         if (ConditionalRanges.IsFunction(function.Name)) return Conditional(function);
         if (LookupModes.IsFunction(function.Name)) return LookupValue(function) is CellValue lookupValue ? lookupValue : Error(CellErrorCode.Value);
         if (DateMathFunctions.IsFunction(function.Name)) return DateMath(function);
+        if (function.Name is "TEXTBEFORE" or "TEXTAFTER") return TextBoundary(function);
         if (TextFunctions.IsFunction(function.Name)) return TextFunction(function);
         if (function.Name == "SUBTOTAL") return Subtotal(function);
         if (ComplexFormulaFunctions.IsStatistic(function.Name)) return Statistic(function);
