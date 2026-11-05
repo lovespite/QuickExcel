@@ -16,6 +16,15 @@ Self-check (writes only new diagnostic files; use a new empty destination):
 Custom isolated settings:
   QuickExcel.Avalonia.exe --user-data C:\Users\YOUR_NAME\QuickExcel-settings [workbook.xlsq]
 
+Disable all workbook scripts and execution/compiler workers:
+  QuickExcel.Avalonia.exe --no-scripts [workbook.xlsq]
+Or set QUICKEXCEL_NO_SCRIPTS=1 in the process, Windows user or machine environment.
+The Scripts & API settings page also has a Disable scripts checkbox (immediate).
+Any active source overrides signatures and trust; the status bar lists every source.
+Command-line/environment values are read at startup. Clearing the checkbox cannot
+override them and never silently reauthorizes the current workbook.
+The installation self-check fails if scripts are disabled.
+
 On first normal start, compatible WPF UI/recent-file preferences are copied into
 LocalAppData\QuickExcel\Avalonia, with an immutable backup and versioned journal.
 Existing Avalonia preferences are retained. Certificates/trust pins and browser
