@@ -1,7 +1,9 @@
 using System.Text.Json;
 using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Controls.Presenters;
+using Avalonia.Input;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
@@ -43,6 +45,7 @@ public sealed partial class MainWindow
             await History(true); Check(Document.GetCellInput(0, 0, 0) == "12", "Redo restores edit");
             _grid.Select(new(0, 1)); _grid.BeginEdit(); _grid.CellEditor.Text = "=A1+3"; Check(CommitEditors(), "Formula edit commits");
             await CalculateAsync(); Check(Document.GetCellValue(0, 0, 1) == "15", "Shared typed calculator evaluates native grid input");
+            await CheckFormulaBarHeightAsync(Check);
             _grid.Select(new(1, 0)); _formula.Focus(); _formula.Text = "原格草稿";
             _grid.Select(new(2, 1));
             Check(Document.GetCellInput(0, 1, 0) == "原格草稿" && Document.GetCellInput(0, 2, 1) == "", "Formula-bar draft remains owned by original cell during selection change");
@@ -101,5 +104,45 @@ public sealed partial class MainWindow
             os = System.Runtime.InteropServices.RuntimeInformation.OSDescription }, new JsonSerializerOptions { WriteIndented = true }));
         _allowClose = true;
         (Application.Current!.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)!.Shutdown(error is null ? 0 : 1);
+    }
+
+    private async Task CheckFormulaBarHeightAsync(Action<bool, string> check)
+    {
+        static async Task Layout() => await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Background);
+        _grid.Select(new(5, 0));
+        await Layout();
+        var compact = _formula.Bounds.Height;
+        var sheetHeight = _grid.Bounds.Height;
+        var multiline = string.Join("\n", Enumerable.Repeat("多行内容", 16));
+        _formula.Focus();
+        _formula.Text = multiline;
+        await Layout();
+        var scroll = _formula.GetVisualDescendants().OfType<ScrollViewer>().Single();
+        check(_formula.Bounds.Height == compact && _grid.Bounds.Height == sheetHeight && scroll.Extent.Height > scroll.Viewport.Height,
+            "Multiline input scrolls inside the formula bar at its original height");
+
+        var splitter = _book.GetVisualDescendants().OfType<GridSplitter>().Single();
+        var start = splitter.TranslatePoint(new Point(splitter.Bounds.Width / 2, splitter.Bounds.Height / 2), this)!.Value;
+        var end = start + new Vector(0, 48);
+        using var mouse = new Pointer(202, PointerType.Mouse, true);
+        splitter.RaiseEvent(new PointerPressedEventArgs(splitter, mouse, this, start, 1,
+            new PointerPointProperties(RawInputModifiers.LeftMouseButton, PointerUpdateKind.LeftButtonPressed), KeyModifiers.None, 1));
+        splitter.RaiseEvent(new PointerEventArgs(PointerMovedEvent, splitter, mouse, this, end, 2,
+            new PointerPointProperties(RawInputModifiers.LeftMouseButton, PointerUpdateKind.Other), KeyModifiers.None));
+        splitter.RaiseEvent(new PointerReleasedEventArgs(splitter, mouse, this, end, 3,
+            new PointerPointProperties(RawInputModifiers.None, PointerUpdateKind.LeftButtonReleased), KeyModifiers.None, MouseButton.Left));
+        await Layout();
+        var expanded = _formula.Bounds.Height;
+        check(expanded > compact && _grid.Bounds.Height < sheetHeight && _formulaDirty && _formula.Text == multiline,
+            "Dragging the formula bar divider expands the editor while preserving its draft");
+        _grid.Select(new(5, 1));
+        await Layout();
+        check(string.IsNullOrEmpty(_formula.Text) && _formula.Bounds.Height == expanded, "Selecting an empty cell retains the chosen formula bar height");
+        _grid.Select(new(5, 0));
+        await Layout();
+        check(_formula.Text == multiline && _formula.Bounds.Height == expanded, "Selecting a multiline cell retains the chosen formula bar height");
+        splitter.RaiseEvent(new KeyEventArgs { RoutedEvent = KeyDownEvent, Key = Key.Up });
+        await Layout();
+        check(_formula.Bounds.Height < expanded && _formula.Text == multiline, "The formula bar divider also shrinks with the keyboard");
     }
 }

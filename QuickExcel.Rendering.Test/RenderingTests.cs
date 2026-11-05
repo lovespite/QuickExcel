@@ -98,6 +98,88 @@ public sealed class RenderingTests
         return bitmap.Pixels;
     }
 
+    [Theory]
+    [InlineData("\n", false)]
+    [InlineData("\n", true)]
+    [InlineData("\r\n", false)]
+    [InlineData("\r\n", true)]
+    [InlineData("\r", false)]
+    [InlineData("\v", false)]
+    [InlineData("\f", false)]
+    [InlineData("\u0085", false)]
+    [InlineData("\u2028", false)]
+    [InlineData("\u2029", false)]
+    public void HardBreaksHaveLineHeightButNoInkOrWidth(string separator, bool wrap)
+    {
+        using var renderer = Renderer();
+        var style = Default with { Horizontal = 2, WrapText = wrap, Underline = "single" };
+        using var word = renderer.Layout(new("项目", style, 100));
+        using var blank = renderer.Layout(new(" ", style, 100));
+        using var actual = renderer.Layout(new("项目" + separator + separator + "项目" + separator, style, 100));
+        using var bitmap = new SKBitmap(300, 200);
+        using var canvas = new SKCanvas(bitmap);
+        canvas.Clear(SKColors.White);
+        word.Draw(canvas, 2, 2);
+        word.Draw(canvas, 2, 2 + (float)(word.Metrics.Height + blank.Metrics.Height));
+        Assert.Equal(bitmap.Pixels, RenderPixels(actual));
+        Assert.Equal(4, actual.Metrics.Lines);
+        Assert.Equal(word.Metrics.Width, actual.Metrics.Width);
+        Assert.Equal(2 * word.Metrics.Height + 2 * blank.Metrics.Height, actual.Metrics.Height, 4);
+    }
+
+    [Fact]
+    public void NonPrintingControlsDoNotAddInkOrAdvance()
+    {
+        using var renderer = Renderer();
+        var ignored = string.Concat(Enumerable.Range(0, 160).Select(i => (char)i)
+            .Where(c => char.IsControl(c) && c is not ('\t' or '\n' or '\v' or '\f' or '\r' or '\u0085')));
+        using var actual = renderer.Layout(new("A" + ignored + @"B\n", Default));
+        using var expected = renderer.Layout(new(@"AB\n", Default));
+        Assert.Equal(expected.Metrics, actual.Metrics);
+        Assert.Equal(RenderPixels(expected), RenderPixels(actual));
+    }
+
+    [Theory]
+    [InlineData("\u200B\u200C\u200D\u2060\uFEFF")] // zero-width space, join controls, word joiner, BOM
+    [InlineData("\u200E\u200F\u202A\u202C\u2066\u2069")] // paired bidi controls in Latin text
+    [InlineData("\u00AD\u034F\uFE0F\U000E0100")] // soft hyphen, grapheme joiner and variation selectors
+    [InlineData("\uFFF9\uFFFA\uFFFB")] // interlinear annotation controls
+    public void InvisibleFormattingDoesNotPaintBoxes(string controls)
+    {
+        using var renderer = Renderer();
+        using var actual = renderer.Layout(new("L" + controls + "H", Default));
+        using var expected = renderer.Layout(new("LH", Default));
+        Assert.Equal(expected.Metrics, actual.Metrics);
+        Assert.Equal(RenderPixels(expected), RenderPixels(actual));
+        Assert.DoesNotContain(renderer.Diagnostics, d => d.Code == "missing-glyph");
+    }
+
+    [Fact]
+    public void NonJoinerStillAffectsArabicShaping()
+    {
+        using var renderer = Renderer();
+        var style = Default with { FontName = "Noto Sans Arabic" };
+        using var joined = renderer.Layout(new("بب", style));
+        using var separated = renderer.Layout(new("ب\u200Cب", style));
+        Assert.NotEqual(RenderPixels(joined), RenderPixels(separated));
+        Assert.DoesNotContain(renderer.Diagnostics, d => d.Code == "missing-glyph");
+    }
+
+    [Fact]
+    public void CrLfAcrossRichRunsBreaksOnceAndKeepsFormatting()
+    {
+        using var renderer = Renderer();
+        var red = new TextRunFont(Bold: true, Color: "FFFF0000", Underline: "single");
+        var source = new RichCellText([new("A\r"), new(""), new("\nB\u0007C", red)]);
+        var reference = new RichCellText([new("A\n"), new("BC", red)]);
+        using var actual = renderer.Layout(new(source.Text, Default, 80, source));
+        using var expected = renderer.Layout(new(reference.Text, Default, 80, reference));
+        Assert.Equal(2, actual.Metrics.Lines);
+        Assert.Equal(expected.Metrics, actual.Metrics);
+        Assert.Equal(RenderPixels(expected), RenderPixels(actual));
+        Assert.Equal("A\r\nB\u0007C", source.Text);
+    }
+
     [Fact]
     public void MissingFontsAndScalarsHaveBoundedLocatedDiagnostics()
     {

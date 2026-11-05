@@ -12,6 +12,11 @@ public sealed class SkiaTextLayout : IDisposable
 {
     private sealed record Run(SKTextBlob Blob, SKColor Color, float OffsetY, float Left, float Right, float Baseline,
         float Size, string? Underline, bool Strike);
+    private sealed class CellRunStyle : RichStyle
+    {
+        public string? CellUnderline { get; init; }
+        public bool CellStrike { get; init; }
+    }
     private readonly List<Run> _runs = [];
     public TextMetrics Metrics { get; private set; } = new(0, 0, 0, 0, 0);
     public IReadOnlyList<string> FontIdentities { get; private set; } = [];
@@ -52,72 +57,111 @@ public sealed class SkiaTextLayout : IDisposable
         }
     }
 
+    private static void LayoutParagraphs(TextLayoutRequest request, SkiaFonts fonts, Action<string, string> diagnostic,
+        float factor, float? maxWidth, Action<TextBlock, bool> visit)
+    {
+        var style = request.Style;
+        var block = new TextBlock { FontMapper = fonts, CharacterMatcher = Fallback, EllipsisEnabled = false, MaxWidth = maxWidth };
+        var rich = request.RichText?.Text == request.Text ? request.RichText : null;
+        RichStyle? breakStyle = null;
+        var previousWasCr = false;
+        void FinishParagraph()
+        {
+            var empty = block.Length == 0;
+            // A hard break reserves a line even at the end of a cell. Use the
+            // break's font for its height; the measuring space is never drawn.
+            if (empty && breakStyle is not null) block.AddText(" ", breakStyle);
+            try { block.Layout(); visit(block, empty); }
+            finally { block.Clear(); }
+        }
+        foreach (var run in rich?.Runs.AsEnumerable() ?? [new TextRun(request.Text)])
+        {
+            var f = run.Font;
+            var fontRequest = new FontRequest(f?.ResolvedName ?? style.FontName ?? "Microsoft YaHei UI", f?.EastAsianName ?? style.EastAsianFontName,
+                f?.Size ?? style.FontSize ?? request.DefaultFontSize * 72 / 96, f?.Bold ?? style.Bold, f?.Italic ?? style.Italic);
+            var segments = StringInfo.GetTextElementEnumerator(run.Text.Replace("\t", "    "));
+            SKTypeface? previous = null;
+            var buffer = new StringBuilder();
+            RichStyle StyleFor(SKTypeface face)
+            {
+                return new CellRunStyle { FontFamily = fonts.Key(face), FontSize = (float)(fontRequest.Points * 96 / 72) * factor,
+                    FontWeight = fontRequest.Bold ? 700 : 400, FontItalic = fontRequest.Italic,
+                    CellUnderline = f?.Underline ?? style.Underline, CellStrike = f?.Strike ?? style.Strike,
+                    TextColor = SkiaRenderer.Color(f?.Color ?? style.FontColor, SKColors.Black),
+                    FontVariant = f?.Vertical switch { "superscript" => FontVariant.SuperScript, "subscript" => FontVariant.SubScript, _ => FontVariant.Normal } };
+            }
+            void Flush()
+            {
+                if (previous is null || buffer.Length == 0) return;
+                var scalars = buffer.ToString().EnumerateRunes().Select(r => r.Value).ToArray();
+                block.AddText(new Topten.RichTextKit.Utils.Slice<int>(scalars), StyleFor(previous));
+                buffer.Clear();
+            }
+            while (segments.MoveNext())
+            {
+                var element = segments.GetTextElement();
+                // CRLF is one grapheme within a run but can straddle rich-text runs.
+                var followsCr = previousWasCr;
+                previousWasCr = element == "\r";
+                if (followsCr && element == "\n") continue;
+                if (element is "\n" or "\r" or "\r\n" or "\v" or "\f" or "\u0085" or "\u2028" or "\u2029")
+                {
+                    Flush();
+                    breakStyle = StyleFor(fonts.Resolve(" ", fontRequest, diagnostic));
+                    FinishParagraph();
+                    continue;
+                }
+                // Interlinear annotation delimiters also have no visible glyph.
+                // Leave joiners, bidi controls and selectors in the shaping input.
+                if (char.IsControl(element[0]) || element[0] is >= '\uFFF9' and <= '\uFFFB') continue;
+                var face = fonts.Resolve(element, fontRequest, diagnostic);
+                if (face != previous) { Flush(); previous = face; }
+                buffer.Append(element);
+            }
+            Flush();
+        }
+        FinishParagraph();
+    }
+
     private void Build(TextLayoutRequest request, SkiaFonts fonts, Action<string, string> diagnostic)
     {
         var style = request.Style;
         var text = request.Text;
-        var decorations = new Dictionary<RichStyle, (string? Underline, bool Strike)>();
-        TextBlock Make(string value, float factor, bool constrain)
+        float NaturalWidth(string value)
         {
-            var block = new TextBlock { FontMapper = fonts, CharacterMatcher = Fallback, EllipsisEnabled = false,
-                MaxWidth = constrain && style.WrapText && style.TextRotation == 0 && double.IsFinite(request.Width) ? Math.Max(1, (float)request.Width - Indent) : null,
-                MaxLines = null };
-            var rich = request.RichText?.Text == value ? request.RichText : null;
-            foreach (var run in rich?.Runs.AsEnumerable() ?? [new TextRun(value)])
+            var width = 0f;
+            LayoutParagraphs(request with { Text = value }, fonts, diagnostic, 1, null, (block, empty) =>
             {
-                var f = run.Font;
-                var fontRequest = new FontRequest(f?.ResolvedName ?? style.FontName ?? "Microsoft YaHei UI", f?.EastAsianName ?? style.EastAsianFontName,
-                    f?.Size ?? style.FontSize ?? request.DefaultFontSize * 72 / 96, f?.Bold ?? style.Bold, f?.Italic ?? style.Italic);
-                // RichTextKit shapes tabs as missing glyphs. Expand only the display
-                // projection, per run, so measuring/wrapping and drawing agree while
-                // the workbook text and inherited rich-run fonts stay untouched.
-                var segments = StringInfo.GetTextElementEnumerator(run.Text.Replace("\t", "    "));
-                SKTypeface? previous = null; var buffer = new StringBuilder();
-                void Flush()
-                {
-                    if (previous is null || buffer.Length == 0) return;
-                    var rs = new RichStyle { FontFamily = fonts.Key(previous), FontSize = (float)(fontRequest.Points * 96 / 72) * factor,
-                        FontWeight = fontRequest.Bold ? 700 : 400, FontItalic = fontRequest.Italic,
-                        TextColor = SkiaRenderer.Color(f?.Color ?? style.FontColor, SKColors.Black),
-                        FontVariant = f?.Vertical switch { "superscript" => FontVariant.SuperScript, "subscript" => FontVariant.SubScript, _ => FontVariant.Normal } };
-                    decorations[rs] = (f?.Underline ?? style.Underline, f?.Strike ?? style.Strike);
-                    // RichTextKit 0.6.170's UTF-16 decoder ORs the surrogate offset instead of adding it.
-                    // Supply scalar values directly so U+20000 and higher keep their real identity.
-                    block.AddText(new Topten.RichTextKit.Utils.Slice<int>(buffer.ToString().EnumerateRunes().Select(r => r.Value).ToArray()), rs); buffer.Clear();
-                }
-                while (segments.MoveNext())
-                {
-                    var element = segments.GetTextElement();
-                    var face = fonts.Resolve(element, fontRequest, diagnostic);
-                    if (face != previous) { Flush(); previous = face; }
-                    buffer.Append(element);
-                }
-                Flush();
-            }
-            block.Layout(); return block;
+                if (!empty) width = Math.Max(width, block.FontRuns.Sum(r => r.Width));
+            });
+            return width;
         }
-        if (style.Indent > 0) { var space = Make(" ", 1, false); Indent = space.FontRuns.Sum(r => r.Width) * 3 * style.Indent; space.Clear(); }
-        var layout = Make(text, 1, false);
+        if (style.Indent > 0) Indent = NaturalWidth(" ") * 3 * style.Indent;
         if (request is { FillOffset: >= 0, FillCharacter: { } fill } && double.IsFinite(request.Width))
         {
-            var unit = Make(fill.ToString(), 1, false);
-            var width = unit.FontRuns.Sum(r => r.Width); unit.Clear();
-            var count = width > 0 ? Math.Clamp((int)Math.Floor((request.Width - Indent - layout.MeasuredWidth) / width), 0, 4096) : 0;
+            var width = NaturalWidth(fill.ToString());
+            var count = width > 0 ? Math.Clamp((int)Math.Floor((request.Width - Indent - NaturalWidth(text)) / width), 0, 4096) : 0;
             if (request.FillOffset <= text.Length) text = text.Insert(request.FillOffset, new string(fill, count));
-            layout.Clear(); layout = Make(text, 1, false);
         }
-        var factor = style.ShrinkToFit && !style.WrapText && double.IsFinite(request.Width) && layout.MeasuredWidth > request.Width - Indent
-            ? Math.Max(.02f, (float)(request.Width - Indent) / Math.Max(1, layout.MeasuredWidth)) : 1;
-        if (factor != 1 || style.WrapText) { layout.Clear(); layout = Make(text, factor, true); }
-        try
+        var factor = 1f;
+        if (style.ShrinkToFit && !style.WrapText && double.IsFinite(request.Width))
         {
-            var width = layout.Lines.Select(l => l.Runs.Sum(r => r.Width)).DefaultIfEmpty().Max();
-            var height = layout.MeasuredHeight;
-            var angle = style.TextRotation is > 0 and <= 180 ? style.TextRotation <= 90 ? -style.TextRotation : style.TextRotation - 90 : 0;
-            var radians = angle * Math.PI / 180;
-            Metrics = new(width, height, Math.Abs(width * Math.Cos(radians)) + Math.Abs(height * Math.Sin(radians)),
-                Math.Abs(width * Math.Sin(radians)) + Math.Abs(height * Math.Cos(radians)), layout.LineCount);
-            FontIdentities = layout.FontRuns.Select(r => $"{r.Typeface.FamilyName}; weight={fonts.Weight(r.Typeface)}; italic={r.Typeface.IsItalic}").Distinct().ToArray();
+            var natural = NaturalWidth(text);
+            if (natural > request.Width - Indent) factor = Math.Max(.02f, (float)(request.Width - Indent) / Math.Max(1, natural));
+        }
+        float maxWidth = 0, height = 0;
+        var lineCount = 0;
+        var identities = new HashSet<string>();
+        float? wrapWidth = style.WrapText && style.TextRotation == 0 && double.IsFinite(request.Width)
+            ? Math.Max(1, (float)request.Width - Indent) : null;
+        LayoutParagraphs(request with { Text = text }, fonts, diagnostic, factor, wrapWidth, (layout, empty) =>
+        {
+            var top = height;
+            height += layout.MeasuredHeight;
+            lineCount += layout.LineCount;
+            if (empty) return;
+            maxWidth = Math.Max(maxWidth, layout.Lines.Max(l => l.Runs.Sum(r => r.Width)));
+            foreach (var r in layout.FontRuns) identities.Add($"{r.Typeface.FamilyName}; weight={fonts.Weight(r.Typeface)}; italic={r.Typeface.IsItalic}");
             foreach (var line in layout.Lines)
             foreach (var run in line.Runs)
             {
@@ -139,17 +183,21 @@ public sealed class SkiaTextLayout : IDisposable
                 for (var i = 0; i < run.Clusters.Length; i++) b.Clusters[i] = (uint)offsets[Math.Clamp(run.Clusters[i] - run.Start, 0, codepoints.Length - 1)];
                 var blob = builder.Build();
                 if (blob is null) continue;
-                var decoration = decorations[(RichStyle)run.Style];
+                var decoration = (CellRunStyle)run.Style;
                 // RichTextKit positions lines and bidi runs. Apply horizontal cell alignment per line.
                 var dx = double.IsFinite(request.Width) ? style.Horizontal switch
                 { 2 => ((float)request.Width - Indent - line.Width) / 2, 3 => (float)request.Width - Indent - line.Width, _ => 0 } : 0;
                 if (style.TextRotation != 0) dx = 0;
-                _runs.Add(new(blob, run.Style.TextColor, dy, run.XCoord + dx, run.XCoord + run.Width + dx,
-                    line.YCoord + line.BaseLine, run.Style.FontSize, decoration.Underline, decoration.Strike));
+                _runs.Add(new(blob, run.Style.TextColor, top + dy, run.XCoord + dx, run.XCoord + run.Width + dx,
+                    line.YCoord + line.BaseLine, run.Style.FontSize, decoration.CellUnderline, decoration.CellStrike));
                 _offsets.Add(dx);
             }
-        }
-        finally { layout.Clear(); }
+        });
+        var angle = style.TextRotation is > 0 and <= 180 ? style.TextRotation <= 90 ? -style.TextRotation : style.TextRotation - 90 : 0;
+        var radians = angle * Math.PI / 180;
+        Metrics = new(maxWidth, height, Math.Abs(maxWidth * Math.Cos(radians)) + Math.Abs(height * Math.Sin(radians)),
+            Math.Abs(maxWidth * Math.Sin(radians)) + Math.Abs(height * Math.Cos(radians)), lineCount);
+        FontIdentities = identities.ToArray();
     }
     private readonly List<float> _offsets = [];
     public void Draw(SKCanvas canvas, float x, float y, bool monochrome = false)

@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Automation;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Layout;
@@ -12,6 +13,7 @@ using QuickExcel.Domain;
 using QuickExcel.Grid.Avalonia;
 using QuickExcel.Presentation;
 using QuickExcel.Storage;
+using LayoutGrid = Avalonia.Controls.Grid;
 
 namespace QuickExcel.Desktop.Avalonia;
 
@@ -20,7 +22,7 @@ public sealed partial class MainWindow : Window
     private readonly WorkbookWorkspace _workspace;
     private readonly WorkbookServices _services;
     private readonly WorkbookGrid _grid = new();
-    private readonly CompositionTextBox _formula = new() { MinHeight = 30 };
+    private readonly CompositionTextBox _formula = new() { TextWrapping = TextWrapping.Wrap, VerticalContentAlignment = VerticalAlignment.Top };
     private readonly TextBlock _address = new() { Width = 86, VerticalAlignment = VerticalAlignment.Center };
     private readonly TextBlock _status = new() { Text = "就绪", Margin = new(12, 5) };
     private readonly ListBox _sheets = new() { MinHeight = 0, Padding = new(0), SelectionMode = SelectionMode.Single };
@@ -133,14 +135,46 @@ public sealed partial class MainWindow : Window
         _menu.Items.Add(new MenuItem { Header = "视图", Items =
         { Item("100%", () => ZoomAsync(100)), Item("125%", () => ZoomAsync(125)), Item("150%", () => ZoomAsync(150)),
           Item("标签在底部", () => PlaceSheets(SheetNavigationPlacement.Bottom)), Item("标签在左侧", () => PlaceSheets(SheetNavigationPlacement.Left)), Item("标签在右侧", () => PlaceSheets(SheetNavigationPlacement.Right)) } });
-        var formulaRow = new DockPanel { Margin = new(8, 4) }; DockPanel.SetDock(_address, Dock.Left); formulaRow.Children.Add(_address); formulaRow.Children.Add(_formula);
-        DockPanel.SetDock(formulaRow, Dock.Top); _book.Children.Add(formulaRow); _book.Children.Add(BuildSheetStrip()); _book.Children.Add(_grid); ApplySheetPlacement();
+        _book.Children.Add(BuildWorksheetLayout()); ApplySheetPlacement();
         BuildHome();
         var content = new global::Avalonia.Controls.Grid(); content.Children.Add(_book); content.Children.Add(new ScrollViewer { Content = _start, HorizontalScrollBarVisibility = global::Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled });
         var root = new DockPanel(); DockPanel.SetDock(_menu, Dock.Top);
         var footer = new DockPanel(); DockPanel.SetDock(_selectionStatistics, Dock.Right); footer.Children.Add(_selectionStatistics); DockPanel.SetDock(_pivotStatus,Dock.Right); footer.Children.Add(_pivotStatus); footer.Children.Add(_status);
         DockPanel.SetDock(footer, Dock.Bottom); root.Children.Add(_menu); root.Children.Add(footer); root.Children.Add(content);
         Content = _execution = new ExecutionOverlay(this, root, () => _grid.IsComposing || _formula.IsComposing);
+    }
+    private LayoutGrid BuildWorksheetLayout()
+    {
+        var layout = new LayoutGrid { RowDefinitions = new("38,5,*") };
+        var formulaHeight = layout.RowDefinitions[0];
+        formulaHeight.MinHeight = formulaHeight.Height.Value;
+        const double minSheetHeight = 120;
+        layout.SizeChanged += (_, e) => formulaHeight.MaxHeight = Math.Max(formulaHeight.MinHeight,
+            e.NewSize.Height - layout.RowDefinitions[1].Height.Value - minSheetHeight);
+
+        var formulaRow = new DockPanel { Margin = new(8, 4, 8, 2) };
+        DockPanel.SetDock(_address, Dock.Left);
+        ScrollViewer.SetHorizontalScrollBarVisibility(_formula, ScrollBarVisibility.Disabled);
+        ScrollViewer.SetVerticalScrollBarVisibility(_formula, ScrollBarVisibility.Auto);
+        formulaRow.Children.Add(_address);
+        formulaRow.Children.Add(_formula);
+        layout.Children.Add(formulaRow);
+
+        var splitter = new GridSplitter { ResizeDirection = GridResizeDirection.Rows, ResizeBehavior = GridResizeBehavior.PreviousAndNext,
+            HorizontalAlignment = HorizontalAlignment.Stretch, VerticalAlignment = VerticalAlignment.Stretch, Background = Brush.Parse("#E0E0E0") };
+        AutomationProperties.SetName(splitter, "调整公式栏高度");
+        ToolTip.SetTip(splitter, "上下拖动可调整公式栏高度");
+        LayoutGrid.SetRow(splitter, 1);
+        layout.Children.Add(splitter);
+
+        var sheet = new DockPanel();
+        sheet.Children.Add(BuildSheetStrip());
+        DockPanel.SetDock(_validationPanel, Dock.Top);
+        sheet.Children.Add(_validationPanel);
+        sheet.Children.Add(_grid);
+        LayoutGrid.SetRow(sheet, 2);
+        layout.Children.Add(sheet);
+        return layout;
     }
     private void ShowHome()
     {

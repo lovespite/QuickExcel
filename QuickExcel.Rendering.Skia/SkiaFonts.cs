@@ -42,7 +42,13 @@ public sealed class SkiaFonts : FontMapper, IDisposable
             if (_coverage.Count < 16384) _coverage[(face, scalar)] = has;
             return has;
         }
-        bool Covers(SKTypeface face) => text.EnumerateRunes().All(r => Rune.IsControl(r) || Rune.GetUnicodeCategory(r) == UnicodeCategory.Format || HasGlyph(face, r.Value));
+        // Join controls and variation selectors participate in shaping without
+        // needing their own glyph in the face's character map.
+        bool CoversRune(SKTypeface face, Rune rune) =>
+            Rune.GetUnicodeCategory(rune) is UnicodeCategory.Control or UnicodeCategory.Format ||
+            rune.Value is 0x034F or >= 0x180B and <= 0x180D or 0x180F or >= 0xFE00 and <= 0xFE0F or >= 0xE0100 and <= 0xE01EF ||
+            HasGlyph(face, rune.Value);
+        bool Covers(SKTypeface face) => text.EnumerateRunes().All(r => CoversRune(face, r));
         if (!_requests.TryGetValue(key, out var requested))
         {
             requested = _faces.FirstOrDefault(f => string.Equals(f.FamilyName, family, StringComparison.OrdinalIgnoreCase) && (Weight(f) >= 600) == request.Bold && f.IsItalic == request.Italic);
@@ -59,14 +65,14 @@ public sealed class SkiaFonts : FontMapper, IDisposable
         var resolved = Covers(requested) ? requested : _faces.FirstOrDefault(Covers);
         if (resolved is null && _systemFonts && _faces.Count < _limit)
         {
-            var missing = text.EnumerateRunes().FirstOrDefault(r => !HasGlyph(requested, r.Value));
+            var missing = text.EnumerateRunes().First(r => !CoversRune(requested, r));
             var fallback = OwnSystemFace(SKFontManager.Default.MatchCharacter(family, style, ["zh-Hans", "en"], missing.Value));
             if (fallback is not null) { _faces.Add(fallback); if (Covers(fallback)) resolved = fallback; }
         }
         if (resolved is null)
         {
             resolved = requested;
-            diagnostic("missing-glyph", $"{resolved.FamilyName}: {string.Join(" ", text.EnumerateRunes().Where(r => !Rune.IsControl(r) && !HasGlyph(resolved, r.Value)).Select(r => $"U+{r.Value:X}"))}");
+            diagnostic("missing-glyph", $"{resolved.FamilyName}: {string.Join(" ", text.EnumerateRunes().Where(r => !CoversRune(resolved, r)).Select(r => $"U+{r.Value:X}"))}");
         }
         if (family is not null && !string.Equals(family, resolved.FamilyName, StringComparison.OrdinalIgnoreCase))
             diagnostic("font-substitution", $"{family} → {resolved.FamilyName}");
