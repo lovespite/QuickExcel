@@ -22,7 +22,7 @@ public sealed class RemoveScriptTableCommand(SheetId sheetId, int tableId, bool 
     {
         var table = snapshot.GetSheet(sheetId).Data.Tables.Single(t => t.Id == tableId);
         if (table.Range.Count > 20_000) throw new ArgumentException("表转换超过 20000 格。");
-        if (!clear && table.Filter?.Columns.Values.Any(c => c.Values is not null || c.First is not null) == true)
+        if (!clear && table.Filter?.Columns.Values.Any(c => c.HasCriteria) == true)
             throw new NotSupportedException("请先清除表筛选，再转换为保留格式的普通区域。");
         // Convert all modeled references before removing their table identity.
         var transformed = StructureEdits.TransformAt(snapshot, (node, context, position) =>

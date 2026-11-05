@@ -34,6 +34,7 @@ internal sealed partial class TypedEvaluator
         if (_subtotalFiltered.TryGetValue((sheet.Id, row), out var excluded)) return excluded;
         foreach (var filter in sheet.Data.AllFilters)
         {
+            WorksheetFilterEngine.RequireColorScope(sheet, filter);
             if (row <= filter.Range.Top || row > filter.Range.Bottom) continue;
             foreach (var pair in filter.Columns)
             {

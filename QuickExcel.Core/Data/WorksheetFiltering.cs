@@ -27,6 +27,7 @@ public static class WorksheetFilterEngine
         foreach (var filter in sheet.Data.AllFilters)
         {
         if (filter.Columns.Count == 0) continue;
+        RequireColorScope(sheet, filter);
         var predicates = filter.Columns.Select(p => (Column: p.Key, Match: Compile(p.Value))).ToArray();
         for (var row = filter.Range.Top + 1; row <= filter.Range.Bottom; row++)
         {
@@ -47,6 +48,8 @@ public static class WorksheetFilterEngine
 
     public static Func<CellValue, StyleDefinition, ExcelDateSystem, bool> Compile(AutoFilterColumn column)
     {
+        if (column.Color is { } color)
+            return (_, style, _) => string.Equals(color.Font ? style.FontColor ?? "FF000000" : style.FillColor, color.Argb, StringComparison.OrdinalIgnoreCase);
         if (column.Values is { } values)
         {
             var labels = values.ToHashSet(StringComparer.OrdinalIgnoreCase);
@@ -56,6 +59,18 @@ public static class WorksheetFilterEngine
         if (column.First is null) return (_, _, _) => true;
         var first = Condition(column.First); var second = column.Second is null ? null : Condition(column.Second);
         return (value, _, _) => second is null ? first(value) : column.UseAnd ? first(value) && second(value) : first(value) || second(value);
+    }
+
+    public static void RequireColorScope(WorksheetSnapshot sheet, WorksheetAutoFilter filter)
+    {
+        foreach (var (column, rule) in filter.Columns)
+        {
+            if (rule.Color is null) continue;
+            var range = filter.Range with { Left = column, Right = column };
+            if (sheet.Data.Tables.Any(t => ValidationSafety.Overlaps(t.Range, range)) ||
+                sheet.Data.ConditionalFormats.Any(f => f.Ranges.Any(r => ValidationSafety.Overlaps(r, range))))
+                throw new InvalidOperationException(MessageText.Get("颜色筛选采用基础单元格颜色，暂不支持含 Table 样式或条件格式的筛选列。"));
+        }
     }
 
     private static Func<CellValue, bool> Condition(AutoFilterCondition condition)

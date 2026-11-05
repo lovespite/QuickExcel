@@ -2286,5 +2286,18 @@
   "粘贴内容": "Paste content",
   "公式和值（保留目标格式）": "Formulas and values (keep destination formats)",
   "已粘贴到可见行，隐藏和筛除行保持原值。可一次撤销。": "Pasted to visible rows. Hidden and filtered rows retain their values. One undo restores the operation.",
-  "公式模式仅发布 XML 表格格式，需要目标应用支持该格式。": "Formula mode publishes only XML Spreadsheet data. The destination application must support this format."
+  "公式模式仅发布 XML 表格格式，需要目标应用支持该格式。": "Formula mode publishes only XML Spreadsheet data. The destination application must support this format.",
+  "颜色筛选需要独立的不透明 ARGB 颜色，或无填充。": "A color filter requires one opaque ARGB color, or no fill, without other criteria.",
+  "颜色筛选采用基础单元格颜色，暂不支持含 Table 样式或条件格式的筛选列。": "Color filters use base cell colors. Columns with table styles or conditional formatting are not supported yet.",
+  "颜色筛选缺少差异填充定义。": "The color filter has no differential fill definition.",
+  "颜色筛选缺少图案。": "The color filter has no fill pattern.",
+  "图案颜色筛选尚未支持。": "Pattern color filters are not supported yet.",
+  "纯色筛选缺少颜色。": "The solid color filter has no color.",
+  "颜色筛选无法重应用：": "Cannot reapply this color filter: ",
+  "颜色筛选条件尚未暴露给脚本 API。请通过桌面筛选入口编辑。": "Color filter criteria are not exposed through the script API yet. Edit them using the desktop filter controls.",
+  "按基础颜色筛选…": "Filter by Base Color…",
+  "按基础颜色筛选": "Filter by Base Color",
+  "颜色类型": "Color type",
+  "筛选颜色": "Filter color",
+  "按单元格基础填充或字体颜色匹配，不使用条件格式或 Table 条纹颜色。此类筛选暂不支持含这些显示规则的列。颜色可输入 #RRGGBB 或 AARRGGBB（AA 必须为 FF）；留空表示无填充或默认黑色字体。": "Match base cell fill or font colors. Columns with conditional formatting or table styles are not supported. Enter #RRGGBB or AARRGGBB (AA must be FF). Leave blank for no fill or default black text."
 }

@@ -557,7 +557,7 @@ internal static class TypedWorkbookXml
             var sortState = XlsxFiltering.WriteSort(sheet.Data.Sort, stylePackage.Styles.Root!);
             var nestedSort = sheet.Data.Filter is { } autoFilter && sheet.Data.Sort is { } sort && sort.Range.Top > autoFilter.Range.Top &&
                 autoFilter.Range.Contains(sort.Range.Top, sort.Range.Left) && autoFilter.Range.Contains(sort.Range.Bottom, sort.Range.Right);
-            root.Add(XlsxFiltering.WriteFilter(sheet.Data.Filter, nestedSort ? sortState : null));
+            root.Add(XlsxFiltering.WriteFilter(sheet.Data.Filter, nestedSort ? sortState : null, stylePackage.Styles.Root!));
             if (!nestedSort) root.Add(sortState);
             if (sheet.MergedCells.Length > 0)
             {

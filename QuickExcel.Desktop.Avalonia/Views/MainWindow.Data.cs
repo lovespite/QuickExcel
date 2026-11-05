@@ -123,6 +123,7 @@ public sealed partial class MainWindow
             if (await ExecuteAsync(new SortRangeCommand(new(sheet.Id, new(range.Top, range.Left), new(range.Bottom, range.Right), [new(column, result.Action == "descending")], table?.HeaderRow ?? true, table is null)), snapshot.Revision)) await CalculatePendingAsync();
             return;
         }
+        if (result.Action == "color") { await ColorFilterAsync(snapshot, sheet, table, filter, column); return; }
         var columns = result.Action == "clear-all" ? filter.Columns.Clear() : result.Action == "clear" ? filter.Columns.Remove(column) :
             filter.Columns.SetItem(column, PersistentFiltering.Convert(result.Filter!, snapshot.DateSystem).WithButton(current?.ShowButton ?? true));
         await ExecuteAsync(table is null ? new SetAutoFilterCommand(sheet.Id, new(filter.Range, columns)) : new SetTableFilterCommand(sheet.Id, table.Id, new(filter.Range, columns)), snapshot.Revision);

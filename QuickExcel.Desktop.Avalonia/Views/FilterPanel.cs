@@ -58,6 +58,9 @@ internal sealed class FilterPanel : Border
         panel.Children.Add(new Separator());
         var clear = Command("FilterClear", UiText.Get("清除此列的筛选"), () => Completed?.Invoke(new("clear"))); clear.IsEnabled = current is not null; panel.Children.Add(clear);
         panel.Children.Add(Command("FilterClearAll", UiText.Get("清除全部筛选条件"), () => Completed?.Invoke(new("clear-all"))));
+        panel.Children.Add(Command("FilterColor", UiText.Get("按基础颜色筛选…"), () => Completed?.Invoke(new("color"))));
+        if (current?.Stored?.Color is { } color)
+            panel.Children.Add(new TextBlock { Text = (color.Font ? UiText.Get("字体颜色") : UiText.Get("填充颜色")) + ": " + (color.Argb ?? UiText.Get("无填充")), Margin = new(8, 0), TextWrapping = TextWrapping.Wrap });
         var custom = new ToggleButton { Name = "FilterCustom", Content = UiText.Get("自定义条件筛选"), IsChecked = current?.First is not null,
             Background = Brushes.Transparent, BorderThickness = new(0),
             HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Left, Padding = new(10, 5) };

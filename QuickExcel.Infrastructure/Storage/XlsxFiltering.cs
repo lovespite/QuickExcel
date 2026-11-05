@@ -36,7 +36,7 @@ internal static class XlsxFiltering
                 var columns = new Dictionary<int, AutoFilterColumn>();
                 foreach (var column in auto.Elements(Main + "filterColumn"))
                 {
-                    Shape(column, "filters customFilters", "colId hiddenButton showButton");
+                    Shape(column, "filters customFilters colorFilter", "colId hiddenButton showButton");
                     var index = Int(Attr(column, "colId"), range.Right - range.Left) + range.Left;
                     var button = !Bool((string?)column.Attribute("hiddenButton")) && (column.Attribute("showButton") is null || Bool((string?)column.Attribute("showButton")));
                     if (column.Elements().Count() > 1) throw new NotSupportedException("多个筛选条件类型不能混用。");
@@ -63,6 +63,27 @@ internal static class XlsxFiltering
                         }
                         try { value = new(first: Condition(items[0]), second: items.Length == 2 ? Condition(items[1]) : null, useAnd: Bool((string?)custom.Attribute("and")), showButton: button); }
                         catch (ArgumentException ex) { throw new NotSupportedException("自定义筛选不能稳定重新应用：" + ex.Message, ex); }
+                    }
+                    else if (column.Element(Main + "colorFilter") is { } color)
+                    {
+                        Shape(color, "", "cellColor dxfId");
+                        var font = color.Attribute("cellColor") is not null && !Bool((string?)color.Attribute("cellColor"));
+                        var stylePath = package.RelatedByType(workbook, "styles", true)!; var styles = package.XmlPart(stylePath).Root!;
+                        var dxfs = styles.Element(Main + "dxfs")?.Elements(Main + "dxf").ToArray() ?? [];
+                        var dxf = dxfs[Int(Attr(color, "dxfId"), dxfs.Length - 1)];
+                        // Excel stores the comparison color in a fill DXF for BOTH fill and font filters.
+                        // cellColor selects which cell property is compared to that color.
+                        Shape(dxf, "fill", "");
+                        var fill = dxf.Element(Main + "fill") ?? throw new NotSupportedException(MessageText.Get("颜色筛选缺少差异填充定义。"));
+                        Shape(fill, "patternFill", ""); var pattern = fill.Element(Main + "patternFill") ?? throw new NotSupportedException(MessageText.Get("颜色筛选缺少图案。"));
+                        Shape(pattern, "fgColor bgColor", "patternType");
+                        var type = (string?)pattern.Attribute("patternType") ?? "none";
+                        if (type is not ("none" or "solid")) throw new NotSupportedException(MessageText.Get("图案颜色筛选尚未支持。"));
+                        var colorElement = type == "none" ? null : pattern.Element(Main + "fgColor") ?? pattern.Element(Main + "bgColor");
+                        if (type == "solid" && colorElement is null) throw new NotSupportedException(MessageText.Get("纯色筛选缺少颜色。"));
+                        var rgb = colorElement is null ? null : new XlsxColors(package, workbook, styles, stylePath).Read(colorElement, package, stylePath);
+                        try { value = new(showButton: button, color: new(font, rgb)); }
+                        catch (ArgumentException ex) { throw new NotSupportedException(MessageText.Get("颜色筛选无法重应用：") + ex.Message, ex); }
                     }
                     else value = new(showButton: button);
                     if (!columns.TryAdd(index, value)) throw new InvalidDataException("重复的筛选列。");
@@ -178,7 +199,7 @@ internal static class XlsxFiltering
             sheet.DefaultRowHeight, sheet.TabColor, sheet.View, sheet.Visibility, sheet.Printing, sheet.Annotations, sheet.Data);
     }
 
-    public static XElement? WriteFilter(WorksheetAutoFilter? filter, XElement? sort)
+    public static XElement? WriteFilter(WorksheetAutoFilter? filter, XElement? sort, XElement styles)
     {
         if (filter is null) return null;
         var root = new XElement(Main + "autoFilter", new XAttribute("ref", filter.Range));
@@ -186,7 +207,13 @@ internal static class XlsxFiltering
         {
             var column = new XElement(Main + "filterColumn", new XAttribute("colId", index - filter.Range.Left));
             if (!value.ShowButton) column.Add(new XAttribute("hiddenButton", 1));
-            if (value.Values is { } list) column.Add(new XElement(Main + "filters", value.IncludeBlank ? new XAttribute("blank", 1) : null,
+            if (value.Color is { } color)
+            {
+                var dxf = new XElement(Main + "dxf", new XElement(Main + "fill", new XElement(Main + "patternFill", new XAttribute("patternType", color.Argb is null ? "none" : "solid"),
+                        color.Argb is null ? null : new XElement(Main + "fgColor", new XAttribute("rgb", color.Argb)))));
+                column.Add(new XElement(Main + "colorFilter", new XAttribute("dxfId", AddDifferentialStyle(styles, dxf)), new XAttribute("cellColor", color.Font ? 0 : 1)));
+            }
+            else if (value.Values is { } list) column.Add(new XElement(Main + "filters", value.IncludeBlank ? new XAttribute("blank", 1) : null,
                 list.Select(v => new XElement(Main + "filter", new XAttribute("val", Encode(v))))));
             else if (value.First is not null)
                 column.Add(new XElement(Main + "customFilters", value.UseAnd ? new XAttribute("and", 1) : null,
@@ -195,6 +222,20 @@ internal static class XlsxFiltering
             root.Add(column);
         }
         root.Add(sort); return root;
+    }
+
+    private static int AddDifferentialStyle(XElement styles, XElement dxf)
+    {
+        var dxfs = styles.Element(Main + "dxfs");
+        if (dxfs is null)
+        {
+            dxfs = new(Main + "dxfs");
+            var after = styles.Elements().FirstOrDefault(e => e.Name.LocalName is "tableStyles" or "colors" or "extLst");
+            if (after is null) styles.Add(dxfs); else after.AddBeforeSelf(dxfs);
+        }
+        var existing = dxfs.Elements().ToArray(); var id = Array.FindIndex(existing, e => XNode.DeepEquals(e, dxf));
+        if (id < 0) { id = existing.Length; if (id >= 4096) throw new InvalidOperationException("差异样式数量超过 4096。"); dxfs.Add(dxf); }
+        dxfs.SetAttributeValue("count", dxfs.Elements().Count()); return id;
     }
 
     public static XElement? WriteSort(WorksheetSortState? sort, XElement styles)

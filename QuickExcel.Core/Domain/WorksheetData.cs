@@ -5,13 +5,18 @@ namespace QuickExcel.Domain;
 
 public enum AutoFilterComparison { Equal, NotEqual, LessThan, LessThanOrEqual, GreaterThan, GreaterThanOrEqual }
 public sealed record AutoFilterCondition(AutoFilterComparison Comparison, string Operand);
+public sealed record AutoFilterColor(bool Font, string? Argb);
 
 /// <summary>Excel checklist labels or one/two custom conditions. Column indexes are absolute model coordinates.</summary>
 public sealed class AutoFilterColumn
 {
     public AutoFilterColumn(IEnumerable<string>? values = null, bool includeBlank = false,
-        AutoFilterCondition? first = null, AutoFilterCondition? second = null, bool useAnd = false, bool showButton = true)
+        AutoFilterCondition? first = null, AutoFilterCondition? second = null, bool useAnd = false, bool showButton = true, AutoFilterColor? color = null)
     {
+        if (color is not null && (values is not null || includeBlank || first is not null || second is not null ||
+            color.Font && color.Argb is null || color.Argb is { } rgb && (rgb.Length != 8 || !rgb.StartsWith("FF", StringComparison.OrdinalIgnoreCase) || rgb.Any(c => !Uri.IsHexDigit(c)))))
+            throw new ArgumentException(MessageText.Get("颜色筛选需要独立的不透明 ARGB 颜色，或无填充。"));
+        Color = color is null ? null : color with { Argb = color.Argb?.ToUpperInvariant() };
         foreach (var condition in new[] { first, second }.OfType<AutoFilterCondition>())
             if (!Enum.IsDefined(condition.Comparison) || condition.Operand is null || condition.Operand.Length > 1024)
                 throw new ArgumentException(MessageText.Get("筛选条件无效或超过 1024 个字符。"));
@@ -51,9 +56,11 @@ public sealed class AutoFilterColumn
     public AutoFilterCondition? Second { get; }
     public bool UseAnd { get; }
     public bool ShowButton { get; }
-    public AutoFilterColumn WithButton(bool showButton) => new(Values, IncludeBlank, First, Second, UseAnd, showButton);
+    public AutoFilterColor? Color { get; }
+    public bool HasCriteria => Values is not null || First is not null || Color is not null;
+    public AutoFilterColumn WithButton(bool showButton) => new(Values, IncludeBlank, First, Second, UseAnd, showButton, Color);
     public bool ContentEquals(AutoFilterColumn other) => IncludeBlank == other.IncludeBlank && First == other.First && Second == other.Second &&
-        UseAnd == other.UseAnd && ShowButton == other.ShowButton && (Values is null ? other.Values is null : other.Values is { } list && Values.Value.SequenceEqual(list));
+        Color == other.Color && UseAnd == other.UseAnd && ShowButton == other.ShowButton && (Values is null ? other.Values is null : other.Values is { } list && Values.Value.SequenceEqual(list));
 }
 
 public sealed class WorksheetAutoFilter

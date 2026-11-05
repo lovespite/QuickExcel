@@ -83,3 +83,13 @@ Visible-row transfers preserve typed identifiers, booleans, errors, dates and ba
 验证：52 项可见行/外部导出/筛选剪贴板/本地化测试通过，涵盖类型、跨表和 XML 往返、日期系统、保存重开、保护与验证回滚、撤销/重做、取消和边界。9 项 Avalonia VisibleTransfer 检查通过，含公式路径、失效本地捕获及过期外部预览；证据 `artifacts/avalonia/workspace/20261105-074503-c289e027`。沿用 78 号 XML 编码协议，本批跨实例证据为序列化后去掉本地身份的接收路径，未将其称为新的实机 Excel 操作样例。
 
 生产发布和自检通过，活动包 `artifacts/avalonia/releases/20261105-074519-26852aec/application`，活动清单哈希已核对。
+
+## XC-0605a — 基础颜色筛选 / Base color filtering
+
+2026-11-05，1.24.0。现有列筛选浮层增加基础颜色筛选，支持填充、字体和无填充；读取/写回标准 colorFilter 与 dxf。颜色比较使用单元格继承后的基础样式，不包含 Table 或条件格式显示投影；含这类规则的列明确拒绝。既有值列表、自定义条件、按钮可见性、多列 AND、手动隐藏和撤销路径继续保留。基础颜色修改会使 SUBTOTAL 重新计算。
+
+The normal column filter menu exposes fill, font and no-fill criteria. Color is stored as an independent filter type and survives XLSX/XLSQ. Cancellation and stale dialogs preserve the previous criteria. Unsupported pattern filters stay on the original-package path. Script filter-state and clear operations recognize the new criteria; script criteria objects do not expose colors yet and report the limitation explicitly.
+
+真实 Excel 对照发现字体颜色筛选同样使用 fill dxf（通过 cellColor=0 指定比较字体），已按独立样本修正。`scripts/test-excel-color-filters.ps1` 验证 QuickExcel 输出在 Excel 重新应用，并生成独立 Excel 原生文件；填充红色、字体红色、无填充三项均通过，来源哈希和 XML 固定在 `Fixtures/excel-color-filters.json`。证据 `artifacts/e6/color-filter-excel-02`；初次字体比较失败保留在 01 目录。参考 [Microsoft AutoFilter operator](https://learn.microsoft.com/office/vba/api/excel.xlautofilteroperator)。
+
+37 项颜色/既有筛选/分类汇总/本地化相关测试通过；5 项 AdvancedFilters 桌面检查通过，证据 `artifacts/avalonia/workspace/20261105-075615-56453940`。生产发布及自检通过，活动包 `artifacts/avalonia/releases/20261105-075637-93e8466e/application`，清单哈希已核对。

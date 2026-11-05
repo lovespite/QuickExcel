@@ -31,7 +31,7 @@ internal sealed partial class ScriptModelAdapter
             return member switch
             {
                 "getEnabled" => filter is not null,
-                "getIsDataFiltered" => filter?.Columns.Values.Any(c => c.Values is not null || c.First is not null) == true,
+                "getIsDataFiltered" => filter?.Columns.Values.Any(c => c.HasCriteria) == true,
                 "getRange" => filter is null ? null : RangeHandle(sheet.Id, filter.Range),
                 "getCriteria" when column is { } c => Criteria(filter?.Columns.GetValueOrDefault(c)),
                 "getCriteria" => filter is null ? Array.Empty<object>() : Enumerable.Range(filter.Range.Left, filter.Range.Right - filter.Range.Left + 1).Select(c => Criteria(filter.Columns.GetValueOrDefault(c))).ToArray(),
@@ -116,6 +116,7 @@ internal sealed partial class ScriptModelAdapter
     }
     private static object Criteria(AutoFilterColumn? column)
     {
+        if (column?.Color is not null) throw Unsupported(MessageText.Get("颜色筛选条件尚未暴露给脚本 API。请通过桌面筛选入口编辑。"));
         if (column?.Values is { } values) return new { filterOn = 5, values = column.IncludeBlank ? values.Add("").ToArray() : values.ToArray() };
         if (column?.First is not { } first) return new { };
         static string Expression(AutoFilterCondition c) => (c.Comparison switch { AutoFilterComparison.Equal => "=", AutoFilterComparison.NotEqual => "<>",
