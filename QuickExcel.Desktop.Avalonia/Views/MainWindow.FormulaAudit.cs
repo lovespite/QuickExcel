@@ -20,6 +20,9 @@ public sealed partial class MainWindow
         item.Bind(IsEnabledProperty, _book.GetObservable(IsVisibleProperty));
         item.Click += async (_, _) => { if (_book.IsVisible) await PerformAsync(ShowFormulaAuditAsync); };
         ((MenuItem)_menu.Items[3]!).Items.Add(item);
+        var button = RibbonButton(RibbonIcon.Search, UiText.Get("公式审核"), ShowFormulaAuditAsync, mutation: false);
+        button.Name = "FormulaAuditRibbon";
+        RibbonGroup(UiText.Get("审阅"), UiText.Get("公式审核"), button);
     }
     private async Task ShowFormulaAuditAsync()
     {

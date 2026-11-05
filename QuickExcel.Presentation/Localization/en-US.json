@@ -2397,6 +2397,7 @@
   "公式审核": "Formula audit",
   "显示静态值引用和直接从属。位置/尺寸引用不读取值。审核固定地址，编辑或重算后自动刷新；切换审核位置请点击“使用当前格”。": "Shows static value references and direct dependents. Position/dimension references do not read values. Audits a fixed address and refreshes after edits or calculation; choose Use current cell to audit another address.",
   "使用当前格": "Use current cell",
+  "刷新": "Refresh",
   "取消分析": "Cancel analysis",
   "定位选中项": "Go to selected item",
   "直接值引用": "Direct value references",

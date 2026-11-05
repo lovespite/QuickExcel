@@ -1,7 +1,12 @@
 using System.Text.Json;
 using Avalonia;
+using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Interactivity;
+using Avalonia.Media.Imaging;
+using Avalonia.Threading;
+using Avalonia.VisualTree;
 using QuickExcel.Core;
 using QuickExcel.Domain;
 
@@ -21,7 +26,24 @@ public sealed partial class MainWindow
             await ExecuteAsync(new SetCellsCommand([new(new(add.Id, 0, 0), CellContent.FromFormula("='" + name.Replace("'", "''") + "'!B1+1"))]));
             await CalculatePendingAsync(); Synchronize(); _grid.Select(new(0, 1));
             Check(((MenuItem)_menu.Items[3]!).Items.OfType<MenuItem>().Any(m => m.Name == "FormulaAuditMenu" && m.IsEnabled), "View menu exposes formula audit");
-            await ShowFormulaAuditAsync(); var result = _formulaAudit!.Result!;
+            _ribbon.SelectedItem = _ribbon.Items.Cast<TabItem>().Single(t => Equals(t.Header, UiText.Get("审阅")));
+            await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Background);
+            var auditButton = _ribbon.GetVisualDescendants().OfType<Button>().Single(b => b.Name == "FormulaAuditRibbon");
+            Check(auditButton.IsEffectivelyEnabled && AutomationProperties.GetName(auditButton) == UiText.Get("公式审核") &&
+                auditButton.GetVisualDescendants().OfType<PathIcon>().Any(i => i.Data is not null && i.Bounds.Width > 0),
+                "Review ribbon exposes an accessible formula audit command with a visible vector icon");
+            using (var bitmap = new RenderTargetBitmap(new PixelSize((int)Bounds.Width, (int)Bounds.Height), new Vector(96, 96)))
+            { bitmap.Render(this); bitmap.Save(Path.Combine(directory, "formula-audit-ribbon.png"), PngBitmapEncoderOptions.Default); }
+            auditButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            var deadline = DateTime.UtcNow.AddSeconds(5);
+            while (_formulaAudit?.Result is null && DateTime.UtcNow < deadline) await Task.Delay(20);
+            Check(_formulaAudit?.Result is not null, "Clicking the Review command opens and populates formula audit");
+            var result = _formulaAudit!.Result!;
+            await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Background);
+            Check(_formulaAudit.GetVisualDescendants().OfType<Button>().Any(b => Equals(b.Content, UiText.Language == UiText.English ? "Refresh" : "刷新")),
+                "Formula audit refresh button follows the chosen language");
+            using (var bitmap = new RenderTargetBitmap(new PixelSize((int)_formulaAudit.Bounds.Width, (int)_formulaAudit.Bounds.Height), new Vector(96, 96)))
+            { bitmap.Render(_formulaAudit); bitmap.Save(Path.Combine(directory, "formula-audit-window.png"), PngBitmapEncoderOptions.Default); }
             Check(result.Precedents.Count == 1 && result.Dependents.Count == 2 && result.Formula == "=A1+1", "Audit shows direct references and same/cross-sheet consumers");
             Check(_grid.FormulaAuditArrowCount == 1, "Audit connects precedent and origin with a grid arrow");
             _formulaAudit.NextStep();
