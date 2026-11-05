@@ -168,3 +168,27 @@ Ribbon 命令使用本地 Fluent UI System Icons 的 20px Regular SVG。37 个�
 定向验证：44 项 Core 测试通过，覆盖结构命令、插入格式、轴剪贴板、合并选区及新增的合并插入/公式引用/相邻合并移动/XLSX 往返/越界和保护拒绝（`artifacts/tests/merged-axis-insertion/merged-axis-insertion.trx`）。新增集合断言首次误用了 ImmutableArray 的相等比较，改为数组序列比较后通过。Release 桌面构建 0 警告/0 错误；Workspace 162 项（`artifacts/avalonia/workspace/20261105-051923-bf8805c8`）及 Grid 326 项（`artifacts/avalonia/workspace/20261105-051955-d1d3334c`）通过，包含真实 Ribbon/右键菜单处理器、连续插入、撤销重做、头部选择及多行列数量检查。仅执行相关测试，未运行全量回归；程序化输入检查不代表物理输入验收。
 
 已运行 `scripts/build-quickexcel.ps1 -SkipTests -RunSmoke`，发布并激活 `artifacts/avalonia/releases/20261105-052025-5effa524/application`（1.12.1），14 项生产自检通过。已核对活动指针、release manifest SHA-256 及宿主 EXE/DLL、Core、Grid 载荷与本次生产构建的哈希，`Start-QuickExcel.cmd` 经现有启动脚本使用该已验证包；旧包保留。生产构建仅有两项既有诊断字段 CS0649 警告。
+
+## 2026-11-05 历史记录固定与配置（1.13.0）
+
+历史文件新增图标固定/取消固定，固定记录置顶并持久化；设置“历史管理”支持 1–1000 条普通记录，默认 100 条，固定记录不计入上限。点击缺失文件先提示并询问移除或保留，保留当前工作簿与搜索条件；权限或共享冲突不会被误报为缺失。兼容旧历史数组，数量与固定状态随历史配置原子保存。
+
+18 项相关 Core.Test 检查及 Menus 92 项通过，Release 桌面构建无警告/错误。存储、交互和截图证据见 [64 号记录](64-avalonia-grid-and-workspace.md)。开发期间诊断补齐了预期共享冲突异常处理及模态窗口就绪等待；共享工作区一次旧文件覆盖在用户确认后恢复为已提交实现，并重新构建及验证通过。未运行全量回归，物理输入验收状态不变。
+
+历史管理首轮发布已执行 `scripts/build-quickexcel.ps1 -SkipTests -RunSmoke`，生成并激活 `artifacts/avalonia/releases/20261105-054355-60c95401/application`。共享工作区同期功能将版本提升为 1.14.0，已核对发布清单与宿主程序集版本均为 1.14.0、14 项生产自检通过，活动指针、清单及 EXE/宿主/Presentation 哈希一致。
+
+## 2026-11-05 固定图标居中修正（1.14.1）
+
+固定按钮显式水平/垂直居中，图标保留完整 20×20 坐标范围，取消对紧边界的拉伸和超出可用区域的固定内边距。固定和未固定状态采用同一几何与布局，图标不截获点击。Menus 96 项通过（`artifacts/avalonia/workspace/20261105-054717-eece1e2d`），其中新增检查验证两种状态下实际图标中心与按钮中心一致；36×36 按钮截图已复核。Release 桌面构建无警告/错误。
+
+最终交付：本次已发布 `artifacts/avalonia/releases/20261105-055104-39ba0083/application`（共享工作区版本 1.15.0）。随后并行任务激活了更新的 `artifacts/avalonia/releases/20261105-055127-b78f494f/application`（同为 1.15.0）。两个包均通过 14 项生产自检，已分别核验清单/程序集版本和 EXE/宿主/Presentation 哈希，且均确认包含居中图钉几何和固定历史模型；活动指针现指向后一包，默认启动器使用它，旧包保留。
+
+重试发布记录：此前 `20261105-054902-322b1370` 在发布期间受到并行版本变更影响，清单为 1.14.1 而宿主为 1.15.0，未作为最终交付。已先恢复版本一致的 1.14.0 活动包，再对历史存储、图标源文件和项目版本文件临时持有只读共享句柄重新发布，完成后全部释放。另一次构建因旧历史文件被覆盖而失败，同样未替换活动包。生产构建仅有两项既有诊断字段 CS0649 警告。
+
+## 2026-11-05 Pin 遮挡与历史管理双滚动条（1.15.1）
+
+首页历史滚动条占用独立宽度，避免展开后遮住 Pin。历史管理按剩余高度分配文件列表，标题/数量设置和底部操作固定，移除整页与列表嵌套滚动；该分区最小高度 480，防止窄窗口中说明换行把列表压缩到不可用。离开该分区恢复其他设置页原来的滚动和最小高度。
+
+Release 桌面构建无警告/错误，Menus 108 项通过（`artifacts/avalonia/workspace/20261105-055844-8364edc7`），覆盖默认/最小尺寸、滚动末尾、搜索过滤、分区切换及既有历史管理操作。截图已复核；未运行全量回归。具体布局和证据见 [64 号记录](64-avalonia-grid-and-workspace.md)。
+
+已执行 `scripts/build-quickexcel.ps1 -SkipTests -RunSmoke`，发布并激活 `artifacts/avalonia/releases/20261105-055933-6635e65c/application`（1.15.1），14 项生产自检通过。已核对 `active-windows.json`、发布清单哈希、EXE/宿主 DLL 哈希和程序集版本，活动宿主与本次生产构建一致；`Start-QuickExcel.cmd` 使用此新包，旧包保留。生产构建只有两项既有诊断字段 CS0649 警告。

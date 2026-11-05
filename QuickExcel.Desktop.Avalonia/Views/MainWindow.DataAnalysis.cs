@@ -53,12 +53,8 @@ public sealed partial class MainWindow
         // A selected example/blank cell infers a header only when the target header itself is empty.
         if (selected.Count == 1 && range.Rows > 2 && range.Top < _grid.Current.Row && sheet.GetCell(range.Top, target) is null &&
             Enumerable.Range(range.Left, range.Columns).Where(c => c != target).All(c => sheet.GetCell(range.Top, c)?.Value.Kind == CellValueKind.Text)) range = range with { Top = range.Top + 1 };
-        var dialog = new FieldsDialog(UiText.Get("快速填充")).Note(UiText.Get("在目标列先输入示例。支持文本提取、拼接、大小写转换；仅填充空白，先预览。"))
-            .Text("range", UiText.Get("来源与示例区域（不含标题）"), range.ToString()).Text("target", UiText.Get("目标列"), QuickExcel.Formulas.FormulaSyntax.ColumnName(target));
-        dialog.Validate = () => { _ = CellRectangle.Parse(dialog.String("range")); if (ColumnNumbers(dialog.String("target")).Length != 1) throw new ArgumentException(UiText.Get("请选择一个目标列。")); };
-        if (!await dialog.ShowAsync(this)) return;
-        range = CellRectangle.Parse(dialog.String("range")); target = ColumnNumbers(dialog.String("target"))[0];
-        var preview = await Task.Run(() => FlashFill.Preview(snapshot, sheet.Id, range, target)); await ApplyCleaningAsync(preview);
+        var result = await Task.Run(() => FlashFill.Preview(snapshot, sheet.Id, range, target));
+        if (await ExecuteAsync(new ApplyCleaningCommand(result), snapshot.Revision)) await CalculatePendingAsync();
     }
 
     private static CellPosition DataPosition(string text)

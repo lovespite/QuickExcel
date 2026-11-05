@@ -96,10 +96,22 @@ public sealed partial class MainWindow
             await History(false); Check(WorksheetOutline.HasGroups(Document.Snapshot.Sheets[0]), "Undo restores the subtotal tree");
 
             await Seed(["Ada Lovelace", "Ada"], ["Grace Hopper"], ["Alan Turing"]); _grid.Select(new(0, 1));
-            _dialogDriver = async window => { await Layout(); var dialog = (FieldsDialog)window; Set(dialog, "range", "A1:B3"); AcceptPreview(); Click(Button(window, "确定")); };
+            var flashFillDialogOpened = false;
+            _dialogDriver = window => { flashFillDialogOpened = true; window.Close(false); return Task.CompletedTask; };
             _grid.RaiseEvent(new KeyEventArgs { RoutedEvent = KeyDownEvent, Key = Key.E, KeyModifiers = KeyModifiers.Control, Source = _grid }); await _operation;
-            Check(Document.Snapshot.Sheets[0].GetCell(1, 1)!.Value.TextValue == "Grace", "Ctrl+E runs flash fill through the actual shortcut");
-            await History(false); Check(Document.Snapshot.Sheets[0].GetCell(1, 1) is null, "Flash fill is one undo step");
+            Check(!flashFillDialogOpened, "Ctrl+E applies flash fill without a settings or preview dialog");
+            Check(Document.GetCellValue(0, 1, 1) == "Grace" && Document.GetCellValue(0, 2, 1) == "Alan" && Document.GetCellValue(0, 0, 1) == "Ada",
+                "Ctrl+E infers the current data region, fills blanks and preserves the example");
+            await History(false);
+            Check(Document.Snapshot.Sheets[0].GetCell(1, 1) is null && Document.Snapshot.Sheets[0].GetCell(2, 1) is null && Document.GetCellValue(0, 0, 1) == "Ada",
+                "One undo removes the entire flash fill and preserves the example");
+            await History(true);
+            Check(Document.GetCellValue(0, 1, 1) == "Grace" && Document.GetCellValue(0, 2, 1) == "Alan", "One redo restores the entire flash fill");
+            await History(false); _grid.SelectRange(new(0, 0, 1, 1), new(0, 1));
+            Click(_ribbon.GetVisualDescendants().OfType<Button>().Single(b => AutomationProperties.GetName(b) == "快速填充  Ctrl+E")); await _operation;
+            Check(!flashFillDialogOpened && Document.GetCellValue(0, 1, 1) == "Grace" && Document.Snapshot.Sheets[0].GetCell(2, 1) is null,
+                "Ribbon flash fill applies directly to the selected rows and active column");
+            _dialogDriver = null;
 
             var splitRows = Enumerable.Range(0, 220).Select(i => new[] { $"xx-{i}|007|02/01/2026|omit" + (i == 219 ? "|25" : "") }).ToArray();
             splitRows[0] = [splitRows[0][0], "existing"];

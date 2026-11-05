@@ -172,11 +172,17 @@ public sealed partial class MainWindow
         _grid.SelectRange(new(target.Top, target.Left, target.Top + rows - 1, target.Left + columns - 1), new(target.Top, target.Left));
         await CalculatePendingAsync(); _status.Text = UiText.Get("已粘贴，可一次撤销。");
     }
-    private async Task FillAsync(GridRange source, GridRange extent, long? revision = null)
+    private async Task FillAsync(GridRange source, GridRange extent, long? revision = null, CellFillMode mode = CellFillMode.Copy)
     {
         CurrentView.RequireVisibleTargets(Document.Snapshot, SheetIndex, Enumerable.Range(extent.Top, extent.Rows));
-        if (await ExecuteAsync(new FillCellsCommand(Document.Snapshot.ActiveSheetId, Rectangle(source), Rectangle(extent)), revision))
+        if (await ExecuteAsync(new FillCellsCommand(Document.Snapshot.ActiveSheetId, Rectangle(source), Rectangle(extent), mode), revision))
         { _grid.SelectRange(extent, new(extent.Top, extent.Left)); await CalculatePendingAsync(); }
+    }
+    private async Task AutoFillDownAsync(GridRange source, long revision, CellFillMode mode)
+    {
+        if (FillPlanning.DownExtent(Document.Snapshot.Sheets[SheetIndex], source) is { } extent)
+            await FillAsync(source, extent, revision, mode);
+        else _status.Text = UiText.Get("相邻列没有可延续的数据，或下方已有内容。请拖动填充柄指定范围。");
     }
     private Task FillDirectionAsync(bool right)
     {
@@ -201,7 +207,8 @@ public sealed partial class MainWindow
         InstallPasteOptions();
         _grid.DimensionChanged += (axis, index, pixels, revision) => _ = PerformAsync(async () =>
             await ExecuteAsync(new SetAxisMetadataCommand(Document.Snapshot.ActiveSheetId, axis, index, 1, axis == SheetAxis.Row ? pixels : Math.Max(.01, (pixels - 5) / 7)), revision));
-        _grid.FillRequested += (source, extent, revision) => _ = PerformAsync(() => FillAsync(source, extent, revision));
+        _grid.FillRequested += (source, extent, revision, mode) => _ = PerformAsync(() => FillAsync(source, extent, revision, mode));
+        _grid.AutoFillDownRequested += (source, revision, mode) => _ = PerformAsync(() => AutoFillDownAsync(source, revision, mode));
         var edit = (MenuItem)_menu.Items[1]!;
         edit.Items.Add(new Separator());
         edit.Items.Add(CommandMenu(UiText.Get("复制  Ctrl+C"), () => CopyAsync(false))); edit.Items.Add(CommandMenu(UiText.Get("剪切  Ctrl+X"), () => CopyAsync(true)));

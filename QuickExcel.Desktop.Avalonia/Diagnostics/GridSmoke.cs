@@ -90,6 +90,7 @@ public sealed partial class MainWindow
             await FillAsync(new(5, 0, 5, 1), new(5, 0, 7, 1), revision);
             Check(Document.GetCellInput(0, 7, 1) == "=(A8+1)", "Fill relocates references through shared command");
             await History(false); Check(Document.GetCellInput(0, 7, 1) == "", "Fill is one undo entry");
+            await RunFillHandleChecksAsync(Check);
             _grid.SelectRange(new(0, 3, 3, 3), new(0, 3)); memory.Value = new("value"); before = Document.Snapshot;
             try { await PasteAsync("all"); throw new InvalidOperationException("Hidden paste succeeded"); }
             catch (InvalidOperationException ex) when (ex.Message != "Hidden paste succeeded") { Check(ReferenceEquals(before, Document.Snapshot), "Paste never remaps across hidden rows"); }

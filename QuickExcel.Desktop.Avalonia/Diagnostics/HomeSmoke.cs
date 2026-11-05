@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
@@ -15,11 +16,21 @@ public sealed partial class MainWindow
     {
         static Task Layout() => Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Background).GetTask();
         var scroll = _start.GetVisualDescendants().OfType<ScrollViewer>().Single(s => s.Name == "HomeRecentScroll");
+        var verticalBar = scroll.GetVisualDescendants().OfType<ScrollBar>().Single(b => b.Orientation == global::Avalonia.Layout.Orientation.Vertical);
+        void CheckPinClearance(string state)
+        {
+            var contentRight = verticalBar.IsVisible ? verticalBar.TranslatePoint(default, scroll)!.Value.X : scroll.Bounds.Width;
+            var pins = _recent.GetVisualDescendants().OfType<ToggleButton>().Where(b => b.Name == "PinRecentFile").ToArray();
+            check(pins.Length > 0 && pins.All(pin => pin.TranslatePoint(default, scroll)!.Value.X >= 0 &&
+                pin.TranslatePoint(new(pin.Bounds.Width, 0), scroll)!.Value.X <= contentRight + .1),
+                "History pin buttons stay entirely clear of the scrollbar: " + state);
+        }
         var manage = _start.GetVisualDescendants().OfType<Button>().Single(b => b.Name == "ManageRecentFiles");
         var container = _start.GetVisualDescendants().OfType<Border>().Single(b => b.Name == "HomeRecentContainer");
         var actionScroll = (ScrollViewer)_start.Children[0];
         check(!_start.GetVisualAncestors().OfType<ScrollViewer>().Any() && scroll.Extent.Height > scroll.Viewport.Height && scroll.Viewport.Height > 70,
             "At minimum size history overflows only its bounded list viewport");
+        CheckPinClearance("minimum window");
         var searchPosition = _recentSearch.TranslatePoint(default, this)!.Value;
         var managePosition = manage.TranslatePoint(default, this)!.Value;
         check(managePosition.Y + manage.Bounds.Height <= _start.TranslatePoint(default, this)!.Value.Y + _start.Bounds.Height &&
@@ -36,11 +47,14 @@ public sealed partial class MainWindow
         check(scroll.Offset.Y > 0 && _recent.Children[^1].TranslatePoint(default, scroll)!.Value.Y + _recent.Children[^1].Bounds.Height <= scroll.Bounds.Height + 1,
             "The last history entry remains reachable inside the list");
         await capture(this, "home-history-scrolled");
+        CheckPinClearance("scrolled to the last entry");
 
         var persisted = await File.ReadAllTextAsync(Path.Combine(directory, "settings", "recent-files.json"));
         _recentSearch.Text = "  历史工作簿-03.XLSX  "; await Layout();
         check(RecentOpenButtons().Count() == 1 && scroll.Offset.Y == 0,
             "Filename search ignores case and surrounding whitespace and resets list scrolling");
+        check(!verticalBar.IsVisible, "A single filtered history entry does not need a scrollbar");
+        CheckPinClearance("filtered without a scrollbar");
         _recentSearch.Text = "historyfolder-3"; await Layout();
         check(RecentOpenButtons().Count() == 1, "History search also matches directory paths case-insensitively");
         _recentSearch.Text = "年度预算"; await Layout();
@@ -54,6 +68,7 @@ public sealed partial class MainWindow
         Width = 1280; Height = 820; await Layout();
         check(scroll.Extent.Height > scroll.Viewport.Height && manage.TranslatePoint(default, this)!.Value.Y + manage.Bounds.Height <= Bounds.Height,
             "A full history list stays bounded after enlarging the window");
+        CheckPinClearance("enlarged window");
         await capture(this, "home-history");
 
         _recentSearch.Text = "historyfolder-3"; await Layout();
@@ -64,7 +79,31 @@ public sealed partial class MainWindow
             var list = window.GetVisualDescendants().OfType<ListBox>().Single(l => l.Name == "SettingsRecentFiles");
             check(Equals(navigation.SelectedItem, UiText.Get("历史管理")) && list.ItemCount == 10,
                 "Manage history opens Settings directly at the complete history section");
+            var pageScroll = window.GetVisualDescendants().OfType<ScrollViewer>().Single(s => s.Name == "SettingsPageScroll");
+            var listScroll = list.GetVisualDescendants().OfType<ScrollViewer>().Single();
+            var remove = window.GetVisualDescendants().OfType<Button>().Single(b => Equals(b.Content, UiText.Get("移除选中记录")));
+            void CheckHistoryLayout(string state)
+            {
+                check(pageScroll.Extent.Height <= pageScroll.Viewport.Height + .1 && listScroll.Viewport.Height >= 80 &&
+                    listScroll.Extent.Height > listScroll.Viewport.Height,
+                    "Settings history scrolls only inside the file list: " + state);
+                check(remove.TranslatePoint(default, window)!.Value.Y >= list.TranslatePoint(default, window)!.Value.Y + list.Bounds.Height &&
+                    remove.TranslatePoint(new(0, remove.Bounds.Height), window)!.Value.Y <= window.Bounds.Height,
+                    "History management actions remain visible below the list: " + state);
+            }
+            CheckHistoryLayout("default size");
             await capture(window, "settings-history");
+            window.Width = window.MinWidth; window.Height = window.MinHeight; await Layout();
+            CheckHistoryLayout("minimum size");
+            await capture(window, "settings-history-minimum");
+            window.Width = 820; window.Height = 600; await Layout();
+            listScroll.ScrollToEnd(); await Layout();
+            CheckHistoryLayout("scrolled to the last entry");
+            navigation.SelectedItem = UiText.Get("保存与计算"); await Layout();
+            check(pageScroll.VerticalScrollBarVisibility == ScrollBarVisibility.Auto,
+                "Other settings sections retain their page scrolling after leaving history");
+            navigation.SelectedItem = UiText.Get("历史管理"); await Layout();
+            list = window.GetVisualDescendants().OfType<ListBox>().Single(l => l.Name == "SettingsRecentFiles");
             list.SelectedItem = _recentFiles.Paths.Single(path => path.Contains("HistoryFolder-3", StringComparison.Ordinal));
             window.GetVisualDescendants().OfType<Button>().Single(b => Equals(b.Content, UiText.Get("移除选中记录")))
                 .RaiseEvent(new RoutedEventArgs(Button.ClickEvent));

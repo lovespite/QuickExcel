@@ -1,3 +1,4 @@
+using Avalonia;
 using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
@@ -31,6 +32,10 @@ public sealed partial class MainWindow
             var button = _recent.GetVisualDescendants().OfType<ToggleButton>().Single(b => Equals(b.Tag, path));
             check(button.Content is global::Avalonia.Controls.Shapes.Path && ToolTip.GetTip(button) is string &&
                 AutomationProperties.GetName(button)?.Contains(Path.GetFileName(path)) == true, "Pin is an icon with a tooltip and accessible file name");
+            var icon = (global::Avalonia.Controls.Shapes.Path)button.Content!;
+            var center = icon.TranslatePoint(icon.Data!.Bounds.Center, button)!.Value;
+            check(Math.Abs(center.X - button.Bounds.Width / 2) < .1 && Math.Abs(center.Y - button.Bounds.Height / 2) < .1,
+                "The pin glyph is centered horizontally and vertically in both toggle states");
             await Idle(); Click(button); await _operation; await Idle();
         }
         var config = Path.Combine(directory, "settings", "recent-files.json");
@@ -53,6 +58,8 @@ public sealed partial class MainWindow
             await Pin(missing);
             check(!_recentFiles.Entries.Single(e => e.Path == missing).IsPinned, "The icon can unpin an entry");
             await Pin(missing); await capture(this, "home-pinned-history");
+            await capture(_recent.GetVisualDescendants().OfType<ToggleButton>().First(b => b.IsChecked == true), "history-pin-selected");
+            await capture(_recent.GetVisualDescendants().OfType<ToggleButton>().First(b => b.IsChecked == false), "history-pin-unselected");
 
             _recentSearch.Text = "historyfolder-4"; await Layout();
             var before = await File.ReadAllTextAsync(config);

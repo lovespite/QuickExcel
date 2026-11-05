@@ -452,6 +452,8 @@ public sealed partial class MainWindow : Window
     }
     private async void Shortcuts(object? sender, KeyEventArgs e)
     {
+        if (e.Key == Key.Escape && _grid.IsSelectionDragging && !_grid.IsComposing && !_formula.IsComposing)
+        { _grid.CancelInputGesture(); e.Handled = true; return; }
         if (e.Key == Key.Escape && _sheetPress is not null) { EndSheetGesture(); e.Handled = true; return; }
         if (e.Key == Key.Escape && _lastPaste is not null) { DismissPasteOptions(); e.Handled = true; return; }
         if (_pasteOptionsPopup?.IsOpen == true) return;

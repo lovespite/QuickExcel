@@ -20,15 +20,16 @@ public sealed partial class MainWindow
         var pin = new ToggleButton
         {
             Name = "PinRecentFile", Tag = entry.Path, IsChecked = entry.IsPinned,
-            Width = 36, Height = 36, Margin = new(8, 0, 0, 0), Padding = new(7),
+            Width = 36, Height = 36, Margin = new(8, 0, 0, 0), Padding = new(0),
+            HorizontalContentAlignment = HorizontalAlignment.Center, VerticalContentAlignment = VerticalAlignment.Center,
             VerticalAlignment = VerticalAlignment.Center,
             Background = Brush.Parse(entry.IsPinned ? "#D9EEE3" : "#F8FAF9"),
             Content = new global::Avalonia.Controls.Shapes.Path
             {
-                // Original pushpin outline, matching the home page's stroke icons.
-                Data = Geometry.Parse("M8,3 H16 M9,3 V9 L6,13 V15 H18 V13 L15,9 V3 M12,15 V22"),
+                // Keep the complete 20x20 view box so the narrow glyph stays centered.
+                Data = Geometry.Parse("M6,2 H14 M7,2 V8 L4,12 V14 H16 V12 L13,8 V2 M10,14 V18"),
                 Stroke = Brush.Parse(entry.IsPinned ? "#237A57" : "#66756D"), StrokeThickness = 1.7,
-                Width = 22, Height = 22, Stretch = Stretch.Uniform
+                Width = 20, Height = 20, Stretch = Stretch.None, IsHitTestVisible = false
             }
         };
         pin.Styles.Add(new Style(s => s.OfType<ToggleButton>().Class(":checked").Template().OfType<ContentPresenter>())
@@ -37,14 +38,18 @@ public sealed partial class MainWindow
                 new Setter(ContentPresenter.BorderBrushProperty, Brush.Parse("#94B9A4")) }
         });
         ToolTip.SetTip(pin, label); AutomationProperties.SetName(pin, label + " · " + System.IO.Path.GetFileName(entry.Path));
-        pin.Click += async (_, _) => await PerformAsync(() =>
+        pin.Click += async (_, _) =>
         {
-            _recentFiles.SetPinned(entry.Path, !entry.IsPinned);
-            var error = _recentFiles.Error;
-            RefreshRecentFiles();
-            if (error is not null) _status.Text = error;
-            return Task.CompletedTask;
-        });
+            pin.IsChecked = entry.IsPinned;
+            await PerformAsync(() =>
+            {
+                _recentFiles.SetPinned(entry.Path, !entry.IsPinned);
+                var error = _recentFiles.Error;
+                RefreshRecentFiles();
+                if (error is not null) _status.Text = error;
+                return Task.CompletedTask;
+            });
+        };
         return pin;
     }
 
@@ -128,6 +133,8 @@ public sealed partial class MainWindow
         {
             Name = "HomeRecentScroll",
             Content = _recent,
+            // Reserve scrollbar width so its expanded track cannot cover the pin buttons.
+            AllowAutoHide = false,
             HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto
         };

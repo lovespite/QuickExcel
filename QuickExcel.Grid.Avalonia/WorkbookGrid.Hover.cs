@@ -11,6 +11,7 @@ public sealed partial class WorkbookGrid
 {
     private string? _hoverText;
     private static readonly Cursor ResizeRowCursor = new(StandardCursorType.SizeNorthSouth), ResizeColumnCursor = new(StandardCursorType.SizeWestEast);
+    private static readonly Cursor FillCursor = new(StandardCursorType.Cross);
     private static readonly Cursor ObjectMoveCursor = new(StandardCursorType.SizeAll), ObjectRotateCursor = new(StandardCursorType.Hand), ObjectResizeCursor = new(StandardCursorType.BottomRightCorner);
     private void UpdateHover(Point point)
     {
@@ -19,8 +20,9 @@ public sealed partial class WorkbookGrid
             _canvas.Cursor = !CanEditDrawingObjects ? Cursor.Default : drawing.Handle == DrawingHandle.Rotate ? ObjectRotateCursor : drawing.Handle == DrawingHandle.Move ? ObjectMoveCursor : ObjectResizeCursor;
             ToolTip.SetTip(_canvas, drawing.Handle == DrawingHandle.Rotate ? UiText.Get("拖动旋转；Shift 按 15° 旋转") : UiText.Get("点击选择对象；拖动移动或调整尺寸")); _hoverText = null; return;
         }
-        _canvas.Cursor = ResizeHit(point) is { } hit ? hit.Axis == SheetAxis.Row ? ResizeRowCursor : ResizeColumnCursor : Cursor.Default;
-        var text = HeaderAnnotation(point) ?? (Hit(point) is { } position ? CellAnnotation(position) : null);
+        var fill = FillHandle() is { } handle && handle.Contains(point);
+        _canvas.Cursor = fill ? FillCursor : ResizeHit(point) is { } hit ? hit.Axis == SheetAxis.Row ? ResizeRowCursor : ResizeColumnCursor : Cursor.Default;
+        var text = fill ? UiText.Get("拖动自动填充；按住 Ctrl 复制；双击沿相邻数据向下填充") : HeaderAnnotation(point) ?? (Hit(point) is { } position ? CellAnnotation(position) : null);
         if (text == _hoverText) return; _hoverText = text;
         ToolTip.SetTip(_canvas, text);
     }

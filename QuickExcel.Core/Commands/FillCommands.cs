@@ -4,11 +4,14 @@ using QuickExcel.Domain;
 
 namespace QuickExcel.Core;
 
-/// <summary>Extends a captured rectangle in one direction, repeating content/styles with A1 copy semantics.</summary>
-public sealed class FillCellsCommand(SheetId sheetId, CellRectangle source, CellRectangle extent) : DocumentCommand
+public enum CellFillMode { Copy, Auto }
+
+/// <summary>Extends a rectangle with repeated content or inferred series; formulas retain A1 copy semantics.</summary>
+public sealed class FillCellsCommand(SheetId sheetId, CellRectangle source, CellRectangle extent, CellFillMode mode = CellFillMode.Copy) : DocumentCommand
 {
     internal override CommandDraft Prepare(WorkbookSnapshot snapshot)
     {
+        if (!Enum.IsDefined(mode)) throw new ArgumentOutOfRangeException(nameof(mode));
         WorkbookClipboard.ValidateRange(source); WorkbookClipboard.ValidateRange(extent);
         var vertical = source.Left == extent.Left && source.Right == extent.Right &&
             (source.Top == extent.Top && source.Bottom <= extent.Bottom || source.Bottom == extent.Bottom && source.Top >= extent.Top);
@@ -23,6 +26,11 @@ public sealed class FillCellsCommand(SheetId sheetId, CellRectangle source, Cell
         if (sheet.Annotations.Links.Keys.Concat(sheet.Annotations.Notes.Keys).Any(p => extent.Contains(p.Row, p.Column)))
             throw new NotSupportedException(MessageText.Get("填充区域含超链接/批注，尚不能安全复制附件；整批操作未应用。"));
         static int Mod(int value, int divisor) => (value % divisor + divisor) % divisor;
+        var patterns = mode == CellFillMode.Auto
+            ? Enumerable.Range(0, vertical ? captured.Columns : captured.Rows).Select(lane =>
+                AutoFillPattern.Infer(Enumerable.Range(0, vertical ? captured.Rows : captured.Columns)
+                    .Select(i => captured.Cells[vertical ? i * captured.Columns + lane : lane * captured.Columns + i].Content).ToArray(), snapshot)).ToArray()
+            : null;
         var edits = new List<CellEdit>();
         for (var row = extent.Top; row <= extent.Bottom; row++)
         for (var column = extent.Left; column <= extent.Right; column++)
@@ -30,7 +38,9 @@ public sealed class FillCellsCommand(SheetId sheetId, CellRectangle source, Cell
             if (source.Contains(row, column)) continue;
             var sr = Mod(row - source.Top, captured.Rows); var sc = Mod(column - source.Left, captured.Columns);
             var content = captured.Cells[sr * captured.Columns + sc].Content;
-            if (content.Kind == CellContentKind.Formula) content = content.WithFormula(PasteCellsCommand.CopyFormula(snapshot, sheetId, sheetId,
+            if (patterns?[vertical ? sc : sr] is { } pattern)
+                content = CellContent.FromLiteral(pattern(vertical ? row - source.Top : column - source.Left), content.StyleId);
+            else if (content.Kind == CellContentKind.Formula) content = content.WithFormula(PasteCellsCommand.CopyFormula(snapshot, sheetId, sheetId,
                 content.FormulaText, new(source.Top + sr, source.Left + sc), new(row, column)));
             edits.Add(new(new(sheetId, row, column), content));
         }

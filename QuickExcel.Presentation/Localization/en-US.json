@@ -2188,5 +2188,9 @@
   "未锁定": "Unlocked",
   "样式预览": "Style Preview",
   "下划线": "Underline",
-  "删除线": "Strikethrough"
+  "删除线": "Strikethrough",
+  "拖动自动填充；按住 Ctrl 复制；双击沿相邻数据向下填充": "Drag to autofill; hold Ctrl to copy; double-click to fill down alongside adjacent data",
+  "相邻列没有可延续的数据，或下方已有内容。请拖动填充柄指定范围。": "No adjacent data to follow, or the cells below already contain data. Drag the fill handle to choose a range.",
+  "填充区域必须是不超过 20,000 格的连续矩形。": "The fill area must be a contiguous rectangle of at most 20,000 cells.",
+  "自动填充范围超过 20,000 格，请改为拖动填充较小范围。": "The autofill range exceeds 20,000 cells. Drag to fill a smaller range."
 }

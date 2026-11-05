@@ -31,6 +31,7 @@ internal sealed partial class SettingsWindow : Window
     private readonly RecentFileStore _history;
     private readonly ListBox _navigation = new() { Name = "SettingsNavigation", Background = Brushes.Transparent };
     private readonly StackPanel _page = new() { Spacing = 14, Margin = new(24, 20) };
+    private readonly LayoutGrid _pageLayout = new() { RowDefinitions = new("*") };
     private readonly TextBlock _feedback = new() { TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Center };
 
     public SettingsWindow(DesktopSettings settings, RecentFileStore history, SettingsSection initialSection = SettingsSection.Associations)
@@ -43,8 +44,9 @@ internal sealed partial class SettingsWindow : Window
         var nav = new DockPanel { Background = Brush.Parse("#F1F6F3") };
         var title = Heading(UiText.Get("设置"), 24); title.Margin = new(16, 20, 12, 16); DockPanel.SetDock(title, Dock.Top);
         nav.Children.Add(title); nav.Children.Add(_navigation); layout.Children.Add(nav);
-        var scroll = new ScrollViewer { Content = _page, HorizontalScrollBarVisibility = global::Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled };
-        LayoutGrid.SetColumn(scroll, 1); layout.Children.Add(scroll);
+        var scroll = new ScrollViewer { Name = "SettingsPageScroll", Content = _page, HorizontalScrollBarVisibility = global::Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled };
+        _pageLayout.Children.Add(scroll);
+        LayoutGrid.SetColumn(_pageLayout, 1); layout.Children.Add(_pageLayout);
         var footer = new DockPanel { Margin = new(16, 8) };
         var close = new Button { Content = UiText.Get("关闭"), MinWidth = 76, IsCancel = true, HorizontalContentAlignment = HorizontalAlignment.Center };
         close.Click += (_, _) => Close(true); DockPanel.SetDock(close, Dock.Right);
@@ -60,6 +62,13 @@ internal sealed partial class SettingsWindow : Window
         {
             if (_navigation.SelectedIndex < 0) return;
             var section = sections[_navigation.SelectedIndex];
+            // Leave a usable list viewport even when history's explanatory text wraps.
+            MinHeight = section.Id == SettingsSection.History ? 480 : 380;
+            while (_pageLayout.Children.Count > 1) _pageLayout.Children.RemoveAt(_pageLayout.Children.Count - 1);
+            _pageLayout.RowDefinitions = new("*"); _pageLayout.RowSpacing = 0; _pageLayout.Margin = default;
+            _page.Margin = new(24, 20);
+            scroll.VerticalScrollBarVisibility = section.Id == SettingsSection.History
+                ? global::Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled : global::Avalonia.Controls.Primitives.ScrollBarVisibility.Auto;
             _page.Children.Clear(); _page.Children.Add(Heading(section.Title, 22)); _feedback.Text = "";
             scroll.Offset = default;
             try { section.Build(); }
@@ -117,7 +126,7 @@ internal sealed partial class SettingsWindow : Window
         };
         AutomationProperties.SetName(limit, UiText.Get("普通历史记录上限"));
         var applyLimit = new Button { Name = "ApplyRecentFileLimit", Content = UiText.Get("应用") };
-        var list = new ListBox { Name = "SettingsRecentFiles", MaxHeight = 300 };
+        var list = new ListBox { Name = "SettingsRecentFiles" };
         AutomationProperties.SetName(list, UiText.Get("最近使用的文件路径"));
         var empty = Note(UiText.Get("暂无历史文件。"));
         var remove = new Button { Content = UiText.Get("移除选中记录") };
@@ -147,7 +156,15 @@ internal sealed partial class SettingsWindow : Window
         _page.Children.Add(Heading(UiText.Get("普通历史记录上限"), 16));
         _page.Children.Add(new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10, Children = { limit, applyLimit } });
         _page.Children.Add(Note(UiText.Get("可设置 1–1000 条，默认 100 条。固定记录置顶且不计入上限；降低上限会移除最旧的普通记录。")));
-        _page.Children.Add(list); _page.Children.Add(empty); _page.Children.Add(actions); Refresh();
+        // Only the history list scrolls; its height follows the space left by the header and actions.
+        _page.Margin = default;
+        _pageLayout.Margin = new(24, 20); _pageLayout.RowSpacing = 14;
+        _pageLayout.RowDefinitions = new("Auto,*,Auto");
+        LayoutGrid.SetRow(list, 1); _pageLayout.Children.Add(list);
+        empty.VerticalAlignment = VerticalAlignment.Top;
+        LayoutGrid.SetRow(empty, 1); _pageLayout.Children.Add(empty);
+        LayoutGrid.SetRow(actions, 2); _pageLayout.Children.Add(actions);
+        Refresh();
     }
 
     private void Calculation()

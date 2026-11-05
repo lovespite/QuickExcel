@@ -23,7 +23,8 @@ public sealed partial class WorkbookGrid
     private GridCellRange? _fillSource, _fillPreview, _referenceRange;
     public event Action<SheetAxis, int, double, long>? DimensionChanged;
     public event Action<SheetAxis, int>? AutoFitRequested;
-    public event Action<GridRange, GridRange, long>? FillRequested;
+    public event Action<GridRange, GridRange, long, CellFillMode>? FillRequested;
+    public event Action<GridRange, long, CellFillMode>? AutoFillDownRequested;
     public event Action<int>? FilterRequested;
     public Func<GridRange, bool>? ReferenceRequested { get; set; }
     public bool IsSelectionDragging => _dragging;
@@ -82,7 +83,8 @@ public sealed partial class WorkbookGrid
     }
     private Rect? FillHandle()
     {
-        if (_selection.Ranges.Count != 1) return null;
+        if (_snapshot is null || IsComposing || _snapshot.FileState?.FormulaReadOnly == true || _selectedObject is not null ||
+            _selection.Ranges.Count != 1 || _selection.Ranges[0].Count > WorkbookClipboard.MaxCells) return null;
         var range = _selection.Ranges[0];
         foreach (var fragment in Fragments(range))
             if (fragment.Clip.Contains(fragment.Bounds.BottomRight))
@@ -135,6 +137,14 @@ public sealed partial class WorkbookGrid
         }
         if (FillHandle() is { } handle && handle.Contains(point))
         {
+            _dragAxis = null;
+            if (e.ClickCount == 2)
+            {
+                var source = _selection.Ranges[0];
+                CancelGesture(); e.Handled = true;
+                AutoFillDownRequested?.Invoke(new(source.Top, source.Left, source.Bottom, source.Right), _gestureRevision, FillMode(e.KeyModifiers));
+                return;
+            }
             _fillSource = _fillPreview = _selection.Ranges[0]; _dragging = true; _dragPoint = point;
             CellEditor.IsVisible = false; e.Pointer.Capture(_canvas); e.Handled = true; RequestDragFrame(); return;
         }
@@ -238,13 +248,17 @@ public sealed partial class WorkbookGrid
             DimensionChanged?.Invoke(axis, _resizeIndex, _resizePixels, _gestureRevision);
             Configure(_rows.Count, _columns.Count); InvalidateContent(); UpdateScrollbars();
         }
-        if (_fillSource is { } source && _fillPreview is { } extent && source != extent)
-            FillRequested?.Invoke(new(source.Top, source.Left, source.Bottom, source.Right), new(extent.Top, extent.Left, extent.Bottom, extent.Right), _gestureRevision);
+        var source = _fillSource; var extent = _fillPreview; var revision = _gestureRevision;
         var reference = _referenceGesture;
         _dragging = _referenceGesture = false; _fillSource = _fillPreview = null; _lastDragFrame = null;
         e.Pointer.Capture(null); _overlay.InvalidateVisual();
         if (!reference) PrepareEditor(true); else ReferenceGestureEnded?.Invoke();
+        // End capture before dispatch: synchronous document refresh must not see an active fill gesture.
+        if (source is { } seed && extent is { } target && seed != target)
+            FillRequested?.Invoke(new(seed.Top, seed.Left, seed.Bottom, seed.Right), new(target.Top, target.Left, target.Bottom, target.Right), revision, FillMode(e.KeyModifiers));
     }
+    private static CellFillMode FillMode(KeyModifiers modifiers) =>
+        (modifiers & (KeyModifiers.Control | KeyModifiers.Meta)) != 0 ? CellFillMode.Copy : CellFillMode.Auto;
     private void CancelGesture()
     {
         CancelObjectGesture();
