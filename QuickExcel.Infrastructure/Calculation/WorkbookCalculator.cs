@@ -22,7 +22,7 @@ public sealed class WorkbookCalculator(IScriptRuntimeFactory runtimeFactory) : I
         using var lifetime = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, request.CancellationToken);
         cancellationToken = lifetime.Token;
         if (request.ScriptsEnabled && !request.Snapshot.ScriptModules.CanExecute)
-            throw new NotSupportedException(ScriptModuleSet.MigrationMessage);
+            throw new NotSupportedException(MessageText.Get(ScriptModuleSet.MigrationMessage));
         // Compilation has its own bounded isolated role. The execution round's
         // existing five-second clock starts after accepted artifacts exist.
         if (request.ScriptsEnabled && request.Snapshot.ScriptModules.HasTypeScript)
@@ -46,10 +46,10 @@ public sealed class WorkbookCalculator(IScriptRuntimeFactory runtimeFactory) : I
                     retained.Add(new(sheet.Id, position.Row, position.Column), new(cell.Calculation?.Value, CalculationState.Blocked,
                         stamp.InputRevision, stamp.CalculationGeneration, stamp.ScriptGeneration, ["只读公式及其受影响依赖范围未知；保留来源缓存，未重算。"]));
                 }
-            return new(stamp, retained, [WorkbookFileState.FormulaReadOnlyMessage]);
+            return new(stamp, retained, [MessageText.Get(WorkbookFileState.FormulaReadOnlyMessage)]);
         }
         if (request.ScriptsEnabled && !request.Snapshot.ScriptModules.CanExecute)
-            throw new NotSupportedException(ScriptModuleSet.MigrationMessage);
+            throw new NotSupportedException(MessageText.Get(ScriptModuleSet.MigrationMessage));
         var index = new WorkbookDependencyIndex(request.Snapshot, Check);
         if (index.Nodes.Values.Any(n => n.Cell.Content.DynamicArray || DynamicArrayFunctions.UsesArrays(n.Expression)))
             return ArrayCalculationRound.Calculate(request with { CancellationToken = cancellationToken }, _factory, Check, timer);

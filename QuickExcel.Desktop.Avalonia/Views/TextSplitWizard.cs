@@ -22,18 +22,18 @@ internal sealed class TextSplitWizard : Window
     private readonly TextBlock _error = new() { Foreground = Brushes.Firebrick, TextWrapping = TextWrapping.Wrap };
     private readonly TextBox _destination = new();
     private readonly CheckBox _overwrite = new() { IsVisible = false };
-    private readonly RadioButton _fixed = Radio("固定宽度", "mode");
-    private readonly CheckBox[] _delimiters = new[] { "Tab 键", "分号", "逗号", "空格", "其他" }.Select(s => new CheckBox { Content = s }).ToArray();
+    private readonly RadioButton _fixed = Radio(UiText.Get("固定宽度"), "mode");
+    private readonly CheckBox[] _delimiters = new[] { UiText.Get("Tab 键"), UiText.Get("分号"), UiText.Get("逗号"), UiText.Get("空格"), UiText.Get("其他") }.Select(s => new CheckBox { Content = s }).ToArray();
     private readonly TextBox _other = new() { Width = 68 };
-    private readonly TextBox _breaks = new() { PlaceholderText = "例如：3,7" };
-    private readonly CheckBox _collapse = new() { Content = "连续分隔符视为单个处理" };
-    private readonly ComboBox _qualifier = Choice(["双引号（\"）", "单引号（'）", "无"]);
+    private readonly TextBox _breaks = new() { PlaceholderText = UiText.Get("例如：3,7") };
+    private readonly CheckBox _collapse = new() { Content = UiText.Get("连续分隔符视为单个处理") };
+    private readonly ComboBox _qualifier = Choice([UiText.Get("双引号（\"）"), UiText.Get("单引号（'）"), UiText.Get("无")]);
     private readonly ComboBox _dateOrder = Choice(["YMD", "MDY", "DMY"]);
     private static readonly CleaningColumnType[] DateTypes = [CleaningColumnType.DateYmd, CleaningColumnType.DateMdy, CleaningColumnType.DateDmy];
     private readonly Dictionary<CleaningColumnType, RadioButton> _formatButtons = [];
-    private readonly Button _back = new() { Content = "上一步", MinWidth = 88 };
-    private readonly Button _next = new() { Content = "下一步", MinWidth = 88 };
-    private readonly Button _finish = new() { Content = "完成", MinWidth = 88 };
+    private readonly Button _back = new() { Content = UiText.Get("上一步"), MinWidth = 88 };
+    private readonly Button _next = new() { Content = UiText.Get("下一步"), MinWidth = 88 };
+    private readonly Button _finish = new() { Content = UiText.Get("完成"), MinWidth = 88 };
     private readonly StackPanel _options = new() { MinHeight = 216 };
     private readonly Control _modePanel, _delimiterPanel, _breakPanel, _formatPanel;
     private NumericTextOptions _numbers = new();
@@ -53,10 +53,10 @@ internal sealed class TextSplitWizard : Window
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
         ShowInTaskbar = false;
         _destination.Text = $"${FormulaSyntax.ColumnName(source.Left)}${source.Top + 1}";
-        AutomationProperties.SetName(_destination, "目标区域");
+        AutomationProperties.SetName(_destination, UiText.Get("目标区域"));
         _modePanel = BuildMode();
         _delimiterPanel = BuildDelimiters();
-        _breakPanel = Group("固定宽度", Label("输入每个分界前的累计字符宽度，用逗号分隔。"), _breaks);
+        _breakPanel = Group(UiText.Get("固定宽度"), Label(UiText.Get("输入每个分界前的累计字符宽度，用逗号分隔。")), _breaks);
         _formatPanel = BuildFormats();
         foreach (var page in new[] { _modePanel, _delimiterPanel, _breakPanel, _formatPanel }) _options.Children.Add(page);
 
@@ -67,7 +67,7 @@ internal sealed class TextSplitWizard : Window
         table.Children.Add(_caption); Add(table, _preview, 1); Add(layout, table, 2);
         var messages = new StackPanel();
         messages.Children.Add(_error); messages.Children.Add(_overwrite); Add(layout, messages, 3);
-        var cancel = new Button { Content = "取消", MinWidth = 88, IsCancel = true };
+        var cancel = new Button { Content = UiText.Get("取消"), MinWidth = 88, IsCancel = true };
         var buttons = Row(cancel, _back, _next, _finish);
         buttons.HorizontalAlignment = HorizontalAlignment.Right;
         Add(layout, buttons, 4);
@@ -109,9 +109,9 @@ internal sealed class TextSplitWizard : Window
 
     private Control BuildMode()
     {
-        var delimited = Radio("分隔符号", "mode"); delimited.IsChecked = true;
-        return Group("原始数据类型", Row(delimited, Label("用逗号、制表符等字符分隔字段")),
-            Row(_fixed, Label("按指定的字符宽度切分字段")));
+        var delimited = Radio(UiText.Get("分隔符号"), "mode"); delimited.IsChecked = true;
+        return Group(UiText.Get("原始数据类型"), Row(delimited, Label(UiText.Get("用逗号、制表符等字符分隔字段"))),
+            Row(_fixed, Label(UiText.Get("按指定的字符宽度切分字段"))));
     }
     private Control BuildDelimiters()
     {
@@ -119,12 +119,12 @@ internal sealed class TextSplitWizard : Window
         var sample = _rows.Take(TextSplitPreview.SampleLimit).ToArray();
         var initial = Array.FindIndex(chars.ToCharArray(), c => c != ' ' && sample.Any(s => s.Contains(c)));
         _delimiters[Math.Max(initial, 0)].IsChecked = true;
-        AutomationProperties.SetName(_other, "其他分隔符");
-        AutomationProperties.SetName(_breaks, "固定宽度分界");
-        AutomationProperties.SetName(_qualifier, "文本识别符号");
-        var choices = Group("分隔符号", _delimiters[0], _delimiters[1], _delimiters[2], _delimiters[3], Row(_delimiters[4], _other));
+        AutomationProperties.SetName(_other, UiText.Get("其他分隔符"));
+        AutomationProperties.SetName(_breaks, UiText.Get("固定宽度分界"));
+        AutomationProperties.SetName(_qualifier, UiText.Get("文本识别符号"));
+        var choices = Group(UiText.Get("分隔符号"), _delimiters[0], _delimiters[1], _delimiters[2], _delimiters[3], Row(_delimiters[4], _other));
         var options = new StackPanel { Spacing = 12, VerticalAlignment = VerticalAlignment.Center };
-        options.Children.Add(_collapse); options.Children.Add(Row(Label("文本识别符号"), _qualifier));
+        options.Children.Add(_collapse); options.Children.Add(Row(Label(UiText.Get("文本识别符号")), _qualifier));
         return Row(choices, options);
     }
     private Control BuildFormats()
@@ -140,26 +140,26 @@ internal sealed class TextSplitWizard : Window
             };
             return button;
         }
-        var date = Format(CleaningColumnType.DateYmd, "日期");
-        AutomationProperties.SetName(_dateOrder, "日期顺序");
+        var date = Format(CleaningColumnType.DateYmd, UiText.Get("日期"));
+        AutomationProperties.SetName(_dateOrder, UiText.Get("日期顺序"));
         _dateOrder.SelectionChanged += (_, _) =>
         {
             if (!_syncing && _dateOrder.SelectedIndex >= 0) SetFormat(DateTypes[_dateOrder.SelectedIndex]);
         };
-        var formats = Group("列数据格式", Format(CleaningColumnType.General, "常规"), Format(CleaningColumnType.Text, "文本"),
-            Row(date, _dateOrder), Format(CleaningColumnType.Skip, "不导入此列（跳过）"), Format(CleaningColumnType.Number, "数字（严格转换）"));
-        var advanced = new Button { Content = "高级…" };
+        var formats = Group(UiText.Get("列数据格式"), Format(CleaningColumnType.General, UiText.Get("常规")), Format(CleaningColumnType.Text, UiText.Get("文本")),
+            Row(date, _dateOrder), Format(CleaningColumnType.Skip, UiText.Get("不导入此列（跳过）")), Format(CleaningColumnType.Number, UiText.Get("数字（严格转换）")));
+        var advanced = new Button { Content = UiText.Get("高级…") };
         advanced.Click += async (_, _) =>
         {
-            var dialog = MainWindow.NumericFields(new FieldsDialog("高级分列设置"), _numbers);
+            var dialog = MainWindow.NumericFields(new FieldsDialog(UiText.Get("高级分列设置")), _numbers);
             dialog.Validate = () => MainWindow.ReadNumeric(dialog);
             if (await dialog.ShowAsync(this)) { _numbers = MainWindow.ReadNumeric(dialog); InvalidateCandidate(); }
         };
         var help = new StackPanel { MaxWidth = 315, Spacing = 12, VerticalAlignment = VerticalAlignment.Center };
-        help.Children.Add(Label("“常规”会识别数值和年在前的日期，其余内容保留为文本。要保留编号的前导零，请选“文本”。"));
+        help.Children.Add(Label(UiText.Get("“常规”会识别数值和年在前的日期，其余内容保留为文本。要保留编号的前导零，请选“文本”。")));
         help.Children.Add(advanced);
         var target = new DockPanel();
-        var label = Label("目标区域  "); DockPanel.SetDock(label, Dock.Left); target.Children.Add(label); target.Children.Add(_destination);
+        var label = Label(UiText.Get("目标区域  ")); DockPanel.SetDock(label, Dock.Left); target.Children.Add(label); target.Children.Add(_destination);
         var panel = new StackPanel { Spacing = 10 };
         panel.Children.Add(Row(formats, help)); panel.Children.Add(target);
         return panel;
@@ -182,8 +182,8 @@ internal sealed class TextSplitWizard : Window
             _formatButtons[date >= 0 ? CleaningColumnType.DateYmd : type].IsChecked = true;
             _preview.SetFormats(_column, i => _formats[i] switch
             {
-                CleaningColumnType.Text => "文本", CleaningColumnType.Number => "数字", CleaningColumnType.Skip => "跳过",
-                CleaningColumnType.DateYmd => "日期 YMD", CleaningColumnType.DateMdy => "日期 MDY", CleaningColumnType.DateDmy => "日期 DMY", _ => "常规"
+                CleaningColumnType.Text => UiText.Get("文本"), CleaningColumnType.Number => UiText.Get("数字"), CleaningColumnType.Skip => UiText.Get("跳过"),
+                CleaningColumnType.DateYmd => UiText.Get("日期 YMD"), CleaningColumnType.DateMdy => UiText.Get("日期 MDY"), CleaningColumnType.DateDmy => UiText.Get("日期 DMY"), _ => UiText.Get("常规")
             });
         }
         finally { _syncing = false; }
@@ -194,7 +194,7 @@ internal sealed class TextSplitWizard : Window
         if (_fixed.IsChecked == true)
         {
             var breaks = (_breaks.Text ?? "").Split([',', '，'], StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
-            return new(Breaks: breaks.Select(s => int.TryParse(s, out var n) ? n : throw new ArgumentException("固定宽度分界必须是整数。")).ToImmutableArray());
+            return new(Breaks: breaks.Select(s => int.TryParse(s, out var n) ? n : throw new ArgumentException(UiText.Get("固定宽度分界必须是整数。"))).ToImmutableArray());
         }
         string[] chars = ["\t", ";", ",", " ", _other.Text ?? ""];
         var delimiters = string.Concat(chars.Where((_, i) => _delimiters[i].IsChecked == true));
@@ -228,17 +228,17 @@ internal sealed class TextSplitWizard : Window
     {
         _step = step;
         InvalidateCandidate();
-        Title = $"文本分列向导 - 第 {step} 步，共 3 步";
-        _instruction.Text = step switch { 1 => "请选择最适合选定数据的分列方式。", 2 when _fixed.IsChecked == true => "请设置分界位置，并在下方预览切分结果。",
-            2 => "请选择数据包含的分隔符号，并在下方预览分列效果。", _ => "请在预览中单击一列，然后为该列设置数据格式。" };
+        Title = UiText.Format($"文本分列向导 - 第 {step} 步，共 3 步");
+        _instruction.Text = step switch { 1 => UiText.Get("请选择最适合选定数据的分列方式。"), 2 when _fixed.IsChecked == true => UiText.Get("请设置分界位置，并在下方预览切分结果。"),
+            2 => UiText.Get("请选择数据包含的分隔符号，并在下方预览分列效果。"), _ => UiText.Get("请在预览中单击一列，然后为该列设置数据格式。") };
         _modePanel.IsVisible = step == 1;
         _delimiterPanel.IsVisible = step == 2 && _fixed.IsChecked != true;
         _breakPanel.IsVisible = step == 2 && _fixed.IsChecked == true;
         _formatPanel.IsVisible = step == 3;
         _other.IsEnabled = _delimiters[4].IsChecked == true;
         _next.IsDefault = step < 3; _finish.IsDefault = step == 3;
-        _caption.Text = step == 1 ? "预览选定数据" : "数据预览";
-        if (_rows.Length > TextSplitPreview.SampleLimit) _caption.Text += $"（显示前 {TextSplitPreview.SampleLimit} 行，共 {_rows.Length:N0} 行）";
+        _caption.Text = step == 1 ? UiText.Get("预览选定数据") : UiText.Get("数据预览");
+        if (_rows.Length > TextSplitPreview.SampleLimit) _caption.Text += UiText.Format($"（显示前 {TextSplitPreview.SampleLimit} 行，共 {_rows.Length:N0} 行）");
         var sample = _rows.Take(TextSplitPreview.SampleLimit);
         try
         {
@@ -278,7 +278,7 @@ internal sealed class TextSplitWizard : Window
                 return;
             }
             var target = CellRectangle.Parse((_destination.Text ?? "").Trim());
-            if (target.Count != 1) throw new ArgumentException("目标区域必须是单个起始单元格。");
+            if (target.Count != 1) throw new ArgumentException(UiText.Get("目标区域必须是单个起始单元格。"));
             var formats = _formats.ToArray();
             var result = _candidate ?? await Task.Run(() => DataCleaning.SplitText(_book, _book.ActiveSheetId, _source,
                 new(target.Top, target.Left), options, formats, _numbers));
@@ -293,7 +293,7 @@ internal sealed class TextSplitWizard : Window
                 }
                 _candidate = result;
                 var examples = result.Overwrites.Take(4).Select(a => FormulaSyntax.ColumnName(a.Column) + (a.Row + 1));
-                _overwrite.Content = $"确认覆盖 {result.Overwrites.Length:N0} 个已有内容的目标单元格（{string.Join("、", examples)}）";
+                _overwrite.Content = UiText.Format($"确认覆盖 {result.Overwrites.Length:N0} 个已有内容的目标单元格（{string.Join("、", examples)}）");
                 _overwrite.IsVisible = true;
                 return;
             }

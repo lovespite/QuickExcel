@@ -34,12 +34,12 @@ public sealed partial class MainWindow
     private async Task RefreshDataTablesAsync()
     {
         if (!await CommitEditorsAsync()) return;
-        if (_dataTables.Count == 0) { _status.Text = "本次打开期间没有可刷新的模拟运算表。"; return; }
+        if (_dataTables.Count == 0) { _status.Text = UiText.Get("本次打开期间没有可刷新的模拟运算表。"); return; }
         using var cancellation = new CancellationTokenSource();
-        using (BeginExecution("正在刷新模拟运算表…", cancellation))
+        using (BeginExecution(UiText.Get("正在刷新模拟运算表…"), cancellation))
             await RefreshDataTableValuesAsync(cancellation.Token);
         await CalculatePendingAsync();
-        _status.Text = "已刷新模拟运算表。";
+        _status.Text = UiText.Get("已刷新模拟运算表。");
     }
 
     private async Task RefreshDataTableValuesAsync(CancellationToken token, bool automatic = false)
@@ -63,7 +63,7 @@ public sealed partial class MainWindow
             return changes;
         }, timeout.Token);
         timeout.Token.ThrowIfCancellationRequested();
-        if (!ReferenceEquals(document, Document)) throw new InvalidOperationException("工作簿已切换，请重新刷新模拟运算表。");
+        if (!ReferenceEquals(document, Document)) throw new InvalidOperationException(UiText.Get("工作簿已切换，请重新刷新模拟运算表。"));
         _applyingDataTables = true;
         try
         {

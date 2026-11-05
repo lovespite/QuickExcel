@@ -42,7 +42,7 @@ public sealed partial class MainWindow
         var document = Document;
         _calculationTimer.Stop();
         using var cancellation = new CancellationTokenSource();
-        using var feedback = BeginExecution("正在执行事件代码…", cancellation);
+        using var feedback = BeginExecution(UiText.Get("正在执行事件代码…"), cancellation);
         _scriptCancellation = cancellation;
         try { await Task.Run(() => document.DispatchScriptEvents(cancellation.Token), cancellation.Token); }
         finally

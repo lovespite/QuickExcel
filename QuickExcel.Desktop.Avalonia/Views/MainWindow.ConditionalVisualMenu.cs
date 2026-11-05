@@ -42,27 +42,27 @@ public sealed partial class MainWindow
     {
         MenuItem Fill(bool gradient)
         {
-            var group = new MenuItem { Header = gradient ? "渐变填充" : "实心填充" };
+            var group = new MenuItem { Header = gradient ? UiText.Get("渐变填充") : UiText.Get("实心填充") };
             foreach (var (name, color) in ConditionalVisualPresets.BarColors)
                 group.Items.Add(VisualMenuItem(name, ColorScaleSample(gradient ? [color, "FFFFFFFF"] : [color, color]), range => ConditionalVisualPresets.DataBar(range, color, gradient)));
             return group;
         }
-        return new() { Header = "数据条(D)", Icon = new ConditionalFormatIcon(2), MinHeight = 44, Items = { Fill(true), Fill(false), new Separator(),
-            CommandMenu("其他数据条规则…", () => NewVisualRuleAsync(r => ConditionalVisualPresets.DataBar(r, ConditionalVisualPresets.BarColors[0].Color))) } };
+        return new() { Header = UiText.Get("数据条(D)"), Icon = new ConditionalFormatIcon(2), MinHeight = 44, Items = { Fill(true), Fill(false), new Separator(),
+            CommandMenu(UiText.Get("其他数据条规则…"), () => NewVisualRuleAsync(r => ConditionalVisualPresets.DataBar(r, ConditionalVisualPresets.BarColors[0].Color))) } };
     }
     private MenuItem ColorScaleMenu()
     {
-        var group = new MenuItem { Header = "色阶(S)", Icon = new ConditionalFormatIcon(3), MinHeight = 44 };
+        var group = new MenuItem { Header = UiText.Get("色阶(S)"), Icon = new ConditionalFormatIcon(3), MinHeight = 44 };
         foreach (var (name, colors) in ConditionalVisualPresets.Scales)
             group.Items.Add(VisualMenuItem(name, ColorScaleSample(colors.Reverse()), range => ConditionalVisualPresets.ColorScale(range, colors)));
         group.Items.Add(new Separator());
-        group.Items.Add(CommandMenu("其他双色规则…", () => NewVisualRuleAsync(r => ConditionalVisualPresets.ColorScale(r, ConditionalVisualPresets.Scales[6].Colors))));
-        group.Items.Add(CommandMenu("其他三色规则…", () => NewVisualRuleAsync(r => ConditionalVisualPresets.ColorScale(r, ConditionalVisualPresets.Scales[0].Colors))));
+        group.Items.Add(CommandMenu(UiText.Get("其他双色规则…"), () => NewVisualRuleAsync(r => ConditionalVisualPresets.ColorScale(r, ConditionalVisualPresets.Scales[6].Colors))));
+        group.Items.Add(CommandMenu(UiText.Get("其他三色规则…"), () => NewVisualRuleAsync(r => ConditionalVisualPresets.ColorScale(r, ConditionalVisualPresets.Scales[0].Colors))));
         return group;
     }
     private MenuItem IconSetMenu()
     {
-        var group = new MenuItem { Header = "图标集(I)", Icon = new ConditionalFormatIcon(4), MinHeight = 44 };
+        var group = new MenuItem { Header = UiText.Get("图标集(I)"), Icon = new ConditionalFormatIcon(4), MinHeight = 44 };
         foreach (var indices in new[] { new[] { 0, 1, 8, 9, 13, 14 }, new[] { 2, 3, 4, 5, 10, 12 }, new[] { 6, 7 }, new[] { 11, 15, 16 } })
         {
             if (group.Items.Count > 0) group.Items.Add(new Separator());
@@ -72,7 +72,7 @@ public sealed partial class MainWindow
                 group.Items.Add(VisualMenuItem(ConditionalVisualPresets.IconLabels[i], IconSetSample(name), range => ConditionalVisualPresets.IconSet(range, name)));
             }
         }
-        group.Items.Add(new Separator()); group.Items.Add(CommandMenu("其他图标集规则…", () => NewVisualRuleAsync(r => ConditionalVisualPresets.IconSet(r, "3Arrows")))); return group;
+        group.Items.Add(new Separator()); group.Items.Add(CommandMenu(UiText.Get("其他图标集规则…"), () => NewVisualRuleAsync(r => ConditionalVisualPresets.IconSet(r, "3Arrows")))); return group;
     }
     private async Task ApplyVisualPresetAsync(Func<CellRectangle, ConditionalFormatRule> create)
     {
@@ -88,35 +88,35 @@ public sealed partial class MainWindow
     }
     private static FieldsDialog VisualRuleFields(ConditionalFormatRule old, out Func<ConditionalFormatRule> read)
     {
-        var dialog = new FieldsDialog(ConditionalKinds[(int)old.Kind] + "规则").Text("ranges", "应用区域（多个区域用空格分隔）", string.Join(' ', old.Ranges));
+        var dialog = new FieldsDialog(ConditionalKinds[(int)old.Kind] + UiText.Get("规则")).Text("ranges", UiText.Get("应用区域（多个区域用空格分隔）"), string.Join(' ', old.Ranges));
         var thresholds = old.Thresholds.ToArray();
         if (old.IconSet is { } icons)
-            dialog.Choice("icons", "图标样式", ConditionalVisualPresets.IconLabels.ToArray(), ConditionalIconSet.Names.IndexOf(icons.Name)).Check("reverse", "反转图标顺序", icons.Reverse).Check("show", "同时显示单元格值", icons.ShowValue);
+            dialog.Choice("icons", UiText.Get("图标样式"), ConditionalVisualPresets.IconLabels.ToArray(), ConditionalIconSet.Names.IndexOf(icons.Name)).Check("reverse", UiText.Get("反转图标顺序"), icons.Reverse).Check("show", UiText.Get("同时显示单元格值"), icons.ShowValue);
         if (old.DataBar is { } bar)
         {
-            dialog.Choice("fill", "填充方式", ["渐变填充", "实心填充"], bar.Gradient ? 0 : 1).Text("color", "正值颜色（ARGB）", bar.Color).Text("negative", "负值颜色（ARGB）", bar.NegativeColor)
-                .Check("show", "同时显示单元格值", bar.ShowValue).Choice("axis", "坐标轴", ["自动", "居中", "无"], (int)bar.Axis)
-                .Choice("direction", "方向", ["随工作表", "从左到右", "从右到左"], (int)bar.Direction).Text("axisColor", "坐标轴颜色（ARGB）", bar.AxisColor)
-                .Text("border", "边框颜色（ARGB，留空无边框）", bar.BorderColor ?? "").Text("negativeBorder", "负值边框颜色（留空沿用正值）", bar.NegativeBorderColor ?? "")
-                .Text("minLength", "最短长度（0–100%）", bar.MinLength.ToString(CultureInfo.InvariantCulture)).Text("maxLength", "最长长度（0–100%）", bar.MaxLength.ToString(CultureInfo.InvariantCulture));
+            dialog.Choice("fill", UiText.Get("填充方式"), [UiText.Get("渐变填充"), UiText.Get("实心填充")], bar.Gradient ? 0 : 1).Text("color", UiText.Get("正值颜色（ARGB）"), bar.Color).Text("negative", UiText.Get("负值颜色（ARGB）"), bar.NegativeColor)
+                .Check("show", UiText.Get("同时显示单元格值"), bar.ShowValue).Choice("axis", UiText.Get("坐标轴"), [UiText.Get("自动"), UiText.Get("居中"), UiText.Get("无")], (int)bar.Axis)
+                .Choice("direction", UiText.Get("方向"), [UiText.Get("随工作表"), UiText.Get("从左到右"), UiText.Get("从右到左")], (int)bar.Direction).Text("axisColor", UiText.Get("坐标轴颜色（ARGB）"), bar.AxisColor)
+                .Text("border", UiText.Get("边框颜色（ARGB，留空无边框）"), bar.BorderColor ?? "").Text("negativeBorder", UiText.Get("负值边框颜色（留空沿用正值）"), bar.NegativeBorderColor ?? "")
+                .Text("minLength", UiText.Get("最短长度（0–100%）"), bar.MinLength.ToString(CultureInfo.InvariantCulture)).Text("maxLength", UiText.Get("最长长度（0–100%）"), bar.MaxLength.ToString(CultureInfo.InvariantCulture));
         }
-        dialog.Note("阈值公式使用绝对单元格引用，例如 =$D$1。阈值按从小到大的顺序填写。");
+        dialog.Note(UiText.Get("阈值公式使用绝对单元格引用，例如 =$D$1。阈值按从小到大的顺序填写。"));
         var kinds = old.IconSet is not null ? new[] { ConditionalThresholdKind.Number, ConditionalThresholdKind.Percent, ConditionalThresholdKind.Percentile, ConditionalThresholdKind.Formula } :
             old.DataBar is not null ? Enum.GetValues<ConditionalThresholdKind>() : Enum.GetValues<ConditionalThresholdKind>().Take(6).ToArray();
-        string[] labels = ["最低值", "最高值", "数字", "百分比", "百分位", "公式", "自动最小值", "自动最大值"];
+        string[] labels = [UiText.Get("最低值"), UiText.Get("最高值"), UiText.Get("数字"), UiText.Get("百分比"), UiText.Get("百分位"), UiText.Get("公式"), UiText.Get("自动最小值"), UiText.Get("自动最大值")];
         var fieldCount = old.IconSet is null ? thresholds.Length : 5;
         for (var i = 0; i < fieldCount; i++)
         {
             var last = thresholds[^1];
             var t = i < thresholds.Length ? thresholds[i] : last.Kind is ConditionalThresholdKind.Percent or ConditionalThresholdKind.Percentile ?
                 last with { Value = last.Value + (100 - last.Value) * (i - thresholds.Length + 1) / (6 - thresholds.Length) } : last;
-            var label = old.IconSet is null ? i == 0 ? "最小值" : i == thresholds.Length - 1 ? "最大值" : "中间值" : $"阈值 {i + 1}";
-            dialog.Choice("type" + i, label + "类型", kinds.Select(k => labels[(int)k]).ToArray(), Array.IndexOf(kinds, t.Kind))
-                .Text("value" + i, label + "数值或公式", t.Formula ?? t.Value.ToString(CultureInfo.CurrentCulture));
-            if (old.IconSet is not null) dialog.Check("gte" + i, label + "包含边界（≥）", t.Inclusive);
-            if (old.ColorScale is { } scale) dialog.Text("color" + i, label + "颜色（ARGB）", scale.Colors[i]);
+            var label = old.IconSet is null ? i == 0 ? UiText.Get("最小值") : i == thresholds.Length - 1 ? UiText.Get("最大值") : UiText.Get("中间值") : UiText.Format($"阈值 {i + 1}");
+            dialog.Choice("type" + i, label + UiText.Get("类型"), kinds.Select(k => labels[(int)k]).ToArray(), Array.IndexOf(kinds, t.Kind))
+                .Text("value" + i, label + UiText.Get("数值或公式"), t.Formula ?? t.Value.ToString(CultureInfo.CurrentCulture));
+            if (old.IconSet is not null) dialog.Check("gte" + i, label + UiText.Get("包含边界（≥）"), t.Inclusive);
+            if (old.ColorScale is { } scale) dialog.Text("color" + i, label + UiText.Get("颜色（ARGB）"), scale.Colors[i]);
         }
-        if (old.IconSet is not null) dialog.Note("图标样式有 3、4 或 5 档，仅使用对应数量的阈值；第一阈值为最低档起点。");
+        if (old.IconSet is not null) dialog.Note(UiText.Get("图标样式有 3、4 或 5 档，仅使用对应数量的阈值；第一阈值为最低档起点。"));
         read = () =>
         {
             string Color(string key) => dialog.String(key).Trim().TrimStart('#').ToUpperInvariant() is var text && text.Length == 6 ? "FF" + text : text;

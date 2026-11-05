@@ -33,7 +33,7 @@ public sealed class SortRangeCommand : DocumentCommand
         void CheckBudget(int left, int right)
         {
             if ((long)rows * (right - left + 1) > MaxCells)
-                throw new InvalidOperationException($"扩展列后排序范围超过 {MaxCells:N0} 格，请先缩小选区或关闭“扩展列”。");
+                throw new InvalidOperationException(MessageText.Format($"扩展列后排序范围超过 {MaxCells:N0} 格，请先缩小选区或关闭“扩展列”。"));
         }
         var first = range.Left; var last = range.Right;
         while (first > 0 && ColumnHasRecordData(first - 1)) { first--; CheckBudget(first, last); }
@@ -51,11 +51,11 @@ public sealed class SortRangeCommand : DocumentCommand
             _descriptor.Keys.Any(key => key.Column < first.Column || key.Column > last.Column) ||
             _descriptor.Keys.Select(key => (key.Column, key.Basis)).Distinct().Count() != _descriptor.Keys.Length ||
             (long)(last.Row - first.Row + 1) * (last.Column - first.Column + 1) > MaxCells)
-            throw new ArgumentException($"排序需要不超过 {MaxCells:N0} 格的矩形，以及 1–32 个不重复的区域内排序键。");
+            throw new ArgumentException(MessageText.Format($"排序需要不超过 {MaxCells:N0} 格的矩形，以及 1–32 个不重复的区域内排序键。"));
         foreach (var key in _descriptor.Keys) key.Validate();
         var sheet = snapshot.GetSheet(sheetId);
         StructureEdits.RequireSimpleStructure(sheet);
-        if (WorksheetOutline.HasGroups(sheet)) throw new NotSupportedException("含分组的工作表暂不排序，请先取消分组。");
+        if (WorksheetOutline.HasGroups(sheet)) throw new NotSupportedException(MessageText.Get("含分组的工作表暂不排序，请先取消分组。"));
         if (_descriptor.ExpandColumns)
         {
             // Keys stay in the explicitly selected columns; only the moved record becomes wider.
@@ -67,19 +67,19 @@ public sealed class SortRangeCommand : DocumentCommand
                 ValidationSafety.Overlaps(a, new(dataFirst, first.Column, last.Row, last.Column)) &&
                 (a.Top > dataFirst || a.Bottom < last.Row))) ||
             !sheet.Data.ConditionalFormats.IsEmpty && _descriptor.Keys.Any(k => k.Basis != SortBasis.Value))
-            throw new NotSupportedException("条件格式仅支持规则覆盖全部待排序行的按值排序；部分行区域或条件颜色排序尚未支持。");
+            throw new NotSupportedException(MessageText.Get("条件格式仅支持规则覆盖全部待排序行的按值排序；部分行区域或条件颜色排序尚未支持。"));
         var affectedTables = sheet.Data.Tables.Where(t => first.Row <= t.Range.Bottom && last.Row >= t.Range.Top && first.Column <= t.Range.Right && last.Column >= t.Range.Left).ToArray();
         var table = affectedTables.SingleOrDefault();
-        if (table is not null && _descriptor.Keys.Any(k => k.Basis != SortBasis.Value)) throw new NotSupportedException("Table 的条纹/差异颜色排序暂不支持重应用；请选择按值排序。");
+        if (table is not null && _descriptor.Keys.Any(k => k.Basis != SortBasis.Value)) throw new NotSupportedException(MessageText.Get("Table 的条纹/差异颜色排序暂不支持重应用；请选择按值排序。"));
         if (table is not null && (first.Column != table.Range.Left || last.Column != table.Range.Right || dataFirst != table.Range.Top + (table.HeaderRow ? 1 : 0) || last.Row != table.Range.Bottom - (table.TotalsRow ? 1 : 0)))
-            throw new InvalidOperationException("表排序必须覆盖完整数据区，保留表头和汇总行；本次没有修改。");
+            throw new InvalidOperationException(MessageText.Get("表排序必须覆盖完整数据区，保留表头和汇总行；本次没有修改。"));
         (CellValue Value, StyleDefinition Style) Key(int row, SortKey key)
         {
             if (_keyValues is not null) return (_keyValues[new(row, key.Column)], snapshot.Styles[sheet.GetStyleId(row, key.Column)]);
             var cell = sheet.GetCell(row, key.Column);
             if (cell?.Content.Kind == CellContentKind.Formula && (cell.Calculation?.Value is null ||
                 cell.Calculation.State is not (CalculationState.Fresh or CalculationState.Error) || cell.Calculation.InputRevision != snapshot.Revision))
-                throw new InvalidOperationException("排序关键列包含旧缓存或缺少结果，请先完成重算。");
+                throw new InvalidOperationException(MessageText.Get("排序关键列包含旧缓存或缺少结果，请先完成重算。"));
             return (cell?.Value ?? CellValue.Blank, snapshot.Styles[sheet.GetStyleId(row, key.Column)]);
         }
         // Materialize every key before sorting: even a later key that never breaks a tie must be fresh.
@@ -159,19 +159,19 @@ public sealed record CellStylePatch(bool? Bold = null, bool? Italic = null, stri
     {
         if (Reset) return new();
         if (FontName is not null && (string.IsNullOrWhiteSpace(FontName) || FontName.Length > 256))
-            throw new ArgumentException("字体名称不能为空且不能超过 256 个字符。");
+            throw new ArgumentException(MessageText.Get("字体名称不能为空且不能超过 256 个字符。"));
         if (FontSize is <= 0 or > 409 || FontSize.HasValue && !double.IsFinite(FontSize.Value))
-            throw new ArgumentException("字号必须大于 0 且不超过 409。");
+            throw new ArgumentException(MessageText.Get("字号必须大于 0 且不超过 409。"));
         if (Horizontal is < 0 or > 7 || TextRotation is < 0 or > 180 && TextRotation != 255 || Indent is < 0 or > 250 ||
             new[] { LeftBorder, RightBorder, TopBorder, BottomBorder, DiagonalBorder }.Any(v => v is < 0 or > 13) ||
             Underline is not null && Underline is not ("none" or "single" or "double" or "singleAccounting" or "doubleAccounting"))
-            throw new ArgumentException("格式属性超出支持范围。");
-        if (Vertical is < 0 or > 3) throw new ArgumentException("不支持的垂直对齐方式。");
-        if (NumberFormatId is < 0 or >= 164) throw new ArgumentException("自定义数字格式使用代码和规范化 ID 0，内置格式 ID 必须小于 164。");
+            throw new ArgumentException(MessageText.Get("格式属性超出支持范围。"));
+        if (Vertical is < 0 or > 3) throw new ArgumentException(MessageText.Get("不支持的垂直对齐方式。"));
+        if (NumberFormatId is < 0 or >= 164) throw new ArgumentException(MessageText.Get("自定义数字格式使用代码和规范化 ID 0，内置格式 ID 必须小于 164。"));
         static string? Color(string? color)
         {
             if (color is not null && (color.Length != 8 || color.Any(c => !Uri.IsHexDigit(c))))
-                throw new ArgumentException("颜色必须是 8 位 ARGB 十六进制。");
+                throw new ArgumentException(MessageText.Get("颜色必须是 8 位 ARGB 十六进制。"));
             return color;
         }
         return style with
@@ -208,7 +208,7 @@ public sealed class SetCellStyleCommand : DocumentCommand
     public SetCellStyleCommand(IEnumerable<CellAddress> addresses, CellStylePatch patch)
     {
         _addresses = addresses.Take(20_001).ToImmutableArray();
-        if (_addresses.Length > 20_000) throw new ArgumentException("样式编辑上限为 20,000 格。");
+        if (_addresses.Length > 20_000) throw new ArgumentException(MessageText.Get("样式编辑上限为 20,000 格。"));
         _patch = patch;
     }
     internal override CommandDraft Prepare(WorkbookSnapshot snapshot)
@@ -223,7 +223,7 @@ public sealed class SetCellStyleCommand : DocumentCommand
             var style = _patch.Apply(snapshot.Styles[sheet.GetStyleId(address.Row, address.Column)]);
             if (!styleIds.TryGetValue(style, out var id))
             {
-                if (styles.Count >= WorkbookLimits.MaxStyles) throw new InvalidOperationException($"样式数量超过 {WorkbookLimits.MaxStyles}，操作未应用。");
+                if (styles.Count >= WorkbookLimits.MaxStyles) throw new InvalidOperationException(MessageText.Format($"样式数量超过 {WorkbookLimits.MaxStyles}，操作未应用。"));
                 id = styles.Count; styles.Add(style); styleIds.Add(style, id);
             }
             var content = sheet.GetCell(address.Row, address.Column)?.Content ?? CellContent.FromLiteral(CellValue.Blank);
@@ -277,7 +277,7 @@ public sealed class SetAxisMetadataCommand(SheetId sheetId, SheetAxis axis, int 
             { if (index < first || index >= first + count) throw new ArgumentOutOfRangeException(nameof(Sizes)); WorkbookLimits.ValidateDimension(value, nameof(Sizes)); }
         var sheet = snapshot.GetSheet(sheetId);
         if (hidden == false && WorksheetOutline.Groups(sheet, axis).Any(g => g.Collapsed && g.First < first + count && g.Last >= first))
-            throw new InvalidOperationException("该区域由分组折叠隐藏，请通过展开分组恢复可见性。");
+            throw new InvalidOperationException(MessageText.Get("该区域由分组折叠隐藏，请通过展开分组恢复可见性。"));
         var rows = sheet.Rows.ToBuilder(); var columns = sheet.Columns.ToBuilder();
         // Showing an axis changes only existing metadata, without materializing every default row.
         var indexes = Sizes?.Keys ?? (size is null && hidden != true
@@ -298,7 +298,7 @@ public sealed class DeleteSheetCommand(SheetId sheetId) : DocumentCommand
 {
     internal override CommandDraft Prepare(WorkbookSnapshot snapshot)
     {
-        if (snapshot.Sheets.Length == 1) throw new InvalidOperationException("至少保留一张工作表。");
+        if (snapshot.Sheets.Length == 1) throw new InvalidOperationException(MessageText.Get("至少保留一张工作表。"));
         var sheet = snapshot.GetSheet(sheetId);
         var transformed = StructureEdits.Transform(snapshot, (node, _) => node switch
         {

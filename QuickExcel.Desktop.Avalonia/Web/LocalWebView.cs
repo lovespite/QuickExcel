@@ -36,8 +36,8 @@ internal sealed class LocalWebView : IAsyncDisposable
         _capabilities = new(capabilities, StringComparer.Ordinal); _capabilities.UnionWith(["ready", "pong", "disposed", "error"]);
         // A stable application-owned cache with in-private browser sessions. No prefix sweep or recursive deletion.
         var profile = Path.GetFullPath(Path.Combine(profileRoot, "browser")); Directory.CreateDirectory(profile);
-        if ((File.GetAttributes(profile) & FileAttributes.ReparsePoint) != 0) throw new IOException("浏览器配置目录不能是重解析点。");
-        Origin = new(assets, page, document, generation);
+        if ((File.GetAttributes(profile) & FileAttributes.ReparsePoint) != 0) throw new IOException(UiText.Get("浏览器配置目录不能是重解析点。"));
+        Origin = new(assets, page, document, generation, UiText.Language);
         if (OperatingSystem.IsWindows()) View.AdapterPreference = [WebViewAdapterType.WebView2];
         View.EnvironmentRequested += (_, e) =>
         {
@@ -48,10 +48,10 @@ internal sealed class LocalWebView : IAsyncDisposable
             if (e is LinuxWpeWebViewEnvironmentRequestedEventArgs linux)
             { linux.DataDirectory = profile; linux.CacheDirectory = Path.Combine(profile, "cache"); }
         };
-        View.NavigationStarted += (_, e) => { e.Cancel = e.Request != Origin.Page; if (!e.Cancel && _hasLoaded && !_closing) Fail(new IOException("页面已重新加载，需恢复已确认的编辑状态。")); };
+        View.NavigationStarted += (_, e) => { e.Cancel = e.Request != Origin.Page; if (!e.Cancel && _hasLoaded && !_closing) Fail(new IOException(UiText.Get("页面已重新加载，需恢复已确认的编辑状态。"))); };
         View.NewWindowRequested += (_, e) => e.Handled = true;
-        View.NavigationCompleted += (_, e) => { if (!e.IsSuccess) Fail(new IOException("本地页面加载失败，请检查 WebView Runtime。")); else _hasLoaded = true; };
-        View.AdapterDestroyed += (_, _) => { _destroyed.TrySetResult(); if (!_closing) Fail(new IOException("浏览器页面已退出。")); };
+        View.NavigationCompleted += (_, e) => { if (!e.IsSuccess) Fail(new IOException(UiText.Get("本地页面加载失败，请检查 WebView Runtime。"))); else _hasLoaded = true; };
+        View.AdapterDestroyed += (_, _) => { _destroyed.TrySetResult(); if (!_closing) Fail(new IOException(UiText.Get("浏览器页面已退出。"))); };
         View.WebMessageReceived += Receive;
         View.Source = Origin.Page;
         _heartbeat.Tick += async (_, _) =>
@@ -70,18 +70,18 @@ internal sealed class LocalWebView : IAsyncDisposable
         if (_failed || _closing && _destroyed.Task.IsCompleted) return;
         try
         {
-            if (View.Source != Origin.Page || e.Body is not { Length: > 0 } body) throw new InvalidDataException("非本地页面消息。");
+            if (View.Source != Origin.Page || e.Body is not { Length: > 0 } body) throw new InvalidDataException(UiText.Get("非本地页面消息。"));
             var message = WebMessage.Parse(body, Origin.Instance, _document, _generation, _capabilities);
-            if (message.Type == "error") throw new InvalidDataException("页面失败：" + message.Payload.ToString());
+            if (message.Type == "error") throw new InvalidDataException(UiText.Get("页面失败：") + message.Payload.ToString());
             if (message.Type == "ready")
-            { if (!_ready.TrySetResult()) throw new InvalidDataException("重复的页面 ready。"); return; }
-            if (!_ready.Task.IsCompletedSuccessfully) throw new InvalidDataException("页面尚未 ready。");
+            { if (!_ready.TrySetResult()) throw new InvalidDataException(UiText.Get("重复的页面 ready。")); return; }
+            if (!_ready.Task.IsCompletedSuccessfully) throw new InvalidDataException(UiText.Get("页面尚未 ready。"));
             if (_pending.TryGetValue(message.RequestId, out var pending))
             {
-                if (pending.Expected != message.Type) throw new InvalidDataException("响应类型与待处理请求不匹配。");
+                if (pending.Expected != message.Type) throw new InvalidDataException(UiText.Get("响应类型与待处理请求不匹配。"));
                 _pending.Remove(message.RequestId); pending.Completion.TrySetResult(message); return;
             }
-            if (message.Type is "pong" or "disposed" or "draftAck" or "loaded") throw new InvalidDataException("未知、过期或重放的响应。");
+            if (message.Type is "pong" or "disposed" or "draftAck" or "loaded") throw new InvalidDataException(UiText.Get("未知、过期或重放的响应。"));
             Message?.Invoke(message);
         }
         catch (Exception ex) { Fail(ex); }
@@ -93,7 +93,7 @@ internal sealed class LocalWebView : IAsyncDisposable
     }
     internal async Task SendAsync(string type, object payload, string? requestId = null)
     {
-        if (_failed || _closing && type != "dispose") throw new InvalidOperationException("Web 页面不可用。");
+        if (_failed || _closing && type != "dispose") throw new InvalidOperationException(UiText.Get("Web 页面不可用。"));
         await _ready.Task;
         var body = WebMessage.Create(Origin.Instance, _document, _generation, type, requestId ?? Guid.NewGuid().ToString("N"), payload);
         // The script is constant except for Base64 ASCII data. User source is never interpolated as executable JavaScript.
@@ -104,7 +104,7 @@ internal sealed class LocalWebView : IAsyncDisposable
     }
     internal async Task<WebMessage> RequestAsync(string type, string expected, object payload, TimeSpan? timeout = null)
     {
-        if (_pending.Count >= 32) throw new InvalidOperationException("Web 待确认请求过多。");
+        if (_pending.Count >= 32) throw new InvalidOperationException(UiText.Get("Web 待确认请求过多。"));
         var id = Guid.NewGuid().ToString("N"); var completion = new TaskCompletionSource<WebMessage>(TaskCreationOptions.RunContinuationsAsynchronously);
         _pending.Add(id, new(expected, completion));
         try { await SendAsync(type, payload, id); return await completion.Task.WaitAsync(timeout ?? TimeSpan.FromSeconds(10)); }

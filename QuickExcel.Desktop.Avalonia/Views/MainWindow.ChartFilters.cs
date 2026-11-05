@@ -17,7 +17,7 @@ public sealed partial class MainWindow
     private void CloseChartFilter() { if (_chartFilterPopup is { } popup) popup.IsOpen = false; }
     private async Task ChartFilterAsync()
     {
-        if (_grid.SelectedDrawingObject is not { Kind: DrawingObjectKind.Chart } selected) { _status.Text = "请先选中一个图表。"; return; }
+        if (_grid.SelectedDrawingObject is not { Kind: DrawingObjectKind.Chart } selected) { _status.Text = UiText.Get("请先选中一个图表。"); return; }
         if (!await FlushEditsAsync()) return;
         CloseFilterPanel(); CloseChartFilter();
         var snapshot = Document.Snapshot; var session = Document.Session.SessionId; var sheet = snapshot.GetSheet(snapshot.ActiveSheetId); var chart = sheet.Data.Charts[selected.Index];
@@ -45,7 +45,7 @@ public sealed partial class MainWindow
         if (!Current()) return;
         if (selectData) { await ChartsAsync(); return; }
         if (result is not null && !chart.ContentEquals(result) && await ExecuteAsync(new SetChartCommand(sheet.Id, selected.Index, result), snapshot.Revision))
-            _status.Text = "已应用图表筛选，可撤销；保存文件后保留。";
+            _status.Text = UiText.Get("已应用图表筛选，可撤销；保存文件后保留。");
         _grid.Focus();
     }
 }

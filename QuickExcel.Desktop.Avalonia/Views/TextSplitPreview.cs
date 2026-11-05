@@ -78,7 +78,7 @@ internal sealed class TextSplitPreview : Border
         {
             var (header, body, text) = _selectable[i];
             header.Content = label(i);
-            AutomationProperties.SetName(header, $"第 {i + 1} 列，{header.Content}");
+            AutomationProperties.SetName(header, UiText.Format($"第 {i + 1} 列，{header.Content}"));
             body.Background = i == selected ? Brushes.Black : Brushes.White;
             text.Foreground = i == selected ? Brushes.White : Brushes.Black;
             header.FontWeight = i == selected ? FontWeight.Bold : FontWeight.Normal;

@@ -17,42 +17,54 @@ public sealed partial class MainWindow
     {
         static Task Layout() => Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Background).GetTask();
         static void Click(Window w, string label) => w.GetVisualDescendants().OfType<Button>()
-            .Single(b => Equals(b.Content, label)).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            .Single(b => Equals(b.Content, UiText.Get(label))).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
         _dialogDriver = async window =>
         {
             await Layout();
+            var english = UiText.Language == UiText.English;
             var nav = window.GetVisualDescendants().OfType<ListBox>().Single(l => l.Name == "SettingsNavigation");
             check(nav.ItemCount == 6, "Settings exposes six separately navigable sections");
-            nav.SelectedItem = "历史文件"; await Layout();
+            nav.SelectedItem = UiText.Get("历史文件"); await Layout();
             var recent = window.GetVisualDescendants().OfType<ListBox>().Single(l => l.Name == "SettingsRecentFiles");
             recent.SelectedIndex = 1; var before = recent.ItemCount; Click(window, "移除选中记录");
             check(recent.ItemCount == before - 1, "Remove updates only the selected history entry");
             Click(window, "清空历史记录"); await Layout();
             Click(window.OwnedWindows.Single(), "确定"); await Layout();
             check(recent.ItemCount == 0, "Confirmed history clear empties the settings list");
-            nav.SelectedItem = "保存与计算"; await Layout();
-            var manual = window.GetVisualDescendants().OfType<RadioButton>().Single(r => r.Content?.ToString()?.StartsWith("手动") == true);
+            nav.SelectedItem = UiText.Get("保存与计算"); await Layout();
+            var manual = window.GetVisualDescendants().OfType<RadioButton>().Single(r => r.Content?.ToString()?.StartsWith(english ? "Manual" : "手动") == true);
             manual.IsChecked = true;
             check(!window.GetVisualDescendants().OfType<ToggleSwitch>().Single().IsEnabled, "Autosave is a disabled placeholder");
             await capture(window, "settings-calculation");
-            nav.SelectedItem = "脚本与 API"; await Layout();
+            nav.SelectedItem = UiText.Get("脚本与 API"); await Layout();
             var search = window.GetVisualDescendants().OfType<TextBox>().Single(); search.Text = "Range.getValues"; await Layout();
             var matrix = window.GetVisualDescendants().OfType<ListBox>().Single(l => l.Name == "SettingsApiMatrix");
             check(matrix.ItemCount == 1, "Manifest-backed matrix filters by object and member");
-            nav.SelectedItem = "关于与许可"; await Layout();
+            nav.SelectedItem = UiText.Get("关于与许可"); await Layout();
             var icon = window.GetVisualDescendants().OfType<Image>().Single(i => i.Name == "AboutProductIcon");
             check(icon.Source is Bitmap && ReferenceEquals(icon.Source, Application.Current!.Resources[DesktopApp.ProductIconKey])
                 && icon.Bounds.Size == new Size(32, 32), "About displays the application icon at 32 x 32");
+            check(window.GetVisualDescendants().OfType<TextBlock>().Any(t => t.Text?.StartsWith("Copyright in the original code") == true),
+                "Copyright is displayed in English in either UI language");
             await capture(window, "settings-about");
             var licenses = window.GetVisualDescendants().OfType<ComboBox>().Single();
+            check(window.GetVisualDescendants().OfType<TextBox>().Single(b => b.Name == "SettingsLicenseText").Text!.StartsWith("# Third-party components and licenses"),
+                "The bundled third-party declaration is shown in English");
             licenses.SelectedItem = licenses.Items.OfType<string>().Single(p => p.EndsWith("OFFICE-SCRIPTS-NOTICE.md"));
             check(window.GetVisualDescendants().OfType<TextBox>().Single(b => b.Name == "SettingsLicenseText").Text!.Contains("CC BY 4.0"), "Bundled license text and attribution can be read offline");
+            nav.SelectedItem = english ? "Appearance" : "界面"; await Layout();
+            var language = window.GetVisualDescendants().OfType<ComboBox>().Single(b => b.Name == "DisplayLanguage");
+            check(language.SelectedItem?.ToString() == (english ? "English" : "简体中文"), "The language selector shows the persisted choice");
+            await capture(window, "settings-language");
+            language.SelectedIndex = english ? 0 : 1;
             Click(window, "关闭");
         };
-        var item = ((MenuItem)_menu.Items[0]!).Items.OfType<MenuItem>().Single(i => Equals(i.Header, "设置"));
+        var item = ((MenuItem)_menu.Items[0]!).Items.OfType<MenuItem>().Single(i => Equals(i.Header, UiText.Get("设置")));
         item.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent)); await _operation;
         check(_recent.Children.Single() is TextBlock && File.Exists(_workspace.FilePath), "Home history updates without deleting the workbook");
         var reloaded = new DesktopSettings(Path.Combine(directory, "settings", "settings.json")); reloaded.Load();
+        check(reloaded.Value.Language == (UiText.Language == UiText.English ? UiText.Chinese : UiText.English),
+            "Changing the language persists for the next launch");
         check(reloaded.Value.Calculation == DesktopCalculationMode.Manual, "Manual calculation selected in Settings survives reload");
         _workspace.New(); Document.SetCell(0, 0, 0, "2"); Document.SetCell(0, 0, 1, "=A1*3");
         await CalculateAsync(); Document.SetCell(0, 0, 0, "4"); await FlushEditsAsync();
@@ -82,9 +94,16 @@ public sealed partial class MainWindow
             check(WindowsFileAssociations.ReadSelection(root).SequenceEqual([".xlsq"]), "Initial association selection defaults to XLSQ");
             var executable = Path.Combine(AppContext.BaseDirectory, "QuickExcel.Avalonia.exe");
             WindowsFileAssociations.Register(root, executable, [".xlsq", ".csv"]);
+            var iconPath = Path.Combine(AppContext.BaseDirectory, "Assets", "QuickExcel-XLSQ.ico");
+            using var icon = root.OpenSubKey(@"Software\Classes\QuickExcel.xlsq\DefaultIcon");
+            check(File.Exists(iconPath) && Equals(icon?.GetValue(""), $"\"{iconPath}\",0"),
+                "The XLSQ file type uses the packaged workbook icon");
             using var command = root.OpenSubKey(@"Software\Classes\QuickExcel.csv\shell\open\command");
             check(Equals(command?.GetValue(""), $"\"{executable}\" \"%1\""), "Registered CSV command quotes both the executable and selected file");
             WindowsFileAssociations.Register(root, executable, [".xlsx"]);
+            using var xlsxIcon = root.OpenSubKey(@"Software\Classes\QuickExcel.xlsx\DefaultIcon");
+            using var csvIcon = root.OpenSubKey(@"Software\Classes\QuickExcel.csv\DefaultIcon");
+            check(xlsxIcon is null && csvIcon is null, "The XLSQ file icon is exclusive to the native workbook format");
             check(WindowsFileAssociations.ReadSelection(root).SequenceEqual([".xlsx"]), "Reapplying associations removes deselected advertisements");
         }
         finally { Registry.CurrentUser.DeleteSubKeyTree(name, throwOnMissingSubKey: false); }

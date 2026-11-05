@@ -25,15 +25,15 @@ public sealed class ChartClipboard
         {
             var r = WorksheetChart.ParseReference(formula); var key = FormulaSyntax.Print(r);
             if (references.TryGetValue(key, out var existing)) return existing;
-            var source = book.Sheets.SingleOrDefault(s => s.Name.Equals(r.Sheet, StringComparison.OrdinalIgnoreCase)) ?? throw new InvalidOperationException("图表源工作表不存在。");
+            var source = book.Sheets.SingleOrDefault(s => s.Name.Equals(r.Sheet, StringComparison.OrdinalIgnoreCase)) ?? throw new InvalidOperationException(MessageText.Get("图表源工作表不存在。"));
             var count = WorksheetChart.Count(r); var column = references.Count;
-            if (cells.Count + count > MaxCells) throw new NotSupportedException("图表剪贴板数据最多 20,000 格。");
+            if (cells.Count + count > MaxCells) throw new NotSupportedException(MessageText.Get("图表剪贴板数据最多 20,000 格。"));
             for (var i = 0; i < count; i++)
             {
                 var row = r.Row + (r.EndRow > r.Row ? i : 0); var col = r.Column + (r.EndColumn > r.Column ? i : 0);
                 var cell = source.GetCell(row, col);
                 if (cell?.Content.Kind == CellContentKind.Formula && cell.Calculation?.State is not (CalculationState.Fresh or CalculationState.Error))
-                    throw new InvalidOperationException("图表源公式尚未重算，不能复制旧结果。");
+                    throw new InvalidOperationException(MessageText.Get("图表源公式尚未重算，不能复制旧结果。"));
                 var style = book.Styles[source.GetStyleId(row, col)] with { NamedStyleId = 0, FontScheme = null };
                 var id = styles.IndexOf(style); if (id < 0) { id = styles.Count; styles.Add(style); }
                 cells.Add(new(i, column), new(CellContent.FromLiteral(cell?.Value ?? CellValue.Blank, id)));
@@ -79,7 +79,7 @@ public sealed class PasteChartCommand(ChartClipboard source, SheetId sheetId, Ce
         chart = chart with { ScriptId = _chartId, Anchor = DrawingGeometry.FromBounds(destination, new(DrawingGeometry.ColumnStart(destination, position.Column), DrawingGeometry.RowStart(destination, position.Row), bounds.Width, bounds.Height), DrawingAnchorKind.OneCell, chart.Anchor.Rotation) };
         // Values are independent snapshots. Preserve numeric/date-axis interpretation across workbook epochs.
         if (source.Book.DateSystem != snapshot.DateSystem && source.Chart.Series.Any(s => s.NumericCategories))
-            throw new NotSupportedException("数值分类图表的数据日期系统与目标不同；请选择粘贴为图片。");
+            throw new NotSupportedException(MessageText.Get("数值分类图表的数据日期系统与目标不同；请选择粘贴为图片。"));
         var staged = new WorkbookSnapshot(snapshot.DocumentId, snapshot.Revision, snapshot.DateSystem, snapshot.Sheets.Add(imported), snapshot.ScriptSource, styles,
             snapshot.ScriptModules, snapshot.FileState, snapshot.DefinedNames, snapshot.ActiveSheetId, snapshot.Window, snapshot.TextCompatibilityVersion, snapshot.PackageFiles);
         var result = new SetChartCommand(sheetId, destination.Data.Charts.Length, chart).Prepare(staged);

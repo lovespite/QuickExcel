@@ -8,7 +8,7 @@ public sealed record LocalFileSelection
     public LocalFileSelection(string path)
     {
         if (string.IsNullOrWhiteSpace(path) || !System.IO.Path.IsPathFullyQualified(path))
-            throw new ArgumentException("当前存储器需要完整的本地文件路径。", nameof(path));
+            throw new ArgumentException(UiText.Get("当前存储器需要完整的本地文件路径。"), nameof(path));
         Path = System.IO.Path.GetFullPath(path);
     }
 
@@ -16,7 +16,7 @@ public sealed record LocalFileSelection
     {
         ArgumentNullException.ThrowIfNull(uri);
         if (!uri.IsAbsoluteUri || !uri.IsFile)
-            throw new NotSupportedException("此位置不提供本地文件路径，请选择本地工作簿。");
+            throw new NotSupportedException(UiText.Get("此位置不提供本地文件路径，请选择本地工作簿。"));
         return new(uri.LocalPath);
     }
 }

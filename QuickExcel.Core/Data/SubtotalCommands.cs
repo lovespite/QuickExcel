@@ -25,7 +25,7 @@ public sealed class ApplySubtotalsCommand(SubtotalPreview preview) : DocumentCom
     internal override CommandDraft Prepare(WorkbookSnapshot snapshot)
     {
         ArgumentNullException.ThrowIfNull(preview);
-        if (!ApplyCleaningCommand.SameInputs(snapshot, preview.Source)) throw new InvalidOperationException("分类汇总预览已过期，请重新预览；没有修改工作簿。");
+        if (!ApplyCleaningCommand.SameInputs(snapshot, preview.Source)) throw new InvalidOperationException(MessageText.Get("分类汇总预览已过期，请重新预览；没有修改工作簿。"));
         var result = preview.Result;
         // Keep navigation that may have changed during the preview dialog.
         result = new(result.DocumentId, result.Revision, result.DateSystem, result.Sheets.Select(s => s.WithView(snapshot.GetSheet(s.Id).View)),
@@ -42,13 +42,13 @@ public static class SubtotalCommands
         options ??= new();
         var original = book;
         WorkbookClipboard.ValidateRange(range);
-        if (range.Count > DataCleaning.MaxCells) throw new ArgumentException("分类汇总一次最多处理 20,000 格。");
+        if (range.Count > DataCleaning.MaxCells) throw new ArgumentException(MessageText.Get("分类汇总一次最多处理 20,000 格。"));
         if (range.Bottom <= range.Top || groupColumn < range.Left || groupColumn > range.Right || function is < 1 or > 11)
-            throw new ArgumentException("分类汇总需要标题和数据行、区域内分类列以及 1–11 的汇总函数。");
+            throw new ArgumentException(MessageText.Get("分类汇总需要标题和数据行、区域内分类列以及 1–11 的汇总函数。"));
         var totals = totalColumns.Take(257).ToArray();
         if (totals.Length is 0 or > 256 || totals.Any(c => c < range.Left || c > range.Right || c == groupColumn) || totals.Distinct().Count() != totals.Length)
-            throw new ArgumentException("请选择不重复的汇总列，且不能与分类列相同。");
-        if (book.FileState?.FormulaReadOnly == true) throw new InvalidOperationException(WorkbookFileState.FormulaReadOnlyMessage);
+            throw new ArgumentException(MessageText.Get("请选择不重复的汇总列，且不能与分类列相同。"));
+        if (book.FileState?.FormulaReadOnly == true) throw new InvalidOperationException(MessageText.Get(WorkbookFileState.FormulaReadOnlyMessage));
         var sheet = book.GetSheet(sheetId); StructureEdits.RequireSimpleStructure(sheet); StructureEdits.RequireTransformableFunctions(book);
         var existing = SummaryRows(sheet, range);
         var removed = 0;
@@ -60,25 +60,25 @@ public static class SubtotalCommands
         var priorRows = sheet.Rows;
         if (existing.Count > 0)
         {
-            if ((sheet.Data.Outline?.SummaryBelow ?? true) != options.SummaryBelow) throw new ArgumentException("追加汇总须沿用现有汇总位置；改变位置时请勾选替换当前分类汇总。");
-            if (priorRows.Values.Any(r => r.OutlineLevel >= 7)) throw new InvalidOperationException("追加汇总会超过 7 层大纲。");
+            if ((sheet.Data.Outline?.SummaryBelow ?? true) != options.SummaryBelow) throw new ArgumentException(MessageText.Get("追加汇总须沿用现有汇总位置；改变位置时请勾选替换当前分类汇总。"));
+            if (priorRows.Values.Any(r => r.OutlineLevel >= 7)) throw new InvalidOperationException(MessageText.Get("追加汇总会超过 7 层大纲。"));
             book = ClearOutline(book, sheet); sheet = book.GetSheet(sheetId);
         }
         if (!(sheet.Data with { ConditionalFormats = [], Outline = null, DefaultColumnWidth = null }).IsEmpty || WorksheetOutline.HasGroups(sheet) || sheet.Rows.Values.Any(r => r.Hidden) || sheet.Columns.Values.Any(c => c.Hidden) ||
             book.Sheets.Any(s => !s.Data.Validations.IsEmpty) ||
             SubtotalFunctions.HasUnmodeledFilters(book))
-            throw new NotSupportedException("分类汇总需要无筛选、表、验证、手动分组、隐藏行列或未建模对象的普通区域；整批操作未应用。");
+            throw new NotSupportedException(MessageText.Get("分类汇总需要无筛选、表、验证、手动分组、隐藏行列或未建模对象的普通区域；整批操作未应用。"));
         if (sheet.Cells.Any(p => p.Value.Content.Kind == CellContentKind.Formula && SubtotalFunctions.Contains(FormulaSyntax.Parse(p.Value.Content.FormulaText)) && !existing.Contains(p.Key.Row)))
-            throw new NotSupportedException("工作表包含不能识别为当前分类汇总的 SUBTOTAL，不能安全替换或嵌套。");
+            throw new NotSupportedException(MessageText.Get("工作表包含不能识别为当前分类汇总的 SUBTOTAL，不能安全替换或嵌套。"));
         string Key(int row)
         {
             var cell = sheet.GetCell(row, groupColumn);
             if (cell?.Content.Kind == CellContentKind.Formula && (cell.Calculation is not { State: CalculationState.Fresh or CalculationState.Error, Value: not null } || cell.Calculation.InputRevision != book.Revision))
-                throw new InvalidOperationException("分类列含待重算公式，请先重算。");
+                throw new InvalidOperationException(MessageText.Get("分类列含待重算公式，请先重算。"));
             return WorksheetFilterEngine.ValueLabel(cell?.Value ?? CellValue.Blank, TablePresentation.NumberStyle(sheet, book.Styles, row, groupColumn), book.DateSystem);
         }
         var details = Enumerable.Range(range.Top + 1, range.Rows - 1).Where(r => !existing.Contains(r)).ToArray();
-        if (details.Length == 0) throw new ArgumentException("区域内没有明细数据。");
+        if (details.Length == 0) throw new ArgumentException(MessageText.Get("区域内没有明细数据。"));
         var groups = new List<(int First, int Last, string Label)>(); var start = range.Top + 1; var label = Key(details[0]);
         for (var i = 1; i <= details.Length; i++)
         {
@@ -88,7 +88,7 @@ public static class SubtotalCommands
             if (!options.SummaryBelow) while (row > start && existing.Contains(row - 1)) row--;
             groups.Add((start, row - 1, label)); start = row; label = next ?? "";
         }
-        if (groups.Count > 256) throw new InvalidOperationException("一次最多生成 256 个连续分类汇总，请先整理数据或缩小区域。");
+        if (groups.Count > 256) throw new InvalidOperationException(MessageText.Get("一次最多生成 256 个连续分类汇总，请先整理数据或缩小区域。"));
         var insertions = (options.SummaryBelow ? groups.Select(g => g.Last + 1).Append(range.Bottom + 1) : groups.Select(g => g.First).Append(range.Top + 1)).Order().ToArray();
         int? Position(int value) => checked(value + insertions.Count(i => i <= value));
         (int, int)? Interval(int first, int last) => (Position(first)!.Value, Position(last)!.Value);
@@ -100,7 +100,7 @@ public static class SubtotalCommands
             for (var col = range.Left; col <= range.Right; col++)
             {
                 var style = book.Styles[sheet.GetStyleId(styleSource, col)] with { Bold = true }; var id = styles.IndexOf(style);
-                if (id < 0) { if (styles.Count >= 4096) throw new InvalidOperationException("汇总样式超过 4096。"); id = styles.Count; styles.Add(style); }
+                if (id < 0) { if (styles.Count >= 4096) throw new InvalidOperationException(MessageText.Get("汇总样式超过 4096。")); id = styles.Count; styles.Add(style); }
                 var column = FormulaSyntax.ColumnName(col);
                 var content = col == groupColumn ? CellContent.FromLiteral(CellValue.FromText(text), id) : totals.Contains(col) ?
                     CellContent.FromFormula($"=SUBTOTAL({function},{column}{from + 1}:{column}{to + 1})", id) : CellContent.FromLiteral(CellValue.Blank, id);
@@ -150,7 +150,7 @@ public static class SubtotalCommands
                 r.Column == p.Key.Column && r.EndColumn == p.Key.Column && r.Row >= group.First && r.EndRow <= group.Last &&
                 r.Row > range.Top && r.EndRow <= range.Bottom);
             if (!valid || cells.Any(p => p.Key.Column < range.Left || p.Key.Column > range.Right) || cells.Count(p => p.Value.Content.Kind == CellContentKind.Literal) != 1)
-                throw new NotSupportedException("汇总行包含额外数据或自定义公式，无法安全删除或替换；请先检查完整区域。");
+                throw new NotSupportedException(MessageText.Get("汇总行包含额外数据或自定义公式，无法安全删除或替换；请先检查完整区域。"));
             rows.Add(group.Summary);
         }
         // When another aggregate is nested, a retained grand total can sit inside a new
@@ -167,11 +167,11 @@ public static class SubtotalCommands
                     f.Arguments[0] is not ValueNode { Value.Kind: CellValueKind.Number } n || n.Value.NumberValue is < 1 or > 11 ||
                     f.Arguments[1] is not ReferenceNode r || r.Column != p.Key.Column || r.EndColumn != p.Key.Column || r.Row <= range.Top || r.EndRow > range.Bottom ||
                     r.Row <= row && r.EndRow >= row || r.Sheet is not null && !r.Sheet.Equals(sheet.Name, StringComparison.OrdinalIgnoreCase)))
-                throw new NotSupportedException("总计行包含额外数据或自定义公式，不能安全删除。");
+                throw new NotSupportedException(MessageText.Get("总计行包含额外数据或自定义公式，不能安全删除。"));
             rows.Add(row);
         }
         if (rows.Count > 0 && (groups.Any(g => g.Axis == SheetAxis.Row && (!rows.Contains(g.Summary) || g.First <= range.Top || g.Last > range.Bottom)) || WorksheetOutline.Groups(sheet, SheetAxis.Column).Count > 0))
-            throw new NotSupportedException("请选择包含全部分类汇总的大纲区域；手动分组不能自动替换。");
+            throw new NotSupportedException(MessageText.Get("请选择包含全部分类汇总的大纲区域；手动分组不能自动替换。"));
         return rows;
     }
 
@@ -181,10 +181,10 @@ public static class SubtotalCommands
     public static SubtotalPreview Remove(WorkbookSnapshot book, SheetId sheetId, CellRectangle range)
     {
         WorkbookClipboard.ValidateRange(range);
-        if (book.FileState?.FormulaReadOnly == true) throw new InvalidOperationException(WorkbookFileState.FormulaReadOnlyMessage);
+        if (book.FileState?.FormulaReadOnly == true) throw new InvalidOperationException(MessageText.Get(WorkbookFileState.FormulaReadOnlyMessage));
         var sheet = book.GetSheet(sheetId); StructureEdits.RequireSimpleStructure(sheet); StructureEdits.RequireTransformableFunctions(book);
         var removed = SummaryRows(sheet, range);
-        if (removed.Count == 0) throw new InvalidOperationException("当前区域没有可安全删除的分类汇总。");
+        if (removed.Count == 0) throw new InvalidOperationException(MessageText.Get("当前区域没有可安全删除的分类汇总。"));
         // Breaks at generated group boundaries are removed; unrelated print settings remain mapped.
         var boundaries = WorksheetOutline.Groups(sheet, SheetAxis.Row).Select(g => (sheet.Data.Outline?.SummaryBelow ?? true) ? g.First : g.Summary).ToHashSet();
         var clean = ClearOutline(book, sheet);

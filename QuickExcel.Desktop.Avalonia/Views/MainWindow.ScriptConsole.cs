@@ -51,19 +51,19 @@ public sealed partial class MainWindow
         _consoleHistoryIndex = _consoleHistory.Count; _consoleLastSequence = -1;
         var panel = new LayoutGrid { RowDefinitions = new("Auto,*,Auto,Auto"), Background = Brushes.White };
         var tools = new LayoutGrid { ColumnDefinitions = new("Auto,*,Auto,Auto"), Margin = new(6, 3) };
-        var clear = ConsoleButton("⊘", "清空输出");
+        var clear = ConsoleButton("⊘", UiText.Get("清空输出"));
         clear.Click += (_, _) => { Document.Session.ClearConsole(); RefreshScriptConsole(true); }; tools.Children.Add(clear);
         _consoleFilter = new TextBox { Height = 26, MinHeight = 0, Padding = new(7, 3), Margin = new(6, 0), FontSize = 12,
-            PlaceholderText = "过滤输出", BorderBrush = ConsoleLine, Background = Brushes.White, Foreground = ConsoleInk };
-        AutomationProperties.SetName(_consoleFilter, "过滤控制台输出");
+            PlaceholderText = UiText.Get("过滤输出"), BorderBrush = ConsoleLine, Background = Brushes.White, Foreground = ConsoleInk };
+        AutomationProperties.SetName(_consoleFilter, UiText.Get("过滤控制台输出"));
         _consoleFilter.TextChanged += (_, _) => RefreshScriptConsole(true);
         LayoutGrid.SetColumn(_consoleFilter, 1); tools.Children.Add(_consoleFilter);
-        _consoleLevel = new ComboBox { ItemsSource = new[] { "所有级别", "日志 / 信息", "警告", "错误", "调试" },
+        _consoleLevel = new ComboBox { ItemsSource = new[] { UiText.Get("所有级别"), UiText.Get("日志 / 信息"), UiText.Get("警告"), UiText.Get("错误"), UiText.Get("调试") },
             SelectedIndex = 0, Width = 110, Height = 26, MinHeight = 0, Padding = new(7, 2), FontSize = 12 };
-        AutomationProperties.SetName(_consoleLevel, "控制台日志级别");
+        AutomationProperties.SetName(_consoleLevel, UiText.Get("控制台日志级别"));
         _consoleLevel.SelectionChanged += (_, _) => RefreshScriptConsole(true);
         LayoutGrid.SetColumn(_consoleLevel, 2); tools.Children.Add(_consoleLevel);
-        _consoleCopy = ConsoleButton("复制", "复制当前筛选的控制台输出");
+        _consoleCopy = ConsoleButton(UiText.Get("复制"), UiText.Get("复制当前筛选的控制台输出"));
         _consoleCopy.Click += async (_, _) => await PerformAsync(() => _clipboard.WriteAsync(new(ConsoleVisibleText)));
         LayoutGrid.SetColumn(_consoleCopy, 3); tools.Children.Add(_consoleCopy);
         _consoleCount = new TextBlock { FontSize = 11, Foreground = ConsoleMuted, VerticalAlignment = VerticalAlignment.Center, Margin = new(8, 0) };
@@ -76,9 +76,9 @@ public sealed partial class MainWindow
             new Setter(TemplatedControl.PaddingProperty, new Thickness(0)), new Setter(Layoutable.MarginProperty, new Thickness(0)),
             new Setter(Layoutable.MinHeightProperty, 0d), new Setter(ContentControl.HorizontalContentAlignmentProperty, HorizontalAlignment.Stretch) } });
         ScrollViewer.SetHorizontalScrollBarVisibility(_consoleOutput, ScrollBarVisibility.Disabled);
-        AutomationProperties.SetName(_consoleOutput, "调试控制台输出，可选择复制");
+        AutomationProperties.SetName(_consoleOutput, UiText.Get("调试控制台输出，可选择复制"));
         var outputArea = new LayoutGrid(); outputArea.Children.Add(_consoleOutput);
-        _consoleEmpty = new TextBlock { Text = "控制台已就绪。输入表达式，或使用 console.log / warn / error 输出消息。", FontSize = 12,
+        _consoleEmpty = new TextBlock { Text = UiText.Get("控制台已就绪。输入表达式，或使用 console.log / warn / error 输出消息。"), FontSize = 12,
             Foreground = ConsoleMuted, Margin = new(28, 12), IsHitTestVisible = false, TextWrapping = TextWrapping.Wrap };
         outputArea.Children.Add(_consoleEmpty); LayoutGrid.SetRow(outputArea, 1); panel.Children.Add(outputArea);
 
@@ -86,9 +86,9 @@ public sealed partial class MainWindow
         inputArea.Children.Add(new TextBlock { Text = "›", FontFamily = new("Consolas"), FontSize = 20, Foreground = ConsoleBlue, Margin = new(8, 1) });
         _consoleInput = new CompositionTextBox { AcceptsReturn = true, Height = 54, MinHeight = 0, FontFamily = new("Consolas"), FontSize = 13,
             Padding = new(2, 5), BorderThickness = new(0), Background = Brushes.White, Foreground = ConsoleInk,
-            PlaceholderText = "输入 JavaScript 表达式或代码…", MaxLength = DocumentSession.MaxConsoleSourceBytes };
-        ToolTip.SetTip(_consoleInput, "Enter 执行，Ctrl+Enter 换行，↑↓ 浏览历史。可用 snapshot / patch / fs；工作簿修改可撤销。");
-        AutomationProperties.SetName(_consoleInput, "调试控制台 JavaScript 输入");
+            PlaceholderText = UiText.Get("输入 JavaScript 表达式或代码…"), MaxLength = DocumentSession.MaxConsoleSourceBytes };
+        ToolTip.SetTip(_consoleInput, UiText.Get("Enter 执行，Ctrl+Enter 换行，↑↓ 浏览历史。可用 workbook 和 host；工作簿修改可撤销。"));
+        AutomationProperties.SetName(_consoleInput, UiText.Get("调试控制台 JavaScript 输入"));
         _consoleInput.CompositionChanged += () => RefreshScriptConsole();
         // TextBox consumes Enter/arrow keys during bubbling. Handle console keys before its editor does.
         _consoleInput.AddHandler(KeyDownEvent, HandleConsoleKey, RoutingStrategies.Tunnel);
@@ -97,15 +97,15 @@ public sealed partial class MainWindow
         LayoutGrid.SetRow(inputBorder, 2); panel.Children.Add(inputBorder);
         var footer = new DockPanel { Background = Brush.Parse("#F8F9FA"), LastChildFill = true };
         var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 2, Margin = new(4, 0) };
-        _consoleRun = ConsoleButton("▶ 执行", "执行控制台代码（Enter）");
+        _consoleRun = ConsoleButton(UiText.Get("▶ 执行"), UiText.Get("执行控制台代码（Enter）"));
         _consoleRun.Foreground = ConsoleBlue; _consoleRun.Click += async (_, _) => await PerformAsync(RunConsoleAsync); actions.Children.Add(_consoleRun);
         DockPanel.SetDock(actions, Dock.Right); footer.Children.Add(actions);
-        footer.Children.Add(new TextBlock { Text = "JavaScript  ·  Enter 执行  ·  Ctrl+Enter 换行  ·  ↑↓ 历史", FontSize = 11, Foreground = ConsoleMuted,
+        footer.Children.Add(new TextBlock { Text = UiText.Get("JavaScript  ·  Enter 执行  ·  Ctrl+Enter 换行  ·  ↑↓ 历史"), FontSize = 11, Foreground = ConsoleMuted,
             VerticalAlignment = VerticalAlignment.Center, Margin = new(9, 0), TextWrapping = TextWrapping.Wrap });
         LayoutGrid.SetRow(footer, 3); panel.Children.Add(footer);
         _scriptOutputTabs = new TabControl { Background = Brushes.White, Foreground = ConsoleInk, ItemsSource = new[] {
-            new TabItem { Header = "控制台", FontSize = 13, MinHeight = 30, Padding = new(10, 6), Content = panel },
-            new TabItem { Header = "运行诊断", FontSize = 13, MinHeight = 30, Padding = new(10, 6), Content = _scriptDiagnostics } } };
+            new TabItem { Header = UiText.Get("控制台"), FontSize = 13, MinHeight = 30, Padding = new(10, 6), Content = panel },
+            new TabItem { Header = UiText.Get("运行诊断"), FontSize = 13, MinHeight = 30, Padding = new(10, 6), Content = _scriptDiagnostics } } };
         _scriptOutputTabs.SelectionChanged += (_, _) => UpdateScriptConsoleToggle(_scriptOutputTabs.IsVisible && _scriptOutputTabs.SelectedIndex == 0);
         RefreshScriptConsole(); return _scriptOutputTabs;
     }
@@ -119,13 +119,13 @@ public sealed partial class MainWindow
     {
         var (icon, ink, background, label) = entry.Level switch
         {
-            ScriptConsoleLevel.Warning => ("⚠", ConsoleWarningInk, ConsoleWarningBackground, "警告"),
-            ScriptConsoleLevel.Error => ("⊗", ConsoleErrorInk, ConsoleErrorBackground, "错误"),
-            ScriptConsoleLevel.Input => ("›", ConsoleBlue, Brushes.White, "输入"),
-            ScriptConsoleLevel.Result => ("‹", ConsoleInk, Brushes.White, "结果"),
-            ScriptConsoleLevel.Debug => ("·", ConsoleMuted, Brushes.White, "调试"),
-            ScriptConsoleLevel.Info => ("i", ConsoleInk, Brushes.White, "信息"),
-            _ => ("", ConsoleInk, Brushes.White, "日志")
+            ScriptConsoleLevel.Warning => ("⚠", ConsoleWarningInk, ConsoleWarningBackground, UiText.Get("警告")),
+            ScriptConsoleLevel.Error => ("⊗", ConsoleErrorInk, ConsoleErrorBackground, UiText.Get("错误")),
+            ScriptConsoleLevel.Input => ("›", ConsoleBlue, Brushes.White, UiText.Get("输入")),
+            ScriptConsoleLevel.Result => ("‹", ConsoleInk, Brushes.White, UiText.Get("结果")),
+            ScriptConsoleLevel.Debug => ("·", ConsoleMuted, Brushes.White, UiText.Get("调试")),
+            ScriptConsoleLevel.Info => ("i", ConsoleInk, Brushes.White, UiText.Get("信息")),
+            _ => ("", ConsoleInk, Brushes.White, UiText.Get("日志"))
         };
         var line = new LayoutGrid { ColumnDefinitions = new("26,*,66"), Margin = new(0, 2) };
         line.Children.Add(new TextBlock { Text = icon, FontSize = 13, Foreground = ink, HorizontalAlignment = HorizontalAlignment.Center });
@@ -185,12 +185,12 @@ public sealed partial class MainWindow
         if (_consoleEmpty is not null)
         {
             _consoleEmpty.IsVisible = _consoleVisibleEntries.Length == 0;
-            _consoleEmpty.Text = entries.IsEmpty ? "控制台已就绪。输入表达式，或使用 console.log / warn / error 输出消息。" : "没有匹配的输出。";
+            _consoleEmpty.Text = entries.IsEmpty ? UiText.Get("控制台已就绪。输入表达式，或使用 console.log / warn / error 输出消息。") : UiText.Get("没有匹配的输出。");
         }
         if (_consoleCount is not null)
         {
             var errors = entries.Count(e => e.Level == ScriptConsoleLevel.Error); var warnings = entries.Count(e => e.Level == ScriptConsoleLevel.Warning);
-            _consoleCount.Text = $"{_consoleVisibleEntries.Length}/{entries.Length}  ·  {errors} 错误  {warnings} 警告";
+            _consoleCount.Text = UiText.Format($"{_consoleVisibleEntries.Length}/{entries.Length}  ·  {errors} 错误  {warnings} 警告");
             _consoleCount.Foreground = errors > 0 ? ConsoleErrorInk : warnings > 0 ? ConsoleWarningInk : ConsoleMuted;
         }
         if (_consoleVisibleEntries.LastOrDefault() is { } latest)
@@ -202,7 +202,7 @@ public sealed partial class MainWindow
     private async Task RunConsoleAsync()
     {
         if (_consoleInput is not { } input || input.IsComposing || input.Text is not { } source || string.IsNullOrWhiteSpace(source)) return;
-        if (!DesktopServices.SupportsScripts) throw new PlatformNotSupportedException("此平台的隔离脚本执行尚不可用。");
+        if (!DesktopServices.SupportsScripts) throw new PlatformNotSupportedException(UiText.Get("此平台的隔离脚本执行尚不可用。"));
         if (_scriptCancellation is not null) return;
         await using var hold = _scriptPage?.HoldEdits();
         if (!await CommitEditorsAsync()) return;
@@ -223,9 +223,9 @@ public sealed partial class MainWindow
                 RefreshScriptConsole();
                 result = await Task.Run(() => document.RunConsole(source, token), token);
             });
-            if (_scriptStatus is not null) _scriptStatus.Text = result?.Changed == true ? "控制台执行完成，修改可撤销。" : "控制台执行完成。";
+            if (_scriptStatus is not null) _scriptStatus.Text = result?.Changed == true ? UiText.Get("控制台执行完成，修改可撤销。") : UiText.Get("控制台执行完成。");
         }
-        catch (OperationCanceledException) { if (_scriptStatus is not null) _scriptStatus.Text = "控制台执行已停止，修改未提交。"; }
+        catch (OperationCanceledException) { if (_scriptStatus is not null) _scriptStatus.Text = UiText.Get("控制台执行已停止，修改未提交。"); }
         catch (Exception error) { if (_scriptStatus is not null) _scriptStatus.Text = error.Message; }
         finally { RefreshScriptConsole(); }
     }

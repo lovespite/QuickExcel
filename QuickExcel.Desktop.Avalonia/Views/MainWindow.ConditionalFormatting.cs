@@ -8,20 +8,20 @@ namespace QuickExcel.Desktop.Avalonia;
 
 public sealed partial class MainWindow
 {
-    private static readonly string[] ConditionalKinds = ["单元格比较", "公式", "重复值", "唯一值", "包含文本", "不包含文本", "以文本开头", "以文本结尾", "色阶", "数据条", "图标集"];
+    private static readonly string[] ConditionalKinds = [UiText.Get("单元格比较"), UiText.Get("公式"), UiText.Get("重复值"), UiText.Get("唯一值"), UiText.Get("包含文本"), UiText.Get("不包含文本"), UiText.Get("以文本开头"), UiText.Get("以文本结尾"), UiText.Get("色阶"), UiText.Get("数据条"), UiText.Get("图标集")];
     private async Task ConditionalFormatsAsync()
     {
         if (!await FlushEditsAsync()) return;
         RequireConditionalFormatEditing();
         var snapshot = Document.Snapshot; var sheet = snapshot.Sheets[SheetIndex]; var selection = Rectangle(SelectedRange());
         var rules = sheet.Data.ConditionalFormats.OrderBy(r => r.Priority).ToList();
-        var window = new Window { Title = "条件格式管理 · " + sheet.Name, Width = 720, Height = 440, WindowStartupLocation = WindowStartupLocation.CenterOwner, ShowInTaskbar = false };
+        var window = new Window { Title = UiText.Get("条件格式管理 · ") + sheet.Name, Width = 720, Height = 440, WindowStartupLocation = WindowStartupLocation.CenterOwner, ShowInTaskbar = false };
         var panel = new StackPanel { Margin = new(20), Spacing = 12 };
-        panel.Children.Add(new TextBlock { Text = "从上到下按优先级应用。点击“应用”后一次提交，可撤销。", TextWrapping = TextWrapping.Wrap });
+        panel.Children.Add(new TextBlock { Text = UiText.Get("从上到下按优先级应用。点击“应用”后一次提交，可撤销。"), TextWrapping = TextWrapping.Wrap });
         var list = new ListBox { Height = 230 }; panel.Children.Add(list);
         var buttons = new WrapPanel(); panel.Children.Add(buttons);
         var error = new TextBlock { Foreground = Brushes.Firebrick, TextWrapping = TextWrapping.Wrap }; panel.Children.Add(error);
-        void Refresh(int index) { list.ItemsSource = rules.Select((r, i) => $"{i + 1} · {ConditionalKinds[(int)r.Kind]} · {string.Join(" ", r.Ranges)}{(r.StopIfTrue ? " · 为真停止" : "")}").ToArray(); list.SelectedIndex = index; }
+        void Refresh(int index) { list.ItemsSource = rules.Select((r, i) => $"{i + 1} · {ConditionalKinds[(int)r.Kind]} · {string.Join(" ", r.Ranges)}{(r.StopIfTrue ? UiText.Get(" · 为真停止") : "")}").ToArray(); list.SelectedIndex = index; }
         void Button(string name, Func<Task> action)
         {
             var button = new Button { Content = name, Margin = new(3) }; buttons.Children.Add(button);
@@ -35,11 +35,11 @@ public sealed partial class MainWindow
             if (!await dialog.ShowAsync(window)) return;
             if (add) { rules.Insert(0, read()); index = 0; } else rules[index] = read(); Refresh(index);
         }
-        Button("新增", () => Edit(true)); Button("编辑", () => Edit(false));
-        Button("删除", () => { var i = list.SelectedIndex; if (i >= 0) { rules.RemoveAt(i); Refresh(Math.Min(i, rules.Count - 1)); } return Task.CompletedTask; });
+        Button(UiText.Get("新增"), () => Edit(true)); Button(UiText.Get("编辑"), () => Edit(false));
+        Button(UiText.Get("删除"), () => { var i = list.SelectedIndex; if (i >= 0) { rules.RemoveAt(i); Refresh(Math.Min(i, rules.Count - 1)); } return Task.CompletedTask; });
         Task Move(int delta) { var i = list.SelectedIndex; if (i >= 0 && i + delta >= 0 && i + delta < rules.Count) { (rules[i], rules[i + delta]) = (rules[i + delta], rules[i]); Refresh(i + delta); } return Task.CompletedTask; }
-        Button("上移", () => Move(-1)); Button("下移", () => Move(1));
-        Button("应用", () => { window.Close(true); return Task.CompletedTask; }); Button("取消", () => { window.Close(false); return Task.CompletedTask; });
+        Button(UiText.Get("上移"), () => Move(-1)); Button(UiText.Get("下移"), () => Move(1));
+        Button(UiText.Get("应用"), () => { window.Close(true); return Task.CompletedTask; }); Button(UiText.Get("取消"), () => { window.Close(false); return Task.CompletedTask; });
         Refresh(rules.Count > 0 ? 0 : -1); window.Content = panel;
         if (await ShowOwnedAsync<bool>(window)) await ExecuteAsync(new SetConditionalFormatsCommand(sheet.Id, rules.Select((r, i) => r.WithPriority(i + 1))), snapshot.Revision);
     }
@@ -47,18 +47,18 @@ public sealed partial class MainWindow
     {
         if (old?.Kind >= ConditionalFormatKind.ColorScale) return VisualRuleFields(old, out read);
         static int Tri(bool? value) => value is null ? 0 : value.Value ? 1 : 2;
-        var dialog = new FieldsDialog("条件格式规则").Text("ranges", "应用区域（多个区域用空格分隔）", old is null ? selection.ToString() : string.Join(" ", old.Ranges))
-            .Choice("kind", "规则类型", ConditionalKinds.Take(8).ToArray(), (int)(old?.Kind ?? ConditionalFormatKind.CellIs))
-            .Choice("comparison", "比较方式", ["介于", "不介于", "等于", "不等于", "小于", "小于等于", "大于", "大于等于"], (int)(old?.Comparison ?? ConditionalComparison.Between))
-            .Text("first", "条件 1 / 公式（相对引用以首格为基准）", old?.Formula1 ?? "=1").Text("second", "条件 2", old?.Formula2 ?? "=10")
-            .Text("text", "文本条件", old?.Text ?? "").Text("fill", "填充色（ARGB，留空不改变）", old is null ? "FFFFC7CE" : old.Style.FillColor ?? "")
-            .Text("font", "字体色（ARGB，留空不改变）", old is null ? "FF9C0006" : old.Style.FontColor ?? "").Text("number", "数字格式代码（留空保持）", old?.Style.NumberFormatCode ?? "")
-            .Choice("bold", "粗体", ["不改变", "是", "否"], Tri(old?.Style.Bold)).Choice("italic", "斜体", ["不改变", "是", "否"], Tri(old?.Style.Italic))
-            .Check("stop", "为真时停止后续规则", old?.StopIfTrue ?? false);
+        var dialog = new FieldsDialog(UiText.Get("条件格式规则")).Text("ranges", UiText.Get("应用区域（多个区域用空格分隔）"), old is null ? selection.ToString() : string.Join(" ", old.Ranges))
+            .Choice("kind", UiText.Get("规则类型"), ConditionalKinds.Take(8).ToArray(), (int)(old?.Kind ?? ConditionalFormatKind.CellIs))
+            .Choice("comparison", UiText.Get("比较方式"), [UiText.Get("介于"), UiText.Get("不介于"), UiText.Get("等于"), UiText.Get("不等于"), UiText.Get("小于"), UiText.Get("小于等于"), UiText.Get("大于"), UiText.Get("大于等于")], (int)(old?.Comparison ?? ConditionalComparison.Between))
+            .Text("first", UiText.Get("条件 1 / 公式（相对引用以首格为基准）"), old?.Formula1 ?? "=1").Text("second", UiText.Get("条件 2"), old?.Formula2 ?? "=10")
+            .Text("text", UiText.Get("文本条件"), old?.Text ?? "").Text("fill", UiText.Get("填充色（ARGB，留空不改变）"), old is null ? "FFFFC7CE" : old.Style.FillColor ?? "")
+            .Text("font", UiText.Get("字体色（ARGB，留空不改变）"), old is null ? "FF9C0006" : old.Style.FontColor ?? "").Text("number", UiText.Get("数字格式代码（留空保持）"), old?.Style.NumberFormatCode ?? "")
+            .Choice("bold", UiText.Get("粗体"), [UiText.Get("不改变"), UiText.Get("是"), UiText.Get("否")], Tri(old?.Style.Bold)).Choice("italic", UiText.Get("斜体"), [UiText.Get("不改变"), UiText.Get("是"), UiText.Get("否")], Tri(old?.Style.Italic))
+            .Check("stop", UiText.Get("为真时停止后续规则"), old?.StopIfTrue ?? false);
         read = () =>
         {
             var ranges = dialog.String("ranges").Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).Select(CellRectangle.Parse).ToArray();
-            if (ranges.Length == 0) throw new ArgumentException("请输入应用区域。");
+            if (ranges.Length == 0) throw new ArgumentException(UiText.Get("请输入应用区域。"));
             var kind = (ConditionalFormatKind)dialog.Index("kind"); var comparison = (ConditionalComparison)dialog.Index("comparison");
             var first = kind is ConditionalFormatKind.CellIs or ConditionalFormatKind.Expression ? dialog.String("first") : null;
             if ((int)kind >= 4)

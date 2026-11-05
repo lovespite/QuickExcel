@@ -19,7 +19,7 @@ public sealed class AxisClipboard
         var limit = row ? WorkbookLimits.MaxRows : WorkbookLimits.MaxColumns;
         if (!Enum.IsDefined(axis) || first < 0 || count < 1 || first > limit - count) throw new ArgumentOutOfRangeException(nameof(first));
         var sheet = snapshot.GetSheet(sheetId);
-        if (sheet.Data.AllFilters.Any(f => f.Columns.Count > 0)) throw new InvalidOperationException("请先清除筛选条件，再复制完整行列。");
+        if (sheet.Data.AllFilters.Any(f => f.Columns.Count > 0)) throw new InvalidOperationException(MessageText.Get("请先清除筛选条件，再复制完整行列。"));
         var full = row ? new CellRectangle(first, 0, first + count - 1, WorkbookLimits.MaxColumns - 1)
             : new CellRectangle(0, first, WorkbookLimits.MaxRows - 1, first + count - 1);
         ExtendedObjectSafety.ValidateCopy(snapshot, sheetId, full);
@@ -30,7 +30,7 @@ public sealed class AxisClipboard
             sheet.Data.Validations.Any(v => v.Ranges.Any(r => ValidationSafety.Overlaps(r, full))) ||
             sheet.Data.ConditionalFormats.Any(v => v.Ranges.Any(r => ValidationSafety.Overlaps(r, full))) ||
             sheet.Data.Tables.Any(t => ValidationSafety.Overlaps(t.Range, full)) || WorksheetOutline.HasGroups(sheet))
-            throw new NotSupportedException("复制整行列涉及链接、批注、验证、条件格式、表格或分组，尚不能完整复制其附件；操作未应用。");
+            throw new NotSupportedException(MessageText.Get("复制整行列涉及链接、批注、验证、条件格式、表格或分组，尚不能完整复制其附件；操作未应用。"));
         var extent = 0;
         foreach (var position in sheet.Cells.Keys.Where(p => full.Contains(p.Row, p.Column)))
             extent = Math.Max(extent, row ? position.Column : position.Row);
@@ -53,16 +53,16 @@ public sealed class InsertCopiedAxisCommand(AxisClipboard source, SheetId sheetI
         ArgumentNullException.ThrowIfNull(source);
         var copied = source.Cells;
         if (snapshot.DocumentId != copied.DocumentId || snapshot.Revision != copied.Revision)
-            throw new InvalidOperationException("复制后文档已改变，请重新复制行列。");
+            throw new InvalidOperationException(MessageText.Get("复制后文档已改变，请重新复制行列。"));
         var row = source.Axis == SheetAxis.Row;
         var original = snapshot.GetSheet(copied.SheetId);
         var target = snapshot.GetSheet(sheetId);
         if (target.Data.Protection?.Sheet == true)
-            throw new InvalidOperationException("请先取消工作表保护，再插入复制的行列。");
+            throw new InvalidOperationException(MessageText.Get("请先取消工作表保护，再插入复制的行列。"));
         if (!target.Data.Tables.IsEmpty || target.Data.AllFilters.Any(f => f.Columns.Count > 0))
-            throw new NotSupportedException("请先清除筛选条件，且在不含表格的工作表插入复制的行列。");
+            throw new NotSupportedException(MessageText.Get("请先清除筛选条件，且在不含表格的工作表插入复制的行列。"));
         if (sheetId == original.Id && index > source.First && index < source.First + source.Count)
-            throw new InvalidOperationException("插入位置不能拆开复制区域，请选择复制区域之前或之后的行列。");
+            throw new InvalidOperationException(MessageText.Get("插入位置不能拆开复制区域，请选择复制区域之前或之后的行列。"));
         var shift = new ShiftAxisCommand(sheetId, source.Axis, index, source.Count);
         var shifted = shift.Prepare(snapshot).Snapshot;
         ProtectionSafety.Validate(snapshot, shifted, shift);

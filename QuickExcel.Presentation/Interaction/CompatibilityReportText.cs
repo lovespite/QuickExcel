@@ -9,31 +9,31 @@ public static class CompatibilityReportText
     {
         var lines = new List<string> {
             report.OriginalPackageUnchanged
-                ? "工作簿内容与导入时一致，普通保存 XLSX/XLSQ 可保留原 XLSX 包；仅保留不代表可编辑写回。"
+                ? UiText.Get("工作簿内容与导入时一致，普通保存 XLSX/XLSQ 可保留原 XLSX 包；仅保留不代表可编辑写回。")
                 : report.Diagnostics.Any(d => d.Kind == CompatibilityKind.PotentialLoss)
-                    ? "当前内容未走原包不变保留路径。潜在损失会阻止普通保存，须明确另存受支持副本，或在保存报告允许时确认覆盖原文件。"
-                    : "当前报告未列出格式损失阻止项；保存时仍会执行完整校验。",
-            "文件特性定位对应导入时的部件/工作表/范围；公式诊断对应当前单元格。内置不可计算与保存损失分别报告。"
+                    ? UiText.Get("当前内容未走原包不变保留路径。潜在损失会阻止普通保存，须明确另存受支持副本，或在保存报告允许时确认覆盖原文件。")
+                    : UiText.Get("当前报告未列出格式损失阻止项；保存时仍会执行完整校验。"),
+            UiText.Get("文件特性定位对应导入时的部件/工作表/范围；公式诊断对应当前单元格。内置不可计算与保存损失分别报告。")
         };
         foreach (var group in report.Diagnostics.GroupBy(d => d.Kind).OrderBy(g => g.Key))
         {
-            lines.Add($"【{Label(group.Key)}】{group.Count()} 项");
+            lines.Add(UiText.Format($"【{Label(group.Key)}】{group.Count()} 项"));
             lines.AddRange(group.Select(d => string.Join(" · ", new[] { d.SheetName, d.Range, d.Part, d.Feature }
                 .Where(s => !string.IsNullOrEmpty(s))) + "：" + d.Message));
         }
         return string.Join("\n\n", lines);
     }
 
-    public static string Rejection(CompatibilityDiagnostic diagnostic) => "【拒绝】" + string.Join(" · ",
+    public static string Rejection(CompatibilityDiagnostic diagnostic) => UiText.Get("【拒绝】") + string.Join(" · ",
         new[] { diagnostic.SheetName, diagnostic.Range, diagnostic.Part, diagnostic.Feature }.Where(s => !string.IsNullOrEmpty(s))) + "：" + diagnostic.Message;
 
     public static string Label(CompatibilityKind kind) => kind switch
     {
-        CompatibilityKind.Editable => "可编辑（已支持子集）",
-        CompatibilityKind.PreservedOnly => "仅保留",
-        CompatibilityKind.CannotCalculate => "内置不可计算／待验证",
-        CompatibilityKind.PotentialLoss => "潜在损失",
-        CompatibilityKind.Rejected => "拒绝",
+        CompatibilityKind.Editable => UiText.Get("可编辑（已支持子集）"),
+        CompatibilityKind.PreservedOnly => UiText.Get("仅保留"),
+        CompatibilityKind.CannotCalculate => UiText.Get("内置不可计算／待验证"),
+        CompatibilityKind.PotentialLoss => UiText.Get("潜在损失"),
+        CompatibilityKind.Rejected => UiText.Get("拒绝"),
         _ => throw new ArgumentOutOfRangeException(nameof(kind))
     };
 }

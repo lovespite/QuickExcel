@@ -1,3 +1,4 @@
+using QuickExcel.Core;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
@@ -30,7 +31,7 @@ public static class ScriptSignatures
         using var rsa = certificate.GetRSAPrivateKey();
         if (rsa is not null)
         {
-            if (rsa.KeySize < 2048) throw new CryptographicException("RSA 签名密钥至少需要 2048 位。");
+            if (rsa.KeySize < 2048) throw new CryptographicException(MessageText.Get("RSA 签名密钥至少需要 2048 位。"));
             algorithm = RsaAlgorithm;
             value = rsa.SignData(Payload(modules, algorithm, certificate), HashAlgorithmName.SHA256, RSASignaturePadding.Pss);
         }
@@ -38,11 +39,11 @@ public static class ScriptSignatures
         {
             using var ec = certificate.GetECDsaPrivateKey();
             if (ec is null || ec.KeySize != 256 || ec.ExportParameters(false).Curve.Oid.Value != "1.2.840.10045.3.1.7")
-                throw new CryptographicException("请选择含 RSA 或 ECDSA P-256 私钥的代码签名证书。");
+                throw new CryptographicException(MessageText.Get("请选择含 RSA 或 ECDSA P-256 私钥的代码签名证书。"));
             algorithm = EcAlgorithm;
             value = ec.SignData(Payload(modules, algorithm, certificate), HashAlgorithmName.SHA256, DSASignatureFormat.IeeeP1363FixedFieldConcatenation);
         }
-        if (certificate.RawData.Length > 16 * 1024 || value.Length > 2048) throw new CryptographicException("证书或签名超过容量限制。");
+        if (certificate.RawData.Length > 16 * 1024 || value.Length > 2048) throw new CryptographicException(MessageText.Get("证书或签名超过容量限制。"));
         return new(modules.HasTypeScript ? 2 : 1, algorithm, encoded, Convert.ToBase64String(value));
     }
 
@@ -52,15 +53,15 @@ public static class ScriptSignatures
     internal static ScriptSignatureVerification Verify(ScriptModuleSet modules, IEnumerable<string>? trustedFingerprints,
         Action<X509ChainPolicy>? configureChain)
     {
-        if (modules.Signature is not { } signature) return new(ScriptSignatureStatus.Unsigned, "脚本未签名；需要手动运行。");
+        if (modules.Signature is not { } signature) return new(ScriptSignatureStatus.Unsigned, MessageText.Get("脚本未签名；需要手动运行。"));
         try
         {
             if (signature.Version != (modules.HasTypeScript ? 2 : 1) || signature.Algorithm is not (RsaAlgorithm or EcAlgorithm) ||
                 signature.Certificate is null || signature.Certificate.Length > 24 * 1024 || signature.Value is null || signature.Value.Length > 4096)
-                throw new CryptographicException("不支持的签名格式或签名超过容量限制。");
+                throw new CryptographicException(MessageText.Get("不支持的签名格式或签名超过容量限制。"));
             var der = Convert.FromBase64String(signature.Certificate);
             using var certificate = X509CertificateLoader.LoadCertificate(der);
-            if (!der.AsSpan().SequenceEqual(certificate.RawData)) throw new CryptographicException("证书必须使用 DER 编码。");
+            if (!der.AsSpan().SequenceEqual(certificate.RawData)) throw new CryptographicException(MessageText.Get("证书必须使用 DER 编码。"));
             var value = Convert.FromBase64String(signature.Value);
             var payload = Payload(modules, signature.Algorithm, certificate);
             using var rsa = certificate.GetRSAPublicKey();
@@ -69,7 +70,7 @@ public static class ScriptSignatures
                 ? rsa is { KeySize: >= 2048 } && rsa.VerifyData(payload, value, HashAlgorithmName.SHA256, RSASignaturePadding.Pss)
                 : ec is { KeySize: 256 } && ec.ExportParameters(false).Curve.Oid.Value == "1.2.840.10045.3.1.7" &&
                     ec.VerifyData(payload, value, HashAlgorithmName.SHA256, DSASignatureFormat.IeeeP1363FixedFieldConcatenation);
-            if (!valid) throw new CryptographicException("脚本签名无效：内容、绑定或证书可能已被更改。");
+            if (!valid) throw new CryptographicException(MessageText.Get("脚本签名无效：内容、绑定或证书可能已被更改。"));
             ValidateCertificate(certificate);
             var fingerprint = Convert.ToHexString(SHA256.HashData(certificate.RawData));
             ScriptSignatureVerification Result(ScriptSignatureStatus status, string message) => new(status, message,
@@ -80,7 +81,7 @@ public static class ScriptSignatures
             chain.ChainPolicy.RevocationFlag = X509RevocationFlag.ExcludeRoot;
             chain.ChainPolicy.UrlRetrievalTimeout = TimeSpan.FromSeconds(5);
             configureChain?.Invoke(chain.ChainPolicy);
-            if (chain.Build(certificate)) return Result(ScriptSignatureStatus.Trusted, "签名有效；证书受系统信任。");
+            if (chain.Build(certificate)) return Result(ScriptSignatureStatus.Trusted, MessageText.Get("签名有效；证书受系统信任。"));
             // Pinning only bypasses an unknown self-signed root. Expiry, revocation, usage,
             // explicit distrust and every other chain failure remain failures even for a pin.
             var selfSigned = certificate.SubjectName.RawData.AsSpan().SequenceEqual(certificate.IssuerName.RawData) &&
@@ -88,18 +89,18 @@ public static class ScriptSignatures
                 chain.ChainStatus.All(s => s.Status == X509ChainStatusFlags.UntrustedRoot);
             if (selfSigned)
                 return trustedFingerprints?.Contains(fingerprint, StringComparer.OrdinalIgnoreCase) == true
-                    ? Result(ScriptSignatureStatus.Trusted, "签名有效；已信任此自签证书。")
-                    : Result(ScriptSignatureStatus.UntrustedSelfSigned, "签名有效；此自签证书尚未受信任。");
-            return Result(ScriptSignatureStatus.Untrusted, "证书链验证失败，未自动启用：" +
+                    ? Result(ScriptSignatureStatus.Trusted, MessageText.Get("签名有效；已信任此自签证书。"))
+                    : Result(ScriptSignatureStatus.UntrustedSelfSigned, MessageText.Get("签名有效；此自签证书尚未受信任。"));
+            return Result(ScriptSignatureStatus.Untrusted, MessageText.Get("证书链验证失败，未自动启用：") +
                 string.Join("、", chain.ChainStatus.Select(s => s.Status.ToString())));
         }
         catch (Exception ex) when (ex is CryptographicException or ArgumentException or FormatException)
-        { return new(ScriptSignatureStatus.Invalid, "签名验证失败：" + ex.Message); }
+        { return new(ScriptSignatureStatus.Invalid, MessageText.Get("签名验证失败：") + ex.Message); }
     }
 
     public static X509Certificate2 CreateSelfSigned(string name)
     {
-        if (string.IsNullOrWhiteSpace(name) || name.Length > 128 || name.Any(char.IsControl)) throw new ArgumentException("请输入 1–128 字符的证书名称。");
+        if (string.IsNullOrWhiteSpace(name) || name.Length > 128 || name.Any(char.IsControl)) throw new ArgumentException(MessageText.Get("请输入 1–128 字符的证书名称。"));
         using var key = RSA.Create(3072);
         var subject = new X500DistinguishedNameBuilder();
         subject.AddCommonName(name);
@@ -114,11 +115,11 @@ public static class ScriptSignatures
     {
         var now = DateTime.UtcNow;
         if (now < certificate.NotBefore.ToUniversalTime() || now > certificate.NotAfter.ToUniversalTime())
-            throw new CryptographicException("证书已过期或尚未生效；请使用有效证书重新签名。");
+            throw new CryptographicException(MessageText.Get("证书已过期或尚未生效；请使用有效证书重新签名。"));
         if (!certificate.Extensions.OfType<X509EnhancedKeyUsageExtension>().Any(e => e.EnhancedKeyUsages.Cast<Oid>().Any(o => o.Value == CodeSigningOid)))
-            throw new CryptographicException("证书必须声明代码签名用途。");
+            throw new CryptographicException(MessageText.Get("证书必须声明代码签名用途。"));
         if (certificate.Extensions.OfType<X509KeyUsageExtension>().Any(e => !e.KeyUsages.HasFlag(X509KeyUsageFlags.DigitalSignature)))
-            throw new CryptographicException("证书不允许数字签名。");
+            throw new CryptographicException(MessageText.Get("证书不允许数字签名。"));
     }
 
     // BinaryWriter uses length-prefixed strict UTF-8 strings and little-endian Int32 counts.

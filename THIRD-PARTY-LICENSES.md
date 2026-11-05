@@ -1,33 +1,29 @@
-# 第三方组件与许可
+# Third-party components and licenses
 
-本项目包含以下第三方材料。各组件的许可证仅覆盖其自身内容，不改变 QuickExcel 其余代码的许可。
+QuickExcel includes the following third-party materials. Each license applies to its respective component.
 
-| 组件 | 许可证 | 位置 | 说明 |
+| Component | License | Location | Use in QuickExcel |
 | --- | --- | --- | --- |
-| RichTextKit | Apache-2.0 | `third_party/RichTextKit` | 文本布局、换行与 HarfBuzz 集成；保留原始版权头与 LICENSE |
-| Office Scripts API 定义 | CC BY 4.0 | `third_party/office-scripts-docs` | 仅用于生成脚本类型声明；QuickExcel 自行实现全部行为 |
-| Avalonia、Avalonia WebView、BuildServices、MicroCom、Tmds.DBus、Fluent System Icons | MIT | Licenses | 桌面界面、平台集成和图标 |
-| FastWpfGrid | MIT | licenses/QuickExcel.Grid.Shared | 保留的网格算法与来源声明 |
-| ANGLE | BSD 及随附声明 | Licenses/ANGLE-LICENSE.txt | 图形后端 |
-| SkiaSharp、HarfBuzzSharp | MIT 及原生库各自条款 | SKIA 与 HARFBUZZ 的 LICENSE 和 THIRD-PARTY-NOTICES | 图形与字体 |
-| LibTiff.NET、PdfPig | 分别为 BSD-3-Clause、Apache-2.0 | LIBTIFF-LICENSE.txt、PDFPIG-LICENSE.txt | 图像和 PDF |
-| AngleSharp、OpenMcdf | 分别为 MIT、MPL-2.0 | Licenses/ANGLESHARP-LICENSE.txt、Licenses/OPENMCDF-LICENSE.txt | HTML 和复合文档读取 |
-| Monaco Editor、PDF.js、esbuild | 分别为 MIT、Apache-2.0、MIT | Web/licenses | 编辑器、PDF 预览与构建；字体、字符映射和 WASM 附各自许可 |
-| JavaScriptCore / WebKit、ICU、mimalloc、TypeScript | 各组件分别授权 | JSC-Licenses | 脚本包附版权与许可原文、对应源码归档及重建说明；Windows VC++ 运行库适用 Microsoft 条款 |
-| .NET 运行时 | MIT 及随附第三方条款 | 自包含发行包的 DOTNET-LICENSE 和 DOTNET-THIRD-PARTY-NOTICES | 桌面及隔离进程 |
+| RichTextKit | Apache-2.0 | `third_party/RichTextKit` | Text layout, line breaking, and HarfBuzz integration. Original copyright headers and license retained. |
+| Office Scripts API definitions | CC BY 4.0 | `third_party/office-scripts-docs` | Input for generating script type declarations. QuickExcel implements the behavior independently. |
+| Avalonia, Avalonia WebView, BuildServices, MicroCom, Tmds.DBus, Fluent System Icons | MIT | Licenses | Desktop interface, platform integration, and icons. |
+| FastWpfGrid | MIT | licenses/QuickExcel.Grid.Shared | Grid algorithms and their source attribution. |
+| ANGLE | BSD and accompanying notices | Licenses/ANGLE-LICENSE.txt | Graphics backend. |
+| SkiaSharp and HarfBuzzSharp | MIT and the individual native library licenses | SKIA and HARFBUZZ license and third-party notice files | Graphics and fonts. |
+| LibTiff.NET and PdfPig | BSD-3-Clause and Apache-2.0, respectively | LIBTIFF-LICENSE.txt and PDFPIG-LICENSE.txt | Images and PDF. |
+| AngleSharp and OpenMcdf | MIT and MPL-2.0, respectively | Licenses/ANGLESHARP-LICENSE.txt and Licenses/OPENMCDF-LICENSE.txt | HTML and compound document readers. |
+| Monaco Editor, PDF.js, esbuild | MIT, Apache-2.0, and MIT, respectively | Web/licenses | Editor, PDF preview, and build tooling. Fonts, character maps, and WebAssembly components include their own licenses. |
+| JavaScriptCore / WebKit, ICU, mimalloc, TypeScript | Individual component licenses | JSC-Licenses | The scripting package includes copyright and license notices, corresponding source, and rebuild instructions. Microsoft terms apply to the Windows VC++ runtime. |
+| .NET runtime | MIT and accompanying third-party terms | DOTNET-LICENSE and DOTNET-THIRD-PARTY-NOTICES in the self-contained distribution | Desktop application and isolated processes. |
 
-## Office Scripts API 定义
+## Office Scripts API definitions
 
-来源为 Microsoft 的 `office-scripts-docs-reference` 仓库，固定 commit 与校验值记录在 `third_party/office-scripts-docs/source.lock.json`。生成物改写了命名空间、删除了文档注释并追加了 QuickExcel 扩展，属于修改后的材料。
+Copyright Microsoft Corporation and contributors. The source is the [Microsoft Office Scripts API reference repository](https://github.com/OfficeDev/office-scripts-docs-reference). The pinned commit and checksums are recorded in `third_party/office-scripts-docs/source.lock.json`.
 
-分发包含该声明或其派生声明的产物时，必须同时保留：
+QuickExcel modifies the declarations by renaming the namespace, removing documentation comments and the OfficeScript namespace, and adding QuickExcel extensions. Distributions containing the declarations or their derivatives must retain the copyright notice, source attribution, [CC BY 4.0 license reference](https://creativecommons.org/licenses/by/4.0/legalcode), and modification notice.
 
-- 版权声明与来源链接；
-- CC BY 4.0 许可证链接；
-- 已修改的说明。
-
-完整声明见 [third_party/office-scripts-docs/NOTICE.md](third_party/office-scripts-docs/NOTICE.md)。
+See [the Office Scripts notice](third_party/office-scripts-docs/NOTICE.md), also included as `Licenses/OFFICE-SCRIPTS-NOTICE.md` in the application package.
 
 ## RichTextKit
 
-来源、修改说明与 SHA-256 见 [third_party/RichTextKit/SOURCES.md](third_party/RichTextKit/SOURCES.md)。
+The [RichTextKit source record](third_party/RichTextKit/SOURCES.md) identifies the upstream revision, archive SHA-256, and QuickExcel modifications.

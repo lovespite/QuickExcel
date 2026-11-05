@@ -45,7 +45,13 @@ public sealed partial class MainWindow
             }
             _grid.RaiseEvent(new ContextRequestedEventArgs { RoutedEvent = InputElement.ContextRequestedEvent });
         }
-        MenuItem Item(string title) => _grid.ContextMenu!.Items.OfType<MenuItem>().FirstOrDefault(i => i.Header as string == title)
+        bool english = UiText.Language == UiText.English;
+        string MenuLabel(string title) => !english ? title : title switch
+        {
+            "插入复制的行" => "Insert Copied Rows", "插入复制的列" => "Insert Copied Columns",
+            "隐藏行" => "Hide Rows", "显示所有行" => "Show All Rows", _ => UiText.Get(title)
+        };
+        MenuItem Item(string title) => _grid.ContextMenu!.Items.OfType<MenuItem>().FirstOrDefault(i => i.Header as string == MenuLabel(title))
             ?? throw new InvalidOperationException($"Missing {title}; current={_grid.Current}; selection={string.Join(';', _grid.SelectionRanges)}; working={_working}; blocked={_grid.IsContextSelectionBlocked}; composing={_grid.IsComposing}/{_formula.IsComposing}; commit={_grid.IsCommitPending}; menu={string.Join(',', _grid.ContextMenu.Items.OfType<MenuItem>().Select(i => i.Header))}; status={_status.Text}");
         async Task Click(string title)
         {
@@ -55,7 +61,7 @@ public sealed partial class MainWindow
         void AcceptDialog(string? size = null) => _dialogDriver = async window =>
         {
             await Layout(); if (size is not null) ((TextBox)((FieldsDialog)window).Input("size")).Text = size;
-            window.GetVisualDescendants().OfType<Button>().Single(b => b.Content as string == "确定").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            window.GetVisualDescendants().OfType<Button>().Single(b => b.Content as string == UiText.Get("确定")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
         };
         try
         {
@@ -71,6 +77,10 @@ public sealed partial class MainWindow
             var labels = ((StackPanel)((Button)_recent.Children[0]).Content!).Children.OfType<TextBlock>().ToArray();
             Check(labels[0].Text == Path.GetFileName(recentPath) && labels[0].FontWeight == FontWeight.Bold && labels[0].Foreground == Brushes.Black &&
                 labels[1].Text == directory && labels[1].Foreground == Brushes.Gray, "History shows bold black filename above gray directory");
+            Check(Equals(((MenuItem)_menu.Items[0]!).Header, english ? "File" : "文件") &&
+                AutomationProperties.GetName(actions[0]) == (english ? "New Workbook" : "新建工作簿") &&
+                Equals(_ribbon.Items.Cast<TabItem>().First().Header, english ? "Home" : "开始") &&
+                _numberFormatLabel.Text == (english ? "General" : "常规"), "Startup applies the stored language to menus, the home page and ribbon");
             await Capture(this, "home");
             Width = 760; Height = 480; await Layout(); await Capture(this, "home-minimum");
             Check(_recent.Bounds.Width > 200 && actions.All(b => b.Bounds.Width >= 280), "Minimum window keeps both home columns usable");

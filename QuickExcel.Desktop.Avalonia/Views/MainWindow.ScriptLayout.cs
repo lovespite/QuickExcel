@@ -33,31 +33,31 @@ public sealed partial class MainWindow
         workspace.ColumnDefinitions[0].MinWidth = 150;
         workspace.ColumnDefinitions[2].MinWidth = 420;
         var navigation = new DockPanel { Background = Brush.Parse("#F8F9FA") };
-        var heading = new TextBlock { Text = "脚本文件", FontWeight = FontWeight.SemiBold, Margin = new(12, 10) };
+        var heading = new TextBlock { Text = UiText.Get("脚本文件"), FontWeight = FontWeight.SemiBold, Margin = new(12, 10) };
         DockPanel.SetDock(heading, Dock.Top); navigation.Children.Add(heading);
-        _modulePicker = CreateScriptModulePicker("主入口脚本");
+        _modulePicker = CreateScriptModulePicker(UiText.Get("主入口脚本"));
         DockPanel.SetDock(_modulePicker, Dock.Top); navigation.Children.Add(_modulePicker);
         var groups = new StackPanel();
         _scriptModuleGroups.Clear(); _scriptNavigationSelection = null;
         foreach (var (label, kind) in new (string, string?)[] { ("UDF", "formula-functions"), ("Actions", "actions"), ("Common", null) })
         {
-            var picker = CreateScriptModulePicker(label + " 脚本文件列表");
+            var picker = CreateScriptModulePicker(label + UiText.Get(" 脚本文件列表"));
             var panel = new Expander { Header = label, Content = picker, IsExpanded = true, Padding = new(0),
                 HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Stretch };
-            AutomationProperties.SetName(panel, label + " 脚本分类");
+            AutomationProperties.SetName(panel, label + UiText.Get(" 脚本分类"));
             _scriptModuleGroups.Add((label, kind, panel, picker)); groups.Children.Add(panel);
         }
         _selectedDefinition = null; _scriptDefinitionFiles.Clear(); _scriptDefinitionFiles.Add("quickexcel.d.ts");
         _definitionPicker = CreateCompactScriptPicker();
         _definitionPicker.ItemTemplate = new FuncDataTemplate<string>((name, _) => new TextBlock
             { Text = name, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center });
-        AutomationProperties.SetName(_definitionPicker, "只读定义文件列表");
+        AutomationProperties.SetName(_definitionPicker, UiText.Get("只读定义文件列表"));
         _definitionPicker.SelectionChanged += async (_, _) =>
         {
             if (_scriptPicking || _definitionPicker.SelectedItem is not string name || name == _selectedDefinition) return;
             await NavigateScriptAsync(new(null, name)); RefreshScriptChrome();
         };
-        _definitionPanel = new Expander { Header = "定义文件（只读）", Content = _definitionPicker, IsExpanded = true, Padding = new(0),
+        _definitionPanel = new Expander { Header = UiText.Get("定义文件（只读）"), Content = _definitionPicker, IsExpanded = true, Padding = new(0),
             HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Stretch };
         groups.Children.Add(_definitionPanel);
         navigation.Children.Add(new ScrollViewer { Content = groups,
@@ -65,7 +65,7 @@ public sealed partial class MainWindow
         workspace.Children.Add(navigation);
         var splitter = new GridSplitter { ResizeDirection = GridResizeDirection.Columns, ResizeBehavior = GridResizeBehavior.PreviousAndNext,
             HorizontalAlignment = HorizontalAlignment.Stretch, Background = Brush.Parse("#E0E0E0") };
-        AutomationProperties.SetName(splitter, "调整文件列表宽度");
+        AutomationProperties.SetName(splitter, UiText.Get("调整文件列表宽度"));
         LayoutGrid.SetColumn(splitter, 1); workspace.Children.Add(splitter);
 
         _scriptEditorPane = new LayoutGrid { RowDefinitions = new("*,0,0") };
@@ -73,7 +73,7 @@ public sealed partial class MainWindow
         _scriptContent = new ContentControl(); _scriptEditorPane.Children.Add(_scriptContent);
         _scriptOutputSplitter = new GridSplitter { ResizeDirection = GridResizeDirection.Rows, ResizeBehavior = GridResizeBehavior.PreviousAndNext,
             HorizontalAlignment = HorizontalAlignment.Stretch, VerticalAlignment = VerticalAlignment.Stretch, Background = Brush.Parse("#E0E0E0"), IsVisible = false };
-        AutomationProperties.SetName(_scriptOutputSplitter, "调整控制台高度");
+        AutomationProperties.SetName(_scriptOutputSplitter, UiText.Get("调整控制台高度"));
         LayoutGrid.SetRow(_scriptOutputSplitter, 1); _scriptEditorPane.Children.Add(_scriptOutputSplitter);
         output.IsVisible = false; LayoutGrid.SetRow(output, 2); _scriptEditorPane.Children.Add(output);
         _scriptEditorHeight = new(3, GridUnitType.Star); _scriptOutputHeight = new(2, GridUnitType.Star);
@@ -104,8 +104,8 @@ public sealed partial class MainWindow
                 if (id is null || !Document.Snapshot.ScriptModules.Modules.TryGetValue(id, out var module)) return null;
                 var item = new TextBlock { Text = Path.GetFileName(module.Path), TextTrimming = TextTrimming.CharacterEllipsis,
                     VerticalAlignment = VerticalAlignment.Center };
-                ToolTip.SetTip(item, $"{module.Path}\n模块 ID：{id}\n{ScriptModuleProperties(Document.Snapshot.ScriptModules, id)}" +
-                    (string.IsNullOrWhiteSpace(module.Description) ? string.Empty : $"\n描述：{module.Description}")); return item;
+                ToolTip.SetTip(item, UiText.Format($"{module.Path}\n模块 ID：{id}\n{ScriptModuleProperties(Document.Snapshot.ScriptModules, id)}") +
+                    (string.IsNullOrWhiteSpace(module.Description) ? string.Empty : UiText.Format($"\n描述：{module.Description}"))); return item;
             });
         AutomationProperties.SetName(picker, name);
         picker.SelectionChanged += async (_, _) =>
@@ -124,7 +124,7 @@ public sealed partial class MainWindow
     private static string ScriptModuleProperties(ScriptModuleSet modules, string id)
     {
         var roles = modules.Bindings.Where(b => b.Module == id).Select(b => b.Kind == "formula-functions" ? "UDF" : "Actions").ToArray();
-        var role = IsMainScriptModule(id, modules.Modules[id]) ? "主入口" : roles.Length == 0 ? "Common" : string.Join(" / ", roles);
+        var role = IsMainScriptModule(id, modules.Modules[id]) ? UiText.Get("主入口") : roles.Length == 0 ? "Common" : string.Join(" / ", roles);
         return $"{role} · {(modules.Modules[id].Language == ScriptLanguage.TypeScript ? "TypeScript" : "JavaScript")}";
     }
 
@@ -246,7 +246,7 @@ public sealed partial class MainWindow
     private void UpdateScriptConsoleToggle(bool visible)
     {
         if (_scriptConsoleToggle is null) return;
-        var label = visible ? "隐藏控制台 · F12" : "显示控制台 · F12";
+        var label = visible ? UiText.Get("隐藏控制台 · F12") : UiText.Get("显示控制台 · F12");
         _scriptConsoleToggle.Content = label; AutomationProperties.SetName(_scriptConsoleToggle, label);
     }
 }

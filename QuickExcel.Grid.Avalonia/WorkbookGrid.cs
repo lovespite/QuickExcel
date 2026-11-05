@@ -280,7 +280,7 @@ public sealed partial class WorkbookGrid : UserControl, IGridSurface, IDisposabl
                 try
                 {
                 var width = (int)Math.Ceiling(Bounds.Width * scale); var height = (int)Math.Ceiling(Bounds.Height * scale);
-                if ((long)width * height > 16_000_000) throw new InvalidOperationException("网格视口超过像素预算。");
+                if ((long)width * height > 16_000_000) throw new InvalidOperationException(UiText.Get("网格视口超过像素预算。"));
                 using var pixels = new SKBitmap(width, height, SKColorType.Bgra8888, SKAlphaType.Premul);
                 using var canvas = new SKCanvas(pixels); canvas.Scale((float)scale); owner.Paint(canvas); canvas.Flush();
                 _bitmap = new(PixelFormat.Bgra8888, AlphaFormat.Premul, pixels.GetPixels(), new(width, height), new(96 * scale, 96 * scale), pixels.RowBytes);
@@ -288,7 +288,7 @@ public sealed partial class WorkbookGrid : UserControl, IGridSurface, IDisposabl
                 catch (Exception ex) when (ex is InvalidOperationException or ArgumentException or IOException or OutOfMemoryException)
                 { owner.ReleaseRendering(); _failed = true; owner.RenderingFailed?.Invoke(ex); }
             }
-            if (_failed) context.DrawText(new FormattedText("网格暂时无法绘制，请调整窗口或重新打开工作簿。", System.Globalization.CultureInfo.CurrentCulture,
+            if (_failed) context.DrawText(new FormattedText(UiText.Get("网格暂时无法绘制，请调整窗口或重新打开工作簿。"), System.Globalization.CultureInfo.CurrentCulture,
                 FlowDirection.LeftToRight, Typeface.Default, 14, Brushes.DarkRed), new(8, 8));
             // Bitmap.Draw passes source rectangles to the backend in physical pixels;
             // using bitmap.Size here crops a high-DPI raster and scales it a second time.

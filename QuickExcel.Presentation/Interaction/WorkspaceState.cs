@@ -72,8 +72,8 @@ public sealed class SheetViewState
     }
     public void Apply(WorkbookSnapshot snapshot, int column, ColumnFilter? filter)
     {
-        var region = Region ?? throw new InvalidOperationException("请先建立筛选区域。");
-        if (column < region.Range.Left || column > region.Range.Right) throw new ArgumentException("筛选列不在区域内。");
+        var region = Region ?? throw new InvalidOperationException(UiText.Get("请先建立筛选区域。"));
+        if (column < region.Range.Left || column > region.Range.Right) throw new ArgumentException(UiText.Get("筛选列不在区域内。"));
         var next = filter is null ? Filters.Remove(column) : Filters.SetItem(column, filter);
         var hidden = DataFilterEngine.Evaluate(snapshot, region, next);
         Filters = next; _hidden = hidden; _evaluatedSnapshot = snapshot; FilterError = null;
@@ -113,7 +113,7 @@ public sealed class SheetViewState
     {
         RequireCurrentFilter(snapshot);
         if (rows.Any(row => IsFilteredOut(snapshot, sheetIndex, row)))
-            throw new InvalidOperationException("目标含筛选隐藏行。请清除筛选后粘贴；本次没有写入。");
+            throw new InvalidOperationException(UiText.Get("目标含筛选隐藏行。请清除筛选后粘贴；本次没有写入。"));
     }
     public void RequireCurrentFilter(WorkbookSnapshot snapshot)
     {
@@ -145,7 +145,7 @@ public sealed class RecentFileStore(string path)
         try
         {
             if (!File.Exists(path)) { Paths = []; Error = null; return; }
-            if (new FileInfo(path).Length > 64 * 1024) throw new InvalidDataException("最近文件配置过大。");
+            if (new FileInfo(path).Length > 64 * 1024) throw new InvalidDataException(UiText.Get("最近文件配置过大。"));
             Paths = Normalize(JsonSerializer.Deserialize<string[]>(File.ReadAllText(path)) ?? []); Error = null;
         }
         catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException or JsonException or ArgumentException)

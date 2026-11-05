@@ -8,7 +8,7 @@ public sealed class SetProtectionCommand(SheetId sheetId, WorksheetProtection? p
     {
         var sheet = snapshot.GetSheet(sheetId);
         if (sheet.Data.Protection == protection) return new(snapshot, [], false);
-        if (sheet.Data.Protection?.HasPassword == true) throw new NotSupportedException("此工作表带密码保护，请在 Excel 中取消保护后再修改保护设置。");
+        if (sheet.Data.Protection?.HasPassword == true) throw new NotSupportedException(MessageText.Get("此工作表带密码保护，请在 Excel 中取消保护后再修改保护设置。"));
         return new(snapshot.WithSheets(snapshot.Sheets.Select(s => s.Id == sheetId ? s.WithData(s.Data with { Protection = protection }) : s)), [], true, CalculationUnchanged: true);
     }
 }
@@ -17,9 +17,9 @@ public sealed class SetCellProtectionCommand(SheetId sheetId, CellRectangle rang
 {
     internal override CommandDraft Prepare(WorkbookSnapshot snapshot)
     {
-        if (range.Count > 20_000) throw new ArgumentException("单次保护格式最多 20,000 格。");
+        if (range.Count > 20_000) throw new ArgumentException(MessageText.Get("单次保护格式最多 20,000 格。"));
         var sheet = snapshot.GetSheet(sheetId);
-        if (sheet.Data.Protection?.Sheet == true) throw new InvalidOperationException("请先取消工作表保护再设置锁定属性。");
+        if (sheet.Data.Protection?.Sheet == true) throw new InvalidOperationException(MessageText.Get("请先取消工作表保护再设置锁定属性。"));
         var styles = snapshot.Styles.ToBuilder(); var cells = sheet.Cells.ToBuilder(); var changes = new List<CellChange>(); var map = new Dictionary<int, int>();
         for (var r = range.Top; r <= range.Bottom; r++)
         for (var c = range.Left; c <= range.Right; c++)
@@ -49,7 +49,7 @@ public static class ProtectionSafety
     public static bool HidesFormula(WorkbookSnapshot book, WorksheetSnapshot sheet, int row, int column) => sheet.Data.Protection?.Sheet == true && book.Styles[sheet.GetStyleId(row, column)].FormulaHidden;
     internal static void Validate(WorkbookSnapshot before, WorkbookSnapshot after, DocumentCommand command)
     {
-        void Reject() => throw new InvalidOperationException("工作表已保护，此操作未被允许；工作簿未修改。");
+        void Reject() => throw new InvalidOperationException(MessageText.Get("工作表已保护，此操作未被允许；工作簿未修改。"));
         // Unknown protection must never become an editable, unenforced model.
         if (before.FileState?.CompatibilityDiagnostics.Any(d => d.Feature.Contains("sheetProtection", StringComparison.OrdinalIgnoreCase) || d.Feature.Contains("protectedRanges", StringComparison.OrdinalIgnoreCase)) == true && !ReferenceEquals(before, after)) Reject();
         foreach (var old in before.Sheets.Where(s => s.Data.Protection?.Sheet == true))

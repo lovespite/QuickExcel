@@ -23,9 +23,9 @@ public sealed partial class MainWindow
     private readonly global::Avalonia.Controls.Grid _sheetTabArea = new() { ClipToBounds = true };
     private readonly Canvas _sheetDropOverlay = new() { IsHitTestVisible = false };
     private readonly Border _sheetDropMarker = new() { Background = Brushes.SeaGreen, IsVisible = false };
-    private readonly Button _addSheetButton = TabButton("新建工作表", "+");
-    private readonly Button _scrollSheetsBack = TabButton("向前滚动标签", "‹");
-    private readonly Button _scrollSheetsForward = TabButton("向后滚动标签", "›");
+    private readonly Button _addSheetButton = TabButton(UiText.Get("新建工作表"), "+");
+    private readonly Button _scrollSheetsBack = TabButton(UiText.Get("向前滚动标签"), "‹");
+    private readonly Button _scrollSheetsForward = TabButton(UiText.Get("向后滚动标签"), "›");
     private readonly DispatcherTimer _sheetDragScroll = new() { Interval = TimeSpan.FromMilliseconds(100) };
     private readonly Cursor _moveSheetCursor = new(StandardCursorType.DragMove);
     private readonly Cursor _copySheetCursor = new(StandardCursorType.DragCopy);
@@ -52,7 +52,7 @@ public sealed partial class MainWindow
             "M2.5 3.5 V5 H8.5 V3.5 Z M10 3.5 V5 H15.5 V3.5 Z " +
             "M13 9 H15 L15.4 10.4 L16.5 10.9 L17.9 10.4 L19 12.2 L18 13.3 V14.6 L19 15.7 L18 17.5 L16.5 17.1 L15.4 17.7 L15 19 H13 L12.6 17.7 L11.5 17.1 L10 17.5 L9 15.7 L10 14.6 V13.3 L9 12.2 L10.1 10.4 L11.5 10.9 L12.6 10.4 Z " +
             "M16.2 14 A2.2 2.2 0 1 0 11.8 14 A2.2 2.2 0 1 0 16.2 14 Z") };
-        var manager = TabButton("工作表管理器", icon);
+        var manager = TabButton(UiText.Get("工作表管理器"), icon);
         manager.Click += async (_, _) => await PerformAsync(ShowSheetManagerAsync);
         _scrollSheetsBack.Click += (_, _) => ScrollSheetTabs(-1);
         _scrollSheetsForward.Click += (_, _) => ScrollSheetTabs(1);

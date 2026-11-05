@@ -18,7 +18,7 @@ public sealed partial class DocumentSession
             {
                 if (calculation.State is not (CalculationState.Fresh or CalculationState.Error) ||
                     !allocation.TryReserve(new(address, array), out _))
-                    throw new InvalidOperationException("数组结果未通过溢出区域校验，整轮结果未提交。");
+                    throw new InvalidOperationException(MessageText.Get("数组结果未通过溢出区域校验，整轮结果未提交。"));
             }
         foreach (var sheet in sheets)
         foreach (var (position, cell) in sheet.Cells)
@@ -41,13 +41,13 @@ public sealed partial class DocumentSession
             var sheet = snapshot.GetSheet(address.SheetId);
             var before = sheet.GetCell(address.Row, address.Column);
             if (before?.Content.Kind != CellContentKind.Formula)
-                throw new InvalidOperationException("计算结果只能提交到本轮快照的公式单元格。");
+                throw new InvalidOperationException(MessageText.Get("计算结果只能提交到本轮快照的公式单元格。"));
             if (calculation.InputRevision != result.Stamp.InputRevision || calculation.CalculationGeneration != result.Stamp.CalculationGeneration || calculation.ScriptGeneration != result.Stamp.ScriptGeneration)
-                throw new InvalidOperationException("计算单元格的修订或代次不匹配。");
+                throw new InvalidOperationException(MessageText.Get("计算单元格的修订或代次不匹配。"));
             if (calculation.Value is { Kind: CellValueKind.Text } text && text.TextValue.Length > WorkbookLimits.MaxCellTextLength)
-                throw new InvalidOperationException("计算结果超过单元格文本容量。");
+                throw new InvalidOperationException(MessageText.Get("计算结果超过单元格文本容量。"));
             if (snapshot.FileState?.FormulaReadOnly == true && (calculation.State != CalculationState.Blocked || calculation.Value != before.Calculation?.Value))
-                throw new InvalidOperationException("只读公式工作簿只能保留原缓存并标记受阻，不能发布新结果。");
+                throw new InvalidOperationException(MessageText.Get("只读公式工作簿只能保留原缓存并标记受阻，不能发布新结果。"));
             if (!builders.TryGetValue(sheet.Id, out var builder)) builders[sheet.Id] = builder = sheet.Cells.ToBuilder();
             var committed = calculation.State == CalculationState.Blocked && before.Calculation?.Array is { } oldArray && calculation.Value == oldArray[0,0]
                 ? new CellCalculation(calculation.Value, calculation.State, calculation.InputRevision, calculation.CalculationGeneration,

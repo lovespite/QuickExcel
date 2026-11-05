@@ -38,7 +38,7 @@ internal sealed class BorderPreview : Control
         }
         if (SampleText)
         {
-            var text = new FormattedText("文本", System.Globalization.CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface("Microsoft YaHei UI"), 14, Brushes.Black);
+            var text = new FormattedText(UiText.Get("文本"), System.Globalization.CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface("Microsoft YaHei UI"), 14, Brushes.Black);
             foreach (var x in new[] { .25, .75 }) foreach (var y in new[] { .25, .75 })
                 context.DrawText(text, new(r.Left + r.Width * x - text.Width / 2, r.Top + r.Height * y - text.Height / 2));
         }

@@ -30,7 +30,7 @@ internal static class WebRuntimePrerequisite
         if (!OperatingSystem.IsWindows()) return null;
         var installation = WindowsInstallation();
         if (installation is null)
-            throw new InvalidOperationException("未检测到 Microsoft Edge WebView2 Runtime。请安装 Evergreen Runtime（离线设备使用 x64 Standalone Installer），然后重新打开此页面。下载：" + DownloadUrl);
+            throw new InvalidOperationException(UiText.Get("未检测到 Microsoft Edge WebView2 Runtime。请安装 Evergreen Runtime（离线设备使用 x64 Standalone Installer），然后重新打开此页面。下载：") + DownloadUrl);
         return installation.Directory;
     }
 }

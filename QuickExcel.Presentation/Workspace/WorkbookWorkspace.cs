@@ -39,7 +39,7 @@ public sealed class WorkbookWorkspace : IDisposable
     private void RequireIdle()
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
-        if (IsBusy) throw new InvalidOperationException("正在处理工作簿，请稍后再试。");
+        if (IsBusy) throw new InvalidOperationException(UiText.Get("正在处理工作簿，请稍后再试。"));
     }
     public void New(bool demo = false)
     {
@@ -68,7 +68,7 @@ public sealed class WorkbookWorkspace : IDisposable
         {
             var sameFile = string.Equals(FilePath, selected.Path, PathComparison);
             if (overwriteOriginal && (!sameFile || Version?.Sha256 is null))
-                throw new InvalidOperationException("覆盖只能用于当前已打开且具有版本记录的文件。");
+                throw new InvalidOperationException(UiText.Get("覆盖只能用于当前已打开且具有版本记录的文件。"));
             var expected = sameFile ? Version ?? new(null) : await Task.Run(() => _files.ReadVersion(selected.Path));
             var saved = await Task.Run(() => Document.SaveChecked(selected.Path, expected, discardUnsupported, overwriteOriginal));
             FilePath = selected.Path; Version = saved;
@@ -96,7 +96,7 @@ public sealed class WorkbookWorkspace : IDisposable
     public async Task ExportAsync(LocalFileSelection selected, bool portable, bool allowStaleCaches = false, bool discardUnsupported = false)
     {
         RequireIdle();
-        if (string.Equals(FilePath, selected.Path, PathComparison)) throw new InvalidOperationException("导出需要使用新副本路径，不能覆盖当前打开的工作簿。");
+        if (string.Equals(FilePath, selected.Path, PathComparison)) throw new InvalidOperationException(UiText.Get("导出需要使用新副本路径，不能覆盖当前打开的工作簿。"));
         IsBusy = true; Changed?.Invoke();
         try
         {

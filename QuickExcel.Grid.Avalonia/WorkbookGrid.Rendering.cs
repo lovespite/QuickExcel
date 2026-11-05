@@ -151,7 +151,7 @@ public sealed partial class WorkbookGrid
     }
     private void AdmitPicture(SKPicture picture)
     {
-        if (picture.ApproximateBytesUsed > 32L * 1024 * 1024) { picture.Dispose(); throw new InvalidOperationException("单格绘制超过缓存预算。"); }
+        if (picture.ApproximateBytesUsed > 32L * 1024 * 1024) { picture.Dispose(); throw new InvalidOperationException(UiText.Get("单格绘制超过缓存预算。")); }
         if (_pictures.Count + _charts.Count >= 4096 || _pictureBytes + picture.ApproximateBytesUsed > 32L * 1024 * 1024) ClearPictures();
         _pictureBytes += picture.ApproximateBytesUsed;
     }
@@ -171,7 +171,7 @@ public sealed partial class WorkbookGrid
             }
             canvas.Save(); canvas.ClipRect(SkiaRect(fragment.Clip));
             if (pixels is not null) SkiaRenderer.DrawImage(canvas, pixels, SkiaRect(fragment.Bounds), false, DisplayAnchor(new(DrawingObjectKind.Image, index), image.Anchor).Rotation);
-            else Renderer.DrawText(canvas, new("图片无法预览", new()), SkiaRect(fragment.Bounds));
+            else Renderer.DrawText(canvas, new(UiText.Get("图片无法预览"), new()), SkiaRect(fragment.Bounds));
             canvas.Restore();
         }
         foreach (var (originalChart, index) in Sheet.Data.Charts.Select((chart, index) => (chart, index)))
@@ -184,7 +184,7 @@ public sealed partial class WorkbookGrid
                     using var recorder = new SKPictureRecorder(); var target = recorder.BeginRecording(SKRect.Create((float)fragment.Bounds.Width, (float)fragment.Bounds.Height));
                     try { Renderer.DrawChart(target, new(0, 0, fragment.Bounds.Width, fragment.Bounds.Height), _snapshot!, chart with { Anchor = chart.Anchor with { Rotation = 0 } }); }
                     catch (Exception ex) when (ex is InvalidOperationException or NotSupportedException or ArgumentException or FormatException)
-                    { Renderer.DrawText(target, new("图表无法预览：" + ex.Message, new()), SKRect.Create((float)fragment.Bounds.Width, (float)fragment.Bounds.Height)); }
+                    { Renderer.DrawText(target, new(UiText.Get("图表无法预览：") + ex.Message, new()), SKRect.Create((float)fragment.Bounds.Width, (float)fragment.Bounds.Height)); }
                     picture = recorder.EndRecording(); AdmitPicture(picture); _charts[chart] = picture;
                 }
                 canvas.Save(); canvas.ClipRect(SkiaRect(fragment.Clip)); canvas.RotateDegrees((float)chart.Anchor.Rotation, (float)fragment.Bounds.Center.X, (float)fragment.Bounds.Center.Y); canvas.Translate((float)fragment.Bounds.X, (float)fragment.Bounds.Y); canvas.DrawPicture(picture); canvas.Restore();

@@ -1,3 +1,4 @@
+using QuickExcel.Core;
 using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
@@ -23,30 +24,30 @@ public sealed class LocalWebOrigin : IAsyncDisposable
     private bool _disposed;
     public string Instance { get; } = Convert.ToHexString(RandomNumberGenerator.GetBytes(24)).ToLowerInvariant();
     public Uri Page { get; }
-    public LocalWebOrigin(WebAssetCatalog assets, string page, string document, long generation)
+    public LocalWebOrigin(WebAssetCatalog assets, string page, string document, long generation, string language = "zh-CN")
     {
         if (page is not ("script.html" or "preview.html") || !assets.Files.ContainsKey(page) || !Guid.TryParseExact(document, "N", out _) || generation < 1)
-            throw new ArgumentException("无效的本地页面或文档身份。");
+            throw new ArgumentException(MessageText.Get("无效的本地页面或文档身份。"));
         _assets = assets; _listener.Start();
-        Page = new($"http://127.0.0.1:{((IPEndPoint)_listener.LocalEndpoint).Port}/{Instance}/{page}#document={document}&generation={generation}");
+        Page = new($"http://127.0.0.1:{((IPEndPoint)_listener.LocalEndpoint).Port}/{Instance}/{page}#document={document}&generation={generation}&lang={Uri.EscapeDataString(language)}");
         _accept = AcceptAsync();
     }
     public async Task<PdfLease> AddPdfAsync(string path, CancellationToken token = default)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
-        if (_pdfs.Count >= 2) throw new InvalidOperationException("每个预览最多持有两份 PDF 资源。");
+        if (_pdfs.Count >= 2) throw new InvalidOperationException(MessageText.Get("每个预览最多持有两份 PDF 资源。"));
         var input = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 64 * 1024, FileOptions.Asynchronous | FileOptions.RandomAccess);
         try
         {
-            if (input.Length is < 5 or > 128 * 1024 * 1024) throw new InvalidDataException("PDF 资源长度无效或超过 128 MiB。");
+            if (input.Length is < 5 or > 128 * 1024 * 1024) throw new InvalidDataException(MessageText.Get("PDF 资源长度无效或超过 128 MiB。"));
             var header = new byte[5]; await input.ReadExactlyAsync(header, token);
-            if (!header.AsSpan().SequenceEqual("%PDF-"u8)) throw new InvalidDataException("预览资源不是 PDF。");
+            if (!header.AsSpan().SequenceEqual("%PDF-"u8)) throw new InvalidDataException(MessageText.Get("预览资源不是 PDF。"));
             var resource = new PdfResource(input); var name = "documents/" + Convert.ToHexString(RandomNumberGenerator.GetBytes(24)).ToLowerInvariant() + ".pdf";
             lock (_lifecycle)
             {
                 ObjectDisposedException.ThrowIf(_disposed, this);
-                if (_pdfs.Count >= 2) throw new InvalidOperationException("每个预览最多持有两份 PDF 资源。");
-                if (!_pdfs.TryAdd(name, resource)) throw new IOException("PDF 资源标识冲突。");
+                if (_pdfs.Count >= 2) throw new InvalidOperationException(MessageText.Get("每个预览最多持有两份 PDF 资源。"));
+                if (!_pdfs.TryAdd(name, resource)) throw new IOException(MessageText.Get("PDF 资源标识冲突。"));
             }
             return new(this, name, new Uri(Page, name));
         }
@@ -130,7 +131,7 @@ public sealed class LocalWebOrigin : IAsyncDisposable
                     for (var offset = first; offset <= last;)
                     {
                         var read = await RandomAccess.ReadAsync(held!.Stream.SafeFileHandle, chunk.AsMemory(0, (int)Math.Min(chunk.Length, last - offset + 1)), offset, timeout.Token);
-                        if (read == 0) throw new EndOfStreamException("PDF 资源在读取中截断。");
+                        if (read == 0) throw new EndOfStreamException(MessageText.Get("PDF 资源在读取中截断。"));
                         await stream.WriteAsync(chunk.AsMemory(0, read), timeout.Token); offset += read;
                     }
                 }

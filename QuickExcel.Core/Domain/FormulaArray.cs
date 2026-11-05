@@ -1,3 +1,4 @@
+using QuickExcel.Core;
 using System.Collections.Immutable;
 
 namespace QuickExcel.Domain;
@@ -20,16 +21,16 @@ public sealed class FormulaArray
         var characters = 0;
         foreach (var value in values)
         {
-            if (builder.Count == count) throw new ArgumentException("数组元素数量与形状不一致。", nameof(values));
+            if (builder.Count == count) throw new ArgumentException(MessageText.Get("数组元素数量与形状不一致。"), nameof(values));
             if (value.Kind == CellValueKind.Text)
             {
                 WorkbookLimits.ValidateText(value.TextValue);
                 characters = checked(characters + value.TextValue.Length);
-                if (characters > MaxTextCharacters) throw new ArgumentException("单个公式数组文本超过 4 Mi 字符。", nameof(values));
+                if (characters > MaxTextCharacters) throw new ArgumentException(MessageText.Get("单个公式数组文本超过 4 Mi 字符。"), nameof(values));
             }
             builder.Add(value);
         }
-        if (builder.Count != count) throw new ArgumentException("数组元素数量与形状不一致。", nameof(values));
+        if (builder.Count != count) throw new ArgumentException(MessageText.Get("数组元素数量与形状不一致。"), nameof(values));
         Values = builder.MoveToImmutable();
     }
 
@@ -42,7 +43,7 @@ public sealed class FormulaArray
     public static void ValidateShape(int rows, int columns)
     {
         if (rows < 1 || rows > WorkbookLimits.MaxRows || columns < 1 || columns > WorkbookLimits.MaxColumns || (long)rows * columns > MaxElements)
-            throw new ArgumentOutOfRangeException(nameof(rows), "公式数组必须非空，且不能超过工作表边界或 100,000 个元素。");
+            throw new ArgumentOutOfRangeException(nameof(rows), MessageText.Get("公式数组必须非空，且不能超过工作表边界或 100,000 个元素。"));
     }
 
     public bool ContentEquals(FormulaArray other) => Rows == other.Rows && Columns == other.Columns && Values.SequenceEqual(other.Values);

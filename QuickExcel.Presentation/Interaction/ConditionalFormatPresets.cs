@@ -22,7 +22,7 @@ public static class ConditionalFormatPresets
             return new([range], preset == ConditionalPreset.DuplicateValues ? ConditionalFormatKind.DuplicateValues : ConditionalFormatKind.UniqueValues, 1, style);
         if (preset == ConditionalPreset.ContainsText)
         {
-            if (string.IsNullOrEmpty(first)) throw new ArgumentException("请输入要查找的文本。");
+            if (string.IsNullOrEmpty(first)) throw new ArgumentException(UiText.Get("请输入要查找的文本。"));
             return new([range], ConditionalFormatKind.ContainsText, 1, style,
                 $"=NOT(ISERROR(SEARCH({Quote(first)},{anchor})))", text: first);
         }
@@ -40,7 +40,7 @@ public static class ConditionalFormatPresets
         else
         {
             var percent = preset is ConditionalPreset.TopPercent or ConditionalPreset.BottomPercent;
-            if (rank < 1 || rank > (percent ? 100 : 1000)) throw new ArgumentException(percent ? "百分比须为 1 到 100 的整数。" : "项数须为 1 到 1000 的整数。");
+            if (rank < 1 || rank > (percent ? 100 : 1000)) throw new ArgumentException(percent ? UiText.Get("百分比须为 1 到 100 的整数。") : UiText.Get("项数须为 1 到 1000 的整数。"));
             var bottom = preset is ConditionalPreset.BottomItems or ConditionalPreset.BottomPercent;
             var count = $"COUNT({absolute})";
             var amount = percent ? $"ROUNDUP({count}*{rank}/100,0)" : rank.ToString(CultureInfo.InvariantCulture);
@@ -53,7 +53,7 @@ public static class ConditionalFormatPresets
     private static string Operand(string input)
     {
         var text = input.Trim();
-        if (text.Length == 0) throw new ArgumentException("请输入比较值或公式。");
+        if (text.Length == 0) throw new ArgumentException(UiText.Get("请输入比较值或公式。"));
         if (text.StartsWith('=')) return text;
         if (double.TryParse(text, NumberStyles.Float, CultureInfo.CurrentCulture, out var value) && double.IsFinite(value))
             return "=" + value.ToString("R", CultureInfo.InvariantCulture);

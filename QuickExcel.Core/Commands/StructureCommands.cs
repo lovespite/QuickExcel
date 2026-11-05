@@ -48,7 +48,7 @@ public sealed class ShiftAxisCommand(SheetId sheetId, SheetAxis axis, int index,
         if (!Enum.IsDefined(axis) || index < 0 || count < 1 || index > limit - count) throw new ArgumentOutOfRangeException(nameof(index));
         var target = snapshot.GetSheet(sheetId);
         if (delete && (!target.Printing.RowBreaks.IsEmpty || !target.Printing.ColumnBreaks.IsEmpty))
-            throw new NotSupportedException("含分页信息的工作表暂不支持删除行列；Excel 的分页重建规则尚未完整对齐，操作未应用。");
+            throw new NotSupportedException(MessageText.Get("含分页信息的工作表暂不支持删除行列；Excel 的分页重建规则尚未完整对齐，操作未应用。"));
         int? Position(int value)
         {
             if (!delete) return value < index ? value : checked(value + count);
@@ -106,7 +106,7 @@ public sealed class ShiftAxisCommand(SheetId sheetId, SheetAxis axis, int index,
             .Select(p => (Position: p.Key, Style: source.GetStyleId(p.Key.Row, p.Key.Column))).ToArray();
         var target = transformed.GetSheet(source.Id); var cells = target.Cells.ToBuilder();
         if ((long)styles.Length * count + transformed.Sheets.Sum(s => (long)s.Cells.Count) > WorkbookLimits.MaxCells)
-            throw new InvalidOperationException("插入行列的继承格式超过单元格容量，操作未应用。");
+            throw new InvalidOperationException(MessageText.Get("插入行列的继承格式超过单元格容量，操作未应用。"));
         var rows = target.Rows.ToBuilder(); var columns = target.Columns.ToBuilder();
         for (var n = index; n < index + count; n++)
         {
@@ -132,11 +132,11 @@ public sealed class MoveAxisCommand(SheetId sheetId, SheetAxis axis, int start, 
             throw new ArgumentOutOfRangeException(nameof(start));
         if (start == destination) return new(snapshot, [], false);
         var target = snapshot.GetSheet(sheetId);
-        if (!target.Data.Tables.IsEmpty) throw new NotSupportedException("整行列搬移的表列重排尚未支持；表插入和删除可单独使用。");
+        if (!target.Data.Tables.IsEmpty) throw new NotSupportedException(MessageText.Get("整行列搬移的表列重排尚未支持；表插入和删除可单独使用。"));
         if (snapshot.Sheets.Any(s => !s.Data.ConditionalFormats.IsEmpty))
-            throw new NotSupportedException("含条件格式的工作簿暂不支持行列搬移；插入、删除和复制工作表可单独使用。");
+            throw new NotSupportedException(MessageText.Get("含条件格式的工作簿暂不支持行列搬移；插入、删除和复制工作表可单独使用。"));
         if (!target.Printing.RowBreaks.IsEmpty || !target.Printing.ColumnBreaks.IsEmpty)
-            throw new NotSupportedException("含分页信息的工作表暂不支持移动行列；操作未应用。");
+            throw new NotSupportedException(MessageText.Get("含分页信息的工作表暂不支持移动行列；操作未应用。"));
         int? Position(int value)
         {
             if (value >= start && value < start + count) return destination + value - start;
@@ -150,7 +150,7 @@ public sealed class MoveAxisCommand(SheetId sheetId, SheetAxis axis, int start, 
             var segments = new List<(int Start, int End)>();
             for (var i = 0; i < cuts.Length - 1; i++) segments.Add((Position(cuts[i])!.Value, Position(cuts[i + 1] - 1)!.Value));
             var min = segments.Min(s => s.Start); var max = segments.Max(s => s.End);
-            if (max - min != last - first) throw new NotSupportedException("此移动会把引用区域拆成不连续区域，操作未应用。");
+            if (max - min != last - first) throw new NotSupportedException(MessageText.Get("此移动会把引用区域拆成不连续区域，操作未应用。"));
             return (min, max);
         }
         return StructureEdits.Draft(snapshot, StructureEdits.Axis(snapshot, target, axis, Position, Interval));
@@ -162,7 +162,7 @@ internal static class StructureEdits
     internal static void RequireTransformableFunctions(WorkbookSnapshot snapshot)
     {
         if (snapshot.Sheets.Any(s => !s.Annotations.IsEmpty))
-            throw new NotSupportedException("含超链接/批注的工作簿尚不能安全变换链接目标或批注绘图；结构操作和排序未应用。值、样式和尺寸仍可编辑。");
+            throw new NotSupportedException(MessageText.Get("含超链接/批注的工作簿尚不能安全变换链接目标或批注绘图；结构操作和排序未应用。值、样式和尺寸仍可编辑。"));
         if (snapshot.FileState is null) return;
         foreach (var sheet in snapshot.Sheets)
         foreach (var (position, cell) in sheet.Cells.Where(p => p.Value.Content.Kind == CellContentKind.Formula))
@@ -171,27 +171,27 @@ internal static class StructureEdits
             {
                 var expression = FormulaBinding.Bind(FormulaSyntax.Parse(cell.Content.FormulaText), snapshot, sheet.Id, position);
                 var unknown = FormulaSyntax.Walk(expression).OfType<FunctionNode>().FirstOrDefault(f => !StandardFunctions.Signatures.ContainsKey(f.Name));
-                if (unknown is not null) throw new NotSupportedException($"导入公式 {unknown.Name} 的引用语义尚未确认，结构变换/排序未应用；值和样式仍可在受支持范围内编辑。");
+                if (unknown is not null) throw new NotSupportedException(MessageText.Format($"导入公式 {unknown.Name} 的引用语义尚未确认，结构变换/排序未应用；值和样式仍可在受支持范围内编辑。"));
             }
-            catch (FormatException e) { throw new NotSupportedException("导入公式不能安全变换，结构操作未应用。", e); }
+            catch (FormatException e) { throw new NotSupportedException(MessageText.Get("导入公式不能安全变换，结构操作未应用。"), e); }
         }
         // Unused definitions also participate in copying/renaming and must not bypass this guard.
         foreach (var name in snapshot.DefinedNames)
         {
             var unknown = FormulaSyntax.Walk(FormulaSyntax.Parse(name.Formula)).OfType<FunctionNode>()
                 .FirstOrDefault(f => !StandardFunctions.Signatures.ContainsKey(f.Name));
-            if (unknown is not null) throw new NotSupportedException($"导入名称 {name.Name} 使用尚未确认引用语义的函数 {unknown.Name}，结构操作未应用。");
+            if (unknown is not null) throw new NotSupportedException(MessageText.Format($"导入名称 {name.Name} 使用尚未确认引用语义的函数 {unknown.Name}，结构操作未应用。"));
         }
         foreach (var formula in snapshot.Sheets.SelectMany(s => s.Data.Tables).SelectMany(t => t.Columns).SelectMany(c => new[] { c.CalculatedFormula, c.TotalsFormula }).OfType<string>())
         {
             var unknown = FormulaSyntax.Walk(FormulaSyntax.Parse(formula)).OfType<FunctionNode>().FirstOrDefault(f => !StandardFunctions.Signatures.ContainsKey(f.Name));
-            if (unknown is not null) throw new NotSupportedException($"导入表公式使用尚未确认引用语义的函数 {unknown.Name}，结构操作未应用。");
+            if (unknown is not null) throw new NotSupportedException(MessageText.Format($"导入表公式使用尚未确认引用语义的函数 {unknown.Name}，结构操作未应用。"));
         }
     }
     internal static void RequireSimpleStructure(WorksheetSnapshot sheet)
     {
         if (!sheet.Images.IsEmpty || !sheet.MergedCells.IsEmpty || !sheet.Data.Charts.IsEmpty)
-            throw new NotSupportedException("带合并单元格、图片或图表的工作表暂不支持结构移动；操作未应用。");
+            throw new NotSupportedException(MessageText.Get("带合并单元格、图片或图表的工作表暂不支持结构移动；操作未应用。"));
     }
 
     internal static WorkbookSnapshot Axis(WorkbookSnapshot snapshot, WorksheetSnapshot target, SheetAxis axis,
@@ -199,11 +199,11 @@ internal static class StructureEdits
     {
         if (!target.Data.Charts.IsEmpty || snapshot.Sheets.SelectMany(s => s.Data.Charts).SelectMany(c => c.Series).SelectMany(s => new[] { s.NameReference, s.Categories, s.Values })
             .OfType<string>().Any(f => string.Equals(WorksheetChart.ParseReference(f).Sheet, target.Name, StringComparison.OrdinalIgnoreCase)))
-            throw new NotSupportedException("受影响工作表含图表或图表源引用，暂不插删或搬移行列；请先调整图表，避免锚点或系列错位。");
+            throw new NotSupportedException(MessageText.Get("受影响工作表含图表或图表源引用，暂不插删或搬移行列；请先调整图表，避免锚点或系列错位。"));
         if (WorksheetOutline.HasGroups(target))
-            throw new NotSupportedException("分组层级的行列插删/搬移尚未支持，请先取消分组；操作未应用。");
+            throw new NotSupportedException(MessageText.Get("分组层级的行列插删/搬移尚未支持，请先取消分组；操作未应用。"));
         if (snapshot.Sheets.Any(s => !s.Data.Validations.IsEmpty))
-            throw new NotSupportedException("含数据验证的工作簿暂不支持行列插删/搬移，避免改变规则的相对引用；操作未应用。");
+            throw new NotSupportedException(MessageText.Get("含数据验证的工作簿暂不支持行列插删/搬移，避免改变规则的相对引用；操作未应用。"));
         var limit = axis == SheetAxis.Row ? WorkbookLimits.MaxRows : WorkbookLimits.MaxColumns;
         FormulaNode Transform(FormulaNode node, SheetId context, CellPosition? currentCell)
         {
@@ -213,7 +213,7 @@ internal static class StructureEdits
                 || axis == SheetAxis.Row && r.WholeColumns) return node;
             var mapped = interval(axis == SheetAxis.Row ? r.Row : r.Column, axis == SheetAxis.Row ? r.EndRow : r.EndColumn);
             if (mapped is null) return new ValueNode(CellValue.FromError(CellErrorCode.Reference));
-            if (mapped.Value.End >= limit) throw new ArgumentException("结构编辑会使公式引用越界，操作未应用。");
+            if (mapped.Value.End >= limit) throw new ArgumentException(MessageText.Get("结构编辑会使公式引用越界，操作未应用。"));
             return axis == SheetAxis.Row ? r with { Row = mapped.Value.Start, EndRow = mapped.Value.End }
                 : r with { Column = mapped.Value.Start, EndColumn = mapped.Value.End };
         }
@@ -225,7 +225,7 @@ internal static class StructureEdits
             {
                 var next = position(axis == SheetAxis.Row ? p.Row : p.Column);
                 if (next is null) continue;
-                if (next >= limit) throw new ArgumentException("结构编辑会使单元格越界，操作未应用。");
+                if (next >= limit) throw new ArgumentException(MessageText.Get("结构编辑会使单元格越界，操作未应用。"));
                 relocated.Add(axis == SheetAxis.Row ? p with { Row = next.Value } : p with { Column = next.Value }, cell);
             }
             IEnumerable<KeyValuePair<int, T>> Metadata<T>(IEnumerable<KeyValuePair<int, T>> entries)
@@ -234,7 +234,7 @@ internal static class StructureEdits
                 {
                     var next = position(key);
                     if (next is null) continue;
-                    if (next >= limit) throw new ArgumentException("结构编辑会使行列属性越界，操作未应用。");
+                    if (next >= limit) throw new ArgumentException(MessageText.Get("结构编辑会使行列属性越界，操作未应用。"));
                     yield return new(next.Value, value);
                 }
             }
@@ -242,7 +242,7 @@ internal static class StructureEdits
             {
                 var mapped = interval(axis == SheetAxis.Row ? rectangle.Top : rectangle.Left, axis == SheetAxis.Row ? rectangle.Bottom : rectangle.Right);
                 if (mapped is null) return null;
-                if (mapped.Value.Start < 0 || mapped.Value.End >= limit) throw new ArgumentException("结构编辑会使图片或合并区域越界，操作未应用。");
+                if (mapped.Value.Start < 0 || mapped.Value.End >= limit) throw new ArgumentException(MessageText.Get("结构编辑会使图片或合并区域越界，操作未应用。"));
                 return axis == SheetAxis.Row ? rectangle with { Top = mapped.Value.Start, Bottom = mapped.Value.End }
                     : rectangle with { Left = mapped.Value.Start, Right = mapped.Value.End };
             }
@@ -254,9 +254,9 @@ internal static class StructureEdits
                 // A partial move must retain the top-left owner, otherwise its value would be hidden.
                 var owner = position(axis == SheetAxis.Row ? original.Top : original.Left);
                 if (owner is null || owner != (axis == SheetAxis.Row ? mapped.Top : mapped.Left))
-                    throw new NotSupportedException("操作会移除或移动合并区域的主单元格，请先取消合并。");
+                    throw new NotSupportedException(MessageText.Get("操作会移除或移动合并区域的主单元格，请先取消合并。"));
                 if (merges.Any(m => m.Top <= mapped.Bottom && m.Bottom >= mapped.Top && m.Left <= mapped.Right && m.Right >= mapped.Left))
-                    throw new NotSupportedException("操作会使合并区域重叠。");
+                    throw new NotSupportedException(MessageText.Get("操作会使合并区域重叠。"));
                 merges.Add(mapped);
             }
             var images = new List<SheetImage>();
@@ -271,7 +271,7 @@ internal static class StructureEdits
                 var mapped = interval(start, last);
                 if (mapped is null)
                 {
-                    if (a.Kind == DrawingAnchorKind.OneCell) throw new NotSupportedException("删除将覆盖固定尺寸图片的起始单元格；请先移动图片。");
+                    if (a.Kind == DrawingAnchorKind.OneCell) throw new NotSupportedException(MessageText.Get("删除将覆盖固定尺寸图片的起始单元格；请先移动图片。"));
                     continue;
                 }
                 var firstOffset = position(start) is null ? 0 : axis == SheetAxis.Row ? a.RowOffset : a.ColumnOffset;
@@ -311,7 +311,7 @@ internal static class StructureEdits
                 });
                 return changed ? "=" + FormulaSyntax.Print(expression) : text;
             }
-            catch (FormatException e) { throw new NotSupportedException("存在无法安全变换的公式，结构操作未应用：" + e.Message, e); }
+            catch (FormatException e) { throw new NotSupportedException(MessageText.Get("存在无法安全变换的公式，结构操作未应用：") + e.Message, e); }
         }
         var sheets = snapshot.Sheets.Select(sheet =>
         {

@@ -6,6 +6,7 @@
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
   </PropertyGroup>
   <ItemGroup>
+    <Using Include="QuickExcel.Presentation.UiText" Alias="UiText" />
     <PackageReference Include="Avalonia" Version="[12.1.4]" />
     <ProjectReference Include="../QuickExcel.Presentation/QuickExcel.Presentation.csproj" />
     <ProjectReference Include="../QuickExcel.Rendering.Skia/QuickExcel.Rendering.Skia.csproj" />

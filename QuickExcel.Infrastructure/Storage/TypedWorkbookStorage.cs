@@ -59,14 +59,14 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage, IW
                 manifest = Json(Required(parts, "manifest.json", 64 * 1024), budget, 64 * 1024);
                 var root = manifest.RootElement;
                 version = checked((int)Integer(root, "formatVersion", 2));
-                if (version is not (1 or 2)) throw new InvalidDataException("不支持此 XLSQ 主版本。");
+                if (version is not (1 or 2)) throw new InvalidDataException(MessageText.Get("不支持此 XLSQ 主版本。"));
                 if (version == 1)
                 {
-                    if (root.TryGetProperty("format", out _) && String(root, "format") != "QuickExcel") throw new InvalidDataException("XLSQ 格式标识无效。");
-                    if (root.TryGetProperty("scriptApiVersion", out _) && Integer(root, "scriptApiVersion", 1) != 1) throw new InvalidDataException("不支持的脚本 API。");
+                    if (root.TryGetProperty("format", out _) && String(root, "format") != "QuickExcel") throw new InvalidDataException(MessageText.Get("XLSQ 格式标识无效。"));
+                    if (root.TryGetProperty("scriptApiVersion", out _) && Integer(root, "scriptApiVersion", 1) != 1) throw new InvalidDataException(MessageText.Get("不支持的脚本 API。"));
                     if (root.TryGetProperty("workbook", out _) && String(root, "workbook") != "workbook.xlsx" ||
-                        root.TryGetProperty("script", out _) && String(root, "script") != "scripts/functions.js") throw new InvalidDataException("v1 入口路径无效。");
-                    if (parts.Count != 3) throw new InvalidDataException("v1 包包含未声明条目。");
+                        root.TryGetProperty("script", out _) && String(root, "script") != "scripts/functions.js") throw new InvalidDataException(MessageText.Get("v1 入口路径无效。"));
+                    if (parts.Count != 3) throw new InvalidDataException(MessageText.Get("v1 包包含未声明条目。"));
                     workbookBytes = Required(parts, "workbook.xlsx");
                     modules = ScriptModuleSet.Single(Utf8.GetString(Required(parts, "scripts/functions.js", 1024 * 1024)), 1);
                 }
@@ -74,8 +74,8 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage, IW
                 {
                     var scriptApiVersion = checked((int)Integer(root, "scriptApiVersion", 3));
                     if (String(root, "format") != "QuickExcel" || Integer(root, "minReaderVersion", 2) != 2 || scriptApiVersion is not (1 or 2 or 3))
-                        throw new InvalidDataException("XLSQ 格式、读取器版本或脚本 API 不受支持。");
-                    var features = Array(root, "requiredFeatures").Select(e => e.GetString() ?? throw new InvalidDataException("能力名称必须为字符串。")).ToArray();
+                        throw new InvalidDataException(MessageText.Get("XLSQ 格式、读取器版本或脚本 API 不受支持。"));
+                    var features = Array(root, "requiredFeatures").Select(e => e.GetString() ?? throw new InvalidDataException(MessageText.Get("能力名称必须为字符串。"))).ToArray();
                     declaredViews = features.Contains("workbook-views");
                     declaredTextVersion = features.Contains("text-compatibility-v2");
                     declaredExtendedErrors = features.Contains("extended-cell-errors");
@@ -85,16 +85,16 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage, IW
                     declaredThreads = features.Contains("preserved-threaded-comments");
                     if (features.Distinct().Count() != features.Length || Features.Except(features).Any() || features.Except(Features.Concat(["strict-ooxml", "preserved-threaded-comments", "worksheet-pivots", "dynamic-arrays", "typescript-sources", "virtual-files", "script-actions", "script-signatures", "workbook-views", "worksheet-printing", "preserved-formulas", "cell-text-annotations", "worksheet-data", "worksheet-tables", "worksheet-validation", "worksheet-conditional-formatting", "worksheet-outline", "text-compatibility-v2", "extended-cell-errors", "drawing-anchors", "drawing-transforms", "worksheet-protection", "worksheet-charts", "worksheet-charts-v2", "chart-filters", "worksheet-default-width", "extended-capacity"])).Any() ||
                         features.Contains("script-actions") && scriptApiVersion < 2)
-                        throw new InvalidDataException("XLSQ 缺少必要能力或包含未知必需能力。");
+                        throw new InvalidDataException(MessageText.Get("XLSQ 缺少必要能力或包含未知必需能力。"));
                     var referenced = new HashSet<string>(StringComparer.Ordinal) { "manifest.json" };
                     byte[] Reference(JsonElement reference, string? expectedPath = null)
                     {
                         var path = PathName(String(reference, "path"));
-                        if (expectedPath is not null && path != expectedPath || !referenced.Add(path)) throw new InvalidDataException("XLSQ 入口重复或路径无效。");
+                        if (expectedPath is not null && path != expectedPath || !referenced.Add(path)) throw new InvalidDataException(MessageText.Get("XLSQ 入口重复或路径无效。"));
                         var content = Required(parts, path);
                         var hash = String(reference, "sha256");
                         if (hash.Length != 64 || hash.Any(c => c is not (>= '0' and <= '9' or >= 'a' and <= 'f')) || Hash(content) != hash)
-                            throw new InvalidDataException($"{path}: SHA-256 不一致。");
+                            throw new InvalidDataException(MessageText.Format($"{path}: SHA-256 不一致。"));
                         return content;
                     }
                     workbookBytes = Reference(Property(root, "workbook"), "workbook.xlsx");
@@ -102,38 +102,38 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage, IW
                     var scripts = Property(root, "scripts");
                     var moduleList = new List<KeyValuePair<string, ScriptModule>>();
                     var map = Property(scripts, "modules");
-                    if (map.ValueKind != JsonValueKind.Object) throw new InvalidDataException("模块目录必须为对象。");
+                    if (map.ValueKind != JsonValueKind.Object) throw new InvalidDataException(MessageText.Get("模块目录必须为对象。"));
                     long sourceBytes = 0;
                     foreach (var module in map.EnumerateObject())
                     {
-                        if (moduleList.Count >= 64) throw new InvalidDataException("模块数量超过限制。");
+                        if (moduleList.Count >= 64) throw new InvalidDataException(MessageText.Get("模块数量超过限制。"));
                         var content = Reference(module.Value);
-                        if ((sourceBytes += content.Length) > 1024 * 1024) throw new InvalidDataException("脚本总量超过 1 MiB。");
+                        if ((sourceBytes += content.Length) > 1024 * 1024) throw new InvalidDataException(MessageText.Get("脚本总量超过 1 MiB。"));
                         var language = module.Value.TryGetProperty("language", out var lang) ? ReadScriptLanguage(lang.GetString()) : ScriptLanguage.JavaScript;
                         if (features.Contains("typescript-sources") && !module.Value.TryGetProperty("language", out _))
-                            throw new InvalidDataException("TS 包必须明确全部模块的语言。");
+                            throw new InvalidDataException(MessageText.Get("TS 包必须明确全部模块的语言。"));
                         var description = module.Value.TryGetProperty("description", out _) ? String(module.Value, "description") : "";
                         moduleList.Add(new(module.Name, new ScriptModule(String(module.Value, "path"), Utf8.GetString(content), language, description)));
                     }
                     var bindings = Array(state.RootElement, "scriptBindings").ToArray();
-                    if (bindings.Any(b => String(b, "scope") != "workbook")) throw new InvalidDataException("脚本绑定作用域无效。");
-                    modules = new(moduleList, Array(scripts, "entryModules").Select(e => e.GetString() ?? throw new InvalidDataException("入口名无效。")),
+                    if (bindings.Any(b => String(b, "scope") != "workbook")) throw new InvalidDataException(MessageText.Get("脚本绑定作用域无效。"));
+                    modules = new(moduleList, Array(scripts, "entryModules").Select(e => e.GetString() ?? throw new InvalidDataException(MessageText.Get("入口名无效。"))),
                         Integer(state.RootElement, "scriptRevision"), Integer(state.RootElement, "bindingRevision"), scriptApiVersion,
                         bindings.Select(b => new ScriptBinding(String(b, "module"), String(b, "kind"))));
-                    if (modules.HasActions != features.Contains("script-actions")) throw new InvalidDataException("动作绑定与必需能力不一致。");
+                    if (modules.HasActions != features.Contains("script-actions")) throw new InvalidDataException(MessageText.Get("动作绑定与必需能力不一致。"));
                     if (modules.HasTypeScript != features.Contains("typescript-sources") ||
                         modules.HasTypeScript && String(scripts, "compilerOptions") != ScriptModuleSet.TypeScriptOptions ||
                         !modules.HasTypeScript && scripts.TryGetProperty("compilerOptions", out _))
-                        throw new InvalidDataException("模块语言、编译选项与必需能力不一致。");
+                        throw new InvalidDataException(MessageText.Get("模块语言、编译选项与必需能力不一致。"));
                     if (root.TryGetProperty("scriptSignature", out var signatureReference))
                     {
-                        if (!features.Contains("script-signatures")) throw new InvalidDataException("脚本签名缺少必需能力声明。");
+                        if (!features.Contains("script-signatures")) throw new InvalidDataException(MessageText.Get("脚本签名缺少必需能力声明。"));
                         using var signatureJson = Json(Reference(signatureReference, "security/script-signature.json"), budget, 64 * 1024);
                         var signature = signatureJson.RootElement;
                         modules = modules.WithSignature(new(checked((int)Integer(signature, "version")), String(signature, "algorithm"),
                             String(signature, "certificate"), String(signature, "value")));
                     }
-                    else if (features.Contains("script-signatures")) throw new InvalidDataException("缺少脚本签名。");
+                    else if (features.Contains("script-signatures")) throw new InvalidDataException(MessageText.Get("缺少脚本签名。"));
                     if (features.Contains("virtual-files"))
                     {
                         var files = new List<VirtualFileEntry>();
@@ -143,7 +143,7 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage, IW
                             var directory = Property(item, "directory").GetBoolean();
                             if (directory)
                             {
-                                if (!referenced.Add(path + "/") || Required(parts, path + "/").Length != 0) throw new InvalidDataException("无效目录。");
+                                if (!referenced.Add(path + "/") || Required(parts, path + "/").Length != 0) throw new InvalidDataException(MessageText.Get("无效目录。"));
                                 files.Add(new("//xlsq/" + path, [], true));
                             }
                             else files.Add(new("//xlsq/" + path, Reference(item).ToImmutableArray()));
@@ -151,29 +151,29 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage, IW
                         packageFiles = new(files);
                         _ = new VirtualFileSet(parts.Select(p => new VirtualFileEntry("//xlsq/" + p.Key.TrimEnd('/'), p.Value.ToImmutableArray(), p.Key.EndsWith('/'))));
                     }
-                    if (referenced.Count != parts.Count) throw new InvalidDataException("XLSQ 包含未声明条目。");
+                    if (referenced.Count != parts.Count) throw new InvalidDataException(MessageText.Get("XLSQ 包含未声明条目。"));
                     var calculation = Property(state.RootElement, "calculation");
                     _ = String(calculation, "engineVersion");
-                    if (String(calculation, "state") is not ("unknown" or "fresh" or "stale" or "partial")) throw new InvalidDataException("计算状态无效。");
-                    if (String(calculation, "scriptSetSha256") != ScriptHash(modules)) throw new InvalidDataException("脚本集合摘要不一致。");
+                    if (String(calculation, "state") is not ("unknown" or "fresh" or "stale" or "partial")) throw new InvalidDataException(MessageText.Get("计算状态无效。"));
+                    if (String(calculation, "scriptSetSha256") != ScriptHash(modules)) throw new InvalidDataException(MessageText.Get("脚本集合摘要不一致。"));
                     if (Integer(calculation, "contentRevision") > Integer(state.RootElement, "contentRevision") ||
                         Integer(calculation, "scriptRevision") > modules.Revision || Integer(calculation, "bindingRevision") > modules.BindingRevision)
-                        throw new InvalidDataException("缓存修订来自未来状态。");
+                        throw new InvalidDataException(MessageText.Get("缓存修订来自未来状态。"));
                 }
             }
             var read = TypedWorkbookXml.Read(workbookBytes, budget);
             var model = read.Snapshot;
             if (version == 2 && (model.TextCompatibilityVersion >= 2) != declaredTextVersion)
-                throw new InvalidDataException("文本计算兼容版本与必需能力不一致。");
+                throw new InvalidDataException(MessageText.Get("文本计算兼容版本与必需能力不一致。"));
             if (version == 2 && HasExtendedErrors(model) != declaredExtendedErrors)
-                throw new InvalidDataException("扩展错误值与必需能力声明不一致。");
+                throw new InvalidDataException(MessageText.Get("扩展错误值与必需能力声明不一致。"));
             if (version == 2 && XlsxDynamicArrays.Present(model) != declaredDynamicArrays && read.PreservedFormulas.Count == 0)
-                throw new InvalidDataException("动态数组与必需能力声明不一致。");
+                throw new InvalidDataException(MessageText.Get("动态数组与必需能力声明不一致。"));
             if (version == 2 && XlsxPivots.Present(model) && !declaredPivots)
-                throw new InvalidDataException("透视模型缺少必需能力声明。");
-            if (version == 2 && read.IsStrict != declaredStrict) throw new InvalidDataException("Strict OOXML 与必需能力声明不一致。");
+                throw new InvalidDataException(MessageText.Get("透视模型缺少必需能力声明。"));
+            if (version == 2 && read.IsStrict != declaredStrict) throw new InvalidDataException(MessageText.Get("Strict OOXML 与必需能力声明不一致。"));
             if (version == 2 && read.PreservedAttachments.Any(a => a.Feature == ExtendedObjectSafety.ThreadedComments) && !declaredThreads)
-                throw new InvalidDataException("线程评论保留缺少必需能力声明。");
+                throw new InvalidDataException(MessageText.Get("线程评论保留缺少必需能力声明。"));
             var sheets = model.Sheets.ToArray();
             var documentId = Guid.NewGuid();
             long revision = 0;
@@ -183,7 +183,7 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage, IW
                 documentId = Identity(String(root, "documentId"));
                 revision = Integer(root, "contentRevision");
                 var bindings = Array(root, "sheets").ToArray();
-                if (bindings.Length != sheets.Length) throw new InvalidDataException("状态中的工作表数量不匹配。");
+                if (bindings.Length != sheets.Length) throw new InvalidDataException(MessageText.Get("状态中的工作表数量不匹配。"));
                 var seenIds = new HashSet<Guid>();
                 var seenParts = new HashSet<string>();
                 foreach (var binding in bindings)
@@ -192,7 +192,7 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage, IW
                     var part = String(binding, "part");
                     var number = String(binding, "workbookSheetId");
                     var index = read.Bindings.ToList().FindIndex(b => b.Part == part && b.WorkbookSheetId == number);
-                    if (index < 0 || !seenIds.Add(id) || !seenParts.Add(part)) throw new InvalidDataException("稳定表身份与 XLSX 关系绑定不一致。");
+                    if (index < 0 || !seenIds.Add(id) || !seenParts.Add(part)) throw new InvalidDataException(MessageText.Get("稳定表身份与 XLSX 关系绑定不一致。"));
                     var sheet = sheets[index];
                     var stableId = new SheetId(id);
                     var cells = sheet.Cells.Select(p => p.Value.SpillOwner is { } owner ? KeyValuePair.Create(p.Key,
@@ -206,17 +206,17 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage, IW
             var legacyViewApplied = false;
             if (state is not null && state.RootElement.TryGetProperty("view", out var view))
             {
-                if (view.ValueKind != JsonValueKind.Object) throw new InvalidDataException("视图状态必须为对象。");
+                if (view.ValueKind != JsonValueKind.Object) throw new InvalidDataException(MessageText.Get("视图状态必须为对象。"));
                 if (view.TryGetProperty("activeSheetId", out _) && !sheets.Any(s => s.Id.Value == Identity(String(view, "activeSheetId"))))
-                    throw new InvalidDataException("活动工作表身份不存在。");
+                    throw new InvalidDataException(MessageText.Get("活动工作表身份不存在。"));
                 if (view.TryGetProperty("selection", out _))
                 {
                     var selection = String(view, "selection").Split(':');
-                    if (selection.Length is < 1 or > 2) throw new InvalidDataException("视图选区无效。");
+                    if (selection.Length is < 1 or > 2) throw new InvalidDataException(MessageText.Get("视图选区无效。"));
                     foreach (var address in selection) _ = TypedWorkbookXml.Position(address);
                 }
                 if (view.TryGetProperty("zoom", out var zoom) && (zoom.ValueKind != JsonValueKind.Number || !zoom.TryGetDouble(out var number) || !double.IsFinite(number) || number <= 0))
-                    throw new InvalidDataException("缩放值无效。");
+                    throw new InvalidDataException(MessageText.Get("缩放值无效。"));
                 if (!read.HasWorkbookView && !declaredViews && read.PreservedFormulas.Count == 0)
                 {
                     legacyViewApplied = true;
@@ -232,7 +232,7 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage, IW
                     if (view.TryGetProperty("zoom", out var ratio))
                     {
                         var percent = ratio.GetDouble() * 100;
-                        if (percent != Math.Truncate(percent) || percent is < 10 or > 400) throw new InvalidDataException("旧视图缩放超出支持范围。");
+                        if (percent != Math.Truncate(percent) || percent is < 10 or > 400) throw new InvalidDataException(MessageText.Get("旧视图缩放超出支持范围。"));
                         legacyView = legacyView with { Zoom = (int)percent };
                     }
                     sheets[index] = sheets[index].WithView(legacyView);
@@ -250,7 +250,7 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage, IW
             return new(documentId, revision, model.DateSystem, sheets, modules.PrimarySource, model.Styles, modules, fileState, names, activeSheet, model.Window, model.TextCompatibilityVersion, packageFiles);
         }
         catch (Exception exception) when (exception is JsonException or System.Xml.XmlException or FormatException or OverflowException or ArgumentException or InvalidOperationException && exception is not WorkbookCompatibilityException)
-        { throw new InvalidDataException("工作簿结构或字段无效：" + exception.Message, exception); }
+        { throw new InvalidDataException(MessageText.Get("工作簿结构或字段无效：") + exception.Message, exception); }
         finally { state?.Dispose(); manifest?.Dispose(); }
     }
 
@@ -262,7 +262,7 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage, IW
         SaveCore(path, snapshot, discardUnsupported, CancellationToken.None, expected);
     public FileVersion OverwriteChecked(string path, WorkbookSnapshot snapshot, FileVersion expected)
     {
-        if (expected.Sha256 is null) throw new InvalidOperationException("覆盖原文件需要已打开文件的版本记录。");
+        if (expected.Sha256 is null) throw new InvalidOperationException(MessageText.Get("覆盖原文件需要已打开文件的版本记录。"));
         return SaveCore(path, snapshot, true, CancellationToken.None, expected, overwriteOriginal: true);
     }
     private FileVersion SaveCore(string path, WorkbookSnapshot snapshot, bool discardUnsupported, CancellationToken cancellationToken, FileVersion? expected, bool overwriteOriginal = false)
@@ -280,7 +280,7 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage, IW
 
     private static Dictionary<string, byte[]> BuildPackage(WorkbookSnapshot snapshot, bool discardUnsupported, CancellationToken cancellationToken)
     {
-        if (!snapshot.ScriptModules.CanExecute) throw new NotSupportedException(ScriptModuleSet.MigrationMessage);
+        if (!snapshot.ScriptModules.CanExecute) throw new NotSupportedException(MessageText.Get(ScriptModuleSet.MigrationMessage));
         if (snapshot.ScriptModules.Modules.Sum(m => (long)Utf8.GetByteCount(m.Value.Source)) > 1024 * 1024) throw new InvalidOperationException("Combined script source exceeds 1 MiB.");
         var unchanged = snapshot.FileState is { } state && ContentEquals(snapshot, state.OriginalModel);
         var issues = SaveIssues(snapshot);
@@ -377,7 +377,7 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage, IW
             {
                 var name = PathName(entry.Path[7..]);
                 var zipName = name + (entry.IsDirectory ? "/" : "");
-                if (name == "manifest.json" || parts.ContainsKey(name) || !parts.TryAdd(zipName, entry.Data.ToArray())) throw new InvalidDataException("虚拟文件覆盖了系统条目。");
+                if (name == "manifest.json" || parts.ContainsKey(name) || !parts.TryAdd(zipName, entry.Data.ToArray())) throw new InvalidDataException(MessageText.Get("虚拟文件覆盖了系统条目。"));
                 var reference = entry.IsDirectory ? new JsonObject { ["path"] = name } : Reference(name).AsObject();
                 reference["directory"] = entry.IsDirectory; files.Add(reference);
             }
@@ -398,7 +398,7 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage, IW
             var checkedSnapshot = OpenBytes(ReadFile(temp, new(cancellationToken)), path, true, new(cancellationToken));
             if (!ContentEquals(snapshot, checkedSnapshot, allowRowHeightRounding: true) || snapshot.DocumentId != checkedSnapshot.DocumentId || snapshot.Revision != checkedSnapshot.Revision ||
                 !snapshot.Sheets.Select(s => s.Id).SequenceEqual(checkedSnapshot.Sheets.Select(s => s.Id)) || snapshot.ScriptModules.Signature != checkedSnapshot.ScriptModules.Signature || snapshot.ScriptModules.ScriptApiVersion != checkedSnapshot.ScriptModules.ScriptApiVersion || ScriptHash(snapshot.ScriptModules) != ScriptHash(checkedSnapshot.ScriptModules) || !snapshot.PackageFiles.ContentEquals(checkedSnapshot.PackageFiles))
-                throw new InvalidDataException("保存后重开校验未能还原完整快照。");
+                throw new InvalidDataException(MessageText.Get("保存后重开校验未能还原完整快照。"));
         }, cancellationToken, expected);
         return new(Convert.ToHexString(SHA256.HashData(bytes)));
     }
@@ -407,15 +407,15 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage, IW
     public void Export(string path, WorkbookSnapshot snapshot, bool allowStaleCaches, bool discardUnsupported)
     {
         if (snapshot.FileState?.PreservedFormulas.Any(f => !f.HasCompleteCache) == true)
-            throw new InvalidOperationException("数组结果区域缺少可确认的完整缓存，不能导出值快照；请在 Excel 中重算后再打开。");
+            throw new InvalidOperationException(MessageText.Get("数组结果区域缺少可确认的完整缓存，不能导出值快照；请在 Excel 中重算后再打开。"));
         RequireExtension(path, ".xlsx");
         GuardOriginal(path, snapshot, discardUnsupported);
         var formulas = snapshot.Sheets.SelectMany(s => s.Cells.Values).Where(c => c.Content.Kind == CellContentKind.Formula).ToArray();
-        if (formulas.Any(c => c.Calculation?.Value is null)) throw new InvalidOperationException("部分公式缺少缓存结果，不能导出值快照。");
+        if (formulas.Any(c => c.Calculation?.Value is null)) throw new InvalidOperationException(MessageText.Get("部分公式缺少缓存结果，不能导出值快照。"));
         if (!allowStaleCaches && formulas.Any(c => c.Calculation!.State is not (CalculationState.Fresh or CalculationState.Error) || c.Calculation.InputRevision != snapshot.Revision))
-            throw new InvalidOperationException("部分公式结果可能过期；请重算或明确选择导出已有结果。");
+            throw new InvalidOperationException(MessageText.Get("部分公式结果可能过期；请重算或明确选择导出已有结果。"));
         if (!allowStaleCaches && snapshot.Sheets.Any(s=>s.Data.Pivots.Any(p=>p.Stale)))
-            throw new InvalidOperationException("透视结果尚未刷新；请刷新或明确选择导出已有结果。");
+            throw new InvalidOperationException(MessageText.Get("透视结果尚未刷新；请刷新或明确选择导出已有结果。"));
         if (!discardUnsupported && snapshot.FileState?.CompatibilityIssues.Length > 0) throw new WorkbookCompatibilityException(snapshot.FileState.CompatibilityIssues);
         var bytes = TypedWorkbookXml.Write(snapshot.WithDefinedNames([]), true, CancellationToken.None);
         PackageIO.AtomicWrite(path, bytes, temp =>
@@ -427,7 +427,7 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage, IW
                 if (value.Kind == CellValueKind.Error && value.ErrorCode is CellErrorCode.Script or CellErrorCode.Cycle) value = CellValue.FromError(CellErrorCode.Value);
                 return new CellSnapshot(pair.Value.Content.RichText is { } rich ? CellContent.FromRichText(rich, pair.Value.Content.StyleId) : CellContent.FromLiteral(value, pair.Value.Content.StyleId));
             })).WithData(sheet.Data with { Pivots=[] }));
-            if (!ContentEquals(snapshot.WithDefinedNames([]).WithSheets(expectedSheets), read.Snapshot, allowRowHeightRounding: true)) throw new InvalidDataException("导出后类型/结构校验未通过。");
+            if (!ContentEquals(snapshot.WithDefinedNames([]).WithSheets(expectedSheets), read.Snapshot, allowRowHeightRounding: true)) throw new InvalidDataException(MessageText.Get("导出后类型/结构校验未通过。"));
         }, CancellationToken.None);
     }
 
@@ -440,7 +440,7 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage, IW
     {
         if (snapshot.FileState is not { } state) return;
         if ((state.RequiresMigration || discardUnsupported && !overwriteOriginal) && string.Equals(Path.GetFullPath(path), state.SourcePath, StringComparison.OrdinalIgnoreCase))
-            throw new InvalidOperationException("迁移或移除不支持内容时必须另存为新文件，原文件不会覆盖。");
+            throw new InvalidOperationException(MessageText.Get("迁移或移除不支持内容时必须另存为新文件，原文件不会覆盖。"));
     }
 
     internal static bool ContentEquals(WorkbookSnapshot left, WorkbookSnapshot right, bool allowRowHeightRounding = false)
@@ -528,24 +528,24 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage, IW
     private static ScriptLanguage ReadScriptLanguage(string? value) => value switch
     {
         "javascript" => ScriptLanguage.JavaScript, "typescript" => ScriptLanguage.TypeScript,
-        _ => throw new InvalidDataException("未知脚本语言。")
+        _ => throw new InvalidDataException(MessageText.Get("未知脚本语言。"))
     };
     private static JsonElement Property(JsonElement parent, string name) => parent.ValueKind == JsonValueKind.Object && parent.TryGetProperty(name, out var value)
-        ? value : throw new InvalidDataException($"缺少字段 {name}。");
+        ? value : throw new InvalidDataException(MessageText.Format($"缺少字段 {name}。"));
     private static string String(JsonElement parent, string name) => Property(parent, name).ValueKind == JsonValueKind.String
-        ? Property(parent, name).GetString()! : throw new InvalidDataException($"{name} 必须是字符串。");
+        ? Property(parent, name).GetString()! : throw new InvalidDataException(MessageText.Format($"{name} 必须是字符串。"));
     private static IEnumerable<JsonElement> Array(JsonElement parent, string name) => Property(parent, name).ValueKind == JsonValueKind.Array
-        ? Property(parent, name).EnumerateArray() : throw new InvalidDataException($"{name} 必须是数组。");
+        ? Property(parent, name).EnumerateArray() : throw new InvalidDataException(MessageText.Format($"{name} 必须是数组。"));
     private static long Integer(JsonElement parent, string name, long max = long.MaxValue - 1)
     {
         var value = Property(parent, name);
-        if (value.ValueKind != JsonValueKind.Number || !value.TryGetInt64(out var number) || number < 0 || number > max) throw new InvalidDataException($"{name} 必须是支持范围内的非负整数。");
+        if (value.ValueKind != JsonValueKind.Number || !value.TryGetInt64(out var number) || number < 0 || number > max) throw new InvalidDataException(MessageText.Format($"{name} 必须是支持范围内的非负整数。"));
         return number;
     }
-    private static Guid Identity(string value) => Guid.TryParseExact(value, "D", out var id) && id != Guid.Empty ? id : throw new InvalidDataException("稳定身份无效。");
+    private static Guid Identity(string value) => Guid.TryParseExact(value, "D", out var id) && id != Guid.Empty ? id : throw new InvalidDataException(MessageText.Get("稳定身份无效。"));
     private static void RequireExtension(string path, params string[] extensions)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
-        if (!extensions.Contains(Path.GetExtension(path), StringComparer.OrdinalIgnoreCase)) throw new ArgumentException("文件扩展名不受支持。", nameof(path));
+        if (!extensions.Contains(Path.GetExtension(path), StringComparer.OrdinalIgnoreCase)) throw new ArgumentException(MessageText.Get("文件扩展名不受支持。"), nameof(path));
     }
 }

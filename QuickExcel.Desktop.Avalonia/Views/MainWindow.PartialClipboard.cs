@@ -23,44 +23,44 @@ public sealed partial class MainWindow
         ExternalClipboardRegion? source = null;
         if (data.SpreadsheetXml is { } xml)
             try { source = SpreadsheetClipboardCodec.Read(xml, data.Biff8); }
-            catch (Exception ex) when (IsClipboardSourceFailure(ex)) { notices.Add("原始表格格式未采用：" + ex.Message); }
+            catch (Exception ex) when (IsClipboardSourceFailure(ex)) { notices.Add(UiText.Get("原始表格格式未采用：") + ex.Message); }
         if (source is null && data.Html is { } html)
             try { source = HtmlClipboardCodec.Read(html); }
-            catch (Exception ex) when (IsClipboardSourceFailure(ex)) { notices.Add("HTML 表格格式未采用：" + ex.Message); }
+            catch (Exception ex) when (IsClipboardSourceFailure(ex)) { notices.Add(UiText.Get("HTML 表格格式未采用：") + ex.Message); }
         if (source is not null)
         {
-            if (hasObjects) notices.Add("已保留单元格区域，区域附带的浮动对象未复制。");
-            if (mode is "image" or "chart") notices.Add("所选对象形式不可用，已改贴单元格内容。");
+            if (hasObjects) notices.Add(UiText.Get("已保留单元格区域，区域附带的浮动对象未复制。"));
+            if (mode is "image" or "chart") notices.Add(UiText.Get("所选对象形式不可用，已改贴单元格内容。"));
             await PasteAvailableCellsAsync(source, mode, target, sheetId, revision, notices); return;
         }
         if (!objectsFirst && hasObjects && mode != "formats" && await TryPasteDrawingAsync(data, mode, new(target.Top, target.Left), revision, notices)) return;
         // Image-only selection may still salvage an editable chart if no image was supplied.
         if (objectsFirst && mode == "image" && (data.ChartPackage is not null || data.OfficeDrawing is not null))
         {
-            notices.Add("图片形式不可用，已尝试可编辑图表。");
+            notices.Add(UiText.Get("图片形式不可用，已尝试可编辑图表。"));
             if (await TryPasteDrawingAsync(data with { Png = null }, "chart", new(target.Top, target.Left), revision, notices)) return;
         }
-        if (mode == "formats") { _status.Text = "剪贴板没有可用的单元格格式，目标内容保持不变。 " + string.Join(" ", notices); return; }
+        if (mode == "formats") { _status.Text = UiText.Get("剪贴板没有可用的单元格格式，目标内容保持不变。 ") + string.Join(" ", notices); return; }
         var text = data.Text;
         if (text is null && data.Html is { } textHtml)
             try { text = HtmlClipboardCodec.ReadDisplayText(textHtml); }
-            catch (Exception ex) when (IsClipboardSourceFailure(ex)) { notices.Add("HTML 文本未采用：" + ex.Message); }
+            catch (Exception ex) when (IsClipboardSourceFailure(ex)) { notices.Add(UiText.Get("HTML 文本未采用：") + ex.Message); }
         if (text is null || text.Length == 0 && (hasObjects || data.Html is not null))
-        { _status.Text = "剪贴板没有可读取的单元格、图片或文本内容，目标保持不变。 " + string.Join(" ", notices); return; }
+        { _status.Text = UiText.Get("剪贴板没有可读取的单元格、图片或文本内容，目标保持不变。 ") + string.Join(" ", notices); return; }
         string[][]? values = null;
         try { values = GridClipboard.Read(text); }
         catch (ArgumentException ex)
         {
             notices.Add(ex.Message);
             // An irregular small text selection still has a useful single-cell representation.
-            if (text.Length <= WorkbookLimits.MaxCellTextLength) { values = [[text]]; notices.Add("非矩形文本已粘贴到单个单元格。"); }
+            if (text.Length <= WorkbookLimits.MaxCellTextLength) { values = [[text]]; notices.Add(UiText.Get("非矩形文本已粘贴到单个单元格。")); }
         }
-        if (values is null) { _status.Text = "没有可在当前大小限制内粘贴的内容，目标保持不变。 " + string.Join(" ", notices); return; }
+        if (values is null) { _status.Text = UiText.Get("没有可在当前大小限制内粘贴的内容，目标保持不变。 ") + string.Join(" ", notices); return; }
         if (values.SelectMany(row => row).Any(value => value.Length > WorkbookLimits.MaxCellTextLength))
-        { _status.Text = "文本超过单元格大小限制，目标保持不变。 " + string.Join(" ", notices); return; }
+        { _status.Text = UiText.Get("文本超过单元格大小限制，目标保持不变。 ") + string.Join(" ", notices); return; }
         if (notices.Count > 0 || hasObjects || mode is "image" or "chart" or "transpose")
         {
-            notices.Add("已降级为文本值，保留目标格式。");
+            notices.Add(UiText.Get("已降级为文本值，保留目标格式。"));
             var region = new ExternalClipboardRegion(values.Length, values[0].Length,
                 values.SelectMany(row => row.Select(value => new ExternalClipboardCell(value.Length == 0 ? CellValue.Blank : CellValue.FromText(value)))));
             await PasteAvailableCellsAsync(region, mode == "transpose" ? "transpose" : "values", target, sheetId, revision, notices); return;
@@ -74,7 +74,7 @@ public sealed partial class MainWindow
         if (!await ExecuteAsync(new SetCellsCommand(edits.Select(v => new CellEdit(new(sheetId, v.Row, v.Column),
             CellInput.ParseForCell(v.Value, Document.Snapshot, sheet, v.Row, v.Column)))), revision)) return;
         _grid.SelectRange(new(target.Top, target.Left, edits.Max(v => v.Row), edits.Max(v => v.Column)), new(target.Top, target.Left));
-        await CalculatePendingAsync(); _status.Text = "已粘贴，可一次撤销。";
+        await CalculatePendingAsync(); _status.Text = UiText.Get("已粘贴，可一次撤销。");
     }
 
     private async Task PasteAvailableCellsAsync(ExternalClipboardRegion source, string mode, GridRange target, SheetId sheetId, long revision, List<string> notices)
@@ -100,12 +100,12 @@ public sealed partial class MainWindow
         {
             // Preserve destination attachments/rules if copying formats cannot safely coexist with them.
             if (!await ExecuteAsync(new PasteExternalCellsCommand(source, sheetId, Rectangle(target), revision, CellPasteMode.Values, allowPartial: true), revision)) return;
-            notices.Add("已自动改为只贴值，保留目标格式、附件和规则。");
+            notices.Add(UiText.Get("已自动改为只贴值，保留目标格式、附件和规则。"));
         }
         catch (NotSupportedException ex) when (plan.Mode == CellPasteMode.Formats)
-        { _status.Text = "没有可应用的格式，目标内容保持不变。 " + ex.Message; return; }
+        { _status.Text = UiText.Get("没有可应用的格式，目标内容保持不变。 ") + ex.Message; return; }
         _grid.SelectRange(new(target.Top, target.Left, target.Top + rows - 1, target.Left + columns - 1), new(target.Top, target.Left));
         await CalculatePendingAsync();
-        _status.Text = (Document.Snapshot.Revision == revision ? "没有可应用的更改，目标保持不变。 " : "已粘贴，可一次撤销。 ") + string.Join(" ", notices);
+        _status.Text = (Document.Snapshot.Revision == revision ? UiText.Get("没有可应用的更改，目标保持不变。 ") : UiText.Get("已粘贴，可一次撤销。 ")) + string.Join(" ", notices);
     }
 }

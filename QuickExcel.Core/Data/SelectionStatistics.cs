@@ -20,7 +20,7 @@ public static class SelectionStatistics
         foreach (var range in ranges)
         {
             WorkbookLimits.ValidatePosition(range.Top, range.Left); WorkbookLimits.ValidatePosition(range.Bottom, range.Right);
-            if (range.Top > range.Bottom || range.Left > range.Right) throw new ArgumentException("选区端点无效。");
+            if (range.Top > range.Bottom || range.Left > range.Right) throw new ArgumentException(MessageText.Get("选区端点无效。"));
         }
         var sheet = snapshot.GetSheet(sheetId);
         if (filteredRow is null && sheet.Data.AllFilters.Any())

@@ -21,7 +21,7 @@ internal sealed class FieldsDialog : Window
         var panel = new StackPanel { Spacing = 14, Margin = new(20) };
         panel.Children.Add(new ScrollViewer { MaxHeight = 550, Content = _fields }); panel.Children.Add(_error);
         var buttons = _buttons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10, HorizontalAlignment = HorizontalAlignment.Right };
-        var ok = new Button { Content = "确定", IsDefault = true }; var cancel = new Button { Content = "取消", IsCancel = true };
+        var ok = new Button { Content = UiText.Get("确定"), IsDefault = true }; var cancel = new Button { Content = UiText.Get("取消"), IsCancel = true };
         ok.Click += (_, _) => { try { Validate?.Invoke(); Close(true); } catch (Exception ex) { _error.Text = ex.Message; } };
         cancel.Click += (_, _) => Close(false); buttons.Children.Add(ok); buttons.Children.Add(cancel); panel.Children.Add(buttons); Content = panel;
         Opened += (_, _) => _inputs.Values.FirstOrDefault()?.Focus();
@@ -56,11 +56,11 @@ internal sealed class FieldsDialog : Window
     public double Number(string key, double minimum, double maximum)
     {
         if (!double.TryParse(String(key), NumberStyles.Float, CultureInfo.CurrentCulture, out var value) || !double.IsFinite(value) || value < minimum || value > maximum)
-            throw new ArgumentException($"请输入 {minimum} 到 {maximum} 之间的数字。");
+            throw new ArgumentException(UiText.Format($"请输入 {minimum} 到 {maximum} 之间的数字。"));
         return value;
     }
     public int Integer(string key, int minimum, int maximum)
-    { var number = Number(key, minimum, maximum); if (Math.Truncate(number) != number) throw new ArgumentException("请输入整数。"); return (int)number; }
+    { var number = Number(key, minimum, maximum); if (Math.Truncate(number) != number) throw new ArgumentException(UiText.Get("请输入整数。")); return (int)number; }
     internal Control Input(string key) => _inputs[key];
     public Task<bool> ShowAsync(Window owner) => owner is MainWindow main ? main.ShowOwnedAsync<bool>(this) : ShowDialog<bool>(owner);
 }

@@ -7,9 +7,9 @@ internal static class ColorPalette
 {
     public static readonly (string Name, string Value)[] Common =
     [
-        ("黑色", "FF000000"), ("白色", "FFFFFFFF"), ("灰色", "FF6B7280"), ("红色", "FFFF0000"),
-        ("橙色", "FFFFA500"), ("黄色", "FFFFFF00"), ("绿色", "FF008000"), ("青色", "FF0D9488"),
-        ("蓝色", "FF0000FF"), ("紫色", "FF9333EA"), ("粉色", "FFDB2777"), ("浅蓝色", "FFBAE6FD")
+        (UiText.Get("黑色"), "FF000000"), (UiText.Get("白色"), "FFFFFFFF"), (UiText.Get("灰色"), "FF6B7280"), (UiText.Get("红色"), "FFFF0000"),
+        (UiText.Get("橙色"), "FFFFA500"), (UiText.Get("黄色"), "FFFFFF00"), (UiText.Get("绿色"), "FF008000"), (UiText.Get("青色"), "FF0D9488"),
+        (UiText.Get("蓝色"), "FF0000FF"), (UiText.Get("紫色"), "FF9333EA"), (UiText.Get("粉色"), "FFDB2777"), (UiText.Get("浅蓝色"), "FFBAE6FD")
     ];
 
     public static bool TryParse(string? text, out Color color)

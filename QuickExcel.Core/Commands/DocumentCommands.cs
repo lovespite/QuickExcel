@@ -19,7 +19,7 @@ public sealed class SetCellsCommand : DocumentCommand
     {
         ArgumentNullException.ThrowIfNull(edits);
         Edits = edits.Take(WorkbookLimits.MaxCells + 1).ToImmutableArray();
-        if (Edits.Length > WorkbookLimits.MaxCells) throw new ArgumentException("编辑数量超过工作簿容量。", nameof(edits));
+        if (Edits.Length > WorkbookLimits.MaxCells) throw new ArgumentException(MessageText.Get("编辑数量超过工作簿容量。"), nameof(edits));
         _allowRichTextLoss = allowRichTextLoss;
     }
     public ImmutableArray<CellEdit> Edits { get; }
@@ -36,26 +36,26 @@ public sealed class SetCellsCommand : DocumentCommand
             ArgumentNullException.ThrowIfNull(edit);
             ArgumentNullException.ThrowIfNull(edit.Content);
             WorkbookLimits.ValidatePosition(edit.Address.Row, edit.Address.Column);
-            if (!addresses.Add(edit.Address)) throw new ArgumentException("同一事务不能多次指定同一单元格。");
+            if (!addresses.Add(edit.Address)) throw new ArgumentException(MessageText.Get("同一事务不能多次指定同一单元格。"));
             var sheet = snapshot.GetSheet(edit.Address.SheetId);
-            if (edit.Content.StyleId >= snapshot.Styles.Length) throw new ArgumentException("单元格样式不存在。");
+            if (edit.Content.StyleId >= snapshot.Styles.Length) throw new ArgumentException(MessageText.Get("单元格样式不存在。"));
             var text = edit.Content.Kind == CellContentKind.Formula ? edit.Content.FormulaText
                 : edit.Content.LiteralValue.Kind == CellValueKind.Text ? edit.Content.LiteralValue.TextValue : "";
-            if (text.Length > WorkbookLimits.MaxCellTextLength) throw new ArgumentException("单元格最多支持 32767 个字符，整批编辑尚未应用。");
+            if (text.Length > WorkbookLimits.MaxCellTextLength) throw new ArgumentException(MessageText.Get("单元格最多支持 32767 个字符，整批编辑尚未应用。"));
             var before = sheet.GetCell(edit.Address.Row, edit.Address.Column);
             if (before?.SpillOwner is { } owner && (before.Content.StyleId == edit.Content.StyleId || before.Content.WithStyle(0) != edit.Content.WithStyle(0)) &&
                 !Edits.Any(e => e.Address == owner && e.Content.WithStyle(0) != sheet.GetCell(owner.Row, owner.Column)?.Content.WithStyle(0)))
-                throw new InvalidOperationException("不能单独修改溢出结果，请编辑数组左上角公式；整批修改未应用。");
+                throw new InvalidOperationException(MessageText.Get("不能单独修改溢出结果，请编辑数组左上角公式；整批修改未应用。"));
             if (!_allowRichTextLoss && before?.Content.RichText is not null && edit.Content.RichText is null)
             {
                 if (edit.Content.Kind == CellContentKind.Literal && edit.Content.LiteralValue == before.Value && edit.Content.StyleId == before.Content.StyleId) continue;
-                throw new InvalidOperationException("目标包含富文本。请先明确转换为普通文本，再编辑或粘贴；整批操作未应用。");
+                throw new InvalidOperationException(MessageText.Get("目标包含富文本。请先明确转换为普通文本，再编辑或粘贴；整批操作未应用。"));
             }
             if (before?.Content == edit.Content) continue;
             if (edit.Content.Kind != CellContentKind.Literal || edit.Content.LiteralValue.Kind != CellValueKind.Blank)
                 foreach (var merge in sheet.MergedCells.Select(CellRectangle.Parse))
                     if (merge.Contains(edit.Address.Row, edit.Address.Column) && (edit.Address.Row != merge.Top || edit.Address.Column != merge.Left))
-                        throw new InvalidOperationException("不能写入合并区域的非主单元格，请先取消合并；整批操作未应用。");
+                        throw new InvalidOperationException(MessageText.Get("不能写入合并区域的非主单元格，请先取消合并；整批操作未应用。"));
             var inheritedStyle = sheet.GetInheritedStyleId(edit.Address.Row, edit.Address.Column);
             var after = before?.SpillOwner is null && edit.Content.Kind == CellContentKind.Literal && edit.Content.LiteralValue.Kind == CellValueKind.Blank && edit.Content.StyleId == 0 && inheritedStyle == 0
                 ? null : new CellSnapshot(edit.Content,
@@ -91,12 +91,12 @@ public sealed class ClearCellsCommand : DocumentCommand
     public ImmutableArray<CellAddress> Addresses { get; }
     internal override CommandDraft Prepare(WorkbookSnapshot snapshot)
     {
-        if (Addresses.Length > WorkbookLimits.MaxCells) throw new ArgumentException("编辑数量超过工作簿容量。");
+        if (Addresses.Length > WorkbookLimits.MaxCells) throw new ArgumentException(MessageText.Get("编辑数量超过工作簿容量。"));
         var seen = new HashSet<CellAddress>();
         var edits = new List<CellEdit>();
         foreach (var address in Addresses)
         {
-            if (!seen.Add(address)) throw new ArgumentException("同一事务不能多次指定同一单元格。");
+            if (!seen.Add(address)) throw new ArgumentException(MessageText.Get("同一事务不能多次指定同一单元格。"));
             var cell = snapshot.GetSheet(address.SheetId).GetCell(address.Row, address.Column);
             // Clearing an absent cell must not create a General override of row/column formatting.
             if (cell is not null) edits.Add(new(address, CellContent.FromLiteral(CellValue.Blank, cell.Content.StyleId)));
@@ -124,7 +124,7 @@ public sealed class UpdateScriptSourceCommand : DocumentCommand
     public string Source { get; }
     internal override CommandDraft Prepare(WorkbookSnapshot snapshot)
     {
-        if ((long)Encoding.UTF8.GetByteCount(Source) + snapshot.ScriptModules.Modules.Where(m => m.Key != snapshot.ScriptModules.EntryModules[0]).Sum(m => (long)Encoding.UTF8.GetByteCount(m.Value.Source)) > 1024 * 1024) throw new ArgumentException("脚本大小不能超过 1 MiB。");
+        if ((long)Encoding.UTF8.GetByteCount(Source) + snapshot.ScriptModules.Modules.Where(m => m.Key != snapshot.ScriptModules.EntryModules[0]).Sum(m => (long)Encoding.UTF8.GetByteCount(m.Value.Source)) > 1024 * 1024) throw new ArgumentException(MessageText.Get("脚本大小不能超过 1 MiB。"));
         return new(snapshot.ScriptSource == Source ? snapshot : snapshot.WithScriptSource(Source), [], false);
     }
 }
@@ -136,7 +136,7 @@ public sealed class UpdateScriptModulesCommand(ScriptModuleSet modules) : Docume
     {
         ArgumentNullException.ThrowIfNull(modules);
         if (modules.Modules.Sum(m => (long)Encoding.UTF8.GetByteCount(m.Value.Source)) > 1024 * 1024)
-            throw new ArgumentException("脚本总量不能超过 1 MiB。");
+            throw new ArgumentException(MessageText.Get("脚本总量不能超过 1 MiB。"));
         var prior = snapshot.ScriptModules;
         var sameBindings = prior.ScriptApiVersion == modules.ScriptApiVersion && prior.EntryModules.SequenceEqual(modules.EntryModules)
             && prior.Bindings.ToHashSet().SetEquals(modules.Bindings)
@@ -153,7 +153,7 @@ public sealed class UpdateScriptSignatureCommand(ScriptModuleSet expectedModules
 {
     internal override CommandDraft Prepare(WorkbookSnapshot snapshot)
     {
-        if (!ReferenceEquals(snapshot.ScriptModules, expectedModules)) throw new InvalidOperationException("脚本已改变，请重新签名。");
+        if (!ReferenceEquals(snapshot.ScriptModules, expectedModules)) throw new InvalidOperationException(MessageText.Get("脚本已改变，请重新签名。"));
         return new(snapshot.ScriptModules.Signature == signature ? snapshot : snapshot.WithScriptModules(expectedModules.WithSignature(signature)), [], false);
     }
 }

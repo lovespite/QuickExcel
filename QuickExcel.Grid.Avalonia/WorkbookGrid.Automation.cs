@@ -21,22 +21,22 @@ public sealed partial class WorkbookGrid
         }
         public bool IsReadOnly => !_grid.IsEffectivelyEnabled || _grid.IsCellReadOnly(_grid.Current);
         public string? Value => _grid._snapshot is null ? "" :
-            ProtectionSafety.HidesFormula(_grid._snapshot, _grid.Sheet, _grid.Current.Row, _grid.Current.Column) ? "受保护的隐藏公式" :
+            ProtectionSafety.HidesFormula(_grid._snapshot, _grid.Sheet, _grid.Current.Row, _grid.Current.Column) ? UiText.Get("受保护的隐藏公式") :
             _grid.Sheet.GetCell(_grid.Current.Row, _grid.Current.Column)?.Value.ToString() ?? "";
         public void SetValue(string? value)
         {
-            if (IsReadOnly || !_grid.BeginEdit()) throw new InvalidOperationException("当前单元格不能编辑。");
+            if (IsReadOnly || !_grid.BeginEdit()) throw new InvalidOperationException(UiText.Get("当前单元格不能编辑。"));
             // Match a native TextBox: editing owns a draft; Enter/Tab or a host command commits it.
             _grid.CellEditor.Text = value ?? "";
         }
         protected override AutomationControlType GetAutomationControlTypeCore() => AutomationControlType.DataGrid;
         protected override IReadOnlyList<AutomationPeer> GetChildrenCore() =>
             [CreatePeerForElement(_grid.CellEditor), CreatePeerForElement(_grid._vertical), CreatePeerForElement(_grid._horizontal)];
-        protected override string GetNameCore() => _grid._snapshot is null ? "工作表网格" :
-            $"工作表 {_grid.Sheet.Name}，{ColumnName(_grid.Current.Column)} 列，第 {_grid.Current.Row + 1} 行，{(IsReadOnly ? "只读" : "可编辑")}";
-        protected override string GetHelpTextCore() => "选区：" + string.Join("；", _grid.SelectionRanges.Take(64).Select(r =>
+        protected override string GetNameCore() => _grid._snapshot is null ? UiText.Get("工作表网格") :
+            UiText.Format($"工作表 {_grid.Sheet.Name}，{ColumnName(_grid.Current.Column)} 列，第 {_grid.Current.Row + 1} 行，{(IsReadOnly ? UiText.Get("只读") : UiText.Get("可编辑"))}");
+        protected override string GetHelpTextCore() => UiText.Get("选区：") + string.Join("；", _grid.SelectionRanges.Take(64).Select(r =>
             $"{ColumnName(r.Left)}{r.Top + 1}:{ColumnName(r.Right)}{r.Bottom + 1}")) +
-            "。当前值：" + Value + "。F2 编辑，Alt+Enter 换行，Enter 提交，Escape 取消，F6 切换网格、公式栏、工作表和菜单。";
+            UiText.Get("。当前值：") + Value + UiText.Get("。F2 编辑，Alt+Enter 换行，Enter 提交，Escape 取消，F6 切换网格、公式栏、工作表和菜单。");
         protected override void SetFocusCore() => _grid.CellEditor.Focus();
         protected override bool HasKeyboardFocusCore() => _grid.IsKeyboardFocusWithin;
     }

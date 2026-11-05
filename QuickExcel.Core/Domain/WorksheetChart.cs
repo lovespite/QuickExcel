@@ -1,3 +1,4 @@
+using QuickExcel.Core;
 using System.Collections.Immutable;
 using QuickExcel.Formulas;
 
@@ -74,16 +75,16 @@ public sealed record WorksheetChart
             GapWidth is < 0 or > 500 || Overlap is < -100 or > 100 || StyleParts.IsDefault || StyleParts.Length > 2 ||
             StyleParts.Select(p => p.Kind).Distinct().Count() != StyleParts.Length || StyleParts.Select(p => p.RelationshipId).Distinct().Count() != StyleParts.Length ||
             StyleParts.Any(p => p.Kind is not ("chartStyle" or "chartColorStyle") || string.IsNullOrWhiteSpace(p.RelationshipId) || p.Bytes.IsDefaultOrEmpty || p.Bytes.Length > 512 * 1024))
-            throw new ArgumentException("图表类型、系列、图例、坐标轴或容量参数无效。");
+            throw new ArgumentException(MessageText.Get("图表类型、系列、图例、坐标轴或容量参数无效。"));
         WorkbookLimits.ValidateText(XNumberFormat);
-        if (IsExtended && (!VisibleOnly || Series.Any(s => s.NumericCategories))) throw new ArgumentException("瀑布图和漏斗图使用可见数据及分类标签。");
+        if (IsExtended && (!VisibleOnly || Series.Any(s => s.NumericCategories))) throw new ArgumentException(MessageText.Get("瀑布图和漏斗图使用可见数据及分类标签。"));
         static bool Color(string value) => value.Length == 8 && value.All(Uri.IsHexDigit);
         foreach (var color in new[] { IncreaseColor, DecreaseColor, TotalColor, Appearance.Background, Appearance.PlotBackground, Appearance.BorderColor, Appearance.GridColor })
-            if (!Color(color)) throw new ArgumentException("图表颜色无效。");
-        if (!double.IsFinite(Appearance.BorderWidth) || Appearance.BorderWidth is < 0 or > 100) throw new ArgumentException("图表边框宽度无效。");
+            if (!Color(color)) throw new ArgumentException(MessageText.Get("图表颜色无效。"));
+        if (!double.IsFinite(Appearance.BorderWidth) || Appearance.BorderWidth is < 0 or > 100) throw new ArgumentException(MessageText.Get("图表边框宽度无效。"));
         foreach (var text in new[] { Appearance.Title, Appearance.Axis, Appearance.Legend })
         {
-            if (!Color(text.Color) || !double.IsFinite(text.Size) || text.Size is < 1 or > 400) throw new ArgumentException("图表文字样式无效。");
+            if (!Color(text.Color) || !double.IsFinite(text.Size) || text.Size is < 1 or > 400) throw new ArgumentException(MessageText.Get("图表文字样式无效。"));
             WorkbookLimits.ValidateText(text.FontFamily ?? "");
         }
         foreach (var series in Series)
@@ -96,15 +97,15 @@ public sealed record WorksheetChart
                 series.TotalPoints.Distinct().Count() != series.TotalPoints.Length || series.TotalPoints.Any(i => i < 0 || i >= Count(values)) ||
                 series.Marker is not ("none" or "auto" or "circle" or "square" or "diamond" or "triangle" or "x" or "plus" or "star" or "dot" or "dash") ||
                 !double.IsFinite(series.MarkerSize) || series.MarkerSize is < 2 or > 72 || !double.IsFinite(series.LineWidth) || series.LineWidth is < 0 or > 100 ||
-                !series.PointColors.IsEmpty && (series.PointColors.Length != Count(values) || series.PointColors.Any(color => !(Kind == WorksheetChartKind.Waterfall && color.Length == 0) && !Color(color)))) throw new ArgumentException("图表系列必须包含等长的单行/单列引用，最多 4096 个点。");
+                !series.PointColors.IsEmpty && (series.PointColors.Length != Count(values) || series.PointColors.Any(color => !(Kind == WorksheetChartKind.Waterfall && color.Length == 0) && !Color(color)))) throw new ArgumentException(MessageText.Get("图表系列必须包含等长的单行/单列引用，最多 4096 个点。"));
         }
     }
     public static ReferenceNode ParseReference(string formula)
     {
         if (FormulaSyntax.Parse("=" + formula.TrimStart('=')) is not ReferenceNode r || r.Sheet is null || r.WholeColumns || r.Row != r.EndRow && r.Column != r.EndColumn)
-            throw new NotSupportedException("图表数据必须直接引用本工作簿单张表中的单行或单列区域。");
+            throw new NotSupportedException(MessageText.Get("图表数据必须直接引用本工作簿单张表中的单行或单列区域。"));
         WorkbookLimits.ValidatePosition(r.Row, r.Column); WorkbookLimits.ValidatePosition(r.EndRow, r.EndColumn);
-        if (r.EndRow < r.Row || r.EndColumn < r.Column) throw new ArgumentException("图表引用反向。");
+        if (r.EndRow < r.Row || r.EndColumn < r.Column) throw new ArgumentException(MessageText.Get("图表引用反向。"));
         return r;
     }
     public static int Count(ReferenceNode r) => Math.Max(r.EndRow - r.Row + 1, r.EndColumn - r.Column + 1);

@@ -100,7 +100,7 @@ public sealed partial class MainWindow
         _formulaSuggestions.ItemsSource = _completion?.Names; _formulaSuggestions.SelectedIndex = _completion is null ? -1 : 0;
         _formulaSuggestions.IsVisible = _completion is not null;
         var hint = FormulaEditing.Hint(editor.Text!, editor.CaretIndex);
-        _formulaHint.Text = hint is null ? "↑↓ 选择 · Tab 补全 · F4 切换引用" : $"{hint.Signature}\n当前第 {hint.Argument} 个参数 · F4 切换引用";
+        _formulaHint.Text = hint is null ? UiText.Get("↑↓ 选择 · Tab 补全 · F4 切换引用") : UiText.Format($"{hint.Signature}\n当前第 {hint.Argument} 个参数 · F4 切换引用");
         _formulaHelp.PlacementTarget = editor; _formulaHelp.IsOpen = _completion is not null || hint is not null;
     }
     private void ReplaceDraft(CompositionTextBox editor, FormulaTextEdit change, bool select)

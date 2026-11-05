@@ -13,7 +13,7 @@ public static class DelimitedText
         var count = 0;
         void Field()
         {
-            if (++count > maximumFields) throw new ArgumentException($"数据上限为 {maximumFields:N0} 格。");
+            if (++count > maximumFields) throw new ArgumentException(MessageText.Format($"数据上限为 {maximumFields:N0} 格。"));
             fields.Add(value.ToString()); value.Clear(); closed = false;
         }
         for (var i = 0; i < text.Length; i++)
@@ -41,11 +41,11 @@ public static class DelimitedText
             }
             else
             {
-                if (closed) throw new ArgumentException("字段的引号格式无效。");
+                if (closed) throw new ArgumentException(MessageText.Get("字段的引号格式无效。"));
                 value.Append(ch);
             }
         }
-        if (quoted) throw new ArgumentException("字段的引号未闭合。");
+        if (quoted) throw new ArgumentException(MessageText.Get("字段的引号未闭合。"));
         Field(); yield return fields.ToArray();
     }
 }

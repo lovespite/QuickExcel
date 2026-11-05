@@ -23,10 +23,10 @@ public sealed class WorkbookValidation : IWorkbookValidation
                 try
                 {
                     if (Valid(evaluation, address, position, rule)) continue;
-                    failures.Add(new(address, rule.Alert, rule.ErrorTitle ?? "数据验证", rule.ErrorMessage ?? "输入值不符合此单元格的验证规则。"));
+                    failures.Add(new(address, rule.Alert, rule.ErrorTitle ?? MessageText.Get("数据验证"), rule.ErrorMessage ?? MessageText.Get("输入值不符合此单元格的验证规则。")));
                 }
                 catch (Exception ex) when (ex is FormatException or NotSupportedException or InvalidOperationException)
-                { failures.Add(new(address, ValidationAlert.Stop, "无法确认验证结果", ex.Message)); }
+                { failures.Add(new(address, ValidationAlert.Stop, MessageText.Get("无法确认验证结果"), ex.Message)); }
             }
         }
         return failures;
@@ -56,7 +56,7 @@ public sealed class WorkbookValidation : IWorkbookValidation
         if (rule.Kind == ValidationKind.Custom)
         {
             var result = Formula(rule.Formula1!);
-            if (result.Kind == CellValueKind.Error) throw new NotSupportedException("自定义验证公式计算出错误，不能确认输入是否有效。");
+            if (result.Kind == CellValueKind.Error) throw new NotSupportedException(MessageText.Get("自定义验证公式计算出错误，不能确认输入是否有效。"));
             return result.Kind == CellValueKind.Boolean ? result.BooleanValue : result.Kind == CellValueKind.Number && result.NumberValue != 0;
         }
         double number;
@@ -73,7 +73,7 @@ public sealed class WorkbookValidation : IWorkbookValidation
             if (rule.Kind == ValidationKind.Whole && number != Math.Truncate(number)) return false;
         }
         var first = Formula(rule.Formula1!);
-        if (first.Kind == CellValueKind.Error) throw new NotSupportedException("验证条件公式计算出错误。");
+        if (first.Kind == CellValueKind.Error) throw new NotSupportedException(MessageText.Get("验证条件公式计算出错误。"));
         if (rule.AllowBlank && first.Kind == CellValueKind.Blank) return true;
         if (first.Kind is not (CellValueKind.Number or CellValueKind.Blank)) return false;
         var lower = first.Kind == CellValueKind.Blank ? 0 : first.NumberValue;
@@ -81,7 +81,7 @@ public sealed class WorkbookValidation : IWorkbookValidation
         if (rule.Comparison is ValidationOperator.Between or ValidationOperator.NotBetween)
         {
             var second = Formula(rule.Formula2!);
-            if (second.Kind == CellValueKind.Error) throw new NotSupportedException("验证条件公式计算出错误。");
+            if (second.Kind == CellValueKind.Error) throw new NotSupportedException(MessageText.Get("验证条件公式计算出错误。"));
             if (rule.AllowBlank && second.Kind == CellValueKind.Blank) return true;
             if (second.Kind is not (CellValueKind.Number or CellValueKind.Blank)) return false;
             upper = second.Kind == CellValueKind.Blank ? 0 : second.NumberValue;
@@ -106,7 +106,7 @@ public sealed class WorkbookValidation : IWorkbookValidation
         private readonly HashSet<CellAddress> _active = [];
         private int _work;
         internal void ResetBudget() => _work = 0;
-        private void Check() { if (++_work > 2_000_000) throw new NotSupportedException("验证计算超过 2,000,000 步，请缩小编辑范围。"); }
+        private void Check() { if (++_work > 2_000_000) throw new NotSupportedException(MessageText.Get("验证计算超过 2,000,000 步，请缩小编辑范围。")); }
         private FormulaNode Bind(string formula, SheetId sheet, CellPosition anchor, CellPosition position, bool list = false)
         {
             Check();
@@ -114,10 +114,10 @@ public sealed class WorkbookValidation : IWorkbookValidation
             // A list range is consumed as a range, rather than as a scalar cell formula.
             var bound = FormulaBinding.Bind(list ? new FunctionNode("SUM", [expression]) : expression, snapshot, sheet, position);
             if (list) bound = ((FunctionNode)bound).Arguments[0];
-            if (SubtotalFunctions.Contains(bound) && SubtotalFunctions.HasUnmodeledFilters(snapshot)) throw new NotSupportedException("未建模的筛选/表可能影响 SUBTOTAL，不能用未知可见性验证输入。");
+            if (SubtotalFunctions.Contains(bound) && SubtotalFunctions.HasUnmodeledFilters(snapshot)) throw new NotSupportedException(MessageText.Get("未建模的筛选/表可能影响 SUBTOTAL，不能用未知可见性验证输入。"));
             if (FormulaSyntax.Walk(bound).OfType<FunctionNode>().Any(f => !StandardFunctions.Signatures.ContainsKey(f.Name) ||
                 f.Name is "NOW" or "TODAY" or "RAND" or "RANDBETWEEN"))
-                throw new NotSupportedException("验证暂不执行脚本、未知或易变函数。");
+                throw new NotSupportedException(MessageText.Get("验证暂不执行脚本、未知或易变函数。"));
             return bound;
         }
         public CellValue Cell(CellAddress address)
@@ -128,7 +128,7 @@ public sealed class WorkbookValidation : IWorkbookValidation
             if (cell?.Content.Kind != CellContentKind.Formula) return cell?.Value ?? CellValue.Blank;
             if (useFreshCaches && cell.Calculation is { State: CalculationState.Fresh or CalculationState.Error, Value: { } cached } calculation &&
                 calculation.InputRevision == snapshot.Revision) { _results[address] = calculation; return cached; }
-            if (_active.Count >= 128 || !_active.Add(address)) throw new NotSupportedException("验证依赖存在循环或嵌套超过 128 层。");
+            if (_active.Count >= 128 || !_active.Add(address)) throw new NotSupportedException(MessageText.Get("验证依赖存在循环或嵌套超过 128 层。"));
             try
             {
                 var position = new CellPosition(address.Row, address.Column);
@@ -167,7 +167,7 @@ public sealed class WorkbookValidation : IWorkbookValidation
             if (bound is ValueNode { Value.Kind: CellValueKind.Text } literal) return literal.Value.TextValue.Split(',').Select(CellValue.FromText).ToArray();
             if (bound is not ReferenceNode reference || reference.Row != reference.EndRow && reference.Column != reference.EndColumn ||
                 (long)(reference.EndRow - reference.Row + 1) * (reference.EndColumn - reference.Column + 1) > 10000)
-                throw new NotSupportedException("列表来源须为不超过 10,000 格的单行或单列区域。");
+                throw new NotSupportedException(MessageText.Get("列表来源须为不超过 10,000 格的单行或单列区域。"));
             var owner = snapshot.Sheets.Single(s => s.Name.Equals(reference.Sheet, StringComparison.OrdinalIgnoreCase));
             var result = new List<CellValue>();
             for (var r = reference.Row; r <= reference.EndRow; r++)

@@ -117,8 +117,8 @@ public sealed class WorkbookDocument : IDisposable
         lock (_saveGate)
         {
             captured = Snapshot;
-            if (_services.Storage is not IVersionedWorkbookStorage storage) throw new NotSupportedException("存储不支持外部文件冲突检查。");
-            if (overwriteOriginal && !discardUnsupported) throw new ArgumentException("覆盖必须明确接受兼容性损失。", nameof(discardUnsupported));
+            if (_services.Storage is not IVersionedWorkbookStorage storage) throw new NotSupportedException(MessageText.Get("存储不支持外部文件冲突检查。"));
+            if (overwriteOriginal && !discardUnsupported) throw new ArgumentException(MessageText.Get("覆盖必须明确接受兼容性损失。"), nameof(discardUnsupported));
             version = overwriteOriginal ? storage.OverwriteChecked(path, captured, expected)
                 : storage.SaveChecked(path, captured, discardUnsupported, expected);
         }
@@ -178,7 +178,7 @@ public sealed class WorkbookDocument : IDisposable
     public void EnableScriptsAndCalculate() => EnableScriptsAndCalculate(CancellationToken.None);
     public void EnableScriptsAndCalculate(CancellationToken cancellationToken)
     {
-        if (!Snapshot.ScriptModules.CanExecute) throw new NotSupportedException(ScriptModuleSet.MigrationMessage);
+        if (!Snapshot.ScriptModules.CanExecute) throw new NotSupportedException(MessageText.Get(ScriptModuleSet.MigrationMessage));
         Session.SetScriptsEnabled(true);
         Calculate(cancellationToken);
     }
@@ -215,14 +215,14 @@ public sealed class WorkbookDocument : IDisposable
     }
     public IReadOnlyList<ScriptActionDescriptor> ListActions(CancellationToken cancellationToken = default)
     {
-        var executor = _services.Actions ?? throw new NotSupportedException("未配置动作执行器。");
+        var executor = _services.Actions ?? throw new NotSupportedException(MessageText.Get("未配置动作执行器。"));
         var request = Session.BeginAction(null);
         using var lifetime = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, request.CancellationToken);
         try
         {
             var actions = executor.List(request, lifetime.Token);
             lifetime.Token.ThrowIfCancellationRequested();
-            if (!Session.CompleteActionDiscovery(request)) throw new InvalidOperationException("动作列表已过期，请重新应用脚本。");
+            if (!Session.CompleteActionDiscovery(request)) throw new InvalidOperationException(MessageText.Get("动作列表已过期，请重新应用脚本。"));
             _eventModules = request.Snapshot.ScriptModules;
             _eventNames = actions.Where(a => a.Name.StartsWith(ScriptEventNames.Prefix, StringComparison.Ordinal)).Select(a => a.Name).ToHashSet(StringComparer.Ordinal);
             Session.ConfigureScriptEvents(_eventModules, _eventNames.Select(n => n[ScriptEventNames.Prefix.Length..]));
@@ -240,7 +240,7 @@ public sealed class WorkbookDocument : IDisposable
 
     private CommandResult RunActionRequest(ScriptActionRequest request, CancellationToken cancellationToken)
     {
-        var executor = _services.Actions ?? throw new NotSupportedException("未配置动作执行器。");
+        var executor = _services.Actions ?? throw new NotSupportedException(MessageText.Get("未配置动作执行器。"));
         using var lifetime = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, request.CancellationToken);
         try
         {
@@ -273,7 +273,7 @@ public sealed class WorkbookDocument : IDisposable
                 var request = Session.BeginAction(ScriptEventNames.Prefix + item.Name, item);
                 try
                 {
-                    var result = (_services.Actions ?? throw new NotSupportedException("未配置事件执行器。")).Run(request, cancellationToken);
+                    var result = (_services.Actions ?? throw new NotSupportedException(MessageText.Get("未配置事件执行器。"))).Run(request, cancellationToken);
                     Session.CommitAction(request, result, cancellationToken);
                 }
                 catch (Exception error)

@@ -1,3 +1,4 @@
+using QuickExcel.Core;
 using System.Collections.ObjectModel;
 
 namespace QuickExcel.Domain;
@@ -19,11 +20,11 @@ public sealed class CellCalculation
         if (state == CalculationState.Error && (value is null || value.Value.Kind != CellValueKind.Error))
             throw new ArgumentException("An error result requires an error value.", nameof(value));
         if (array is not null && value != array[0, 0])
-            throw new ArgumentException("数组锚点缓存必须与数组首元素一致。", nameof(array));
+            throw new ArgumentException(MessageText.Get("数组锚点缓存必须与数组首元素一致。"), nameof(array));
         if (blockedSpill is { } extent)
         {
             FormulaArray.ValidateShape(extent.Rows, extent.Columns);
-            if (value != CellValue.FromError(CellErrorCode.Spill)) throw new ArgumentException("阻塞尺寸仅用于溢出错误。", nameof(blockedSpill));
+            if (value != CellValue.FromError(CellErrorCode.Spill)) throw new ArgumentException(MessageText.Get("阻塞尺寸仅用于溢出错误。"), nameof(blockedSpill));
         }
 
         var messages = diagnostics?.ToArray() ?? [];

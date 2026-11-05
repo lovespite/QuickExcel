@@ -1,3 +1,4 @@
+using QuickExcel.Core;
 using System.Collections.Immutable;
 
 namespace QuickExcel.Domain;
@@ -21,12 +22,12 @@ public sealed record CellSnapshot
         else if (content.LiteralValue.Kind == CellValueKind.Text) WorkbookLimits.ValidateText(content.LiteralValue.TextValue);
         if (calculation?.Value is { Kind: CellValueKind.Text } value) WorkbookLimits.ValidateText(value.TextValue);
         if (calculation?.Array is not null && content.Kind != CellContentKind.Formula)
-            throw new ArgumentException("只有公式锚点可以拥有数组结果。", nameof(calculation));
+            throw new ArgumentException(MessageText.Get("只有公式锚点可以拥有数组结果。"), nameof(calculation));
         if (spillOwner is { } owner)
         {
             WorkbookLimits.ValidatePosition(owner.Row, owner.Column);
             if (owner.SheetId.Value == Guid.Empty || content.Kind != CellContentKind.Literal || content.LiteralValue.Kind != CellValueKind.Blank || calculation is null)
-                throw new ArgumentException("溢出子格只能含派生缓存，不能含独立输入。", nameof(spillOwner));
+                throw new ArgumentException(MessageText.Get("溢出子格只能含派生缓存，不能含独立输入。"), nameof(spillOwner));
         }
         Content = content;
         Calculation = calculation;
@@ -170,7 +171,7 @@ public sealed class WorksheetSnapshot
             ArgumentNullException.ThrowIfNull(metadata);
             ArgumentOutOfRangeException.ThrowIfNegative(metadata.StyleId);
             WorkbookLimits.ValidateDimension(metadata.Height, nameof(rows));
-            if (metadata.OutlineLevel is < 0 or > 7) throw new ArgumentException("行分组最多 7 层。");
+            if (metadata.OutlineLevel is < 0 or > 7) throw new ArgumentException(MessageText.Get("行分组最多 7 层。"));
         }
         Columns = columns?.ToImmutableDictionary() ?? ImmutableDictionary<int, ColumnMetadata>.Empty;
         foreach (var (column, metadata) in Columns)
@@ -179,35 +180,35 @@ public sealed class WorksheetSnapshot
             ArgumentNullException.ThrowIfNull(metadata);
             ArgumentOutOfRangeException.ThrowIfNegative(metadata.StyleId);
             WorkbookLimits.ValidateDimension(metadata.Width, nameof(columns));
-            if (metadata.OutlineLevel is < 0 or > 7) throw new ArgumentException("列分组最多 7 层。");
+            if (metadata.OutlineLevel is < 0 or > 7) throw new ArgumentException(MessageText.Get("列分组最多 7 层。"));
         }
         MergedCells = mergedCells?.ToImmutableArray() ?? [];
         if (MergedCells.Any(string.IsNullOrWhiteSpace)) throw new ArgumentException("Merge references cannot be empty.", nameof(mergedCells));
         Images = images?.ToImmutableArray() ?? [];
-        if (Images.Length > 1024 || Images.Sum(i => (long)i.Data.Length) > 64 * 1024 * 1024) throw new ArgumentException("每表图片最多 1024 张、共 64 MiB。", nameof(images));
+        if (Images.Length > 1024 || Images.Sum(i => (long)i.Data.Length) > 64 * 1024 * 1024) throw new ArgumentException(MessageText.Get("每表图片最多 1024 张、共 64 MiB。"), nameof(images));
         if (Images.Any(image => image is null)) throw new ArgumentException("Images cannot contain null entries.", nameof(images));
         ShowGridLines = showGridLines;
         DefaultRowHeight = defaultRowHeight;
         TabColor = tabColor;
         View = view ?? new(); View.Validate();
-        if (!Enum.IsDefined(visibility)) throw new ArgumentException("工作表可见性无效。");
+        if (!Enum.IsDefined(visibility)) throw new ArgumentException(MessageText.Get("工作表可见性无效。"));
         Visibility = visibility;
         Printing = printing ?? new(); Printing.Validate();
         Annotations = annotations ?? new();
         Data = data ?? new();
         QuickExcel.Core.SetScriptCommentsCommand.Validate(Data.ThreadComments);
         WorkbookLimits.ValidateDimension(Data.DefaultColumnWidth, nameof(data));
-        if (Data.ImplicitColumnWidth && Data.DefaultColumnWidth != 8.43) throw new ArgumentException("隐式 Excel 默认列宽需要 8.43 字符的布局基准。", nameof(data));
+        if (Data.ImplicitColumnWidth && Data.DefaultColumnWidth != 8.43) throw new ArgumentException(MessageText.Get("隐式 Excel 默认列宽需要 8.43 字符的布局基准。"), nameof(data));
         Data.Protection?.Validate();
-        if (Data.Charts.IsDefault || Data.Charts.Length > 128 || Data.Charts.Sum(c => c.EstimatedBytes) > 8 * 1024 * 1024) throw new ArgumentException("每表图表最多 128 张、8 MiB 定义。");
+        if (Data.Charts.IsDefault || Data.Charts.Length > 128 || Data.Charts.Sum(c => c.EstimatedBytes) > 8 * 1024 * 1024) throw new ArgumentException(MessageText.Get("每表图表最多 128 张、8 MiB 定义。"));
         foreach (var chart in Data.Charts) chart.Validate();
         if (Data.Pivots.IsDefault || Data.Pivots.Length > 16 || Data.Pivots.Any(p => p is null) || Data.Pivots.Sum(p => p.EstimatedBytes) > 32 * 1024 * 1024)
-            throw new ArgumentException("每表透视定义最多 16 个、缓存合计 32 MiB。");
+            throw new ArgumentException(MessageText.Get("每表透视定义最多 16 个、缓存合计 32 MiB。"));
         QuickExcel.Core.ValidationSafety.Validate(Data);
         if (Data.ConditionalFormats.IsDefault || Data.ConditionalFormats.Length > 1024 || Data.ConditionalFormats.Any(r => r is null) ||
             Data.ConditionalFormats.Sum(r => r.Ranges.Length) > 4096 || Data.ConditionalFormats.Sum(r => r.EstimatedBytes) > 4 * 1024 * 1024 ||
             Data.ConditionalFormats.Select(r => r.Priority).Distinct().Count() != Data.ConditionalFormats.Length)
-            throw new ArgumentException("条件格式优先级重复，或规则超过数量/文本容量限制。");
+            throw new ArgumentException(MessageText.Get("条件格式优先级重复，或规则超过数量/文本容量限制。"));
         foreach (var position in Annotations.Links.Keys.Concat(Annotations.Notes.Keys))
         {
             UsedRowCount = Math.Max(UsedRowCount, position.Row + 1);
@@ -289,7 +290,7 @@ public sealed class WorkbookSnapshot
         if (textCompatibilityVersion < 1) throw new ArgumentOutOfRangeException(nameof(textCompatibilityVersion));
         TextCompatibilityVersion = textCompatibilityVersion;
         PackageFiles = packageFiles ?? QuickExcel.Core.VirtualFileSet.Empty;
-        if (PackageFiles.Entries.Keys.Any(p => !p.StartsWith("//xlsq/", StringComparison.Ordinal))) throw new ArgumentException("包只能包含 xlsq 卷。");
+        if (PackageFiles.Entries.Keys.Any(p => !p.StartsWith("//xlsq/", StringComparison.Ordinal))) throw new ArgumentException(MessageText.Get("包只能包含 xlsq 卷。"));
         ArgumentNullException.ThrowIfNull(sheets);
         ArgumentNullException.ThrowIfNull(scriptSource);
         Sheets = sheets.ToImmutableArray();
@@ -300,9 +301,9 @@ public sealed class WorkbookSnapshot
             throw new ArgumentException("Sheet identities must be unique.", nameof(sheets));
         if (Sheets.Select(sheet => sheet.Name).Distinct(StringComparer.OrdinalIgnoreCase).Count() != Sheets.Length)
             throw new ArgumentException("Sheet names must be unique ignoring case.", nameof(sheets));
-        if (!Sheets.Any(s => s.Visibility == SheetVisibility.Visible)) throw new ArgumentException("至少保留一张可见工作表。");
+        if (!Sheets.Any(s => s.Visibility == SheetVisibility.Visible)) throw new ArgumentException(MessageText.Get("至少保留一张可见工作表。"));
         ActiveSheetId = activeSheetId ?? Sheets.First(s => s.Visibility == SheetVisibility.Visible).Id;
-        if (!Sheets.Any(s => s.Id == ActiveSheetId && s.Visibility == SheetVisibility.Visible)) throw new ArgumentException("活动工作表必须存在且可见。");
+        if (!Sheets.Any(s => s.Id == ActiveSheetId && s.Visibility == SheetVisibility.Visible)) throw new ArgumentException(MessageText.Get("活动工作表必须存在且可见。"));
         Window = window ?? new();
         if (Sheets.Sum(sheet => (long)sheet.Cells.Count) > WorkbookLimits.MaxCells)
             throw new ArgumentException("The workbook exceeds the cell limit.", nameof(sheets));
@@ -344,7 +345,7 @@ public sealed class WorkbookSnapshot
             if (decoded != formula) (normalizedNames ??= DefinedNames.ToBuilder())[i] = definition with { Formula = decoded };
         }
         if (normalizedNames is not null) DefinedNames = normalizedNames.ToImmutable();
-        if (DefinedNames.Length > 4096) throw new ArgumentException("名称数量超过 4096。", nameof(definedNames));
+        if (DefinedNames.Length > 4096) throw new ArgumentException(MessageText.Get("名称数量超过 4096。"), nameof(definedNames));
         var seenNames = new HashSet<(SheetId?, string)>();
         foreach (var name in DefinedNames)
         {
@@ -357,12 +358,12 @@ public sealed class WorkbookSnapshot
                 name.Name.Equals("TRUE", StringComparison.OrdinalIgnoreCase) || name.Name.Equals("FALSE", StringComparison.OrdinalIgnoreCase) ||
                 name.Scope is { } scope && !Sheets.Any(s => s.Id == scope) ||
                 !seenNames.Add((name.Scope, name.Name.ToUpperInvariant())))
-                throw new ArgumentException("名称或名称作用域无效。", nameof(definedNames));
+                throw new ArgumentException(MessageText.Get("名称或名称作用域无效。"), nameof(definedNames));
             var expression = QuickExcel.Formulas.FormulaSyntax.Parse(name.Formula);
             if (QuickExcel.Formulas.FormulaSyntax.Walk(expression).OfType<QuickExcel.Formulas.ReferenceNode>().Any(r =>
                 r.Sheet is null || !r.ColumnAbsolute || !r.WholeColumns && !r.RowAbsolute ||
                 r.IsRange && (!r.EndColumnAbsolute || !r.WholeColumns && !r.EndRowAbsolute)))
-                throw new ArgumentException("名称中的单元格/区域必须使用带表名的绝对引用。", nameof(definedNames));
+                throw new ArgumentException(MessageText.Get("名称中的单元格/区域必须使用带表名的绝对引用。"), nameof(definedNames));
         }
         QuickExcel.Core.TableSafety.Validate(this);
     }

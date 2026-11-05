@@ -46,24 +46,24 @@ internal sealed class ScriptEditorPage : IAsyncDisposable
             switch (message.Type)
             {
                 case "draftChanged":
-                    var changed = message.Payload.Deserialize<Changed>(WebMessage.Json) ?? throw new InvalidDataException("缺少草稿版本。");
+                    var changed = message.Payload.Deserialize<Changed>(WebMessage.Json) ?? throw new InvalidDataException(UiText.Get("缺少草稿版本。"));
                     Drafts.Observe(changed.Module, changed.Version); DraftChanged?.Invoke(); break;
                 case "draftChunk":
-                    var chunk = message.Payload.Deserialize<DraftChunk>(WebMessage.Json) ?? throw new InvalidDataException("缺少草稿分块。");
+                    var chunk = message.Payload.Deserialize<DraftChunk>(WebMessage.Json) ?? throw new InvalidDataException(UiText.Get("缺少草稿分块。"));
                     Drafts.Receive(chunk);
                     await Browser.SendAsync("chunkAck", new { chunk.Transfer, chunk.Index, chunk.Version }, message.RequestId); break;
                 case "save": SaveRequested?.Invoke(); break;
                 case "focusHost": FocusRequested?.Invoke(); break;
                 case "console": ConsoleRequested?.Invoke(); break;
                 case "navigate":
-                    var target = message.Payload.Deserialize<Navigation>(WebMessage.Json) ?? throw new InvalidDataException("缺少定义导航目标。");
+                    var target = message.Payload.Deserialize<Navigation>(WebMessage.Json) ?? throw new InvalidDataException(UiText.Get("缺少定义导航目标。"));
                     if ((target.Module is null) == (target.Definition is null) || target.Line < 1 || target.Column < 1 ||
                         target.Module is { } module && !Drafts.Models.ContainsKey(module) ||
                         target.Definition is { } definition && (definition.Length > 128 || !IsDefinition(definition)))
-                        throw new InvalidDataException("无效的定义导航目标。");
+                        throw new InvalidDataException(UiText.Get("无效的定义导航目标。"));
                     var accepted = NavigateRequested is { } navigate && await navigate(target);
                     await Browser.SendAsync("navigated", new { accepted }, message.RequestId); break;
-                default: throw new InvalidDataException("脚本页发送了未请求的响应。");
+                default: throw new InvalidDataException(UiText.Get("脚本页发送了未请求的响应。"));
             }
         }
         catch (Exception ex) { Drafts.MarkFailed(); Failed?.Invoke(ex); }
@@ -87,12 +87,12 @@ internal sealed class ScriptEditorPage : IAsyncDisposable
     {
         try
         {
-            if (Drafts.Failed) throw new InvalidOperationException("脚本页面已失败；请恢复已确认草稿后再保存或运行。");
+            if (Drafts.Failed) throw new InvalidOperationException(UiText.Get("脚本页面已失败；请恢复已确认草稿后再保存或运行。"));
             var response = await Browser.RequestAsync("flushDraft", "draftAck", new { });
-            var flushed = response.Payload.Deserialize<Flushed>(WebMessage.Json) ?? throw new InvalidDataException("缺少草稿确认。");
+            var flushed = response.Payload.Deserialize<Flushed>(WebMessage.Json) ?? throw new InvalidDataException(UiText.Get("缺少草稿确认。"));
             if (flushed.Busy is { } busy) throw new InvalidOperationException(busy);
             _locked = true;
-            Drafts.ConfirmFlush(flushed.Versions ?? throw new InvalidDataException("缺少模块版本。"));
+            Drafts.ConfirmFlush(flushed.Versions ?? throw new InvalidDataException(UiText.Get("缺少模块版本。")));
             var next = Drafts.BuildModules(current());
             await commit(next); Drafts.MarkCommitted(current());
         }
@@ -104,7 +104,7 @@ internal sealed class ScriptEditorPage : IAsyncDisposable
     }
     internal Task SelectAsync(string module) => Browser.RequestAsync("select", "selected", new { module });
     internal Task OpenDefinitionAsync(string name, int? line = null, int? column = null) => IsDefinition(name) ?
-        Browser.RequestAsync("definition", "definitionSelected", new { name, line, column }) : throw new InvalidDataException("未知定义文件。");
+        Browser.RequestAsync("definition", "definitionSelected", new { name, line, column }) : throw new InvalidDataException(UiText.Get("未知定义文件。"));
     internal Task LocateAsync(string module, int line, int column) => Browser.RequestAsync("locate", "located", new { module, line, column, version = Drafts.Models[module].Version });
     public async ValueTask DisposeAsync() { _closed = true; await Browser.DisposeAsync(); }
 }

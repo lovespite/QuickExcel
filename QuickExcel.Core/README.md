@@ -9,6 +9,7 @@ Core 只依赖 .NET，负责工作簿领域模型、文档会话、命令事务�
 | `Domain/` | 不可变快照、单元格类型及工作表对象的数据定义；入口为 `WorkbookSnapshot.cs`、`WorksheetData.cs` |
 | `Documents/` | 文档 facade、会话生命周期、修订、撤销重做、保存与计算协调；入口为 `WorkbookDocument.cs`、`DocumentSession.cs` |
 | `Ports/` | 存储、计算和脚本运行时的注入契约及请求/结果类型；入口为 `WorkbookPorts.cs` |
+| `Localization/` | 宿主提供的只读消息翻译目录；保留 Core 独立调用的默认文案与格式参数 |
 | `Commands/` | 命令基础类型、通用单元格编辑及跨功能的工作表/名称/结构/样式/视图/保护操作；入口为 `DocumentCommands.cs`、`StructureCommands.cs`、`PresentationCommands.cs` |
 | `Clipboard/` | 内部、外部及图表剪贴板模型和粘贴命令 |
 | `Data/` | 清洗、排序描述、筛选、分组、分类汇总、数据验证和选区统计；包含对应的功能命令 |

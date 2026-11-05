@@ -20,7 +20,7 @@ internal static class DataStructure
         if (data.Filter is { } oldFilter && Range(oldFilter.Range) is { } filterRange)
         {
             if (axis == SheetAxis.Row && position(oldFilter.Range.Top) != filterRange.Top)
-                throw new NotSupportedException("操作会删除或移动筛选表头，请先清除筛选；操作未应用。");
+                throw new NotSupportedException(MessageText.Get("操作会删除或移动筛选表头，请先清除筛选；操作未应用。"));
             filter = new(filterRange, oldFilter.Columns.Select(p => new KeyValuePair<int?, AutoFilterColumn>(axis == SheetAxis.Column ? position(p.Key) : p.Key, p.Value))
                 .Where(p => p.Key.HasValue).Select(p => new KeyValuePair<int, AutoFilterColumn>(p.Key!.Value, p.Value)));
         }
@@ -35,9 +35,9 @@ internal static class DataStructure
         {
             if (Range(table.Range) is not { } range) continue;
             if (axis == SheetAxis.Row && (table.HeaderRow && position(table.Range.Top) != range.Top || table.TotalsRow && position(table.Range.Bottom) != range.Bottom))
-                throw new NotSupportedException("插删不能移除表头或汇总行，请先调整表定义。");
+                throw new NotSupportedException(MessageText.Get("插删不能移除表头或汇总行，请先调整表定义。"));
             if (axis == SheetAxis.Row && table.TotalsRow && range.Bottom - range.Top < (table.HeaderRow ? 2 : 1))
-                throw new NotSupportedException("含汇总行的表须至少保留一行数据；本次删除未应用。");
+                throw new NotSupportedException(MessageText.Get("含汇总行的表须至少保留一行数据；本次删除未应用。"));
             var empty = axis == SheetAxis.Row && table.HeaderRow && !table.TotalsRow && range.Top == range.Bottom;
             if (empty) range = range with { Bottom = range.Bottom + 1 }; // Excel keeps an empty insertion row.
             var columns = table.Columns;

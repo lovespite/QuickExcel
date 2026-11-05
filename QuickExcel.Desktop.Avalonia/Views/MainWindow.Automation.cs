@@ -13,10 +13,10 @@ namespace QuickExcel.Desktop.Avalonia;
 
 public sealed partial class MainWindow
 {
-    private readonly TextBox _automationSearch = new() { Name = "AutomationSearch", Height = 32, PlaceholderText = "搜索操作名称或描述" };
+    private readonly TextBox _automationSearch = new() { Name = "AutomationSearch", Height = 32, PlaceholderText = UiText.Get("搜索操作名称或描述") };
     private readonly ComboBox _automationActions = new()
     {
-        Name = "AutomationActions", Height = 50, MaxDropDownHeight = 320, PlaceholderText = "请选择操作",
+        Name = "AutomationActions", Height = 50, MaxDropDownHeight = 320, PlaceholderText = UiText.Get("请选择操作"),
         HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Stretch
     };
     private readonly TextBlock _automationEmpty = new() { Margin = new(12, 0), VerticalAlignment = VerticalAlignment.Center, TextWrapping = TextWrapping.Wrap };
@@ -29,8 +29,8 @@ public sealed partial class MainWindow
 
     private void InstallAutomationRibbon()
     {
-        AutomationProperties.SetName(_automationSearch, "搜索脚本操作名称或描述");
-        AutomationProperties.SetName(_automationActions, "可用脚本操作，选择后点击执行");
+        AutomationProperties.SetName(_automationSearch, UiText.Get("搜索脚本操作名称或描述"));
+        AutomationProperties.SetName(_automationActions, UiText.Get("可用脚本操作，选择后点击执行"));
         _automationSearch.TextChanged += (_, _) => FilterScriptActions();
         ScrollViewer.SetHorizontalScrollBarVisibility(_automationActions, ScrollBarVisibility.Disabled);
         ScrollViewer.SetVerticalScrollBarVisibility(_automationActions, ScrollBarVisibility.Auto);
@@ -47,8 +47,8 @@ public sealed partial class MainWindow
             if (action is null) return null;
             var item = new StackPanel { Spacing = 1, HorizontalAlignment = HorizontalAlignment.Stretch, Background = Brushes.Transparent };
             item.Children.Add(new TextBlock { Text = action.Name, FontWeight = FontWeight.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis });
-            item.Children.Add(new TextBlock { Text = string.IsNullOrWhiteSpace(action.Description) ? "无描述" : action.Description, FontSize = 12, TextTrimming = TextTrimming.CharacterEllipsis });
-            ToolTip.SetTip(item, action.Name + "\n" + (string.IsNullOrWhiteSpace(action.Description) ? "无描述" : action.Description));
+            item.Children.Add(new TextBlock { Text = string.IsNullOrWhiteSpace(action.Description) ? UiText.Get("无描述") : action.Description, FontSize = 12, TextTrimming = TextTrimming.CharacterEllipsis });
+            ToolTip.SetTip(item, action.Name + "\n" + (string.IsNullOrWhiteSpace(action.Description) ? UiText.Get("无描述") : action.Description));
             AutomationProperties.SetName(item, action.Name + "，" + action.Description);
             return item;
         });
@@ -57,12 +57,12 @@ public sealed partial class MainWindow
         picker.Children.Add(_automationActions); picker.Children.Add(_automationEmpty);
         var body = new StackPanel { Width = 560, Spacing = 4, VerticalAlignment = VerticalAlignment.Center };
         body.Children.Add(_automationSearch); body.Children.Add(picker);
-        RibbonContentGroup("自动执行", "Actions", body);
-        _automationRun = RibbonButton(RibbonIcon.Run, "执行", () => RunScriptActionAsync(_automationActions.SelectedItem as ScriptActionDescriptor), false);
+        RibbonContentGroup(UiText.Get("自动执行"), "Actions", body);
+        _automationRun = RibbonButton(RibbonIcon.Run, UiText.Get("执行"), () => RunScriptActionAsync(_automationActions.SelectedItem as ScriptActionDescriptor), false);
         _automationRun.Name = "AutomationRun";
-        _automationLoad = RibbonButton("加载操作", ApplyScriptsAsync, false); _automationLoad.Name = "AutomationLoad";
-        ToolTip.SetTip(_automationLoad, "应用并授权当前脚本、重算工作簿，然后加载全部操作。操作内容仅在执行时运行。");
-        RibbonGroup("自动执行", "操作", _automationRun, _automationLoad, RibbonButton(RibbonIcon.Code, "脚本编辑器", OpenScriptsAsync, false));
+        _automationLoad = RibbonButton(UiText.Get("加载操作"), ApplyScriptsAsync, false); _automationLoad.Name = "AutomationLoad";
+        ToolTip.SetTip(_automationLoad, UiText.Get("应用并授权当前脚本、重算工作簿，然后加载全部操作。操作内容仅在执行时运行。"));
+        RibbonGroup(UiText.Get("自动执行"), UiText.Get("操作"), _automationRun, _automationLoad, RibbonButton(RibbonIcon.Code, UiText.Get("脚本编辑器"), OpenScriptsAsync, false));
     }
 
     private void ClearScriptActions()
@@ -77,7 +77,7 @@ public sealed partial class MainWindow
     private void SetScriptActions(WorkbookDocument document, ScriptModuleSet modules, IReadOnlyList<ScriptActionDescriptor> actions)
     {
         if (!ReferenceEquals(document, Document) || !Document.ScriptsEnabled || !ReferenceEquals(modules, Document.Snapshot.ScriptModules))
-            throw new InvalidOperationException("脚本操作列表已过期，请重新加载操作。");
+            throw new InvalidOperationException(UiText.Get("脚本操作列表已过期，请重新加载操作。"));
         _actionsSession = document.Session.SessionId; _actionsModules = modules; _availableScriptActions = actions;
         _automationActions.SelectedItem = null; _automationSearch.Text = "";
         FilterScriptActions();
@@ -91,11 +91,11 @@ public sealed partial class MainWindow
         _automationSearch.IsEnabled = _availableScriptActions.Count > 0;
         _automationEmpty.IsVisible = _automationActions.ItemCount == 0;
         _automationActions.IsVisible = !_automationEmpty.IsVisible;
-        _automationEmpty.Text = _availableScriptActions.Count > 0 ? "没有匹配的操作，请更换或清空关键词。" :
-            !DesktopServices.SupportsScripts ? "此平台尚未开放脚本执行。" :
-            Document.Snapshot.FileState?.FormulaReadOnly == true ? "当前工作簿为只读，无法执行脚本操作。" :
-            !Document.Snapshot.ScriptModules.HasActions || ScriptActionsCurrent ? "当前工作簿没有可用的脚本操作。" :
-            "点击“加载操作”应用脚本，加载全部可用操作。";
+        _automationEmpty.Text = _availableScriptActions.Count > 0 ? UiText.Get("没有匹配的操作，请更换或清空关键词。") :
+            !DesktopServices.SupportsScripts ? UiText.Get("此平台尚未开放脚本执行。") :
+            Document.Snapshot.FileState?.FormulaReadOnly == true ? UiText.Get("当前工作簿为只读，无法执行脚本操作。") :
+            !Document.Snapshot.ScriptModules.HasActions || ScriptActionsCurrent ? UiText.Get("当前工作簿没有可用的脚本操作。") :
+            UiText.Get("点击“加载操作”应用脚本，加载全部可用操作。");
         RefreshScriptActionButtons();
     }
 

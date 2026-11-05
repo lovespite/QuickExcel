@@ -39,14 +39,14 @@ public sealed partial class WorkbookGrid
         if (_rowOutline.Count > 0)
         {
             for (var level = 1; level <= _outlineDepth + 1; level++)
-            { var value = level; Button("level:" + level, level.ToString(), $"显示大纲级别 {level}", 3 + (level - 1) * 22, 4, () => OutlineLevelRequested?.Invoke(value)); }
+            { var value = level; Button("level:" + level, level.ToString(), UiText.Format($"显示大纲级别 {level}"), 3 + (level - 1) * 22, 4, () => OutlineLevelRequested?.Invoke(value)); }
             foreach (var group in _rowOutline)
             {
                 if (_rows.Cell(group.Summary) is not { } row) continue;
                 var y = HeaderHeight + row.Start + (row.Size - 19) / 2;
                 if (y < HeaderHeight + (row.Frozen ? 0 : _rows.FrozenSize) || y + 19 > HeaderHeight + ViewHeight) continue;
                 Button($"group:{group.Level}:{group.First}:{group.Last}", group.Collapsed ? "+" : "−",
-                    $"{(group.Collapsed ? "展开" : "折叠")}第 {group.First + 1}–{group.Last + 1} 行（{group.Level} 级）",
+                    UiText.Format($"{(group.Collapsed ? UiText.Get("展开") : UiText.Get("折叠"))}第 {group.First + 1}–{group.Last + 1} 行（{group.Level} 级）"),
                     3 + (group.Level - 1) * 22, y, () => OutlineToggleRequested?.Invoke(group));
             }
         }

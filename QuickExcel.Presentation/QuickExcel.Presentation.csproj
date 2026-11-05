@@ -5,6 +5,7 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
+    <EmbeddedResource Include="Localization/en-US.json" LogicalName="QuickExcel.Localization.en-US.json" WithCulture="false" />
     <ProjectReference Include="../QuickExcel.Core/QuickExcel.Core.csproj" />
     <ProjectReference Include="../QuickExcel.Grid.Shared/QuickExcel.Grid.Shared.csproj" />
   </ItemGroup>

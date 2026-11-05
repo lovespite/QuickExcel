@@ -15,7 +15,7 @@ internal sealed class WindowsPrintJob : IDisposable
     internal static WindowsPrintJob? Choose(nint owner, PrintSession session)
     {
         if (!OperatingSystem.IsWindows()) throw new PlatformNotSupportedException();
-        if (owner == 0) throw new ArgumentException("系统打印对话框需要所属窗口。");
+        if (owner == 0) throw new ArgumentException(UiText.Get("系统打印对话框需要所属窗口。"));
         var ranges = Marshal.AllocHGlobal(16 * Marshal.SizeOf<PageRange>());
         var dialog = new PrintDialog { Size = (uint)Marshal.SizeOf<PrintDialog>(), Owner = owner, Flags = ReturnDc | UseDriverCopies | NoSelection | NoCurrentPage | HidePrintToFile | DisablePrintToFile,
             MaxRanges = 16, Ranges = ranges, MinPage = 1, MaxPage = (uint)session.Job.Layout.Pages.Length, Copies = 1, StartPage = uint.MaxValue };
@@ -29,15 +29,15 @@ internal sealed class WindowsPrintJob : IDisposable
             dialog.Flags &= ~ReturnDefault; dialog.ResultAction = 0;
             var result = PrintDlgExW(ref dialog); if (result < 0) Marshal.ThrowExceptionForHR(result);
             if (dialog.ResultAction != 1) return null;
-            if (dialog.Dc == 0) throw new IOException("打印机没有提供绘图上下文。");
+            if (dialog.Dc == 0) throw new IOException(UiText.Get("打印机没有提供绘图上下文。"));
             var selected = new SortedSet<int>();
             if ((dialog.Flags & PageNumbers) != 0)
             {
-                if (dialog.RangeCount is < 1 or > 16) throw new InvalidDataException("打印页范围无效。");
+                if (dialog.RangeCount is < 1 or > 16) throw new InvalidDataException(UiText.Get("打印页范围无效。"));
                 for (var i = 0; i < dialog.RangeCount; i++)
                 {
                     var range = Marshal.PtrToStructure<PageRange>(ranges + i * Marshal.SizeOf<PageRange>());
-                    if (range.From < 1 || range.To < range.From || range.To > session.Job.Layout.Pages.Length) throw new InvalidDataException("打印页范围超出当前预览。");
+                    if (range.From < 1 || range.To < range.From || range.To > session.Job.Layout.Pages.Length) throw new InvalidDataException(UiText.Get("打印页范围超出当前预览。"));
                     for (var page = range.From; page <= range.To; page++) selected.Add((int)page - 1);
                 }
             }
@@ -49,7 +49,7 @@ internal sealed class WindowsPrintJob : IDisposable
             var margins = session.Job.Layout.Margins;
             var right = width - offsetX - GetDeviceCaps(dialog.Dc, 8); var bottom = height - offsetY - GetDeviceCaps(dialog.Dc, 10);
             if (margins.Left * dpiX + 1 < offsetX || margins.Right * dpiX + 1 < right || margins.Top * dpiY + 1 < offsetY || margins.Bottom * dpiY + 1 < bottom)
-                throw new InvalidOperationException("页面边距小于此打印机的不可打印边缘。请增加页面边距并重新生成预览。");
+                throw new InvalidOperationException(UiText.Get("页面边距小于此打印机的不可打印边缘。请增加页面边距并重新生成预览。"));
             var dc = dialog.Dc; dialog.Dc = 0; return new(dc, selected.ToArray(), layout);
         }
         finally
@@ -65,7 +65,7 @@ internal sealed class WindowsPrintJob : IDisposable
         try
         {
             // Public DEVMODEW printer header offsets, preserving the driver's variable-sized private tail.
-            if (GlobalSize(handle) < 94 || (ushort)Marshal.ReadInt16(pointer, 68) < 94) throw new InvalidDataException("打印机 DEVMODEW 过短。");
+            if (GlobalSize(handle) < 94 || (ushort)Marshal.ReadInt16(pointer, 68) < 94) throw new InvalidDataException(UiText.Get("打印机 DEVMODEW 过短。"));
             const int orientation = 1, paperSize = 2, paperLength = 4, paperWidth = 8, scale = 16, copies = 256, color = 2048;
             var setup = session.Job.Sheet.Printing.Setup; var landscape = session.Job.Layout.PaperWidth > session.Job.Layout.PaperHeight;
             var fields = Marshal.ReadInt32(pointer, 72) | orientation | scale | copies | color;
@@ -95,22 +95,22 @@ internal sealed class WindowsPrintJob : IDisposable
         AbortCallback abort = (_, _) => !token.IsCancellationRequested;
         try
         {
-            token.ThrowIfCancellationRequested(); Require(SetAbortProc(_dc, abort), "无法设置打印取消回调。");
+            token.ThrowIfCancellationRequested(); Require(SetAbortProc(_dc, abort), UiText.Get("无法设置打印取消回调。"));
             var info = new DocInfo { Size = Marshal.SizeOf<DocInfo>(), Name = session.Job.FileName };
-            Require(StartDocW(_dc, ref info), "无法开始打印任务。"); started = true;
+            Require(StartDocW(_dc, ref info), UiText.Get("无法开始打印任务。")); started = true;
             foreach (var page in _pages)
             {
                 token.ThrowIfCancellationRequested();
                 using var bitmap = session.RenderPageAsync(page, _layout.RasterDpi, token).GetAwaiter().GetResult();
-                Require(StartPage(_dc), "无法开始打印页面。");
+                Require(StartPage(_dc), UiText.Get("无法开始打印页面。"));
                 var bitmapInfo = new BitmapInfo { Size = (uint)Marshal.SizeOf<BitmapInfo>(), Width = bitmap.Width, Height = -bitmap.Height, Planes = 1, BitCount = 32 };
                 // Skia uses tightly packed opaque BGRA; negative height is the GDI top-down DIB contract.
-                if (bitmap.RowBytes != bitmap.Width * 4) throw new InvalidDataException("打印像素步幅无效。");
+                if (bitmap.RowBytes != bitmap.Width * 4) throw new InvalidDataException(UiText.Get("打印像素步幅无效。"));
                 var lines = StretchDIBits(_dc, _layout.X, _layout.Y, _layout.Width, _layout.Height, 0, 0, bitmap.Width, bitmap.Height, bitmap.GetPixels(), ref bitmapInfo, 0, 0x00CC0020);
-                if (lines is 0 or -1) throw new Win32Exception(Marshal.GetLastWin32Error(), "无法传输打印页面。");
-                token.ThrowIfCancellationRequested(); Require(EndPage(_dc), "打印页面提交失败。");
+                if (lines is 0 or -1) throw new Win32Exception(Marshal.GetLastWin32Error(), UiText.Get("无法传输打印页面。"));
+                token.ThrowIfCancellationRequested(); Require(EndPage(_dc), UiText.Get("打印页面提交失败。"));
             }
-            token.ThrowIfCancellationRequested(); Require(EndDoc(_dc), "打印任务提交失败。"); started = false;
+            token.ThrowIfCancellationRequested(); Require(EndDoc(_dc), UiText.Get("打印任务提交失败。")); started = false;
         }
         finally { if (started) AbortDoc(_dc); GC.KeepAlive(abort); }
     }

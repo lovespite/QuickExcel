@@ -45,7 +45,7 @@ try {
     foreach ($notice in @('THIRD-PARTY-LICENSES.md','OFFICE-SCRIPTS-NOTICE.md','DOTNET-LICENSE.txt','DOTNET-THIRD-PARTY-NOTICES.txt')) {
         if (-not (Test-Path -LiteralPath (Join-Path $package "Licenses/$notice") -PathType Leaf)) { throw "Missing product license notice: $notice" }
     }
-    foreach ($file in (@('QuickExcel.Avalonia.exe','QuickExcel.Avalonia.dll','QuickExcel.Avalonia.deps.json','coreclr.dll','hostfxr.dll','QuickExcel.Grid.Avalonia.dll','libSkiaSharp.dll','libHarfBuzzSharp.dll','Web/manifest.json','ScriptWorker/QuickExcel.ScriptWorker.exe','ScriptWorker/coreclr.dll') + @($engineFiles | ForEach-Object { 'ScriptWorker/' + $_ }))) {
+    foreach ($file in (@('QuickExcel.Avalonia.exe','QuickExcel.Avalonia.dll','QuickExcel.Avalonia.deps.json','Assets/QuickExcel-XLSQ.ico','coreclr.dll','hostfxr.dll','QuickExcel.Grid.Avalonia.dll','libSkiaSharp.dll','libHarfBuzzSharp.dll','Web/manifest.json','ScriptWorker/QuickExcel.ScriptWorker.exe','ScriptWorker/coreclr.dll') + @($engineFiles | ForEach-Object { 'ScriptWorker/' + $_ }))) {
         if (-not (Test-Path -LiteralPath (Join-Path $package $file) -PathType Leaf)) { throw "Missing release payload: $file" }
     }
     $all = @(Get-ChildItem -LiteralPath $package -File -Recurse)

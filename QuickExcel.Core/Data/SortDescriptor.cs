@@ -24,13 +24,13 @@ public sealed record SortKey
 
     internal void Validate()
     {
-        if (!Enum.IsDefined(Basis)) throw new ArgumentException("未知排序依据。");
+        if (!Enum.IsDefined(Basis)) throw new ArgumentException(MessageText.Get("未知排序依据。"));
         if (Basis != SortBasis.Value && (PreferredColor is null || PreferredColor.Length != 8 || PreferredColor.Any(c => !Uri.IsHexDigit(c))))
-            throw new ArgumentException("颜色排序需要 8 位 ARGB 颜色。");
+            throw new ArgumentException(MessageText.Get("颜色排序需要 8 位 ARGB 颜色。"));
         if (CustomOrder.Length > 256 || CustomOrder.Any(value => value is null || value.Length > 1024) ||
             CustomOrder.Distinct(CaseSensitive ? StringComparer.Ordinal : StringComparer.OrdinalIgnoreCase).Count() != CustomOrder.Length ||
             Basis != SortBasis.Value && !CustomOrder.IsEmpty)
-            throw new ArgumentException("自定义顺序需要最多 256 个不重复文本，且仅适用于值排序。");
+            throw new ArgumentException(MessageText.Get("自定义顺序需要最多 256 个不重复文本，且仅适用于值排序。"));
     }
 
     internal int Compare((CellValue Value, StyleDefinition Style) a, (CellValue Value, StyleDefinition Style) b)

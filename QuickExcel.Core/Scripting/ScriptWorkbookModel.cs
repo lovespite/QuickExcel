@@ -181,7 +181,7 @@ public sealed class ScriptWorkbookModel
                 throw new InvalidOperationException("每次脚本最多修改 20000 格、提交 4096 个模型命令。");
             _writes += chargedCells ?? range.Count;
             if (_writes > 20_000) throw new InvalidOperationException("每次脚本累计最多修改 20000 格（重复写入也计数）。");
-            if (_working.FileState?.FormulaReadOnly == true) throw new InvalidOperationException(WorkbookFileState.FormulaReadOnlyMessage);
+            if (_working.FileState?.FormulaReadOnly == true) throw new InvalidOperationException(MessageText.Get(WorkbookFileState.FormulaReadOnlyMessage));
             var command = create();
             var draft = command.Prepare(_working);
             ExtendedObjectSafety.ValidateEdit(_working, draft.Snapshot, command, draft.StructureChanged);

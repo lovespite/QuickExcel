@@ -1,3 +1,4 @@
+using QuickExcel.Core;
 using System.Collections.Immutable;
 using QuickExcel.Formulas;
 
@@ -17,28 +18,28 @@ public sealed class WorksheetValidation
     {
         Ranges = ranges.Take(1025).ToImmutableArray();
         if (Ranges.Length is < 1 or > 1024 || !Enum.IsDefined(kind) || !Enum.IsDefined(comparison) || !Enum.IsDefined(alert))
-            throw new ArgumentException("数据验证类型或区域数无效。");
+            throw new ArgumentException(MessageText.Get("数据验证类型或区域数无效。"));
         foreach (var r in Ranges)
         {
             WorkbookLimits.ValidatePosition(r.Top, r.Left); WorkbookLimits.ValidatePosition(r.Bottom, r.Right);
-            if (r.Top > r.Bottom || r.Left > r.Right) throw new ArgumentException("数据验证区域无效。");
+            if (r.Top > r.Bottom || r.Left > r.Right) throw new ArgumentException(MessageText.Get("数据验证区域无效。"));
         }
         if (inputTitle?.Length > 32 || errorTitle?.Length > 32 || inputMessage?.Length > 255 || errorMessage?.Length > 255)
-            throw new ArgumentException("验证提示标题最多 32 字符，正文最多 255 字符。");
+            throw new ArgumentException(MessageText.Get("验证提示标题最多 32 字符，正文最多 255 字符。"));
         foreach (var formula in new[] { formula1, formula2 }.OfType<string>())
         {
-            if (formula.Length is < 1 or > 8192) throw new ArgumentException("验证公式长度无效。");
+            if (formula.Length is < 1 or > 8192) throw new ArgumentException(MessageText.Get("验证公式长度无效。"));
             var syntax = FormulaSyntax.Parse(formula);
             if (FormulaSyntax.Walk(syntax).OfType<FunctionNode>().Any(f => !StandardFunctions.Signatures.ContainsKey(f.Name) || f.Name is "NOW" or "TODAY" or "RAND" or "RANDBETWEEN"))
-                throw new NotSupportedException("验证公式仅支持已建模的非易变标准函数。");
+                throw new NotSupportedException(MessageText.Get("验证公式仅支持已建模的非易变标准函数。"));
         }
         if (kind != ValidationKind.None && formula1 is null ||
             kind is ValidationKind.Whole or ValidationKind.Decimal or ValidationKind.Date or ValidationKind.TextLength &&
                 comparison is ValidationOperator.Between or ValidationOperator.NotBetween && formula2 is null)
-            throw new ArgumentException("验证条件公式缺失。");
+            throw new ArgumentException(MessageText.Get("验证条件公式缺失。"));
         if (kind == ValidationKind.List && formula1 is not null && FormulaSyntax.Parse(formula1) is ValueNode { Value.Kind: CellValueKind.Text } literal &&
             (literal.Value.TextValue.Length > 255 || literal.Value.TextValue.Contains('\n') || literal.Value.TextValue.Contains('\r')))
-            throw new NotSupportedException("直接列表最长 255 字符，不能含换行；较长列表请使用单行或单列范围。");
+            throw new NotSupportedException(MessageText.Get("直接列表最长 255 字符，不能含换行；较长列表请使用单行或单列范围。"));
         Kind = kind; Formula1 = formula1 is null ? null : "=" + FormulaSyntax.Print(FormulaSyntax.Parse(formula1));
         Formula2 = formula2 is null ? null : "=" + FormulaSyntax.Print(FormulaSyntax.Parse(formula2));
         Comparison = comparison; AllowBlank = allowBlank; ShowDropDown = showDropDown;
@@ -68,11 +69,11 @@ public sealed class WorksheetValidation
             var bound = FormulaBinding.Bind(list ? new FunctionNode("SUM", [syntax]) : syntax, snapshot, sheet, Anchor);
             if (list) bound = ((FunctionNode)bound).Arguments[0];
             if (FormulaSyntax.Walk(bound).OfType<FunctionNode>().Any(f => !StandardFunctions.Signatures.ContainsKey(f.Name) || f.Name is "NOW" or "TODAY" or "RAND" or "RANDBETWEEN"))
-                throw new NotSupportedException("验证名称间接依赖了未支持或易变函数。");
+                throw new NotSupportedException(MessageText.Get("验证名称间接依赖了未支持或易变函数。"));
             if (list && bound is not ValueNode { Value.Kind: CellValueKind.Text or CellValueKind.Error } &&
                 (bound is not ReferenceNode r || r.Row != r.EndRow && r.Column != r.EndColumn ||
                     (long)(r.EndRow - r.Row + 1) * (r.EndColumn - r.Column + 1) > 10000))
-                throw new NotSupportedException("列表来源须为不超过 10,000 格的单行或单列范围。");
+                throw new NotSupportedException(MessageText.Get("列表来源须为不超过 10,000 格的单行或单列范围。"));
         }
     }
     public WorksheetValidation MapFormulas(Func<string, string> transform) => new(Ranges, Kind,

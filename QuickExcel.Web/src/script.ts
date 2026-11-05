@@ -1,3 +1,4 @@
+import { uiText } from './localization';
 import * as monaco from 'monaco-editor/editor/editor.api';
 // editor.api is deliberately minimal: language providers alone do not install
 // their UI. Keep these registrations explicit for the pinned Monaco package.
@@ -47,7 +48,7 @@ for (const defaults of [typescript.javascriptDefaults, typescript.typescriptDefa
 }
 const extraLibs = [typescript.javascriptDefaults, typescript.typescriptDefaults].map(d => d.addExtraLib(declarations, baseUri + 'quickexcel.d.ts'));
 editor = monaco.editor.create(document.getElementById('editor')!, { model: null, automaticLayout: true, readOnly: true,
-  minimap: { enabled: false }, fontSize: 14, scrollBeyondLastLine: false, accessibilitySupport: 'auto', ariaLabel: 'QuickExcel JavaScript / TypeScript 脚本编辑器',
+  minimap: { enabled: false }, fontSize: 14, scrollBeyondLastLine: false, accessibilitySupport: 'auto', ariaLabel: uiText('QuickExcel JavaScript / TypeScript 脚本编辑器'),
   quickSuggestions: { other: true, comments: false, strings: false }, suggestOnTriggerCharacters: true,
   parameterHints: { enabled: true }, hover: { enabled: true }, renderValidationDecorations: 'on',
   wordBasedSuggestions: 'off',
@@ -85,11 +86,11 @@ function updateAssistance() {
 function updateStatus() {
   if (disposed || !selected || document.body.hasAttribute('data-failed')) return;
   const model = editor.getModel()!;
-  if (selectedDefinition) { status.textContent = `${selectedDefinition} · 定义文件（只读）`; return; }
+  if (selectedDefinition) { status.textContent = `${selectedDefinition} · ${uiText('定义文件（只读）')}`; return; }
   const markers = monaco.editor.getModelMarkers({ resource: model.uri });
   const errors = markers.filter(m => m.severity === monaco.MarkerSeverity.Error).length;
   const warnings = markers.filter(m => m.severity === monaco.MarkerSeverity.Warning).length;
-  status.textContent = `${selected} · ${model.getLanguageId() === 'typescript' ? 'TypeScript' : 'JavaScript'} · 当前模块 ${errors} 个错误，${warnings} 个警告`;
+  status.textContent = `${selected} · ${model.getLanguageId() === 'typescript' ? 'TypeScript' : 'JavaScript'} · ${uiText('当前模块 {0} 个错误，{1} 个警告', errors, warnings)}`;
 }
 const markerListener = monaco.editor.onDidChangeMarkers(resources => {
   if (resources.some(uri => uri.toString() === editor.getModel()?.uri.toString())) updateStatus();
@@ -165,7 +166,7 @@ async function pushDrafts() {
     if (item.version === item.accepted) continue;
     const version = item.version, baseVersion = item.accepted;
     const bytes = utf8.encode(item.model.getValue());
-    if (bytes.length > 1048576 || [...models.values()].reduce((sum, m) => sum + utf8.encode(m.model.getValue()).length, 0) > 1048576) throw new Error('脚本总量超过 1 MiB，请恢复后缩减源码');
+    if (bytes.length > 1048576 || [...models.values()].reduce((sum, m) => sum + utf8.encode(m.model.getValue()).length, 0) > 1048576) throw new Error(uiText('脚本总量超过 1 MiB，请恢复后缩减源码'));
     const sha256 = await hash(bytes), transfer = crypto.randomUUID(), count = Math.max(1, Math.ceil(bytes.length / 49152));
     for (let index = 0; index < count; index++) {
       const acknowledgment = await request('draftChunk', 'chunkAck', { module: id, baseVersion, version, transfer, index, count, totalBytes: bytes.length, sha256,
@@ -301,7 +302,7 @@ async function handle(message: Message) {
     case 'flushDraft': {
       if (!initialized) throw new Error('Editor has not loaded');
       // Composition belongs to the original model; do not end it or run incomplete text.
-      if (composing) { post('draftAck', { busy: '中文组合输入尚未结束，请完成输入后重试。' }, message.requestId); return; }
+      if (composing) { post('draftAck', { busy: uiText('中文组合输入尚未结束，请完成输入后重试。') }, message.requestId); return; }
       setLocked(true); if (scheduled !== undefined) { clearTimeout(scheduled); scheduled = undefined; }
       await enqueue(); post('draftAck', { versions: Object.fromEntries([...models].map(([id, m]) => [id, m.accepted])) }, message.requestId); return;
     }

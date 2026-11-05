@@ -16,7 +16,7 @@ public sealed partial class TypedWorkbookStorage
         {
             cancellation.ThrowIfCancellationRequested();
             if (row >= WorkbookLimits.MaxRows || fields.Length > WorkbookLimits.MaxColumns)
-                throw new InvalidDataException("CSV 超出工作表行列上限。");
+                throw new InvalidDataException(MessageText.Get("CSV 超出工作表行列上限。"));
             for (var col = 0; col < fields.Length; col++)
             {
                 var field = fields[col];

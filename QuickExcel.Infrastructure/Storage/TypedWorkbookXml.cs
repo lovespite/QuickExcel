@@ -1,3 +1,4 @@
+using QuickExcel.Core;
 using System.Globalization;
 using System.Collections.Immutable;
 using System.Xml.Linq;
@@ -449,7 +450,7 @@ internal static class TypedWorkbookXml
 
     public static byte[] Write(WorkbookSnapshot snapshot, bool valuesOnly, CancellationToken cancellationToken)
     {
-        if (!valuesOnly && snapshot.FileState?.FormulaReadOnly == true) throw new InvalidOperationException(WorkbookFileState.FormulaReadOnlyMessage);
+        if (!valuesOnly && snapshot.FileState?.FormulaReadOnly == true) throw new InvalidOperationException(MessageText.Get(WorkbookFileState.FormulaReadOnlyMessage));
         if (!valuesOnly && snapshot.Sheets.Any(s => s.Cells.Values.Any(c => c.Content.DynamicArray &&
             (c.Calculation is not { State: CalculationState.Fresh or CalculationState.Error } cache || cache.InputRevision != snapshot.Revision))))
             throw new InvalidOperationException("动态数组结果尚未完成本轮重算，请重算后保存公式文件；旧溢出区域不能作为新的可编辑数据写出。");

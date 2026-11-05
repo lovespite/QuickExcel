@@ -13,11 +13,11 @@ public static class PivotReport
     public static (WorksheetSnapshot Sheet, CellRectangle Range) Resolve(WorkbookSnapshot book, PivotSource source)
     {
         var sheet = book.Sheets.FirstOrDefault(s => s.Name.Equals(source.Sheet,StringComparison.OrdinalIgnoreCase))
-            ?? throw new InvalidOperationException("透视表来源工作表不存在。");
+            ?? throw new InvalidOperationException(MessageText.Get("透视表来源工作表不存在。"));
         if (source.TableName is null) return (sheet,source.Range);
         var table = sheet.Data.Tables.FirstOrDefault(t => t.Name.Equals(source.TableName,StringComparison.OrdinalIgnoreCase))
-            ?? throw new InvalidOperationException("透视表来源表格不存在。");
-        if (!table.HeaderRow) throw new NotSupportedException("透视源表格需要标题行。");
+            ?? throw new InvalidOperationException(MessageText.Get("透视表来源表格不存在。"));
+        if (!table.HeaderRow) throw new NotSupportedException(MessageText.Get("透视源表格需要标题行。"));
         return (sheet,table.Range with { Bottom = table.Range.Bottom - (table.TotalsRow ? 1 : 0) });
     }
 
@@ -25,19 +25,19 @@ public static class PivotReport
     {
         var (sheet,range) = Resolve(book,source);
         if (range.Rows < 2 || range.Rows - 1 > PivotCache.MaxRows || range.Columns > PivotCache.MaxFields || range.Count > PivotCache.MaxValues)
-            throw new InvalidOperationException("透视源需要标题和数据行，最多 128 列、50,000 行、200,000 格。");
+            throw new InvalidOperationException(MessageText.Get("透视源需要标题和数据行，最多 128 列、50,000 行、200,000 格。"));
         if (sheet.MergedCells.Select(CellRectangle.Parse).Any(r => ValidationSafety.Overlaps(r,range)) ||
-            sheet.Data.Pivots.Any(p => ValidationSafety.Overlaps(p.Range,range))) throw new NotSupportedException("透视源不能含合并区域或其他透视表结果。");
+            sheet.Data.Pivots.Any(p => ValidationSafety.Overlaps(p.Range,range))) throw new NotSupportedException(MessageText.Get("透视源不能含合并区域或其他透视表结果。"));
         CellValue Read(int row,int column)
         {
             cancellationToken.ThrowIfCancellationRequested(); var cell=sheet.GetCell(row,column);
             if ((cell?.Content.Kind == CellContentKind.Formula || cell?.SpillOwner is not null) &&
                 (cell.Calculation?.InputRevision != book.Revision || cell.Calculation?.State is not (CalculationState.Fresh or CalculationState.Error)))
-                throw new InvalidOperationException("透视源含旧公式结果，请先完成重算再刷新。");
+                throw new InvalidOperationException(MessageText.Get("透视源含旧公式结果，请先完成重算再刷新。"));
             return cell?.Value ?? CellValue.Blank;
         }
         var fields=Enumerable.Range(range.Left,range.Columns).Select(c => Read(range.Top,c)).ToArray();
-        if (fields.Any(f => f.Kind != CellValueKind.Text)) throw new InvalidOperationException("透视源标题须为非空文本。");
+        if (fields.Any(f => f.Kind != CellValueKind.Text)) throw new InvalidOperationException(MessageText.Get("透视源标题须为非空文本。"));
         return new(fields.Select(v => v.TextValue),Enumerable.Range(range.Top+1,range.Rows-1).Select(r =>
             Enumerable.Range(range.Left,range.Columns).Select(c => Read(r,c))));
     }
@@ -50,7 +50,7 @@ public static class PivotReport
     {
         if (rowField < 0 || rowField >= cache.Fields.Length || dataField < 0 || dataField >= cache.Fields.Length ||
             columnField is { } index && (index < 0 || index >= cache.Fields.Length || index == rowField) || !Enum.IsDefined(aggregation))
-            throw new ArgumentException("透视字段配置无效。");
+            throw new ArgumentException(MessageText.Get("透视字段配置无效。"));
         var comparer = new KeyComparer();
         var rows = new HashSet<CellValue>(comparer); var columns = new HashSet<CellValue>(comparer);
         var sums = new Dictionary<(int Row,int Column),Aggregate>();
@@ -58,7 +58,7 @@ public static class PivotReport
         {
             cancellationToken.ThrowIfCancellationRequested();
             if (record[rowField].Kind == CellValueKind.Error || columnField is { } c && record[c].Kind == CellValueKind.Error || record[dataField].Kind == CellValueKind.Error)
-                throw new NotSupportedException("含错误值的透视分组或汇总暂不支持刷新；原缓存保持不变。");
+                throw new NotSupportedException(MessageText.Get("含错误值的透视分组或汇总暂不支持刷新；原缓存保持不变。"));
             rows.Add(record[rowField]); if (columnField is { } field) columns.Add(record[field]);
         }
         if (columnField is null) columns.Add(CellValue.Blank);
@@ -68,7 +68,7 @@ public static class PivotReport
         var headers=columnField is null ? 1 : 2;
         var width=1 + columnItems.Length + (columnField is null ? 0 : 1);
         var height=headers + rowItems.Length + 1;
-        if ((long)width * height > 20_000) throw new InvalidOperationException("透视输出超过 20,000 格。");
+        if ((long)width * height > 20_000) throw new InvalidOperationException(MessageText.Get("透视输出超过 20,000 格。"));
         var range=new CellRectangle(position.Row,position.Column,checked(position.Row+height-1),checked(position.Column+width-1));
         WorkbookLimits.ValidatePosition(range.Top,range.Left); WorkbookLimits.ValidatePosition(range.Bottom,range.Right);
         void Add(int row,int column,CellValue value)
@@ -78,7 +78,7 @@ public static class PivotReport
             var numeric=value.Kind == CellValueKind.Number;
             var number=numeric ? value.NumberValue : 0;
             var sum=aggregation is PivotAggregation.Sum or PivotAggregation.Average ? current.Sum+number : 0;
-            if (!double.IsFinite(sum)) throw new InvalidOperationException("透视汇总超出有限数值范围。");
+            if (!double.IsFinite(sum)) throw new InvalidOperationException(MessageText.Get("透视汇总超出有限数值范围。"));
             sums[(row,column)]=new(sum,current.Count+1,current.NumericCount+(numeric ? 1 : 0),
                 numeric ? current.NumericCount==0 ? number : Math.Min(current.Min,number) : current.Min,
                 numeric ? current.NumericCount==0 ? number : Math.Max(current.Max,number) : current.Max);

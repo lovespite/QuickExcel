@@ -1,3 +1,4 @@
+import { uiText } from './localization';
 import { getDocument, GlobalWorkerOptions, AnnotationMode, AnnotationEditorType } from 'pdfjs-dist';
 import { PDFViewer, EventBus, PDFLinkService, PDFFindController, RenderingStates } from 'pdfjs-dist/web/pdf_viewer.mjs';
 import 'pdfjs-dist/web/pdf_viewer.css';
@@ -74,13 +75,13 @@ eventBus.on('pagesinit', () => { viewer.currentScaleValue = 'page-fit'; viewer.u
 eventBus.on('pagerendered', ({ pageNumber, error }: any) => {
   if (error) { firstFailure?.(error); return; }
   if (firstPage) { firstPaintMs = performance.now() - loadStarted; requestAnimationFrame(() => { firstPage?.(); firstPage = undefined; }); }
-  status.textContent = `第 ${pageNumber} 页 · ${pdf?.numPages ?? 0} 页 · 预览与导出使用同一打印任务`;
+  status.textContent = uiText('第 {0} 页 · {1} 页 · 预览与导出使用同一打印任务', pageNumber, pdf?.numPages ?? 0);
 });
 eventBus.on('pagechanging', ({ pageNumber }: any) => {
   pageInput.value = String(pageNumber);
   thumbnails.querySelector('[aria-current=true]')?.removeAttribute('aria-current'); thumbnails.children[pageNumber - 1]?.setAttribute('aria-current', 'true');
 });
-eventBus.on('updatefindmatchescount', ({ matchesCount }: any) => { status.textContent = `查找：${matchesCount.current} / ${matchesCount.total}`; });
+eventBus.on('updatefindmatchescount', ({ matchesCount }: any) => { status.textContent = uiText('查找：{0} / {1}', matchesCount.current, matchesCount.total); });
 const on = (id: string, action: () => void) => document.getElementById(id)!.addEventListener('click', action, { signal: life.signal });
 on('previous', () => { if (pdf) viewer.currentPageNumber = Math.max(1, viewer.currentPageNumber - 1); });
 on('next', () => { if (pdf) viewer.currentPageNumber = Math.min(pdf.numPages, viewer.currentPageNumber + 1); });
@@ -194,7 +195,7 @@ async function handle(message: Message) {
   pageInput.max = String(pdf.numPages); document.getElementById('count')!.textContent = '/ ' + pdf.numPages;
   linkService.setDocument(pdf); viewer.setDocument(pdf);
   for (let index = 1; index <= pdf.numPages; index++) {
-    const button = document.createElement('button'); button.className = 'thumbnail'; button.dataset.page = String(index); button.textContent = String(index); button.setAttribute('aria-label', '第 ' + index + ' 页');
+    const button = document.createElement('button'); button.className = 'thumbnail'; button.dataset.page = String(index); button.textContent = String(index); button.setAttribute('aria-label', uiText('第 {0} 页', index));
     button.addEventListener('click', () => { viewer.currentPageNumber = index; }, { signal: life.signal }); thumbnails.append(button); observer.observe(button);
   }
   await first; post('pdfLoaded', { pages: pdf.numPages, firstPaintMs }, message.requestId);

@@ -1,3 +1,4 @@
+using QuickExcel.Core;
 using System.Collections.Immutable;
 
 namespace QuickExcel.Domain;
@@ -18,19 +19,19 @@ public sealed class PivotCache
         Fields = fields.Take(MaxFields + 1).ToImmutableArray();
         if (Fields.Length is < 1 or > MaxFields || Fields.Any(string.IsNullOrWhiteSpace) ||
             Fields.Any(f => f.Length > 255) || Fields.Distinct(StringComparer.OrdinalIgnoreCase).Count() != Fields.Length)
-            throw new ArgumentException("透视源须有不重复的非空文本列名，最多 128 列，每个列名最多 255 字符。");
+            throw new ArgumentException(MessageText.Get("透视源须有不重复的非空文本列名，最多 128 列，每个列名最多 255 字符。"));
         var rows = ImmutableArray.CreateBuilder<ImmutableArray<CellValue>>(); var bytes = 1024L + Fields.Sum(f => 32L + f.Length * 2L);
         foreach (var record in records)
         {
-            if (rows.Count >= MaxRows || (long)(rows.Count + 1) * Fields.Length > MaxValues) throw new ArgumentException("透视缓存超过 50,000 行或 200,000 个值。");
+            if (rows.Count >= MaxRows || (long)(rows.Count + 1) * Fields.Length > MaxValues) throw new ArgumentException(MessageText.Get("透视缓存超过 50,000 行或 200,000 个值。"));
             var values = record.Take(Fields.Length + 1).ToImmutableArray();
-            if (values.Length != Fields.Length) throw new ArgumentException("透视缓存记录列数不一致。");
+            if (values.Length != Fields.Length) throw new ArgumentException(MessageText.Get("透视缓存记录列数不一致。"));
             foreach (var value in values)
             {
                 if (value.Kind == CellValueKind.Text) WorkbookLimits.ValidateText(value.TextValue);
                 bytes += 32 + (value.Kind == CellValueKind.Text ? value.TextValue.Length * 2L : 0);
             }
-            if (bytes > 16 * 1024 * 1024) throw new ArgumentException("透视缓存超过 16 MiB。");
+            if (bytes > 16 * 1024 * 1024) throw new ArgumentException(MessageText.Get("透视缓存超过 16 MiB。"));
             rows.Add(values);
         }
         Records = rows.ToImmutable(); EstimatedBytes = bytes;
@@ -49,18 +50,18 @@ public sealed class WorksheetPivot
         int dataField, PivotAggregation aggregation, string dataCaption, string grandCaption = "总计", bool stale = false)
     {
         if (string.IsNullOrWhiteSpace(name) || name.Length > 255 || name.Any(char.IsWhiteSpace) || name.IndexOfAny(['[',']','!']) >= 0)
-            throw new ArgumentException("透视表名称无效。");
+            throw new ArgumentException(MessageText.Get("透视表名称无效。"));
         WorkbookLimits.ValidateSheetName(source.Sheet);
         foreach (var r in new[] { source.Range,range })
         {
             WorkbookLimits.ValidatePosition(r.Top,r.Left); WorkbookLimits.ValidatePosition(r.Bottom,r.Right);
-            if (r.Top > r.Bottom || r.Left > r.Right) throw new ArgumentException("透视表或源区域无效。");
+            if (r.Top > r.Bottom || r.Left > r.Right) throw new ArgumentException(MessageText.Get("透视表或源区域无效。"));
         }
         if (source.Range.Rows < 2 || range.Count > 20_000 ||
             rowField < 0 || rowField >= cache.Fields.Length || columnField is { } c && (c < 0 || c >= cache.Fields.Length || c == rowField) ||
-            dataField < 0 || dataField >= cache.Fields.Length || !Enum.IsDefined(aggregation)) throw new ArgumentException("透视表字段、来源或输出大小无效。");
+            dataField < 0 || dataField >= cache.Fields.Length || !Enum.IsDefined(aggregation)) throw new ArgumentException(MessageText.Get("透视表字段、来源或输出大小无效。"));
         if (string.IsNullOrWhiteSpace(dataCaption) || dataCaption.Length > 255 || string.IsNullOrWhiteSpace(grandCaption) || grandCaption.Length > 255)
-            throw new ArgumentException("透视表汇总标题无效。");
+            throw new ArgumentException(MessageText.Get("透视表汇总标题无效。"));
         Name=name; Source=source; Range=range; Cache=cache; RowField=rowField; ColumnField=columnField;
         DataField=dataField; Aggregation=aggregation; DataCaption=dataCaption; GrandCaption=grandCaption; Stale=stale;
     }

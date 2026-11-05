@@ -20,7 +20,7 @@ internal sealed class ExecutionOverlay : global::Avalonia.Controls.Grid
     private readonly Border _overlay;
     private readonly TextBlock _title = new() { FontSize = 16, FontWeight = FontWeight.SemiBold, Foreground = Brushes.Black, HorizontalAlignment = HorizontalAlignment.Center };
     internal TextBlock Elapsed { get; } = new() { FontFamily = new("Consolas"), Foreground = Brushes.Black, HorizontalAlignment = HorizontalAlignment.Center };
-    internal Button Cancel { get; } = new() { Content = "取消  Esc", HorizontalAlignment = HorizontalAlignment.Center, MinWidth = 112 };
+    internal Button Cancel { get; } = new() { Content = UiText.Get("取消  Esc"), HorizontalAlignment = HorizontalAlignment.Center, MinWidth = 112 };
     private readonly RotateTransform _rotation = new();
     private readonly DispatcherTimer _timer = new();
     private readonly Stopwatch _elapsed = new();
@@ -39,8 +39,8 @@ internal sealed class ExecutionOverlay : global::Avalonia.Controls.Grid
             Data = Geometry.Parse("M 18,3 A 15,15 0 1 1 3,18"), Stroke = Brush.Parse("#1967D2"), StrokeThickness = 3,
             RenderTransform = _rotation, RenderTransformOrigin = RelativePoint.Center
         };
-        AutomationProperties.SetName(spinner, "正在加载");
-        AutomationProperties.SetName(Cancel, "取消执行（Esc）");
+        AutomationProperties.SetName(spinner, UiText.Get("正在加载"));
+        AutomationProperties.SetName(Cancel, UiText.Get("取消执行（Esc）"));
         var panel = new StackPanel { Spacing = 14 };
         panel.Children.Add(spinner); panel.Children.Add(_title); panel.Children.Add(Elapsed); panel.Children.Add(Cancel);
         _overlay = new Border
@@ -60,8 +60,8 @@ internal sealed class ExecutionOverlay : global::Avalonia.Controls.Grid
 
     internal IDisposable Begin(string title, CancellationTokenSource cancellation)
     {
-        if (IsRunning) throw new InvalidOperationException("已有计算或脚本正在执行。");
-        _cancellation = cancellation; _title.Text = title; Cancel.Content = "取消  Esc"; Cancel.IsEnabled = true;
+        if (IsRunning) throw new InvalidOperationException(UiText.Get("已有计算或脚本正在执行。"));
+        _cancellation = cancellation; _title.Text = title; Cancel.Content = UiText.Get("取消  Esc"); Cancel.IsEnabled = true;
         // Do not toggle IsEnabled: Fluent's disabled styles flash even when work finishes in one frame.
         _contentHitTestVisible = _content.IsHitTestVisible; _content.IsHitTestVisible = false;
         _elapsed.Restart(); _timer.Interval = TimeSpan.FromMilliseconds(100); _timer.Start();
@@ -90,7 +90,7 @@ internal sealed class ExecutionOverlay : global::Avalonia.Controls.Grid
 
     private void CancelExecution()
     {
-        _cancellation?.Cancel(); Cancel.Content = "正在取消…";
+        _cancellation?.Cancel(); Cancel.Content = UiText.Get("正在取消…");
     }
 
     private void End()

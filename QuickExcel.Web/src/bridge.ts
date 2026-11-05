@@ -1,3 +1,4 @@
+import { uiText } from './localization';
 // A document-bound data channel. It exposes no host object or user-code execution API.
 export type Message = { protocol: number; instance: string; document: string; generation: number; type: string; requestId: string; payload: any };
 const instance = location.pathname.split('/')[1];
@@ -28,7 +29,7 @@ export function request(type: string, expected: string, payload: unknown): Promi
 export function fail(error: unknown) {
   if (!closed) {
     document.body.setAttribute('data-failed', 'true');
-    const banner = document.getElementById('status'); if (banner) banner.textContent = '页面已停止，请在主窗口恢复已确认草稿。';
+    const banner = document.getElementById('status'); if (banner) banner.textContent = uiText('页面已停止，请在主窗口恢复已确认草稿。');
     try { post('error', { message: String(error).slice(0, 2000) }); } catch {}
   }
 }

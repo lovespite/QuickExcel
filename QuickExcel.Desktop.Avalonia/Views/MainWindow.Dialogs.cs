@@ -22,7 +22,7 @@ public sealed partial class MainWindow
         }
 #endif
         var result = await window.ShowDialog<T>(this);
-        if (failure is not null) throw new InvalidOperationException("对话框专项检查失败。", failure);
+        if (failure is not null) throw new InvalidOperationException(UiText.Get("对话框专项检查失败。"), failure);
         return result;
     }
 }

@@ -58,7 +58,7 @@ public sealed partial class MainWindow
         if (_settings.Value.Calculation == DesktopCalculationMode.Automatic && _tablesPending) _calculationPending = true;
         if (!_calculationPending) return;
         if (CanAutoCalculate) _calculationTimer.Start();
-        else _status.Text = "有待重算的公式，可按 F9 或在保存时计算。";
+        else _status.Text = UiText.Get("有待重算的公式，可按 F9 或在保存时计算。");
     }
     private Task CalculatePendingAsync() => CanAutoCalculate ? CalculatePendingCoreAsync(false) : Task.CompletedTask;
     private async Task CalculatePendingCoreAsync(bool forceFull)
@@ -66,15 +66,15 @@ public sealed partial class MainWindow
         if (!_calculationPending) return;
         _calculationTimer.Stop();
         using var cancellation = new CancellationTokenSource();
-        using var feedback = BeginExecution("正在重新计算…", cancellation);
+        using var feedback = BeginExecution(UiText.Get("正在重新计算…"), cancellation);
         _calculationCancellation = cancellation;
         try
         {
             if (_settings.Value.Calculation != DesktopCalculationMode.Partial && (forceFull || _tablesPending))
                 await RefreshDataTableValuesAsync(cancellation.Token, automatic: !forceFull);
-            if (await _workspace.CalculateAsync(cancellation.Token, forceFull)) { _calculationPending = false; _calculationFailure = null; _status.Text = "重算完成"; }
+            if (await _workspace.CalculateAsync(cancellation.Token, forceFull)) { _calculationPending = false; _calculationFailure = null; _status.Text = UiText.Get("重算完成"); }
         }
-        catch (Exception ex) { _calculationFailure = ex.Message; _status.Text = "计算未完成，保留输入及上次结果：" + ex.Message; }
+        catch (Exception ex) { _calculationFailure = ex.Message; _status.Text = UiText.Get("计算未完成，保留输入及上次结果：") + ex.Message; }
         finally { _calculationCancellation = null; QueueStatistics(); }
     }
     private async Task<bool> FlushEditsAsync()
@@ -97,13 +97,13 @@ public sealed partial class MainWindow
                 var result = await Task.Run(() => SelectionStatistics.Compute(snapshot, sheet, ranges, cancellationToken: cancellation.Token), cancellation.Token);
                 if (cancellation.IsCancellationRequested || _windowClosed || !ReferenceEquals(document, Document) || Document.Snapshot.Revision != snapshot.Revision) return;
                 string Number(double? value) => value?.ToString("G12") ?? "—";
-                _selectionStatistics.Text = !result.Complete ? result.Limitation : result.Numbers == 0 ? $"计数：{result.Count:N0}" :
-                    $"平均值：{Number(result.Average)}   计数：{result.Count:N0}   求和：{Number(result.Sum)}";
-                if (result.OldCaches > 0 || result.MissingResults > 0) _selectionStatistics.Text += " · 含待重算结果";
-                ToolTip.SetTip(_selectionStatistics, $"仅统计可见行列，重叠选区不重复计数。\n数值 {result.Numbers:N0}；错误 {result.Errors:N0}；旧缓存 {result.OldCaches:N0}；缺失结果 {result.MissingResults:N0}。");
+                _selectionStatistics.Text = !result.Complete ? result.Limitation : result.Numbers == 0 ? UiText.Format($"计数：{result.Count:N0}") :
+                    UiText.Format($"平均值：{Number(result.Average)}   计数：{result.Count:N0}   求和：{Number(result.Sum)}");
+                if (result.OldCaches > 0 || result.MissingResults > 0) _selectionStatistics.Text += UiText.Get(" · 含待重算结果");
+                ToolTip.SetTip(_selectionStatistics, UiText.Format($"仅统计可见行列，重叠选区不重复计数。\n数值 {result.Numbers:N0}；错误 {result.Errors:N0}；旧缓存 {result.OldCaches:N0}；缺失结果 {result.MissingResults:N0}。"));
             }
             catch (OperationCanceledException) { }
-            catch (InvalidOperationException ex) { if (!cancellation.IsCancellationRequested) { _selectionStatistics.Text = "筛选待更新"; ToolTip.SetTip(_selectionStatistics, ex.Message); } }
+            catch (InvalidOperationException ex) { if (!cancellation.IsCancellationRequested) { _selectionStatistics.Text = UiText.Get("筛选待更新"); ToolTip.SetTip(_selectionStatistics, ex.Message); } }
             finally { if (ReferenceEquals(_statisticsCancellation, cancellation)) _statisticsCancellation = null; cancellation.Dispose(); }
         }
     }

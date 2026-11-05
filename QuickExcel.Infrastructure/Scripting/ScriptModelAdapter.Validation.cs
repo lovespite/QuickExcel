@@ -21,7 +21,7 @@ internal sealed partial class ScriptModelAdapter
             if (range.Count > MaxReadCells) throw new ModelFailure("BudgetExceeded", "验证读取超过 100000 格。");
             Spend((int)range.Count, false); Model.PrepareValueRead(sheet.Id, range, cancellation);
             var failures = new WorkbookValidation().CheckAll(Model.ValueView, Cells(sheet.Id, range).ToArray());
-            if (failures.Any(f => f.Title == "无法确认验证结果")) throw Unsupported(failures.First(f => f.Title == "无法确认验证结果").Message);
+            if (failures.Any(f => f.Title == MessageText.Get("无法确认验证结果"))) throw Unsupported(failures.First(f => f.Title == MessageText.Get("无法确认验证结果")).Message);
             if (member == "getValid") return failures.Count == 0;
             if (failures.Count == 0) return null;
             if (failures.Count > 1024) throw new ModelFailure("BudgetExceeded", "无效区域超过 1024 个，请分块查询。");

@@ -25,7 +25,7 @@ public sealed partial class MainWindow : Window
     private readonly CompositionTextBox _formula = new() { AcceptsReturn = true, NewLine = "\n",
         TextWrapping = TextWrapping.Wrap, VerticalContentAlignment = VerticalAlignment.Top };
     private readonly TextBlock _address = new() { Width = 86, VerticalAlignment = VerticalAlignment.Center };
-    private readonly TextBlock _status = new() { Text = "就绪", Margin = new(12, 5) };
+    private readonly TextBlock _status = new() { Text = UiText.Get("就绪"), Margin = new(12, 5) };
     private readonly ListBox _sheets = new() { MinHeight = 0, Padding = new(0), SelectionMode = SelectionMode.Single };
     private readonly DockPanel _book = new();
     private readonly global::Avalonia.Controls.Grid _start = new() { Margin = new(40, 36), ColumnDefinitions = new("300,40,*") };
@@ -45,14 +45,24 @@ public sealed partial class MainWindow : Window
     private WorkbookDocument Document => _workspace.Document;
     private int SheetIndex => Document.Snapshot.Sheets.IndexOf(Document.Snapshot.GetSheet(Document.Snapshot.ActiveSheetId));
 
-    public MainWindow(string userDataDirectory)
+    private static DesktopSettings LoadSettings(string userDataDirectory)
+    {
+        var settings = new DesktopSettings(Path.Combine(userDataDirectory, "settings.json"));
+        settings.Load();
+        UiText.Initialize(settings.Value.Language);
+        return settings;
+    }
+
+    public MainWindow(string userDataDirectory) : this(userDataDirectory, LoadSettings(userDataDirectory)) { }
+
+    internal MainWindow(string userDataDirectory, DesktopSettings settings)
     {
         Title = "QuickExcel · Avalonia"; Width = 1280; Height = 820; MinWidth = 760; MinHeight = 480;
         FontFamily = new FontFamily("Segoe UI, Noto Sans CJK SC, sans-serif"); FontSize = 13;
         var services = _services = DesktopServices.Create(); _workspace = new(services, new WorkbookFileAccess(services.Storage));
         _files = new AvaloniaFileDialogs(this);
         _recentFiles = new(Path.Combine(userDataDirectory, "recent-files.json")); _recentFiles.Load();
-        _settings = new(Path.Combine(userDataDirectory, "settings.json")); _settings.Load();
+        _settings = settings;
         _userDataDirectory = userDataDirectory;
         BuildView(); InstallEditingCommands(); InstallFormulaEditing(); InstallRibbon(); InstallCalculation(); InstallSheetCommands(); InstallSearch(); InstallDataCommands(); InstallValidation(); InstallCleaning(); InstallObjects(); InstallFileCommands(); InstallScriptCommands(); InstallPrintCommands();
         ArrangeRibbonTabs(); InstallScriptEvents(); GroupMainMenus();
@@ -94,6 +104,7 @@ public sealed partial class MainWindow : Window
             await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Background);
             if (Program.SelfCheckDirectory is { } evidence) { await RunSelfCheckAsync(evidence); return; }
 #if QUICKEXCEL_DIAGNOSTICS
+            if (Program.SmokeDirectory is { } localizationDirectory && Program.SmokeMode == "localization") { await RunLocalizationSmokeAsync(localizationDirectory); return; }
             if (Program.SmokeDirectory is { } sheetsDirectory && Program.SmokeMode == "sheets") { await RunSheetsSmokeAsync(sheetsDirectory); return; }
             if (Program.SmokeDirectory is { } dataToolsDirectory && Program.SmokeMode == "data-tools") { await RunDataToolsSmokeAsync(dataToolsDirectory); return; }
             if (Program.SmokeDirectory is { } borderDirectory && Program.SmokeMode == "borders") { await RunBorderSmokeAsync(borderDirectory); return; }
@@ -119,24 +130,24 @@ public sealed partial class MainWindow : Window
     private void BuildView()
     {
         MenuItem Item(string text, Func<Task> action) { var item = new MenuItem { Header = text }; item.Click += async (_, _) => await PerformAsync(action); return item; }
-        _menu.Items.Add(new MenuItem { Header = "文件", Items =
+        _menu.Items.Add(new MenuItem { Header = UiText.Get("文件"), Items =
         {
-            Item("新建  Ctrl+N", async () => { if (await ConfirmDiscardAsync()) { _workspace.New(); ShowBook(); } }),
-            Item("打开  Ctrl+O", OpenAsync), Item("最近文件", async () => { if (await ConfirmDiscardAsync()) ShowHome(); }),
-            Item("打开恢复副本", RecoveryAsync), new Separator(),
-            Item("保存  Ctrl+S", async () => await SaveAsync(false)), Item("另存为", async () => await SaveAsync(true)), new Separator(),
-            Item("导出值快照", () => ExportAsync(false)), Item("导出可移植公式", () => ExportAsync(true)),
-            Item("打印预览 / PDF", OpenPrintPreviewAsync), new Separator(), Item("兼容性报告", CompatibilityAsync), new Separator(),
-            Item("设置", OpenSettingsAsync), new Separator(),
-            Item("关闭工作簿", async () => { if (await ConfirmDiscardAsync()) { _workspace.New(); ShowHome(); } }), Item("退出", () => { Close(); return Task.CompletedTask; })
+            Item(UiText.Get("新建  Ctrl+N"), async () => { if (await ConfirmDiscardAsync()) { _workspace.New(); ShowBook(); } }),
+            Item(UiText.Get("打开  Ctrl+O"), OpenAsync), Item(UiText.Get("最近文件"), async () => { if (await ConfirmDiscardAsync()) ShowHome(); }),
+            Item(UiText.Get("打开恢复副本"), RecoveryAsync), new Separator(),
+            Item(UiText.Get("保存  Ctrl+S"), async () => await SaveAsync(false)), Item(UiText.Get("另存为"), async () => await SaveAsync(true)), new Separator(),
+            Item(UiText.Get("导出值快照"), () => ExportAsync(false)), Item(UiText.Get("导出可移植公式"), () => ExportAsync(true)),
+            Item(UiText.Get("打印预览 / PDF"), OpenPrintPreviewAsync), new Separator(), Item(UiText.Get("兼容性报告"), CompatibilityAsync), new Separator(),
+            Item(UiText.Get("设置"), OpenSettingsAsync), new Separator(),
+            Item(UiText.Get("关闭工作簿"), async () => { if (await ConfirmDiscardAsync()) { _workspace.New(); ShowHome(); } }), Item(UiText.Get("退出"), () => { Close(); return Task.CompletedTask; })
         } });
-        _menu.Items.Add(new MenuItem { Header = "编辑", Items =
-        { Item("撤销  Ctrl+Z", () => History(false)), Item("重做  Ctrl+Y", () => History(true)) } });
-        _menu.Items.Add(new MenuItem { Header = "工作表", Items =
-        { Item("添加工作表", AddSheetAsync), Item("重命名", RenameSheetAsync), Item("删除工作表", DeleteSheetAsync) } });
-        _menu.Items.Add(new MenuItem { Header = "视图", Items =
+        _menu.Items.Add(new MenuItem { Header = UiText.Get("编辑"), Items =
+        { Item(UiText.Get("撤销  Ctrl+Z"), () => History(false)), Item(UiText.Get("重做  Ctrl+Y"), () => History(true)) } });
+        _menu.Items.Add(new MenuItem { Header = UiText.Get("工作表"), Items =
+        { Item(UiText.Get("添加工作表"), AddSheetAsync), Item(UiText.Get("重命名"), RenameSheetAsync), Item(UiText.Get("删除工作表"), DeleteSheetAsync) } });
+        _menu.Items.Add(new MenuItem { Header = UiText.Get("视图"), Items =
         { Item("100%", () => ZoomAsync(100)), Item("125%", () => ZoomAsync(125)), Item("150%", () => ZoomAsync(150)),
-          Item("标签在底部", () => PlaceSheets(SheetNavigationPlacement.Bottom)), Item("标签在左侧", () => PlaceSheets(SheetNavigationPlacement.Left)), Item("标签在右侧", () => PlaceSheets(SheetNavigationPlacement.Right)) } });
+          Item(UiText.Get("标签在底部"), () => PlaceSheets(SheetNavigationPlacement.Bottom)), Item(UiText.Get("标签在左侧"), () => PlaceSheets(SheetNavigationPlacement.Left)), Item(UiText.Get("标签在右侧"), () => PlaceSheets(SheetNavigationPlacement.Right)) } });
         _book.Children.Add(BuildWorksheetLayout()); ApplySheetPlacement();
         BuildHome();
         var content = new global::Avalonia.Controls.Grid(); content.Children.Add(_book); content.Children.Add(new ScrollViewer { Content = _start, HorizontalScrollBarVisibility = global::Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled });
@@ -164,8 +175,8 @@ public sealed partial class MainWindow : Window
 
         var splitter = new GridSplitter { ResizeDirection = GridResizeDirection.Rows, ResizeBehavior = GridResizeBehavior.PreviousAndNext,
             HorizontalAlignment = HorizontalAlignment.Stretch, VerticalAlignment = VerticalAlignment.Stretch, Background = Brush.Parse("#E0E0E0") };
-        AutomationProperties.SetName(splitter, "调整公式栏高度");
-        ToolTip.SetTip(splitter, "上下拖动可调整公式栏高度");
+        AutomationProperties.SetName(splitter, UiText.Get("调整公式栏高度"));
+        ToolTip.SetTip(splitter, UiText.Get("上下拖动可调整公式栏高度"));
         LayoutGrid.SetRow(splitter, 1);
         layout.Children.Add(splitter);
 
@@ -198,7 +209,7 @@ public sealed partial class MainWindow : Window
             AutomationProperties.SetName(button, Path.GetFileName(path) + "，" + Path.GetDirectoryName(path));
             button.Click += async (_, _) => await PerformAsync(async () => { if (await ConfirmDiscardAsync()) await OpenPathAsync(path); }); _recent.Children.Add(button);
         }
-        if (_recent.Children.Count == 0) _recent.Children.Add(new TextBlock { Text = "暂无历史文件，打开工作簿后会显示在这里。", Foreground = Brushes.Gray, TextWrapping = TextWrapping.Wrap, Margin = new(0, 12) });
+        if (_recent.Children.Count == 0) _recent.Children.Add(new TextBlock { Text = UiText.Get("暂无历史文件，打开工作簿后会显示在这里。"), Foreground = Brushes.Gray, TextWrapping = TextWrapping.Wrap, Margin = new(0, 12) });
     }
     private void ShowBook() { if (!_book.IsVisible) Document.Session.RaiseScriptEvent("workbook.activate"); ((Control)_start.Parent!).IsVisible = false; _book.IsVisible = true; }
     private void Synchronize()
@@ -229,14 +240,14 @@ public sealed partial class MainWindow : Window
     }
     private void UpdateTitle()
     {
-        Title = (Document.IsDirty || _scriptPage?.Drafts.IsDirty == true ? "* " : "") + (_workspace.FilePath is { } path ? Path.GetFileName(path) : "未命名.xlsq") + " — QuickExcel";
+        Title = (Document.IsDirty || _scriptPage?.Drafts.IsDirty == true ? "* " : "") + (_workspace.FilePath is { } path ? Path.GetFileName(path) : UiText.Get("未命名.xlsq")) + " — QuickExcel";
         _address.Text = WorkbookGrid.ColumnName(_grid.Current.Column) + (_grid.Current.Row + 1);
         var sheet = Document.Snapshot.Sheets[SheetIndex];
         var value = Document.GetCellValue(SheetIndex, _grid.Current.Row, _grid.Current.Column);
         var readOnly = _grid.IsCellReadOnly(_grid.Current);
-        AutomationProperties.SetName(_grid, $"工作表 {sheet.Name}，{WorkbookGrid.ColumnName(_grid.Current.Column)} 列，第 {_grid.Current.Row + 1} 行，值 {value}，选中 {_grid.SelectionRanges.Sum(r => r.Count)} 格，{(readOnly ? "只读" : "可编辑")}");
-        AutomationProperties.SetName(_grid.CellEditor, $"单元格 {_address.Text}，{(readOnly ? "只读" : "编辑")}");
-        AutomationProperties.SetName(_formula, "公式栏 " + _address.Text); AutomationProperties.SetName(_sheets, "工作表列表");
+        AutomationProperties.SetName(_grid, UiText.Format($"工作表 {sheet.Name}，{WorkbookGrid.ColumnName(_grid.Current.Column)} 列，第 {_grid.Current.Row + 1} 行，值 {value}，选中 {_grid.SelectionRanges.Sum(r => r.Count)} 格，{(readOnly ? UiText.Get("只读") : UiText.Get("可编辑"))}"));
+        AutomationProperties.SetName(_grid.CellEditor, UiText.Format($"单元格 {_address.Text}，{(readOnly ? UiText.Get("只读") : UiText.Get("编辑"))}"));
+        AutomationProperties.SetName(_formula, UiText.Get("公式栏 ") + _address.Text); AutomationProperties.SetName(_sheets, UiText.Get("工作表列表"));
     }
     private void UpdateFormula()
     {
@@ -280,7 +291,7 @@ public sealed partial class MainWindow : Window
             var command = new SetCellsCommand([new(new(sheet.Id, owner.Row, owner.Column), CellInput.ParseForCell(text, snapshot, sheet, owner.Row, owner.Column))]);
             await _workspace.Editor.ExecuteAsync(command, ConfirmValidationAsync, snapshot.Revision);
             QueueCellEvent("cell.commit", sheet.Id, owner);
-            Synchronize(); _status.Text = "已修改"; return true;
+            Synchronize(); _status.Text = UiText.Get("已修改"); return true;
         }
         catch (Exception ex) { Error(ex); return false; }
     }
@@ -292,7 +303,7 @@ public sealed partial class MainWindow : Window
     private bool TryEdit(Func<CommandResult> edit)
     {
         if (_workspace.IsBusy || _execution.IsRunning) return false;
-        try { edit(); Synchronize(); _status.Text = "已修改"; return true; }
+        try { edit(); Synchronize(); _status.Text = UiText.Get("已修改"); return true; }
         catch (Exception ex) { Error(ex); return false; }
     }
     private void Error(Exception ex) => _status.Text = ex.Message;
@@ -325,14 +336,14 @@ public sealed partial class MainWindow : Window
     private async Task OpenAsync()
     {
         if (!await CommitEditorsAsync()) return;
-        var selected = await _files.OpenAsync(new("打开工作簿", [new("所有支持的文件", ["*.xlsq", "*.xlsx", "*.csv"]), new("CSV（UTF-8 文本）", ["*.csv"])]));
+        var selected = await _files.OpenAsync(new(UiText.Get("打开工作簿"), [new(UiText.Get("所有支持的文件"), ["*.xlsq", "*.xlsx", "*.csv"]), new(UiText.Get("CSV（UTF-8 文本）"), ["*.csv"])]));
         if (selected is not null && await ConfirmDiscardAsync()) await OpenPathAsync(selected.Path);
     }
     private async Task OpenPathAsync(string path)
     {
-        await _workspace.OpenAsync(new(path)); _recentFiles.Remember(path); ShowBook(); _status.Text = "已打开 " + Path.GetFileName(path);
+        await _workspace.OpenAsync(new(path)); _recentFiles.Remember(path); ShowBook(); _status.Text = UiText.Get("已打开 ") + Path.GetFileName(path);
         if (Path.GetExtension(path).Equals(".csv", StringComparison.OrdinalIgnoreCase))
-            _status.Text = "已按文本导入 CSV。保存时将写入新的工作簿。";
+            _status.Text = UiText.Get("已按文本导入 CSV。保存时将写入新的工作簿。");
         if (DesktopServices.SupportsScripts && Document.Snapshot.ScriptModules.Signature is not null)
         {
             var modules = Document.Snapshot.ScriptModules;
@@ -341,12 +352,12 @@ public sealed partial class MainWindow : Window
                 var trust = await Task.Run(() => ScriptTrust.Verify(modules));
                 if (ReferenceEquals(modules, Document.Snapshot.ScriptModules) && trust.CanAutoEnable)
                 {
-                    if (!modules.CanExecute) _status.Text = ScriptModuleSet.MigrationMessage;
+                    if (!modules.CanExecute) _status.Text = UiText.Get(ScriptModuleSet.MigrationMessage);
                     else if (trust.ExecutionPolicyAccepted) await EnableVerifiedScriptsAsync();
-                    else _status.Text = "脚本签名有效；尚未确认当前引擎策略，请在脚本页显式应用一次。";
+                    else _status.Text = UiText.Get("脚本签名有效；尚未确认当前引擎策略，请在脚本页显式应用一次。");
                 }
             }
-            catch (QuickExcel.Security.UserProtectionUnavailableException ex) { _status.Text = "文件已打开；无法读取持久信任，脚本保持停用：" + ex.Message; }
+            catch (QuickExcel.Security.UserProtectionUnavailableException ex) { _status.Text = UiText.Get("文件已打开；无法读取持久信任，脚本保持停用：") + ex.Message; }
         }
     }
     private async Task<bool> SaveAsync(bool saveAs)
@@ -358,7 +369,7 @@ public sealed partial class MainWindow : Window
         await CalculatePendingCoreAsync(_settings.Value.Calculation == DesktopCalculationMode.Manual);
         if (_calculationPending && _settings.Value.Calculation != DesktopCalculationMode.Automatic)
         {
-            _status.Text = "保存前重算未完成，本次保存已取消。" + _calculationFailure;
+            _status.Text = UiText.Get("保存前重算未完成，本次保存已取消。") + _calculationFailure;
             return false;
         }
         var snapshot = Document.Snapshot;
@@ -382,11 +393,11 @@ public sealed partial class MainWindow : Window
         {
             var preferXlsx = !needsScripts && !migration && string.Equals(Path.GetExtension(current), ".xlsx", StringComparison.OrdinalIgnoreCase);
             var extension = preferXlsx ? ".xlsx" : ".xlsq";
-            FileDialogType[] types = needsScripts ? [new("QuickExcel 工作簿（含脚本）", ["*.xlsq"])] : [new("QuickExcel 工作簿", ["*.xlsq"]), new("Excel 工作簿", ["*.xlsx"])];
-            selected = await _files.SaveAsync(new("保存工作簿", types, Path.GetFileNameWithoutExtension(current ?? "未命名") + (migration ? "-v2" : discard ? "-受支持副本" : "") + extension, extension, preferXlsx ? 1 : 0));
+            FileDialogType[] types = needsScripts ? [new(UiText.Get("QuickExcel 工作簿（含脚本）"), ["*.xlsq"])] : [new(UiText.Get("QuickExcel 工作簿"), ["*.xlsq"]), new(UiText.Get("Excel 工作簿"), ["*.xlsx"])];
+            selected = await _files.SaveAsync(new(UiText.Get("保存工作簿"), types, Path.GetFileNameWithoutExtension(current ?? UiText.Get("未命名")) + (migration ? "-v2" : discard ? UiText.Get("-受支持副本") : "") + extension, extension, preferXlsx ? 1 : 0));
         }
         if (selected is null) return false;
-        try { await _workspace.SaveAsync(selected, discard, overwrite); _recentFiles.Remember(selected.Path); _status.Text = "已保存 " + Path.GetFileName(selected.Path) + (_calculationFailure is null ? "" : " · 部分结果待重算：" + _calculationFailure); return true; }
+        try { await _workspace.SaveAsync(selected, discard, overwrite); _recentFiles.Remember(selected.Path); _status.Text = UiText.Get("已保存 ") + Path.GetFileName(selected.Path) + (_calculationFailure is null ? "" : UiText.Get(" · 部分结果待重算：") + _calculationFailure); return true; }
         catch (Exception ex) { Error(ex); return false; }
     }
     private async Task History(bool redo) { if (await CommitEditorsAsync()) TryEdit(() => redo ? _workspace.Editor.Redo() : _workspace.Editor.Undo()); }
@@ -440,9 +451,9 @@ public sealed partial class MainWindow : Window
         }
         // Search editing and dropdown navigation own their keys; they must not clear or paste into worksheet cells.
         if (AutomationPickerOwnsKeyboard) return;
-        if (e.Key == Key.Escape && _formatBrush is not null) { _formatBrush = null; _status.Text = "已取消格式刷。"; e.Handled = true; return; }
+        if (e.Key == Key.Escape && _formatBrush is not null) { _formatBrush = null; _status.Text = UiText.Get("已取消格式刷。"); e.Handled = true; return; }
         if (e.Key == Key.Escape && _clipboardCells?.IsCut == true && !_grid.IsEditing)
-        { _clipboardCells = null; _status.Text = "已取消剪切。"; e.Handled = true; return; }
+        { _clipboardCells = null; _status.Text = UiText.Get("已取消剪切。"); e.Handled = true; return; }
         if (e.Key == Key.Delete && !_grid.IsEditing && !_formula.IsKeyboardFocusWithin) { e.Handled = true; await PerformAsync(ClearAsync); return; }
         var command = e.KeyModifiers.HasFlag(KeyModifiers.Control) || e.KeyModifiers.HasFlag(KeyModifiers.Meta);
         if (command && e.Key == Key.E && e.KeyModifiers is KeyModifiers.Control or KeyModifiers.Meta && !_grid.IsEditing && !_formula.IsKeyboardFocusWithin &&

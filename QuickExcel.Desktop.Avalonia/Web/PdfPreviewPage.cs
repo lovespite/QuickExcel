@@ -23,18 +23,18 @@ internal sealed class PdfPreviewPage : IAsyncDisposable
                 case "exportPdf": ExportRequested?.Invoke(); break;
                 case "print": PrintRequested?.Invoke(); break;
                 case "focusHost": FocusRequested?.Invoke(); break;
-                default: Failed?.Invoke(new InvalidDataException("预览页发送了未请求的响应。")); break;
+                default: Failed?.Invoke(new InvalidDataException(UiText.Get("预览页发送了未请求的响应。"))); break;
             }
         };
     }
     internal async Task LoadAsync(PrintSession session)
     {
-        if (_file is not null || _dispose is not null) throw new InvalidOperationException("预览页已绑定打印任务或已关闭。");
+        if (_file is not null || _dispose is not null) throw new InvalidOperationException(UiText.Get("预览页已绑定打印任务或已关闭。"));
         _file = session.RetainPdf();
         _resource = await Browser.Origin.AddPdfAsync(session.PdfPath);
         await Browser.Ready;
         var response = await Browser.RequestAsync("loadPdf", "pdfLoaded", new { url = _resource.Uri.AbsoluteUri }, TimeSpan.FromSeconds(45));
-        if (response.Payload.GetProperty("pages").GetInt32() != session.Job.Layout.Pages.Length) throw new InvalidDataException("浏览器预览页数与冻结打印任务不一致。");
+        if (response.Payload.GetProperty("pages").GetInt32() != session.Job.Layout.Pages.Length) throw new InvalidDataException(UiText.Get("浏览器预览页数与冻结打印任务不一致。"));
     }
     public ValueTask DisposeAsync() => new(_dispose ??= DisposeCoreAsync());
     private async Task DisposeCoreAsync()

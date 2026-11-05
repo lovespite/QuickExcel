@@ -23,26 +23,26 @@ public sealed partial class MainWindow
             items.Add(item);
         }
         items.Add(new Separator());
-        var color = new MenuItem { Header = "线条颜色" };
-        color.ItemsSource = ColorMenuItems("自动（黑色）", value => { _borderColor = value; return Task.CompletedTask; }, async () =>
-        { if (await new CustomColorDialog(_borderColor, "边框颜色").ShowAsync(this) is { } value) _borderColor = value; });
+        var color = new MenuItem { Header = UiText.Get("线条颜色") };
+        color.ItemsSource = ColorMenuItems(UiText.Get("自动（黑色）"), value => { _borderColor = value; return Task.CompletedTask; }, async () =>
+        { if (await new CustomColorDialog(_borderColor, UiText.Get("边框颜色")).ShowAsync(this) is { } value) _borderColor = value; });
         items.Add(color);
-        var line = new MenuItem { Header = "线型" };
+        var line = new MenuItem { Header = UiText.Get("线型") };
         line.ItemsSource = BorderEditor.StyleNames.Select((name, index) =>
         {
             var item = CommandMenu(name, () => { _borderLine = index; return Task.CompletedTask; });
             item.Icon = new BorderLineSample(index) { Width = 58, Height = 18 }; return item;
         }).ToArray(); items.Add(line);
-        items.Add(new Separator()); items.Add(CommandMenu("其他边框…", () => ShowNumberFormatAsync(true, true)));
+        items.Add(new Separator()); items.Add(CommandMenu(UiText.Get("其他边框…"), () => ShowNumberFormatAsync(true, true)));
         var menu = new MenuFlyout { ItemsSource = items };
         menu.Opening += (_, _) =>
         {
-            color.Header = "线条颜色 · " + (_borderColor is null ? "自动" : "#" + _borderColor[2..]);
-            line.Header = "线型 · " + BorderEditor.StyleNames[_borderLine];
+            color.Header = UiText.Get("线条颜色 · ") + (_borderColor is null ? UiText.Get("自动") : "#" + _borderColor[2..]);
+            line.Header = UiText.Get("线型 · ") + BorderEditor.StyleNames[_borderLine];
         };
-        var button = new DropDownButton { Name = "BorderDropdown", Content = "▦ 边框", Flyout = menu,
+        var button = new DropDownButton { Name = "BorderDropdown", Content = UiText.Get("▦ 边框"), Flyout = menu,
             Height = 28, MinHeight = 28, Padding = new(4, 2), Margin = new(2, 1), Background = Brushes.Transparent, BorderThickness = new(0) };
-        AutomationProperties.SetName(button, "单元格边框"); ToolTip.SetTip(button, "边框 · 线型 · 颜色"); _mutationControls.Add(button); return button;
+        AutomationProperties.SetName(button, UiText.Get("单元格边框")); ToolTip.SetTip(button, UiText.Get("边框 · 线型 · 颜色")); _mutationControls.Add(button); return button;
     }
     private async Task ApplyBordersAsync(CellBorderPatch patch)
     {

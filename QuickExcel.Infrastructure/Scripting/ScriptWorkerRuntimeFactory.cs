@@ -79,7 +79,7 @@ public sealed class ScriptWorkerRuntime : IScriptBatchRuntime
         if ((!OperatingSystem.IsWindows() && !OperatingSystem.IsLinux()) || System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture != System.Runtime.InteropServices.Architecture.X64)
             throw new PlatformNotSupportedException("此平台尚未开放脚本隔离。");
         if (!File.Exists(executable)) throw new ScriptRuntimeFailureException("WorkerMissing", "找不到脚本 worker，请重新构建或安装完整发布包。");
-        if (!request.Modules.CanExecute) throw new NotSupportedException(QuickExcel.Domain.ScriptModuleSet.MigrationMessage);
+        if (!request.Modules.CanExecute) throw new NotSupportedException(MessageText.Get(QuickExcel.Domain.ScriptModuleSet.MigrationMessage));
         if (request.Modules.Modules.Sum(m => (long)Encoding.UTF8.GetByteCount(m.Value.Source)) > 1024 * 1024)
             throw new ScriptRuntimeFailureException("SourceLimit", "脚本源码超过 1 MiB UTF-8 限额。");
         if (actionsMode && !request.Modules.HasActions) throw new InvalidOperationException("没有 actions 绑定。");

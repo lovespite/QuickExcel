@@ -39,7 +39,7 @@ public static class PersistentFiltering
     public static IReadOnlyList<FilterCandidate> Candidates(WorkbookSnapshot snapshot, WorksheetSnapshot sheet, int column, int? tableId = null)
     {
         var table = tableId is { } id ? sheet.Data.Tables.Single(t => t.Id == id) : null;
-        var filter = (table is null ? sheet.Data.Filter : table.Filter) ?? throw new InvalidOperationException("筛选区域已失效。");
+        var filter = (table is null ? sheet.Data.Filter : table.Filter) ?? throw new InvalidOperationException(UiText.Get("筛选区域已失效。"));
         var remaining = new WorksheetAutoFilter(filter.Range, filter.Columns.Remove(column));
         var other = sheet.WithData(table is null ? sheet.Data with { Filter = remaining } : sheet.Data with { Tables = sheet.Data.Tables.Replace(table, table.WithFilter(remaining)) });
         var hidden = WorksheetFilterEngine.Evaluate(other, snapshot.Styles, snapshot.DateSystem, snapshot.Revision);
@@ -49,22 +49,22 @@ public static class PersistentFiltering
         {
             if (values.TryGetValue(key, out var old)) { values[key] = (old.Label, old.Count + count, old.Selected || on); return; }
             characters += label.Length;
-            if (characters > DataFilterEngine.MaxCandidateCharacters) throw new InvalidOperationException("筛选候选文本过大，请缩小区域。");
+            if (characters > DataFilterEngine.MaxCandidateCharacters) throw new InvalidOperationException(UiText.Get("筛选候选文本过大，请缩小区域。"));
             values.Add(key, (label, count, on));
         }
         for (var row = filter.Range.Top + 1; row <= filter.Range.Bottom; row++)
         {
             var cell = sheet.GetCell(row, column);
             if (cell?.Content.Kind == CellContentKind.Formula && (cell.Calculation?.Value is null || cell.Calculation.InputRevision != snapshot.Revision || cell.Calculation.State is not (CalculationState.Fresh or CalculationState.Error)))
-                throw new InvalidOperationException("候选列含待重算公式，请先重算。");
+                throw new InvalidOperationException(UiText.Get("候选列含待重算公式，请先重算。"));
             if (hidden.Contains(row)) continue;
             var value = cell?.Value ?? CellValue.Blank; var style = TablePresentation.NumberStyle(sheet, snapshot.Styles, row, column);
             var blank = value.Kind == CellValueKind.Blank || value.Kind == CellValueKind.Text && value.TextValue.Length == 0;
-            var label = blank ? "(空白)" : WorksheetFilterEngine.ValueLabel(value, style, snapshot.DateSystem);
+            var label = blank ? UiText.Get("(空白)") : WorksheetFilterEngine.ValueLabel(value, style, snapshot.DateSystem);
             Add(blank ? CellValue.Blank : CellValue.FromText(label), label, match?.Invoke(value, style, snapshot.DateSystem) ?? true, 1);
         }
         if (selected?.Values is { } oldValues) foreach (var label in oldValues) Add(CellValue.FromText(label), label, true, 0);
-        if (selected?.IncludeBlank == true) Add(CellValue.Blank, "(空白)", true, 0);
+        if (selected?.IncludeBlank == true) Add(CellValue.Blank, UiText.Get("(空白)"), true, 0);
         return values.Select(p => new FilterCandidate(p.Key, p.Value.Label, p.Value.Count, p.Value.Selected)).OrderBy(c => c.Key.Kind == CellValueKind.Blank).ThenBy(c => c.Label, StringComparer.OrdinalIgnoreCase).ToArray();
     }
 }

@@ -72,7 +72,7 @@ public sealed partial class DocumentSession : IDisposable
         {
             ThrowIfClosed(); WorkbookLimits.ValidatePosition(cell.Row, cell.Column);
             var sheet = _snapshot.GetSheet(sheetId);
-            if (sheet.Visibility != SheetVisibility.Visible) throw new InvalidOperationException("不能激活隐藏工作表。");
+            if (sheet.Visibility != SheetVisibility.Visible) throw new InvalidOperationException(MessageText.Get("不能激活隐藏工作表。"));
             var view = sheet.View.ActiveCell == cell ? sheet.View : sheet.View.WithActiveCell(cell);
             if (viewport is { } first)
             {
@@ -106,11 +106,11 @@ public sealed partial class DocumentSession : IDisposable
                 if (!Matches(action.Stamp) || _activeActionId != action.OperationId ||
                     (action.ConsoleSource is null ? !_scriptsEnabled || !_snapshot.ScriptModules.HasActions || _activeConsoleSource is not null
                         : action.ConsoleSource != _activeConsoleSource))
-                    throw new InvalidOperationException("动作已过期或未授权，请重新运行。");
+                    throw new InvalidOperationException(MessageText.Get("动作已过期或未授权，请重新运行。"));
             }
             CheckRevision(expectedRevision);
             var before = _snapshot;
-            if (before.FileState?.FormulaReadOnly == true && action?.ConsoleSource is null) throw new InvalidOperationException(WorkbookFileState.FormulaReadOnlyMessage);
+            if (before.FileState?.FormulaReadOnly == true && action?.ConsoleSource is null) throw new InvalidOperationException(MessageText.Get(WorkbookFileState.FormulaReadOnlyMessage));
             var draft = command.Prepare(before); // No session state is changed until every check succeeds.
             ExtendedObjectSafety.ValidateEdit(before, draft.Snapshot, command, draft.StructureChanged);
             PivotSafety.ValidateEdit(before,draft.Snapshot,command,draft.StructureChanged);
@@ -121,7 +121,7 @@ public sealed partial class DocumentSession : IDisposable
             if (command is not ApplyActionPatchCommand { ProtectionValidatedByModel: true })
                 ProtectionSafety.Validate(before, draft.Snapshot, command);
             if (draft.Snapshot.Sheets.Any(s => WorksheetOutline.HasGroups(s) && s.Data.AllFilters.Any(f => f.Columns.Count > 0)))
-                throw new NotSupportedException("分组与活动筛选的混合编辑暂未对齐 Excel；请先展开并取消分组，或清除筛选条件。");
+                throw new NotSupportedException(MessageText.Get("分组与活动筛选的混合编辑暂未对齐 Excel；请先展开并取消分组，或清除筛选条件。"));
             // Visibility aggregates also depend on filter metadata and displayed filter labels.
             // Conservatively recalculate these workbooks for presentation-only commands.
             if (draft.CalculationUnchanged && !ReferenceEquals(draft.Snapshot, before) && Formulas.SubtotalFunctions.Present(draft.Snapshot))
@@ -129,11 +129,11 @@ public sealed partial class DocumentSession : IDisposable
             TableSafety.ValidateEdit(before, draft.Snapshot);
             var inputChanges = draft.Changes.Where(c => c.Before?.Content.WithStyle(0) != c.After?.Content.WithStyle(0)).Select(c => c.Address).ToArray();
             if (inputChanges.Length > 0 && before.FileState?.CompatibilityDiagnostics.Any(d => d.Feature.Contains("dataValidation", StringComparison.OrdinalIgnoreCase)) == true)
-                throw new NotSupportedException("工作簿含尚未支持的数据验证，不能确认输入限制；本次修改未应用。原规则随原文件保留。");
+                throw new NotSupportedException(MessageText.Get("工作簿含尚未支持的数据验证，不能确认输入限制；本次修改未应用。原规则随原文件保留。"));
             var constrained = inputChanges.Where(a => draft.Snapshot.Sheets.FirstOrDefault(s => s.Id == a.SheetId)?.Data.Validations.Any(v => v.ShowError && v.Contains(new(a.Row, a.Column))) == true).ToArray();
             if (constrained.Length > 0)
             {
-                if (_validation is null) throw new NotSupportedException("此会话未配置数据验证计算器，修改未应用。");
+                if (_validation is null) throw new NotSupportedException(MessageText.Get("此会话未配置数据验证计算器，修改未应用。"));
                 var failures = _validation.Check(draft.Snapshot, constrained);
                 if (failures.Count > 0 && (!acceptValidationWarnings || failures.Any(f => f.Alert == ValidationAlert.Stop)))
                     throw new DataValidationException(failures);
@@ -160,7 +160,7 @@ public sealed partial class DocumentSession : IDisposable
                         first.StructureChanged || entry.StructureChanged, false);
                 }
                 if (entry is not null && entry.Bytes > HistoryBudgetBytes)
-                    throw new InvalidOperationException("此操作超过撤销历史容量，尚未修改工作簿。请缩小操作范围。");
+                    throw new InvalidOperationException(MessageText.Get("此操作超过撤销历史容量，尚未修改工作簿。请缩小操作范围。"));
                 cancellationToken.ThrowIfCancellationRequested();
                 if (!sourceChanged)
                 {
@@ -209,10 +209,10 @@ public sealed partial class DocumentSession : IDisposable
         lock (_gate)
         {
             ThrowIfClosed();
-            if (consoleSource is null && (!_scriptsEnabled || !_snapshot.ScriptModules.HasActions)) throw new InvalidOperationException("请先启用包含 actions 绑定的脚本。");
-            if (name is not null && (string.IsNullOrWhiteSpace(name) || name.Length > 128 || name.Any(char.IsControl))) throw new ArgumentException("动作名称无效。");
+            if (consoleSource is null && (!_scriptsEnabled || !_snapshot.ScriptModules.HasActions)) throw new InvalidOperationException(MessageText.Get("请先启用包含 actions 绑定的脚本。"));
+            if (name is not null && (string.IsNullOrWhiteSpace(name) || name.Length > 128 || name.Any(char.IsControl))) throw new ArgumentException(MessageText.Get("动作名称无效。"));
             if (scriptEvent is not null && (scriptEvent.SessionId != SessionId || !ScriptEventNames.All.Contains(scriptEvent.Name) || name != ScriptEventNames.Prefix + scriptEvent.Name) ||
-                scriptEvent is null && name?.StartsWith(ScriptEventNames.Prefix, StringComparison.Ordinal) == true) throw new ArgumentException("事件调用身份无效。");
+                scriptEvent is null && name?.StartsWith(ScriptEventNames.Prefix, StringComparison.Ordinal) == true) throw new ArgumentException(MessageText.Get("事件调用身份无效。"));
             AdvanceCalculationGeneration();
             _activeCalculation = new CancellationTokenSource();
             _activeActionId = Guid.NewGuid();
@@ -237,7 +237,7 @@ public sealed partial class DocumentSession : IDisposable
         catch (Exception error)
         {
             TryFailCalculation(request.Stamp, "文件快照失败：" + error.Message, disableScripts: false);
-            if (error is NotSupportedException) throw new InvalidOperationException("当前工作簿不能构建安全的脚本文件快照：" + error.Message, error);
+            if (error is NotSupportedException) throw new InvalidOperationException(MessageText.Get("当前工作簿不能构建安全的脚本文件快照：") + error.Message, error);
             throw;
         }
     }
@@ -256,12 +256,12 @@ public sealed partial class DocumentSession : IDisposable
     {
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(result);
-        if (request.Name is null) throw new InvalidOperationException("动作发现请求不能提交变更。");
+        if (request.Name is null) throw new InvalidOperationException(MessageText.Get("动作发现请求不能提交变更。"));
         try
         {
-            if (result.FileEdits.IsDefault) throw new InvalidOperationException("缺少文件变更。");
+            if (result.FileEdits.IsDefault) throw new InvalidOperationException(MessageText.Get("缺少文件变更。"));
             if (request.ConsoleSource is not null && request.Snapshot.FileState?.FormulaReadOnly == true && (!result.Edits.IsEmpty || !result.FileEdits.IsEmpty))
-                throw new InvalidOperationException(WorkbookFileState.FormulaReadOnlyMessage);
+                throw new InvalidOperationException(MessageText.Get(WorkbookFileState.FormulaReadOnlyMessage));
             var transient = result.FileEdits.IsEmpty ? null : new VirtualFileSet(request.Files.Apply(result.FileEdits).Entries.Values.Where(e => !e.Path.StartsWith("//xlsq/", StringComparison.Ordinal)));
             return ExecuteCore(new ApplyActionPatchCommand(request, result, _virtualFiles), request.Stamp.InputRevision, request, cancellationToken, result.Logs, transientFiles: transient);
         }
@@ -334,8 +334,8 @@ public sealed partial class DocumentSession : IDisposable
         lock (_gate)
         {
             ThrowIfClosed();
-            if (enabled && _snapshot.FileState?.FormulaReadOnly == true) throw new InvalidOperationException(WorkbookFileState.FormulaReadOnlyMessage);
-            if (enabled && !_snapshot.ScriptModules.CanExecute) throw new NotSupportedException(ScriptModuleSet.MigrationMessage);
+            if (enabled && _snapshot.FileState?.FormulaReadOnly == true) throw new InvalidOperationException(MessageText.Get(WorkbookFileState.FormulaReadOnlyMessage));
+            if (enabled && !_snapshot.ScriptModules.CanExecute) throw new NotSupportedException(MessageText.Get(ScriptModuleSet.MigrationMessage));
             // Reapply also invalidates an in-flight compile of the same source.
             ResetScriptRuntime();
             _scriptsEnabled = enabled;
@@ -509,7 +509,7 @@ public sealed partial class DocumentSession : IDisposable
 
     private void CheckRevision(long? expected)
     {
-        if (expected.HasValue && expected != _snapshot.Revision) throw new InvalidOperationException("文档已发生变化，请重新提交操作。");
+        if (expected.HasValue && expected != _snapshot.Revision) throw new InvalidOperationException(MessageText.Get("文档已发生变化，请重新提交操作。"));
     }
     private void AdvanceCalculationGeneration()
     {

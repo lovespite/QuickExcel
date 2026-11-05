@@ -18,20 +18,20 @@ public sealed partial class MainWindow
         {
             if (_chartFilterContextCurrent?.Invoke() == false) CloseChartFilter();
             UpdateFormula();
-            if (_grid.SelectedDrawingObject is { } target) _status.Text = $"已选择{(target.Kind == DrawingObjectKind.Image ? "图片" : "图表")} {target.Index + 1}：拖动移动，边框控制点缩放，顶部圆点旋转；Shift 保持比例或按 15° 旋转，Esc 取消。";
+            if (_grid.SelectedDrawingObject is { } target) _status.Text = UiText.Format($"已选择{(target.Kind == DrawingObjectKind.Image ? UiText.Get("图片") : UiText.Get("图表"))} {target.Index + 1}：拖动移动，边框控制点缩放，顶部圆点旋转；Shift 保持比例或按 15° 旋转，Esc 取消。");
         };
         _grid.ChartFilterRequested += () => _ = PerformAsync(ChartFilterAsync);
         _grid.ViewportChanged += CloseChartFilter;
-        RibbonGroup("插入", "对象", RibbonButton("图片管理", ImagesAsync), RibbonButton("图表管理", ChartsAsync), RibbonButton("图表筛选", ChartFilterAsync), RibbonButton(RibbonIcon.Comment, "批注", NoteAsync));
-        RibbonGroup("页面布局", "页面设置", RibbonButton("页面设置", PageSettingsAsync), RibbonButton("设为打印区域", () => PrintAreaAsync(false)),
-            RibbonButton("清除打印区域", () => PrintAreaAsync(true)), RibbonButton("分页", PageBreaksAsync));
+        RibbonGroup(UiText.Get("插入"), UiText.Get("对象"), RibbonButton(UiText.Get("图片管理"), ImagesAsync), RibbonButton(UiText.Get("图表管理"), ChartsAsync), RibbonButton(UiText.Get("图表筛选"), ChartFilterAsync), RibbonButton(RibbonIcon.Comment, UiText.Get("批注"), NoteAsync));
+        RibbonGroup(UiText.Get("页面布局"), UiText.Get("页面设置"), RibbonButton(UiText.Get("页面设置"), PageSettingsAsync), RibbonButton(UiText.Get("设为打印区域"), () => PrintAreaAsync(false)),
+            RibbonButton(UiText.Get("清除打印区域"), () => PrintAreaAsync(true)), RibbonButton(UiText.Get("分页"), PageBreaksAsync));
     }
     private async Task NoteAsync()
     {
         if (!await FlushEditsAsync()) return;
         var snapshot = Document.Snapshot; var sheet = snapshot.Sheets[SheetIndex]; var position = _grid.Current; var old = sheet.Annotations.Notes.GetValueOrDefault(position);
-        var dialog = new FieldsDialog("传统批注").Text("author", "作者", old?.Author ?? "QuickExcel").Text("text", "批注内容", old?.Text.Text ?? "", true)
-            .Check("flatten", "替换含格式的批注时，明确转换为普通文本").Check("remove", "删除此批注");
+        var dialog = new FieldsDialog(UiText.Get("传统批注")).Text("author", UiText.Get("作者"), old?.Author ?? "QuickExcel").Text("text", UiText.Get("批注内容"), old?.Text.Text ?? "", true)
+            .Check("flatten", UiText.Get("替换含格式的批注时，明确转换为普通文本")).Check("remove", UiText.Get("删除此批注"));
         if (await dialog.ShowAsync(this)) await ExecuteAsync(new SetNoteCommand(sheet.Id, position, dialog.Boolean("remove") ? null :
             new(dialog.String("author"), new([new TextRun(dialog.String("text"))])), dialog.Boolean("flatten")), snapshot.Revision);
     }
@@ -39,18 +39,18 @@ public sealed partial class MainWindow
     {
         if (!await FlushEditsAsync()) return;
         var snapshot = Document.Snapshot; var sheet = snapshot.Sheets[SheetIndex]; var current = _grid.Current;
-        var choose = new FieldsDialog("图片管理").Choice("image", "图片", new[] { "插入新图片" }.Concat(sheet.Images.Select((_, i) => $"图片 {i + 1}")).ToArray()).Check("remove", "删除所选图片");
+        var choose = new FieldsDialog(UiText.Get("图片管理")).Choice("image", UiText.Get("图片"), new[] { UiText.Get("插入新图片") }.Concat(sheet.Images.Select((_, i) => UiText.Format($"图片 {i + 1}"))).ToArray()).Check("remove", UiText.Get("删除所选图片"));
         if (_grid.SelectedDrawingObject is { Kind: DrawingObjectKind.Image } selected) ((ComboBox)choose.Input("image")).SelectedIndex = selected.Index + 1;
         if (!await choose.ShowAsync(this)) return; var index = choose.Index("image") - 1;
-        if (choose.Boolean("remove")) { if (index < 0) throw new ArgumentException("请先选择已有图片。"); await ExecuteAsync(new SetImageCommand(sheet.Id, index, null), snapshot.Revision); return; }
+        if (choose.Boolean("remove")) { if (index < 0) throw new ArgumentException(UiText.Get("请先选择已有图片。")); await ExecuteAsync(new SetImageCommand(sheet.Id, index, null), snapshot.Revision); return; }
         SheetImage image;
         if (index < 0)
         {
-            var file = await _files.OpenAsync(new("插入图片", [new("图片", ["*.png", "*.jpg", "*.jpeg", "*.gif", "*.bmp", "*.tif", "*.tiff"])])); if (file is null) return;
+            var file = await _files.OpenAsync(new(UiText.Get("插入图片"), [new(UiText.Get("图片"), ["*.png", "*.jpg", "*.jpeg", "*.gif", "*.bmp", "*.tif", "*.tiff"])])); if (file is null) return;
             var bytes = await Task.Run(() =>
             {
                 using var input = new FileStream(file.Path, FileMode.Open, FileAccess.Read, FileShare.Read);
-                if (input.Length > 16 * 1024 * 1024) throw new ArgumentException("单张图片最多 16 MiB。");
+                if (input.Length > 16 * 1024 * 1024) throw new ArgumentException(UiText.Get("单张图片最多 16 MiB。"));
                 var data = new byte[checked((int)input.Length)]; input.ReadExactly(data); return data;
             });
             image = new(bytes, Path.GetExtension(file.Path), current.Row, current.Column); index = sheet.Images.Length;
@@ -60,16 +60,16 @@ public sealed partial class MainWindow
         }
         else image = sheet.Images[index];
         var bounds = image.Anchor.Bounds(sheet);
-        var dialog = DrawingFields("图片位置和尺寸", bounds, image.Anchor.Kind, image.Anchor.Rotation);
+        var dialog = DrawingFields(UiText.Get("图片位置和尺寸"), bounds, image.Anchor.Kind, image.Anchor.Rotation);
         if (await dialog.ShowAsync(this)) await ExecuteAsync(new SetImageCommand(sheet.Id, index, image.WithAnchor(ReadAnchor(dialog, sheet))), snapshot.Revision);
     }
     private static FieldsDialog DrawingFields(string title, DrawingBounds bounds, DrawingAnchorKind kind, double rotation = 0)
     {
-        var dialog = new FieldsDialog(title).Note("位置和尺寸使用 96 DPI 像素。")
-            .Text("left", "距工作表左边", bounds.X.ToString()).Text("top", "距工作表顶部", bounds.Y.ToString())
-            .Text("width", "宽度", bounds.Width.ToString()).Text("height", "高度", bounds.Height.ToString())
-            .Text("rotation", "旋转角度（度）", rotation.ToString())
-            .Choice("behavior", "随单元格变化", ["移动并缩放", "移动但不缩放", "固定位置和尺寸"], (int)kind);
+        var dialog = new FieldsDialog(title).Note(UiText.Get("位置和尺寸使用 96 DPI 像素。"))
+            .Text("left", UiText.Get("距工作表左边"), bounds.X.ToString()).Text("top", UiText.Get("距工作表顶部"), bounds.Y.ToString())
+            .Text("width", UiText.Get("宽度"), bounds.Width.ToString()).Text("height", UiText.Get("高度"), bounds.Height.ToString())
+            .Text("rotation", UiText.Get("旋转角度（度）"), rotation.ToString())
+            .Choice("behavior", UiText.Get("随单元格变化"), [UiText.Get("移动并缩放"), UiText.Get("移动但不缩放"), UiText.Get("固定位置和尺寸")], (int)kind);
         dialog.Validate = () => { ReadBounds(dialog); dialog.Number("rotation", -36000, 36000); }; return dialog;
     }
     private static DrawingBounds ReadBounds(FieldsDialog dialog) => new(dialog.Number("left", 0, 2_000_000_000), dialog.Number("top", 0, 2_000_000_000), dialog.Number("width", 1, 100000), dialog.Number("height", 1, 100000));
@@ -78,11 +78,11 @@ public sealed partial class MainWindow
     {
         if (!await FlushEditsAsync()) return;
         var snapshot = Document.Snapshot; var sheet = snapshot.Sheets[SheetIndex]; var selection = Rectangle(SelectedRange(allowObject: true));
-        var dialog = new FieldsDialog("图表管理").Choice("chart", "图表", new[] { "插入新图表" }.Concat(sheet.Data.Charts.Select((c, i) => $"{i + 1} · {c.Title}")).ToArray())
-            .Choice("kind", "类型", ["簇状柱形图", "折线图", "饼图", "散点图", "平滑曲线图", "瀑布图", "漏斗图"]).Text("title", "标题").Text("range", "数据范围（首行标题，首列分类；编辑时留空保持）", selection.ToString())
-            .Note("散点图首列为数值 X，其余列为 Y。饼图、瀑布图和漏斗图使用两列。")
-            .Text("totals", "瀑布图总计点（从 1 开始，用逗号分隔）")
-            .Choice("legend", "图例", ["右侧", "底部", "左侧", "顶部", "隐藏"]).Check("position", "调整位置和尺寸").Check("remove", "删除所选图表");
+        var dialog = new FieldsDialog(UiText.Get("图表管理")).Choice("chart", UiText.Get("图表"), new[] { UiText.Get("插入新图表") }.Concat(sheet.Data.Charts.Select((c, i) => $"{i + 1} · {c.Title}")).ToArray())
+            .Choice("kind", UiText.Get("类型"), [UiText.Get("簇状柱形图"), UiText.Get("折线图"), UiText.Get("饼图"), UiText.Get("散点图"), UiText.Get("平滑曲线图"), UiText.Get("瀑布图"), UiText.Get("漏斗图")]).Text("title", UiText.Get("标题")).Text("range", UiText.Get("数据范围（首行标题，首列分类；编辑时留空保持）"), selection.ToString())
+            .Note(UiText.Get("散点图首列为数值 X，其余列为 Y。饼图、瀑布图和漏斗图使用两列。"))
+            .Text("totals", UiText.Get("瀑布图总计点（从 1 开始，用逗号分隔）"))
+            .Choice("legend", UiText.Get("图例"), [UiText.Get("右侧"), UiText.Get("底部"), UiText.Get("左侧"), UiText.Get("顶部"), UiText.Get("隐藏")]).Check("position", UiText.Get("调整位置和尺寸")).Check("remove", UiText.Get("删除所选图表"));
         ((ComboBox)dialog.Input("chart")).SelectionChanged += (_, _) =>
         {
             if (dialog.Index("chart") == 0) return;
@@ -108,7 +108,7 @@ public sealed partial class MainWindow
             chart = chart with { Series = [chart.Series[0] with { TotalPoints = [.. dialog.String("totals").Split([',', '，'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Select(s => int.Parse(s) - 1)] }] };
         chart = chart with { Legend = dialog.Index("legend") switch { 0 => "r", 1 => "b", 2 => "l", 3 => "t", _ => null } };
         if (dialog.Boolean("position"))
-        { var position = DrawingFields("图表位置和尺寸", chart.Anchor.Bounds(sheet), chart.Anchor.Kind, chart.Anchor.Rotation); if (!await position.ShowAsync(this)) return; chart = chart with { Anchor = ReadAnchor(position, sheet) }; }
+        { var position = DrawingFields(UiText.Get("图表位置和尺寸"), chart.Anchor.Bounds(sheet), chart.Anchor.Kind, chart.Anchor.Rotation); if (!await position.ShowAsync(this)) return; chart = chart with { Anchor = ReadAnchor(position, sheet) }; }
         await ExecuteAsync(new SetChartCommand(sheet.Id, index, chart), snapshot.Revision);
     }
 }

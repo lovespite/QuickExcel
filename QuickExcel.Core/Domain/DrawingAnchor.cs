@@ -1,3 +1,4 @@
+using QuickExcel.Core;
 namespace QuickExcel.Domain;
 
 public enum DrawingAnchorKind { TwoCell, OneCell, Absolute }
@@ -24,15 +25,15 @@ public sealed record DrawingAnchor
 
     public void Validate()
     {
-        if (!Enum.IsDefined(Kind)) throw new ArgumentException("图片锚点类型无效。");
-        if (!double.IsFinite(Rotation) || Rotation is < 0 or >= 360) throw new ArgumentException("绘图旋转角度必须在 0 到 360 度之间。");
+        if (!Enum.IsDefined(Kind)) throw new ArgumentException(MessageText.Get("图片锚点类型无效。"));
+        if (!double.IsFinite(Rotation) || Rotation is < 0 or >= 360) throw new ArgumentException(MessageText.Get("绘图旋转角度必须在 0 到 360 度之间。"));
         WorkbookLimits.ValidatePosition(Row, Column);
         if (new[] { RowOffset, ColumnOffset, EndRowOffset, EndColumnOffset, X, Y, Width, Height }.Any(v => v < 0 || v > 10_000_000_000_000L))
-            throw new ArgumentException("绘图坐标超出预算。");
+            throw new ArgumentException(MessageText.Get("绘图坐标超出预算。"));
         if (Kind == DrawingAnchorKind.TwoCell && (EndRow < Row || EndColumn < Column || EndRow > WorkbookLimits.MaxRows || EndColumn > WorkbookLimits.MaxColumns ||
             EndRow == Row && EndRowOffset <= RowOffset || EndColumn == Column && EndColumnOffset <= ColumnOffset))
-            throw new ArgumentException("绘图坐标反向或零尺寸：终点必须在起点右下方。");
-        if (Kind != DrawingAnchorKind.TwoCell && (Width <= 0 || Height <= 0)) throw new ArgumentException("绘图宽高必须为正数。");
+            throw new ArgumentException(MessageText.Get("绘图坐标反向或零尺寸：终点必须在起点右下方。"));
+        if (Kind != DrawingAnchorKind.TwoCell && (Width <= 0 || Height <= 0)) throw new ArgumentException(MessageText.Get("绘图宽高必须为正数。"));
     }
 
     public DrawingBounds Bounds(WorksheetSnapshot sheet)
@@ -66,13 +67,13 @@ public static class DrawingGeometry
     public static DrawingAnchor FromBounds(WorksheetSnapshot sheet, DrawingBounds bounds, DrawingAnchorKind kind, double rotation = 0)
     {
         if (!new[] { bounds.X, bounds.Y, bounds.Width, bounds.Height }.All(double.IsFinite) || bounds.X < 0 || bounds.Y < 0 || bounds.Width <= 0 || bounds.Height <= 0)
-            throw new ArgumentException("绘图位置和尺寸无效。");
+            throw new ArgumentException(MessageText.Get("绘图位置和尺寸无效。"));
         (int Index, long Offset) Locate(double value, bool row)
         {
             var limit = row ? WorkbookLimits.MaxRows : WorkbookLimits.MaxColumns;
             double Start(int index) => row ? RowStart(sheet, index) : ColumnStart(sheet, index);
             var end = Start(limit);
-            if (value > end) throw new ArgumentException("绘图超出工作表坐标边界。");
+            if (value > end) throw new ArgumentException(MessageText.Get("绘图超出工作表坐标边界。"));
             if (value == end) return (limit, 0);
             var low = 0; var high = limit - 1;
             while (low < high) { var mid = low + (high - low) / 2; if (Start(mid + 1) <= value) low = mid + 1; else high = mid; }

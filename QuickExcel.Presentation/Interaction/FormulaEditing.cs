@@ -92,8 +92,8 @@ public static class FormulaEditing
             "LARGE" or "SMALL" => "array, k",
             "RANK.EQ" => "number, ref, [order]",
             "HLOOKUP" => "lookup_value, table_array, row_index, [range_lookup]",
-            "XLOOKUP" => "lookup_value, lookup_array, return_array, [if_not_found], [match_mode], [search_mode: 1/-1]（模式须为常量）",
-            "XMATCH" => "lookup_value, lookup_array, [match_mode], [search_mode: 1/-1]（模式须为常量）",
+            "XLOOKUP" => UiText.Get("lookup_value, lookup_array, return_array, [if_not_found], [match_mode], [search_mode: 1/-1]（模式须为常量）"),
+            "XMATCH" => UiText.Get("lookup_value, lookup_array, [match_mode], [search_mode: 1/-1]（模式须为常量）"),
             "DATE" => "year, month, day", "TIME" => "hour, minute, second",
             "YEAR" or "MONTH" or "DAY" or "HOUR" or "MINUTE" or "SECOND" => "serial_number",
             "EDATE" or "EOMONTH" => "start_date, months", "WEEKDAY" => "serial_number, [return_type]",
@@ -103,7 +103,7 @@ public static class FormulaEditing
             "REPLACE" => "old_text, start_num, num_chars, new_text", "FIND" or "SEARCH" => "find_text, within_text, [start_num]",
             "TEXTJOIN" => "delimiter, ignore_empty, text1, [text2], ", "CONCAT" => "text1, [text2], ",
             "ISBLANK" or "ISNUMBER" or "ISTEXT" or "ISERROR" => "value", "IFNA" => "value, value_if_na",
-            _ => StandardFunctions.Signatures.TryGetValue(name, out var count) ? $"参数 {count.Min}–{count.Max}" : ""
+            _ => StandardFunctions.Signatures.TryGetValue(name, out var count) ? UiText.Format($"参数 {count.Min}–{count.Max}") : ""
         };
         return name + "(" + parameters + ")";
     }

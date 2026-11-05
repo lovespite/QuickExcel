@@ -43,7 +43,7 @@ public sealed partial class TypedWorkbookStorage
         CancellationToken cancellationToken, FileVersion? expected)
     {
         if (RequiresScriptContainer(snapshot)) throw new InvalidOperationException(
-            "此工作簿含 JavaScript、模块或签名，主文件必须保存为 XLSQ。交付 Excel 请使用明确的 XLSX 导出副本；导出不会标记主文件已保存。");
+            MessageText.Get("此工作簿含 JavaScript、模块或签名，主文件必须保存为 XLSQ。交付 Excel 请使用明确的 XLSX 导出副本；导出不会标记主文件已保存。"));
         var issues = SaveIssues(snapshot);
         if (!discardUnsupported && issues.Count > 0) throw new WorkbookCompatibilityException(issues);
         var preserve = !discardUnsupported && snapshot.FileState is { } source && ContentEquals(snapshot, source.OriginalModel);
@@ -55,7 +55,7 @@ public sealed partial class TypedWorkbookStorage
                 try { expression = FormulaSyntax.Parse(formula); }
                 catch (Exception ex) when (ex is FormatException or OverflowException) { return; } // Opaque Excel syntax follows the existing preservation rules.
                 if (FormulaSyntax.Walk(expression).OfType<FunctionNode>().Any(f => StandardFunctions.Signatures.ContainsKey(f.Name) && !StandardFunctions.AcceptsArguments(f.Name, f.Arguments.Count)))
-                    throw new InvalidOperationException($"{location} 的函数参数个数不在受支持范围内。请修正公式，或使用明确的值/可移植公式导出。");
+                    throw new InvalidOperationException(MessageText.Format($"{location} 的函数参数个数不在受支持范围内。请修正公式，或使用明确的值/可移植公式导出。"));
             }
             foreach (var name in snapshot.DefinedNames) ValidateArity(name.Formula, "名称 " + name.Name);
             foreach (var sheet in snapshot.Sheets)
@@ -72,7 +72,7 @@ public sealed partial class TypedWorkbookStorage
             var saved = PackageIO.ReadFile(temp, new(cancellationToken));
             var reopened = OpenBytes(saved, path, false, new(cancellationToken));
             if (!ContentEquals(snapshot, reopened, allowRowHeightRounding: true))
-                throw new InvalidDataException("XLSX 保存后重开校验未能还原单元格、公式、样式与工作表配置。");
+                throw new InvalidDataException(MessageText.Get("XLSX 保存后重开校验未能还原单元格、公式、样式与工作表配置。"));
             if (!preserve) XlsxMetadata.VerifyWritten(snapshot, saved, cancellationToken);
         }, cancellationToken, expected);
         return new(Convert.ToHexString(SHA256.HashData(bytes)));

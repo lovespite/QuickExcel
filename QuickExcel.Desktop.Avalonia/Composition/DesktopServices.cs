@@ -18,7 +18,7 @@ internal static class DesktopServices
         SupportsScripts ? new ScriptWorkerActionExecutor() : null);
     private sealed class UnavailableScripts : IScriptRuntimeFactory
     {
-        public IScriptRuntime Create(string source) => throw new PlatformNotSupportedException("此平台尚未完成独立脚本沙箱，脚本执行不可用。");
+        public IScriptRuntime Create(string source) => throw new PlatformNotSupportedException(UiText.Get("此平台尚未完成独立脚本沙箱，脚本执行不可用。"));
     }
 }
 

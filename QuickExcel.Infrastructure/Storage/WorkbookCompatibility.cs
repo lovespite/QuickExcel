@@ -5,7 +5,7 @@ using QuickExcel.Formulas;
 namespace QuickExcel.Storage;
 
 public sealed class WorkbookFeatureRejectedException(CompatibilityDiagnostic diagnostic, Exception? inner = null)
-    : NotSupportedException($"拒绝导入：{diagnostic.SheetName}!{diagnostic.Range} · {diagnostic.Feature}：{diagnostic.Message}", inner)
+    : NotSupportedException(MessageText.Format($"拒绝导入：{diagnostic.SheetName}!{diagnostic.Range} · {diagnostic.Feature}：{diagnostic.Message}"), inner)
 {
     public CompatibilityDiagnostic Diagnostic { get; } = diagnostic;
 }
@@ -36,23 +36,23 @@ public sealed partial class TypedWorkbookStorage
         }).ToList();
         if (snapshot.FileState is { FormulaReadOnly: true } source)
         {
-            diagnostics.Add(new("workbook.formula-read-only", CompatibilityKind.PreservedOnly, "只读公式工作簿", WorkbookFileState.FormulaReadOnlyMessage));
+            diagnostics.Add(new("workbook.formula-read-only", CompatibilityKind.PreservedOnly, MessageText.Get("只读公式工作簿"), MessageText.Get(WorkbookFileState.FormulaReadOnlyMessage)));
             foreach (var formula in source.PreservedFormulas.Take(1024))
                 diagnostics.Add(new("formula.preserved-read-only", CompatibilityKind.PreservedOnly, "formula/" + formula.Kind,
-                    "公式及结果范围依赖原包，仅作只读投影；源码、公式属性、相关部件和来源缓存整包保留。共享从属格显示主表达式，数组结果区域中的值也属于来源缓存。",
+                    MessageText.Get("公式及结果范围依赖原包，仅作只读投影；源码、公式属性、相关部件和来源缓存整包保留。共享从属格显示主表达式，数组结果区域中的值也属于来源缓存。"),
                     formula.Part, formula.SheetName, formula.Range ?? formula.Cell));
-            if (source.PreservedFormulas.Length > 1024) diagnostics.Add(new("report.preserved-truncated", CompatibilityKind.PreservedOnly, "报告容量", "只展示前 1024 个只读公式位置；整簿只读限制仍覆盖全部公式。"));
+            if (source.PreservedFormulas.Length > 1024) diagnostics.Add(new("report.preserved-truncated", CompatibilityKind.PreservedOnly, MessageText.Get("报告容量"), MessageText.Get("只展示前 1024 个只读公式位置；整簿只读限制仍覆盖全部公式。")));
         }
-        else diagnostics.Add(new("workbook.modeled-subset", CompatibilityKind.Editable, "已建模内容",
-            "单元格类型、普通公式源码和基础格式可在已支持子集内编辑；不支持的函数及依赖保留旧缓存，未知引用语义阻止结构变换。这不代表全部 Excel 功能已支持。"));
+        else diagnostics.Add(new("workbook.modeled-subset", CompatibilityKind.Editable, MessageText.Get("已建模内容"),
+            MessageText.Get("单元格类型、普通公式源码和基础格式可在已支持子集内编辑；不支持的函数及依赖保留旧缓存，未知引用语义阻止结构变换。这不代表全部 Excel 功能已支持。")));
         foreach (var sheet in snapshot.Sheets.Where(s => s.Data.Filter is not null || s.Data.Sort is not null))
-            diagnostics.Add(new("worksheet.data-editable", CompatibilityKind.Editable, "筛选与排序",
-                "支持的筛选条件和最后一次排序状态可编辑、撤销及保存。手动隐藏与筛选隐藏分开处理；外部文件没有隐藏来源扩展时，未满足条件的隐藏行归于筛选，无法恢复该行是否还曾被手动隐藏。未支持条件仍按原包保护。",
+            diagnostics.Add(new("worksheet.data-editable", CompatibilityKind.Editable, MessageText.Get("筛选与排序"),
+                MessageText.Get("支持的筛选条件和最后一次排序状态可编辑、撤销及保存。手动隐藏与筛选隐藏分开处理；外部文件没有隐藏来源扩展时，未满足条件的隐藏行归于筛选，无法恢复该行是否还曾被手动隐藏。未支持条件仍按原包保护。"),
                 SheetName: sheet.Name, Range: (sheet.Data.Filter?.Range ?? sheet.Data.Sort!.Range).ToString()));
         foreach (var sheet in snapshot.Sheets)
         foreach (var table in sheet.Data.Tables)
             diagnostics.Add(new("worksheet.table-modeled", snapshot.FileState?.FormulaReadOnly == true ? CompatibilityKind.PreservedOnly : CompatibilityKind.Editable, "Excel Table",
-                $"表 {table.Name}：名称、范围、表头、汇总行、样式与筛选可显示和保存。支持表/列重命名、计算列、扩表及表内行列插删；未支持公式仍受来源保留策略保护。",
+                MessageText.Format($"表 {table.Name}：名称、范围、表头、汇总行、样式与筛选可显示和保存。支持表/列重命名、计算列、扩表及表内行列插删；未支持公式仍受来源保留策略保护。"),
                 SheetName: sheet.Name, Range: table.Range.ToString()));
         var formulaCount = 0;
         var cachedCount = 0;
@@ -74,8 +74,8 @@ public sealed partial class TypedWorkbookStorage
                     CellDisplayFormatter.Format(cell.Value, style, snapshot.DateSystem) != rich.Text))
                 {
                     richWarnings++;
-                    diagnostics.Add(new("text.display-partial", CompatibilityKind.PreservedOnly, "富文本显示限制",
-                        "分段数据保存保留；上下标/会计下划线、缺少字体属性的分段回退、混合字号缩小填充或改变文字的数字格式显示尚未完全对齐。", SheetName: sheet.Name, Range: TypedWorkbookXml.Reference(position)));
+                    diagnostics.Add(new("text.display-partial", CompatibilityKind.PreservedOnly, MessageText.Get("富文本显示限制"),
+                        MessageText.Get("分段数据保存保留；上下标/会计下划线、缺少字体属性的分段回退、混合字号缩小填充或改变文字的数字格式显示尚未完全对齐。"), SheetName: sheet.Name, Range: TypedWorkbookXml.Reference(position)));
                 }
             }
             if (cell.Content.Kind != CellContentKind.Formula) continue;
@@ -95,38 +95,38 @@ public sealed partial class TypedWorkbookStorage
                 if (unknown.Length > 0)
                 {
                     if (unknown.Any(n => n.StartsWith("_xlfn.", StringComparison.OrdinalIgnoreCase) || n.StartsWith("_xlws.", StringComparison.OrdinalIgnoreCase))) feature = "formula/version-prefix";
-                    message = "内置计算器不支持函数：" + string.Join("、", unknown) +
-                        "。公式源码仍保留；若为自定义脚本函数，须在显式启用后核对注册结果，本报告不执行或验证脚本。";
+                    message = MessageText.Get("内置计算器不支持函数：") + string.Join("、", unknown) +
+                        MessageText.Get("。公式源码仍保留；若为自定义脚本函数，须在显式启用后核对注册结果，本报告不执行或验证脚本。");
                 }
             }
             catch (Exception ex) when (ex is FormatException or OverflowException)
             {
                 code = "formula.unsupported-syntax"; feature = "formula/syntax";
-                message = "当前公式语法或名称绑定不支持：" + ex.Message + " 结构编辑仍受现有安全检查限制。";
+                message = MessageText.Get("当前公式语法或名称绑定不支持：") + ex.Message + MessageText.Get(" 结构编辑仍受现有安全检查限制。");
             }
             if (message is null && cell.Calculation is { State: CalculationState.Blocked } blocked && blocked.InputRevision == snapshot.Revision)
             {
                 code = "formula.blocked-dependency"; feature = "formula/dependency";
-                message = "当前计算已将此公式标记为不可用依赖/只读公式阻塞；保留来源缓存，不是新结果。";
+                message = MessageText.Get("当前计算已将此公式标记为不可用依赖/只读公式阻塞；保留来源缓存，不是新结果。");
             }
             if (message is null) continue;
-            message += cell.Calculation?.Value is null ? " 当前无缓存结果。" :
+            message += cell.Calculation?.Value is null ? MessageText.Get(" 当前无缓存结果。") :
                 cell.Calculation.State is CalculationState.Fresh or CalculationState.Error && cell.Calculation.InputRevision == snapshot.Revision
-                    ? " 当前已有计算结果，但这不证明内置函数兼容性。" : " 当前显示值来自已有缓存，尚未确认是本次输入的计算结果。";
+                    ? MessageText.Get(" 当前已有计算结果，但这不证明内置函数兼容性。") : MessageText.Get(" 当前显示值来自已有缓存，尚未确认是本次输入的计算结果。");
             diagnostics.Add(new(code, CompatibilityKind.CannotCalculate, feature, message,
                 SheetName: sheet.Name, Range: TypedWorkbookXml.Reference(position)));
             formulaLocations++;
         }
-        if (truncated) diagnostics.Add(new("report.formulas-truncated", CompatibilityKind.CannotCalculate, "报告容量",
-            "已达到 1024 个公式问题位置；后续公式未逐项检查，未列出不代表可计算。"));
-        if (richCount > 0) diagnostics.Add(new("text.rich-preserved", CompatibilityKind.PreservedOnly, "富文本",
-            $"{richCount} 格保留分段字体和颜色；普通编辑需先显式转换为纯文本，转换可撤销。完整分段编辑尚未提供。"));
-        if (richWarnings == 1024) diagnostics.Add(new("report.rich-display-truncated", CompatibilityKind.PreservedOnly, "报告容量", "富文本显示差异仅列出前 1024 格；未列出不代表完全对齐。"));
+        if (truncated) diagnostics.Add(new("report.formulas-truncated", CompatibilityKind.CannotCalculate, MessageText.Get("报告容量"),
+            MessageText.Get("已达到 1024 个公式问题位置；后续公式未逐项检查，未列出不代表可计算。")));
+        if (richCount > 0) diagnostics.Add(new("text.rich-preserved", CompatibilityKind.PreservedOnly, MessageText.Get("富文本"),
+            MessageText.Format($"{richCount} 格保留分段字体和颜色；普通编辑需先显式转换为纯文本，转换可撤销。完整分段编辑尚未提供。")));
+        if (richWarnings == 1024) diagnostics.Add(new("report.rich-display-truncated", CompatibilityKind.PreservedOnly, MessageText.Get("报告容量"), MessageText.Get("富文本显示差异仅列出前 1024 格；未列出不代表完全对齐。")));
         var links = snapshot.Sheets.Sum(s => s.Annotations.Links.Count); var notes = snapshot.Sheets.Sum(s => s.Annotations.Notes.Count);
-        if (links + notes > 0) diagnostics.Add(new("text.attachments-preserved", CompatibilityKind.PreservedOnly, "超链接和传统批注",
-            $"{links} 个链接、{notes} 条传统批注可查看并保存；链接不自动访问。暂拒绝结构变换/排序，批注编辑和线程评论不在此支持范围内。"));
-        if (formulaCount > 0) diagnostics.Add(new("formula.cache-summary", snapshot.FileState?.FormulaReadOnly == true ? CompatibilityKind.PreservedOnly : CompatibilityKind.Editable, "公式源码与缓存",
-            $"共 {formulaCount} 个公式，{cachedCount} 个有缓存，{staleCount} 个缺少当前有效结果。能力检查不执行计算，也不证明缓存数值正确或引用这些公式的其他单元格可以正确重算。"));
+        if (links + notes > 0) diagnostics.Add(new("text.attachments-preserved", CompatibilityKind.PreservedOnly, MessageText.Get("超链接和传统批注"),
+            MessageText.Format($"{links} 个链接、{notes} 条传统批注可查看并保存；链接不自动访问。暂拒绝结构变换/排序，批注编辑和线程评论不在此支持范围内。")));
+        if (formulaCount > 0) diagnostics.Add(new("formula.cache-summary", snapshot.FileState?.FormulaReadOnly == true ? CompatibilityKind.PreservedOnly : CompatibilityKind.Editable, MessageText.Get("公式源码与缓存"),
+            MessageText.Format($"共 {formulaCount} 个公式，{cachedCount} 个有缓存，{staleCount} 个缺少当前有效结果。能力检查不执行计算，也不证明缓存数值正确或引用这些公式的其他单元格可以正确重算。")));
         return new(unchanged, diagnostics);
     }
 }

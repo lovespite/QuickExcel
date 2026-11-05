@@ -13,15 +13,15 @@ internal static class TableSafety
             var occupied = new List<CellRectangle>();
             foreach (var table in sheet.Data.Tables)
             {
-                if (++count > 256 || !ids.Add(table.Id) || !names.Add(table.Name)) throw new ArgumentException("表数量超过 256，或表编号/名称重复。");
-                if (snapshot.DefinedNames.Any(n => n.Name.Equals(table.Name, StringComparison.OrdinalIgnoreCase))) throw new ArgumentException("表名与定义名称冲突。");
+                if (++count > 256 || !ids.Add(table.Id) || !names.Add(table.Name)) throw new ArgumentException(MessageText.Get("表数量超过 256，或表编号/名称重复。"));
+                if (snapshot.DefinedNames.Any(n => n.Name.Equals(table.Name, StringComparison.OrdinalIgnoreCase))) throw new ArgumentException(MessageText.Get("表名与定义名称冲突。"));
                 if (occupied.Any(r => Overlaps(r, table.Range)) || sheet.MergedCells.Select(CellRectangle.Parse).Any(r => Overlaps(r, table.Range)) ||
-                    sheet.Data.Filter is { } filter && Overlaps(filter.Range, table.Range)) throw new ArgumentException("表不能与其他表、工作表筛选或合并单元格重叠。");
+                    sheet.Data.Filter is { } filter && Overlaps(filter.Range, table.Range)) throw new ArgumentException(MessageText.Get("表不能与其他表、工作表筛选或合并单元格重叠。"));
                 occupied.Add(table.Range);
                 if (table.Style.Name is { } styleName)
                 {
                     if (styles.TryGetValue(styleName, out var existing) && !existing.Elements.SequenceEqual(table.Style.Elements))
-                        throw new ArgumentException("同名表样式必须具有相同定义。");
+                        throw new ArgumentException(MessageText.Get("同名表样式必须具有相同定义。"));
                     styles[styleName] = table.Style;
                 }
             }
@@ -45,11 +45,11 @@ internal static class TableSafety
                         return old?.Kind != current?.Kind || (old?.Kind == CellContentKind.Formula ? old.FormulaText != current!.FormulaText : old?.LiteralValue != current?.LiteralValue);
                     }
                     if (table.HeaderRow && nextTable.Columns[column - table.Range.Left].Name == table.Columns[column - table.Range.Left].Name && Changed(table.Range.Top))
-                        throw new InvalidOperationException("当前表头受控编辑尚不支持改列名，请保持表头内容；本次修改未应用。");
+                        throw new InvalidOperationException(MessageText.Get("当前表头受控编辑尚不支持改列名，请保持表头内容；本次修改未应用。"));
                     var definition = table.Columns[column - table.Range.Left];
                     if (table.TotalsRow && definition == nextTable.Columns[column - table.Range.Left] &&
                         (definition.TotalsFunction is not null || definition.TotalsFormula is not null || definition.TotalsLabel is not null) && Changed(table.Range.Bottom))
-                        throw new InvalidOperationException("当前汇总行定义受保护，请在 Excel 修改汇总标签/公式；本次修改未应用。");
+                        throw new InvalidOperationException(MessageText.Get("当前汇总行定义受保护，请在 Excel 修改汇总标签/公式；本次修改未应用。"));
                 }
             }
         }
@@ -61,12 +61,12 @@ public sealed class CreateTableCommand(SheetId sheetId, CellRectangle range, str
     internal override CommandDraft Prepare(WorkbookSnapshot snapshot)
     {
         var sheet = snapshot.GetSheet(sheetId);
-        if (range.Bottom <= range.Top) throw new ArgumentException("创建表需要表头和至少一行数据。");
+        if (range.Bottom <= range.Top) throw new ArgumentException(MessageText.Get("创建表需要表头和至少一行数据。"));
         var columns = Enumerable.Range(range.Left, range.Right - range.Left + 1).Select(c =>
         {
             var cell = sheet.GetCell(range.Top, c);
             if (cell?.Content.Kind != CellContentKind.Literal || cell.Value.Kind != CellValueKind.Text || cell.Content.RichText is not null)
-                throw new ArgumentException("表头须是非空且不重复的普通文本；请先整理表头。");
+                throw new ArgumentException(MessageText.Get("表头须是非空且不重复的普通文本；请先整理表头。"));
             return new TableColumn(c - range.Left + 1, cell.Value.TextValue);
         }).ToArray();
         var id = reservedId ?? checked(snapshot.Sheets.SelectMany(s => s.Data.Tables).Select(t => t.Id).DefaultIfEmpty().Max() + 1);
@@ -84,8 +84,8 @@ public sealed class ResizeTableCommand(SheetId sheetId, int tableId, int bottomR
     {
         var sheet = snapshot.GetSheet(sheetId); var table = sheet.Data.Tables.Single(t => t.Id == tableId);
         if (table.Range.Bottom == bottomRow) return new(snapshot, [], false);
-        if (table.TotalsRow) throw new NotSupportedException("含汇总行的表请使用表内插删行，底边调整暂未支持移动汇总格；本次没有修改。");
-        if (bottomRow < table.Range.Top + (table.HeaderRow ? 1 : 0)) throw new ArgumentException("表范围至少保留一行数据。");
+        if (table.TotalsRow) throw new NotSupportedException(MessageText.Get("含汇总行的表请使用表内插删行，底边调整暂未支持移动汇总格；本次没有修改。"));
+        if (bottomRow < table.Range.Top + (table.HeaderRow ? 1 : 0)) throw new ArgumentException(MessageText.Get("表范围至少保留一行数据。"));
         var range = table.Range with { Bottom = bottomRow };
         var working = bottomRow < table.Range.Bottom ? StructureEdits.TransformAt(snapshot, (node, context, position) =>
             node is QuickExcel.Formulas.StructuredReferenceNode { Table: null } reference && context == sheetId && position is { } p && !range.Contains(p.Row, p.Column) &&

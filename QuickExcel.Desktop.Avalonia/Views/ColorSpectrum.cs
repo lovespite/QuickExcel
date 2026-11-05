@@ -28,7 +28,7 @@ internal sealed class ColorSpectrum : Control
     public ColorSpectrum()
     {
         Focusable = true; Cursor = new Cursor(StandardCursorType.Cross);
-        AutomationProperties.SetName(this, "色盘，左右调整饱和度，上下调整明度，Ctrl 加左右调整色相");
+        AutomationProperties.SetName(this, UiText.Get("色盘，左右调整饱和度，上下调整明度，Ctrl 加左右调整色相"));
     }
 
     public event Action<Color>? ColorChanged;

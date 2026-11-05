@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>QuickExcel 脚本</title>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title data-i18n="text">QuickExcel 脚本</title>
 <link rel="stylesheet" href="script.css"><style>
 html,body{margin:0;height:100%;overflow:hidden;font:13px sans-serif;background:#fff;color:#254b49}
 body{display:flex;flex-direction:column}#editor{flex:1;min-height:0}
@@ -9,12 +9,12 @@ button{font:inherit;color:inherit;background:#fff;border:1px solid #b5cdcb;borde
 button:hover:not(:disabled){background:#dbeae8}button:focus-visible{outline:2px solid #287a72;outline-offset:1px}button:disabled{opacity:.5;cursor:default}
 body[data-failed] #editor,body[data-failed] button{pointer-events:none;opacity:.6}
 </style></head>
-<body><div id="editor" aria-label="脚本编辑器"></div>
-<div id="assistance" role="group" aria-label="代码提示与静态检查">
-<div id="status" role="status" title="静态检查使用 QuickExcel API 类型声明；应用脚本时还会进行独立编译检查。">正在准备脚本编辑器…</div>
-<button type="button" data-action="editor.action.triggerSuggest" title="补全 QuickExcel API、变量与模块成员（Ctrl+Space / macOS ⌃Space）" disabled>补全</button>
-<button type="button" data-action="editor.action.triggerParameterHints" title="显示函数参数（Ctrl+Shift+Space / macOS ⇧⌘Space）" disabled>参数提示</button>
-<button type="button" data-action="editor.action.showHover" title="显示光标处类型与说明（Ctrl+K，Ctrl+I / macOS ⌘K，⌘I），也可悬停查看" disabled>类型提示</button>
-<button type="button" data-action="editor.action.revealDefinition" title="跳转到光标处符号的定义，也可 Ctrl+单击（macOS ⌘单击）；F12 仍用于控制台" disabled>转到定义</button>
-<button type="button" data-action="editor.action.marker.next" title="定位当前模块下一处错误或警告（F8），上一处用 Shift+F8" disabled>下一问题 · F8</button>
+<body><div id="editor" aria-label="脚本编辑器" data-i18n="aria-label"></div>
+<div id="assistance" role="group" aria-label="代码提示与静态检查" data-i18n="aria-label">
+<div id="status" role="status" title="静态检查使用 QuickExcel API 类型声明；应用脚本时还会进行独立编译检查。" data-i18n="title text">正在准备脚本编辑器…</div>
+<button type="button" data-action="editor.action.triggerSuggest" title="补全 QuickExcel API、变量与模块成员（Ctrl+Space / macOS ⌃Space）" disabled data-i18n="title text">补全</button>
+<button type="button" data-action="editor.action.triggerParameterHints" title="显示函数参数（Ctrl+Shift+Space / macOS ⇧⌘Space）" disabled data-i18n="title text">参数提示</button>
+<button type="button" data-action="editor.action.showHover" title="显示光标处类型与说明（Ctrl+K，Ctrl+I / macOS ⌘K，⌘I），也可悬停查看" disabled data-i18n="title text">类型提示</button>
+<button type="button" data-action="editor.action.revealDefinition" title="跳转到光标处符号的定义，也可 Ctrl+单击（macOS ⌘单击）；F12 仍用于控制台" disabled data-i18n="title text">转到定义</button>
+<button type="button" data-action="editor.action.marker.next" title="定位当前模块下一处错误或警告（F8），上一处用 Shift+F8" disabled data-i18n="title text">下一问题 · F8</button>
 </div><script type="module" src="script.js"></script></body></html>

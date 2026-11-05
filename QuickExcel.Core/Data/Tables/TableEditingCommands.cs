@@ -41,7 +41,7 @@ public sealed class RenameTableColumnCommand(SheetId sheetId, int tableId, int c
             if (current.HeaderRow)
             {
                 var position = new CellPosition(current.Range.Top, current.Range.Left + index);
-                if (source.GetCell(position.Row, position.Column)?.Content.RichText is not null) throw new NotSupportedException("富文本表头改名需要先明确转换为普通文本。");
+                if (source.GetCell(position.Row, position.Column)?.Content.RichText is not null) throw new NotSupportedException(MessageText.Get("富文本表头改名需要先明确转换为普通文本。"));
                 cells = cells.SetItem(position, new(CellContent.FromLiteral(CellValue.FromText(name), source.GetStyleId(position.Row, position.Column))));
             }
             return sheet.WithCells(cells).WithData(sheet.Data with { Tables = sheet.Data.Tables.Replace(current, renamed) });
@@ -56,14 +56,14 @@ public sealed class SetTableCalculatedColumnCommand(SheetId sheetId, int tableId
     internal override CommandDraft Prepare(WorkbookSnapshot snapshot)
     {
         var sheet = snapshot.GetSheet(sheetId); var table = sheet.Data.Tables.Single(t => t.Id == tableId);
-        var index = table.Columns.Select(c => c.Id).ToList().IndexOf(columnId); if (index < 0) throw new ArgumentException("表列不存在。");
+        var index = table.Columns.Select(c => c.Id).ToList().IndexOf(columnId); if (index < 0) throw new ArgumentException(MessageText.Get("表列不存在。"));
         var first = new CellPosition(table.Range.Top + (table.HeaderRow ? 1 : 0), table.Range.Left + index);
         _ = FormulaBinding.Bind(FormulaSyntax.Parse(formula), snapshot, sheetId, first);
         var updated = table.WithColumns(table.Columns.SetItem(index, table.Columns[index] with { CalculatedFormula = formula })).WithInsertRow(false);
         var cells = sheet.Cells.ToBuilder();
         for (var row = first.Row; row <= table.Range.Bottom - (table.TotalsRow ? 1 : 0); row++)
         {
-            if (sheet.GetCell(row, first.Column)?.Content.RichText is not null) throw new NotSupportedException("计算列包含富文本，请先明确转换为普通文本。");
+            if (sheet.GetCell(row, first.Column)?.Content.RichText is not null) throw new NotSupportedException(MessageText.Get("计算列包含富文本，请先明确转换为普通文本。"));
             cells[new(row, first.Column)] = new(CellContent.FromFormula(FormulaCopy.Translate(formula, first, new(row, first.Column)), sheet.GetStyleId(row, first.Column)));
         }
         var after = snapshot.WithSheets(snapshot.Sheets.Select(s => s.Id == sheetId ? s.WithCells(cells.ToImmutable()).WithData(s.Data with { Tables = s.Data.Tables.Replace(table, updated) }) : s));

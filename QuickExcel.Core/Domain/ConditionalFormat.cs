@@ -1,3 +1,4 @@
+using QuickExcel.Core;
 using System.Collections.Immutable;
 using QuickExcel.Formulas;
 
@@ -16,7 +17,7 @@ public sealed record DifferentialStyle(bool? Bold = null, bool? Italic = null, b
         new TableStyleElement("wholeTable", Bold: Bold, FontColor: FontColor, FillColor: FillColor, Left: Left, Right: Right, Top: Top, Bottom: Bottom,
             NumberFormatId: NumberFormatId, NumberFormatCode: NumberFormatCode).Validate();
         if (Underline is not (null or "none" or "single" or "double" or "singleAccounting" or "doubleAccounting"))
-            throw new ArgumentException("条件格式下划线无效。");
+            throw new ArgumentException(MessageText.Get("条件格式下划线无效。"));
     }
     public StyleDefinition Apply(StyleDefinition original) => original with
     {
@@ -39,33 +40,33 @@ public sealed class ConditionalFormatRule
     {
         Ranges = ranges.Take(1025).ToImmutableArray();
         if (Ranges.Length is < 1 or > 1024 || priority < 1 || !Enum.IsDefined(kind) || !Enum.IsDefined(comparison) || text?.Length > 255)
-            throw new ArgumentException("条件格式区域、优先级或规则类型无效。");
+            throw new ArgumentException(MessageText.Get("条件格式区域、优先级或规则类型无效。"));
         foreach (var range in Ranges)
         {
             WorkbookLimits.ValidatePosition(range.Top, range.Left); WorkbookLimits.ValidatePosition(range.Bottom, range.Right);
-            if (range.Top > range.Bottom || range.Left > range.Right) throw new ArgumentException("条件格式区域无效。");
+            if (range.Top > range.Bottom || range.Left > range.Right) throw new ArgumentException(MessageText.Get("条件格式区域无效。"));
         }
         Style = style ?? throw new ArgumentNullException(nameof(style)); Style.Validate();
         if (kind is ConditionalFormatKind.CellIs or ConditionalFormatKind.Expression && formula1 is null ||
             kind == ConditionalFormatKind.CellIs && comparison is ConditionalComparison.Between or ConditionalComparison.NotBetween && formula2 is null ||
             kind is ConditionalFormatKind.ContainsText or ConditionalFormatKind.NotContainsText or ConditionalFormatKind.BeginsWith or ConditionalFormatKind.EndsWith && (text is null || formula1 is null))
-            throw new ArgumentException("条件格式公式或文本条件缺失。");
+            throw new ArgumentException(MessageText.Get("条件格式公式或文本条件缺失。"));
         if ((kind == ConditionalFormatKind.ColorScale) != (colorScale is not null) || (kind == ConditionalFormatKind.DataBar) != (dataBar is not null) ||
-            (kind == ConditionalFormatKind.IconSet) != (iconSet is not null)) throw new ArgumentException("条件格式类型和视觉规则不一致。");
+            (kind == ConditionalFormatKind.IconSet) != (iconSet is not null)) throw new ArgumentException(MessageText.Get("条件格式类型和视觉规则不一致。"));
         dataBar?.Validate(); ColorScale = colorScale; DataBar = dataBar; IconSet = iconSet;
-        if (kind >= ConditionalFormatKind.ColorScale && (formula1 is not null || formula2 is not null || text is not null)) throw new ArgumentException("视觉规则使用阈值公式。");
-        if (kind >= ConditionalFormatKind.ColorScale && style != new DifferentialStyle()) throw new NotSupportedException("视觉规则不能同时包含差异样式。");
-        if (kind >= ConditionalFormatKind.ColorScale && stopIfTrue) throw new NotSupportedException("数据条、色阶和图标集不支持为真时停止。");
+        if (kind >= ConditionalFormatKind.ColorScale && (formula1 is not null || formula2 is not null || text is not null)) throw new ArgumentException(MessageText.Get("视觉规则使用阈值公式。"));
+        if (kind >= ConditionalFormatKind.ColorScale && style != new DifferentialStyle()) throw new NotSupportedException(MessageText.Get("视觉规则不能同时包含差异样式。"));
+        if (kind >= ConditionalFormatKind.ColorScale && stopIfTrue) throw new NotSupportedException(MessageText.Get("数据条、色阶和图标集不支持为真时停止。"));
         foreach (var formula in new[] { formula1, formula2 }.OfType<string>()) ValidateFormula(formula);
         Kind = kind; Priority = priority; Formula1 = Normalize(formula1); Formula2 = Normalize(formula2); Comparison = comparison; StopIfTrue = stopIfTrue; Text = text;
     }
     private static string? Normalize(string? formula) => formula is null ? null : "=" + FormulaSyntax.Print(FormulaSyntax.Parse(formula));
     internal static void ValidateFormula(string formula)
     {
-        if (formula.Length > 8192) throw new ArgumentException("条件格式公式超过 8,192 字符。");
+        if (formula.Length > 8192) throw new ArgumentException(MessageText.Get("条件格式公式超过 8,192 字符。"));
         var expression = FormulaSyntax.Parse(formula);
         if (FormulaSyntax.Walk(expression).OfType<FunctionNode>().Any(f => !StandardFunctions.Signatures.ContainsKey(f.Name) || f.Name is "NOW" or "TODAY" or "RAND" or "RANDBETWEEN"))
-            throw new NotSupportedException("条件格式仅支持已建模的非易变标准函数。");
+            throw new NotSupportedException(MessageText.Get("条件格式仅支持已建模的非易变标准函数。"));
     }
     public ConditionalColorScale? ColorScale { get; }
     public ConditionalDataBar? DataBar { get; }
@@ -94,7 +95,7 @@ public sealed class ConditionalFormatRule
         {
             var expression = FormulaBinding.Bind(FormulaSyntax.Parse(text), snapshot, sheet, Anchor);
             if (FormulaSyntax.Walk(expression).OfType<FunctionNode>().Any(f => !StandardFunctions.Signatures.ContainsKey(f.Name) || f.Name is "NOW" or "TODAY" or "RAND" or "RANDBETWEEN"))
-                throw new NotSupportedException("条件格式名称依赖了未支持或易变函数。");
+                throw new NotSupportedException(MessageText.Get("条件格式名称依赖了未支持或易变函数。"));
         }
     }
     public bool ContentEquals(ConditionalFormatRule other) => Ranges.SequenceEqual(other.Ranges) && Kind == other.Kind && Priority == other.Priority &&

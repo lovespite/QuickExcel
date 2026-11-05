@@ -23,7 +23,7 @@ public sealed partial class WorkbookGrid
     {
         _chartFilterButton.Content = new global::Avalonia.Controls.Shapes.Path { Data = Geometry.Parse("M 1,1 L 17,1 L 11,8 L 11,16 L 7,13 L 7,8 Z"),
             Stroke = Brushes.SeaGreen, StrokeThickness = 1.5, Fill = Brushes.Honeydew, Width = 18, Height = 18 };
-        AutomationProperties.SetName(_chartFilterButton, "图表筛选器"); ToolTip.SetTip(_chartFilterButton, "图表筛选器：选择显示的系列和类别");
+        AutomationProperties.SetName(_chartFilterButton, UiText.Get("图表筛选器")); ToolTip.SetTip(_chartFilterButton, UiText.Get("图表筛选器：选择显示的系列和类别"));
         _chartFilterButton.Click += (_, e) => { e.Handled = true; ChartFilterRequested?.Invoke(); };
         _canvas.Children.Add(_chartFilterButton);
     }

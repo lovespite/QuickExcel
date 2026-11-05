@@ -26,8 +26,8 @@ public sealed class CopySheetCommand : DocumentCommand
     {
         if (Destination < 0 || Destination > snapshot.Sheets.Length) throw new ArgumentOutOfRangeException(nameof(Destination));
         WorkbookLimits.ValidateSheetName(Name);
-        if (snapshot.Sheets.Any(s => s.Name.Equals(Name, StringComparison.OrdinalIgnoreCase))) throw new ArgumentException("工作表名称已存在。");
-        if (snapshot.Sheets.Length >= WorkbookLimits.MaxSheets) throw new InvalidOperationException("工作表数量超过 64。");
+        if (snapshot.Sheets.Any(s => s.Name.Equals(Name, StringComparison.OrdinalIgnoreCase))) throw new ArgumentException(MessageText.Get("工作表名称已存在。"));
+        if (snapshot.Sheets.Length >= WorkbookLimits.MaxSheets) throw new InvalidOperationException(MessageText.Get("工作表数量超过 64。"));
         StructureEdits.RequireTransformableFunctions(snapshot);
         var source = snapshot.GetSheet(Source);
         var usedTableNames = snapshot.Sheets.SelectMany(s => s.Data.Tables).Select(t => t.Name).Concat(snapshot.DefinedNames.Select(n => n.Name)).ToHashSet(StringComparer.OrdinalIgnoreCase);
@@ -37,7 +37,7 @@ public sealed class CopySheetCommand : DocumentCommand
             var suffix = 1; var stem = table.Name.Length > 245 ? table.Name[..245] : table.Name; string candidate;
             do { candidate = stem + "_" + suffix++; } while (!usedTableNames.Add(candidate)); tableNames[table.Name] = candidate;
         }
-        if (snapshot.Sheets.Sum(s => (long)s.Cells.Count) + source.Cells.Count > WorkbookLimits.MaxCells) throw new InvalidOperationException("复制工作表超过单元格总容量。");
+        if (snapshot.Sheets.Sum(s => (long)s.Cells.Count) + source.Cells.Count > WorkbookLimits.MaxCells) throw new InvalidOperationException(MessageText.Get("复制工作表超过单元格总容量。"));
         var expressions = snapshot.DefinedNames.ToDictionary(n => n, n => FormulaSyntax.Parse(n.Formula));
         var dependents = new Dictionary<DefinedName, List<DefinedName>>(); var relevant = new HashSet<DefinedName>(); var pending = new Queue<DefinedName>();
         foreach (var definition in snapshot.DefinedNames)
@@ -101,10 +101,10 @@ public sealed class RenameDefinedNameCommand(string name, SheetId? scope, string
     internal override CommandDraft Prepare(WorkbookSnapshot snapshot)
     {
         var definition = snapshot.DefinedNames.SingleOrDefault(n => n.Scope == scope && n.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
-            ?? throw new ArgumentException("名称不存在。");
+            ?? throw new ArgumentException(MessageText.Get("名称不存在。"));
         if (definition.Name == newName) return new(snapshot, [], false);
         if (snapshot.DefinedNames.Any(n => n != definition && n.Name.Equals(newName, StringComparison.OrdinalIgnoreCase)))
-            throw new InvalidOperationException("新名称已在某个作用域存在；为避免改变其他引用的绑定，本次改名未应用。");
+            throw new InvalidOperationException(MessageText.Get("新名称已在某个作用域存在；为避免改变其他引用的绑定，本次改名未应用。"));
         StructureEdits.RequireTransformableFunctions(snapshot);
         string Formula(string text, SheetId context, bool inDefinition)
         {
@@ -139,7 +139,7 @@ public sealed class DeleteDefinedNameCommand(string name, SheetId? scope) : Docu
     internal override CommandDraft Prepare(WorkbookSnapshot snapshot)
     {
         var definition = snapshot.DefinedNames.SingleOrDefault(n => n.Scope == scope && n.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
-            ?? throw new ArgumentException("名称不存在。");
+            ?? throw new ArgumentException(MessageText.Get("名称不存在。"));
         if (scope is { } sheetId)
         {
             var sheet = snapshot.GetSheet(sheetId);
@@ -150,7 +150,7 @@ public sealed class DeleteDefinedNameCommand(string name, SheetId? scope) : Docu
                 .Concat(snapshot.Sheets.SelectMany(s => s.Data.Tables).SelectMany(t => t.Columns).SelectMany(c => new[] { c.CalculatedFormula, c.TotalsFormula }).OfType<string>());
             if (formulas.SelectMany(f => FormulaSyntax.Walk(FormulaSyntax.Parse(f))).OfType<NameNode>().Any(n => n.Name.Equals(name, StringComparison.OrdinalIgnoreCase) &&
                 string.Equals(n.Sheet, sheet.Name, StringComparison.OrdinalIgnoreCase)))
-                throw new NotSupportedException("该局部名称仍有带工作表限定的引用。Excel 删除后的工作簿限定名称尚未建模，请先修改这些引用；名称未删除。");
+                throw new NotSupportedException(MessageText.Get("该局部名称仍有带工作表限定的引用。Excel 删除后的工作簿限定名称尚未建模，请先修改这些引用；名称未删除。"));
         }
         return StructureEdits.Draft(snapshot, snapshot.WithDefinedNames(snapshot.DefinedNames.Where(n => n != definition)));
     }
@@ -162,7 +162,7 @@ public sealed class EditDefinedNameCommand(string oldName, SheetId? scope, strin
     internal override CommandDraft Prepare(WorkbookSnapshot snapshot)
     {
         var original = snapshot.DefinedNames.SingleOrDefault(n => n.Scope == scope && n.Name.Equals(oldName, StringComparison.OrdinalIgnoreCase))
-            ?? throw new ArgumentException("名称不存在。");
+            ?? throw new ArgumentException(MessageText.Get("名称不存在。"));
         var renamed = new RenameDefinedNameCommand(oldName, scope, name).Prepare(snapshot).Snapshot;
         var nextFormula = formula == original.Formula ? renamed.DefinedNames.Single(n => n.Scope == scope && n.Name == name).Formula : formula;
         var updated = new DefineNameCommand(new(name, nextFormula, scope)).Prepare(renamed).Snapshot;

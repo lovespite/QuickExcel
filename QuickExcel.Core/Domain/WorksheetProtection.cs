@@ -1,3 +1,4 @@
+using QuickExcel.Core;
 namespace QuickExcel.Domain;
 
 /// <summary>Sheet operation restrictions, not encryption. True flags mean the operation is prohibited.</summary>
@@ -29,6 +30,6 @@ public sealed record WorksheetProtection
     {
         if (Password is { } p && (p.Length != 4 || p.Any(c => !Uri.IsHexDigit(c))) ||
             AlgorithmName?.Length > 64 || HashValue?.Length > 1024 || SaltValue?.Length > 1024 || SpinCount > 10_000_000)
-            throw new ArgumentException("工作表保护校验参数无效或超限。");
+            throw new ArgumentException(MessageText.Get("工作表保护校验参数无效或超限。"));
     }
 }

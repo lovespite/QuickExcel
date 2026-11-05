@@ -1,3 +1,4 @@
+using QuickExcel.Core;
 namespace QuickExcel.Domain;
 
 public enum SheetVisibility { Visible, Hidden, VeryHidden }
@@ -10,8 +11,8 @@ public sealed record SheetSelection(CellPosition ActiveCell, CellRectangle Range
         WorkbookLimits.ValidatePosition(ActiveCell.Row, ActiveCell.Column);
         WorkbookLimits.ValidatePosition(Range.Top, Range.Left);
         WorkbookLimits.ValidatePosition(Range.Bottom, Range.Right);
-        if (Range.Bottom < Range.Top || Range.Right < Range.Left) throw new ArgumentException("选区顺序无效。");
-        if (!Range.Contains(ActiveCell.Row, ActiveCell.Column)) throw new ArgumentException("活动格必须位于选区内。");
+        if (Range.Bottom < Range.Top || Range.Right < Range.Left) throw new ArgumentException(MessageText.Get("选区顺序无效。"));
+        if (!Range.Contains(ActiveCell.Row, ActiveCell.Column)) throw new ArgumentException(MessageText.Get("活动格必须位于选区内。"));
     }
 }
 
@@ -52,13 +53,13 @@ public sealed record WorksheetView
     {
         if (FrozenRows < 0 || FrozenRows >= WorkbookLimits.MaxRows || FrozenColumns < 0 || FrozenColumns >= WorkbookLimits.MaxColumns ||
             Zoom is < 10 or > 400 || NormalZoom is < 10 or > 400 || !Enum.IsDefined(ActivePane) || FrozenSplit && !HasFreeze)
-            throw new ArgumentException("工作表视图参数超出支持范围。");
+            throw new ArgumentException(MessageText.Get("工作表视图参数超出支持范围。"));
         WorkbookLimits.ValidatePosition(TopLeftCell.Row, TopLeftCell.Column);
         WorkbookLimits.ValidatePosition(PaneTopLeftCell.Row, PaneTopLeftCell.Column);
         if (HasFreeze && (PaneTopLeftCell.Row < FrozenRows || PaneTopLeftCell.Column < FrozenColumns))
-            throw new ArgumentException("可滚动窗格的首格不能位于冻结区域内。");
+            throw new ArgumentException(MessageText.Get("可滚动窗格的首格不能位于冻结区域内。"));
         if (!HasFreeze && (ActivePane != SheetPane.TopLeft || PaneTopLeftCell != default || TopRight is not null || BottomLeft is not null || BottomRight is not null))
-            throw new ArgumentException("非冻结视图不能包含其他窗格。");
+            throw new ArgumentException(MessageText.Get("非冻结视图不能包含其他窗格。"));
         foreach (var selection in new[] { TopLeft, TopRight, BottomLeft, BottomRight }) selection?.Validate();
     }
 }

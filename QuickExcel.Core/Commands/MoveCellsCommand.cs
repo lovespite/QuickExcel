@@ -16,7 +16,7 @@ public sealed class MoveCellsCommand(SheetId sourceSheet, CellPosition first, Ce
     {
         WorkbookClipboard.RequireCompleteMerges(sheet, range);
         if (sheet.Data.Tables.Any(t => ValidationSafety.Overlaps(t.Range, range) && !range.Contains(t.Range)))
-            throw new InvalidOperationException("剪切需要选中完整的 Excel 表格，包括表头和汇总行。");
+            throw new InvalidOperationException(MessageText.Get("剪切需要选中完整的 Excel 表格，包括表头和汇总行。"));
         ValidateArea(book, sheet, range);
         RequireCompleteSpills(sheet, range, null);
     }
@@ -26,19 +26,19 @@ public sealed class MoveCellsCommand(SheetId sourceSheet, CellPosition first, Ce
         WorkbookClipboard.RequireNoDrawings(sheet, range);
         WorkbookClipboard.RequireVisibleDimensions(sheet, range);
         if (sheet.Printing.HasReferences)
-            throw new NotSupportedException("含打印区域或重复标题的工作表暂不支持移动单元格。");
+            throw new NotSupportedException(MessageText.Get("含打印区域或重复标题的工作表暂不支持移动单元格。"));
         if (sheet.Data.Protection?.Sheet == true)
-            throw new InvalidOperationException("请先取消工作表保护，再移动单元格。");
+            throw new InvalidOperationException(MessageText.Get("请先取消工作表保护，再移动单元格。"));
         if (!sheet.Data.Validations.IsEmpty || !sheet.Data.ConditionalFormats.IsEmpty ||
             book.FileState?.CompatibilityDiagnostics.Any(d => d.Feature.Contains("conditionalFormatting", StringComparison.OrdinalIgnoreCase) ||
                 d.Feature.Contains("dataValidation", StringComparison.OrdinalIgnoreCase) || d.Feature.Contains("sortState", StringComparison.OrdinalIgnoreCase)) == true ||
             SubtotalFunctions.HasUnmodeledFilters(book))
-            throw new NotSupportedException("工作表含验证或条件格式，或文件含尚未建模的表格、筛选、排序或规则；暂不能安全剪切。");
+            throw new NotSupportedException(MessageText.Get("工作表含验证或条件格式，或文件含尚未建模的表格、筛选、排序或规则；暂不能安全剪切。"));
         if (sheet.Data.Filter is { } filter && ValidationSafety.Overlaps(range, filter.Range) ||
             sheet.Data.Sort is { } sort && ValidationSafety.Overlaps(range, sort.Range))
-            throw new NotSupportedException("剪切区域与独立的工作表筛选或排序区域相交，请先清除该状态。");
+            throw new NotSupportedException(MessageText.Get("剪切区域与独立的工作表筛选或排序区域相交，请先清除该状态。"));
         if (WorksheetFilterEngine.Evaluate(book, sheet.Id, WorksheetFilterEngine.CanUseSourceCaches(book)).Any(r => r >= range.Top && r <= range.Bottom))
-            throw new InvalidOperationException("剪切区域含筛选隐藏行，请先清除筛选条件。");
+            throw new InvalidOperationException(MessageText.Get("剪切区域含筛选隐藏行，请先清除筛选条件。"));
     }
 
     private static void RequireCompleteSpills(WorksheetSnapshot sheet, CellRectangle area, CellRectangle? vacated)
@@ -48,7 +48,7 @@ public sealed class MoveCellsCommand(SheetId sourceSheet, CellPosition first, Ce
             if (cell.Calculation?.Array is not { } array) continue;
             var spill = new CellRectangle(position.Row, position.Column, position.Row + array.Rows - 1, position.Column + array.Columns - 1);
             if (ValidationSafety.Overlaps(area, spill) && !area.Contains(spill) && vacated?.Contains(spill) != true)
-                throw new InvalidOperationException("剪切需要包含整个数组溢出区域。");
+                throw new InvalidOperationException(MessageText.Get("剪切需要包含整个数组溢出区域。"));
         }
     }
 
@@ -56,7 +56,7 @@ public sealed class MoveCellsCommand(SheetId sourceSheet, CellPosition first, Ce
     {
         WorkbookLimits.ValidatePosition(first.Row, first.Column);
         WorkbookLimits.ValidatePosition(last.Row, last.Column);
-        if (first.Row > last.Row || first.Column > last.Column) throw new ArgumentException("移动区域顺序无效。");
+        if (first.Row > last.Row || first.Column > last.Column) throw new ArgumentException(MessageText.Get("移动区域顺序无效。"));
         var output = _source.Offset(_rows, _columns);
         WorkbookLimits.ValidatePosition(output.Top, output.Left);
         WorkbookLimits.ValidatePosition(output.Bottom, output.Right);
@@ -70,14 +70,14 @@ public sealed class MoveCellsCommand(SheetId sourceSheet, CellPosition first, Ce
         RequireCompleteSpills(target, output, sameSheet ? _source : null);
         var movedTables = source.Data.Tables.Where(t => _source.Contains(t.Range)).Select(t => t.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
         if (target.Data.Tables.Any(t => !movedTables.Contains(t.Name) && ValidationSafety.Overlaps(output, t.Range)))
-            throw new InvalidOperationException("目标与现有 Excel 表格相交，请选择表格以外的位置。");
+            throw new InvalidOperationException(MessageText.Get("目标与现有 Excel 表格相交，请选择表格以外的位置。"));
         var movedMerges = source.MergedCells.Select(CellRectangle.Parse).Where(_source.Contains).ToArray();
         if (target.MergedCells.Select(CellRectangle.Parse).Any(m => ValidationSafety.Overlaps(m, output) && !output.Contains(m) && !(sameSheet && _source.Contains(m))))
-            throw new InvalidOperationException("目标只覆盖了合并单元格的一部分，请选择能容纳整个区域的位置。");
+            throw new InvalidOperationException(MessageText.Get("目标只覆盖了合并单元格的一部分，请选择能容纳整个区域的位置。"));
         foreach (var (p, cell) in target.Cells)
             if (output.Contains(p.Row, p.Column) && !(sameSheet && _source.Contains(p.Row, p.Column)) && cell.Content.RichText is not null &&
                 source.GetCell(p.Row - _rows, p.Column - _columns)?.Content.RichText is null)
-                throw new InvalidOperationException("剪切目标包含富文本，请先明确转换为普通文本；源区域尚未修改。");
+                throw new InvalidOperationException(MessageText.Get("剪切目标包含富文本，请先明确转换为普通文本；源区域尚未修改。"));
 
         var tableNames = snapshot.Sheets.SelectMany(s => s.Data.Tables).Select(t => t.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
         FormulaNode Transform(FormulaNode node, SheetId context)
@@ -96,7 +96,7 @@ public sealed class MoveCellsCommand(SheetId sourceSheet, CellPosition first, Ce
             var reference = new CellRectangle(r.Row, r.Column, r.EndRow, r.EndColumn);
             if (!ValidationSafety.Overlaps(reference, _source)) return node;
             if (!_source.Contains(reference))
-                throw new NotSupportedException("移动仅覆盖了引用区域的一部分，无法保留连续区域语义，操作未应用。");
+                throw new NotSupportedException(MessageText.Get("移动仅覆盖了引用区域的一部分，无法保留连续区域语义，操作未应用。"));
             return r with { Sheet = target.Name, Row = r.Row + _rows, EndRow = r.EndRow + _rows, Column = r.Column + _columns, EndColumn = r.EndColumn + _columns };
         }
 
@@ -169,7 +169,7 @@ public sealed class MoveCellsCommand(SheetId sourceSheet, CellPosition first, Ce
             sheet.Rows.Any(p => p.Key >= range.Top && p.Key <= range.Bottom && p.Value.ApplyStyle && p.Value.StyleId != 0) ||
             sheet.Columns.Any(p => p.Key >= range.Left && p.Key <= range.Right && p.Value.StyleId != 0);
         if (!HasStyle(source, _source) && !HasStyle(target, output)) return;
-        if (_source.Count > WorkbookClipboard.MaxCells) throw new NotSupportedException("移动含继承格式的区域最多支持 20,000 格。");
+        if (_source.Count > WorkbookClipboard.MaxCells) throw new NotSupportedException(MessageText.Get("移动含继承格式的区域最多支持 20,000 格。"));
         for (var row = _source.Top; row <= _source.Bottom; row++)
         for (var column = _source.Left; column <= _source.Right; column++)
         {

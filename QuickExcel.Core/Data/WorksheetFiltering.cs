@@ -12,7 +12,7 @@ public static class WorksheetFilterEngine
         (source.FormulaReadOnly || snapshot.Revision == source.OriginalModel.Revision);
     public static string ValueLabel(CellValue value, StyleDefinition style, ExcelDateSystem system) =>
         CellDisplayFormatter.SupportsFilterLabel(value, style) ? CellDisplayFormatter.Format(value, style, system) :
-            throw new InvalidOperationException("筛选列含未支持或依赖版面的显示格式，不能安全匹配显示值；请先改为明确的数字格式或使用数值条件。");
+            throw new InvalidOperationException(MessageText.Get("筛选列含未支持或依赖版面的显示格式，不能安全匹配显示值；请先改为明确的数字格式或使用数值条件。"));
 
     public static ImmutableHashSet<int> Evaluate(WorkbookSnapshot snapshot, SheetId sheetId, bool allowSourceCaches = false,
         CancellationToken cancellationToken = default) => Evaluate(snapshot.GetSheet(sheetId), snapshot.Styles, snapshot.DateSystem,
@@ -23,7 +23,7 @@ public static class WorksheetFilterEngine
     {
         var hidden = ImmutableHashSet.CreateBuilder<int>();
         if (sheet.Data.AllFilters.Sum(f => (long)(f.Range.Bottom - f.Range.Top) * f.Columns.Count) > 2_000_000)
-            throw new InvalidOperationException("工作表筛选条件遍历超过 2,000,000 格。");
+            throw new InvalidOperationException(MessageText.Get("工作表筛选条件遍历超过 2,000,000 格。"));
         foreach (var filter in sheet.Data.AllFilters)
         {
         if (filter.Columns.Count == 0) continue;
@@ -36,7 +36,7 @@ public static class WorksheetFilterEngine
                 var cell = sheet.GetCell(row, column);
                 if (cell?.Content.Kind == CellContentKind.Formula && (cell.Calculation?.Value is null || !allowSourceCaches &&
                     (cell.Calculation.InputRevision != revision || cell.Calculation.State is not (CalculationState.Fresh or CalculationState.Error))))
-                    throw new InvalidOperationException("筛选列包含待重算或缺少结果的公式，请重算后重新应用或保存。");
+                    throw new InvalidOperationException(MessageText.Get("筛选列包含待重算或缺少结果的公式，请重算后重新应用或保存。"));
                 matches &= match(cell?.Value ?? CellValue.Blank, TablePresentation.NumberStyle(sheet, styles, row, column), system);
             }
             if (!matches) hidden.Add(row);

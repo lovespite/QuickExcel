@@ -12,7 +12,7 @@ public sealed record TextSplitOptions(string Delimiters = ",", bool CollapseDeli
     public string[] SplitRow(string text, int sheetRow)
     {
         try { return CleaningText.Parse(text, this); }
-        catch (ArgumentException ex) { throw new ArgumentException($"第 {sheetRow + 1} 行：{ex.Message}", ex); }
+        catch (ArgumentException ex) { throw new ArgumentException(MessageText.Format($"第 {sheetRow + 1} 行：{ex.Message}"), ex); }
     }
 }
 public sealed record NumericTextOptions(char DecimalSeparator = '.', char? GroupSeparator = ',', bool TrailingMinus = true)
@@ -21,7 +21,7 @@ public sealed record NumericTextOptions(char DecimalSeparator = '.', char? Group
     {
         if (DecimalSeparator is not ('.' or ',') || GroupSeparator == DecimalSeparator ||
             GroupSeparator is { } group && (char.IsDigit(group) || group is '+' or '-' or '%' or 'e' or 'E'))
-            throw new ArgumentException("小数点须为点或逗号，千分位符须不同且不能是数字、符号或指数标记。");
+            throw new ArgumentException(MessageText.Get("小数点须为点或逗号，千分位符须不同且不能是数字、符号或指数标记。"));
     }
 }
 public sealed record CleaningCellPreview(CellAddress Address, CellContent? Before, CellContent After);
@@ -48,8 +48,8 @@ public sealed class ApplyCleaningCommand(CleaningPreview preview, bool allowOver
     internal override CommandDraft Prepare(WorkbookSnapshot snapshot)
     {
         ArgumentNullException.ThrowIfNull(preview);
-        if (!SameInputs(snapshot, preview.Source)) throw new InvalidOperationException("清洗预览已过期，请重新预览；没有修改工作簿。");
-        if (!allowOverwrite && !preview.Overwrites.IsEmpty) throw new InvalidOperationException("目标已有内容，请在预览中明确确认覆盖；没有修改工作簿。");
+        if (!SameInputs(snapshot, preview.Source)) throw new InvalidOperationException(MessageText.Get("清洗预览已过期，请重新预览；没有修改工作簿。"));
+        if (!allowOverwrite && !preview.Overwrites.IsEmpty) throw new InvalidOperationException(MessageText.Get("目标已有内容，请在预览中明确确认覆盖；没有修改工作簿。"));
         // Navigation may change while a modal preview is open. Replay only the reviewed edits
         // against that current view; never restore the preview's old navigation or window.
         var styled = new WorkbookSnapshot(snapshot.DocumentId, snapshot.Revision, snapshot.DateSystem, snapshot.Sheets, snapshot.ScriptSource,
@@ -71,33 +71,33 @@ public static class DataCleaning
     public const int MaxCells = 20_000;
     internal static WorksheetSnapshot RequireRange(WorkbookSnapshot book, SheetId sheetId, CellRectangle range)
     {
-        if (book.FileState?.FormulaReadOnly == true) throw new InvalidOperationException(WorkbookFileState.FormulaReadOnlyMessage);
+        if (book.FileState?.FormulaReadOnly == true) throw new InvalidOperationException(MessageText.Get(WorkbookFileState.FormulaReadOnlyMessage));
         WorkbookClipboard.ValidateRange(range); var sheet = book.GetSheet(sheetId);
         WorkbookClipboard.RequirePlainGeometry(sheet, range); WorkbookClipboard.RequireVisibleDimensions(sheet, range);
         if (sheet.Annotations.Links.Keys.Concat(sheet.Annotations.Notes.Keys).Any(p => range.Contains(p.Row, p.Column)) ||
             sheet.Cells.Any(p => range.Contains(p.Key.Row, p.Key.Column) && p.Value.Content.RichText is not null))
-            throw new NotSupportedException("清洗区域含富文本、链接或批注，请先明确处理这些内容；整批操作未应用。");
+            throw new NotSupportedException(MessageText.Get("清洗区域含富文本、链接或批注，请先明确处理这些内容；整批操作未应用。"));
         var hidden = WorksheetFilterEngine.Evaluate(book, sheetId);
-        if (hidden.Any(r => r >= range.Top && r <= range.Bottom)) throw new InvalidOperationException("清洗区域含筛选隐藏行，请先清除筛选；不跨隐藏行映射记录。");
+        if (hidden.Any(r => r >= range.Top && r <= range.Bottom)) throw new InvalidOperationException(MessageText.Get("清洗区域含筛选隐藏行，请先清除筛选；不跨隐藏行映射记录。"));
         return sheet;
     }
     public static CleaningPreview RemoveDuplicates(WorkbookSnapshot book, SheetId sheetId, CellRectangle range, IEnumerable<int> keyColumns, bool hasHeader = true, bool expandToWholeRows = false)
     {
         var sheet = RequireRange(book, sheetId, range); var keys = keyColumns.Take(1025).ToArray();
-        if (WorksheetOutline.HasGroups(sheet)) throw new NotSupportedException("删除重复项暂不压缩分组，请先取消分组。");
+        if (WorksheetOutline.HasGroups(sheet)) throw new NotSupportedException(MessageText.Get("删除重复项暂不压缩分组，请先取消分组。"));
         if (keys.Length is 0 or > 1024 || keys.Any(c => c < range.Left || c > range.Right) || keys.Distinct().Count() != keys.Length)
-            throw new ArgumentException("请选择不重复的区域内判重列。");
+            throw new ArgumentException(MessageText.Get("请选择不重复的区域内判重列。"));
         // Excel's "expand the selection" keeps duplicate detection on the chosen columns,
         // but removes the duplicate record from every adjacent data column as one whole row.
         var work = expandToWholeRows ? ExpandRowColumns(sheet, range) : range;
         if ((long)(work.Bottom - work.Top + 1) * (work.Right - work.Left + 1) > MaxCells)
-            throw new InvalidOperationException($"扩展列后范围超过 {MaxCells:N0} 格，请先缩小选区或关闭“扩展列”。");
+            throw new InvalidOperationException(MessageText.Format($"扩展列后范围超过 {MaxCells:N0} 格，请先缩小选区或关闭“扩展列”。"));
         if (work != range) RequireRange(book, sheetId, work);
         if (sheet.Data.Filter is { } filter && ValidationSafety.Overlaps(filter.Range, work) || sheet.Data.Sort is { } sort && ValidationSafety.Overlaps(sort.Range, work) ||
             sheet.Data.Tables.Any(t => ValidationSafety.Overlaps(t.Range, work)) ||
             sheet.Data.ConditionalFormats.Any(r => r.Ranges.Any(a => ValidationSafety.Overlaps(a, work))) ||
             sheet.Data.Validations.Any(r => r.Ranges.Any(a => ValidationSafety.Overlaps(a, work))))
-            throw new NotSupportedException("删除重复项暂不压缩筛选、排序、Table、条件格式或验证区域；请先复制值到普通区域再清洗。");
+            throw new NotSupportedException(MessageText.Get("删除重复项暂不压缩筛选、排序、Table、条件格式或验证区域；请先复制值到普通区域再清洗。"));
         StructureEdits.RequireTransformableFunctions(book);
         var first = range.Top + (hasHeader ? 1 : 0); var keep = new List<int>(); var removed = new List<int>();
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase); long characters = 0;
@@ -108,13 +108,13 @@ public static class DataCleaning
             {
                 var cell = sheet.GetCell(row, column);
                 if (cell?.Content.Kind == CellContentKind.Formula && (cell.Calculation is not { State: CalculationState.Fresh or CalculationState.Error, Value: not null } || cell.Calculation.InputRevision != book.Revision))
-                    throw new InvalidOperationException("判重列含待重算公式，请先完成重算并重新预览。");
+                    throw new InvalidOperationException(MessageText.Get("判重列含待重算公式，请先完成重算并重新预览。"));
                 var value = cell?.Value ?? CellValue.Blank;
                 var text = WorksheetFilterEngine.ValueLabel(value, TablePresentation.NumberStyle(sheet, book.Styles, row, column), book.DateSystem);
                 var kind = value.Kind switch { CellValueKind.Number => "N", CellValueKind.Blank => "B", CellValueKind.Error => "E", _ => "T" };
                 key.Append(kind).Append(text.Length).Append(':').Append(text);
             }
-            characters += key.Length; if (characters > 4_000_000) throw new InvalidOperationException("判重文本超过 4,000,000 字符，请缩小区域。");
+            characters += key.Length; if (characters > 4_000_000) throw new InvalidOperationException(MessageText.Get("判重文本超过 4,000,000 字符，请缩小区域。"));
             if (seen.Add(key.ToString())) keep.Add(row); else removed.Add(row);
         }
         var edits = new List<CellEdit>();
@@ -174,12 +174,12 @@ public static class DataCleaning
             var startInside = Inside(reference.Column); var endInside = Inside(endColumn);
             if (!startInside && !endInside) return node;
             if (startInside != endInside)
-                throw new NotSupportedException("公式引用跨越扩展列边界，无法安全压缩重复记录；请先复制值到普通区域。");
+                throw new NotSupportedException(MessageText.Get("公式引用跨越扩展列边界，无法安全压缩重复记录；请先复制值到普通区域。"));
             int MapRow(int row)
             {
                 if (row < first || row > work.Bottom) return row;
                 if (removedSet.Contains(row))
-                    throw new NotSupportedException($"公式引用了将被删除的重复行（第 {row + 1} 行），无法安全压缩；请先复制值到普通区域。");
+                    throw new NotSupportedException(MessageText.Format($"公式引用了将被删除的重复行（第 {row + 1} 行），无法安全压缩；请先复制值到普通区域。"));
                 return row - removedSet.Count(candidate => candidate >= first && candidate < row);
             }
             var startRow = MapRow(reference.Row);
@@ -193,16 +193,16 @@ public static class DataCleaning
     public static string[] ReadSplitSource(WorkbookSnapshot book, SheetId sheetId, CellRectangle source)
     {
         var sheet = RequireRange(book, sheetId, source);
-        if (source.Left != source.Right) throw new ArgumentException("分列来源须为单列矩形。");
+        if (source.Left != source.Right) throw new ArgumentException(MessageText.Get("分列来源须为单列矩形。"));
         var rows = new string[source.Rows];
         long characters = 0;
         for (var row = source.Top; row <= source.Bottom; row++)
         {
             var cell = sheet.GetCell(row, source.Left);
             if (cell is not null && (cell.Content.Kind != CellContentKind.Literal || cell.Value.Kind is not (CellValueKind.Text or CellValueKind.Blank)))
-                throw new InvalidOperationException($"第 {row + 1} 行不是普通文本；分列不隐式转换数值、日期或公式。");
+                throw new InvalidOperationException(MessageText.Format($"第 {row + 1} 行不是普通文本；分列不隐式转换数值、日期或公式。"));
             var text = cell?.Value.Kind == CellValueKind.Text ? cell.Value.TextValue : ""; characters += text.Length;
-            if (characters > 4_000_000) throw new InvalidOperationException("分列来源超过 4,000,000 字符。");
+            if (characters > 4_000_000) throw new InvalidOperationException(MessageText.Get("分列来源超过 4,000,000 字符。"));
             rows[row - source.Top] = text;
         }
         return rows;
@@ -213,12 +213,12 @@ public static class DataCleaning
         var rows = ReadSplitSource(book, sheetId, source);
         var sheet = book.GetSheet(sheetId);
         var types = (columnTypes ?? []).Take(257).ToArray();
-        if (types.Length > 256 || types.Any(t => !Enum.IsDefined(t))) throw new ArgumentException("分列类型列表最多 256 列。");
+        if (types.Length > 256 || types.Any(t => !Enum.IsDefined(t))) throw new ArgumentException(MessageText.Get("分列类型列表最多 256 列。"));
         var parsed = rows.Select((text, i) => options.SplitRow(text, source.Top + i)).ToArray();
         var maximum = parsed.Max(row => row.Length);
         CleaningColumnType Type(int i) => i < types.Length ? types[i] : CleaningColumnType.Text;
         var count = Enumerable.Range(0, maximum).Count(i => Type(i) != CleaningColumnType.Skip);
-        if (count == 0) throw new ArgumentException("至少保留一个输出列。");
+        if (count == 0) throw new ArgumentException(MessageText.Get("至少保留一个输出列。"));
         var output = new CellRectangle(destination.Row, destination.Column, checked(destination.Row + parsed.Length - 1), checked(destination.Column + count - 1));
         RequireRange(book, sheetId, output);
         var builder = new Builder(book, sheet); var overwrites = new List<CellAddress>();
@@ -261,11 +261,11 @@ public static class DataCleaning
             (CellValue Value, int FormatId, string? FormatCode) converted;
             try { converted = CleaningText.Convert(text, type, numbers, book.DateSystem, Notices); }
             catch (Exception ex) when (ex is ArgumentException or OverflowException)
-            { throw new ArgumentException($"目标第 {position.Row + 1} 行、第 {position.Column + 1} 列：{ex.Message}", ex); }
+            { throw new ArgumentException(MessageText.Format($"目标第 {position.Row + 1} 行、第 {position.Column + 1} 列：{ex.Message}"), ex); }
             var baseStyle = book.Styles[sheet.GetStyleId(position.Row, position.Column)];
             var style = baseStyle with { NumberFormatId = converted.FormatId, NumberFormatCode = converted.FormatCode };
             var id = _styles.IndexOf(style);
-            if (id < 0) { if (_styles.Count >= 4096) throw new InvalidOperationException("样式超过 4096，清洗未应用。"); id = _styles.Count; _styles.Add(style); }
+            if (id < 0) { if (_styles.Count >= 4096) throw new InvalidOperationException(MessageText.Get("样式超过 4096，清洗未应用。")); id = _styles.Count; _styles.Add(style); }
             _edits.Add(new(new(sheet.Id, position.Row, position.Column), CellContent.FromLiteral(converted.Value, id)));
         }
         public CleaningPreview Finish(IEnumerable<CellAddress> overwrites)

@@ -25,16 +25,16 @@ public static class SortPlanning
         if (selection is { } full && (SelectionPlanning.IsWholeColumn(full) || SelectionPlanning.IsWholeRow(full)))
         {
             var records = WholeAxisRegion(sheet, full, active);
-            if (records.Count > MaxCells) throw new InvalidOperationException($"实际排序区域超过 {MaxCells:N0} 格，请缩小选区。");
+            if (records.Count > MaxCells) throw new InvalidOperationException(UiText.Format($"实际排序区域超过 {MaxCells:N0} 格，请缩小选区。"));
             return new(records, LooksLikeHeader(sheet, records));
         }
         if (selection is { } bounded && bounded.Count > MaxCells)
-            throw new InvalidOperationException($"实际排序区域超过 {MaxCells:N0} 格，请缩小选区。");
+            throw new InvalidOperationException(UiText.Format($"实际排序区域超过 {MaxCells:N0} 格，请缩小选区。"));
         var block = selection is { } selected && IsRecordSelection(selected, row, column)
             ? SortRangeCommand.ExpandColumns(sheet, selected, hasHeader: false)
             : CurrentRegion(sheet, row, column);
         if (block.Count > MaxCells)
-            throw new InvalidOperationException($"数据块为 {block.Rows:N0} 行 × {block.Columns:N0} 列，超过排序上限 {MaxCells:N0} 格；请选择较小的数据区域。");
+            throw new InvalidOperationException(UiText.Format($"数据块为 {block.Rows:N0} 行 × {block.Columns:N0} 列，超过排序上限 {MaxCells:N0} 格；请选择较小的数据区域。"));
         return new SortBlock(block, LooksLikeHeader(sheet, block));
     }
 

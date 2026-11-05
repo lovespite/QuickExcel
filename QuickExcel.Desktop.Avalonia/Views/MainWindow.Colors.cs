@@ -20,12 +20,12 @@ public sealed partial class MainWindow
         {
             var item = createItem(name, () => apply(value)); item.Icon = ColorPalette.Swatch(value); items.Add(item);
         }
-        items.Add(new Separator()); items.Add(createItem("自定义颜色…", custom)); return items.ToArray();
+        items.Add(new Separator()); items.Add(createItem(UiText.Get("自定义颜色…"), custom)); return items.ToArray();
     }
 
     private DropDownButton RibbonColorDropdown(bool fill)
     {
-        var title = fill ? "填充颜色" : "字体颜色";
+        var title = fill ? UiText.Get("填充颜色") : UiText.Get("字体颜色");
         var swatch = ColorPalette.Swatch(null);
         if (fill) _fillColorSwatch = swatch; else _fontColorSwatch = swatch;
         var content = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 5 };
@@ -33,7 +33,7 @@ public sealed partial class MainWindow
         var button = new DropDownButton { Name = fill ? "FillColorDropdown" : "FontColorDropdown", Content = content,
             Height = 28, MinHeight = 28, Padding = new(4, 2), Margin = new(2, 1), Background = Brushes.Transparent, BorderThickness = new(0),
             HorizontalAlignment = HorizontalAlignment.Left, HorizontalContentAlignment = HorizontalAlignment.Left,
-            Flyout = new MenuFlyout { ItemsSource = ColorMenuItems(fill ? "无填充" : "自动字体色", color => ApplyCellColorAsync(fill, color), () => CustomCellColorAsync(fill)) } };
+            Flyout = new MenuFlyout { ItemsSource = ColorMenuItems(fill ? UiText.Get("无填充") : UiText.Get("自动字体色"), color => ApplyCellColorAsync(fill, color), () => CustomCellColorAsync(fill)) } };
         button.Classes.Add("ribbon-command");
         AutomationProperties.SetName(button, title); ToolTip.SetTip(button, title); _mutationControls.Add(button); return button;
     }
@@ -59,7 +59,7 @@ public sealed partial class MainWindow
     {
         if (!await CommitEditorsAsync()) return;
         var revision = Document.Snapshot.Revision; var addresses = VisibleAddresses();
-        var color = await new CustomColorDialog(fill ? CurrentStyle.FillColor : CurrentStyle.FontColor, fill ? "自定义填充颜色" : "自定义字体颜色").ShowAsync(this);
+        var color = await new CustomColorDialog(fill ? CurrentStyle.FillColor : CurrentStyle.FontColor, fill ? UiText.Get("自定义填充颜色") : UiText.Get("自定义字体颜色")).ShowAsync(this);
         if (color is not null) await ExecuteAsync(new SetCellStyleCommand(addresses, fill ? new(FillColor: color) : new(FontColor: color)), revision);
     }
 }

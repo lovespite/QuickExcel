@@ -20,9 +20,13 @@ internal static class WindowsFileAssociations
 
     internal static void Register(RegistryKey user, string executable, IReadOnlyCollection<string> selected)
     {
+        var xlsqIcon = Path.Combine(Path.GetDirectoryName(executable)!, "Assets", "QuickExcel-XLSQ.ico");
+        if (selected.Contains(".xlsq") && !File.Exists(xlsqIcon))
+            throw new FileNotFoundException(null, xlsqIcon);
+
         using var capabilities = user.CreateSubKey(Capabilities);
         capabilities.SetValue("ApplicationName", "QuickExcel");
-        capabilities.SetValue("ApplicationDescription", "QuickExcel 工作簿与 CSV 文件");
+        capabilities.SetValue("ApplicationDescription", UiText.Get("QuickExcel 工作簿与 CSV 文件"));
         using var associations = user.CreateSubKey(Associations);
         foreach (var ext in Extensions)
         {
@@ -36,7 +40,12 @@ internal static class WindowsFileAssociations
                 continue;
             }
             using var type = user.CreateSubKey(@"Software\Classes\" + progId);
-            type.SetValue("", $"QuickExcel {ext[1..].ToUpperInvariant()} 文件");
+            type.SetValue("", UiText.Format($"QuickExcel {ext[1..].ToUpperInvariant()} 文件"));
+            if (ext == ".xlsq")
+            {
+                using var icon = type.CreateSubKey("DefaultIcon");
+                icon.SetValue("", $"\"{xlsqIcon}\",0");
+            }
             using var command = type.CreateSubKey(@"shell\open\command");
             command.SetValue("", $"\"{executable}\" \"%1\"");
             using var openWith = user.CreateSubKey(openWithPath);
@@ -50,7 +59,7 @@ internal static class WindowsFileAssociations
     internal static void ApplyAndOpenDefaults(IReadOnlyCollection<string> selected)
     {
         var executable = Path.Combine(AppContext.BaseDirectory, "QuickExcel.Avalonia.exe");
-        if (!File.Exists(executable)) throw new FileNotFoundException("找不到 QuickExcel 启动程序。", executable);
+        if (!File.Exists(executable)) throw new FileNotFoundException(UiText.Get("找不到 QuickExcel 启动程序。"), executable);
         Register(Registry.CurrentUser, executable, selected);
         SHChangeNotify(0x08000000, 0, IntPtr.Zero, IntPtr.Zero); // SHCNE_ASSOCCHANGED
         Process.Start(new ProcessStartInfo("ms-settings:defaultapps?registeredAppUser=QuickExcel") { UseShellExecute = true });

@@ -15,7 +15,7 @@ public sealed partial class TypedWorkbookStorage
     public WorkbookSnapshot Apply(WorkbookSnapshot snapshot, IReadOnlyList<VirtualFileEdit> edits)
     {
         if (edits.Count == 0) return snapshot;
-        if (edits.Any(e => !e.Path.StartsWith("//xlsq/", StringComparison.Ordinal))) throw new ArgumentException("包编辑只能访问 xlsq 卷。");
+        if (edits.Any(e => !e.Path.StartsWith("//xlsq/", StringComparison.Ordinal))) throw new ArgumentException(MessageText.Get("包编辑只能访问 xlsq 卷。"));
         var original = Capture(snapshot);
         var updated = original.Apply(edits);
         if (original.ContentEquals(updated)) return snapshot;
@@ -26,12 +26,12 @@ public sealed partial class TypedWorkbookStorage
         var manifest = JsonNode.Parse(Required(parts, "manifest.json", 64 * 1024))!.AsObject();
         var state = JsonNode.Parse(Required(parts, "state/document.json", 1024 * 1024))!.AsObject();
         if (state["documentId"]?.GetValue<string>() != snapshot.DocumentId.ToString("D") || state["contentRevision"]?.GetValue<long>() != snapshot.Revision)
-            throw new InvalidDataException("虚拟文件不能修改会话身份或内容修订。");
+            throw new InvalidDataException(MessageText.Get("虚拟文件不能修改会话身份或内容修订。"));
         var system = new HashSet<string>(StringComparer.Ordinal) { "manifest.json" };
         void Refresh(JsonNode reference)
         {
             var name = PathName(reference["path"]!.GetValue<string>());
-            if (!system.Add(name)) throw new InvalidDataException("重复系统条目。");
+            if (!system.Add(name)) throw new InvalidDataException(MessageText.Get("重复系统条目。"));
             reference["sha256"] = Hash(Required(parts, name));
         }
         Refresh(manifest["workbook"]!);
@@ -82,13 +82,13 @@ public sealed partial class TypedWorkbookStorage
         if (!original.Entries["//xlsq/workbook.xlsx"].Data.SequenceEqual(parts["workbook.xlsx"]))
         {
             if (snapshot.FileState?.CompatibilityIssues.Length > 0 || imported.FileState?.CompatibilityIssues.Length > 0 || imported.FileState?.FormulaReadOnly == true)
-                throw new InvalidDataException("含未建模内容的 workbook.xlsx 不能通过虚拟文件替换。");
+                throw new InvalidDataException(MessageText.Get("含未建模内容的 workbook.xlsx 不能通过虚拟文件替换。"));
             foreach (var sheet in snapshot.Sheets)
             {
                 var next = imported.Sheets.FirstOrDefault(s => s.Id == sheet.Id);
                 if (!sheet.Annotations.IsEmpty && (next is null || !sheet.Annotations.ContentEquals(next.Annotations)) ||
                     sheet.Cells.Any(c => c.Value.Content.RichText is not null && next?.GetCell(c.Key.Row, c.Key.Column)?.Content.RichText != c.Value.Content.RichText))
-                    throw new InvalidDataException("原始包替换不能隐式移除富文本、链接或批注。");
+                    throw new InvalidDataException(MessageText.Get("原始包替换不能隐式移除富文本、链接或批注。"));
             }
         }
         return imported.WithScriptModules(changedScripts ? modules : imported.ScriptModules.Signature == snapshot.ScriptModules.Signature

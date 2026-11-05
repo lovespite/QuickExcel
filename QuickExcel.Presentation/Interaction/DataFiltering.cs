@@ -12,7 +12,7 @@ public sealed record DataRegion(Guid Id, SheetId SheetId, GridRange Range, bool 
     {
         if (Range.Top < 0 || Range.Left < 0 || Range.Bottom >= WorkbookLimits.MaxRows || Range.Right >= WorkbookLimits.MaxColumns ||
             Range.Top > Range.Bottom || Range.Left > Range.Right)
-            throw new ArgumentException($"筛选区域须是 {WorkbookLimits.MaxRows:N0} 行 × {WorkbookLimits.MaxColumns:N0} 列范围内、包含数据的矩形。");
+            throw new ArgumentException(UiText.Format($"筛选区域须是 {WorkbookLimits.MaxRows:N0} 行 × {WorkbookLimits.MaxColumns:N0} 列范围内、包含数据的矩形。"));
     }
 }
 
@@ -22,13 +22,13 @@ public sealed record FilterTerm(FilterOperator Operator, string Operand)
 {
     public void Validate()
     {
-        if (!Enum.IsDefined(Operator) || Operand.Length > 1024) throw new ArgumentException("筛选条件无效或超过 1024 个字符。");
+        if (!Enum.IsDefined(Operator) || Operand.Length > 1024) throw new ArgumentException(UiText.Get("筛选条件无效或超过 1024 个字符。"));
         if (Operator is >= FilterOperator.NumberEquals and <= FilterOperator.LessOrEqual &&
             (!double.TryParse(Operand, NumberStyles.Float, CultureInfo.InvariantCulture, out var number) || !double.IsFinite(number)))
-            throw new ArgumentException("数字条件须为有限数值（小数点使用 .）。");
+            throw new ArgumentException(UiText.Get("数字条件须为有限数值（小数点使用 .）。"));
         if (Operator is FilterOperator.DateOnOrAfter or FilterOperator.DateOnOrBefore &&
             !DateTime.TryParseExact(Operand, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out _))
-            throw new ArgumentException("日期条件须为 yyyy-MM-dd。");
+            throw new ArgumentException(UiText.Get("日期条件须为 yyyy-MM-dd。"));
     }
 
     public bool Matches(CellValue value, StyleDefinition style, ExcelDateSystem dateSystem)
@@ -71,7 +71,7 @@ public sealed record ColumnFilter(ImmutableHashSet<CellValue>? Values = null, Fi
     public void Validate()
     {
         if (Values is not null && (First is not null || Second is not null) || Second is not null && First is null)
-            throw new ArgumentException("候选值筛选和条件筛选不能混用。");
+            throw new ArgumentException(UiText.Get("候选值筛选和条件筛选不能混用。"));
         First?.Validate(); Second?.Validate();
     }
     public bool Matches(CellValue value, StyleDefinition style, ExcelDateSystem system) => Stored is not null ? WorksheetFilterEngine.Compile(Stored)(value, style, system) : Values is not null ? Values.Contains(value)
@@ -91,7 +91,7 @@ public static class DataFilterEngine
         var cell = sheet.GetCell(row, column);
         if (cell?.Content.Kind == CellContentKind.Formula && (cell.Calculation?.Value is null ||
             cell.Calculation.State is not (CalculationState.Fresh or CalculationState.Error) || cell.Calculation.InputRevision != snapshot.Revision))
-            throw new InvalidOperationException("筛选列包含待重算公式，请完成重算后重新应用。");
+            throw new InvalidOperationException(UiText.Get("筛选列包含待重算公式，请完成重算后重新应用。"));
         return (cell?.Value ?? CellValue.Blank, snapshot.Styles[sheet.GetStyleId(row, column)]);
     }
 
@@ -100,7 +100,7 @@ public static class DataFilterEngine
         region.Validate();
         foreach (var (column, filter) in filters)
         {
-            if (column < region.Range.Left || column > region.Range.Right) throw new ArgumentException("筛选列不在数据区域中。");
+            if (column < region.Range.Left || column > region.Range.Right) throw new ArgumentException(UiText.Get("筛选列不在数据区域中。"));
             filter.Validate();
         }
         return snapshot.GetSheet(region.SheetId);
@@ -136,7 +136,7 @@ public static class DataFilterEngine
         IReadOnlyDictionary<int, ColumnFilter> filters, int column, CancellationToken cancellationToken = default)
     {
         var sheet = Validate(snapshot, region, filters);
-        if (column < region.Range.Left || column > region.Range.Right) throw new ArgumentException("候选列不在区域内。");
+        if (column < region.Range.Left || column > region.Range.Right) throw new ArgumentException(UiText.Get("候选列不在区域内。"));
         var selected = filters.GetValueOrDefault(column)?.Values;
         var values = new Dictionary<CellValue, (string Label, int Count)>();
         var characters = 0;
@@ -144,7 +144,7 @@ public static class DataFilterEngine
         {
             if (values.TryGetValue(value, out var existing)) { values[value] = (existing.Label, existing.Count + count); return; }
             characters += label.Length;
-            if (characters > MaxCandidateCharacters) throw new InvalidOperationException("候选文本超过 8 Mi 字符，请缩小筛选区域；没有截断或应用筛选。");
+            if (characters > MaxCandidateCharacters) throw new InvalidOperationException(UiText.Get("候选文本超过 8 Mi 字符，请缩小筛选区域；没有截断或应用筛选。"));
             values.Add(value, (label, count));
         }
         for (var row = region.FirstDataRow; row <= region.Range.Bottom; row++)
@@ -162,10 +162,10 @@ public static class DataFilterEngine
 
     private static string Label(CellValue value, StyleDefinition style, ExcelDateSystem system) => value.Kind switch
     {
-        CellValueKind.Blank => "(空白)",
-        CellValueKind.Text => value.TextValue.Length == 0 ? "(空字符串)" : value.TextValue + "  [文本]",
-        CellValueKind.Number => CellDisplayFormatter.Format(value, style, system) + "  [数字 " + value.NumberValue.ToString("R", CultureInfo.InvariantCulture) + "]",
-        CellValueKind.Boolean => CellInput.DisplayText(value) + "  [布尔]",
-        _ => CellInput.DisplayText(value) + "  [错误]"
+        CellValueKind.Blank => UiText.Get("(空白)"),
+        CellValueKind.Text => value.TextValue.Length == 0 ? UiText.Get("(空字符串)") : value.TextValue + UiText.Get("  [文本]"),
+        CellValueKind.Number => CellDisplayFormatter.Format(value, style, system) + UiText.Get("  [数字 ") + value.NumberValue.ToString("R", CultureInfo.InvariantCulture) + "]",
+        CellValueKind.Boolean => CellInput.DisplayText(value) + UiText.Get("  [布尔]"),
+        _ => CellInput.DisplayText(value) + UiText.Get("  [错误]")
     };
 }

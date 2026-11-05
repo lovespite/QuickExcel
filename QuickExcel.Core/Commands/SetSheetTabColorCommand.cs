@@ -12,7 +12,7 @@ public sealed class SetSheetTabColorCommand : DocumentCommand
         var value = color.Trim();
         if (value.StartsWith('#')) value = value[1..];
         if (value.Length is not (6 or 8) || value.Any(c => !Uri.IsHexDigit(c)))
-            throw new ArgumentException("请输入有效的十六进制颜色（#RRGGBB 或 AARRGGBB）。", nameof(color));
+            throw new ArgumentException(MessageText.Get("请输入有效的十六进制颜色（#RRGGBB 或 AARRGGBB）。"), nameof(color));
         Color = (value.Length == 6 ? "FF" + value : value).ToUpperInvariant();
     }
 

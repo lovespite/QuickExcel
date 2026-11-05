@@ -17,9 +17,11 @@ public sealed class DesktopSettingsMigrationTests : IDisposable
         Assert.Null(DesktopSettingsMigration.ImportOnce(Legacy, Target));
         var settings = new DesktopSettings(Path.Combine(Target, "settings.json")); settings.Load(); Assert.Equal(125, settings.Value.Zoom);
         Assert.Equal(DesktopCalculationMode.Automatic, settings.Value.Calculation);
-        settings.Save(settings.Value with { Calculation = DesktopCalculationMode.Manual });
+        Assert.Equal(UiText.Chinese, settings.Value.Language);
+        settings.Save(settings.Value with { Calculation = DesktopCalculationMode.Manual, Language = UiText.English });
         var reloaded = new DesktopSettings(Path.Combine(Target, "settings.json")); reloaded.Load();
         Assert.Equal(DesktopCalculationMode.Manual, reloaded.Value.Calculation);
+        Assert.Equal(UiText.English, reloaded.Value.Language);
         Assert.Single(Directory.GetDirectories(Target, "migration-backup-*"));
         Assert.False(File.Exists(Path.Combine(Target, "trusted-script-certificates.json")));
         File.WriteAllText(Path.Combine(Legacy, "settings.json"), "{\"Sheets\":0,\"Zoom\":75}");
@@ -33,9 +35,10 @@ public sealed class DesktopSettingsMigrationTests : IDisposable
         Assert.NotNull(DesktopSettingsMigration.ImportOnce(Legacy, Target));
         Assert.False(File.Exists(Path.Combine(Target, "settings.json")));
         Assert.Equal("malformed", File.ReadAllText(Path.Combine(Legacy, "settings.json")));
-        File.WriteAllText(Path.Combine(Target, "settings.json"), "{\"Sheets\":2,\"Zoom\":150}");
+        File.WriteAllText(Path.Combine(Target, "settings.json"), "{\"Sheets\":2,\"Zoom\":150,\"Language\":\"unknown\"}");
         Assert.Null(DesktopSettingsMigration.ImportOnce(Legacy, Target));
         var settings = new DesktopSettings(Path.Combine(Target, "settings.json")); settings.Load(); Assert.Equal(150, settings.Value.Zoom);
+        Assert.Equal(UiText.Chinese, settings.Value.Language);
     }
     public void Dispose() => Directory.Delete(_root, true);
 }
