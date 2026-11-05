@@ -318,6 +318,7 @@ public sealed partial class MainWindow
             await Task.Run(() => document.EnableScriptsAndCalculate(token), token);
             var actions = document.Snapshot.ScriptModules.HasActions ? await Task.Run(() => document.ListActions(token), token) : [];
             SetScriptActions(document, modules, actions);
+            _calculationPending = false;
             _status.Text = $"已加载 {actions.Count} 个脚本操作。";
         });
         await DispatchEventsAsync();
@@ -342,12 +343,13 @@ public sealed partial class MainWindow
         using var feedback = BeginExecution("正在执行代码…", cancellation);
         _scriptCancellation = cancellation;
         RefreshScriptActionButtons(); RefreshScriptConsole();
-        try { await work(cancellation.Token); _calculationPending = false; }
+        try { await work(cancellation.Token); }
         finally
         {
             _scriptCancellation = null;
             await RefreshScriptPageAfterMutationAsync();
             Synchronize(); RefreshScriptChrome(); RefreshScriptDiagnostics();
+            ScheduleCalculation();
         }
     }
     private void RefreshScriptDiagnostics()

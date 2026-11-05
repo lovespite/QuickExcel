@@ -1,0 +1,92 @@
+using System.Runtime.Versioning;
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Interactivity;
+using Avalonia.Media.Imaging;
+using Avalonia.Threading;
+using Avalonia.VisualTree;
+using Microsoft.Win32;
+using QuickExcel.Presentation;
+using QuickExcel.Storage;
+
+namespace QuickExcel.Desktop.Avalonia;
+
+public sealed partial class MainWindow
+{
+    private async Task CheckSettingsAsync(string directory, Action<bool, string> check, Func<Control, string, Task> capture)
+    {
+        static Task Layout() => Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Background).GetTask();
+        static void Click(Window w, string label) => w.GetVisualDescendants().OfType<Button>()
+            .Single(b => Equals(b.Content, label)).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+        _dialogDriver = async window =>
+        {
+            await Layout();
+            var nav = window.GetVisualDescendants().OfType<ListBox>().Single(l => l.Name == "SettingsNavigation");
+            check(nav.ItemCount == 6, "Settings exposes six separately navigable sections");
+            nav.SelectedItem = "历史文件"; await Layout();
+            var recent = window.GetVisualDescendants().OfType<ListBox>().Single(l => l.Name == "SettingsRecentFiles");
+            recent.SelectedIndex = 1; var before = recent.ItemCount; Click(window, "移除选中记录");
+            check(recent.ItemCount == before - 1, "Remove updates only the selected history entry");
+            Click(window, "清空历史记录"); await Layout();
+            Click(window.OwnedWindows.Single(), "确定"); await Layout();
+            check(recent.ItemCount == 0, "Confirmed history clear empties the settings list");
+            nav.SelectedItem = "保存与计算"; await Layout();
+            var manual = window.GetVisualDescendants().OfType<RadioButton>().Single(r => r.Content?.ToString()?.StartsWith("手动") == true);
+            manual.IsChecked = true;
+            check(!window.GetVisualDescendants().OfType<ToggleSwitch>().Single().IsEnabled, "Autosave is a disabled placeholder");
+            await capture(window, "settings-calculation");
+            nav.SelectedItem = "脚本与 API"; await Layout();
+            var search = window.GetVisualDescendants().OfType<TextBox>().Single(); search.Text = "Range.getValues"; await Layout();
+            var matrix = window.GetVisualDescendants().OfType<ListBox>().Single(l => l.Name == "SettingsApiMatrix");
+            check(matrix.ItemCount == 1, "Manifest-backed matrix filters by object and member");
+            nav.SelectedItem = "关于与许可"; await Layout();
+            var icon = window.GetVisualDescendants().OfType<Image>().Single(i => i.Name == "AboutProductIcon");
+            check(icon.Source is Bitmap && ReferenceEquals(icon.Source, Application.Current!.Resources[DesktopApp.ProductIconKey])
+                && icon.Bounds.Size == new Size(32, 32), "About displays the application icon at 32 x 32");
+            await capture(window, "settings-about");
+            var licenses = window.GetVisualDescendants().OfType<ComboBox>().Single();
+            licenses.SelectedItem = licenses.Items.OfType<string>().Single(p => p.EndsWith("OFFICE-SCRIPTS-NOTICE.md"));
+            check(window.GetVisualDescendants().OfType<TextBox>().Single(b => b.Name == "SettingsLicenseText").Text!.Contains("CC BY 4.0"), "Bundled license text and attribution can be read offline");
+            Click(window, "关闭");
+        };
+        var item = ((MenuItem)_menu.Items[0]!).Items.OfType<MenuItem>().Single(i => Equals(i.Header, "设置"));
+        item.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent)); await _operation;
+        check(_recent.Children.Single() is TextBlock && File.Exists(_workspace.FilePath), "Home history updates without deleting the workbook");
+        var reloaded = new DesktopSettings(Path.Combine(directory, "settings", "settings.json")); reloaded.Load();
+        check(reloaded.Value.Calculation == DesktopCalculationMode.Manual, "Manual calculation selected in Settings survives reload");
+        _workspace.New(); Document.SetCell(0, 0, 0, "2"); Document.SetCell(0, 0, 1, "=A1*3");
+        await CalculateAsync(); Document.SetCell(0, 0, 0, "4"); await FlushEditsAsync();
+        check(!_calculationTimer.IsEnabled && _calculationPending && Document.GetCellValue(0, 0, 1) != "12", "Manual mode retains pending edits through an ordinary flush");
+        var source = Path.Combine(directory, "原始 数据.csv");
+        var csv = "001,公式\r\n\"引号\"\"与,逗号\n换行\",=1+2\r\n";
+        var dialogs = new SmokeFiles { NextSave = Path.Combine(directory, "manual.xlsq") }; _files = dialogs;
+        check(await SaveAsync(false) && new TypedWorkbookStorage().Open(dialogs.NextSave).Sheets[0].GetCell(0, 1)!.Value.NumberValue == 12,
+            "Manual save writes the recalculated result");
+        await File.WriteAllTextAsync(source, csv); await OpenPathAsync(source);
+        check(Document.GetCellValue(0, 0, 0) == "001" && Document.GetCellValue(0, 1, 0) == "引号\"与,逗号\n换行" &&
+            Document.GetCellValue(0, 1, 1) == "=1+2", "CSV opens via normal file workflow with quoted multiline text, leading zeros and literal formulas");
+        dialogs.NextSave = Path.Combine(directory, "imported.xlsq");
+        check(await SaveAsync(false) && _workspace.FilePath == dialogs.NextSave && await File.ReadAllTextAsync(source) == csv,
+            "Saving imported CSV creates a workbook and preserves the source");
+        _settings.Save(_settings.Value with { Calculation = DesktopCalculationMode.Automatic });
+        if (OperatingSystem.IsWindows()) CheckAssociationRegistration(check);
+    }
+
+    [SupportedOSPlatform("windows")]
+    private static void CheckAssociationRegistration(Action<bool, string> check)
+    {
+        var name = @"Software\QuickExcel-Association-Test-" + Guid.NewGuid().ToString("N");
+        try
+        {
+            using var root = Registry.CurrentUser.CreateSubKey(name);
+            check(WindowsFileAssociations.ReadSelection(root).SequenceEqual([".xlsq"]), "Initial association selection defaults to XLSQ");
+            var executable = Path.Combine(AppContext.BaseDirectory, "QuickExcel.Avalonia.exe");
+            WindowsFileAssociations.Register(root, executable, [".xlsq", ".csv"]);
+            using var command = root.OpenSubKey(@"Software\Classes\QuickExcel.csv\shell\open\command");
+            check(Equals(command?.GetValue(""), $"\"{executable}\" \"%1\""), "Registered CSV command quotes both the executable and selected file");
+            WindowsFileAssociations.Register(root, executable, [".xlsx"]);
+            check(WindowsFileAssociations.ReadSelection(root).SequenceEqual([".xlsx"]), "Reapplying associations removes deselected advertisements");
+        }
+        finally { Registry.CurrentUser.DeleteSubKeyTree(name, throwOnMissingSubKey: false); }
+    }
+}

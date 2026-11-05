@@ -1,4 +1,6 @@
-# QuickExcel 0.6 交互预览版
+# QuickExcel 1.1.0
+
+从开始页或「文件 → 设置」管理文件关联、历史记录、计算和工作表标签位置，或查看脚本 API 支持矩阵与随包许可证。
 
 2026-11-03：JSC / TypeScript 已完成 70 号方案 J0–J6，Windows 默认包已切换为 `0.6.0-preview.8`，Linux 已独立验证；实现、发布与回退证据见 [71 号记录](QuickExcel.Desktop/docs/71-jsc-typescript-implementation-log.md)。64 MiB 引擎硬限额 `JSC-MEM-001` 保持开放，按用户要求延期且不阻止后续工作。
 

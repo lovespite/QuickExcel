@@ -32,7 +32,7 @@ public static class DesktopSettingsMigration
                 if (name == "settings.json")
                 {
                     var value = json.Deserialize<DesktopPreferences>();
-                    if (value is null || !Enum.IsDefined(value.Sheets) || value.Zoom is < 75 or > 175) throw new InvalidDataException("旧界面设置无效。");
+                    if (value is null || !value.IsValid) throw new InvalidDataException("旧界面设置无效。");
                 }
                 else if (json.Deserialize<string[]>() is not { } paths || paths.Any(p => p is null)) throw new InvalidDataException("旧最近文件记录无效。");
                 Directory.CreateDirectory(backup); WriteNew(Path.Combine(backup, name), bytes);

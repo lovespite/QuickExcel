@@ -66,7 +66,7 @@ public sealed partial class MainWindow
             _workspace.New(); _recentFiles.Remember(Path.Combine(directory, "同名文件示例", "年度预算与项目计划.xlsq")); _recentFiles.Remember(recentPath);
             ShowHome(); await Layout();
             var actions = ((StackPanel)_start.Children[0]).Children.OfType<Button>().ToArray();
-            Check(actions.Length == 4 && actions.All(b => b.Bounds.Height >= 76 && b.GetVisualDescendants().OfType<Viewbox>().Any()), "Home has four large icon buttons");
+            Check(actions.Length == 5 && actions.All(b => b.Bounds.Height >= 76 && b.GetVisualDescendants().OfType<Viewbox>().Any()), "Home has five large icon buttons including Settings");
             Check(_recent.TranslatePoint(default, _start)!.Value.X > actions[0].Bounds.Right, "Recent files are to the right of the home actions");
             var labels = ((StackPanel)((Button)_recent.Children[0]).Content!).Children.OfType<TextBlock>().ToArray();
             Check(labels[0].Text == Path.GetFileName(recentPath) && labels[0].FontWeight == FontWeight.Bold && labels[0].Foreground == Brushes.Black &&
@@ -79,6 +79,7 @@ public sealed partial class MainWindow
             Check(_book.IsVisible && _workspace.FilePath == recentPath, "History button opens its workbook");
             Check(!_menu.Items.OfType<MenuItem>().Any(i => (i.Header as string)?.Contains("F9") == true), "Main menu no longer contains recalculate F9");
             Check(((MenuItem)_menu.Items[0]!).Items.OfType<Separator>().Count() >= 4, "File menu separates open, save, export, compatibility and close actions");
+            await CheckSettingsAsync(directory, Check, Capture);
             _workspace.New(); ShowBook(); var id = Document.Snapshot.ActiveSheetId;
             await ExecuteAsync(new SetCellsCommand([new(new(id, 1, 0), CellInput.Parse("12")), new(new(id, 2, 0), CellInput.Parse("34")), new(new(id, 1, 1), CellInput.Parse("=A2*2"))]));
             await ExecuteAsync(new SetAxisMetadataCommand(id, SheetAxis.Row, 1, 2, 36)); await CalculateAsync();

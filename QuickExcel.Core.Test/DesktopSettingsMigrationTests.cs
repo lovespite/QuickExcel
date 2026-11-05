@@ -16,6 +16,10 @@ public sealed class DesktopSettingsMigrationTests : IDisposable
         File.WriteAllText(Path.Combine(Legacy, "trusted-script-certificates.json"), "private");
         Assert.Null(DesktopSettingsMigration.ImportOnce(Legacy, Target));
         var settings = new DesktopSettings(Path.Combine(Target, "settings.json")); settings.Load(); Assert.Equal(125, settings.Value.Zoom);
+        Assert.Equal(DesktopCalculationMode.Automatic, settings.Value.Calculation);
+        settings.Save(settings.Value with { Calculation = DesktopCalculationMode.Manual });
+        var reloaded = new DesktopSettings(Path.Combine(Target, "settings.json")); reloaded.Load();
+        Assert.Equal(DesktopCalculationMode.Manual, reloaded.Value.Calculation);
         Assert.Single(Directory.GetDirectories(Target, "migration-backup-*"));
         Assert.False(File.Exists(Path.Combine(Target, "trusted-script-certificates.json")));
         File.WriteAllText(Path.Combine(Legacy, "settings.json"), "{\"Sheets\":0,\"Zoom\":75}");

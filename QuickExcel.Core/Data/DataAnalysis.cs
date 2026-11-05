@@ -134,7 +134,7 @@ public static class DataAnalysis
                 table.Add(new[] { CellValue.FromNumber(column) }.Concat(rowValues.Select(row => CellValue.FromNumber(evaluator.Evaluate([columnInput, rowInput.Value], [column, row])))).ToArray());
         }
         RequireSeparateOutput(formula, rowInput is null ? [columnInput] : [columnInput, rowInput.Value], outputSheet, output, table.Count, table[0].Count);
-        return Output(book, outputSheet, output, table, "模拟运算表为本次计算的值快照，源输入保持原值；支持一变量和二变量，源数据改变后需重新生成。");
+        return Output(book, outputSheet, output, table, "模拟运算表将保存为结果值，源输入保持原值。");
     }
 
     private static void RequireSeparateOutput(CellAddress formula, IReadOnlyList<CellAddress> inputs, SheetId sheet, CellPosition start, int rows, int columns)

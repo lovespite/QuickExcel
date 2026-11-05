@@ -206,6 +206,10 @@ public sealed class M5WorkspaceTests : IDisposable
         recent.Remember(FilePath("11.xlsq").ToUpperInvariant());
         var loaded = new RecentFileStore(config); loaded.Load();
         Assert.Equal(10, loaded.Paths.Count); Assert.Equal(FilePath("11.xlsq").ToUpperInvariant(), loaded.Paths[0]);
+        var csv = FilePath("book.csv"); File.WriteAllText(csv, "data");
+        loaded.Remember(csv); loaded.Remove(csv); recent.Load();
+        Assert.DoesNotContain(csv, recent.Paths); Assert.Equal(9, recent.Paths.Count); Assert.True(File.Exists(csv));
+        loaded.Clear(); recent.Remember(csv); loaded.Load(); Assert.Equal([csv], loaded.Paths);
         loaded.Clear(); recent.Load(); Assert.Empty(recent.Paths);
         File.WriteAllText(config, "{broken"); recent.Load(); Assert.Empty(recent.Paths); Assert.NotNull(recent.Error);
     }

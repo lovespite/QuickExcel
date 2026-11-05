@@ -127,6 +127,7 @@ public sealed partial class MainWindow : Window
             Item("保存  Ctrl+S", async () => await SaveAsync(false)), Item("另存为", async () => await SaveAsync(true)), new Separator(),
             Item("导出值快照", () => ExportAsync(false)), Item("导出可移植公式", () => ExportAsync(true)),
             Item("打印预览 / PDF", OpenPrintPreviewAsync), new Separator(), Item("兼容性报告", CompatibilityAsync), new Separator(),
+            Item("设置", OpenSettingsAsync), new Separator(),
             Item("关闭工作簿", async () => { if (await ConfirmDiscardAsync()) { _workspace.New(); ShowHome(); } }), Item("退出", () => { Close(); return Task.CompletedTask; })
         } });
         _menu.Items.Add(new MenuItem { Header = "编辑", Items =
@@ -180,7 +181,13 @@ public sealed partial class MainWindow : Window
     private void ShowHome()
     {
         if (_book.IsVisible) Document.Session.RaiseScriptEvent("workbook.deactivate");
-        _book.IsVisible = false; ((Control)_start.Parent!).IsVisible = true; _recent.Children.Clear();
+        _book.IsVisible = false; ((Control)_start.Parent!).IsVisible = true;
+        RefreshRecentFiles();
+    }
+    private void RefreshRecentFiles()
+    {
+        _recentFiles.Load();
+        _recent.Children.Clear();
         foreach (var path in _recentFiles.Paths)
         {
             var label = new StackPanel { Spacing = 5 };
@@ -318,12 +325,14 @@ public sealed partial class MainWindow : Window
     private async Task OpenAsync()
     {
         if (!await CommitEditorsAsync()) return;
-        var selected = await _files.OpenAsync(new("打开工作簿", [new("工作簿", ["*.xlsx", "*.xlsq"])]));
+        var selected = await _files.OpenAsync(new("打开工作簿", [new("所有支持的文件", ["*.xlsq", "*.xlsx", "*.csv"]), new("CSV（UTF-8 文本）", ["*.csv"])]));
         if (selected is not null && await ConfirmDiscardAsync()) await OpenPathAsync(selected.Path);
     }
     private async Task OpenPathAsync(string path)
     {
         await _workspace.OpenAsync(new(path)); _recentFiles.Remember(path); ShowBook(); _status.Text = "已打开 " + Path.GetFileName(path);
+        if (Path.GetExtension(path).Equals(".csv", StringComparison.OrdinalIgnoreCase))
+            _status.Text = "已按文本导入 CSV。保存时将写入新的工作簿。";
         if (DesktopServices.SupportsScripts && Document.Snapshot.ScriptModules.Signature is not null)
         {
             var modules = Document.Snapshot.ScriptModules;
@@ -345,7 +354,13 @@ public sealed partial class MainWindow : Window
         await using var hold = _scriptPage?.HoldEdits();
         if (!await FlushEditsAsync()) return false;
         Document.Session.RaiseScriptEvent("workbook.beforeSave"); await DispatchEventsAsync();
-        await CalculatePendingAsync();
+        if (_settings.Value.Calculation == DesktopCalculationMode.Manual) _calculationPending = true;
+        await CalculatePendingCoreAsync(_settings.Value.Calculation == DesktopCalculationMode.Manual);
+        if (_calculationPending && _settings.Value.Calculation != DesktopCalculationMode.Automatic)
+        {
+            _status.Text = "保存前重算未完成，本次保存已取消。" + _calculationFailure;
+            return false;
+        }
         var snapshot = Document.Snapshot;
         var migration = snapshot.FileState?.RequiresMigration == true;
         var needsScripts = TypedWorkbookStorage.RequiresScriptContainer(snapshot);
@@ -361,13 +376,14 @@ public sealed partial class MainWindow : Window
             overwrite = choice == CompatibilitySaveDecision.Overwrite;
             discard = true; saveAs = !overwrite;
         }
-        if (migration || requiresNewContainer) saveAs = true;
+        if (migration || requiresNewContainer || string.Equals(Path.GetExtension(current), ".csv", StringComparison.OrdinalIgnoreCase)) saveAs = true;
         LocalFileSelection? selected = !saveAs && current is not null ? new(current) : null;
         if (selected is null)
         {
-            var extension = needsScripts || migration ? ".xlsq" : ".xlsx";
-            FileDialogType[] types = needsScripts ? [new("QuickExcel 工作簿（含脚本）", ["*.xlsq"])] : [new("Excel 工作簿", ["*.xlsx"]), new("QuickExcel 工作簿", ["*.xlsq"])];
-            selected = await _files.SaveAsync(new("保存工作簿", types, Path.GetFileNameWithoutExtension(current ?? "未命名") + (migration ? "-v2" : discard ? "-受支持副本" : "") + extension, extension));
+            var preferXlsx = !needsScripts && !migration && string.Equals(Path.GetExtension(current), ".xlsx", StringComparison.OrdinalIgnoreCase);
+            var extension = preferXlsx ? ".xlsx" : ".xlsq";
+            FileDialogType[] types = needsScripts ? [new("QuickExcel 工作簿（含脚本）", ["*.xlsq"])] : [new("QuickExcel 工作簿", ["*.xlsq"]), new("Excel 工作簿", ["*.xlsx"])];
+            selected = await _files.SaveAsync(new("保存工作簿", types, Path.GetFileNameWithoutExtension(current ?? "未命名") + (migration ? "-v2" : discard ? "-受支持副本" : "") + extension, extension, preferXlsx ? 1 : 0));
         }
         if (selected is null) return false;
         try { await _workspace.SaveAsync(selected, discard, overwrite); _recentFiles.Remember(selected.Path); _status.Text = "已保存 " + Path.GetFileName(selected.Path) + (_calculationFailure is null ? "" : " · 部分结果待重算：" + _calculationFailure); return true; }

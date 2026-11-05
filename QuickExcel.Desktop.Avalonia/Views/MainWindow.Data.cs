@@ -61,7 +61,7 @@ public sealed partial class MainWindow
             var dialog = new SortDialog(snapshot, sheet, block.Range, block.HasHeader, CurrentView.SortKeys, table is not null || filter is not null, filter is not null && table is null);
             if (!await ShowOwnedAsync<bool>(dialog) || dialog.Descriptor is null) return; descriptor = dialog.Descriptor;
         }
-        if (await ExecuteAsync(new SortRangeCommand(descriptor), snapshot.Revision)) await CalculateAsync();
+        if (await ExecuteAsync(new SortRangeCommand(descriptor), snapshot.Revision)) await CalculatePendingAsync();
     }
     private async Task EstablishFilterAsync()
     {
@@ -120,7 +120,7 @@ public sealed partial class MainWindow
         if (result.Action is "ascending" or "descending")
         {
             var range = table is null ? filter.Range : table.Range with { Bottom = table.Range.Bottom - (table.TotalsRow ? 1 : 0) };
-            if (await ExecuteAsync(new SortRangeCommand(new(sheet.Id, new(range.Top, range.Left), new(range.Bottom, range.Right), [new(column, result.Action == "descending")], table?.HeaderRow ?? true, table is null)), snapshot.Revision)) await CalculateAsync();
+            if (await ExecuteAsync(new SortRangeCommand(new(sheet.Id, new(range.Top, range.Left), new(range.Bottom, range.Right), [new(column, result.Action == "descending")], table?.HeaderRow ?? true, table is null)), snapshot.Revision)) await CalculatePendingAsync();
             return;
         }
         var columns = result.Action == "clear-all" ? filter.Columns.Clear() : result.Action == "clear" ? filter.Columns.Remove(column) :

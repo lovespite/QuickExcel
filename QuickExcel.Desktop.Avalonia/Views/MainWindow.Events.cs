@@ -50,7 +50,7 @@ public sealed partial class MainWindow
             _scriptCancellation = null;
             await RefreshScriptPageAfterMutationAsync();
             Synchronize(); RefreshScriptDiagnostics();
-            if (_calculationPending) _calculationTimer.Start();
+            ScheduleCalculation();
         }
     }
 }

@@ -74,7 +74,7 @@ public sealed partial class MainWindow
         if (!await ExecuteAsync(new SetCellsCommand(edits.Select(v => new CellEdit(new(sheetId, v.Row, v.Column),
             CellInput.ParseForCell(v.Value, Document.Snapshot, sheet, v.Row, v.Column)))), revision)) return;
         _grid.SelectRange(new(target.Top, target.Left, edits.Max(v => v.Row), edits.Max(v => v.Column)), new(target.Top, target.Left));
-        await CalculateAsync(); _status.Text = "已粘贴，可一次撤销。";
+        await CalculatePendingAsync(); _status.Text = "已粘贴，可一次撤销。";
     }
 
     private async Task PasteAvailableCellsAsync(ExternalClipboardRegion source, string mode, GridRange target, SheetId sheetId, long revision, List<string> notices)
@@ -105,7 +105,7 @@ public sealed partial class MainWindow
         catch (NotSupportedException ex) when (plan.Mode == CellPasteMode.Formats)
         { _status.Text = "没有可应用的格式，目标内容保持不变。 " + ex.Message; return; }
         _grid.SelectRange(new(target.Top, target.Left, target.Top + rows - 1, target.Left + columns - 1), new(target.Top, target.Left));
-        await CalculateAsync();
+        await CalculatePendingAsync();
         _status.Text = (Document.Snapshot.Revision == revision ? "没有可应用的更改，目标保持不变。 " : "已粘贴，可一次撤销。 ") + string.Join(" ", notices);
     }
 }

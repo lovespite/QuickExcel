@@ -158,13 +158,13 @@ public sealed partial class MainWindow
             _clipboardRevision = Document.Snapshot.Revision; if (cells.IsCut) _clipboardCells = null;
             _grid.SelectRange(new(target.Top, target.Left, target.Top + rows - 1, target.Left + columns - 1), new(target.Top, target.Left));
         }
-        await CalculateAsync(); _status.Text = "已粘贴，可一次撤销。";
+        await CalculatePendingAsync(); _status.Text = "已粘贴，可一次撤销。";
     }
     private async Task FillAsync(GridRange source, GridRange extent, long? revision = null)
     {
         CurrentView.RequireVisibleTargets(Document.Snapshot, SheetIndex, Enumerable.Range(extent.Top, extent.Rows));
         if (await ExecuteAsync(new FillCellsCommand(Document.Snapshot.ActiveSheetId, Rectangle(source), Rectangle(extent)), revision))
-        { _grid.SelectRange(extent, new(extent.Top, extent.Left)); await CalculateAsync(); }
+        { _grid.SelectRange(extent, new(extent.Top, extent.Left)); await CalculatePendingAsync(); }
     }
     private Task FillDirectionAsync(bool right)
     {
@@ -181,7 +181,7 @@ public sealed partial class MainWindow
         dialog.Validate = () => dialog.Number("step", -1e12, 1e12);
         if (!await dialog.ShowAsync(this)) return;
         RequireVisiblePaste(range);
-        if (await ExecuteAsync(new FillSeriesCommand(Document.Snapshot.ActiveSheetId, Rectangle(range), (CellSeriesKind)dialog.Index("kind"), dialog.Number("step", -1e12, 1e12)), revision)) await CalculateAsync();
+        if (await ExecuteAsync(new FillSeriesCommand(Document.Snapshot.ActiveSheetId, Rectangle(range), (CellSeriesKind)dialog.Index("kind"), dialog.Number("step", -1e12, 1e12)), revision)) await CalculatePendingAsync();
     }
     private void InstallEditingCommands()
     {

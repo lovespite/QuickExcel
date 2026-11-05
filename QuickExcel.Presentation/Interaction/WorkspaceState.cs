@@ -137,36 +137,52 @@ public sealed class SheetViewState
 public sealed class RecentFileStore(string path)
 {
     public const int Limit = 10;
+    private static readonly StringComparer PathComparer = OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
     public IReadOnlyList<string> Paths { get; private set; } = [];
     public string? Error { get; private set; }
     public void Load()
     {
         try
         {
-            if (!File.Exists(path)) return;
+            if (!File.Exists(path)) { Paths = []; Error = null; return; }
             if (new FileInfo(path).Length > 64 * 1024) throw new InvalidDataException("最近文件配置过大。");
-            Paths = Normalize(JsonSerializer.Deserialize<string[]>(File.ReadAllText(path)) ?? []);
+            Paths = Normalize(JsonSerializer.Deserialize<string[]>(File.ReadAllText(path)) ?? []); Error = null;
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException or ArgumentException)
+        catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException or JsonException or ArgumentException)
         { Paths = []; Error = ex.Message; }
     }
     private static string[] Normalize(IEnumerable<string> paths) => paths.Where(p => !string.IsNullOrWhiteSpace(p) && Path.IsPathFullyQualified(p)
-        && Path.GetExtension(p).ToLowerInvariant() is ".xlsx" or ".xlsq").Select(Path.GetFullPath)
-        .Distinct(StringComparer.OrdinalIgnoreCase).Take(Limit).ToArray();
-    public void Remember(string file) { Paths = Normalize(new[] { file }.Concat(Paths)); Save(); }
-    public void Clear() { Paths = []; Save(); }
-    private void Save()
+        && Path.GetExtension(p).ToLowerInvariant() is ".xlsx" or ".xlsq" or ".csv").Select(Path.GetFullPath)
+        .Distinct(PathComparer).Take(Limit).ToArray();
+    public void Remember(string file) => Save(current => Normalize(new[] { file }.Concat(current)));
+    public void Remove(string file) => Save(current => current.Where(p => !PathComparer.Equals(p, file)).ToArray());
+    public void Clear() => Save(_ => []);
+    private void Save(Func<IReadOnlyList<string>, IReadOnlyList<string>> update)
     {
         var temp = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
         try
         {
             Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
-            File.WriteAllText(temp, JsonSerializer.Serialize(Paths));
+            // Associated files can open in separate processes. Read the latest list
+            // under the same lease as the replacement so a removed entry stays removed.
+            using var lease = AcquireLease();
+            Load();
+            var paths = update(Paths);
+            File.WriteAllText(temp, JsonSerializer.Serialize(paths));
             File.Move(temp, path, true);
-            Error = null;
+            Paths = paths; Error = null;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         { Error = ex.Message; }
         finally { try { if (File.Exists(temp)) File.Delete(temp); } catch (IOException) { } catch (UnauthorizedAccessException) { } }
+    }
+
+    private FileStream AcquireLease()
+    {
+        for (var attempt = 0; ; attempt++)
+        {
+            try { return new FileStream(path + ".lock", FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None); }
+            catch (IOException) when (attempt < 10) { Thread.Sleep(10); }
+        }
     }
 }

@@ -57,55 +57,9 @@ public static class GridClipboard
     public static string[][] Read(string text)
     {
         if (text.Length > MaxCharacters) throw new ArgumentException("粘贴文本不能超过 4 Mi 个字符。");
-        var rows = new List<string[]>();
-        var fields = new List<string>();
-        var value = new StringBuilder();
-        var quoted = false;
-        var closed = false;
-        var count = 0;
-        void Field()
-        {
-            if (++count > MaxEditCells) throw new ArgumentException("单次粘贴上限为 20,000 格。");
-            fields.Add(value.ToString()); value.Clear(); closed = false;
-        }
-        for (var i = 0; i < text.Length; i++)
-        {
-            var ch = text[i];
-            if (quoted)
-            {
-                if (ch == '"')
-                {
-                    if (i + 1 < text.Length && text[i + 1] == '"') { value.Append('"'); i++; }
-                    else { quoted = false; closed = true; }
-                }
-                else value.Append(ch);
-            }
-            else if (ch == '"' && value.Length == 0 && !closed) quoted = true;
-            else if (ch is '\t' or '\r' or '\n')
-            {
-                Field();
-                if (ch != '\t')
-                {
-                    if (ch == '\r' && i + 1 < text.Length && text[i + 1] == '\n') i++;
-                    rows.Add(fields.ToArray()); fields.Clear();
-                    if (i == text.Length - 1) return Validate(rows);
-                }
-            }
-            else
-            {
-                if (closed) throw new ArgumentException("粘贴文本的引号格式无效。");
-                value.Append(ch);
-            }
-        }
-        if (quoted) throw new ArgumentException("粘贴文本的引号未闭合。");
-        Field(); rows.Add(fields.ToArray());
-        return Validate(rows);
-    }
-
-    private static string[][] Validate(List<string[]> rows)
-    {
+        var rows = QuickExcel.Core.DelimitedText.ReadRows(text, '\t', MaxEditCells).ToArray();
         if (rows.Any(row => row.Length != rows[0].Length)) throw new ArgumentException("粘贴数据必须是矩形，每行列数应相同。");
-        return rows.ToArray();
+        return rows;
     }
 
     public static (int Row, int Column, string Value)[] Prepare(string text, GridRange target, bool allowFormulas)

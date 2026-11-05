@@ -239,6 +239,6 @@ public sealed partial class MainWindow
         if (!await edit.ShowAsync(this)) return;
         DocumentCommand command = selected is null ? new DefineNameCommand(new(edit.String("name"), edit.String("formula"), edit.Index("scope") == 0 ? null : sheet.Id)) :
             new EditDefinedNameCommand(selected.Name, selected.Scope, edit.String("name"), edit.String("formula"));
-        if (await ExecuteAsync(command, snapshot.Revision)) await CalculateAsync();
+        if (await ExecuteAsync(command, snapshot.Revision)) await CalculatePendingAsync();
     }
 }

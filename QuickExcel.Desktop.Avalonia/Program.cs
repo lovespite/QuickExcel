@@ -1,5 +1,9 @@
 using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Media.Imaging;
+using Avalonia.Platform;
+using Avalonia.Styling;
 using Avalonia.Themes.Fluent;
 
 namespace QuickExcel.Desktop.Avalonia;
@@ -54,7 +58,20 @@ internal static class Program
 
 public sealed class DesktopApp : Application
 {
-    public override void Initialize() { RequestedThemeVariant = global::Avalonia.Styling.ThemeVariant.Light; Styles.Add(new FluentTheme()); }
+    internal const string ProductIconKey = "QuickExcel.ProductIcon";
+
+    public override void Initialize()
+    {
+        RequestedThemeVariant = ThemeVariant.Light;
+        Styles.Add(new FluentTheme());
+        using var stream = AssetLoader.Open(new Uri("avares://QuickExcel.Avalonia/Assets/QuickExcel.png"));
+        var icon = new Bitmap(stream);
+        Resources[ProductIconKey] = icon;
+        Styles.Add(new Style(selector => selector.Is<Window>())
+        {
+            Setters = { new Setter(Window.IconProperty, new WindowIcon(icon)) }
+        });
+    }
     public override void OnFrameworkInitializationCompleted()
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)

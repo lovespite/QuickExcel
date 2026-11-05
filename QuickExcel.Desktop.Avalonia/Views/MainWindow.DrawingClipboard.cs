@@ -72,7 +72,7 @@ public sealed partial class MainWindow
             catch (NotSupportedException ex) { notices.Add(ex.Message); source = null; }
             if (source is not null)
             {
-                await CalculateAsync();
+                await CalculatePendingAsync();
                 _grid.SelectDrawingObject(new(DrawingObjectKind.Chart, sheet.Data.Charts.Length));
                 _status.Text = "已粘贴可编辑图表，数据快照保存在新增的“图表数据”工作表；不连接源文件，可一次撤销。 " + string.Join(" ", notices);
                 return true;

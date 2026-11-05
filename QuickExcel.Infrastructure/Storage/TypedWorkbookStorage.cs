@@ -24,6 +24,8 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage, IW
     {
         try
         {
+            if (Path.GetExtension(path).Equals(".csv", StringComparison.OrdinalIgnoreCase))
+                return ImportCsv(ReadFile(path, new(cancellationToken)), cancellationToken);
             RequireExtension(path, ".xlsx", ".xlsq");
             return OpenBytes(ReadFile(path, new(cancellationToken)), path, Path.GetExtension(path).Equals(".xlsq", StringComparison.OrdinalIgnoreCase), new(cancellationToken));
         }

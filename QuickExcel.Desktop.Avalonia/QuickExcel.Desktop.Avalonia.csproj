@@ -5,13 +5,16 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AssemblyName>QuickExcel.Avalonia</AssemblyName>
-    <Version>0.6.0-preview.8</Version>
+    <Version>1.1.0</Version>
     <QuickExcelDiagnostics Condition="'$(QuickExcelDiagnostics)' == ''">true</QuickExcelDiagnostics>
     <DefineConstants Condition="'$(QuickExcelDiagnostics)' == 'true'">$(DefineConstants);QUICKEXCEL_DIAGNOSTICS</DefineConstants>
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets/QuickExcel.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
+    <!-- Window and executable icons are exports of Assets/QuickExcel.svg. -->
+    <AvaloniaResource Include="Assets/QuickExcel.png" />
     <!-- CJK PDF validation creates large short-lived font buffers. Keep the desktop
          heap conservative; shared-grid latency is measured with this setting. -->
     <RuntimeHostConfigurationOption Include="System.GC.ConserveMemory" Value="5" />
@@ -21,6 +24,8 @@
     <ProjectReference Include="../QuickExcel.Grid.Avalonia/QuickExcel.Grid.Avalonia.csproj" />
     <ProjectReference Include="../QuickExcel.Infrastructure/QuickExcel.Infrastructure.csproj" />
     <None Include="Licenses/*.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <None Include="../THIRD-PARTY-LICENSES.md" Link="Licenses/THIRD-PARTY-LICENSES.md" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="../third_party/office-scripts-docs/NOTICE.md" Link="Licenses/OFFICE-SCRIPTS-NOTICE.md" CopyToOutputDirectory="PreserveNewest" />
     <!-- The manifest and assets are one verified bundle. A newer destination may
          be stale or modified; it must not win over the generated source bundle. -->
     <None Include="../artifacts/avalonia/web/**/*" Link="Web/%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="IfDifferent" CopyToPublishDirectory="IfDifferent" />
@@ -35,6 +40,13 @@
   <Target Name="ExcludeAvaloniaDesigner" AfterTargets="ResolvePackageAssets">
     <ItemGroup>
       <RuntimeCopyLocalItems Remove="@(RuntimeCopyLocalItems)" Condition="'%(Filename)' == 'Avalonia.DesignerSupport'" />
+    </ItemGroup>
+  </Target>
+  <Target Name="IncludeDotNetRuntimeNotices" AfterTargets="ComputeFilesToPublish" Condition="'$(SelfContained)' == 'true'">
+    <ItemGroup>
+      <_DotNetRuntime Include="@(ResolvedRuntimePack)" Condition="'%(ResolvedRuntimePack.FrameworkName)' == 'Microsoft.NETCore.App'" />
+      <ResolvedFileToPublish Include="@(_DotNetRuntime->'%(PackageDirectory)/LICENSE.TXT')" RelativePath="Licenses/DOTNET-LICENSE.txt" CopyToPublishDirectory="PreserveNewest" />
+      <ResolvedFileToPublish Include="@(_DotNetRuntime->'%(PackageDirectory)/THIRD-PARTY-NOTICES.TXT')" RelativePath="Licenses/DOTNET-THIRD-PARTY-NOTICES.txt" CopyToPublishDirectory="PreserveNewest" />
     </ItemGroup>
   </Target>
   <Target Name="ExcludeReleaseSymbols" AfterTargets="ComputeFilesToPublish" Condition="'$(QuickExcelDiagnostics)' != 'true'">

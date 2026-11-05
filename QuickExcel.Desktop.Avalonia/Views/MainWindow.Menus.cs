@@ -105,7 +105,7 @@ public sealed partial class MainWindow
         _clipboardAxes = null; _clipboardCells = null; _clipboardToken = null;
         _grid.SelectRange(axis == SheetAxis.Row ? new(first, 0, first + source.Count - 1, WorkbookLimits.MaxColumns - 1)
             : new(0, first, WorkbookLimits.MaxRows - 1, first + source.Count - 1), axis == SheetAxis.Row ? new(first, 0) : new(0, first));
-        await CalculateAsync(); _status.Text = "已插入复制的行列，可一次撤销。";
+        await CalculatePendingAsync(); _status.Text = "已插入复制的行列，可一次撤销。";
     }
     private async Task SetAxisVisibilityAsync(SheetAxis axis, bool hidden, bool all = false)
     {

@@ -4,7 +4,12 @@ using System.Text.Json;
 namespace QuickExcel.Presentation;
 
 public enum SheetNavigationPlacement { Bottom, Left, Right }
-public sealed record DesktopPreferences(SheetNavigationPlacement Sheets = SheetNavigationPlacement.Bottom, int Zoom = 100);
+public enum DesktopCalculationMode { Automatic, Partial, Manual }
+public sealed record DesktopPreferences(SheetNavigationPlacement Sheets = SheetNavigationPlacement.Bottom, int Zoom = 100,
+    DesktopCalculationMode Calculation = DesktopCalculationMode.Automatic)
+{
+    internal bool IsValid => Enum.IsDefined(Sheets) && Zoom is >= 75 and <= 175 && Enum.IsDefined(Calculation);
+}
 
 public sealed class DesktopSettings(string path)
 {
@@ -17,7 +22,7 @@ public sealed class DesktopSettings(string path)
             if (!File.Exists(path)) return;
             if (new FileInfo(path).Length > 4096) throw new InvalidDataException("设置文件过大。");
             var value = JsonSerializer.Deserialize<DesktopPreferences>(File.ReadAllText(path));
-            if (value is null || !Enum.IsDefined(value.Sheets) || value.Zoom is < 75 or > 175) throw new InvalidDataException("无效的界面设置。");
+            if (value is null || !value.IsValid) throw new InvalidDataException("无效的界面设置。");
             Value = value; Error = null;
         }
         catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException or JsonException)
@@ -25,14 +30,13 @@ public sealed class DesktopSettings(string path)
     }
     public void Save(DesktopPreferences value)
     {
-        if (!Enum.IsDefined(value.Sheets) || value.Zoom is < 75 or > 175) throw new ArgumentException("无效的界面设置。");
-        Value = value;
+        if (!value.IsValid) throw new ArgumentException("无效的界面设置。");
         var temp = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
         try
         {
             Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
             File.WriteAllText(temp, JsonSerializer.Serialize(value));
-            File.Move(temp, path, true); Error = null;
+            File.Move(temp, path, true); Value = value; Error = null;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { Error = ex.Message; }
         finally { try { if (File.Exists(temp)) File.Delete(temp); } catch (IOException) { } catch (UnauthorizedAccessException) { } }

@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 128 128" role="img" aria-labelledby="title">
+  <title id="title">QuickExcel</title>
+  <defs>
+    <linearGradient id="tile" x1="16" y1="6" x2="105" y2="124" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#5147a6"/>
+      <stop offset="1" stop-color="#292557"/>
+    </linearGradient>
+    <!-- Both colors follow this same outline, centered at (64, 64). -->
+    <clipPath id="grid-ring">
+      <path clip-rule="evenodd" fill-rule="evenodd" d="
+        M55 29H73C91 29 101 39 101 56V72C101 89 91 99 73 99H55
+        C37 99 27 89 27 72V56C27 39 37 29 55 29Z
+        M55 44C46 44 42 48 42 57V60H55Z
+        M61 44V60H86V57C86 48 82 44 73 44Z
+        M42 66V71C42 80 46 84 55 84V66Z
+        M61 66V84H73C82 84 86 80 86 71V66Z"/>
+    </clipPath>
+  </defs>
+
+  <rect x="4" y="4" width="120" height="120" rx="28" fill="url(#tile)"/>
+  <g clip-path="url(#grid-ring)">
+    <rect x="27" y="29" width="74" height="70" fill="#fff6e9"/>
+    <path d="M63 70H82L109 101H90Z" fill="#ff9478"/>
+  </g>
+</svg>

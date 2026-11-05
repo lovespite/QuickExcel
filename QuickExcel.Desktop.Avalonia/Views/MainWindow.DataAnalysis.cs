@@ -94,7 +94,7 @@ public sealed partial class MainWindow
     private async Task DataTableAsync()
     {
         if (!await FlushEditsAsync()) return; var snapshot = Document.Snapshot; var sheet = snapshot.ActiveSheetId;
-        var dialog = new FieldsDialog("模拟运算表").Note("对一变量或二变量组合计算目标公式，输出可撤销的数值表。只使用内置公式。")
+        var dialog = new FieldsDialog("模拟运算表").Note("用内置公式试算一组或两组输入。本次打开期间可刷新，文件保存结果值。")
             .Text("formula", "结果公式单元格", CurrentAddress).Text("column", "列输入单元格", "A1").Text("columns", "列输入的试算值", "1,2,3,4,5")
             .Text("row", "行输入单元格（二变量；一变量留空）").Text("rows", "行输入的试算值（二变量）").Text("output", "输出左上角", "D1");
         dialog.Validate = () => { _ = DataPosition(dialog.String("formula")); _ = DataPosition(dialog.String("column")); _ = DataPosition(dialog.String("output")); _ = AnalysisNumbers(dialog.String("columns"));
@@ -102,7 +102,13 @@ public sealed partial class MainWindow
         if (!await dialog.ShowAsync(this)) return;
         var formula = DataAddress(sheet, dialog.String("formula")); var column = DataAddress(sheet, dialog.String("column")); var columns = AnalysisNumbers(dialog.String("columns"));
         CellAddress? row = string.IsNullOrWhiteSpace(dialog.String("row")) ? null : DataAddress(sheet, dialog.String("row")); var rows = row is null ? [] : AnalysisNumbers(dialog.String("rows")); var output = DataPosition(dialog.String("output"));
-        var preview = await AnalyzeAsync("正在计算模拟运算表…", c => DataAnalysis.DataTable(snapshot, _services.Calculator, formula, column, columns, row, rows, sheet, output, c)); await ApplyCleaningAsync(preview);
+        var table = new SessionDataTable(formula, column, columns, row, rows, output);
+        var preview = await AnalyzeAsync("正在计算模拟运算表…", c => table.Preview(snapshot, _services.Calculator, c));
+        if (await ApplyCleaningAsync(preview))
+        {
+            _dataTables.RemoveAll(table.Overlaps);
+            _dataTables.Add(table);
+        }
     }
     private async Task ScenariosAsync()
     {

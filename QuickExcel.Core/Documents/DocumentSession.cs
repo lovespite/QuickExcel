@@ -59,6 +59,11 @@ public sealed partial class DocumentSession : IDisposable
     public CommandResult Execute(DocumentCommand command, long? expectedRevision = null, bool acceptValidationWarnings = false) =>
         ExecuteCore(command, expectedRevision, acceptValidationWarnings: acceptValidationWarnings);
 
+    // Calculated trial values are literal cells in the saved workbook. Validate them
+    // through the ordinary edit path, but let one undo restore the initiating edit.
+    public CommandResult ApplyAutomaticDataTableResults(SetCellsCommand results, long expectedRevision) =>
+        ExecuteCore(results, expectedRevision, includeWithPreviousEdit: true);
+
     /// <summary>Navigation is captured by the next save without input revisions, undo entries or recalculation.
     /// Freeze/zoom/visibility changes must use commands instead.</summary>
     public void UpdateNavigation(SheetId sheetId, CellPosition cell, CellPosition? viewport = null)
@@ -86,7 +91,7 @@ public sealed partial class DocumentSession : IDisposable
         }
     }
 
-    private CommandResult ExecuteCore(DocumentCommand command, long? expectedRevision, ScriptActionRequest? action = null, CancellationToken cancellationToken = default, ImmutableArray<string> diagnostics = default, bool acceptValidationWarnings = false, VirtualFileSet? transientFiles = null)
+    private CommandResult ExecuteCore(DocumentCommand command, long? expectedRevision, ScriptActionRequest? action = null, CancellationToken cancellationToken = default, ImmutableArray<string> diagnostics = default, bool acceptValidationWarnings = false, VirtualFileSet? transientFiles = null, bool includeWithPreviousEdit = false)
     {
         ArgumentNullException.ThrowIfNull(command);
         DocumentChange? change = null;
@@ -145,6 +150,15 @@ public sealed partial class DocumentSession : IDisposable
                 var revised = draft.Snapshot.WithRevision(checked(before.Revision + 1));
                 var after = draft.CalculationUnchanged ? CarryCalculationRevision(revised, before.Revision) : Invalidate(revised);
                 var entry = sourceChanged ? null : new HistoryEntry(before, after, draft.Changes, draft.StructureChanged, draft.CalculationUnchanged);
+                var previous = includeWithPreviousEdit && _redo.Count == 0 && before.Revision > _savedRevision &&
+                    _undo.Last?.Value.After.Revision == before.Revision ? _undo.Last : null;
+                if (previous is not null && entry is not null)
+                {
+                    var first = previous.Value;
+                    var addresses = first.Changes.Concat(entry.Changes).DistinctBy(c => c.Address).ToImmutableArray();
+                    entry = new(first.Before, after, ActualChanges(first.Before, after, addresses),
+                        first.StructureChanged || entry.StructureChanged, false);
+                }
                 if (entry is not null && entry.Bytes > HistoryBudgetBytes)
                     throw new InvalidOperationException("此操作超过撤销历史容量，尚未修改工作簿。请缩小操作范围。");
                 cancellationToken.ThrowIfCancellationRequested();
@@ -155,6 +169,7 @@ public sealed partial class DocumentSession : IDisposable
                 }
                 if (entry is not null)
                 {
+                    if (previous is not null) { _historyBytes -= previous.Value.Bytes; _undo.Remove(previous); }
                     _undo.AddLast(entry);
                     _historyBytes += entry.Bytes;
                     TrimHistory();

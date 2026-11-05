@@ -4,6 +4,11 @@
 
 This is the independent QuickExcel repository. Keep desktop, Core, infrastructure adapters, scripting, tests, documentation, and generated artifacts here. The sibling `../ExcelIO` is a separate repository containing the ExcelIO libraries. QuickExcel no longer depends on ExcelIO or ExcelIO.Formula; the sibling is not part of this repository. Do not edit, stage, commit, or copy sibling library sources as part of ordinary QuickExcel changes. Library changes require a separately scoped task.
 
+## Versioning and third-party notices
+
+- Set the product version in `QuickExcel.Desktop.Avalonia/QuickExcel.Desktop.Avalonia.csproj`. Bump the patch version for bug fixes, the minor version for optimizations or small feature additions, and the major version for large changes or important new features. Reset lower version components when increasing minor or major.
+- When introducing a third-party component or open-source functionality, update the copyright and open-source information in Settings and the distributed third-party notices and licenses. Retain upstream attribution and modification notices.
+
 ## Build and verification
 
 Run from this repository root on Windows x64 with .NET 10 SDK:

@@ -14,7 +14,7 @@ public sealed partial class MainWindow
         InstallOutline();
         RibbonGroup("数据", "数据工具", RibbonButton("分列", SplitTextAsync), RibbonButton("快速填充  Ctrl+E", FlashFillAsync), RibbonButton("删除重复值", RemoveDuplicatesAsync),
             DataToolDropdown("数据验证", CommandMenu("数据验证…", EditValidationAsync), CommandMenu("清除验证", RemoveValidationAsync)), RibbonButton("文本转数字", ConvertNumbersAsync));
-        RibbonGroup("数据", "预测与模拟", DataToolDropdown("模拟分析", CommandMenu("单变量求解…", GoalSeekAsync), CommandMenu("模拟运算表…", DataTableAsync), CommandMenu("方案分析…", ScenariosAsync)),
+        RibbonGroup("数据", "预测与模拟", DataToolDropdown("模拟分析", CommandMenu("单变量求解…", GoalSeekAsync), CommandMenu("模拟运算表…", DataTableAsync), CommandMenu("刷新模拟运算表", RefreshDataTablesAsync), CommandMenu("方案分析…", ScenariosAsync)),
             RibbonButton("预测", ForecastAsync));
         RibbonGroup("数据", "条件格式", RibbonButton("条件格式管理", ConditionalFormatsAsync));
         RibbonGroup("数据", "分组与汇总", RibbonButton("分组", () => GroupAsync(false)), RibbonButton("取消分组", () => GroupAsync(true)), RibbonButton("展开/折叠", OutlineAsync), RibbonButton("分类汇总", SubtotalsAsync));
@@ -68,7 +68,7 @@ public sealed partial class MainWindow
         await ExecuteAsync(new ApplyCleaningCommand(result, wizard.AllowOverwrite));
         await CalculatePendingAsync();
     }
-    private async Task ApplyCleaningAsync(CleaningPreview preview)
+    private async Task<bool> ApplyCleaningAsync(CleaningPreview preview)
     {
         var window = new Window { Title = "数据工具预览", Width = 820, Height = 580, WindowStartupLocation = WindowStartupLocation.CenterOwner, ShowInTaskbar = false };
         var root = new DockPanel { Margin = new(20) }; var header = new StackPanel { Spacing = 8 };
@@ -84,6 +84,8 @@ public sealed partial class MainWindow
         root.Children.Add(new ListBox { ItemsSource = preview.Changes, ItemTemplate = new FuncDataTemplate<CleaningCellPreview>((change, _) => change is null ? null : new TextBlock
         { Text = $"{QuickExcel.Formulas.FormulaSyntax.ColumnName(change.Address.Column)}{change.Address.Row + 1}   {Preview(change.Before)}  →  {Preview(change.After)}", TextTrimming = TextTrimming.CharacterEllipsis }) });
         window.Content = root;
-        if (await ShowOwnedAsync<bool>(window)) { await ExecuteAsync(new ApplyCleaningCommand(preview, overwrite.IsChecked == true)); await CalculatePendingAsync(); }
+        if (!await ShowOwnedAsync<bool>(window) || !await ExecuteAsync(new ApplyCleaningCommand(preview, overwrite.IsChecked == true))) return false;
+        await CalculatePendingAsync();
+        return true;
     }
 }

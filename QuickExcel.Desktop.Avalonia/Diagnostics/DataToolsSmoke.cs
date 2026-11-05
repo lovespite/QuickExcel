@@ -181,6 +181,23 @@ public sealed partial class MainWindow
             Check(Math.Abs(Document.Snapshot.Sheets[0].GetCell(0, 0)!.Value.NumberValue - 10) < 0.000001, "Goal seek applies only its reviewed solution");
             _dialogDriver = async w => { await Layout(); AcceptPreview(); Click(Button(w, "确定")); }; await DataTableAsync();
             Check(Document.Snapshot.Sheets[0].GetCell(1, 4)!.Value.NumberValue == 5, "Simulation table dialog produces calculated results");
+            _settings.Save(_settings.Value with { Calculation = QuickExcel.Presentation.DesktopCalculationMode.Partial });
+            Document.SetCell(0, 0, 1, "=A1*4"); await CalculatePendingAsync();
+            Check(Math.Abs(Document.Snapshot.Sheets[0].GetCell(0, 1)!.Value.NumberValue - 40) < 1e-6 &&
+                Document.GetCellValue(0, 1, 4) == "5", "Partial calculation updates formulas but retains the trial results");
+            await RefreshDataTablesAsync();
+            Check(Document.GetCellValue(0, 1, 4) == "4", "Separate data table refresh uses the original trial inputs");
+            _settings.Save(_settings.Value with { Calculation = QuickExcel.Presentation.DesktopCalculationMode.Automatic });
+            Document.SetCell(0, 0, 1, "=A1*6"); await CalculatePendingAsync();
+            Check(Document.GetCellValue(0, 1, 4) == "6", "Automatic calculation also refreshes trial results");
+            await History(false);
+            Check(Document.GetCellInput(0, 0, 1) == "=A1*4" && Document.GetCellValue(0, 1, 4) == "4",
+                "One undo restores both the input formula and its automatically refreshed trial outputs");
+            await History(true);
+            // Repeat the normal creation workflow after history replaced the output rectangle.
+            _grid.Select(new(0, 1)); _dialogDriver = async w => { await Layout(); AcceptPreview(); Click(Button(w, "确定")); }; await DataTableAsync();
+            Document.SetCell(0, 1, 4, "123"); Document.SetCell(0, 0, 1, "=A1*7"); await CalculatePendingAsync();
+            Check(Document.GetCellValue(0, 1, 4) == "123", "Recalculation preserves a user's replacement of a simulation output");
             await Seed(["1", "2", "=A1*B1"]); _grid.Select(new(0, 2));
             _dialogDriver = async w => { await Layout(); AcceptPreview(); Click(Button(w, "确定")); }; await ScenariosAsync();
             Check(Document.Snapshot.Sheets[0].GetCell(1, 6)!.Value.NumberValue == 200 && Document.Snapshot.Sheets[0].GetCell(2, 6)!.Value.NumberValue == 375, "Scenario dialog computes named multi-input summaries");
