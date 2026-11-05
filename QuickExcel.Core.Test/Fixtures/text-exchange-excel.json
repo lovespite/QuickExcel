@@ -1,0 +1,20 @@
+{
+  "excelVersion": "16.0",
+  "excelBuild": 20527.0,
+  "sourceSha256": "2DD5EEFF0BADD2FB92F49CACB386167DEF9C1EC0D18075C7B7DABB25B2CD8388",
+  "csvSha256": "97FF16DB473489E1902D56100B4FF57538FCC89F2224B81197E9F624479694BE",
+  "text": "001234567890123456789,=1+1,\"中文,\"\"引号\"\"\n第二行\"\r\n0002,,结束\r\n",
+  "rows": [
+    [
+      "001234567890123456789",
+      "=1+1",
+      "中文,\"引号\"\n第二行"
+    ],
+    [
+      "0002",
+      "",
+      "结束"
+    ]
+  ],
+  "quickExcelToExcelPassed": true
+}

@@ -16,6 +16,9 @@ public sealed partial class MainWindow
 
     private void InstallFileCommands()
     {
+        var textImport = new MenuItem { Header = UiText.Get("导入 CSV / TSV…") };
+        textImport.Click += async (_, _) => await PerformAsync(ImportTextAsync);
+        ((MenuItem)_menu.Items[0]!).Items.Add(textImport);
         var textExport = new MenuItem { Header = UiText.Get("导出 CSV / TSV") };
         textExport.Bind(IsEnabledProperty, _book.GetObservable(IsVisibleProperty));
         textExport.Click += async (_, _) => { if (_book.IsVisible) await PerformAsync(ExportTextAsync); };

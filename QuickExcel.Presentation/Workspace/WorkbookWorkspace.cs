@@ -45,6 +45,10 @@ public sealed class WorkbookWorkspace : IDisposable
     {
         RequireIdle(); Replace(demo ? WorkbookDocument.CreateDemo(_services) : NewDocument(), null, null);
     }
+    public void Import(WorkbookSnapshot snapshot)
+    {
+        RequireIdle(); Replace(new WorkbookDocument(snapshot, _services), null, null);
+    }
     private void Replace(WorkbookDocument document, string? path, FileVersion? version)
     {
         var previous = Document;

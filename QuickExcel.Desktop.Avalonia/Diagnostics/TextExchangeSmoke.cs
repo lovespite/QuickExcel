@@ -3,6 +3,7 @@ using System.Text.Json;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.VisualTree;
 using QuickExcel.Core;
 using QuickExcel.Presentation;
 
@@ -13,7 +14,8 @@ public sealed partial class MainWindow
     private sealed class TextExchangeSmokeFiles(string path) : ILocalFileDialogs
     {
         public bool Cancel { get; set; }
-        public Task<LocalFileSelection?> OpenAsync(FileDialogRequest request) => Task.FromResult<LocalFileSelection?>(null);
+        public string? OpenPath { get; set; }
+        public Task<LocalFileSelection?> OpenAsync(FileDialogRequest request) => Task.FromResult<LocalFileSelection?>(OpenPath is null ? null : new(OpenPath));
         public Task<LocalFileSelection?> SaveAsync(FileDialogRequest request) => Task.FromResult<LocalFileSelection?>(Cancel ? null : new(path));
     }
 
@@ -38,6 +40,36 @@ public sealed partial class MainWindow
             await ExportTextAsync(); Check(bytes.SequenceEqual(File.ReadAllBytes(path)), "Cancel options leaves output unchanged");
             files.Cancel = true; _dialogDriver = window => { window.Close(true); return Task.CompletedTask; };
             await ExportTextAsync(); Check(bytes.SequenceEqual(File.ReadAllBytes(path)), "Cancel file picker leaves output unchanged");
+            var input = Path.Combine(directory, "input.csv"); await File.WriteAllTextAsync(input, "001,2.5\r\n=1+1,3\r\n", new UTF8Encoding(true));
+            files.OpenPath = input;
+            var previous = Document;
+            _dialogDriver = window => { window.Close(false); return Task.CompletedTask; };
+            await ImportTextAsync(); Check(ReferenceEquals(previous, Document), "Cancel import preserves the current document");
+            _discardChoice = () => Task.FromResult(SaveDecision.Discard);
+            async Task ImportDriver(Window window)
+            {
+                _dialogDriver = ImportDriver;
+                await global::Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => { }, global::Avalonia.Threading.DispatcherPriority.Background);
+                if (window.Title == UiText.Get("文本导入预览")) window.GetVisualDescendants().OfType<ComboBox>().ElementAt(1).SelectedIndex = 1;
+                window.Close(true);
+            }
+            _dialogDriver = ImportDriver;
+            await ImportTextAsync();
+            Check(Document.GetCellInput(0, 0, 0) == "001" && Document.Snapshot.Sheets[0].GetCell(1, 0)!.Content.Kind == QuickExcel.Domain.CellContentKind.Literal,
+                "Import defaults identifiers and leading equals to literal text");
+            Check(Document.Snapshot.Sheets[0].GetCell(0, 1)!.Value.NumberValue == 2.5, "Per-column import converts only explicitly selected numeric columns");
+            Check(_workspace.FilePath is null && !Document.ScriptsEnabled && File.ReadAllText(input).StartsWith("001,2.5"), "Import creates an unbound document without modifying the source or authorizing scripts");
+            previous = Document;
+            Task StaleDriver(Window window)
+            {
+                _dialogDriver = StaleDriver;
+                if (window.Title == UiText.Get("确认导入")) _workspace.Editor.SetCell(0, 5, 0, "changed");
+                window.Close(true); return Task.CompletedTask;
+            }
+            _dialogDriver = StaleDriver;
+            var staleRejected = false;
+            try { await ImportTextAsync(); } catch (InvalidOperationException) { staleRejected = true; }
+            Check(staleRejected && ReferenceEquals(previous, Document) && Document.GetCellInput(0, 5, 0) == "changed", "Stale preview rejects replacement and retains newer edits");
         }
         catch (Exception ex) { failure = ex; }
         finally { _dialogDriver = null; }
