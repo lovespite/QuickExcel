@@ -10,7 +10,13 @@ namespace QuickExcel.Calculation;
 public static partial class ConditionalPresentation
 {
     [ThreadStatic] private static Cache? _cache;
-    private static Cache For(WorkbookSnapshot snapshot) => _cache?.Snapshot == snapshot ? _cache : _cache = new(snapshot);
+    private static Cache For(WorkbookSnapshot snapshot, DateTime? day = null)
+    {
+        var today = (day ?? DateTime.Today).Date;
+        return _cache?.Snapshot == snapshot && _cache.Today == today ? _cache : _cache = new(snapshot, today);
+    }
+    public static StyleDefinition GetStyleAtDate(WorkbookSnapshot snapshot, WorksheetSnapshot sheet, int row, int column, DateTime today) =>
+        For(snapshot, today).Style(sheet, row, column);
     public static StyleDefinition GetStyle(WorkbookSnapshot snapshot, WorksheetSnapshot sheet, int row, int column)
     {
         if (sheet.Data.ConditionalFormats.IsEmpty) return TablePresentation.GetStyle(snapshot, sheet, row, column);
@@ -19,8 +25,9 @@ public static partial class ConditionalPresentation
     public static IReadOnlyList<string> Diagnostics(WorkbookSnapshot snapshot) => _cache?.Snapshot == snapshot ? _cache.Errors.ToArray() : [];
     public static ConditionalCellVisual? GetVisual(WorkbookSnapshot snapshot, WorksheetSnapshot sheet, int row, int column) =>
         sheet.Data.ConditionalFormats.IsEmpty ? null : For(snapshot).Visual(sheet, row, column);
-    private sealed partial class Cache(WorkbookSnapshot snapshot)
+    private sealed partial class Cache(WorkbookSnapshot snapshot, DateTime today)
     {
+        public DateTime Today { get; } = today;
         public WorkbookSnapshot Snapshot { get; } = snapshot;
         public HashSet<string> Errors { get; } = [];
         private readonly WorkbookValidation.Evaluation _evaluation = new(snapshot, useFreshCaches: true);
@@ -72,7 +79,7 @@ public static partial class ConditionalPresentation
                 bool match; var style = rule.Style; ConditionalCellVisual? visual = null;
                 try
                 {
-                    if (rule.Kind >= ConditionalFormatKind.ColorScale) match = VisualMatch(sheet, new(row, column), rule, out style, out visual);
+                    if (rule.IsVisual) match = VisualMatch(sheet, new(row, column), rule, out style, out visual);
                     else match = Matches(sheet, new(row, column), rule);
                 }
                 catch (Exception ex) when (ex is NotSupportedException or FormatException or InvalidOperationException)
@@ -93,6 +100,16 @@ public static partial class ConditionalPresentation
         }
         private bool Matches(WorksheetSnapshot sheet, CellPosition position, ConditionalFormatRule rule)
         {
+            if (rule.DatePeriod is { } period)
+            {
+                var cell = sheet.GetCell(position.Row, position.Column);
+                if (cell?.SpillOwner is not null && (cell.Calculation?.InputRevision != Snapshot.Revision || cell.Calculation.State is not (CalculationState.Fresh or CalculationState.Error)))
+                    throw new InvalidOperationException(MessageText.Get("发生日期规则需要最新的溢出结果。"));
+                var dateValue = _evaluation.Cell(new(sheet.Id, position.Row, position.Column));
+                var serial = dateValue.Kind == CellValueKind.Number ? dateValue.NumberValue :
+                    dateValue.Kind == CellValueKind.Text && FormulaCriterion.TryNumber(dateValue.TextValue, Snapshot.DateSystem, out var parsed) ? parsed : double.NaN;
+                return ConditionalDates.Matches(serial, Snapshot.DateSystem, period, Today);
+            }
             static bool True(CellValue value) => value.Kind == CellValueKind.Boolean ? value.BooleanValue : value.Kind == CellValueKind.Number && value.NumberValue != 0;
             if (rule.Kind is not (ConditionalFormatKind.CellIs or ConditionalFormatKind.DuplicateValues or ConditionalFormatKind.UniqueValues))
                 return True(_evaluation.Scalar(rule.Formula1!, sheet.Id, rule.Anchor, position));

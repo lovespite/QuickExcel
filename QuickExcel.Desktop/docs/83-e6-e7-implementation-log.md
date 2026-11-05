@@ -123,3 +123,15 @@ The preview explicitly describes raw date serial arithmetic, zero for blanks, an
 真实 Excel 24 案例覆盖四种运算、源/目标公式、源/目标空白及跳过空白，固定预期和来源哈希见 `Fixtures/excel-arithmetic-paste.json`，证据 `artifacts/e6/arithmetic-excel-02`。参考 [Microsoft PasteSpecial](https://learn.microsoft.com/en-us/office/vba/api/excel.range.pastespecial)。首轮在文件关闭前取哈希失败，01 证据保留，02 已修正关闭顺序。
 
 144 项相关运算/剪贴板/本地化检查通过；新增附件与溢出缓存边界后 16 项运算测试通过。7 项 ArithmeticPaste 桌面检查通过，最终证据 `artifacts/avalonia/workspace/20261105-083143-90664916`。XLSX/XLSQ、单次撤销/重做、引用重算、保护/验证/除零回滚及过期预览均覆盖。按用户要求独立提交，统一发布仍留到 E6/E7 完成。
+
+## XC-0606b — 发生日期条件格式 / Date-occurring conditional formatting
+
+2026-11-05，1.28.0 源码。十种日/周/月范围接入正常开始页条件格式菜单、规则编辑器及管理器。公历星期日起算，近七天含今天；两种工作簿日期系统均支持。保留原始数值和时间小数。数字文本与明确年优先日期文本沿用稳定转换规则，模糊地区日期文本不转换；错误、布尔和空白不匹配。
+
+The immutable date-period model retains priority, stop-if-true, differential style and stable identity across history and structure edits. Standard timePeriod/formula pairs roundtrip through XLSX/XLSQ; modified formulas remain preserved. The shared rendering cache includes the local day, and a one-minute desktop check redraws after a day change without dirtying the document. General volatile conditional formulas remain restricted.
+
+33 项日期/既有条件格式/视觉规则/本地化测试通过，包含同快照模拟跨日、周日起点、跨年上下月、结构移动、撤销/重做、非标准公式原包保护。37 项 ConditionalFormat 桌面检查通过，证据 `artifacts/avalonia/workspace/20261105-084521-a75d0c37`，覆盖正常菜单、取消、一次撤销和过期对话框。独立 Excel 20 组（10 种范围 × 两种日期系统）按实际 DisplayFormat 对照，含 91 个连续日期及数字/日期文本、空白、布尔、错误；QuickExcel 输出在 Excel 重开结果一致。证据 `artifacts/e6/date-conditional-excel-06`，固定 XML、版本及 SHA-256 为 `Fixtures/excel-date-conditional.json`。
+
+01–04 保留了 COM 文本赋值和 DateOperator 参数调用的失败；05 首次采集完整对照，06 完成双向验证。实现时另由原生公式对照修正单格引用输出，未放宽未知公式保护。参考 [Microsoft XlTimePeriods](https://learn.microsoft.com/en-us/office/vba/api/excel.xltimeperiods)。按用户要求本项独立 commit，最后统一发布。
+
+补核对：午夜刷新同时清理网格场景和绘制缓存，保留选区和编辑归属；桌面专项已重跑通过。 / Calendar refresh invalidates both scene and drawing caches without changing selection or edit ownership.

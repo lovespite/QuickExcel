@@ -35,7 +35,7 @@ internal sealed partial class ScriptModelAdapter
         var rule = sheet.Data.ConditionalFormats.FirstOrDefault(r => r.ScriptId.ToString() == Text(data.GetProperty("conditionalId"))) ?? throw new ModelFailure("InvalidReference", "条件格式句柄已失效。");
         var type = name.Split('.')[0]; var member = name.Split('.')[1];
         object Child(string t) => ConditionalHandle(sheet.Id, rule, t);
-        ConditionalFormatRule Copy(DifferentialStyle? style = null, bool? stop = null, IEnumerable<CellRectangle>? ranges = null) => new(ranges ?? rule.Ranges, rule.Kind, rule.Priority, style ?? rule.Style, rule.Formula1, rule.Formula2, rule.Comparison, stop ?? rule.StopIfTrue, rule.Text, rule.ColorScale, rule.DataBar, rule.IconSet) { ScriptId = rule.ScriptId };
+        ConditionalFormatRule Copy(DifferentialStyle? style = null, bool? stop = null, IEnumerable<CellRectangle>? ranges = null) => new(ranges ?? rule.Ranges, rule.Kind, rule.Priority, style ?? rule.Style, rule.Formula1, rule.Formula2, rule.Comparison, stop ?? rule.StopIfTrue, rule.Text, rule.ColorScale, rule.DataBar, rule.IconSet, rule.DatePeriod) { ScriptId = rule.ScriptId };
         void Save(ConditionalFormatRule next) => WriteRules(sheet, rule.Ranges.Concat(next.Ranges).Distinct(), new SetConditionalFormatsCommand(sheet.Id, sheet.Data.ConditionalFormats.Replace(rule, next)));
         if (type == "ConditionalFormat")
         {
@@ -52,7 +52,7 @@ internal sealed partial class ScriptModelAdapter
             return member switch
             {
                 "getId" => rule.ScriptId.ToString(), "getPriority" => rule.Priority, "getStopIfTrue" => rule.StopIfTrue,
-                "getType" => EnumNumber("ConditionalFormatType", rule.Kind switch { ConditionalFormatKind.CellIs => "cellValue", ConditionalFormatKind.Expression => "custom", ConditionalFormatKind.DuplicateValues or ConditionalFormatKind.UniqueValues => "presetCriteria", ConditionalFormatKind.ColorScale => "colorScale", ConditionalFormatKind.DataBar => "dataBar", ConditionalFormatKind.IconSet => "iconSet", _ => "containsText" }),
+                "getType" => EnumNumber("ConditionalFormatType", rule.Kind switch { ConditionalFormatKind.TimePeriod => throw Unsupported(MessageText.Get("发生日期规则尚未暴露给脚本条件格式 API。")), ConditionalFormatKind.CellIs => "cellValue", ConditionalFormatKind.Expression => "custom", ConditionalFormatKind.DuplicateValues or ConditionalFormatKind.UniqueValues => "presetCriteria", ConditionalFormatKind.ColorScale => "colorScale", ConditionalFormatKind.DataBar => "dataBar", ConditionalFormatKind.IconSet => "iconSet", _ => "containsText" }),
                 "getCustom" => rule.Kind == ConditionalFormatKind.Expression ? Child("CustomConditionalFormat") : null,
                 "getCellValue" => rule.Kind == ConditionalFormatKind.CellIs ? Child("CellValueConditionalFormat") : null,
                 "getPreset" => rule.Kind is ConditionalFormatKind.DuplicateValues or ConditionalFormatKind.UniqueValues ? Child("PresetCriteriaConditionalFormat") : null,

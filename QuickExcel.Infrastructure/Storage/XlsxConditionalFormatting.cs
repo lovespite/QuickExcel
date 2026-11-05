@@ -1,6 +1,8 @@
 using System.Collections.Immutable;
 using System.Xml.Linq;
 using QuickExcel.Domain;
+using QuickExcel.Core;
+using QuickExcel.Formulas;
 using static QuickExcel.Storage.PackageIO;
 using static QuickExcel.Storage.TypedStyles;
 using static QuickExcel.Storage.XlsxPackage;
@@ -9,7 +11,7 @@ namespace QuickExcel.Storage;
 
 internal static partial class XlsxConditionalFormatting
 {
-    private static readonly string[] Types = ["cellIs", "expression", "duplicateValues", "uniqueValues", "containsText", "notContainsText", "beginsWith", "endsWith", "colorScale", "dataBar", "iconSet"];
+    private static readonly string[] Types = ["cellIs", "expression", "duplicateValues", "uniqueValues", "containsText", "notContainsText", "beginsWith", "endsWith", "colorScale", "dataBar", "iconSet", "timePeriod"];
     private static readonly string[] Operators = ["between", "notBetween", "equal", "notEqual", "lessThan", "lessThanOrEqual", "greaterThan", "greaterThanOrEqual"];
     private static readonly string[] TextOperators = ["containsText", "notContains", "beginsWith", "endsWith"];
     public static ImmutableArray<ConditionalFormatRule> Read(XlsxPackage package, string workbook, string path, XElement sheet)
@@ -30,16 +32,27 @@ internal static partial class XlsxConditionalFormatting
                 var ranges = Attr(group, "sqref").Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).Select(CellRectangle.Parse).ToArray();
                 foreach (var rule in group.Elements())
                 {
-                    XlsxTables.Shape(rule, "formula colorScale dataBar iconSet extLst", "type dxfId priority stopIfTrue operator text");
+                    XlsxTables.Shape(rule, "formula colorScale dataBar iconSet extLst", "type dxfId priority stopIfTrue operator text timePeriod");
                     var type = Array.IndexOf(Types, Attr(rule, "type")); if (type < 0) throw new NotSupportedException("此条件格式类型尚未支持。");
                     var op = (string?)rule.Attribute("operator"); var index = Array.IndexOf(Operators, op ?? "between");
                     if (type is >= 4 and <= 7) { if (op is not null && op != TextOperators[type - 4]) throw new NotSupportedException("文本条件类型和比较符不一致。"); index = 0; }
                     if (index < 0) throw new NotSupportedException("条件格式比较符未支持。");
                     var formulas = rule.Elements(Main + "formula").Select(f => { XlsxTables.Shape(f, "", ""); return XlsxStructuredFormula.Read("=" + Decode(f.Value).TrimStart('=')); }).ToArray();
                     if (formulas.Length > 2) throw new NotSupportedException("条件格式公式数量超出基础规则。");
+                    ConditionalDatePeriod? datePeriod = null;
+                    if (type == 11)
+                    {
+                        var name = (string?)rule.Attribute("timePeriod");
+                        datePeriod = Enum.GetValues<ConditionalDatePeriod>().Cast<ConditionalDatePeriod?>().SingleOrDefault(p => ConditionalDates.XmlName(p!.Value) == name);
+                        if (datePeriod is null || op is not null || rule.Attribute("text") is not null || formulas.Length > 1 || formulas.Length == 1 &&
+                            FormulaSyntax.Print(FormulaSyntax.Parse(formulas[0])) != FormulaSyntax.Print(FormulaSyntax.Parse(ConditionalDates.Formula(datePeriod.Value, new(ranges[0].Top, ranges[0].Left)))))
+                            throw new NotSupportedException(MessageText.Get("发生日期规则包含未知日期范围或非标准公式，需保留原规则。"));
+                        formulas = [];
+                    }
+                    else if (rule.Attribute("timePeriod") is not null) throw new NotSupportedException(MessageText.Get("发生日期规则包含未知日期范围或非标准公式，需保留原规则。"));
                     var dxf = rule.Attribute("dxfId") is { } id ? ReadStyle(dxfs[Int(id.Value, dxfs.Length - 1)], colors, package, stylePath) : new DifferentialStyle();
                     var visual = rule.Elements().Where(e => e.Name.LocalName is "colorScale" or "dataBar" or "iconSet").ToArray();
-                    if (type >= 8 ? visual.Length != 1 || visual[0].Name.LocalName != Types[type] : visual.Length != 0)
+                    if (type is >= 8 and <= 10 ? visual.Length != 1 || visual[0].Name.LocalName != Types[type] : visual.Length != 0)
                         throw new NotSupportedException("条件格式视觉类型和定义不一致。");
                     ConditionalColorScale? scale = null; ConditionalDataBar? bar = null; ConditionalIconSet? icons = null;
                     if (type == 8) scale = ReadScale(visual[0], colors, package, stylePath);
@@ -54,7 +67,7 @@ internal static partial class XlsxConditionalFormatting
                     }
                     result.Add(new(ranges, (ConditionalFormatKind)type, Int(Attr(rule, "priority"), int.MaxValue), dxf,
                         formulas.ElementAtOrDefault(0), formulas.ElementAtOrDefault(1), (ConditionalComparison)index,
-                        Bool((string?)rule.Attribute("stopIfTrue")), rule.Attribute("text") is { } text ? Decode(text.Value) : null, scale, bar, icons));
+                        Bool((string?)rule.Attribute("stopIfTrue")), rule.Attribute("text") is { } text ? Decode(text.Value) : null, scale, bar, icons, datePeriod));
                     if (result.Count > 1024) throw new InvalidDataException("条件格式规则超过 1024。");
                 }
             }
@@ -133,7 +146,7 @@ internal static partial class XlsxConditionalFormatting
     {
         foreach (var rule in sheet.Data.ConditionalFormats.OrderBy(r => r.Priority))
         {
-            if (rule.Kind >= ConditionalFormatKind.ColorScale)
+            if (rule.IsVisual)
             {
                 yield return new(Main + "conditionalFormatting", new XAttribute("sqref", string.Join(" ", rule.Ranges)), WriteVisualRule(rule));
                 continue;
@@ -141,9 +154,11 @@ internal static partial class XlsxConditionalFormatting
             var element = new XElement(Main + "cfRule", new XAttribute("type", Types[(int)rule.Kind]), new XAttribute("priority", rule.Priority),
                 new XAttribute("stopIfTrue", rule.StopIfTrue ? 1 : 0), new XAttribute("dxfId", WriteStyle(rule.Style, styles)),
                 rule.Kind == ConditionalFormatKind.CellIs ? new XAttribute("operator", Operators[(int)rule.Comparison]) :
-                    (int)rule.Kind >= 4 ? new XAttribute("operator", TextOperators[(int)rule.Kind - 4]) : null,
+                    (int)rule.Kind is >= 4 and <= 7 ? new XAttribute("operator", TextOperators[(int)rule.Kind - 4]) : null,
+                rule.DatePeriod is { } period ? new XAttribute("timePeriod", ConditionalDates.XmlName(period)) : null,
                 rule.Text is { } text ? new XAttribute("text", Encode(text)) : null,
                 new[] { rule.Formula1, rule.Formula2 }.OfType<string>().Select(f => new XElement(Main + "formula", Encode(XlsxStructuredFormula.Write(f).TrimStart('=')))));
+            if (rule.DatePeriod is { } datePeriod) element.Add(new XElement(Main + "formula", ConditionalDates.Formula(datePeriod, rule.Anchor).TrimStart('=')));
             yield return new(Main + "conditionalFormatting", new XAttribute("sqref", string.Join(" ", rule.Ranges)), element);
         }
     }

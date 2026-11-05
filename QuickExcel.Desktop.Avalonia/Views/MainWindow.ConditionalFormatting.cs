@@ -8,7 +8,7 @@ namespace QuickExcel.Desktop.Avalonia;
 
 public sealed partial class MainWindow
 {
-    private static readonly string[] ConditionalKinds = [UiText.Get("单元格比较"), UiText.Get("公式"), UiText.Get("重复值"), UiText.Get("唯一值"), UiText.Get("包含文本"), UiText.Get("不包含文本"), UiText.Get("以文本开头"), UiText.Get("以文本结尾"), UiText.Get("色阶"), UiText.Get("数据条"), UiText.Get("图标集")];
+    private static readonly string[] ConditionalKinds = [UiText.Get("单元格比较"), UiText.Get("公式"), UiText.Get("重复值"), UiText.Get("唯一值"), UiText.Get("包含文本"), UiText.Get("不包含文本"), UiText.Get("以文本开头"), UiText.Get("以文本结尾"), UiText.Get("色阶"), UiText.Get("数据条"), UiText.Get("图标集"), UiText.Get("发生日期")];
     private async Task ConditionalFormatsAsync()
     {
         if (!await FlushEditsAsync()) return;
@@ -45,10 +45,12 @@ public sealed partial class MainWindow
     }
     private static FieldsDialog RuleFields(CellRectangle selection, ConditionalFormatRule? old, out Func<ConditionalFormatRule> read)
     {
-        if (old?.Kind >= ConditionalFormatKind.ColorScale) return VisualRuleFields(old, out read);
+        if (old?.DatePeriod is not null) return DateRuleFields(old, out read);
+        if (old?.IsVisual == true) return VisualRuleFields(old, out read);
         static int Tri(bool? value) => value is null ? 0 : value.Value ? 1 : 2;
         var dialog = new FieldsDialog(UiText.Get("条件格式规则")).Text("ranges", UiText.Get("应用区域（多个区域用空格分隔）"), old is null ? selection.ToString() : string.Join(" ", old.Ranges))
-            .Choice("kind", UiText.Get("规则类型"), ConditionalKinds.Take(8).ToArray(), (int)(old?.Kind ?? ConditionalFormatKind.CellIs))
+            .Choice("kind", UiText.Get("规则类型"), ConditionalKinds.Take(8).Append(ConditionalKinds[11]).ToArray(), old?.DatePeriod is not null ? 8 : (int)(old?.Kind ?? ConditionalFormatKind.CellIs))
+            .Choice("period", UiText.Get("日期范围"), DatePeriodLabels, (int)(old?.DatePeriod ?? ConditionalDatePeriod.Today))
             .Choice("comparison", UiText.Get("比较方式"), [UiText.Get("介于"), UiText.Get("不介于"), UiText.Get("等于"), UiText.Get("不等于"), UiText.Get("小于"), UiText.Get("小于等于"), UiText.Get("大于"), UiText.Get("大于等于")], (int)(old?.Comparison ?? ConditionalComparison.Between))
             .Text("first", UiText.Get("条件 1 / 公式（相对引用以首格为基准）"), old?.Formula1 ?? "=1").Text("second", UiText.Get("条件 2"), old?.Formula2 ?? "=10")
             .Text("text", UiText.Get("文本条件"), old?.Text ?? "").Text("fill", UiText.Get("填充色（ARGB，留空不改变）"), old is null ? "FFFFC7CE" : old.Style.FillColor ?? "")
@@ -59,9 +61,9 @@ public sealed partial class MainWindow
         {
             var ranges = dialog.String("ranges").Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).Select(CellRectangle.Parse).ToArray();
             if (ranges.Length == 0) throw new ArgumentException(UiText.Get("请输入应用区域。"));
-            var kind = (ConditionalFormatKind)dialog.Index("kind"); var comparison = (ConditionalComparison)dialog.Index("comparison");
+            var kind = dialog.Index("kind") == 8 ? ConditionalFormatKind.TimePeriod : (ConditionalFormatKind)dialog.Index("kind"); var comparison = (ConditionalComparison)dialog.Index("comparison");
             var first = kind is ConditionalFormatKind.CellIs or ConditionalFormatKind.Expression ? dialog.String("first") : null;
-            if ((int)kind >= 4)
+            if ((int)kind is >= 4 and <= 7)
             {
                 var anchor = new CellRectangle(ranges[0].Top, ranges[0].Left, ranges[0].Top, ranges[0].Left).ToString();
                 var quoted = "\"" + dialog.String("text").Replace("\"", "\"\"") + "\"";
@@ -74,7 +76,7 @@ public sealed partial class MainWindow
                 NumberFormatId = dialog.String("number").Length == 0 ? old?.Style.NumberFormatId : 0,
                 NumberFormatCode = dialog.String("number").Length == 0 ? old?.Style.NumberFormatCode : dialog.String("number") };
             return new(ranges, kind, old?.Priority ?? 1, style, first, kind == ConditionalFormatKind.CellIs && comparison is ConditionalComparison.Between or ConditionalComparison.NotBetween ? dialog.String("second") : null,
-                comparison, dialog.Boolean("stop"), (int)kind >= 4 ? dialog.String("text") : null) { ScriptId = old?.ScriptId ?? Guid.NewGuid() };
+                comparison, dialog.Boolean("stop"), (int)kind is >= 4 and <= 7 ? dialog.String("text") : null, datePeriod: kind == ConditionalFormatKind.TimePeriod ? (ConditionalDatePeriod)dialog.Index("period") : null) { ScriptId = old?.ScriptId ?? Guid.NewGuid() };
         };
         return dialog;
     }

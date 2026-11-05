@@ -19,6 +19,7 @@ public sealed partial class MainWindow
         InstallSpecialSelection();
         InstallVisibleTransfer();
         InstallArithmeticPaste();
+        InstallCalendarRefresh();
         var textImport = new MenuItem { Header = UiText.Get("导入 CSV / TSV…") };
         textImport.Click += async (_, _) => await PerformAsync(ImportTextAsync);
         ((MenuItem)_menu.Items[0]!).Items.Add(textImport);

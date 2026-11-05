@@ -29,7 +29,7 @@ public sealed partial class MainWindow
             Rule(UiText.Get("大于…"), ConditionalPreset.GreaterThan), Rule(UiText.Get("小于…"), ConditionalPreset.LessThan),
             Rule(UiText.Get("介于…"), ConditionalPreset.Between), Rule(UiText.Get("等于…"), ConditionalPreset.Equal), new Separator(),
             Rule(UiText.Get("文本包含…"), ConditionalPreset.ContainsText),
-            new MenuItem { Header = UiText.Get("发生日期…（暂不支持）"), IsEnabled = false },
+            CommandMenu(UiText.Get("发生日期…"), DateConditionalFormatAsync),
             Rule(UiText.Get("重复值…"), ConditionalPreset.DuplicateValues), new Separator(), CommandMenu(UiText.Get("其他规则…"), NewConditionalFormatAsync));
         var ranking = Group(UiText.Get("最前/最后规则(T)"), 1,
             Rule(UiText.Get("前 10 项…"), ConditionalPreset.TopItems), Rule(UiText.Get("前 10%…"), ConditionalPreset.TopPercent),

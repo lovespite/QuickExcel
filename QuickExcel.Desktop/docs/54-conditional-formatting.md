@@ -82,3 +82,11 @@ XLSX/XLSQ 读写标准 `colorScale`、`iconSet`，数据条同时写基础兼容
 复现入口：scripts/test-excel-conditional-formatting.ps1（新原生矩阵或 -WorkbookPath 复验）、CompatibilityProbe 的 conditional-formatting / verify-conditional-formatting / verify-conditional-model，以及桌面 --conditional-formatting-smoke。托管命令始终使用 --artifacts-path artifacts/build。早期 dxf 字体元素顺序、填充色、重复值数字/通配符和窄列差异证据保留，不覆盖失败记录。
 
 参考：[Microsoft 条件格式说明](https://support.microsoft.com/en-us/excel/use-conditional-formatting-to-highlight-information-in-excel)、[OOXML 条件格式扩展](https://learn.microsoft.com/en-us/openspecs/office_standards/ms-xlsx/025ea6e4-ad42-43ea-a016-16f4e4688ac8)、[FormatCondition 边框接口](https://learn.microsoft.com/en-us/office/vba/api/Excel.FormatCondition.Borders)。
+
+## XC-0606b 发生日期 / A date occurring
+
+1.28.0 源码支持今天、昨天、明天、含今天的最近七天、本/上/下周、本/上/下月。星期日起算；日期用工作簿 1900/1904 序列号，数值不要求日期格式，明确的年优先日期文本及数字文本按现有稳定转换规则匹配，模糊地区日期文本保持未转换。空白、布尔和错误不匹配。主界面“突出显示单元格规则 → 发生日期”及管理器均可编辑，优先级、为真停止、差异样式和对象身份沿用既有规则。
+
+Date periods are a separate model kind. Their canonical Excel timePeriod/formula pairs are validated on import and regenerated on export; unknown periods or modified formulas retain the original package. General conditional formulas still reject arbitrary volatile functions. XLSX/XLSQ use the same representation. Existing script handles retain the date period on metadata changes; getType reports the unsupported script exposure instead of pretending it is a text rule.
+
+样式缓存同时绑定不可变快照和本地日期；桌面一分钟检查日期变化并重绘，不创建编辑历史。打印/PDF 继续使用同一条件投影。模拟跨日测试验证同一快照结果改变；未将其描述为等待到真实午夜的实机证据。标准函数和脚本依赖继续遵守既有计算/新鲜缓存约束，不为条件格式授权脚本。独立 Excel 和定向验证见 83 号记录。

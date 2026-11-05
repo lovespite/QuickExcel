@@ -141,6 +141,21 @@ public sealed partial class MainWindow
             await Click(Item(bars.Items, "其他数据条规则…"));
             var storage = new TypedWorkbookStorage(); var path = Path.Combine(directory, "conditional-visuals.xlsx"); storage.Export(path, Document.Snapshot);
             var reopened = storage.Open(path); Check(reopened.Sheets[0].Data.ConditionalFormats.Length == 6 && reopened.FileState!.CompatibilityDiagnostics.IsEmpty, "Visual workbook saves and reopens without compatibility loss");
+            _workspace.New(); ShowBook(); sheet = Document.Snapshot.ActiveSheetId;
+            var today = ExcelSerialDate.FromDateTime(DateTime.SpecifyKind(DateTime.Today, DateTimeKind.Unspecified), Document.Snapshot.DateSystem).Serial;
+            _workspace.Editor.SetCells(0, [(0, 0, today.ToString(System.Globalization.CultureInfo.InvariantCulture)), (1, 0, (today - 1).ToString(System.Globalization.CultureInfo.InvariantCulture))]); Synchronize();
+            _grid.SelectRange(new(0, 0, 1, 0), new(0, 0));
+            var dateMenu = Item(highlight.Items, "发生日期…"); Check(dateMenu.IsEnabled, "Date-occurring menu entry is enabled");
+            revision = Document.Snapshot.Revision; _dialogDriver = w => { w.Close(false); return Task.CompletedTask; }; await Click(dateMenu);
+            Check(Document.Snapshot.Revision == revision, "Cancel date rule leaves no history");
+            _dialogDriver = w => { w.Close(true); return Task.CompletedTask; }; await Click(dateMenu);
+            Check(Document.Snapshot.Sheets[0].Data.ConditionalFormats.Single().DatePeriod == ConditionalDatePeriod.Today && Fill(0) == "FFFFC7CE" && Fill(1) is null, "Date rule highlights today through the normal menu");
+            revision = Document.Snapshot.Revision; _grid.InvalidatePresentation(); await Layout();
+            Check(Document.Snapshot.Revision == revision && _grid.Current.Row == 0, "Calendar presentation invalidation preserves revision and selection");
+            await History(false); Check(Document.Snapshot.Sheets[0].Data.ConditionalFormats.IsEmpty, "Date rule is one undoable change");
+            _dialogDriver = w => { _workspace.Editor.SetCell(0, 8, 0, "newer"); w.Close(true); return Task.CompletedTask; };
+            var stale = false; try { await DateConditionalFormatAsync(); } catch (InvalidOperationException) { stale = true; }
+            Check(stale && Document.Snapshot.Sheets[0].Data.ConditionalFormats.IsEmpty && Document.GetCellInput(0, 8, 0) == "newer", "Stale date-rule preview preserves newer edits");
         }
         catch (Exception ex) { failure = ex; }
         await File.WriteAllTextAsync(Path.Combine(directory, "result.json"), JsonSerializer.Serialize(new { passed = failure is null, checks, error = failure?.ToString() }, new JsonSerializerOptions { WriteIndented = true }));
