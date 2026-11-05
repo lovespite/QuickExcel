@@ -134,30 +134,63 @@ public sealed class SheetViewState
     }
 }
 
+public sealed record RecentFileEntry(string Path, bool IsPinned = false);
+
 public sealed class RecentFileStore(string path)
 {
-    public const int Limit = 10;
+    public const int DefaultLimit = 100;
+    public const int MinimumLimit = 1;
+    public const int MaximumLimit = 1000;
+    private const int MaximumSettingsBytes = 8 * 1024 * 1024;
+    private sealed record Settings(int Version, int Limit, RecentFileEntry[] Entries);
     private static readonly StringComparer PathComparer = OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
+    public int Limit { get; private set; } = DefaultLimit;
+    public IReadOnlyList<RecentFileEntry> Entries { get; private set; } = [];
     public IReadOnlyList<string> Paths { get; private set; } = [];
     public string? Error { get; private set; }
     public void Load()
     {
         try
         {
-            if (!File.Exists(path)) { Paths = []; Error = null; return; }
-            if (new FileInfo(path).Length > 64 * 1024) throw new InvalidDataException(UiText.Get("最近文件配置过大。"));
-            Paths = Normalize(JsonSerializer.Deserialize<string[]>(File.ReadAllText(path)) ?? []); Error = null;
+            if (!File.Exists(path)) { SetState([], DefaultLimit); Error = null; return; }
+            if (new FileInfo(path).Length > MaximumSettingsBytes) throw new InvalidDataException(UiText.Get("最近文件配置过大。"));
+            using var json = JsonDocument.Parse(File.ReadAllText(path));
+            if (json.RootElement.ValueKind == JsonValueKind.Array)
+                SetState(Normalize((json.Deserialize<string[]>() ?? []).Select(p => new RecentFileEntry(p)), DefaultLimit), DefaultLimit);
+            else
+            {
+                var settings = json.Deserialize<Settings>();
+                if (settings is null || settings.Version != 1 || settings.Limit is < MinimumLimit or > MaximumLimit || settings.Entries is null)
+                    throw new InvalidDataException(UiText.Get("无效的历史文件设置。"));
+                SetState(Normalize(settings.Entries, settings.Limit), settings.Limit);
+            }
+            Error = null;
         }
         catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException or JsonException or ArgumentException)
-        { Paths = []; Error = ex.Message; }
+        { SetState([], DefaultLimit); Error = ex.Message; }
     }
-    private static string[] Normalize(IEnumerable<string> paths) => paths.Where(p => !string.IsNullOrWhiteSpace(p) && Path.IsPathFullyQualified(p)
-        && Path.GetExtension(p).ToLowerInvariant() is ".xlsx" or ".xlsq" or ".csv").Select(Path.GetFullPath)
-        .Distinct(PathComparer).Take(Limit).ToArray();
-    public void Remember(string file) => Save(current => Normalize(new[] { file }.Concat(current)));
-    public void Remove(string file) => Save(current => current.Where(p => !PathComparer.Equals(p, file)).ToArray());
+    private void SetState(RecentFileEntry[] entries, int limit)
+    { Entries = entries; Paths = entries.Select(e => e.Path).ToArray(); Limit = limit; }
+    private static RecentFileEntry[] Normalize(IEnumerable<RecentFileEntry> entries, int limit)
+    {
+        var unique = entries.Where(e => e is not null && !string.IsNullOrWhiteSpace(e.Path) && Path.IsPathFullyQualified(e.Path)
+            && Path.GetExtension(e.Path).ToLowerInvariant() is ".xlsx" or ".xlsq" or ".csv")
+            .Select(e => e with { Path = Path.GetFullPath(e.Path) }).OrderByDescending(e => e.IsPinned)
+            .DistinctBy(e => e.Path, PathComparer).ToArray();
+        return unique.Where(e => e.IsPinned).Concat(unique.Where(e => !e.IsPinned).Take(limit)).ToArray();
+    }
+    public void Remember(string file) => Save(current => current.Any(e => e.IsPinned && PathComparer.Equals(e.Path, file))
+        ? current : new[] { new RecentFileEntry(file) }.Concat(current));
+    public void SetPinned(string file, bool pinned) => Save(current => current.FirstOrDefault(e => PathComparer.Equals(e.Path, file)) is { } entry
+        ? new[] { entry with { IsPinned = pinned } }.Concat(current.Where(e => !PathComparer.Equals(e.Path, file))) : current);
+    public void ChangeLimit(int limit)
+    {
+        if (limit is < MinimumLimit or > MaximumLimit) throw new ArgumentOutOfRangeException(nameof(limit));
+        Save(current => current, limit);
+    }
+    public void Remove(string file) => Save(current => current.Where(e => !PathComparer.Equals(e.Path, file)));
     public void Clear() => Save(_ => []);
-    private void Save(Func<IReadOnlyList<string>, IReadOnlyList<string>> update)
+    private void Save(Func<IReadOnlyList<RecentFileEntry>, IEnumerable<RecentFileEntry>> update, int? limit = null)
     {
         var temp = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
         try
@@ -167,10 +200,14 @@ public sealed class RecentFileStore(string path)
             // under the same lease as the replacement so a removed entry stays removed.
             using var lease = AcquireLease();
             Load();
-            var paths = update(Paths);
-            File.WriteAllText(temp, JsonSerializer.Serialize(paths));
+            if (Error is not null) return;
+            var nextLimit = limit ?? Limit;
+            var entries = Normalize(update(Entries), nextLimit);
+            var bytes = JsonSerializer.SerializeToUtf8Bytes(new Settings(1, nextLimit, entries));
+            if (bytes.Length > MaximumSettingsBytes) throw new IOException(UiText.Get("最近文件配置过大。"));
+            File.WriteAllBytes(temp, bytes);
             File.Move(temp, path, true);
-            Paths = paths; Error = null;
+            SetState(entries, nextLimit); Error = null;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         { Error = ex.Message; }

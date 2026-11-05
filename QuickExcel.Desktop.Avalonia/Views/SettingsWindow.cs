@@ -110,6 +110,13 @@ internal sealed partial class SettingsWindow : Window
     private void History()
     {
         _history.Load();
+        var limit = new NumericUpDown
+        {
+            Name = "RecentFileLimit", Minimum = RecentFileStore.MinimumLimit, Maximum = RecentFileStore.MaximumLimit,
+            Increment = 1, FormatString = "0", Value = _history.Limit, Width = 130
+        };
+        AutomationProperties.SetName(limit, UiText.Get("普通历史记录上限"));
+        var applyLimit = new Button { Name = "ApplyRecentFileLimit", Content = UiText.Get("应用") };
         var list = new ListBox { Name = "SettingsRecentFiles", MaxHeight = 300 };
         AutomationProperties.SetName(list, UiText.Get("最近使用的文件路径"));
         var empty = Note(UiText.Get("暂无历史文件。"));
@@ -127,7 +134,19 @@ internal sealed partial class SettingsWindow : Window
         list.SelectionChanged += (_, _) => remove.IsEnabled = list.SelectedItem is string;
         remove.Click += (_, _) => { if (list.SelectedItem is string path) _history.Remove(path); Refresh(); };
         clear.Click += async (_, _) => { if (await Dialogs.Confirm(this, UiText.Get("清空历史文件记录"), UiText.Get("移除列表中的全部记录？磁盘上的文件会保留。"))) { _history.Clear(); Refresh(); } };
+        applyLimit.Click += (_, _) =>
+        {
+            if (limit.Value is not { } value || value != decimal.Truncate(value) || value < RecentFileStore.MinimumLimit || value > RecentFileStore.MaximumLimit)
+            { _feedback.Text = UiText.Get("请输入 1 到 1000 之间的整数。"); return; }
+            _history.ChangeLimit((int)value);
+            limit.Value = _history.Limit;
+            Refresh();
+            if (_history.Error is null) _feedback.Text = UiText.Get("设置已保存");
+        };
         _page.Children.Add(Note(UiText.Get("管理开始页上显示的最近文件。移除记录会保留磁盘上的文件。")));
+        _page.Children.Add(Heading(UiText.Get("普通历史记录上限"), 16));
+        _page.Children.Add(new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10, Children = { limit, applyLimit } });
+        _page.Children.Add(Note(UiText.Get("可设置 1–1000 条，默认 100 条。固定记录置顶且不计入上限；降低上限会移除最旧的普通记录。")));
         _page.Children.Add(list); _page.Children.Add(empty); _page.Children.Add(actions); Refresh();
     }
 

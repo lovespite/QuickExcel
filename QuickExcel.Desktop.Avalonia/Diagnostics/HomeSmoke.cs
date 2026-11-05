@@ -9,6 +9,8 @@ namespace QuickExcel.Desktop.Avalonia;
 
 public sealed partial class MainWindow
 {
+    private IEnumerable<Button> RecentOpenButtons() => _recent.GetVisualDescendants().OfType<Button>().Where(b => b.Name == "OpenRecentFile");
+
     private async Task CheckHomeHistoryAsync(string directory, Action<bool, string> check, Func<Control, string, Task> capture)
     {
         static Task Layout() => Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Background).GetTask();
@@ -37,17 +39,17 @@ public sealed partial class MainWindow
 
         var persisted = await File.ReadAllTextAsync(Path.Combine(directory, "settings", "recent-files.json"));
         _recentSearch.Text = "  历史工作簿-03.XLSX  "; await Layout();
-        check(_recent.Children.OfType<Button>().Count() == 1 && scroll.Offset.Y == 0,
+        check(RecentOpenButtons().Count() == 1 && scroll.Offset.Y == 0,
             "Filename search ignores case and surrounding whitespace and resets list scrolling");
         _recentSearch.Text = "historyfolder-3"; await Layout();
-        check(_recent.Children.OfType<Button>().Count() == 1, "History search also matches directory paths case-insensitively");
+        check(RecentOpenButtons().Count() == 1, "History search also matches directory paths case-insensitively");
         _recentSearch.Text = "年度预算"; await Layout();
-        check(_recent.Children.OfType<Button>().Count() == 2, "Unicode filename search retains matching files from different directories");
+        check(RecentOpenButtons().Count() == 2, "Unicode filename search retains matching files from different directories");
         _recentSearch.Text = "no-matching-workbook"; await Layout();
         check(_recent.Children.Single() is TextBlock noMatch && noMatch.Text == UiText.Get("没有匹配的历史文件。") && manage.IsVisible,
             "An unmatched query shows a distinct empty result while keeping history management available");
         _recentSearch.Text = "  "; await Layout();
-        check(_recent.Children.OfType<Button>().Count() == 10 && await File.ReadAllTextAsync(Path.Combine(directory, "settings", "recent-files.json")) == persisted,
+        check(RecentOpenButtons().Count() == 10 && await File.ReadAllTextAsync(Path.Combine(directory, "settings", "recent-files.json")) == persisted,
             "Clearing the query restores the original order and never rewrites persisted history");
         Width = 1280; Height = 820; await Layout();
         check(scroll.Extent.Height > scroll.Viewport.Height && manage.TranslatePoint(default, this)!.Value.Y + manage.Bounds.Height <= Bounds.Height,
@@ -72,6 +74,7 @@ public sealed partial class MainWindow
         check(_recentSearch.Text == "historyfolder-3" && _recent.Children.Single() is TextBlock && _recentFiles.Paths.Count == 9,
             "Returning from history management refreshes results and preserves the active search");
         _recentSearch.Text = ""; await Layout();
-        check(_recent.Children.OfType<Button>().Count() == 9, "Clearing the search reflects removals made in Settings");
+        check(RecentOpenButtons().Count() == 9, "Clearing the search reflects removals made in Settings");
+        await CheckRecentFileFeaturesAsync(directory, check, capture);
     }
 }

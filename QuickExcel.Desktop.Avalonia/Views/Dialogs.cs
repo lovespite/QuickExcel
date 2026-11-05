@@ -11,6 +11,9 @@ internal static class Dialogs
         [(UiText.Get("保存"), SaveDecision.Save), (UiText.Get("不保存"), SaveDecision.Discard), (UiText.Get("取消"), SaveDecision.Cancel)], SaveDecision.Cancel);
     public static Task<bool> Confirm(Window owner, string title, string message) => Choose(owner, title, message,
         [(UiText.Get("确定"), true), (UiText.Get("取消"), false)], false);
+    public static Task<bool> MissingRecentFile(Window owner, string path) => Choose(owner, UiText.Get("文件不存在"),
+        UiText.Format($"文件不存在，可能已被移动或删除。\n\n{path}\n\n是否从历史文件中移除此记录？"),
+        [(UiText.Get("移除记录"), true), (UiText.Get("保留记录"), false)], false);
     public static async Task<string?> Text(Window owner, string title, string label, string initial)
     {
         var input = new TextBox { Text = initial, MinWidth = 300 };

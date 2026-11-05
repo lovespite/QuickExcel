@@ -1,14 +1,84 @@
+using Avalonia;
 using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
+using Avalonia.Controls.Presenters;
 using Avalonia.Layout;
 using Avalonia.Media;
+using Avalonia.Styling;
+using QuickExcel.Presentation;
 
 namespace QuickExcel.Desktop.Avalonia;
 
 public sealed partial class MainWindow
 {
     private readonly TextBox _recentSearch = new() { Name = "HomeRecentSearch", PlaceholderText = UiText.Get("搜索文件名或路径") };
+
+    private ToggleButton CreateRecentPinButton(RecentFileEntry entry)
+    {
+        var label = UiText.Get(entry.IsPinned ? "取消固定" : "固定");
+        var pin = new ToggleButton
+        {
+            Name = "PinRecentFile", Tag = entry.Path, IsChecked = entry.IsPinned,
+            Width = 36, Height = 36, Margin = new(8, 0, 0, 0), Padding = new(7),
+            VerticalAlignment = VerticalAlignment.Center,
+            Background = Brush.Parse(entry.IsPinned ? "#D9EEE3" : "#F8FAF9"),
+            Content = new global::Avalonia.Controls.Shapes.Path
+            {
+                // Original pushpin outline, matching the home page's stroke icons.
+                Data = Geometry.Parse("M8,3 H16 M9,3 V9 L6,13 V15 H18 V13 L15,9 V3 M12,15 V22"),
+                Stroke = Brush.Parse(entry.IsPinned ? "#237A57" : "#66756D"), StrokeThickness = 1.7,
+                Width = 22, Height = 22, Stretch = Stretch.Uniform
+            }
+        };
+        pin.Styles.Add(new Style(s => s.OfType<ToggleButton>().Class(":checked").Template().OfType<ContentPresenter>())
+        {
+            Setters = { new Setter(ContentPresenter.BackgroundProperty, Brush.Parse("#D9EEE3")),
+                new Setter(ContentPresenter.BorderBrushProperty, Brush.Parse("#94B9A4")) }
+        });
+        ToolTip.SetTip(pin, label); AutomationProperties.SetName(pin, label + " · " + System.IO.Path.GetFileName(entry.Path));
+        pin.Click += async (_, _) => await PerformAsync(() =>
+        {
+            _recentFiles.SetPinned(entry.Path, !entry.IsPinned);
+            var error = _recentFiles.Error;
+            RefreshRecentFiles();
+            if (error is not null) _status.Text = error;
+            return Task.CompletedTask;
+        });
+        return pin;
+    }
+
+    private async Task OpenRecentFileAsync(string path)
+    {
+        if (await HandleMissingRecentFileAsync(path) || !await ConfirmDiscardAsync()) return;
+        var previous = Document;
+        try { await OpenPathAsync(path); }
+        catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException && ReferenceEquals(Document, previous))
+        {
+            // The file can disappear while the user handles unsaved changes.
+            if (!await HandleMissingRecentFileAsync(path)) throw;
+        }
+    }
+
+    private async Task<bool> HandleMissingRecentFileAsync(string path)
+    {
+        try
+        {
+            // Unlike File.Exists, this preserves permission and other IO errors.
+            await Task.Run(() => File.GetAttributes(path));
+            return false;
+        }
+        catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException) { }
+
+        if (await Dialogs.MissingRecentFile(this, path))
+        {
+            _recentFiles.Remove(path);
+            var error = _recentFiles.Error;
+            RefreshRecentFiles();
+            _status.Text = error ?? UiText.Get("已移除历史记录。");
+        }
+        return true;
+    }
 
     private void BuildHome()
     {

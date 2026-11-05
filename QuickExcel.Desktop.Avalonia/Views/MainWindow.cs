@@ -207,15 +207,20 @@ public sealed partial class MainWindow : Window
     {
         var query = _recentSearch.Text?.Trim() ?? "";
         _recent.Children.Clear();
-        foreach (var path in _recentFiles.Paths.Where(path => path.Contains(query, StringComparison.OrdinalIgnoreCase)))
+        foreach (var entry in _recentFiles.Entries.Where(entry => entry.Path.Contains(query, StringComparison.OrdinalIgnoreCase)))
         {
+            var path = entry.Path;
             var label = new StackPanel { Spacing = 5 };
             label.Children.Add(new TextBlock { Text = Path.GetFileName(path), FontSize = 16, FontWeight = FontWeight.Bold, Foreground = Brushes.Black, TextTrimming = TextTrimming.CharacterEllipsis });
             label.Children.Add(new TextBlock { Text = Path.GetDirectoryName(path), FontSize = 12, Foreground = Brushes.Gray, TextTrimming = TextTrimming.CharacterEllipsis });
-            var button = new Button { Content = label, HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Stretch,
+            var button = new Button { Name = "OpenRecentFile", Tag = path, Content = label, HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Stretch,
                 Padding = new(16, 12), MinHeight = 70, Background = Brushes.White, BorderBrush = new SolidColorBrush(Color.Parse("#E1E5E3")), BorderThickness = new(1), CornerRadius = new(6) }; ToolTip.SetTip(button, path);
             AutomationProperties.SetName(button, Path.GetFileName(path) + "，" + Path.GetDirectoryName(path));
-            button.Click += async (_, _) => await PerformAsync(async () => { if (await ConfirmDiscardAsync()) await OpenPathAsync(path); }); _recent.Children.Add(button);
+            button.Click += async (_, _) => await PerformAsync(() => OpenRecentFileAsync(path));
+            var row = new LayoutGrid { ColumnDefinitions = new("*,Auto") };
+            row.Children.Add(button);
+            var pin = CreateRecentPinButton(entry);
+            LayoutGrid.SetColumn(pin, 1); row.Children.Add(pin); _recent.Children.Add(row);
         }
         if (_recent.Children.Count == 0) _recent.Children.Add(new TextBlock
         {

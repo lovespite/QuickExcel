@@ -75,7 +75,7 @@ public sealed partial class MainWindow
             var actions = ((StackPanel)((ScrollViewer)_start.Children[0]).Content!).Children.OfType<Button>().ToArray();
             Check(actions.Length == 5 && actions.All(b => b.Bounds.Height >= 76 && b.GetVisualDescendants().OfType<Viewbox>().Any()), "Home has five large icon buttons including Settings");
             Check(_recent.TranslatePoint(default, _start)!.Value.X > actions[0].Bounds.Right, "Recent files are to the right of the home actions");
-            var labels = ((StackPanel)((Button)_recent.Children[0]).Content!).Children.OfType<TextBlock>().ToArray();
+            var labels = ((StackPanel)RecentOpenButtons().First().Content!).Children.OfType<TextBlock>().ToArray();
             Check(labels[0].Text == Path.GetFileName(recentPath) && labels[0].FontWeight == FontWeight.Bold && labels[0].Foreground == Brushes.Black &&
                 labels[1].Text == directory && labels[1].Foreground == Brushes.Gray, "History shows bold black filename above gray directory");
             Check(Equals(((MenuItem)_menu.Items[0]!).Header, english ? "File" : "文件") &&
@@ -87,7 +87,7 @@ public sealed partial class MainWindow
             Check(_recent.Bounds.Width > 200 && actions.All(b => b.Bounds.Width >= 280), "Minimum window keeps both home columns usable");
             await CheckHomeHistoryAsync(directory, Check, Capture);
             Width = 1280; Height = 820; await Layout();
-            ((Button)_recent.Children[0]).RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); await _operation;
+            RecentOpenButtons().First().RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); await _operation;
             Check(_book.IsVisible && !_start.IsVisible && _workspace.FilePath == recentPath, "History button opens its workbook and hides the home page");
             Check(!_menu.Items.OfType<MenuItem>().Any(i => (i.Header as string)?.Contains("F9") == true), "Main menu no longer contains recalculate F9");
             Check(((MenuItem)_menu.Items[0]!).Items.OfType<Separator>().Count() >= 4, "File menu separates open, save, export, compatibility and close actions");
