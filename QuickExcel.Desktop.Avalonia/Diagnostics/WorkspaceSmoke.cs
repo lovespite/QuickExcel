@@ -62,7 +62,7 @@ public sealed partial class MainWindow
             var saved = files.NextSave;
             await OpenPathAsync(saved);
             Check(Document.GetCellInput(0, 1, 0) == "原格草稿" && Document.GetCellValue(0, 0, 1) == "15", "Reopen preserves Unicode, formula and calculated value");
-            Check(Document.GetCellInput(0, 6, 0) == "=1+\n2" && Document.GetCellInput(0, 6, 1) == "甲\n乙",
+            Check(Document.GetCellInput(0, 6, 0) == "=1+\n3+2" && Document.GetCellInput(0, 6, 1) == "甲\n续乙",
                 "Reopen preserves line breaks entered in both worksheet editors");
             Check(!Document.ScriptsEnabled, "Open never inherits prior script authorization");
             var revision = Document.Snapshot.Revision;
@@ -111,43 +111,56 @@ public sealed partial class MainWindow
 
     private async Task CheckEditorLineBreaksAsync(Action<bool, string> check)
     {
-        static void Press(TextBox editor, Key key, KeyModifiers modifiers = KeyModifiers.None) =>
-            editor.RaiseEvent(new KeyEventArgs { RoutedEvent = KeyDownEvent, Key = key, KeyModifiers = modifiers });
+        InputElement Focused() => (InputElement)FocusManager!.GetFocusedElement()!;
+        void KeyEvent(Key key, KeyModifiers modifiers = KeyModifiers.None, bool release = false) =>
+            Focused().RaiseEvent(new KeyEventArgs { RoutedEvent = release ? KeyUpEvent : KeyDownEvent, Key = key, KeyModifiers = modifiers });
+        void AltEnter()
+        {
+            KeyEvent(Key.LeftAlt, KeyModifiers.Alt);
+            KeyEvent(Key.Enter, KeyModifiers.Alt);
+            KeyEvent(Key.Enter, KeyModifiers.Alt, release: true);
+            KeyEvent(Key.LeftAlt, release: true);
+        }
+        void TypeText(string text) => Focused().RaiseEvent(new TextInputEventArgs { RoutedEvent = TextInputEvent, Text = text });
 
         _grid.Select(new(6, 0)); _formula.Focus(); _formula.Text = "=1+2";
         _formula.CaretIndex = _formula.SelectionStart = _formula.SelectionEnd = 3;
         var revision = Document.Snapshot.Revision;
         var presenter = _formula.GetVisualDescendants().OfType<TextPresenter>().Single();
         presenter.PreeditText = "zhong";
-        Press(_formula, Key.Enter, KeyModifiers.Alt);
+        AltEnter();
         check(_formula.IsComposing && _formula.Text == "=1+2" && Document.Snapshot.Revision == revision,
             "Alt+Enter leaves an active IME composition and its draft intact");
         presenter.PreeditText = null;
-        Press(_formula, Key.Enter, KeyModifiers.Alt);
+        AltEnter();
         check(_formula.Text == "=1+\n2" && _formula.CaretIndex == 4 && _formulaDirty && _formula.IsKeyboardFocusWithin &&
             Document.Snapshot.Revision == revision, "Alt+Enter inserts one LF at the formula caret and keeps the draft active");
-        Press(_formula, Key.Enter);
-        check(!_formulaDirty && Document.GetCellInput(0, 6, 0) == "=1+\n2", "Plain Enter commits the multiline formula");
+        TypeText("3+");
+        check(_formula.Text == "=1+\n3+2" && Document.Snapshot.Revision == revision, "Typing continues at the formula caret after releasing Alt");
+        KeyEvent(Key.Enter);
+        check(!_formulaDirty && Document.GetCellInput(0, 6, 0) == "=1+\n3+2", "Plain Enter commits the multiline formula");
         await CalculateAsync();
-        check(Document.GetCellValue(0, 6, 0) == "3", "The committed multiline formula calculates");
+        check(Document.GetCellValue(0, 6, 0) == "6", "The committed multiline formula calculates");
 
         _grid.Select(new(6, 1)); _grid.BeginEdit();
         var cell = _grid.CellEditor;
         cell.Text = "甲替换乙"; cell.SelectionStart = 1; cell.SelectionEnd = 3;
         revision = Document.Snapshot.Revision;
-        Press(cell, Key.Enter, KeyModifiers.Alt);
+        AltEnter();
         check(cell.Text == "甲\n乙" && cell.CaretIndex == 2 && cell.SelectionStart == cell.SelectionEnd && _grid.IsEditing &&
             _grid.Current == new CellPosition(6, 1) && Document.Snapshot.Revision == revision,
             "Alt+Enter replaces the cell editor selection with one LF and stays in the original cell");
-        Press(cell, Key.Enter);
-        check(Document.GetCellInput(0, 6, 1) == "甲\n乙" && _grid.Current == new CellPosition(7, 1),
+        TypeText("续");
+        check(cell.Text == "甲\n续乙" && Document.Snapshot.Revision == revision, "Typing continues at the cell caret after releasing Alt");
+        KeyEvent(Key.Enter);
+        check(Document.GetCellInput(0, 6, 1) == "甲\n续乙" && _grid.Current == new CellPosition(7, 1),
             "Plain Enter commits the multiline cell and moves down");
 
-        _grid.Select(new(0, 0)); Press(cell, Key.Enter, KeyModifiers.Alt);
+        _grid.Select(new(0, 0)); AltEnter();
         check(_grid.IsEditing && cell.Text == "12\n", "Alt+Enter from a selected cell appends a line break to its existing text");
-        Press(cell, Key.Escape);
+        KeyEvent(Key.Escape);
         check(!_grid.IsEditing && Document.GetCellInput(0, 0, 0) == "12", "Escape discards the line break with the rest of the draft");
-        cell.IsReadOnly = true; Press(cell, Key.Enter, KeyModifiers.Alt);
+        cell.IsReadOnly = true; AltEnter();
         check(!_grid.IsEditing && cell.Text == "12", "Alt+Enter respects a read-only cell editor");
         cell.IsReadOnly = false;
     }

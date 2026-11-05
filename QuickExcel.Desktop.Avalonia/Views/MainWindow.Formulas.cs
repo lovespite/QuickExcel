@@ -44,7 +44,9 @@ public sealed partial class MainWindow
         {
             if (_completion is not null && _formulaSuggestions.SelectedItem is string) { AcceptCompletion(); e.Handled = true; }
         };
-        AddHandler(KeyDownEvent, (_, e) =>
+        // Let the window see the full Alt chord before consuming Enter, or its
+        // access-key handler will focus the menu when Alt is released.
+        _book.AddHandler(KeyDownEvent, (_, e) =>
         {
             if (e.Handled || _grid.IsComposing || _formula.IsComposing) return;
             var editor = _formula.IsKeyboardFocusWithin ? _formula : _grid.CellEditor.IsKeyboardFocusWithin ? _grid.CellEditor : null;
