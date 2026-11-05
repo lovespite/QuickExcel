@@ -81,7 +81,7 @@ public sealed class PasteChartCommand(ChartClipboard source, SheetId sheetId, Ce
         if (source.Book.DateSystem != snapshot.DateSystem && source.Chart.Series.Any(s => s.NumericCategories))
             throw new NotSupportedException(MessageText.Get("数值分类图表的数据日期系统与目标不同；请选择粘贴为图片。"));
         var staged = new WorkbookSnapshot(snapshot.DocumentId, snapshot.Revision, snapshot.DateSystem, snapshot.Sheets.Add(imported), snapshot.ScriptSource, styles,
-            snapshot.ScriptModules, snapshot.FileState, snapshot.DefinedNames, snapshot.ActiveSheetId, snapshot.Window, snapshot.TextCompatibilityVersion, snapshot.PackageFiles);
+            snapshot.ScriptModules, snapshot.FileState, snapshot.DefinedNames, snapshot.ActiveSheetId, snapshot.Window, snapshot.TextCompatibilityVersion, snapshot.PackageFiles, snapshot.LocalStorage);
         var result = new SetChartCommand(sheetId, destination.Data.Charts.Length, chart).Prepare(staged);
         return result with { StructureChanged = true, CalculationUnchanged = false };
     }

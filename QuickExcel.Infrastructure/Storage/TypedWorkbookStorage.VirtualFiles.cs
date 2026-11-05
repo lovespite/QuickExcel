@@ -9,13 +9,14 @@ namespace QuickExcel.Storage;
 
 public sealed partial class TypedWorkbookStorage
 {
-    public VirtualFileSet Capture(WorkbookSnapshot snapshot) => new(BuildPackage(snapshot, false, CancellationToken.None)
+    public VirtualFileSet Capture(WorkbookSnapshot snapshot) => new(BuildPackage(snapshot.WithLocalStorage(ScriptStorage.Empty), false, CancellationToken.None)
         .Select(p => new VirtualFileEntry("//xlsq/" + p.Key.TrimEnd('/'), p.Value.ToImmutableArray(), p.Key.EndsWith('/'))));
 
     public WorkbookSnapshot Apply(WorkbookSnapshot snapshot, IReadOnlyList<VirtualFileEdit> edits)
     {
         if (edits.Count == 0) return snapshot;
         if (edits.Any(e => !e.Path.StartsWith("//xlsq/", StringComparison.Ordinal))) throw new ArgumentException(MessageText.Get("包编辑只能访问 xlsq 卷。"));
+        if (edits.Any(e => IsStoragePath(e.Path[7..]))) throw new ArgumentException("localStorage 系统路径不能用作虚拟文件。请使用 localStorage 接口。");
         var original = Capture(snapshot);
         var updated = original.Apply(edits);
         if (original.ContentEquals(updated)) return snapshot;
@@ -91,7 +92,7 @@ public sealed partial class TypedWorkbookStorage
                     throw new InvalidDataException(MessageText.Get("原始包替换不能隐式移除富文本、链接或批注。"));
             }
         }
-        return imported.WithScriptModules(changedScripts ? modules : imported.ScriptModules.Signature == snapshot.ScriptModules.Signature
+        return imported.WithLocalStorage(snapshot.LocalStorage).WithScriptModules(changedScripts ? modules : imported.ScriptModules.Signature == snapshot.ScriptModules.Signature
             ? snapshot.ScriptModules : imported.ScriptModules);
     }
 }

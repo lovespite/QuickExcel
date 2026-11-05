@@ -39,7 +39,7 @@ internal sealed class ApplyActionPatchCommand(ScriptActionRequest request, Scrip
             result.Edits.IsDefault || result.Edits.Length > 20_000 || result.Logs.IsDefault || result.Logs.Length > 100 || result.Logs.Any(l => l is null || l.Length > 4000))
             throw new InvalidOperationException("动作结果身份或容量无效，变更未提交。");
         if (result.FileEdits.IsDefault) throw new InvalidOperationException("缺少虚拟文件变更。");
-        if (request.Event?.Name == "workbook.close" && (request.Model?.HasWrites == true || result.Edits.Length != 0 || result.FileEdits.Length != 0))
+        if (request.Event?.Name == "workbook.close" && (request.Model?.HasSessionStorageWrites == true || request.Model?.HasWrites == true || result.Edits.Length != 0 || result.FileEdits.Length != 0))
             throw new InvalidOperationException("关闭完成事件只读；保存前的清理请使用 workbook.beforeClose。");
         if (request.Event?.Name is "workbook.calculated" or "workbook.saved" && (request.Model?.HasWrites == true || result.Edits.Length != 0 || result.FileEdits.Any(e => e.Path.StartsWith("//xlsq/", StringComparison.Ordinal))))
             throw new InvalidOperationException("完成通知不能修改持久输入；请使用 beforeSave 或其他交互事件。");

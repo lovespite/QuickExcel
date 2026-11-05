@@ -24,7 +24,23 @@ declare namespace QuickExcel {
   /** The entry point of an action module. One module can declare one action. */
   type Main = (workbook: Workbook, host: Host) => void;
 
+  /** String storage; quotas count UTF-8 key + value bytes. Entries use ordinal key order.
+   * Available inside initialization, actions, events and console transactions. */
+  interface IStorage {
+    get(key: string): string | undefined;
+    set(key: string, value: string): void;
+    clear(): void;
+    remove(key: string): void;
+    keys(): string[];
+    values(): string[];
+    entries(): Array<[string, string]>;
+  }
+
   interface Host {
+    /** Saved in the XLSQ workbook. 1 MiB per entry, no storage total quota. */
+    readonly localStorage: IStorage;
+    /** Session memory only. 1 MiB per entry, 100 MiB total. */
+    readonly sessionStorage: IStorage;
     readonly values: ValueUtilities;
     /** Available only inside an action, event or console transaction. */
     readonly files: VirtualFiles;
@@ -115,3 +131,8 @@ declare const console: {
   error(...values: unknown[]): void;
   debug(...values: unknown[]): void;
 };
+
+/** Alias for the script storage contract. */
+type IStorage = QuickExcel.IStorage;
+declare const localStorage: IStorage;
+declare const sessionStorage: IStorage;

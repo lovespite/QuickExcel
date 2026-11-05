@@ -108,6 +108,15 @@ public sealed partial class MainWindow
                     "Published API v4 initializes once, discovers UDF/Actions/Events and preserves isolated state across recalculation");
                 var startupPath = Path.Combine(directory, "initialized-scripts.xlsq"); initialized.Save(startupPath);
                 Check(_services.Storage.Open(startupPath).ScriptModules.ScriptApiVersion == 4, "Published API v4 roles and sources save/reopen");
+                await Task.Run(() => initialized.RunConsole("localStorage.set('installation','verified'); sessionStorage.set('installation','memory'); if(localStorage.entries()[0][1]!=='verified')throw Error('storage');"));
+                Check(initialized.Snapshot.LocalStorage.Get("installation") == "verified" && initialized.Session.SessionStorage.Get("installation") == "memory",
+                    "Published IStorage globals execute in the isolated transaction");
+                Check(initialized.Undo() && initialized.Snapshot.LocalStorage.Get("installation") is null && initialized.Session.SessionStorage.Get("installation") == "memory" && initialized.Redo(),
+                    "Published localStorage undo/redo preserves sessionStorage");
+                initialized.Save(startupPath);
+                using var stored = new WorkbookDocument(_services.Storage.Open(startupPath), _services);
+                Check(stored.Snapshot.LocalStorage.Get("installation") == "verified" && stored.Session.SessionStorage.Entries.Count == 0,
+                    "Published storage persists local data and releases session data on reopen");
             }
             _workspace.Editor.Execute(new SetCellsCommand(Enumerable.Range(0, 3).SelectMany(column => Enumerable.Range(10, 4).Select(row =>
                 new CellEdit(new(visualSheet, row, column), CellContent.FromLiteral(CellValue.FromNumber((row - 11) * 10)))))));

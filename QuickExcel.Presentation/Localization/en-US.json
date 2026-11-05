@@ -2066,6 +2066,7 @@
   "重复系统条目。": "Duplicate system entry.",
   "含未建模内容的 workbook.xlsx 不能通过虚拟文件替换。": "A virtual file cannot replace workbook.xlsx while it contains unmodeled content.",
   "原始包替换不能隐式移除富文本、链接或批注。": "Replacing the original package cannot implicitly remove rich text, links, or notes.",
+  "此工作簿含 localStorage 数据，主文件必须保存为 XLSQ。导出的 XLSX 副本不包含脚本存储。": "Save the main file as XLSQ to keep its localStorage data. Exported XLSX copies do not include script storage.",
   "此工作簿含 JavaScript、模块或签名，主文件必须保存为 XLSQ。交付 Excel 请使用明确的 XLSX 导出副本；导出不会标记主文件已保存。": "Save the main file as XLSQ to keep its scripts, modules, or signatures. Use XLSX export to deliver an Excel copy. Exporting does not mark the main file as saved.",
   "{0} 的函数参数个数不在受支持范围内。请修正公式，或使用明确的值/可移植公式导出。": "The number of arguments to {0} is unsupported. Correct the formula or explicitly export values or portable formulas.",
   "XLSX 保存后重开校验未能还原单元格、公式、样式与工作表配置。": "Reopening the saved XLSX did not restore the cells, formulas, styles, and worksheet configuration.",

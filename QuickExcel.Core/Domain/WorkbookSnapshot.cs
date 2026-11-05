@@ -282,7 +282,7 @@ public sealed class WorkbookSnapshot
 {
     public WorkbookSnapshot(Guid documentId, long revision, ExcelDateSystem dateSystem,
         IEnumerable<WorksheetSnapshot> sheets, string scriptSource = "", IEnumerable<StyleDefinition>? styles = null, ScriptModuleSet? scriptModules = null, WorkbookFileState? fileState = null, IEnumerable<QuickExcel.Formulas.DefinedName>? definedNames = null,
-        SheetId? activeSheetId = null, WorkbookWindow? window = null, int textCompatibilityVersion = 1, QuickExcel.Core.VirtualFileSet? packageFiles = null)
+        SheetId? activeSheetId = null, WorkbookWindow? window = null, int textCompatibilityVersion = 1, QuickExcel.Core.VirtualFileSet? packageFiles = null, ScriptStorage? localStorage = null)
     {
         if (documentId == Guid.Empty) throw new ArgumentException("A document requires a nonempty identity.", nameof(documentId));
         ArgumentOutOfRangeException.ThrowIfNegative(revision);
@@ -290,6 +290,7 @@ public sealed class WorkbookSnapshot
         if (textCompatibilityVersion < 1) throw new ArgumentOutOfRangeException(nameof(textCompatibilityVersion));
         TextCompatibilityVersion = textCompatibilityVersion;
         PackageFiles = packageFiles ?? QuickExcel.Core.VirtualFileSet.Empty;
+        LocalStorage = localStorage ?? ScriptStorage.Empty;
         if (PackageFiles.Entries.Keys.Any(p => !p.StartsWith("//xlsq/", StringComparison.Ordinal))) throw new ArgumentException(MessageText.Get("包只能包含 xlsq 卷。"));
         ArgumentNullException.ThrowIfNull(sheets);
         ArgumentNullException.ThrowIfNull(scriptSource);
@@ -377,11 +378,14 @@ public sealed class WorkbookSnapshot
     public string ScriptSource { get; }
     public ScriptModuleSet ScriptModules { get; }
     public WorkbookFileState? FileState { get; }
+    public ScriptStorage LocalStorage { get; }
+    public WorkbookSnapshot WithLocalStorage(ScriptStorage storage) => ReferenceEquals(storage, LocalStorage) ? this :
+        new(DocumentId, Revision, DateSystem, Sheets, ScriptSource, Styles, ScriptModules, FileState, DefinedNames, ActiveSheetId, Window, TextCompatibilityVersion, PackageFiles, storage);
     public QuickExcel.Core.VirtualFileSet PackageFiles { get; }
     public WorkbookSnapshot WithPackageFiles(QuickExcel.Core.VirtualFileSet files) =>
-        new(DocumentId, Revision, DateSystem, Sheets, ScriptSource, Styles, ScriptModules, FileState, DefinedNames, ActiveSheetId, Window, TextCompatibilityVersion, files);
+        new(DocumentId, Revision, DateSystem, Sheets, ScriptSource, Styles, ScriptModules, FileState, DefinedNames, ActiveSheetId, Window, TextCompatibilityVersion, files, LocalStorage);
     public WorkbookSnapshot WithFileState(WorkbookFileState state) =>
-        new(DocumentId, Revision, DateSystem, Sheets, ScriptSource, Styles, ScriptModules, state, DefinedNames, ActiveSheetId, Window, TextCompatibilityVersion, PackageFiles);
+        new(DocumentId, Revision, DateSystem, Sheets, ScriptSource, Styles, ScriptModules, state, DefinedNames, ActiveSheetId, Window, TextCompatibilityVersion, PackageFiles, LocalStorage);
     public SheetId ActiveSheetId { get; }
     public WorkbookWindow Window { get; }
     public ImmutableArray<QuickExcel.Formulas.DefinedName> DefinedNames { get; }
@@ -390,24 +394,24 @@ public sealed class WorkbookSnapshot
         ?? throw new KeyNotFoundException($"Sheet {id} does not exist.");
 
     public WorkbookSnapshot WithDefinedNames(IEnumerable<QuickExcel.Formulas.DefinedName> names) =>
-        new(DocumentId, Revision, DateSystem, Sheets, ScriptSource, Styles, ScriptModules, FileState, names, ActiveSheetId, Window, TextCompatibilityVersion, PackageFiles);
+        new(DocumentId, Revision, DateSystem, Sheets, ScriptSource, Styles, ScriptModules, FileState, names, ActiveSheetId, Window, TextCompatibilityVersion, PackageFiles, LocalStorage);
 
     public WorkbookSnapshot WithSheets(IEnumerable<WorksheetSnapshot> sheets)
     {
         var next = sheets.ToImmutableArray();
         return new(DocumentId, Revision, DateSystem, next, ScriptSource, Styles, ScriptModules, FileState, DefinedNames,
-            next.Any(s => s.Id == ActiveSheetId && s.Visibility == SheetVisibility.Visible) ? ActiveSheetId : null, Window, TextCompatibilityVersion, PackageFiles);
+            next.Any(s => s.Id == ActiveSheetId && s.Visibility == SheetVisibility.Visible) ? ActiveSheetId : null, Window, TextCompatibilityVersion, PackageFiles, LocalStorage);
     }
 
     public WorkbookSnapshot WithRevision(long revision) =>
-        new(DocumentId, revision, DateSystem, Sheets, ScriptSource, Styles, ScriptModules, FileState, DefinedNames, ActiveSheetId, Window, TextCompatibilityVersion, PackageFiles);
+        new(DocumentId, revision, DateSystem, Sheets, ScriptSource, Styles, ScriptModules, FileState, DefinedNames, ActiveSheetId, Window, TextCompatibilityVersion, PackageFiles, LocalStorage);
 
     public WorkbookSnapshot WithScriptModules(ScriptModuleSet modules) =>
-        new(DocumentId, Revision, DateSystem, Sheets, modules.PrimarySource, Styles, modules, FileState, DefinedNames, ActiveSheetId, Window, TextCompatibilityVersion, PackageFiles);
+        new(DocumentId, Revision, DateSystem, Sheets, modules.PrimarySource, Styles, modules, FileState, DefinedNames, ActiveSheetId, Window, TextCompatibilityVersion, PackageFiles, LocalStorage);
 
     public WorkbookSnapshot WithScriptSource(string scriptSource) =>
-        new(DocumentId, Revision, DateSystem, Sheets, scriptSource, Styles, ScriptModules.WithPrimarySource(scriptSource), FileState, DefinedNames, ActiveSheetId, Window, TextCompatibilityVersion, PackageFiles);
+        new(DocumentId, Revision, DateSystem, Sheets, scriptSource, Styles, ScriptModules.WithPrimarySource(scriptSource), FileState, DefinedNames, ActiveSheetId, Window, TextCompatibilityVersion, PackageFiles, LocalStorage);
 
     public WorkbookSnapshot WithActiveSheet(SheetId id) =>
-        new(DocumentId, Revision, DateSystem, Sheets, ScriptSource, Styles, ScriptModules, FileState, DefinedNames, id, Window, TextCompatibilityVersion, PackageFiles);
+        new(DocumentId, Revision, DateSystem, Sheets, ScriptSource, Styles, ScriptModules, FileState, DefinedNames, id, Window, TextCompatibilityVersion, PackageFiles, LocalStorage);
 }

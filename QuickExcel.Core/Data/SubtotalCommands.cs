@@ -29,7 +29,7 @@ public sealed class ApplySubtotalsCommand(SubtotalPreview preview) : DocumentCom
         var result = preview.Result;
         // Keep navigation that may have changed during the preview dialog.
         result = new(result.DocumentId, result.Revision, result.DateSystem, result.Sheets.Select(s => s.WithView(snapshot.GetSheet(s.Id).View)),
-            result.ScriptSource, result.Styles, result.ScriptModules, result.FileState, result.DefinedNames, snapshot.ActiveSheetId, snapshot.Window, result.TextCompatibilityVersion, result.PackageFiles);
+            result.ScriptSource, result.Styles, result.ScriptModules, result.FileState, result.DefinedNames, snapshot.ActiveSheetId, snapshot.Window, result.TextCompatibilityVersion, result.PackageFiles, result.LocalStorage);
         return StructureEdits.Draft(snapshot, result);
     }
 }
@@ -129,7 +129,7 @@ public static class SubtotalCommands
             transformed = transformed.WithSheets(transformed.Sheets.Select(s => s.Id == sheetId ? s.WithPrinting(s.Printing with { RowBreaks = s.Printing.RowBreaks.Concat(breaks).DistinctBy(b => b.Id).OrderBy(b => b.Id).ToImmutableArray() }) : s));
         }
         transformed = new(transformed.DocumentId, transformed.Revision, transformed.DateSystem, transformed.Sheets, transformed.ScriptSource, styles,
-            transformed.ScriptModules, transformed.FileState, transformed.DefinedNames, transformed.ActiveSheetId, transformed.Window, transformed.TextCompatibilityVersion, transformed.PackageFiles);
+            transformed.ScriptModules, transformed.FileState, transformed.DefinedNames, transformed.ActiveSheetId, transformed.Window, transformed.TextCompatibilityVersion, transformed.PackageFiles, transformed.LocalStorage);
         transformed = new SetCellsCommand(edits).Prepare(transformed).Snapshot;
         return new(original, StructureEdits.Draft(original, transformed), previews, grand) { RemovedRows = removed, Range = range with { Bottom = range.Bottom + groups.Count + 1 } };
     }

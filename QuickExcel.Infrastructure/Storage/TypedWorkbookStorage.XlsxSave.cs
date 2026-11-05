@@ -17,7 +17,7 @@ public sealed partial class TypedWorkbookStorage
     public static bool RequiresScriptContainer(WorkbookSnapshot snapshot)
     {
         var scripts = snapshot.ScriptModules;
-        return snapshot.PackageFiles.Entries.Count != 0 || scripts.ScriptApiVersion != 3 || scripts.Signature is not null || scripts.Modules.Count != 1 ||
+        return snapshot.LocalStorage.Entries.Count != 0 || snapshot.PackageFiles.Entries.Count != 0 || scripts.ScriptApiVersion != 3 || scripts.Signature is not null || scripts.Modules.Count != 1 ||
             !scripts.Modules.TryGetValue("main", out var main) || main != new ScriptModule("scripts/main.js", "") ||
             !scripts.EntryModules.SequenceEqual(["main"]) || !scripts.Bindings.SequenceEqual([new ScriptBinding("main", "formula-functions")]);
     }
@@ -42,6 +42,8 @@ public sealed partial class TypedWorkbookStorage
     private static FileVersion SaveXlsx(string path, WorkbookSnapshot snapshot, bool discardUnsupported,
         CancellationToken cancellationToken, FileVersion? expected)
     {
+        if (snapshot.LocalStorage.Entries.Count > 0) throw new InvalidOperationException(
+            MessageText.Get("此工作簿含 localStorage 数据，主文件必须保存为 XLSQ。导出的 XLSX 副本不包含脚本存储。"));
         if (RequiresScriptContainer(snapshot)) throw new InvalidOperationException(
             MessageText.Get("此工作簿含 JavaScript、模块或签名，主文件必须保存为 XLSQ。交付 Excel 请使用明确的 XLSX 导出副本；导出不会标记主文件已保存。"));
         var issues = SaveIssues(snapshot);

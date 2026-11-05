@@ -294,6 +294,8 @@ public sealed partial class JscSession
 
         const workbook = makeHandle('Workbook', {});
         let host = freeze({
+            get localStorage() { return localStorage; },
+            get sessionStorage() { return sessionStorage; },
             functions: freeze({ register(name, fn) { registerFunction(name, fn); } }),
             values: freeze({ getErrorCode(value) {
                 const data = dataOf(value);

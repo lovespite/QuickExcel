@@ -12,7 +12,7 @@ public sealed partial class TypedWorkbookStorage
         if (snapshot.FileState is not { FormulaReadOnly: true } state) return snapshot;
         if (discardUnsupported) throw new InvalidOperationException("只读公式工作簿不能另存删减特性的公式副本；可另存完整原包或显式导出已有缓存的值快照。");
         var source = state.OriginalModel;
-        if (snapshot.Sheets.Length != source.Sheets.Length || snapshot.ScriptModules != source.ScriptModules)
+        if (snapshot.Sheets.Length != source.Sheets.Length || snapshot.ScriptModules != source.ScriptModules || !snapshot.LocalStorage.ContentEquals(source.LocalStorage))
             throw new InvalidOperationException(MessageText.Get(WorkbookFileState.FormulaReadOnlyMessage));
         var sheets = snapshot.Sheets.Select((sheet, i) =>
         {

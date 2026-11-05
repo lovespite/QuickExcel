@@ -58,7 +58,7 @@ public sealed class RemoveScriptTableCommand(SheetId sheetId, int tableId, bool 
             transformed = new(transformed.DocumentId, transformed.Revision, transformed.DateSystem,
                 transformed.Sheets.Select(s => s.Id == sheetId ? s.WithCells(cells.ToImmutable()) : s), transformed.ScriptSource, styles,
                 transformed.ScriptModules, transformed.FileState, transformed.DefinedNames, transformed.ActiveSheetId, transformed.Window,
-                transformed.TextCompatibilityVersion, transformed.PackageFiles);
+                transformed.TextCompatibilityVersion, transformed.PackageFiles, transformed.LocalStorage);
         }
         return StructureEdits.Draft(snapshot, transformed);
     }

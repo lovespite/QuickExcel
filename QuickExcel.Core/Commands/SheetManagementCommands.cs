@@ -91,7 +91,7 @@ public sealed class CopySheetCommand : DocumentCommand
             source.ShowGridLines, source.DefaultRowHeight, source.TabColor, source.View, source.Visibility, source.Printing, source.Annotations, data);
         var names = snapshot.DefinedNames.Concat(copiedNames.Select(n => new DefinedName(n.Name, Formula(n.Formula, true, n.Scope ?? Source), Id)));
         var after = new WorkbookSnapshot(snapshot.DocumentId, snapshot.Revision, snapshot.DateSystem, snapshot.Sheets.Insert(Destination, copy), snapshot.ScriptSource,
-            snapshot.Styles, snapshot.ScriptModules, snapshot.FileState, names, copy.Visibility == SheetVisibility.Visible ? Id : snapshot.ActiveSheetId, snapshot.Window, snapshot.TextCompatibilityVersion, snapshot.PackageFiles);
+            snapshot.Styles, snapshot.ScriptModules, snapshot.FileState, names, copy.Visibility == SheetVisibility.Visible ? Id : snapshot.ActiveSheetId, snapshot.Window, snapshot.TextCompatibilityVersion, snapshot.PackageFiles, snapshot.LocalStorage);
         return new(after, cells.Select(p => new CellChange(new(Id, p.Key.Row, p.Key.Column), null, p.Value)).ToImmutableArray(), true);
     }
 }
@@ -129,7 +129,7 @@ public sealed class RenameDefinedNameCommand(string name, SheetId? scope, string
             TotalsFormula = c.TotalsFormula is { } total ? Formula(total, sheet.Id, false) : null }))).ToImmutableArray() }));
         var names = snapshot.DefinedNames.Select(n => n with { Name = n == definition ? newName : n.Name, Formula = Formula(n.Formula, n.Scope ?? snapshot.Sheets[0].Id, true) });
         var after = new WorkbookSnapshot(snapshot.DocumentId, snapshot.Revision, snapshot.DateSystem, sheets, snapshot.ScriptSource,
-            snapshot.Styles, snapshot.ScriptModules, snapshot.FileState, names, snapshot.ActiveSheetId, snapshot.Window, snapshot.TextCompatibilityVersion, snapshot.PackageFiles);
+            snapshot.Styles, snapshot.ScriptModules, snapshot.FileState, names, snapshot.ActiveSheetId, snapshot.Window, snapshot.TextCompatibilityVersion, snapshot.PackageFiles, snapshot.LocalStorage);
         return StructureEdits.Draft(snapshot, after);
     }
 }

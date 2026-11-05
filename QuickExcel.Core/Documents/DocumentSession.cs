@@ -178,7 +178,12 @@ public sealed partial class DocumentSession : IDisposable
             }
             if (ReferenceEquals(draft.Snapshot, before))
             {
-                if (action is not null) { AdvanceCalculationGeneration(); _diagnostics = diagnostics; AppendConsole(diagnostics); if (transientFiles is not null) _transientFiles = transientFiles; }
+                if (action is not null)
+                {
+                    AdvanceCalculationGeneration(); _diagnostics = diagnostics; AppendConsole(diagnostics);
+                    if (transientFiles is not null) _transientFiles = transientFiles;
+                    if (action.Model is { } storageModel) _sessionStorage = storageModel.SessionStorageResult;
+                }
                 return new(false, before.Revision);
             }
             else
@@ -221,6 +226,7 @@ public sealed partial class DocumentSession : IDisposable
                 AdvanceCalculationGeneration();
                 _snapshot = after;
                 if (transientFiles is not null) _transientFiles = transientFiles;
+                if (action?.Model is { } storageModel) _sessionStorage = storageModel.SessionStorageResult;
                 if (action is null) QueueChangeEvents(before, after, draft.Changes);
                 if (action is not null || !draft.CalculationUnchanged) { _diagnostics = diagnostics.IsDefault ? [] : diagnostics; AppendConsole(_diagnostics); }
                 change = new(after.Revision, ActualChanges(before, after, draft.Changes), draft.StructureChanged)
@@ -611,7 +617,7 @@ public sealed partial class DocumentSession : IDisposable
             _undo.Clear(); _redo.Clear(); _historyBytes = 0;
             _notifications.Clear();
             Changed = null;
-            _scriptEvents.Clear(); _transientFiles = VirtualFileSet.Empty;
+            _scriptEvents.Clear(); _transientFiles = VirtualFileSet.Empty; _sessionStorage = ScriptStorage.Empty;
         }
     }
 
@@ -641,6 +647,7 @@ public sealed partial class DocumentSession : IDisposable
         // Unchanged immutable input and metadata are shared. Count changed payloads and copied formula caches.
         public long Bytes => 1024L + Changes.Sum(change => Estimate(change.Before) + Estimate(change.After) + 256L)
             + FormulaCaches(Before) + FormulaCaches(After)
+            + After.LocalStorage.HistoryBytesFrom(Before.LocalStorage)
             + (ReferenceEquals(Before.PackageFiles, After.PackageFiles) ? 0 : Before.PackageFiles.Bytes + After.PackageFiles.Bytes)
             + (ReferenceEquals(Before.FileState, After.FileState) ? 0 : (Before.FileState?.OriginalWorkbook.Length ?? 0L) + (After.FileState?.OriginalWorkbook.Length ?? 0L))
             + Before.DefinedNames.Sum(n => 128L + 2L * (n.Name.Length + n.Formula.Length))

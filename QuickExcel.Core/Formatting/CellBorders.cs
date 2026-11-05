@@ -120,7 +120,7 @@ public sealed class SetCellBordersCommand : DocumentCommand
             edits.Add(new(a, (sheet.GetCell(a.Row, a.Column)?.Content ?? CellContent.FromLiteral(CellValue.Blank)).WithStyle(id)));
         }
         var styled = new WorkbookSnapshot(snapshot.DocumentId, snapshot.Revision, snapshot.DateSystem, snapshot.Sheets,
-            snapshot.ScriptSource, styles, snapshot.ScriptModules, snapshot.FileState, snapshot.DefinedNames, snapshot.ActiveSheetId, snapshot.Window, snapshot.TextCompatibilityVersion, snapshot.PackageFiles);
+            snapshot.ScriptSource, styles, snapshot.ScriptModules, snapshot.FileState, snapshot.DefinedNames, snapshot.ActiveSheetId, snapshot.Window, snapshot.TextCompatibilityVersion, snapshot.PackageFiles, snapshot.LocalStorage);
         var draft = new SetCellsCommand(edits).Prepare(styled);
         return draft.Changes.IsEmpty ? new(snapshot, [], false) : draft with { CalculationUnchanged = true };
     }

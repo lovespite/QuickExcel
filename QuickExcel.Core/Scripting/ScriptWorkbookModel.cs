@@ -6,7 +6,7 @@ namespace QuickExcel.Core;
 
 /// <summary>Host-owned, command-backed view of an action. Reads observe its prior writes;
 /// only DocumentSession can publish the complete transaction.</summary>
-public sealed class ScriptWorkbookModel
+public sealed partial class ScriptWorkbookModel
 {
     private readonly WorkbookSnapshot _original;
     private WorkbookSnapshot _working;
@@ -35,7 +35,7 @@ public sealed class ScriptWorkbookModel
     public bool HasPendingCalculation { get; private set; }
     public WorkbookSnapshot View { get { _check(); return _working; } }
     public WorkbookSnapshot ValueView { get { _check(); return _calculatedView ?? _working; } }
-    internal bool HasWrites => _commands.Count > 0;
+    internal bool HasWrites => _commands.Count > 0 || _localStorageWritten;
 
     public CellSnapshot? ReadCell(SheetId sheet, CellPosition position, bool original = false, bool calculated = false)
     {
@@ -224,6 +224,7 @@ public sealed class ScriptWorkbookModel
                 changes[change.Address] = changes.TryGetValue(change.Address, out var prior) ? change with { Before = prior.Before } : change;
             current = draft.Snapshot; structure |= draft.StructureChanged; calculationUnchanged &= draft.CalculationUnchanged;
         }
+        if (_localStorageWritten && !current.LocalStorage.ContentEquals(_working.LocalStorage)) current = current.WithLocalStorage(_working.LocalStorage);
         return new(current, changes.Values.Where(c => c.Before != c.After).ToImmutableArray(), structure, CalculationUnchanged: calculationUnchanged);
     }
 
@@ -257,7 +258,7 @@ public sealed partial class DocumentSession
         var sheet = request.Snapshot.GetSheet(request.Snapshot.ActiveSheetId);
         var selection = _scriptSelectionSheet == sheet.Id && _scriptSelectionCell == sheet.View.ActiveCell && !_scriptSelection.IsEmpty
             ? _scriptSelection : [sheet.View.Selection?.Range ?? new(sheet.View.ActiveCell.Row, sheet.View.ActiveCell.Column, sheet.View.ActiveCell.Row, sheet.View.ActiveCell.Column)];
-        return new(request.Snapshot, () =>
+        var model = new ScriptWorkbookModel(request.Snapshot, () =>
         {
             lock (_gate)
             {
@@ -269,5 +270,7 @@ public sealed partial class DocumentSession
         }, selection, _calculator is null ? null : (snapshot, cancellation) => _calculator.Calculate(
             new CalculationRequest(request.Stamp, snapshot, request.ConsoleSource is null)
             { CancellationToken = request.CancellationToken, RuntimeLifetime = request.RuntimeLifetime, IsProvisional = true }, cancellation), _scriptTableIds);
+        model.InitializeSessionStorage(_sessionStorage);
+        return model;
     }
 }

@@ -36,7 +36,7 @@ public sealed class SetCellProtectionCommand(SheetId sheetId, CellRectangle rang
         }
         if (changes.Count == 0) return new(snapshot, [], false);
         var styled = new WorkbookSnapshot(snapshot.DocumentId, snapshot.Revision, snapshot.DateSystem, snapshot.Sheets, snapshot.ScriptSource,
-            styles, snapshot.ScriptModules, snapshot.FileState, snapshot.DefinedNames, snapshot.ActiveSheetId, snapshot.Window, snapshot.TextCompatibilityVersion, snapshot.PackageFiles);
+            styles, snapshot.ScriptModules, snapshot.FileState, snapshot.DefinedNames, snapshot.ActiveSheetId, snapshot.Window, snapshot.TextCompatibilityVersion, snapshot.PackageFiles, snapshot.LocalStorage);
         return new(styled.WithSheets(snapshot.Sheets.Select(s => s.Id == sheetId ? s.WithCells(cells.ToImmutable()) : s)), [.. changes], false, CalculationUnchanged: true);
     }
 }

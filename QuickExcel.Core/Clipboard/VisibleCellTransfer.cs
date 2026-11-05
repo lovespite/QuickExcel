@@ -133,7 +133,7 @@ public sealed class PasteVisibleCellsCommand(ExternalClipboardRegion source, She
         }
         var styled = new WorkbookSnapshot(snapshot.DocumentId, snapshot.Revision, snapshot.DateSystem, snapshot.Sheets,
             snapshot.ScriptSource, styles, snapshot.ScriptModules, snapshot.FileState, snapshot.DefinedNames, snapshot.ActiveSheetId,
-            snapshot.Window, snapshot.TextCompatibilityVersion, snapshot.PackageFiles);
+            snapshot.Window, snapshot.TextCompatibilityVersion, snapshot.PackageFiles, snapshot.LocalStorage);
         var draft = new SetCellsCommand(edits).Prepare(styled);
         return draft.Changes.IsEmpty && !draft.StructureChanged ? new(snapshot, [], false) : draft;
     }

@@ -27,14 +27,14 @@ internal sealed partial class ScriptModelAdapter(ScriptActionRequest request, Ca
             if (method is null || arguments.ValueKind != JsonValueKind.Array || arguments.GetArrayLength() > 3)
                 throw new ProtocolException("Invalid model arguments.");
             var args = arguments.EnumerateArray().ToArray();
-            // Virtual-file snapshots are an internal transaction request, not an
-            // Office object-model member. Keep their zero-argument contract explicit;
-            // object-model calls use the generated capability whitelist.
-            if (!(method == "files" && args.Length == 0 || method == "errorCode" && args.Length == 2) && !ScriptCapabilities.Current.AllowsHost(method, args.Length))
+            // Files, storage and error utilities are internal host extensions with explicit
+            // arities; Office object-model calls use the generated capability whitelist.
+            if (!(method == "files" && args.Length == 0 || method == "errorCode" && args.Length == 2 || StorageCall(method, args.Length)) && !ScriptCapabilities.Current.AllowsHost(method, args.Length))
                 throw new ModelFailure("InvalidArgument", "未知的工作簿模型方法或参数个数。");
             var view = model.View;
             object? value;
-            if (method.StartsWith("getApi:", StringComparison.Ordinal) || method.StartsWith("setApi:", StringComparison.Ordinal))
+            if (StorageCall(method, args.Length)) value = CallStorage(method, args);
+            else if (method.StartsWith("getApi:", StringComparison.Ordinal) || method.StartsWith("setApi:", StringComparison.Ordinal))
                 value = CallApi(method, args);
             else if (method == "active")
             {
@@ -141,6 +141,7 @@ internal sealed partial class ScriptModelAdapter(ScriptActionRequest request, Ca
             if (IsWrite(method)) model.RejectWrite();
             var code = error switch
             {
+                ScriptStorageQuotaException => "BudgetExceeded",
                 KeyNotFoundException => "ItemNotFound",
                 NotSupportedException => "UnsupportedApi",
                 ArgumentException or FormatException or OverflowException => "InvalidArgument",

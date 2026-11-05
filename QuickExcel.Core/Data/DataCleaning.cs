@@ -53,7 +53,7 @@ public sealed class ApplyCleaningCommand(CleaningPreview preview, bool allowOver
         // Navigation may change while a modal preview is open. Replay only the reviewed edits
         // against that current view; never restore the preview's old navigation or window.
         var styled = new WorkbookSnapshot(snapshot.DocumentId, snapshot.Revision, snapshot.DateSystem, snapshot.Sheets, snapshot.ScriptSource,
-            preview.Result.Styles, snapshot.ScriptModules, snapshot.FileState, snapshot.DefinedNames, snapshot.ActiveSheetId, snapshot.Window, snapshot.TextCompatibilityVersion, snapshot.PackageFiles);
+            preview.Result.Styles, snapshot.ScriptModules, snapshot.FileState, snapshot.DefinedNames, snapshot.ActiveSheetId, snapshot.Window, snapshot.TextCompatibilityVersion, snapshot.PackageFiles, snapshot.LocalStorage);
         return new SetCellsCommand(preview.Changes.Select(c => new CellEdit(c.Address, c.After))).Prepare(styled);
     }
     internal static bool SameInputs(WorkbookSnapshot a, WorkbookSnapshot b) => ReferenceEquals(a, b) ||
@@ -271,7 +271,7 @@ public static class DataCleaning
         public CleaningPreview Finish(IEnumerable<CellAddress> overwrites)
         {
             var styled = new WorkbookSnapshot(book.DocumentId, book.Revision, book.DateSystem, book.Sheets, book.ScriptSource, _styles, book.ScriptModules,
-                book.FileState, book.DefinedNames, book.ActiveSheetId, book.Window, book.TextCompatibilityVersion, book.PackageFiles);
+                book.FileState, book.DefinedNames, book.ActiveSheetId, book.Window, book.TextCompatibilityVersion, book.PackageFiles, book.LocalStorage);
             var draft = new SetCellsCommand(_edits).Prepare(styled);
             if (draft.Changes.IsEmpty) draft = new(book, [], false);
             return new(book, draft, overwrites, [], Notices);

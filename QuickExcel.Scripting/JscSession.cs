@@ -89,6 +89,7 @@ public sealed partial class JscSession : IDisposable
             }
             /*EVENT_API*/
             /*WORKBOOK_MODEL*/
+            /*STORAGE*/
             /*MODULE_CONVENTIONS*/
             return freeze({
                 load(source) {
@@ -102,7 +103,7 @@ public sealed partial class JscSession : IDisposable
                     actionMode = useActions === true;
                     sharedMode = options.share === true;
                     automatic = options.automatic === true;
-                    if (automatic) host = freeze({ values: host.values, get files() { return fileContext(); } });
+                    if (automatic) host = freeze({ localStorage, sessionStorage, values: host.values, get files() { return fileContext(); } });
                     Object.defineProperty(globalThis, 'host', { value: host });
                     Object.defineProperty(globalThis, 'console', { value: console });
                     Object.defineProperty(globalThis, '__qxRegisterMain', {
@@ -163,6 +164,7 @@ public sealed partial class JscSession : IDisposable
         """.Replace("/*VIRTUAL_FILES*/", VirtualFileBootstrap, StringComparison.Ordinal)
             .Replace("/*EVENT_API*/", EventApiBootstrap, StringComparison.Ordinal)
             .Replace("/*WORKBOOK_MODEL*/", WorkbookModelBootstrap, StringComparison.Ordinal)
+            .Replace("/*STORAGE*/", StorageBootstrap, StringComparison.Ordinal)
             .Replace("/*MODULE_CONVENTIONS*/", ModuleConventionsBootstrap, StringComparison.Ordinal)
             .Replace("/*CAPABILITIES*/", JsonSerializer.Serialize(ScriptCapabilities.Current.Json), StringComparison.Ordinal);
 

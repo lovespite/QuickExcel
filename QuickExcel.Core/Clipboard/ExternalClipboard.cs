@@ -164,7 +164,7 @@ public sealed class PasteExternalCellsCommand(ExternalClipboardRegion source, Sh
         }
         var styled = new WorkbookSnapshot(snapshot.DocumentId, snapshot.Revision, snapshot.DateSystem, snapshot.Sheets,
             snapshot.ScriptSource, styles, snapshot.ScriptModules, snapshot.FileState, snapshot.DefinedNames, snapshot.ActiveSheetId,
-            snapshot.Window, snapshot.TextCompatibilityVersion, snapshot.PackageFiles);
+            snapshot.Window, snapshot.TextCompatibilityVersion, snapshot.PackageFiles, snapshot.LocalStorage);
         var copyMerges = mode is CellPasteMode.All or CellPasteMode.Formats && !scalarMerge &&
             !(allowPartial && mode != CellPasteMode.Formats && source.Cells.Any(c => c.MissingResult));
         var oldMerges = sheet.MergedCells.Select(CellRectangle.Parse).Where(m => ValidationSafety.Overlaps(m, output)).ToHashSet();
