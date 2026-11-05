@@ -93,5 +93,22 @@ public sealed partial class MainWindow
         CheckAnchor("Merged click uses the anchor's selection protection instead of the covered child's style");
         await History(false); await History(false);
         _grid.Select(new(0, 0));
+
+        foreach (var (first, last) in new[]
+        {
+            (new CellPosition(0, 0), new CellPosition(1, 2)),
+            (new CellPosition(1, 0), new CellPosition(0, 2))
+        })
+        {
+            await MergeAsync(remove: true);
+            var from = _grid.GetCellBounds(first)!.Value.Center;
+            var to = _grid.GetCellBounds(last)!.Value.Center;
+            Down(from); Move(to); Up(to);
+            check(_grid.Current == last, "The drag endpoint is active before merging");
+            await MergeAsync(remove: false);
+            CheckAnchor($"Merging a drag from {first} to {last} immediately targets the anchor");
+            check(_address.Text == "A1" && Document.Snapshot.GetSheet(id).View.ActiveCell == new CellPosition(0, 0) &&
+                _grid.SelectionRanges.Single() == new GridRange(0, 0, 1, 2), "Merge updates the active address and retains the full selection");
+        }
     }
 }

@@ -153,7 +153,12 @@ public sealed partial class MainWindow
     private async Task ClearFormatsAsync()
     { if (await CommitEditorsAsync()) await ExecuteAsync(new ClearCellFormatsCommand(VisibleAddresses())); }
     private async Task MergeAsync(bool remove)
-    { if (await CommitEditorsAsync()) await ExecuteAsync(new MergeCellsCommand(Document.Snapshot.ActiveSheetId, Rectangle(SelectedRange()), remove)); }
+    {
+        if (!await CommitEditorsAsync()) return;
+        var range = SelectedRange();
+        if (await ExecuteAsync(new MergeCellsCommand(Document.Snapshot.ActiveSheetId, Rectangle(range), remove)) && !remove)
+            _grid.Select(new(range.Top, range.Left));
+    }
     private async Task FormatBrushAsync()
     {
         if (!await CommitEditorsAsync()) return;
