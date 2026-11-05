@@ -105,14 +105,14 @@ public sealed partial class MainWindow
         _consoleLevel!.SelectedIndex = 2; await Layout();
         var warningRow = _consoleOutput!.GetVisualDescendants().OfType<Border>().Single(b => b.Tag is ScriptConsoleEntry { Level: ScriptConsoleLevel.Warning });
         var warningText = warningRow.GetVisualDescendants().OfType<SelectableTextBlock>().Single(); warningText.SelectAll();
-        check(_consoleVisibleEntries.Length == 1 && warningRow.Background is ISolidColorBrush { Color: var warningColor } && warningColor == Color.Parse("#FFFBE6") &&
-            warningText.Foreground is ISolidColorBrush { Color: var warningInk } && warningInk == Color.Parse("#7A4F00") && warningText.SelectedText == "缺少可选字段 {cell: A1}",
+        check(_consoleVisibleEntries.Length == 1 && warningRow.Background is ISolidColorBrush { Color: var warningColor } && warningColor == Color.Parse("#332B18") &&
+            warningText.Foreground is ISolidColorBrush { Color: var warningInk } && warningInk == Color.Parse("#FFD866") && warningText.SelectedText == "缺少可选字段 {cell: A1}",
             "Warning level filters actual rows, uses amber styling and keeps object output selectable");
         _consoleLevel.SelectedIndex = 3; await Layout();
         var errorRow = _consoleOutput!.GetVisualDescendants().OfType<Border>().Single(b => b.Tag is ScriptConsoleEntry { Level: ScriptConsoleLevel.Error });
-        check(_consoleVisibleEntries.Length == 1 && errorRow.Background is ISolidColorBrush { Color: var errorColor } && errorColor == Color.Parse("#FCE8E6") &&
-            errorRow.GetVisualDescendants().OfType<SelectableTextBlock>().Single().Foreground is ISolidColorBrush { Color: var errorInk } && errorInk == Color.Parse("#B3261E"),
-            "Error level filters actual rows and uses red foreground with pale red background");
+        check(_consoleVisibleEntries.Length == 1 && errorRow.Background is ISolidColorBrush { Color: var errorColor } && errorColor == Color.Parse("#3F2024") &&
+            errorRow.GetVisualDescendants().OfType<SelectableTextBlock>().Single().Foreground is ISolidColorBrush { Color: var errorInk } && errorInk == Color.Parse("#FF9B9B"),
+            "Error level filters actual rows and uses readable red text on a dark red background");
         check(_consoleCount!.Text!.Contains("1 错误  1 警告"), "Console toolbar counts errors and warnings without counting source text");
         _consoleFilter!.Text = "missing"; await Layout();
         check(_consoleVisibleEntries.Length == 0 && _consoleEmpty!.IsVisible && !_consoleCopy!.IsEnabled, "Empty filters show a clear empty state and disable copying");
@@ -127,7 +127,11 @@ public sealed partial class MainWindow
         }
         finally { _clipboard = clipboard; }
         _consoleFilter.Text = ""; _consoleInput.Text = "workbook.getWorksheets";
+        _consoleInput.Focus(); await Layout();
         await Capture("console-styled");
+        _consoleFilter.Text = "console"; _consoleFilter.Focus(); await Layout();
+        await Capture("console-filter-focused");
+        _consoleFilter.Text = ""; _consoleInput.Focus(); await Layout();
         // A wide navigation split must still leave room for the editor when the window shrinks.
         var workspace = (global::Avalonia.Controls.Grid)navigation.Parent!;
         workspace.ColumnDefinitions[0].Width = workspace.ColumnDefinitions[2].Width = new(1, GridUnitType.Star);

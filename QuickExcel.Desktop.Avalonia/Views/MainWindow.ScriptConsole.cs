@@ -30,10 +30,12 @@ public sealed partial class MainWindow
     private int _consoleHistoryIndex;
     private string _consolePendingInput = "";
     private long _consoleLastSequence = -1;
-    private static readonly IBrush ConsoleInk = Brush.Parse("#202124"), ConsoleMuted = Brush.Parse("#70757A"),
-        ConsoleLine = Brush.Parse("#E0E0E0"), ConsoleBlue = Brush.Parse("#1967D2"),
-        ConsoleWarningInk = Brush.Parse("#7A4F00"), ConsoleWarningBackground = Brush.Parse("#FFFBE6"),
-        ConsoleErrorInk = Brush.Parse("#B3261E"), ConsoleErrorBackground = Brush.Parse("#FCE8E6");
+    // The script workspace uses the dark Fluent theme, including focused/hovered input templates.
+    private static readonly IBrush ConsoleBackground = Brush.Parse("#1E1E1E"), ConsoleToolbar = Brush.Parse("#252526"),
+        ConsoleInk = Brush.Parse("#D4D4D4"), ConsoleMuted = Brush.Parse("#ABABAB"),
+        ConsoleLine = Brush.Parse("#3F3F46"), ConsoleBlue = Brush.Parse("#75BEFF"),
+        ConsoleWarningInk = Brush.Parse("#FFD866"), ConsoleWarningBackground = Brush.Parse("#332B18"),
+        ConsoleErrorInk = Brush.Parse("#FF9B9B"), ConsoleErrorBackground = Brush.Parse("#3F2024");
 
     private string ConsoleVisibleText => string.Join(Environment.NewLine, _consoleVisibleEntries.Select(e =>
         $"{e.Time.ToLocalTime():HH:mm:ss} {(e.Kind == "input" ? "> " : "")}{e.Text}"));
@@ -49,12 +51,13 @@ public sealed partial class MainWindow
         if (_consoleSession != Document.Session.SessionId)
         { _consoleSession = Document.Session.SessionId; _consoleHistory.Clear(); _consolePendingInput = ""; }
         _consoleHistoryIndex = _consoleHistory.Count; _consoleLastSequence = -1;
-        var panel = new LayoutGrid { RowDefinitions = new("Auto,*,Auto,Auto"), Background = Brushes.White };
+        var panel = new LayoutGrid { RowDefinitions = new("Auto,*,Auto,Auto"), Background = ConsoleBackground };
         var tools = new LayoutGrid { ColumnDefinitions = new("Auto,*,Auto,Auto"), Margin = new(6, 3) };
         var clear = ConsoleButton("⊘", UiText.Get("清空输出"));
         clear.Click += (_, _) => { Document.Session.ClearConsole(); RefreshScriptConsole(true); }; tools.Children.Add(clear);
         _consoleFilter = new TextBox { Height = 26, MinHeight = 0, Padding = new(7, 3), Margin = new(6, 0), FontSize = 12,
-            PlaceholderText = UiText.Get("过滤输出"), BorderBrush = ConsoleLine, Background = Brushes.White, Foreground = ConsoleInk };
+            PlaceholderText = UiText.Get("过滤输出"), PlaceholderForeground = Brushes.White,
+            BorderBrush = ConsoleLine, Background = ConsoleBackground, Foreground = ConsoleInk };
         AutomationProperties.SetName(_consoleFilter, UiText.Get("过滤控制台输出"));
         _consoleFilter.TextChanged += (_, _) => RefreshScriptConsole(true);
         LayoutGrid.SetColumn(_consoleFilter, 1); tools.Children.Add(_consoleFilter);
@@ -68,9 +71,9 @@ public sealed partial class MainWindow
         LayoutGrid.SetColumn(_consoleCopy, 3); tools.Children.Add(_consoleCopy);
         _consoleCount = new TextBlock { FontSize = 11, Foreground = ConsoleMuted, VerticalAlignment = VerticalAlignment.Center, Margin = new(8, 0) };
         var consoleToolbar = new StackPanel(); consoleToolbar.Children.Add(tools); consoleToolbar.Children.Add(_consoleCount);
-        panel.Children.Add(new Border { Background = Brush.Parse("#F3F3F3"), BorderBrush = ConsoleLine, BorderThickness = new(0, 1, 0, 1), Child = consoleToolbar });
+        panel.Children.Add(new Border { Background = ConsoleToolbar, BorderBrush = ConsoleLine, BorderThickness = new(0, 1, 0, 1), Child = consoleToolbar });
 
-        _consoleOutput = new ListBox { BorderThickness = new(0), Padding = new(0), Background = Brushes.White,
+        _consoleOutput = new ListBox { BorderThickness = new(0), Padding = new(0), Background = ConsoleBackground,
             ItemTemplate = new FuncDataTemplate<ScriptConsoleEntry>((entry, _) => entry is null ? null : CreateConsoleRow(entry)) };
         _consoleOutput.Styles.Add(new Style(x => x.OfType<ListBoxItem>()) { Setters = {
             new Setter(TemplatedControl.PaddingProperty, new Thickness(0)), new Setter(Layoutable.MarginProperty, new Thickness(0)),
@@ -85,8 +88,9 @@ public sealed partial class MainWindow
         var inputArea = new LayoutGrid { ColumnDefinitions = new("26,*") };
         inputArea.Children.Add(new TextBlock { Text = "›", FontFamily = new("Consolas"), FontSize = 20, Foreground = ConsoleBlue, Margin = new(8, 1) });
         _consoleInput = new CompositionTextBox { AcceptsReturn = true, Height = 54, MinHeight = 0, FontFamily = new("Consolas"), FontSize = 13,
-            Padding = new(2, 5), BorderThickness = new(0), Background = Brushes.White, Foreground = ConsoleInk,
-            PlaceholderText = UiText.Get("输入 JavaScript 表达式或代码…"), MaxLength = DocumentSession.MaxConsoleSourceBytes };
+            Padding = new(2, 5), BorderThickness = new(0), Background = ConsoleBackground, Foreground = ConsoleInk,
+            PlaceholderText = UiText.Get("输入 JavaScript 表达式或代码…"), PlaceholderForeground = Brushes.White,
+            MaxLength = DocumentSession.MaxConsoleSourceBytes };
         ToolTip.SetTip(_consoleInput, UiText.Get("Enter 执行，Ctrl+Enter 换行，↑↓ 浏览历史。可用 workbook 和 host；工作簿修改可撤销。"));
         AutomationProperties.SetName(_consoleInput, UiText.Get("调试控制台 JavaScript 输入"));
         _consoleInput.CompositionChanged += () => RefreshScriptConsole();
@@ -95,7 +99,7 @@ public sealed partial class MainWindow
         LayoutGrid.SetColumn(_consoleInput, 1); inputArea.Children.Add(_consoleInput);
         var inputBorder = new Border { BorderBrush = ConsoleLine, BorderThickness = new(0, 1, 0, 0), Child = inputArea };
         LayoutGrid.SetRow(inputBorder, 2); panel.Children.Add(inputBorder);
-        var footer = new DockPanel { Background = Brush.Parse("#F8F9FA"), LastChildFill = true };
+        var footer = new DockPanel { Background = ConsoleToolbar, LastChildFill = true };
         var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 2, Margin = new(4, 0) };
         _consoleRun = ConsoleButton(UiText.Get("▶ 执行"), UiText.Get("执行控制台代码（Enter）"));
         _consoleRun.Foreground = ConsoleBlue; _consoleRun.Click += async (_, _) => await PerformAsync(RunConsoleAsync); actions.Children.Add(_consoleRun);
@@ -103,7 +107,7 @@ public sealed partial class MainWindow
         footer.Children.Add(new TextBlock { Text = UiText.Get("JavaScript  ·  Enter 执行  ·  Ctrl+Enter 换行  ·  ↑↓ 历史"), FontSize = 11, Foreground = ConsoleMuted,
             VerticalAlignment = VerticalAlignment.Center, Margin = new(9, 0), TextWrapping = TextWrapping.Wrap });
         LayoutGrid.SetRow(footer, 3); panel.Children.Add(footer);
-        _scriptOutputTabs = new TabControl { Background = Brushes.White, Foreground = ConsoleInk, ItemsSource = new[] {
+        _scriptOutputTabs = new TabControl { Background = ConsoleBackground, Foreground = ConsoleInk, ItemsSource = new[] {
             new TabItem { Header = UiText.Get("控制台"), FontSize = 13, MinHeight = 30, Padding = new(10, 6), Content = panel },
             new TabItem { Header = UiText.Get("运行诊断"), FontSize = 13, MinHeight = 30, Padding = new(10, 6), Content = _scriptDiagnostics } } };
         _scriptOutputTabs.SelectionChanged += (_, _) => UpdateScriptConsoleToggle(_scriptOutputTabs.IsVisible && _scriptOutputTabs.SelectedIndex == 0);
@@ -121,11 +125,11 @@ public sealed partial class MainWindow
         {
             ScriptConsoleLevel.Warning => ("⚠", ConsoleWarningInk, ConsoleWarningBackground, UiText.Get("警告")),
             ScriptConsoleLevel.Error => ("⊗", ConsoleErrorInk, ConsoleErrorBackground, UiText.Get("错误")),
-            ScriptConsoleLevel.Input => ("›", ConsoleBlue, Brushes.White, UiText.Get("输入")),
-            ScriptConsoleLevel.Result => ("‹", ConsoleInk, Brushes.White, UiText.Get("结果")),
-            ScriptConsoleLevel.Debug => ("·", ConsoleMuted, Brushes.White, UiText.Get("调试")),
-            ScriptConsoleLevel.Info => ("i", ConsoleInk, Brushes.White, UiText.Get("信息")),
-            _ => ("", ConsoleInk, Brushes.White, UiText.Get("日志"))
+            ScriptConsoleLevel.Input => ("›", ConsoleBlue, ConsoleBackground, UiText.Get("输入")),
+            ScriptConsoleLevel.Result => ("‹", ConsoleInk, ConsoleBackground, UiText.Get("结果")),
+            ScriptConsoleLevel.Debug => ("·", ConsoleMuted, ConsoleBackground, UiText.Get("调试")),
+            ScriptConsoleLevel.Info => ("i", ConsoleInk, ConsoleBackground, UiText.Get("信息")),
+            _ => ("", ConsoleInk, ConsoleBackground, UiText.Get("日志"))
         };
         var line = new LayoutGrid { ColumnDefinitions = new("26,*,66"), Margin = new(0, 2) };
         line.Children.Add(new TextBlock { Text = icon, FontSize = 13, Foreground = ink, HorizontalAlignment = HorizontalAlignment.Center });

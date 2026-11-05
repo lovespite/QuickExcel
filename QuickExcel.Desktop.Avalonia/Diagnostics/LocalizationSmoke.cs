@@ -1,7 +1,9 @@
 using System.Globalization;
 using System.Text.Json;
 using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.VisualTree;
 using QuickExcel.Core;
 using QuickExcel.Domain;
 using QuickExcel.Storage;
@@ -54,9 +56,15 @@ public sealed partial class MainWindow
             _workspace.Editor.Execute(new UpdateScriptModulesCommand(new(new Dictionary<string, ScriptModule>
                 { ["main"] = new("scripts/main.js", source) }, ["main"], scriptApiVersion: 3)));
             await OpenScriptsAsync();
+            var scriptMenu = _scriptWindow!.GetVisualDescendants().OfType<Menu>().Single();
+            var editMenu = scriptMenu.Items.OfType<MenuItem>().Single(item => Equals(item.Header, english ? "Edit" : "编辑"));
+            Check(editMenu.Items.OfType<MenuItem>().Select(item => item.Header as string).SequenceEqual(english
+                ? new[] { "Undo", "Redo", "Suggest", "Parameter Hints", "Type Info", "Go to Definition", "Next Problem · F8", "Format Document" }
+                : new[] { "撤销", "重做", "补全", "参数提示", "类型提示", "转到定义", "下一问题 · F8", "格式化代码" }),
+                "The native script Edit menu follows the stored language");
             await CheckPage(_scriptPage!.Browser, english
-                ? "document.documentElement.lang === 'en-US' && document.querySelector('[data-action]').textContent === 'Suggest'"
-                : "document.documentElement.lang === 'zh-CN' && document.querySelector('[data-action]').textContent === '补全'",
+                ? "document.documentElement.lang === 'en-US' && document.getElementById('editor').getAttribute('aria-label') === 'Script editor'"
+                : "document.documentElement.lang === 'zh-CN' && document.getElementById('editor').getAttribute('aria-label') === '脚本编辑器'",
                 "The native Monaco page follows the stored language");
             Check(await CommitScriptsAsync() && Document.Snapshot.ScriptModules.Modules["main"].Source == source,
                 "Localization preserves script source");
