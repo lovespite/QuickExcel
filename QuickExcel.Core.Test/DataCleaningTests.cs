@@ -7,6 +7,26 @@ namespace QuickExcel.Core.Test;
 public sealed class DataCleaningTests
 {
     [Fact]
+    public void GeneralSplitRecognizesSafeNumbersAndYearFirstDatesAndKeepsOtherFieldsLiteral()
+    {
+        var sheet = Sheet("Data", (0, 0, T("001;007;02/01/2026;2026-01-02;1.234,5-;=1+1;1234567890123456;omit")));
+        var book = Book(sheet);
+        var formats = Enumerable.Repeat(CleaningColumnType.General, 8).ToArray();
+        formats[1] = CleaningColumnType.Text;
+        formats[7] = CleaningColumnType.Skip;
+        var preview = DataCleaning.SplitText(book, sheet.Id, new(0, 0, 0, 0), new(0, 1), new(";"), formats, new(',', '.'));
+        var result = preview.Result.Sheets[0];
+        Assert.Equal(CellValue.FromNumber(1), result.GetCell(0, 1)!.Value);
+        Assert.Equal(CellValue.FromText("007"), result.GetCell(0, 2)!.Value);
+        Assert.Equal(CellValue.FromText("02/01/2026"), result.GetCell(0, 3)!.Value);
+        Assert.Equal(CellValue.FromNumber(46024), result.GetCell(0, 4)!.Value);
+        Assert.Equal(CellValue.FromNumber(-1234.5), result.GetCell(0, 5)!.Value);
+        Assert.Equal(CellValue.FromText("=1+1"), result.GetCell(0, 6)!.Content.LiteralValue);
+        Assert.Equal(CellValue.FromText("1234567890123456"), result.GetCell(0, 7)!.Value);
+        Assert.Null(result.GetCell(0, 8));
+    }
+
+    [Fact]
     public void NavigationDoesNotExpirePreviewOrGetRewoundByCommit()
     {
         var sheet = Sheet("Data", (0, 0, T("001,2"))); using var session = new DocumentSession(Book(sheet));

@@ -45,6 +45,11 @@ internal sealed class BorderPreview : Control
     }
     internal static void DrawLine(DrawingContext context, BorderStroke stroke, Point a, Point b)
     {
+        if (stroke.Style is 1 or 3 or 4 or 5 or 6 or 9 or 11)
+        {
+            if (a.X == b.X) { a = a.WithX(a.X + .5); b = b.WithX(b.X + .5); }
+            else if (a.Y == b.Y) { a = a.WithY(a.Y + .5); b = b.WithY(b.Y + .5); }
+        }
         var width = BorderMetrics.Width(stroke.Style); var color = new SolidColorBrush(Color.Parse("#" + (stroke.Color ?? "FF000000")));
         var dashes = BorderMetrics.Dashes(stroke.Style);
         var pen = new Pen(color, width, dashes is null ? null : new DashStyle(dashes.Select(d => (double)d / width), 0));

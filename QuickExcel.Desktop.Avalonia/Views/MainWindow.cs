@@ -1,7 +1,6 @@
 using Avalonia;
 using Avalonia.Automation;
 using Avalonia.Controls;
-using Avalonia.Controls.Templates;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Layout;
@@ -92,6 +91,9 @@ public sealed partial class MainWindow : Window
             await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Background);
             if (Program.SelfCheckDirectory is { } evidence) { await RunSelfCheckAsync(evidence); return; }
 #if QUICKEXCEL_DIAGNOSTICS
+            if (Program.SmokeDirectory is { } sheetsDirectory && Program.SmokeMode == "sheets") { await RunSheetsSmokeAsync(sheetsDirectory); return; }
+            if (Program.SmokeDirectory is { } dataToolsDirectory && Program.SmokeMode == "data-tools") { await RunDataToolsSmokeAsync(dataToolsDirectory); return; }
+            if (Program.SmokeDirectory is { } borderDirectory && Program.SmokeMode == "borders") { await RunBorderSmokeAsync(borderDirectory); return; }
             if (Program.SmokeDirectory is { } numberDirectory && Program.SmokeMode == "number-format") { await RunNumberFormatSmokeAsync(numberDirectory); return; }
             if (Program.SmokeDirectory is { } menuDirectory && Program.SmokeMode == "menus") { await RunMenuSmokeAsync(menuDirectory); return; }
             if (Program.SmokeDirectory is { } colorDirectory && Program.SmokeMode == "colors") { await RunColorSmokeAsync(colorDirectory); return; }
@@ -132,7 +134,7 @@ public sealed partial class MainWindow : Window
         { Item("100%", () => ZoomAsync(100)), Item("125%", () => ZoomAsync(125)), Item("150%", () => ZoomAsync(150)),
           Item("标签在底部", () => PlaceSheets(SheetNavigationPlacement.Bottom)), Item("标签在左侧", () => PlaceSheets(SheetNavigationPlacement.Left)), Item("标签在右侧", () => PlaceSheets(SheetNavigationPlacement.Right)) } });
         var formulaRow = new DockPanel { Margin = new(8, 4) }; DockPanel.SetDock(_address, Dock.Left); formulaRow.Children.Add(_address); formulaRow.Children.Add(_formula);
-        DockPanel.SetDock(formulaRow, Dock.Top); _book.Children.Add(formulaRow); _book.Children.Add(_sheets); _book.Children.Add(_grid); ApplySheetPlacement();
+        DockPanel.SetDock(formulaRow, Dock.Top); _book.Children.Add(formulaRow); _book.Children.Add(BuildSheetStrip()); _book.Children.Add(_grid); ApplySheetPlacement();
         BuildHome();
         var content = new global::Avalonia.Controls.Grid(); content.Children.Add(_book); content.Children.Add(new ScrollViewer { Content = _start, HorizontalScrollBarVisibility = global::Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled });
         var root = new DockPanel(); DockPanel.SetDock(_menu, Dock.Top);
@@ -160,6 +162,7 @@ public sealed partial class MainWindow : Window
     private void Synchronize()
     {
         if (_synchronizing) return;
+        if (_sheetPress is { } press && !IsCurrentSheetPress(press)) EndSheetGesture();
         if (_filterContextCurrent?.Invoke() == false) CloseFilterPanel();
         if (_chartFilterContextCurrent?.Invoke() == false) CloseChartFilter();
         ObserveDocument();
@@ -175,10 +178,12 @@ public sealed partial class MainWindow : Window
             }
             else _grid.Refresh(Document.Snapshot);
             var items = Document.Snapshot.Sheets.Where(s => s.Visibility == SheetVisibility.Visible).Select(s => new SheetItem(s.Id, s.Name, s.TabColor)).ToArray();
-            _sheets.ItemsSource = items; _sheets.SelectedItem = items.FirstOrDefault(s => s.Id == Document.Snapshot.ActiveSheetId);
+            if (_sheets.ItemsSource is not SheetItem[] prior || !prior.SequenceEqual(items)) _sheets.ItemsSource = items;
+            _sheets.SelectedItem = items.FirstOrDefault(s => s.Id == Document.Snapshot.ActiveSheetId);
+            _addSheetButton.IsEnabled = Document.Snapshot.FileState?.FormulaReadOnly != true && Document.Snapshot.Sheets.Length < WorkbookLimits.MaxSheets;
         }
         finally { _synchronizing = false; }
-        UpdateFormula(); UpdateTitle(); UpdateRibbon(); UpdateValidation(); UpdateOutline(); QueueStatistics(); RefreshPrintStatus(); RefreshScriptConsole(); UpdatePivotStatus();
+        UpdateFormula(); UpdateTitle(); UpdateRibbon(); UpdateValidation(); QueueStatistics(); RefreshPrintStatus(); RefreshScriptConsole(); UpdatePivotStatus();
     }
     private void UpdateTitle()
     {
@@ -354,31 +359,12 @@ public sealed partial class MainWindow : Window
         if (!await CommitEditorsAsync()) return;
         var sheet = Document.AddSheet(); Document.Session.UpdateNavigation(sheet.Id, new(0, 0)); Synchronize();
     }
-    private async Task RenameSheetAsync()
-    {
-        if (!await CommitEditorsAsync()) return;
-        var sheet = Document.Snapshot.Sheets[SheetIndex]; var name = await Dialogs.Text(this, "重命名工作表", "工作表名称", sheet.Name);
-        if (name is not null) TryEdit(() => _workspace.Editor.Execute(new RenameSheetCommand(sheet.Id, name)));
-    }
-    private async Task DeleteSheetAsync()
-    {
-        if (!await CommitEditorsAsync()) return;
-        var sheet = Document.Snapshot.Sheets[SheetIndex];
-        if (await Dialogs.Confirm(this, "删除工作表", $"删除“{sheet.Name}”？引用此表的公式将变为 #REF!，可撤销。")) TryEdit(() => _workspace.Editor.Execute(new DeleteSheetCommand(sheet.Id)));
-    }
     private async Task ZoomAsync(int value, bool preserveDraft = false)
     {
         if (_grid.IsComposing || _formula.IsComposing || _grid.IsCommitPending || _formulaCommit is not null) return;
         if (preserveDraft || await CommitEditorsAsync()) TryEdit(() => _workspace.Editor.Execute(new SetSheetViewCommand(Document.Snapshot.ActiveSheetId, Document.Snapshot.Sheets[SheetIndex].View with { Zoom = value })));
     }
     private Task PlaceSheets(SheetNavigationPlacement placement) { _settings.Save(_settings.Value with { Sheets = placement }); ApplySheetPlacement(); return Task.CompletedTask; }
-    private void ApplySheetPlacement()
-    {
-        var placement = _settings.Value.Sheets; var vertical = placement != SheetNavigationPlacement.Bottom;
-        DockPanel.SetDock(_sheets, placement switch { SheetNavigationPlacement.Left => Dock.Left, SheetNavigationPlacement.Right => Dock.Right, _ => Dock.Bottom });
-        _sheets.Width = vertical ? 160 : double.NaN;
-        _sheets.ItemsPanel = new FuncTemplate<Panel?>(() => new StackPanel { Orientation = vertical ? Orientation.Vertical : Orientation.Horizontal });
-    }
     private async Task CalculateAsync()
     {
         if (!await CommitEditorsAsync()) return;
@@ -386,6 +372,7 @@ public sealed partial class MainWindow : Window
     }
     private async void Shortcuts(object? sender, KeyEventArgs e)
     {
+        if (e.Key == Key.Escape && _sheetPress is not null) { EndSheetGesture(); e.Handled = true; return; }
         if (_filterPopup?.IsOpen == true || _chartFilterPopup?.IsOpen == true) return;
         if (e.Handled || _grid.IsComposing || _formula.IsComposing) return;
         if (e.Key == Key.Escape && _calculationCancellation is not null) { _calculationCancellation.Cancel(); e.Handled = true; return; }
@@ -407,6 +394,9 @@ public sealed partial class MainWindow : Window
         { _clipboardCells = null; _status.Text = "已取消剪切。"; e.Handled = true; return; }
         if (e.Key == Key.Delete && !_grid.IsEditing && !_formula.IsKeyboardFocusWithin) { e.Handled = true; await PerformAsync(ClearAsync); return; }
         var command = e.KeyModifiers.HasFlag(KeyModifiers.Control) || e.KeyModifiers.HasFlag(KeyModifiers.Meta);
+        if (command && e.Key == Key.E && e.KeyModifiers is KeyModifiers.Control or KeyModifiers.Meta && !_grid.IsEditing && !_formula.IsKeyboardFocusWithin &&
+            (e.Source is not TextBox textInput || textInput == _grid.CellEditor))
+        { e.Handled = true; await PerformAsync(FlashFillAsync); return; }
         if (command && e.Key is Key.Z or Key.Y && (_grid.IsEditing || _formula.IsKeyboardFocusWithin || e.Source is TextBox box && box != _grid.CellEditor)) return;
         if (command && !_grid.IsEditing && !_formula.IsKeyboardFocusWithin && e.Key is Key.C or Key.X or Key.V or Key.D or Key.R)
         {

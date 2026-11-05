@@ -17,6 +17,7 @@ public sealed partial class WorkbookGrid
     private readonly record struct PictureKey(GridCellRange Range, double Width, double Height, bool Header = false);
     private readonly record struct Fragment(Rect Bounds, Rect Clip);
     private readonly Dictionary<PictureKey, SKPicture> _pictures = [];
+    private readonly Dictionary<GridCellRange, StyleDefinition> _borderStyles = [];
     private readonly Dictionary<SheetImage, SKBitmap?> _images = [];
     private readonly Dictionary<WorksheetChart, SKPicture> _charts = [];
     private long _pictureBytes, _imageBytes;
@@ -39,7 +40,7 @@ public sealed partial class WorkbookGrid
     {
         foreach (var picture in _pictures.Values) picture.Dispose();
         foreach (var chart in _charts.Values) chart.Dispose();
-        _pictures.Clear(); _charts.Clear(); _pictureBytes = 0;
+        _pictures.Clear(); _charts.Clear(); _borderStyles.Clear(); _pictureBytes = 0;
     }
     private void ClearScene()
     {
@@ -72,8 +73,9 @@ public sealed partial class WorkbookGrid
             foreach (var fragment in Fragments(range))
             {
                 var bounds = fragment.Bounds;
-                var borderStyle = CellBorderProjection.ForRange(new(range.Top, range.Left, range.Bottom, range.Right),
-                    (r, c) => ResolveStyle?.Invoke(_snapshot, Sheet, r, c) ?? _snapshot.Styles[Sheet.GetStyleId(r, c)]);
+                if (!_borderStyles.TryGetValue(range, out var borderStyle))
+                    _borderStyles[range] = borderStyle = CellBorderProjection.ForRange(new(range.Top, range.Left, range.Bottom, range.Right),
+                        (r, c) => ResolveStyle?.Invoke(_snapshot, Sheet, r, c) ?? TablePresentation.GetStyle(_snapshot, Sheet, r, c), Sheet);
                 borders.Add((bounds, fragment.Clip, borderStyle));
                 var key = new PictureKey(range, bounds.Width, bounds.Height);
                 if (!_pictures.TryGetValue(key, out var picture))
@@ -140,9 +142,10 @@ public sealed partial class WorkbookGrid
         }
         foreach (var col in columns) Header(-1, col.ModelIndex, new(HeaderWidth + col.Start, 0, col.Size, HeaderHeight),
             new(HeaderWidth + (col.Frozen ? 0 : _columns.FrozenSize), 0, col.Frozen ? _columns.FrozenSize : ViewWidth - _columns.FrozenSize, HeaderHeight), ColumnName(col.ModelIndex));
-        foreach (var row in rows) Header(row.ModelIndex, -1, new(0, HeaderHeight + row.Start, HeaderWidth, row.Size),
-            new(0, HeaderHeight + (row.Frozen ? 0 : _rows.FrozenSize), HeaderWidth, row.Frozen ? _rows.FrozenSize : ViewHeight - _rows.FrozenSize), (row.ModelIndex + 1).ToString());
+        foreach (var row in rows) Header(row.ModelIndex, -1, new(OutlineWidth, HeaderHeight + row.Start, 52, row.Size),
+            new(OutlineWidth, HeaderHeight + (row.Frozen ? 0 : _rows.FrozenSize), 52, row.Frozen ? _rows.FrozenSize : ViewHeight - _rows.FrozenSize), (row.ModelIndex + 1).ToString());
         Header(-1, -1, new(0, 0, HeaderWidth, HeaderHeight), new(0, 0, HeaderWidth, HeaderHeight), "");
+        PaintOutline(canvas);
         ContentRenderCount++; LastContentRenderMilliseconds = Stopwatch.GetElapsedTime(start).TotalMilliseconds;
         RenderingTrace?.Invoke("content-end", Stopwatch.GetTimestamp());
     }

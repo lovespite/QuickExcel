@@ -20,7 +20,7 @@ public sealed class PrintJob
     {
         Book = book; Sheet = outputSheet; FileName = Path.GetFileName(file); Timestamp = timestamp;
         Warnings = Array.AsReadOnly(warnings.Distinct().ToArray());
-        _style = style ?? ((b, s, r, c) => b.Styles[s.GetStyleId(r, c)]);
+        _style = style ?? TablePresentation.GetStyle;
         _visual = visual;
         Layout = PrintingLayout.Create(outputSheet, cancellationToken);
     }

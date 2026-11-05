@@ -12,6 +12,7 @@ internal sealed class FieldsDialog : Window
 {
     private readonly StackPanel _fields = new() { Spacing = 10 };
     private readonly Dictionary<string, Control> _inputs = [];
+    private readonly StackPanel _buttons;
     private readonly TextBlock _error = new() { Foreground = Brushes.Firebrick, TextWrapping = TextWrapping.Wrap };
     public FieldsDialog(string title)
     {
@@ -19,13 +20,19 @@ internal sealed class FieldsDialog : Window
         WindowStartupLocation = WindowStartupLocation.CenterOwner; ShowInTaskbar = false;
         var panel = new StackPanel { Spacing = 14, Margin = new(20) };
         panel.Children.Add(new ScrollViewer { MaxHeight = 550, Content = _fields }); panel.Children.Add(_error);
-        var buttons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10, HorizontalAlignment = HorizontalAlignment.Right };
+        var buttons = _buttons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10, HorizontalAlignment = HorizontalAlignment.Right };
         var ok = new Button { Content = "确定", IsDefault = true }; var cancel = new Button { Content = "取消", IsCancel = true };
         ok.Click += (_, _) => { try { Validate?.Invoke(); Close(true); } catch (Exception ex) { _error.Text = ex.Message; } };
         cancel.Click += (_, _) => Close(false); buttons.Children.Add(ok); buttons.Children.Add(cancel); panel.Children.Add(buttons); Content = panel;
         Opened += (_, _) => _inputs.Values.FirstOrDefault()?.Focus();
     }
     public Action? Validate { get; set; }
+    public FieldsDialog Alternative(string label, Action action)
+    {
+        var button = new Button { Content = label };
+        button.Click += (_, _) => { action(); Close(true); };
+        _buttons.Children.Insert(0, button); return this;
+    }
     public FieldsDialog Note(string text) { _fields.Children.Add(new TextBlock { Text = text, TextWrapping = TextWrapping.Wrap }); return this; }
     public FieldsDialog Preview(Control preview) { _fields.Children.Add(preview); return this; }
     private void Add(string key, string label, Control input)

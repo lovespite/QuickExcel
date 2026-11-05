@@ -57,6 +57,7 @@ E1 七项实现及各自真实 Excel 对照已完成；[行列样式优先级](2
 | [SkiaSharp 引入方案](59-skia-rendering-and-pdf-plan.md) | 原始跨平台渲染、PDF 生成/预览、分阶段迁移方案；P0–P4 已实施 |
 | [Skia 实施记录](60-skia-rendering-and-pdf-implementation.md) | 实际架构/预算/依赖、Windows/Linux 输出、原有性能预算、候选包证据与外部门禁 |
 | [分组与分类汇总](56-outline-and-subtotals.md) | E3 收尾：outline、SUBTOTAL、预览生成、真实 Excel 验收及混合状态边界 |
+| [数据工具与树形分类汇总](80-data-tools-and-outline-tree.md) | Ctrl+E、模拟分析、预测、分类汇总选项和网格左侧树形大纲 |
 | [XLSX / Excel 对齐专项](26-excel-compatibility-roadmap.md) | 当前重点工程的阶段、优先级、支持维度及完成清单 |
 | [XLSX 兼容基线](27-xlsx-compatibility-baseline.md) | 当前特性矩阵、样本台账、独立比较工具、首轮缺陷与证据 |
 | [XLSX 兼容诊断](28-xlsx-compatibility-diagnostics.md) | 分级报告、未知函数与旧缓存、拒绝定位及保存保护证据 |

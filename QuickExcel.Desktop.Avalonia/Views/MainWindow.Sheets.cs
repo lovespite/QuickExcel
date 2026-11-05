@@ -25,10 +25,14 @@ public sealed partial class MainWindow
             ("隐藏工作表", HideSheetAsync), ("取消隐藏", UnhideSheetAsync), ("保护工作表", ProtectSheetAsync)
         }) sheet.Items.Add(CommandMenu(name, action));
         sheet.Items.Add(SheetColorMenu());
+        sheet.Items.Add(new Separator());
+        sheet.Items.Add(CommandMenu("工作表管理器", ShowSheetManagerAsync));
         var context = new ContextMenu();
-        foreach (var (name, action) in new (string, Func<Task>)[] { ("重命名", RenameSheetAsync), ("复制", CopySheetAsync), ("向前移动", () => MoveSheetAsync(-1)), ("向后移动", () => MoveSheetAsync(1)), ("隐藏", HideSheetAsync), ("取消隐藏", UnhideSheetAsync), ("删除", DeleteSheetAsync) })
+        foreach (var (name, action) in new (string, Func<Task>)[] { ("新建工作表", AddSheetAsync), ("重命名", RenameSheetAsync), ("复制", CopySheetAsync), ("向前移动", () => MoveSheetAsync(-1)), ("向后移动", () => MoveSheetAsync(1)), ("隐藏", HideSheetAsync), ("取消隐藏", UnhideSheetAsync), ("删除", DeleteSheetAsync) })
             context.Items.Add(CommandMenu(name, action));
         context.Items.Add(SheetColorMenu());
+        context.Items.Add(new Separator());
+        context.Items.Add(CommandMenu("工作表管理器", ShowSheetManagerAsync));
         _sheets.ContextMenu = context;
         _sheets.Styles.Add(new Style(s => s.OfType<ListBoxItem>()) { Setters =
         {
@@ -87,21 +91,50 @@ public sealed partial class MainWindow
         if (await CommitEditorsAsync())
             await ExecuteAsync(new SetSheetTabColorCommand(Document.Snapshot.ActiveSheetId, color));
     }
-    private async Task CustomSheetTabColorAsync()
+    private Task CustomSheetTabColorAsync() => CustomSheetTabColorAsync(this, Document.Snapshot.ActiveSheetId);
+    private async Task CustomSheetTabColorAsync(Window owner, SheetId target)
     {
         if (!await CommitEditorsAsync()) return;
-        var snapshot = Document.Snapshot; var sheet = snapshot.GetSheet(snapshot.ActiveSheetId);
-        var color = await new CustomColorDialog(sheet.TabColor, "自定义标签颜色").ShowAsync(this);
+        var snapshot = Document.Snapshot; var sheet = snapshot.GetSheet(target);
+        var color = await new CustomColorDialog(sheet.TabColor, "自定义标签颜色").ShowAsync(owner);
         if (color is not null) await ExecuteAsync(new SetSheetTabColorCommand(sheet.Id, color), snapshot.Revision);
     }
-    private async Task CopySheetAsync()
+    private Task RenameSheetAsync() => RenameSheetAsync(this, Document.Snapshot.ActiveSheetId);
+    private async Task RenameSheetAsync(Window owner, SheetId target)
     {
         if (!await CommitEditorsAsync()) return;
-        var snapshot = Document.Snapshot; var sheet = snapshot.Sheets[SheetIndex]; var index = SheetIndex;
-        var stem = sheet.Name[..Math.Min(24, sheet.Name.Length)]; var suffix = 2;
-        while (snapshot.Sheets.Any(s => s.Name.Equals($"{stem} ({suffix})", StringComparison.OrdinalIgnoreCase))) suffix++;
-        var name = await Dialogs.Text(this, "复制工作表", "新工作表名称", $"{stem} ({suffix})");
-        if (name is not null) await ExecuteAsync(new CopySheetCommand(sheet.Id, name, index + 1), snapshot.Revision);
+        var snapshot = Document.Snapshot; var sheet = snapshot.GetSheet(target);
+        var name = await Dialogs.Text(owner, "重命名工作表", "工作表名称", sheet.Name);
+        if (name is not null) await ExecuteAsync(new RenameSheetCommand(target, name), snapshot.Revision);
+    }
+    private Task DeleteSheetAsync() => DeleteSheetAsync(this, Document.Snapshot.ActiveSheetId);
+    private async Task DeleteSheetAsync(Window owner, SheetId target)
+    {
+        if (!await CommitEditorsAsync()) return;
+        var snapshot = Document.Snapshot; var sheet = snapshot.GetSheet(target);
+        if (await Dialogs.Confirm(owner, "删除工作表", $"删除“{sheet.Name}”？引用此表的公式将变为 #REF!，可撤销。"))
+            await ExecuteAsync(new DeleteSheetCommand(target), snapshot.Revision);
+    }
+    private Task CopySheetAsync() => CopySheetAsync(this, Document.Snapshot.ActiveSheetId);
+    private async Task<SheetId?> CopySheetAsync(Window owner, SheetId target)
+    {
+        if (!await CommitEditorsAsync()) return null;
+        var snapshot = Document.Snapshot; var sheet = snapshot.GetSheet(target);
+        var name = await Dialogs.Text(owner, "复制工作表", "新工作表名称", NextCopyName(snapshot, sheet.Name));
+        if (name is null) return null;
+        var copy = new CopySheetCommand(target, name, snapshot.Sheets.IndexOf(sheet) + 1);
+        return await ExecuteAsync(copy, snapshot.Revision) ? copy.Id : null;
+    }
+    private static string NextCopyName(WorkbookSnapshot snapshot, string name)
+    {
+        for (int i = 2; ; i++)
+        {
+            var suffix = $" ({i})";
+            var length = Math.Min(name.Length, WorkbookLimits.MaxSheetNameLength - suffix.Length);
+            if (char.IsHighSurrogate(name[length - 1])) length--;
+            var candidate = name[..length] + suffix;
+            if (!snapshot.Sheets.Any(s => s.Name.Equals(candidate, StringComparison.OrdinalIgnoreCase))) return candidate;
+        }
     }
     private async Task MoveSheetAsync(int direction)
     {
@@ -160,10 +193,11 @@ public sealed partial class MainWindow
         await ExecuteAsync(new SetAxisMetadataCommand(Document.Snapshot.ActiveSheetId, row ? SheetAxis.Row : SheetAxis.Column,
             all ? 0 : row ? range.Top : range.Left, all ? row ? WorkbookLimits.MaxRows : WorkbookLimits.MaxColumns : row ? range.Rows : range.Columns, hidden: dialog.Index("action") == 0), revision);
     }
-    private async Task ProtectSheetAsync()
+    private Task ProtectSheetAsync() => ProtectSheetAsync(this, Document.Snapshot.ActiveSheetId);
+    private async Task ProtectSheetAsync(Window owner, SheetId target)
     {
         if (!await CommitEditorsAsync()) return;
-        var snapshot = Document.Snapshot; var sheet = snapshot.Sheets[SheetIndex]; var protection = sheet.Data.Protection;
+        var snapshot = Document.Snapshot; var sheet = snapshot.GetSheet(target); var protection = sheet.Data.Protection;
         if (protection?.HasPassword == true) throw new NotSupportedException("此工作表带密码保护，请在 Excel 中取消保护后再修改保护设置。");
         var previous = protection ?? new WorksheetProtection();
         var dialog = new FieldsDialog("保护工作表").Note("工作表保护限制编辑操作，不加密文件。")
@@ -173,7 +207,7 @@ public sealed partial class MainWindow
             .Check("insertRows", "允许插入行", !previous.InsertRows).Check("insertColumns", "允许插入列", !previous.InsertColumns)
             .Check("deleteRows", "允许删除行", !previous.DeleteRows).Check("deleteColumns", "允许删除列", !previous.DeleteColumns)
             .Check("objects", "允许编辑对象和批注", !previous.Objects).Check("sort", "允许排序", !previous.Sort).Check("filter", "允许筛选", !previous.AutoFilter);
-        if (await dialog.ShowAsync(this)) await ExecuteAsync(new SetProtectionCommand(sheet.Id, !dialog.Boolean("enabled") ? null : previous with
+        if (await dialog.ShowAsync(owner)) await ExecuteAsync(new SetProtectionCommand(sheet.Id, !dialog.Boolean("enabled") ? null : previous with
         {
             SelectLockedCells = !dialog.Boolean("locked"), SelectUnlockedCells = !dialog.Boolean("unlocked"), FormatCells = !dialog.Boolean("format"),
             FormatRows = !dialog.Boolean("rows"), FormatColumns = !dialog.Boolean("columns"), Sort = !dialog.Boolean("sort"), AutoFilter = !dialog.Boolean("filter"),

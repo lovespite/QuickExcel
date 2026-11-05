@@ -68,6 +68,24 @@ internal static class CleaningText
     {
         if (text.Length == 0) return (CellValue.Blank, 0, null);
         if (type == CleaningColumnType.Text) return (CellValue.FromText(text), 49, null);
+        if (type == CleaningColumnType.General)
+        {
+            options.Validate();
+            var candidate = text.AsSpan().Trim();
+            if (!candidate.IsEmpty && (char.IsAsciiDigit(candidate[0]) || candidate[0] is '+' or '-' or '.' or ','))
+            {
+                var yearFirst = candidate.Length >= 8 && candidate[4] is '-' or '/' or '.' && candidate[5..].Contains(candidate[4]);
+                try
+                {
+                    return Convert(text, yearFirst ? CleaningColumnType.DateYmd : CleaningColumnType.Number, options, system, notices);
+                }
+                catch (Exception ex) when (ex is ArgumentException or OverflowException)
+                {
+                    // General retains the original field when it cannot be represented safely.
+                }
+            }
+            return (CellValue.FromText(text), 0, null);
+        }
         if (type is CleaningColumnType.DateYmd or CleaningColumnType.DateMdy or CleaningColumnType.DateDmy)
         {
             var parts = text.Trim().Split(['-', '/', '.']); var yearIndex = type == CleaningColumnType.DateYmd ? 0 : 2;
@@ -87,9 +105,7 @@ internal static class CleaningText
             return (CellValue.FromNumber(serial), 0, "yyyy/m/d");
         }
         if (type != CleaningColumnType.Number) throw new ArgumentException("此输出类型不可转换。");
-        if (options.DecimalSeparator is not ('.' or ',') || options.GroupSeparator == options.DecimalSeparator ||
-            options.GroupSeparator is { } group && (char.IsDigit(group) || group is '+' or '-' or '%' or 'e' or 'E'))
-            throw new ArgumentException("小数点须为点或逗号，千分位符须不同且不能是数字、符号或指数标记。");
+        options.Validate();
         var value = text.Trim(); var percent = value.EndsWith('%'); if (percent) value = value[..^1];
         if (options.TrailingMinus && value.EndsWith('-')) value = "-" + value[..^1];
         var exponentIndex = value.IndexOfAny(['e', 'E']); var mantissa = exponentIndex < 0 ? value : value[..exponentIndex];
@@ -105,8 +121,8 @@ internal static class CleaningText
         }
         var digits = new string(mantissa.Where(c => c is >= '0' and <= '9').ToArray()).TrimStart('0');
         if (digits.Length > 15) throw new ArgumentException($"文本“{text}”超过 Excel 的 15 位有效输入精度；请保留文本 ID，整批转换未应用。");
-        if (Regex.IsMatch(integer.TrimStart('+', '-'), "^0[0-9]", RegexOptions.CultureInvariant))
-            notices.Add("已明确选择数值转换：部分文本的前导零将被移除；需要保留编号时请改选文本。");
+        if (options.DecimalSeparator != '.' && options.GroupSeparator != '.' && value.Contains('.'))
+            throw new ArgumentException($"“{text}”含未指定的小数点或千分位符。");
         var normalized = options.GroupSeparator is { } g ? value.Replace(g.ToString(), "") : value;
         normalized = normalized.Replace(options.DecimalSeparator, '.');
         if (!double.TryParse(normalized, NumberStyles.Float, CultureInfo.InvariantCulture, out var number) || !double.IsFinite(number))
@@ -114,6 +130,8 @@ internal static class CleaningText
         if (percent) number /= 100;
         if (number == 0 && digits.Any(c => c != '0') || number != 0 && Math.Abs(number) < 2.2250738585072014e-308)
             throw new ArgumentException($"数值“{text}”超出 Excel 可保留的最小数值范围；请保留文本。");
+        if (Regex.IsMatch(integer.TrimStart('+', '-'), "^0[0-9]", RegexOptions.CultureInvariant))
+            notices.Add("数值转换将移除前导零；需要保留编号时请改选文本。");
         if (percent) return (CellValue.FromNumber(number), digitsAfter == 0 ? 9 : 0, digitsAfter == 0 ? null : "0." + new string('0', Math.Min(15, digitsAfter)) + "%");
         if (exponentIndex >= 0) return (CellValue.FromNumber(number), 11, null);
         if (options.GroupSeparator is { } grouped && value.Contains(grouped))

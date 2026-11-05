@@ -79,6 +79,45 @@ public sealed class CellBorderTests
         session.Undo(); Assert.False(session.CanUndo); Assert.False(Style(session.Snapshot, 1, 1).Bold); Assert.Equal(0, Style(session.Snapshot, 3, 2).BottomBorder);
     }
 
+    [Fact]
+    public void SharedEdgeProjectsTheSameStrongestStrokeOnBothSides()
+    {
+        var sheet = Sheet("S"); using var session = new DocumentSession(Book(sheet));
+        session.Execute(new SetCellStyleCommand([new(sheet.Id, 1, 1)], new(RightBorder: 6, RightBorderColor: "FFFF0000")));
+        session.Execute(new SetCellStyleCommand([new(sheet.Id, 1, 2)], new(LeftBorder: 1, LeftBorderColor: "FF0000FF")));
+        var book = session.Snapshot; sheet = book.Sheets[0];
+        var left = TablePresentation.GetStyle(book, sheet, 1, 1); var right = TablePresentation.GetStyle(book, sheet, 1, 2);
+        Assert.Equal(6, left.RightBorder); Assert.Equal(left.RightBorder, right.LeftBorder); Assert.Equal(left.RightBorderColor, right.LeftBorderColor);
+    }
+
+    [Fact]
+    public void WholeSheetMergeProjectsSparsePerimeterWithoutEnumeratingAllRows()
+    {
+        var sheet = new WorksheetSnapshot(SheetId.New(), "Huge", cells: [new(new(100_000, 0), new(CellContent.FromLiteral(CellValue.Blank, 1)))], mergedCells: [new CellRectangle(0, 0, WorkbookLimits.MaxRows - 1, WorkbookLimits.MaxColumns - 1).ToString()]);
+        var book = new WorkbookSnapshot(Guid.NewGuid(), 0, ExcelDateSystem.Windows1900, [sheet], styles: [new(), new() { LeftBorder = 5 }]);
+        var reads = 0;
+        var result = CellBorderProjection.ForRange(new(0, 0, WorkbookLimits.MaxRows - 1, WorkbookLimits.MaxColumns - 1), (r, c) => { reads++; return Style(book, r, c); }, sheet);
+        Assert.Equal(5, result.LeftBorder); Assert.InRange(reads, 1, 20);
+    }
+
+    [Fact]
+    public void RemovingOneDiagonalPreservesTheOtherAndItsStroke()
+    {
+        var sheet = Sheet("S"); using var session = new DocumentSession(Book(sheet));
+        session.Execute(new SetCellBordersCommand([new(sheet.Id, 0, 0)], new(Diagonal: new(10, "FF0070C0"), DiagonalUp: true, DiagonalDown: true)));
+        session.Execute(new SetCellBordersCommand([new(sheet.Id, 0, 0)], new(DiagonalUp: false)));
+        var s = Style(session.Snapshot, 0, 0); Assert.False(s.DiagonalUp); Assert.True(s.DiagonalDown); Assert.Equal(10, s.DiagonalBorder); Assert.Equal("FF0070C0", s.DiagonalBorderColor);
+    }
+
+    [Fact]
+    public void ScriptWeightCannotSilentlyReplaceAnImportedDashDotWithSolid()
+    {
+        var sheet = Sheet("S"); using var session = new DocumentSession(Book(sheet));
+        session.Execute(new SetCellBordersCommand([new(sheet.Id, 0, 0)], new(Top: new(12)))); var before = session.Snapshot;
+        Assert.Throws<NotSupportedException>(() => session.Execute(new SetScriptBorderCommand(sheet.Id, new(0, 0, 0, 0), 0, null, null, 5)));
+        Assert.Same(before, session.Snapshot);
+    }
+
     [Theory]
     [InlineData("xlsx")]
     [InlineData("xlsq")]

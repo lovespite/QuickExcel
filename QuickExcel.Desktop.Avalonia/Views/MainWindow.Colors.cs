@@ -10,16 +10,17 @@ public sealed partial class MainWindow
 {
     private Border? _fontColorSwatch, _fillColorSwatch;
 
-    private Control[] ColorMenuItems(string resetLabel, Func<string?, Task> apply, Func<Task> custom)
+    private Control[] ColorMenuItems(string resetLabel, Func<string?, Task> apply, Func<Task> custom, Func<string, Func<Task>, MenuItem>? createItem = null)
     {
+        createItem ??= CommandMenu;
         var items = new List<Control>();
-        var reset = CommandMenu(resetLabel, () => apply(null)); reset.Icon = ColorPalette.Swatch(null); items.Add(reset);
+        var reset = createItem(resetLabel, () => apply(null)); reset.Icon = ColorPalette.Swatch(null); items.Add(reset);
         items.Add(new Separator());
         foreach (var (name, value) in ColorPalette.Common)
         {
-            var item = CommandMenu(name, () => apply(value)); item.Icon = ColorPalette.Swatch(value); items.Add(item);
+            var item = createItem(name, () => apply(value)); item.Icon = ColorPalette.Swatch(value); items.Add(item);
         }
-        items.Add(new Separator()); items.Add(CommandMenu("自定义颜色…", custom)); return items.ToArray();
+        items.Add(new Separator()); items.Add(createItem("自定义颜色…", custom)); return items.ToArray();
     }
 
     private DropDownButton RibbonColorDropdown(bool fill)

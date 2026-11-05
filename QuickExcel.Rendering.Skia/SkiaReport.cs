@@ -100,7 +100,7 @@ public sealed class SkiaReport : IDisposable
                 textUnits += input.Text.Text.Length;
                 if (textUnits > 2_000_000) throw new NotSupportedException("单页文字超过 2,000,000 字符渲染预算。");
                 var merge = _merges.FirstOrDefault(m => m.Top == row && m.Left == column);
-                if (merge != default) input = input with { Text = input.Text with { Style = CellBorderProjection.ForRange(merge, (r, c) => Job.Cell(r, c, rect).Text.Style) } };
+                if (merge != default) input = input with { Text = input.Text with { Style = CellBorderProjection.ForRange(merge, (r, c) => Job.Cell(r, c, rect).Text.Style, sheet) } };
                 borders.Add(input);
                 Renderer.DrawCell(canvas, input, borders: false, monochrome: monochrome, location: $"{sheet.Name}!R{row + 1}C{column + 1}");
             }

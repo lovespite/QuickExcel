@@ -94,3 +94,29 @@ public sealed class SetOutlineCollapsedCommand(SheetId sheetId, SheetAxis axis, 
         return new(WorksheetOutline.Replace(snapshot, sheet, rows.ToImmutable(), columns.ToImmutable(), sheet.Data.Outline ?? new()), [], true);
     }
 }
+
+/// <summary>Show only rows/columns above the chosen detail level, as one undoable outline operation.</summary>
+public sealed class ShowOutlineLevelCommand(SheetId sheetId, SheetAxis axis, int level) : DocumentCommand
+{
+    internal override CommandDraft Prepare(WorkbookSnapshot snapshot)
+    {
+        WorksheetOutline.RequireEditable(snapshot);
+        if (!Enum.IsDefined(axis) || level is < 1 or > 8) throw new ArgumentOutOfRangeException(nameof(level));
+        var sheet = snapshot.GetSheet(sheetId); var groups = WorksheetOutline.Groups(sheet, axis);
+        var rows = sheet.Rows.ToBuilder(); var columns = sheet.Columns.ToBuilder();
+        var covered = groups.SelectMany(g => Enumerable.Range(g.First, g.Last - g.First + 1)).Distinct().ToArray();
+        foreach (var i in covered)
+        {
+            if (axis == SheetAxis.Row) rows[i] = (rows.GetValueOrDefault(i) ?? new()) with { Hidden = (rows.GetValueOrDefault(i)?.OutlineLevel ?? 0) >= level };
+            else columns[i] = WorksheetOutline.Column(sheet, i) with { Hidden = (columns.GetValueOrDefault(i)?.OutlineLevel ?? 0) >= level };
+        }
+        var limit = axis == SheetAxis.Row ? WorkbookLimits.MaxRows : WorkbookLimits.MaxColumns;
+        foreach (var marker in groups.Where(g => g.Summary >= 0 && g.Summary < limit).GroupBy(g => g.Summary))
+        {
+            var collapsed = marker.Any(g => g.Level >= level);
+            if (axis == SheetAxis.Row) rows[marker.Key] = (rows.GetValueOrDefault(marker.Key) ?? new()) with { Collapsed = collapsed };
+            else columns[marker.Key] = WorksheetOutline.Column(sheet, marker.Key) with { Collapsed = collapsed };
+        }
+        return new(WorksheetOutline.Replace(snapshot, sheet, rows.ToImmutable(), columns.ToImmutable(), sheet.Data.Outline ?? new()), [], true);
+    }
+}

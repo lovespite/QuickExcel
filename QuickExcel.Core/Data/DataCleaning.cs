@@ -5,10 +5,25 @@ using QuickExcel.Formulas;
 
 namespace QuickExcel.Core;
 
-public enum CleaningColumnType { Text, Number, DateYmd, DateMdy, DateDmy, Skip }
+public enum CleaningColumnType { Text, Number, DateYmd, DateMdy, DateDmy, Skip, General }
 public sealed record TextSplitOptions(string Delimiters = ",", bool CollapseDelimiters = false, char? Qualifier = '"',
-    ImmutableArray<int> Breaks = default);
-public sealed record NumericTextOptions(char DecimalSeparator = '.', char? GroupSeparator = ',', bool TrailingMinus = true);
+    ImmutableArray<int> Breaks = default)
+{
+    public string[] SplitRow(string text, int sheetRow)
+    {
+        try { return CleaningText.Parse(text, this); }
+        catch (ArgumentException ex) { throw new ArgumentException($"第 {sheetRow + 1} 行：{ex.Message}", ex); }
+    }
+}
+public sealed record NumericTextOptions(char DecimalSeparator = '.', char? GroupSeparator = ',', bool TrailingMinus = true)
+{
+    public void Validate()
+    {
+        if (DecimalSeparator is not ('.' or ',') || GroupSeparator == DecimalSeparator ||
+            GroupSeparator is { } group && (char.IsDigit(group) || group is '+' or '-' or '%' or 'e' or 'E'))
+            throw new ArgumentException("小数点须为点或逗号，千分位符须不同且不能是数字、符号或指数标记。");
+    }
+}
 public sealed record CleaningCellPreview(CellAddress Address, CellContent? Before, CellContent After);
 
 /// <summary>An immutable, reviewable candidate. Commit cannot reinterpret newer inputs or expand its scope.</summary>
@@ -54,7 +69,7 @@ public sealed class ApplyCleaningCommand(CleaningPreview preview, bool allowOver
 public static class DataCleaning
 {
     public const int MaxCells = 20_000;
-    private static WorksheetSnapshot RequireRange(WorkbookSnapshot book, SheetId sheetId, CellRectangle range)
+    internal static WorksheetSnapshot RequireRange(WorkbookSnapshot book, SheetId sheetId, CellRectangle range)
     {
         if (book.FileState?.FormulaReadOnly == true) throw new InvalidOperationException(WorkbookFileState.FormulaReadOnlyMessage);
         WorkbookClipboard.ValidateRange(range); var sheet = book.GetSheet(sheetId);
@@ -175,14 +190,12 @@ public static class DataCleaning
         });
         return changed ? "=" + FormulaSyntax.Print(expression) : formula;
     }
-    public static CleaningPreview SplitText(WorkbookSnapshot book, SheetId sheetId, CellRectangle source, CellPosition destination,
-        TextSplitOptions options, IEnumerable<CleaningColumnType>? columnTypes = null, NumericTextOptions? numbers = null)
+    public static string[] ReadSplitSource(WorkbookSnapshot book, SheetId sheetId, CellRectangle source)
     {
         var sheet = RequireRange(book, sheetId, source);
         if (source.Left != source.Right) throw new ArgumentException("分列来源须为单列矩形。");
-        var types = (columnTypes ?? []).Take(257).ToArray();
-        if (types.Length > 256 || types.Any(t => !Enum.IsDefined(t))) throw new ArgumentException("分列类型列表最多 256 列。");
-        var parsed = new List<string[]>(); var maximum = 0; long characters = 0;
+        var rows = new string[source.Rows];
+        long characters = 0;
         for (var row = source.Top; row <= source.Bottom; row++)
         {
             var cell = sheet.GetCell(row, source.Left);
@@ -190,16 +203,26 @@ public static class DataCleaning
                 throw new InvalidOperationException($"第 {row + 1} 行不是普通文本；分列不隐式转换数值、日期或公式。");
             var text = cell?.Value.Kind == CellValueKind.Text ? cell.Value.TextValue : ""; characters += text.Length;
             if (characters > 4_000_000) throw new InvalidOperationException("分列来源超过 4,000,000 字符。");
-            var fields = CleaningText.Parse(text, options); parsed.Add(fields); maximum = Math.Max(maximum, fields.Length);
+            rows[row - source.Top] = text;
         }
-        if (maximum > 256) throw new InvalidOperationException("分列结果超过 256 列。");
+        return rows;
+    }
+    public static CleaningPreview SplitText(WorkbookSnapshot book, SheetId sheetId, CellRectangle source, CellPosition destination,
+        TextSplitOptions options, IEnumerable<CleaningColumnType>? columnTypes = null, NumericTextOptions? numbers = null)
+    {
+        var rows = ReadSplitSource(book, sheetId, source);
+        var sheet = book.GetSheet(sheetId);
+        var types = (columnTypes ?? []).Take(257).ToArray();
+        if (types.Length > 256 || types.Any(t => !Enum.IsDefined(t))) throw new ArgumentException("分列类型列表最多 256 列。");
+        var parsed = rows.Select((text, i) => options.SplitRow(text, source.Top + i)).ToArray();
+        var maximum = parsed.Max(row => row.Length);
         CleaningColumnType Type(int i) => i < types.Length ? types[i] : CleaningColumnType.Text;
         var count = Enumerable.Range(0, maximum).Count(i => Type(i) != CleaningColumnType.Skip);
         if (count == 0) throw new ArgumentException("至少保留一个输出列。");
-        var output = new CellRectangle(destination.Row, destination.Column, checked(destination.Row + parsed.Count - 1), checked(destination.Column + count - 1));
+        var output = new CellRectangle(destination.Row, destination.Column, checked(destination.Row + parsed.Length - 1), checked(destination.Column + count - 1));
         RequireRange(book, sheetId, output);
         var builder = new Builder(book, sheet); var overwrites = new List<CellAddress>();
-        for (var r = 0; r < parsed.Count; r++)
+        for (var r = 0; r < parsed.Length; r++)
         {
             var targetColumn = destination.Column;
             for (var c = 0; c < maximum; c++)

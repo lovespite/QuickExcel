@@ -20,7 +20,8 @@ namespace QuickExcel.Grid.Avalonia;
 /// <summary>A bounded visible-cell canvas, one native editor, and independent selection overlay.</summary>
 public sealed partial class WorkbookGrid : UserControl, IGridSurface, IDisposable
 {
-    private const double HeaderWidth = 52, HeaderHeight = 28;
+    private const double HeaderHeight = 28;
+    private double HeaderWidth => 52 + OutlineWidth;
     private readonly ViewportAxis _rows = new(), _columns = new();
     private readonly Canvas _canvas = new() { ClipToBounds = true };
     private readonly GridArtwork _artwork;
@@ -123,6 +124,8 @@ public sealed partial class WorkbookGrid : UserControl, IGridSurface, IDisposabl
     }
     private void Configure(int rows, int columns)
     {
+        _rowOutline = Sheet.Data.Outline?.ShowSymbols == false ? [] : WorksheetOutline.Groups(Sheet, SheetAxis.Row);
+        _outlineDepth = _rowOutline.Count == 0 ? 0 : _rowOutline.Max(g => g.Level);
         var view = new SheetViewState(); view.Synchronize(_snapshot!, Sheet.Id, _current); view.RefreshFilter(_snapshot!);
         var hiddenRows = Sheet.Rows.Where(p => p.Value.Hidden).Select(p => p.Key).ToHashSet();
         foreach (var filter in Sheet.Data.AllFilters)
@@ -255,7 +258,7 @@ public sealed partial class WorkbookGrid : UserControl, IGridSurface, IDisposabl
         var range = CellRange(position);
         return new(range.Top, range.Left);
     }
-    private void InvalidateContent() { _artwork.Release(); _artwork.InvalidateVisual(); _overlay.InvalidateVisual(); PositionChartControls(); }
+    private void InvalidateContent() { _artwork.Release(); _artwork.InvalidateVisual(); _overlay.InvalidateVisual(); PositionChartControls(); PositionOutlineControls(); }
     public static string ColumnName(int column)
     {
         var text = ""; for (column++; column > 0; column = (column - 1) / 26) text = (char)('A' + (column - 1) % 26) + text; return text;

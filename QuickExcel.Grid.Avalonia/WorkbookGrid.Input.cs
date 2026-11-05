@@ -65,7 +65,7 @@ public sealed partial class WorkbookGrid
         if (y < HeaderHeight && x >= HeaderWidth)
             foreach (var cell in _columns.Visible(ViewWidth))
                 if (Math.Abs(x - HeaderWidth - cell.Start - cell.Size) <= 4 / _zoom) return (SheetAxis.Column, cell.ModelIndex, cell.Size);
-        if (x < HeaderWidth && y >= HeaderHeight)
+        if (x >= OutlineWidth && x < HeaderWidth && y >= HeaderHeight)
             foreach (var cell in _rows.Visible(ViewHeight))
                 if (Math.Abs(y - HeaderHeight - cell.Start - cell.Size) <= 4 / _zoom) return (SheetAxis.Row, cell.ModelIndex, cell.Size);
         return null;
@@ -74,7 +74,7 @@ public sealed partial class WorkbookGrid
     {
         if (_snapshot is null) return null;
         var x = point.X / _zoom; var y = point.Y / _zoom;
-        if (x >= 0 && x < HeaderWidth && y >= HeaderHeight && _rows.HitTest(y - HeaderHeight, ViewHeight) is var row && row >= 0)
+        if (x >= OutlineWidth && x < HeaderWidth && y >= HeaderHeight && _rows.HitTest(y - HeaderHeight, ViewHeight) is var row && row >= 0)
             return (SheetAxis.Row, row);
         if (y >= 0 && y < HeaderHeight && x >= HeaderWidth && _columns.HitTest(x - HeaderWidth, ViewWidth) is var column && column >= 0)
             return (SheetAxis.Column, column);
@@ -94,6 +94,7 @@ public sealed partial class WorkbookGrid
         IsContextSelectionBlocked = false;
         if (_snapshot is null || IsComposing || _editing && CellEditor.IsPointerOver) return;
         var point = e.GetPosition(_canvas); var properties = e.GetCurrentPoint(_canvas).Properties;
+        if (point.X < OutlineWidth * _zoom) { e.Handled = true; return; }
         if (properties.IsRightButtonPressed)
         {
             if (!Commit() || !(BeforeSelection?.Invoke() ?? true)) { IsContextSelectionBlocked = true; return; }

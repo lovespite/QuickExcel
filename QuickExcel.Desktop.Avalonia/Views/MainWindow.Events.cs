@@ -21,7 +21,7 @@ public sealed partial class MainWindow
         _eventTimer.Tick += async (_, _) =>
         {
             if (_working || _execution.IsRunning || _workspace.IsBusy || _scriptCancellation is not null || _windowClosed || _closePending ||
-                _grid.IsEditing || _formulaDirty || _grid.IsComposing || _formula.IsComposing || _grid.IsSelectionDragging || !Document.Session.HasScriptEvents) return;
+                _grid.IsEditing || _formulaDirty || _grid.IsComposing || _formula.IsComposing || _grid.IsSelectionDragging || _sheetPress is not null || !Document.Session.HasScriptEvents) return;
             await PerformAsync(DispatchEventsAsync);
         };
         Closed += (_, _) => _eventTimer.Stop();

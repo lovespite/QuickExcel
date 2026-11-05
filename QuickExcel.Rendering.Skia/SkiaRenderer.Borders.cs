@@ -39,8 +39,16 @@ public sealed partial class SkiaRenderer
             // A skewed dash/dot pattern, with the same orientation on either side of a shared edge.
             SKPoint Along(float distance) => new(dx / length * distance, dy / length * distance);
             using var path = new SKPathBuilder();
-            for (float p = 0; p < length; p += 13)
+            // Large merged cells can extend far beyond the viewport. Keep the pattern phase,
+            // but only construct segments intersecting this canvas clip.
+            var clip = canvas.LocalClipBounds;
+            float Project(float x, float y) => ((x - from.X) * dx + (y - from.Y) * dy) / length;
+            var extent = new[] { Project(clip.Left, clip.Top), Project(clip.Right, clip.Top), Project(clip.Left, clip.Bottom), Project(clip.Right, clip.Bottom) };
+            var first = (long)Math.Max(0, Math.Floor((extent.Min() - 4) / 13));
+            var last = (long)Math.Ceiling(Math.Min(length, extent.Max() + 4) / 13);
+            for (var index = first; index <= last; index++)
             {
+                var p = index * 13f;
                 void Segment(float start, float end)
                 {
                     if (start >= length) return;

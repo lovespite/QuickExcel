@@ -16,7 +16,6 @@ public sealed partial class MainWindow
     private void InstallValidation()
     {
         DockPanel.SetDock(_validationPanel, Dock.Top); _validationPanel.Children.Add(_validationValues); _validationPanel.Children.Add(_validationHint); _book.Children.Insert(_book.Children.Count - 1, _validationPanel);
-        RibbonGroup("数据", "数据验证", RibbonButton("数据验证", EditValidationAsync), RibbonButton("清除验证", RemoveValidationAsync));
         _validationValues.DropDownOpened += (_, _) =>
         {
             try

@@ -79,8 +79,7 @@ internal static class TypedStyles
             package.Shape(font, "name sz color b i u strike family charset scheme", "", path);
             foreach (var item in font.Elements().Where(e => e.Name != Main + "color")) package.Shape(item, "", "val", path);
             package.Shape(fill, "patternFill", "", path);
-            package.Shape(border, "left right top bottom diagonal", "diagonalUp diagonalDown outline", path);
-            if (border.Attribute("outline") is { } outline) _ = Bool(outline.Value);
+            package.Shape(border, "left right top bottom diagonal", "diagonalUp diagonalDown", path);
             foreach (var side in border.Elements()) package.Shape(side, "color", "style", path);
             var pattern = fill.Element(Main + "patternFill");
             if (pattern is not null)

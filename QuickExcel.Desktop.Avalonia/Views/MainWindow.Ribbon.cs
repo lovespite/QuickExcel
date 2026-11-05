@@ -54,7 +54,7 @@ public sealed partial class MainWindow
         }
         if (name == "字体")
         {
-            body.Children.Clear(); body.Width = 236; body.ColumnDefinitions = new("*");
+            body.Children.Clear(); body.MinWidth = 236; body.ColumnDefinitions = new("*");
             var selectors = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4 };
             selectors.Children.Add(_font); selectors.Children.Add(_fontSize);
             body.Children.Add(selectors);

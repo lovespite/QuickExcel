@@ -48,7 +48,7 @@ public sealed class SetScriptBorderCommand(SheetId sheetId, CellRectangle range,
         for (var c = range.Left; c <= range.Right; c++)
         {
             var s = snapshot.Styles[sheet.GetStyleId(r, c)];
-            int? Apply(int old) => line ?? (weight.HasValue ? old is 3 or 4 or 6 ? throw new NotSupportedException("该线型不能独立保存粗细。") : weight : null);
+            int? Apply(int old) => line ?? (weight.HasValue ? old is 3 or 4 or 6 or >= 8 ? throw new NotSupportedException("该线型不能独立保存粗细。") : weight : null);
             var top = side == 0 && r == range.Top || side == 5 && r > range.Top;
             var bottom = side == 1 && r == range.Bottom || side == 5 && r < range.Bottom;
             var left = side == 2 && c == range.Left || side == 4 && c > range.Left;

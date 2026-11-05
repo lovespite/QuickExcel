@@ -37,7 +37,7 @@ internal sealed class NumberFormatDialog : Window
     {
         _original = style; _sample = sample.Kind == CellValueKind.Blank ? CellValue.FromNumber(1234.56) : sample; _dateSystem = dateSystem;
         _customCodes = new[] { NumberFormatOptions.Code(style) }.Concat(styles.Select(NumberFormatOptions.Code)).Concat(NumberFormatOptions.CustomCodes).Where(c => c.Length > 0).Distinct().ToArray();
-        Title = appearance ? "设置单元格格式" : "数字格式"; Width = 760; Height = 620; MinWidth = 650; MinHeight = 540;
+        Title = appearance ? "设置单元格格式" : "数字格式"; Width = 760; Height = 620; MinWidth = 650; MinHeight = appearance ? 620 : 540;
         WindowStartupLocation = WindowStartupLocation.CenterOwner; ShowInTaskbar = false;
         var root = new global::Avalonia.Controls.Grid { RowDefinitions = new("*,Auto,Auto"), Margin = new(20) };
         var body = new global::Avalonia.Controls.Grid { ColumnDefinitions = new("145,20,*") };

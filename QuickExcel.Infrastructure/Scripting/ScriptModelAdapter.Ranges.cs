@@ -129,8 +129,8 @@ internal sealed partial class ScriptModelAdapter
         string? Color(StyleDefinition s) => side switch { 0 => s.TopBorderColor, 1 => s.BottomBorderColor, 2 => s.LeftBorderColor, _ when side == 3 || side == 4 => s.RightBorderColor, _ => s.BottomBorderColor };
         if (!setter) return Uniform(sheet, selected, s => member switch
         {
-            "getColor" => Rgb(Color(s)), "getStyle" => Line(s) switch { 0 => 0, 3 => 2, 4 => 5, 6 => 6, _ => 1 },
-            "getWeight" => Line(s) switch { 7 => 0, 2 => 2, 5 => 3, _ => 1 }, _ => throw Unsupported(member)
+            "getColor" => Rgb(Color(s)), "getStyle" => Line(s) switch { 0 => 0, 3 or 8 => 2, 9 or 10 => 3, 11 or 12 => 4, 13 => 7, 4 => 5, 6 => 6, _ => 1 },
+            "getWeight" => Line(s) switch { 7 => 0, 2 or 8 or 10 or 12 or 13 => 2, 5 => 3, _ => 1 }, _ => throw Unsupported(member)
         });
         int? style = null; string? color = null; int? weight = null;
         if (member == "setColor") color = Argb(args[0]);
