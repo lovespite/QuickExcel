@@ -124,6 +124,7 @@ public sealed partial class MainWindow : Window
             if (Program.SmokeDirectory is { } featureDirectory && Program.SmokeMode == "ribbon-filter") { await RunRibbonFilterSmokeAsync(featureDirectory); return; }
             if (Program.SmokeDirectory is { } drawingDirectory && Program.SmokeMode == "drawing") { await RunDrawingSmokeAsync(drawingDirectory); return; }
             if (Program.SmokeDirectory is { } pageBreakDirectory && Program.SmokeMode == "page-break") { await RunPageBreakSmokeAsync(pageBreakDirectory); return; }
+            if (Program.SmokeDirectory is { } contentDirectory && Program.SmokeMode == "cell-content") { await RunCellContentSmokeAsync(contentDirectory); return; }
             if (Program.SmokeDirectory is { } auditDirectory && Program.SmokeMode == "formula-audit") { await RunFormulaAuditSmokeAsync(auditDirectory); return; }
             if (Program.SmokeDirectory is { } arithmeticDirectory && Program.SmokeMode == "arithmetic-paste") { await RunArithmeticPasteSmokeAsync(arithmeticDirectory); return; }
             if (Program.SmokeDirectory is { } advancedDirectory && Program.SmokeMode == "advanced-filters") { await RunAdvancedFiltersSmokeAsync(advancedDirectory); return; }

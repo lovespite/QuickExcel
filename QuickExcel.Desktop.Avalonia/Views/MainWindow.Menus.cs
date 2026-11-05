@@ -92,7 +92,7 @@ public sealed partial class MainWindow
                 Item(UiText.Get("合并单元格"), () => MergeAsync(false)), Item(UiText.Get("取消合并单元格"), () => MergeAsync(true)));
             Group(Submenu(UiText.Get("排序与筛选"), Item(UiText.Get("升序排序"), () => SortAsync(false)), Item(UiText.Get("降序排序"), () => SortAsync(true)), Item(UiText.Get("建立筛选"), EstablishFilterAsync), Item(UiText.Get("清除筛选条件"), ClearFiltersAsync)),
                 Submenu(UiText.Get("填充"), Item(UiText.Get("向下填充"), () => FillDirectionAsync(false)), Item(UiText.Get("向右填充"), () => FillDirectionAsync(true)), Item(UiText.Get("填充序列…"), SeriesAsync)),
-                Item(UiText.Get("批注…"), NoteAsync));
+                Item(UiText.Get("批注…"), NoteAsync), Item(UiText.Get("超链接…"), HyperlinkAsync), Item(UiText.Get("线程评论…"), ThreadCommentsAsync));
             Group(Item(UiText.Get("粘贴为可编辑图表（附带数据快照）"), () => PasteAsync("chart")), Item(UiText.Get("粘贴为图片"), () => PasteAsync("image")));
         }
         InstallPageBreakMenu(menu);
