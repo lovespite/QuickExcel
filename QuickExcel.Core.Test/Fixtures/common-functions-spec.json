@@ -64,6 +64,96 @@
       "formula": "=COLUMN(B2:D3)",
       "rows": 1,
       "columns": 3
+    },
+    {
+      "formula": "=IFS(TRUE,5,FALSE,1/0)",
+      "rows": 1,
+      "columns": 1
+    },
+    {
+      "formula": "=IFS(FALSE,1,TRUE,2)",
+      "rows": 1,
+      "columns": 1
+    },
+    {
+      "formula": "=IFS(FALSE,1)",
+      "rows": 1,
+      "columns": 1
+    },
+    {
+      "formula": "=IFS(\"TRUE\",3)",
+      "rows": 1,
+      "columns": 1
+    },
+    {
+      "formula": "=SWITCH(2,1,\"a\",2,\"b\",\"c\")",
+      "rows": 1,
+      "columns": 1
+    },
+    {
+      "formula": "=SWITCH(\"a\",\"A\",1,0)",
+      "rows": 1,
+      "columns": 1
+    },
+    {
+      "formula": "=SWITCH(1,\"1\",2,3)",
+      "rows": 1,
+      "columns": 1
+    },
+    {
+      "formula": "=SWITCH(2,1,4)",
+      "rows": 1,
+      "columns": 1
+    },
+    {
+      "formula": "=SWITCH(1,1,5,2,1/0)",
+      "rows": 1,
+      "columns": 1
+    },
+    {
+      "formula": "=SUMPRODUCT(2,3)",
+      "rows": 1,
+      "columns": 1
+    },
+    {
+      "formula": "=SUMPRODUCT(\"2\",3)",
+      "rows": 1,
+      "columns": 1
+    },
+    {
+      "formula": "=SUMPRODUCT(TRUE,3)",
+      "rows": 1,
+      "columns": 1
+    },
+    {
+      "formula": "=SUMPRODUCT(SEQUENCE(3),SEQUENCE(3,1,2))",
+      "rows": 1,
+      "columns": 1
+    },
+    {
+      "formula": "=SUMPRODUCT(SEQUENCE(3),SEQUENCE(2))",
+      "rows": 1,
+      "columns": 1
+    },
+    {
+      "formula": "=SUMPRODUCT(SEQUENCE(3)/0,SEQUENCE(3)*0)",
+      "rows": 1,
+      "columns": 1
+    },
+    {
+      "formula": "=IFS(SEQUENCE(3)>1,SEQUENCE(3)*10,TRUE,0)",
+      "rows": 3,
+      "columns": 1
+    },
+    {
+      "formula": "=SWITCH(SEQUENCE(3),1,10,2,20,0)",
+      "rows": 3,
+      "columns": 1
+    },
+    {
+      "formula": "=IFS(TRUE,1,FALSE,SEQUENCE(3))",
+      "rows": 1,
+      "columns": 1
     }
   ]
 }

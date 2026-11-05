@@ -1,4 +1,6 @@
 {
+  "specSha256": "DF82E8780E4A085B096BC53986EC1C77AF4ADFBC48554A597C4F909224091EFC",
+  "excelBuild": 20527.0,
   "cases": [
     {
       "values": [
@@ -7,9 +9,9 @@
           "kind": "Number"
         }
       ],
+      "columns": 1,
       "formula": "=ROW()",
-      "rows": 1,
-      "columns": 1
+      "rows": 1
     },
     {
       "values": [
@@ -18,9 +20,9 @@
           "kind": "Number"
         }
       ],
+      "columns": 1,
       "formula": "=COLUMN()",
-      "rows": 1,
-      "columns": 1
+      "rows": 1
     },
     {
       "values": [
@@ -29,9 +31,9 @@
           "kind": "Number"
         }
       ],
+      "columns": 1,
       "formula": "=ROW(D6)",
-      "rows": 1,
-      "columns": 1
+      "rows": 1
     },
     {
       "values": [
@@ -40,9 +42,9 @@
           "kind": "Number"
         }
       ],
+      "columns": 1,
       "formula": "=COLUMN(D6)",
-      "rows": 1,
-      "columns": 1
+      "rows": 1
     },
     {
       "values": [
@@ -51,9 +53,9 @@
           "kind": "Number"
         }
       ],
+      "columns": 1,
       "formula": "=ROWS(D6:E8)",
-      "rows": 1,
-      "columns": 1
+      "rows": 1
     },
     {
       "values": [
@@ -62,9 +64,9 @@
           "kind": "Number"
         }
       ],
+      "columns": 1,
       "formula": "=COLUMNS(D6:E8)",
-      "rows": 1,
-      "columns": 1
+      "rows": 1
     },
     {
       "values": [
@@ -73,9 +75,9 @@
           "kind": "Number"
         }
       ],
+      "columns": 1,
       "formula": "=ROWS(SEQUENCE(3,2))",
-      "rows": 1,
-      "columns": 1
+      "rows": 1
     },
     {
       "values": [
@@ -84,9 +86,9 @@
           "kind": "Number"
         }
       ],
+      "columns": 1,
       "formula": "=COLUMNS(SEQUENCE(3,2))",
-      "rows": 1,
-      "columns": 1
+      "rows": 1
     },
     {
       "values": [
@@ -95,9 +97,9 @@
           "kind": "Number"
         }
       ],
+      "columns": 1,
       "formula": "=ROWS(1)",
-      "rows": 1,
-      "columns": 1
+      "rows": 1
     },
     {
       "values": [
@@ -106,9 +108,9 @@
           "kind": "Number"
         }
       ],
+      "columns": 1,
       "formula": "=COLUMNS(\"text\")",
-      "rows": 1,
-      "columns": 1
+      "rows": 1
     },
     {
       "values": [
@@ -117,9 +119,9 @@
           "kind": "Error"
         }
       ],
+      "columns": 1,
       "formula": "=ROWS(#N/A)",
-      "rows": 1,
-      "columns": 1
+      "rows": 1
     },
     {
       "values": [
@@ -136,9 +138,9 @@
           "kind": "Number"
         }
       ],
+      "columns": 1,
       "formula": "=ROW(B2:D4)",
-      "rows": 3,
-      "columns": 1
+      "rows": 3
     },
     {
       "values": [
@@ -155,12 +157,224 @@
           "kind": "Number"
         }
       ],
+      "columns": 3,
       "formula": "=COLUMN(B2:D3)",
-      "rows": 1,
-      "columns": 3
+      "rows": 1
+    },
+    {
+      "values": [
+        {
+          "value": 5.0,
+          "kind": "Number"
+        }
+      ],
+      "columns": 1,
+      "formula": "=IFS(TRUE,5,FALSE,1/0)",
+      "rows": 1
+    },
+    {
+      "values": [
+        {
+          "value": 2.0,
+          "kind": "Number"
+        }
+      ],
+      "columns": 1,
+      "formula": "=IFS(FALSE,1,TRUE,2)",
+      "rows": 1
+    },
+    {
+      "values": [
+        {
+          "value": "#N/A",
+          "kind": "Error"
+        }
+      ],
+      "columns": 1,
+      "formula": "=IFS(FALSE,1)",
+      "rows": 1
+    },
+    {
+      "values": [
+        {
+          "value": 3.0,
+          "kind": "Number"
+        }
+      ],
+      "columns": 1,
+      "formula": "=IFS(\"TRUE\",3)",
+      "rows": 1
+    },
+    {
+      "values": [
+        {
+          "value": "b",
+          "kind": "Text"
+        }
+      ],
+      "columns": 1,
+      "formula": "=SWITCH(2,1,\"a\",2,\"b\",\"c\")",
+      "rows": 1
+    },
+    {
+      "values": [
+        {
+          "value": 1.0,
+          "kind": "Number"
+        }
+      ],
+      "columns": 1,
+      "formula": "=SWITCH(\"a\",\"A\",1,0)",
+      "rows": 1
+    },
+    {
+      "values": [
+        {
+          "value": 3.0,
+          "kind": "Number"
+        }
+      ],
+      "columns": 1,
+      "formula": "=SWITCH(1,\"1\",2,3)",
+      "rows": 1
+    },
+    {
+      "values": [
+        {
+          "value": "#N/A",
+          "kind": "Error"
+        }
+      ],
+      "columns": 1,
+      "formula": "=SWITCH(2,1,4)",
+      "rows": 1
+    },
+    {
+      "values": [
+        {
+          "value": 5.0,
+          "kind": "Number"
+        }
+      ],
+      "columns": 1,
+      "formula": "=SWITCH(1,1,5,2,1/0)",
+      "rows": 1
+    },
+    {
+      "values": [
+        {
+          "value": 6.0,
+          "kind": "Number"
+        }
+      ],
+      "columns": 1,
+      "formula": "=SUMPRODUCT(2,3)",
+      "rows": 1
+    },
+    {
+      "values": [
+        {
+          "value": 0.0,
+          "kind": "Number"
+        }
+      ],
+      "columns": 1,
+      "formula": "=SUMPRODUCT(\"2\",3)",
+      "rows": 1
+    },
+    {
+      "values": [
+        {
+          "value": 0.0,
+          "kind": "Number"
+        }
+      ],
+      "columns": 1,
+      "formula": "=SUMPRODUCT(TRUE,3)",
+      "rows": 1
+    },
+    {
+      "values": [
+        {
+          "value": 20.0,
+          "kind": "Number"
+        }
+      ],
+      "columns": 1,
+      "formula": "=SUMPRODUCT(SEQUENCE(3),SEQUENCE(3,1,2))",
+      "rows": 1
+    },
+    {
+      "values": [
+        {
+          "value": "#VALUE!",
+          "kind": "Error"
+        }
+      ],
+      "columns": 1,
+      "formula": "=SUMPRODUCT(SEQUENCE(3),SEQUENCE(2))",
+      "rows": 1
+    },
+    {
+      "values": [
+        {
+          "value": "#DIV/0!",
+          "kind": "Error"
+        }
+      ],
+      "columns": 1,
+      "formula": "=SUMPRODUCT(SEQUENCE(3)/0,SEQUENCE(3)*0)",
+      "rows": 1
+    },
+    {
+      "values": [
+        {
+          "value": 0.0,
+          "kind": "Number"
+        },
+        {
+          "value": 20.0,
+          "kind": "Number"
+        },
+        {
+          "value": 30.0,
+          "kind": "Number"
+        }
+      ],
+      "columns": 1,
+      "formula": "=IFS(SEQUENCE(3)>1,SEQUENCE(3)*10,TRUE,0)",
+      "rows": 3
+    },
+    {
+      "values": [
+        {
+          "value": 10.0,
+          "kind": "Number"
+        },
+        {
+          "value": 20.0,
+          "kind": "Number"
+        },
+        {
+          "value": 0.0,
+          "kind": "Number"
+        }
+      ],
+      "columns": 1,
+      "formula": "=SWITCH(SEQUENCE(3),1,10,2,20,0)",
+      "rows": 3
+    },
+    {
+      "values": [
+        {
+          "value": 1.0,
+          "kind": "Number"
+        }
+      ],
+      "columns": 1,
+      "formula": "=IFS(TRUE,1,FALSE,SEQUENCE(3))",
+      "rows": 1
     }
   ],
-  "excelBuild": 20527.0,
-  "specSha256": "E8C9617D5E4898CA3F5AAFA776083324E2C8B7B5251E34DCB449F33D480F4244",
   "excelVersion": "16.0"
 }

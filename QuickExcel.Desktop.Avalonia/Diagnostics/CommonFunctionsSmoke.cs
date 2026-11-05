@@ -21,6 +21,9 @@ public sealed partial class MainWindow
             _grid.Select(new(9, 0)); _grid.BeginEdit(); _grid.CellEditor.Text = "=ROW(B2:B4)"; Check(CommitEditors(), "Native editor accepts a reference array");
             await CalculateAsync(); Check(Document.GetCellValue(0, 11, 0) == "4", "Reference result spills into the grid");
             await History(false); Check(Document.GetCellInput(0, 9, 0) == "", "One undo removes the formula and its spill");
+            _grid.Select(new(15, 0)); _grid.BeginEdit(); _grid.CellEditor.Text = "=IFS(TRUE,SUMPRODUCT(SEQUENCE(3),SEQUENCE(3)),FALSE,0)+SWITCH(2,1,1,2,5,0)";
+            Check(CommitEditors(), "Native grid commits logical and product formulas");
+            await CalculateAsync(); Check(Document.GetCellValue(0, 15, 0) == "19", "IFS, SWITCH and SUMPRODUCT calculate in the desktop");
         }
         catch (Exception ex) { failure = ex; }
         await File.WriteAllTextAsync(Path.Combine(directory, "result.json"), JsonSerializer.Serialize(new { passed = failure is null, checks, error = failure?.ToString() }, new JsonSerializerOptions { WriteIndented = true }));

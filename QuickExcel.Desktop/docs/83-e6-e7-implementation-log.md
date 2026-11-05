@@ -37,3 +37,15 @@ ROW and COLUMN return current coordinates or reference coordinates, with bounded
 验证：36 项引用函数/动态数组/本地化测试通过，补充结构编辑和撤销后 19 项引用专项通过；13 个独立 Excel 对照通过，样例与来源 SHA-256 为 `Fixtures/common-functions-spec.json` / `excel-common-functions.json`。规范参考 [Microsoft ROWS](https://support.microsoft.com/en-us/excel/functions/rows-function) 与 [动态数组说明](https://support.microsoft.com/en-us/excel/dynamic-array-formulas-vs-legacy-cse-array-formulas)。桌面 CommonFunctions 6 项通过，证据 `artifacts/avalonia/workspace/20261105-071129-5d250dad`。
 
 发布与生产自检通过，活动包 `artifacts/avalonia/releases/20261105-071219-533eef9e/application`；已核对启动器活动指针与清单哈希。
+
+## XC-0602b — 逻辑与乘积统计 / Logical and product formulas
+
+2026-11-05，1.20.0。IFS 支持 1–127 个条件/结果对，首个匹配返回结果，未匹配为 #N/A；SWITCH 支持相同类型的精确匹配（文本不区分大小写）、默认值和 #N/A。结果按所选分支求值，不以未选数组扩展结果；数组条件及选中结果按既有单行/单列广播契约组合，尺寸缺失为 #N/A。静态依赖仍保守包含全部源码分支，未承诺脚本副作用与 Excel UDF 调度等价。
+
+SUMPRODUCT 对同形状数组逐项相乘再求和，文本、布尔和空白按零处理，显式算术转换后按数字处理；维度不匹配为 #VALUE!，错误传播，即使另一个乘数为零也不吞掉错误。数组仍有 100,000 元素预算；全列超预算须缩小引用。IFS/SWITCH 的 XLSX `_xlfn` 编码与解码、增量重算、保存重开、撤销和双语参数提示已接入。
+
+IFS and SWITCH select the first matching result and support bounded array conditions and broadcasting. Unselected result arrays do not expand the output. SUMPRODUCT requires equal array shapes, treats nonnumeric entries as zero, and propagates errors. Modern function names round-trip through XLSX.
+
+39 项相关测试、31 个累计独立 Excel 公式样例、8 项 Avalonia CommonFunctions 检查通过。Excel 证据 `artifacts/e6/common-functions-excel-04`；桌面证据 `artifacts/avalonia/workspace/20261105-071655-51cafed2`。规范参考 [IFS](https://support.microsoft.com/en-gb/excel/functions/ifs-function)、[SUMPRODUCT](https://support.microsoft.com/en-us/excel/functions/sumproduct-function)。
+
+发布与生产自检通过，活动包 `artifacts/avalonia/releases/20261105-071727-601471eb/application`。

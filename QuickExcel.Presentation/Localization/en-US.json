@@ -2229,5 +2229,8 @@
   "确认导入": "Confirm import",
   "文本已导入新工作簿，请另存。脚本未授权。": "Text imported into a new workbook. Save As to keep it. Scripts are not authorized.",
   "[引用]": "[reference]",
-  "数组或引用": "array_or_reference"
+  "数组或引用": "array_or_reference",
+  "条件1, 结果1, [条件2, 结果2], …": "logical_test1, value_if_true1, [logical_test2, value_if_true2], …",
+  "表达式, 值1, 结果1, [值2, 结果2], [默认值]": "expression, value1, result1, [value2, result2], [default]",
+  "数组1, [数组2], …": "array1, [array2], …"
 }

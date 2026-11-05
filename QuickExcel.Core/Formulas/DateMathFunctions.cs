@@ -28,7 +28,7 @@ public static class DateMathFunctions
         FunctionNode function when ReferenceFunctions.ReturnsArray(function) => true,
         UnaryNode unary => ArrayResult(unary.Operand),
         BinaryNode binary => ArrayResult(binary.Left) || ArrayResult(binary.Right),
-        FunctionNode { Name: "IF" } function => function.Arguments.Any(ArrayResult),
+        FunctionNode { Name: "IF" or "IFS" or "SWITCH" } function => function.Arguments.Any(ArrayResult),
         FunctionNode { Name: "IFERROR" or "IFNA" } function => function.Arguments.Any(ArrayResult),
         _ => false
     };

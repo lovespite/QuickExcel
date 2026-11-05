@@ -123,7 +123,7 @@ public static class StandardFunctions
     {
         name = name.ToUpperInvariant();
         return Signatures.TryGetValue(name, out var bounds) && count >= bounds.Min && count <= bounds.Max &&
-            (name is "SUMIFS" or "AVERAGEIFS" or "LET" ? count % 2 == 1 : name != "COUNTIFS" || count % 2 == 0);
+            (name is "SUMIFS" or "AVERAGEIFS" or "LET" ? count % 2 == 1 : name is not ("COUNTIFS" or "IFS") || count % 2 == 0);
     }
     public static IReadOnlyDictionary<string, (int Min, int Max)> Signatures { get; } =
         new Dictionary<string, (int, int)>(StringComparer.OrdinalIgnoreCase)
@@ -132,6 +132,7 @@ public static class StandardFunctions
             ["SEQUENCE"] = (1, 4), ["FILTER"] = (2, 3), ["SORT"] = (1, 4), ["UNIQUE"] = (1, 3),
             ["LET"] = (3, 253), ["OFFSET"] = (3, 5), ["INDIRECT"] = (1, 2),
             ["ROW"] = (0, 1), ["COLUMN"] = (0, 1), ["ROWS"] = (1, 1), ["COLUMNS"] = (1, 1),
+            ["IFS"] = (2, 254), ["SWITCH"] = (3, 254), ["SUMPRODUCT"] = (1, 255),
             ["VAR.S"] = (1, 254), ["VAR.P"] = (1, 254), ["STDEV.S"] = (1, 254), ["STDEV.P"] = (1, 254), ["MEDIAN"] = (1, 255),
             ["LARGE"] = (2, 2), ["SMALL"] = (2, 2), ["RANK.EQ"] = (2, 3),
             ["COUNT"] = (1, 255), ["COUNTA"] = (1, 255), ["PRODUCT"] = (1, 255),

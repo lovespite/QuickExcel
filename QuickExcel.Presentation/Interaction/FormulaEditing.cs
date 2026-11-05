@@ -76,6 +76,9 @@ public static class FormulaEditing
         var parameters = name.ToUpperInvariant() switch
         {
             "ROW" or "COLUMN" => UiText.Get("[引用]"), "ROWS" or "COLUMNS" => UiText.Get("数组或引用"),
+            "IFS" => UiText.Get("条件1, 结果1, [条件2, 结果2], …"),
+            "SWITCH" => UiText.Get("表达式, 值1, 结果1, [值2, 结果2], [默认值]"),
+            "SUMPRODUCT" => UiText.Get("数组1, [数组2], …"),
             "IF" => "logical_test, value_if_true, [value_if_false]", "IFERROR" => "value, value_if_error",
             "ROUND" => "number, num_digits", "LEFT" or "RIGHT" => "text, [num_chars]", "MID" => "text, start_num, num_chars",
             "VLOOKUP" => "lookup_value, table_array, col_index_num, [range_lookup]", "MATCH" => "lookup_value, lookup_array, [match_type]",
