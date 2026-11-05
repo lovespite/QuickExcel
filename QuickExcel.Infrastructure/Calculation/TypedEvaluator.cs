@@ -72,6 +72,7 @@ internal sealed partial class TypedEvaluator(WorkbookSnapshot snapshot, IReadOnl
                 return CellValue.FromNumber(unary.Operator switch { "-" => -number, "%" => number / 100, _ => number });
             case BinaryNode binary: return ArrayMode ? ArrayBinary(binary) : Binary(binary);
             case FunctionNode function when ArrayMode && DynamicArrayFunctions.IsFunction(function.Name): return ArrayFunction(function);
+            case FunctionNode function when ReferenceFunctions.IsPosition(function.Name): return ReferencePosition(function);
             case FunctionNode { Name: "XLOOKUP" } function when ArrayMode:
                 return StandardFunctions.AcceptsArguments(function.Name,function.Arguments.Count) ? LookupValue(function) : Error(CellErrorCode.Value);
             case FunctionNode { Name: "IF" or "IFERROR" or "IFNA" } function when ArrayMode: return ArrayBranch(function);
@@ -118,6 +119,7 @@ internal sealed partial class TypedEvaluator(WorkbookSnapshot snapshot, IReadOnl
         if (scripts.TryGetValue(function.Name, out var descriptor)) return Script(function, descriptor);
         if (!StandardFunctions.Signatures.ContainsKey(function.Name)) return Error(CellErrorCode.Name);
         if (!StandardFunctions.AcceptsArguments(function.Name, function.Arguments.Count)) return Error(CellErrorCode.Value);
+        if (ReferenceFunctions.IsDimension(function.Name)) return ReferenceDimension(function);
         if (function.Name == "IF")
         {
             var condition = Scalar(function.Arguments[0]);

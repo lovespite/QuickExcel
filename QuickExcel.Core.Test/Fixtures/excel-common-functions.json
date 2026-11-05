@@ -1,0 +1,166 @@
+{
+  "cases": [
+    {
+      "values": [
+        {
+          "value": 6.0,
+          "kind": "Number"
+        }
+      ],
+      "formula": "=ROW()",
+      "rows": 1,
+      "columns": 1
+    },
+    {
+      "values": [
+        {
+          "value": 4.0,
+          "kind": "Number"
+        }
+      ],
+      "formula": "=COLUMN()",
+      "rows": 1,
+      "columns": 1
+    },
+    {
+      "values": [
+        {
+          "value": 6.0,
+          "kind": "Number"
+        }
+      ],
+      "formula": "=ROW(D6)",
+      "rows": 1,
+      "columns": 1
+    },
+    {
+      "values": [
+        {
+          "value": 4.0,
+          "kind": "Number"
+        }
+      ],
+      "formula": "=COLUMN(D6)",
+      "rows": 1,
+      "columns": 1
+    },
+    {
+      "values": [
+        {
+          "value": 3.0,
+          "kind": "Number"
+        }
+      ],
+      "formula": "=ROWS(D6:E8)",
+      "rows": 1,
+      "columns": 1
+    },
+    {
+      "values": [
+        {
+          "value": 2.0,
+          "kind": "Number"
+        }
+      ],
+      "formula": "=COLUMNS(D6:E8)",
+      "rows": 1,
+      "columns": 1
+    },
+    {
+      "values": [
+        {
+          "value": 3.0,
+          "kind": "Number"
+        }
+      ],
+      "formula": "=ROWS(SEQUENCE(3,2))",
+      "rows": 1,
+      "columns": 1
+    },
+    {
+      "values": [
+        {
+          "value": 2.0,
+          "kind": "Number"
+        }
+      ],
+      "formula": "=COLUMNS(SEQUENCE(3,2))",
+      "rows": 1,
+      "columns": 1
+    },
+    {
+      "values": [
+        {
+          "value": 1.0,
+          "kind": "Number"
+        }
+      ],
+      "formula": "=ROWS(1)",
+      "rows": 1,
+      "columns": 1
+    },
+    {
+      "values": [
+        {
+          "value": 1.0,
+          "kind": "Number"
+        }
+      ],
+      "formula": "=COLUMNS(\"text\")",
+      "rows": 1,
+      "columns": 1
+    },
+    {
+      "values": [
+        {
+          "value": "#N/A",
+          "kind": "Error"
+        }
+      ],
+      "formula": "=ROWS(#N/A)",
+      "rows": 1,
+      "columns": 1
+    },
+    {
+      "values": [
+        {
+          "value": 2.0,
+          "kind": "Number"
+        },
+        {
+          "value": 3.0,
+          "kind": "Number"
+        },
+        {
+          "value": 4.0,
+          "kind": "Number"
+        }
+      ],
+      "formula": "=ROW(B2:D4)",
+      "rows": 3,
+      "columns": 1
+    },
+    {
+      "values": [
+        {
+          "value": 2.0,
+          "kind": "Number"
+        },
+        {
+          "value": 3.0,
+          "kind": "Number"
+        },
+        {
+          "value": 4.0,
+          "kind": "Number"
+        }
+      ],
+      "formula": "=COLUMN(B2:D3)",
+      "rows": 1,
+      "columns": 3
+    }
+  ],
+  "excelBuild": 20527.0,
+  "specSha256": "E8C9617D5E4898CA3F5AAFA776083324E2C8B7B5251E34DCB449F33D480F4244",
+  "excelVersion": "16.0"
+}

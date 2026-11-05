@@ -2227,5 +2227,7 @@
   "共 {0} 行、{1} 列。默认文本保留前导零与等号原文；导入为新工作簿，原文件不修改。": "{0} rows, {1} columns. Text is the default and preserves leading zeros and equals signs. Import creates a new workbook and leaves the source file unchanged.",
   "正在转换文本…": "Converting text…",
   "确认导入": "Confirm import",
-  "文本已导入新工作簿，请另存。脚本未授权。": "Text imported into a new workbook. Save As to keep it. Scripts are not authorized."
+  "文本已导入新工作簿，请另存。脚本未授权。": "Text imported into a new workbook. Save As to keep it. Scripts are not authorized.",
+  "[引用]": "[reference]",
+  "数组或引用": "array_or_reference"
 }

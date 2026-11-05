@@ -25,3 +25,15 @@ The File menu now offers an explicit import wizard. Choose encoding and delimite
 验证：19 项 TextImport/TextExchange/Localization 定向测试通过；Avalonia TextExchange 11 项通过，证据 `artifacts/avalonia/workspace/20261105-070306-e411b9b8`。真实 Excel 16.0 build 20527 直接打开 QuickExcel CSV 保留中文、引号和嵌入换行；Excel 导出的 UTF-8 CSV 由 QuickExcel 独立导入并保持编号、等号原文及换行，夹具与 SHA-256 位于 `Fixtures/text-exchange-excel.json`，证据 `artifacts/e6/text-exchange-excel-04`。Excel COM 的旧 OpenText 路径在本机将嵌入 LF 截断，常规 Workbooks.Open 验证通过；两者不能混为同一入口。
 
 发布与自检通过：`artifacts/avalonia/releases/20261105-070355-e1bb7007/application`，已验证活动指针。无新增第三方依赖，GB18030 使用 .NET 已分发的 CodePages provider。
+
+## XC-0602a — 引用位置函数 / Reference position functions
+
+2026-11-05，1.19.0。新增 ROW/COLUMN 的无参当前坐标、单格及矩形引用，矩形返回行向/列向数组；ROWS/COLUMNS 接受引用、标量及受支持数组表达式。名称、跨表、结构编辑、数组所有权和标准文件公式路径复用现有实现。静态引用的坐标/尺寸不读取被引用格值，防止自引用被误判为循环。无参函数在绑定时补充当前地址，源公式仍保留；可移植导出保留函数语义。提示文案为中英文，参数数量登记接入现有补全。
+
+ROW and COLUMN return current coordinates or reference coordinates, with bounded array results for ranges. ROWS and COLUMNS return reference or supported array dimensions. Static coordinate queries do not depend on cell values. Formula source, structural reference updates, spill conflict checks and undo remain in the existing calculation and document paths.
+
+范围：全列引用按 QuickExcel 的 200,000 行容量解释；数组仍限 100,000 元素。ROW/COLUMN 目前需要静态矩形引用，不接受计算产生的引用数组或溢出运算符作为引用参数；ROWS/COLUMNS 可读取溢出数组尺寸。
+
+验证：36 项引用函数/动态数组/本地化测试通过，补充结构编辑和撤销后 19 项引用专项通过；13 个独立 Excel 对照通过，样例与来源 SHA-256 为 `Fixtures/common-functions-spec.json` / `excel-common-functions.json`。规范参考 [Microsoft ROWS](https://support.microsoft.com/en-us/excel/functions/rows-function) 与 [动态数组说明](https://support.microsoft.com/en-us/excel/dynamic-array-formulas-vs-legacy-cse-array-formulas)。桌面 CommonFunctions 6 项通过，证据 `artifacts/avalonia/workspace/20261105-071129-5d250dad`。
+
+发布与生产自检通过，活动包 `artifacts/avalonia/releases/20261105-071219-533eef9e/application`；已核对启动器活动指针与清单哈希。

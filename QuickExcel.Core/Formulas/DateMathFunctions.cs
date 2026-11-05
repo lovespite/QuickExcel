@@ -25,6 +25,7 @@ public static class DateMathFunctions
         LocalValueNode local => local.ArrayResult,
         LetNode let => ArrayResult(let.Body),
         FunctionNode function when DynamicArrayFunctions.IsFunction(function.Name) => true,
+        FunctionNode function when ReferenceFunctions.ReturnsArray(function) => true,
         UnaryNode unary => ArrayResult(unary.Operand),
         BinaryNode binary => ArrayResult(binary.Left) || ArrayResult(binary.Right),
         FunctionNode { Name: "IF" } function => function.Arguments.Any(ArrayResult),

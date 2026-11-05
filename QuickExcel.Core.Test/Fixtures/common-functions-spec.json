@@ -1,0 +1,69 @@
+{
+  "cases": [
+    {
+      "formula": "=ROW()",
+      "rows": 1,
+      "columns": 1
+    },
+    {
+      "formula": "=COLUMN()",
+      "rows": 1,
+      "columns": 1
+    },
+    {
+      "formula": "=ROW(D6)",
+      "rows": 1,
+      "columns": 1
+    },
+    {
+      "formula": "=COLUMN(D6)",
+      "rows": 1,
+      "columns": 1
+    },
+    {
+      "formula": "=ROWS(D6:E8)",
+      "rows": 1,
+      "columns": 1
+    },
+    {
+      "formula": "=COLUMNS(D6:E8)",
+      "rows": 1,
+      "columns": 1
+    },
+    {
+      "formula": "=ROWS(SEQUENCE(3,2))",
+      "rows": 1,
+      "columns": 1
+    },
+    {
+      "formula": "=COLUMNS(SEQUENCE(3,2))",
+      "rows": 1,
+      "columns": 1
+    },
+    {
+      "formula": "=ROWS(1)",
+      "rows": 1,
+      "columns": 1
+    },
+    {
+      "formula": "=COLUMNS(\"text\")",
+      "rows": 1,
+      "columns": 1
+    },
+    {
+      "formula": "=ROWS(#N/A)",
+      "rows": 1,
+      "columns": 1
+    },
+    {
+      "formula": "=ROW(B2:D4)",
+      "rows": 3,
+      "columns": 1
+    },
+    {
+      "formula": "=COLUMN(B2:D3)",
+      "rows": 1,
+      "columns": 3
+    }
+  ]
+}

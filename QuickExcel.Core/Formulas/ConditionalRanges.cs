@@ -20,7 +20,7 @@ public static class ConditionalRanges
     public static FormulaNode ForDependencies(FormulaNode expression) => FormulaSyntax.Map(expression, node =>
         node is FunctionNode { Name: "SUMIF" or "AVERAGEIF", Arguments.Count: 3 } function &&
         function.Arguments[0] is ReferenceNode criteria && function.Arguments[2] is ReferenceNode result
-            ? function with { Arguments = [criteria, function.Arguments[1], Project(criteria, result)] } : node);
+            ? function with { Arguments = [criteria, function.Arguments[1], Project(criteria, result)] } : ReferenceFunctions.ValueDependencies(node));
 
     public static void ValidateModes(FormulaNode expression)
     {
