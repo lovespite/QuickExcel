@@ -16,7 +16,11 @@ features and preserves the SVG fill rule. Runtime geometry keeps the complete
 asset is required. The license is also published under
 `Licenses/FLUENT-SYSTEM-ICONS-LICENSE.txt`.
 
-`RibbonIcon.Default` is Fluent `apps`: commands without a sufficiently clear icon
-keep their full text alongside it. Explicit icons are assigned at each command
-call site, independently of translated labels. All commands retain tooltips and
-accessible names. Color dropdowns additionally retain their live color swatches.
+The selection contains 94 icons, including 54 additional command icons for the
+compact Ribbon. Explicit icons are required at each command call site,
+independently of translated labels; Ribbon commands no longer use the generic
+`apps` fallback. Home uses icon-only commands. Other pages display icons and
+labels when their full contents fit; they hide command labels before resorting
+to horizontal scrolling. Labels return when the page has enough space again.
+All commands retain tooltips and accessible names. Font, size and number-format selectors and the style gallery
+keep their current values/previews. Color and border controls keep live previews.

@@ -16,6 +16,17 @@ QuickExcel includes the following third-party materials. Each license applies to
 | JavaScriptCore / WebKit, ICU, mimalloc, TypeScript | Individual component licenses | JSC-Licenses | The scripting package includes copyright and license notices, corresponding source, and rebuild instructions. Microsoft terms apply to the Windows VC++ runtime. |
 | .NET runtime | MIT and accompanying third-party terms | DOTNET-LICENSE and DOTNET-THIRD-PARTY-NOTICES in the self-contained distribution | Desktop application and isolated processes. |
 
+## Fluent UI System Icons
+
+Copyright (c) 2020 Microsoft Corporation. The Ribbon uses 94 selected 20px Regular
+SVGs from revision `64e5aa757d1b70c24a283256ddcb8269d0f58773` of
+[Fluent UI System Icons](https://github.com/microsoft/fluentui-system-icons), under
+the MIT license (`Licenses/FLUENT-SYSTEM-ICONS-LICENSE.txt` in the distribution).
+The original SVGs are unmodified; QuickExcel converts their paths and fill rules
+to native Avalonia geometry. Original paths and SHA-256 hashes are recorded in
+`third_party/fluentui-system-icons/manifest.json`. The expanded selection covers
+formatting, data tools, tables, printing, protection and automation commands.
+
 ## Office Scripts API definitions
 
 Copyright Microsoft Corporation and contributors. The source is the [Microsoft Office Scripts API reference repository](https://github.com/OfficeDev/office-scripts-docs-reference). The pinned commit and checksums are recorded in `third_party/office-scripts-docs/source.lock.json`.

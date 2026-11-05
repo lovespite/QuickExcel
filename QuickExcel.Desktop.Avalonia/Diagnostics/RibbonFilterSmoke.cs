@@ -50,12 +50,55 @@ public sealed partial class MainWindow
                 var scroll = (ScrollViewer)tab.Content!;
                 Check(scroll.VerticalScrollBarVisibility == ScrollBarVisibility.Disabled && scroll.HorizontalScrollBarVisibility == ScrollBarVisibility.Auto,
                     $"Ribbon scrolls horizontally on {tab.Header}");
-                var buttons = scroll.GetVisualDescendants().OfType<Button>().Where(b => b.Classes.Contains("ribbon-command")).ToArray();
+                var buttons = scroll.GetVisualDescendants().OfType<ContentControl>().Where(b => b is Button or SplitButton && b.Classes.Contains("ribbon-command")).ToArray();
+                await Capture(_ribbon, $"ribbon-tab-{_ribbon.SelectedIndex}");
                 Check(buttons.Length > 0 && buttons.All(b => !string.IsNullOrWhiteSpace(AutomationProperties.GetName(b)) && ToolTip.GetTip(b) is string { Length: > 0 }),
                     $"Every ribbon command has an accessible name and tooltip on {tab.Header}");
-                Check(buttons.All(b => b.GetVisualDescendants().OfType<PathIcon>().Where(i => i.Classes.Contains("fluent-ribbon-icon")).Count() == 1), $"Every ribbon command has one vector icon on {tab.Header}");
                 foreach (var button in buttons)
                 {
+                    // Color split buttons also contain a 14px swatch and a separate arrow target.
+                    var maxWidth = button.Name is "FontColorDropdown" or "FillColorDropdown" ? 84 : button is SplitButton ? 68 : 64;
+                    var labeled = button.Content is RibbonCommandContent command && command.Label.IsVisible;
+                    Check((labeled || button.Bounds.Width <= maxWidth) && button.Bounds.Height <= 28,
+                        $"Ribbon command fits its row: {AutomationProperties.GetName(button)} ({button.Bounds.Width} x {button.Bounds.Height}, labeled={labeled})");
+                    bool Fits(Control control, Control parent)
+                    {
+                        var topLeft = control.TranslatePoint(default, parent)!.Value;
+                        var bottomRight = control.TranslatePoint(new(control.Bounds.Width, control.Bounds.Height), parent)!.Value;
+                        return control.Bounds.Width > 0 && control.Bounds.Height > 0 && topLeft.X >= -.1 && topLeft.Y >= -.1 &&
+                            bottomRight.X <= parent.Bounds.Width + .1 && bottomRight.Y <= parent.Bounds.Height + .1;
+                    }
+                    if (button is SplitButton split)
+                    {
+                        var primary = Named<Button>(split, "PART_PrimaryButton"); var secondary = Named<Button>(split, "PART_SecondaryButton");
+                        Check(Fits(primary, split) && Fits(secondary, split) && split.Content is Control splitContent && Fits(splitContent, primary),
+                            $"Split button content and both targets fit: {AutomationProperties.GetName(button)}");
+                        split.IsEnabled = false;
+                        Check(!primary.IsEffectivelyEnabled && !secondary.IsEffectivelyEnabled,
+                            $"Both split button targets inherit disabled state: {AutomationProperties.GetName(button)}");
+                        split.IsEnabled = true;
+                    }
+                    if (button.Name == "BorderDropdown")
+                    {
+                        Check(button.Content is BorderPresetIcon border && border.Bounds.Size == new Size(20, 20) && Fits(border, button) && !border.IsHitTestVisible,
+                            "Border sample fits the ribbon and leaves clicks to the primary button");
+                        continue;
+                    }
+                    if (button.Name == "TextRotationDropdown")
+                    {
+                        Check(button.Content is Border { Child: TextBlock sample } preview && preview.Bounds.Size == new Size(20, 20) &&
+                              Fits(preview, button) && !string.IsNullOrWhiteSpace(sample.Text) && sample.RenderTransform is RotateTransform { Angle: -45 },
+                            "Text orientation has a visible rotated text sample inside its ribbon button");
+                        continue;
+                    }
+                    if (button.Name == "ConditionalFormatDropdown")
+                    {
+                        Check(button.Content is ConditionalFormatIcon preview && preview.Bounds.Size == new Size(20, 20) && Fits(preview, button),
+                            "Conditional format uses a compact 20px preview without a command label");
+                        continue;
+                    }
+                    Check(button.GetVisualDescendants().OfType<PathIcon>().Count(i => i.Classes.Contains("fluent-ribbon-icon")) == 1,
+                        $"Ribbon command has one vector icon: {AutomationProperties.GetName(button)}");
                     var icon = button.GetVisualDescendants().OfType<PathIcon>().Where(i => i.Classes.Contains("fluent-ribbon-icon")).Single();
                     var origin = icon.TranslatePoint(default, button)!.Value;
                     Check(icon.Bounds.Size == new Size(20, 20) && origin.X >= 0 && origin.Y >= 0 &&
@@ -65,16 +108,18 @@ public sealed partial class MainWindow
                     Check(path.Stretch == Stretch.None && Equals(path.Fill, icon.Foreground),
                         $"Vector preserves SVG margins and inherits foreground: {AutomationProperties.GetName(button)}");
                     // A color swatch can contain a slash for "no fill"; it is not a command label.
-                    var labels = button.Content is StackPanel content ? content.Children.OfType<TextBlock>().ToArray() : [];
-                    if (ReferenceEquals(icon.Data, RibbonIcons.Create(RibbonIcon.Default).Data))
-                        Check(labels.Length == 1 && labels[0].Text == AutomationProperties.GetName(button) && labels[0].Bounds.Width + .1 >= labels[0].DesiredSize.Width,
-                            $"Default icon retains an unclipped command label: {AutomationProperties.GetName(button)}");
-                    else
-                        Check(labels.Length == 0, $"Recognizable icon has no redundant text: {AutomationProperties.GetName(button)}");
+                    var labels = button.Content is StackPanel content ? content.Children.OfType<TextBlock>().Where(t => t.IsVisible).ToArray() : [];
+                    Check(!ReferenceEquals(icon.Data, RibbonIcons.Create(RibbonIcon.Default).Data),
+                        $"Command has a specific icon: {AutomationProperties.GetName(button)}");
+                    Check(labeled ? labels.Length == 1 && labels[0].Text == AutomationProperties.GetName(button) && Fits(labels[0], button)
+                        : labels.Length == 0 && button.Content is not string && button.Content is not TextBlock,
+                        $"Command label follows the page layout: {AutomationProperties.GetName(button)}");
                 }
-                await Capture(_ribbon, $"ribbon-tab-{_ribbon.SelectedIndex}");
             }
+            await CheckResponsiveRibbonAsync(Check, (control, name) => Capture(control, name));
             _ribbon.SelectedIndex = 0; await Layout();
+            foreach (var name in new[] { "FontColorDropdown", "FillColorDropdown", "BorderDropdown" })
+                Check(Named<SplitButton>(_ribbon, name).Classes.Contains("ribbon-command"), "Split command is included in ribbon diagnostics: " + name);
             var bold = _ribbon.GetVisualDescendants().OfType<Button>().Single(b => AutomationProperties.GetName(b) == "加粗");
             var boldIcon = bold.GetVisualDescendants().OfType<PathIcon>().Where(i => i.Classes.Contains("fluent-ribbon-icon")).Single();
             bold.Foreground = Brushes.Red; await Layout();

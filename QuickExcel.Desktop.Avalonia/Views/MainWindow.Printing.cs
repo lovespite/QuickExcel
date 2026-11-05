@@ -23,7 +23,7 @@ public sealed partial class MainWindow
     private Guid _printDocument;
     private void InstallPrintCommands()
     {
-        RibbonGroup(UiText.Get("页面布局"), UiText.Get("打印输出"), RibbonButton(UiText.Get("打印预览 / PDF"), OpenPrintPreviewAsync, false));
+        RibbonGroup(UiText.Get("页面布局"), UiText.Get("打印输出"), RibbonButton(RibbonIcon.PrintPreview, UiText.Get("打印预览 / PDF"), OpenPrintPreviewAsync, false));
     }
     private async Task OpenPrintPreviewAsync()
     {

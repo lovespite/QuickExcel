@@ -241,6 +241,330 @@
       "source": "assets/TextBox Align Bottom/SVG/ic_fluent_textbox_align_bottom_20_regular.svg",
       "file": "icons/ic_fluent_textbox_align_bottom_20_regular.svg",
       "sha256": "82f78bb2df228b04be4bcb1a21a145e266e402a937197a06b8d2adfda34e8810"
+    },
+    {
+      "id": "PasteValues",
+      "source": "assets/Clipboard Number 123/SVG/ic_fluent_clipboard_number_123_20_regular.svg",
+      "file": "icons/ic_fluent_clipboard_number_123_20_regular.svg",
+      "sha256": "c9cc6d9fffb69ed00148bde2ada8f2dcbf960e01127e33ea921ca3a081c215ba"
+    },
+    {
+      "id": "FormatCells",
+      "source": "assets/Table Edit/SVG/ic_fluent_table_edit_20_regular.svg",
+      "file": "icons/ic_fluent_table_edit_20_regular.svg",
+      "sha256": "d076535342dbf67db1b9d020d45bf609a0ec76477358db03f18c1ec6cc36ee3c"
+    },
+    {
+      "id": "FillDown",
+      "source": "assets/Arrow Down/SVG/ic_fluent_arrow_down_20_regular.svg",
+      "file": "icons/ic_fluent_arrow_down_20_regular.svg",
+      "sha256": "d5b5fb92e9ccc28c9de1b5c8f2eb74b8cd1311b434e8125d215e8e12f8fc25c2"
+    },
+    {
+      "id": "FillRight",
+      "source": "assets/Arrow Right/SVG/ic_fluent_arrow_right_20_regular.svg",
+      "file": "icons/ic_fluent_arrow_right_20_regular.svg",
+      "sha256": "b69b65ab472132acbe2ece874a387e5355a84181398572aecae827e4d043d622"
+    },
+    {
+      "id": "FillSeries",
+      "source": "assets/Number Row/SVG/ic_fluent_number_row_20_regular.svg",
+      "file": "icons/ic_fluent_number_row_20_regular.svg",
+      "sha256": "9adf93115ac31de2947630f296a1a2859a5ae17ec556fd2bf8c36108b4e62045"
+    },
+    {
+      "id": "PlainText",
+      "source": "assets/Text T/SVG/ic_fluent_text_t_20_regular.svg",
+      "file": "icons/ic_fluent_text_t_20_regular.svg",
+      "sha256": "8f99b4774a141041dc9e804b49bf9b2380ac9587a41355e3045069d51817e1ea"
+    },
+    {
+      "id": "AutoFitHeight",
+      "source": "assets/Arrow Autofit Height/SVG/ic_fluent_arrow_autofit_height_20_regular.svg",
+      "file": "icons/ic_fluent_arrow_autofit_height_20_regular.svg",
+      "sha256": "160fd0112269b1b3191364c04ee9fd6bf921616efc1c3628c5473c7c06997c0f"
+    },
+    {
+      "id": "AutoFitWidth",
+      "source": "assets/Arrow Autofit Width/SVG/ic_fluent_arrow_autofit_width_20_regular.svg",
+      "file": "icons/ic_fluent_arrow_autofit_width_20_regular.svg",
+      "sha256": "0ad9b6b3dd345c6cb5ccbbbc94c80131d5f67a5bafa7f404182b2960def49e4e"
+    },
+    {
+      "id": "RowHeight",
+      "source": "assets/Table Resize Row/SVG/ic_fluent_table_resize_row_20_regular.svg",
+      "file": "icons/ic_fluent_table_resize_row_20_regular.svg",
+      "sha256": "1cc9e88acce501db0335a2e49f72e2892e79a3f88d846252fab4ee200e495567"
+    },
+    {
+      "id": "ColumnWidth",
+      "source": "assets/Table Resize Column/SVG/ic_fluent_table_resize_column_20_regular.svg",
+      "file": "icons/ic_fluent_table_resize_column_20_regular.svg",
+      "sha256": "00454f726407808177129a77da654ea153b9f8f001b3029d3fb007a09f50be6e"
+    },
+    {
+      "id": "Compatibility",
+      "source": "assets/Document Error/SVG/ic_fluent_document_error_20_regular.svg",
+      "file": "icons/ic_fluent_document_error_20_regular.svg",
+      "sha256": "135803c78011f7e104f9ccd5a737b393bb3f63b1332e88bfbd7be01ea8e821ae"
+    },
+    {
+      "id": "ExportValues",
+      "source": "assets/Document Arrow Down/SVG/ic_fluent_document_arrow_down_20_regular.svg",
+      "file": "icons/ic_fluent_document_arrow_down_20_regular.svg",
+      "sha256": "a436dde487c5c04b96855a3ab9969481e15b74b7f0f195e061be896dc1b6ccd2"
+    },
+    {
+      "id": "ExportFormulas",
+      "source": "assets/Clipboard Math Formula/SVG/ic_fluent_clipboard_math_formula_20_regular.svg",
+      "file": "icons/ic_fluent_clipboard_math_formula_20_regular.svg",
+      "sha256": "d023f48b51612c26b291166f1417aebede4cce9d2864a5ebe0ab31df529887ec"
+    },
+    {
+      "id": "LoadActions",
+      "source": "assets/Arrow Download/SVG/ic_fluent_arrow_download_20_regular.svg",
+      "file": "icons/ic_fluent_arrow_download_20_regular.svg",
+      "sha256": "28e752ccfd95feb1850de1da3d170f34fd31765417d3431a7dbf3da89840ea33"
+    },
+    {
+      "id": "SortLevels",
+      "source": "assets/Arrow Sort/SVG/ic_fluent_arrow_sort_20_regular.svg",
+      "file": "icons/ic_fluent_arrow_sort_20_regular.svg",
+      "sha256": "2f4c40b5fa1a5dff788f77b5b1d41c61f388d0a45ebfb9a10343fe7904ba119a"
+    },
+    {
+      "id": "FilterColumn",
+      "source": "assets/Filter Add/SVG/ic_fluent_filter_add_20_regular.svg",
+      "file": "icons/ic_fluent_filter_add_20_regular.svg",
+      "sha256": "27a70cf0f62ee76765e842edc6095c954c16cb2177f4ffdfb5b69795d539ce59"
+    },
+    {
+      "id": "ClearFilters",
+      "source": "assets/Filter Dismiss/SVG/ic_fluent_filter_dismiss_20_regular.svg",
+      "file": "icons/ic_fluent_filter_dismiss_20_regular.svg",
+      "sha256": "781eef4c2807d4912262199f1bf825a469217ee7c16d345d1970aa5ff869532f"
+    },
+    {
+      "id": "RemoveFilter",
+      "source": "assets/Table Dismiss/SVG/ic_fluent_table_dismiss_20_regular.svg",
+      "file": "icons/ic_fluent_table_dismiss_20_regular.svg",
+      "sha256": "ba86bbc8d25b5458a9a01db8e79e1985785af730027b75d12d0d75c9f8963a8a"
+    },
+    {
+      "id": "ClearSort",
+      "source": "assets/Arrow Reset/SVG/ic_fluent_arrow_reset_20_regular.svg",
+      "file": "icons/ic_fluent_arrow_reset_20_regular.svg",
+      "sha256": "8f7ee75b0194f186e8de8de57272c0237f10fae1c9dcd0d579ec241848324296"
+    },
+    {
+      "id": "ResizeTable",
+      "source": "assets/Table Select Range/SVG/ic_fluent_table_select_range_20_regular.svg",
+      "file": "icons/ic_fluent_table_select_range_20_regular.svg",
+      "sha256": "45e984ada548e9db5f68d77f6c0625f135fd474a82287714180fea497cea6e5c"
+    },
+    {
+      "id": "RenameTable",
+      "source": "assets/Rename/SVG/ic_fluent_rename_20_regular.svg",
+      "file": "icons/ic_fluent_rename_20_regular.svg",
+      "sha256": "df0cff51d2aa82fdacb2a764d47a8b77cf2fd5ef5efa1e87ffc223832bd0dd8b"
+    },
+    {
+      "id": "RenameColumn",
+      "source": "assets/Table Column Top Bottom Edit/SVG/ic_fluent_table_column_top_bottom_edit_20_regular.svg",
+      "file": "icons/ic_fluent_table_column_top_bottom_edit_20_regular.svg",
+      "sha256": "f71fa340101b914cc63f4f1f7bf7fbafda99db974d853e3731fc68a6fb542d2d"
+    },
+    {
+      "id": "CalculatedColumn",
+      "source": "assets/Table Calculator/SVG/ic_fluent_table_calculator_20_regular.svg",
+      "file": "icons/ic_fluent_table_calculator_20_regular.svg",
+      "sha256": "ee91081adcb1c171bcc7adec56a08425f46a09297a8700f224f3773e49aa99c8"
+    },
+    {
+      "id": "CreatePivot",
+      "source": "assets/Table Offset Add/SVG/ic_fluent_table_offset_add_20_regular.svg",
+      "file": "icons/ic_fluent_table_offset_add_20_regular.svg",
+      "sha256": "7a0d8008c733d3581e96316ff212f42768a44b206f6e204d1b77bed9f887b1b9"
+    },
+    {
+      "id": "RefreshPivot",
+      "source": "assets/Table Arrow Repeat All/SVG/ic_fluent_table_arrow_repeat_all_20_regular.svg",
+      "file": "icons/ic_fluent_table_arrow_repeat_all_20_regular.svg",
+      "sha256": "92200348cc7b71c6492dff1db657769349eab2089b988b497c2720a133d0f865"
+    },
+    {
+      "id": "PivotValues",
+      "source": "assets/Table Simple/SVG/ic_fluent_table_simple_20_regular.svg",
+      "file": "icons/ic_fluent_table_simple_20_regular.svg",
+      "sha256": "f687a6928966023e0ea128986ad4e44934a51e7ee32106b3af026793ca8186e8"
+    },
+    {
+      "id": "PrintPreview",
+      "source": "assets/Print/SVG/ic_fluent_print_20_regular.svg",
+      "file": "icons/ic_fluent_print_20_regular.svg",
+      "sha256": "e418a867689b2f174d25fa8d5a9a8c589ed9d0c42793ca393c090423eab316e2"
+    },
+    {
+      "id": "SplitText",
+      "source": "assets/Text Column Two/SVG/ic_fluent_text_column_two_20_regular.svg",
+      "file": "icons/ic_fluent_text_column_two_20_regular.svg",
+      "sha256": "72863213a0a611b44bfba96ebc2c4ce1bfe4ff796de4ae8203214e7a4f5408c8"
+    },
+    {
+      "id": "FlashFill",
+      "source": "assets/Table Lightning/SVG/ic_fluent_table_lightning_20_regular.svg",
+      "file": "icons/ic_fluent_table_lightning_20_regular.svg",
+      "sha256": "3b36b2b6445573e4929b00ce02238ebfbf6cadfe7a69b60cf01a24a3f425afc6"
+    },
+    {
+      "id": "RemoveDuplicates",
+      "source": "assets/Table Simple Exclude/SVG/ic_fluent_table_simple_exclude_20_regular.svg",
+      "file": "icons/ic_fluent_table_simple_exclude_20_regular.svg",
+      "sha256": "4401ecd53a686d7258fb667e71117b0ba9d8860b2ada3f16d745af27e513beb6"
+    },
+    {
+      "id": "ConvertNumbers",
+      "source": "assets/Number Symbol/SVG/ic_fluent_number_symbol_20_regular.svg",
+      "file": "icons/ic_fluent_number_symbol_20_regular.svg",
+      "sha256": "0d2575799ba5febfa729d916112ac2ed7ad55a1ec9fa7fdbcc4c8775df67f86f"
+    },
+    {
+      "id": "Forecast",
+      "source": "assets/Data Trending/SVG/ic_fluent_data_trending_20_regular.svg",
+      "file": "icons/ic_fluent_data_trending_20_regular.svg",
+      "sha256": "59770ef9d3849bc7b728fe4819a9ec8bf7878b9fc6433abdebc24b1a6e446f20"
+    },
+    {
+      "id": "ConditionalRules",
+      "source": "assets/Table Settings/SVG/ic_fluent_table_settings_20_regular.svg",
+      "file": "icons/ic_fluent_table_settings_20_regular.svg",
+      "sha256": "c87f49638d16ff07c59ef05dd3ba83e7e0e12958047af7596476f94b8af0fe0b"
+    },
+    {
+      "id": "Group",
+      "source": "assets/Group/SVG/ic_fluent_group_20_regular.svg",
+      "file": "icons/ic_fluent_group_20_regular.svg",
+      "sha256": "a44a4d54af336e29e82593e10f1e30ea9a85ef302d274f0c26848925eb8dd7fc"
+    },
+    {
+      "id": "Ungroup",
+      "source": "assets/Group Dismiss/SVG/ic_fluent_group_dismiss_20_regular.svg",
+      "file": "icons/ic_fluent_group_dismiss_20_regular.svg",
+      "sha256": "b9eaabdc6475865bc5670d72212dbca49e2c223c0a6b385418e4709fc855a419"
+    },
+    {
+      "id": "Outline",
+      "source": "assets/Group List/SVG/ic_fluent_group_list_20_regular.svg",
+      "file": "icons/ic_fluent_group_list_20_regular.svg",
+      "sha256": "b2272ee6771aee6e1f49169eed125d063bb7351f14161c1fc2de39d95cc82c81"
+    },
+    {
+      "id": "Subtotals",
+      "source": "assets/Table Stack Below/SVG/ic_fluent_table_stack_below_20_regular.svg",
+      "file": "icons/ic_fluent_table_stack_below_20_regular.svg",
+      "sha256": "abf1fa5d43ffa553f6b9cdf275664ce816cdc37945ccfe775c3085c8fc626ef1"
+    },
+    {
+      "id": "Images",
+      "source": "assets/Image Multiple/SVG/ic_fluent_image_multiple_20_regular.svg",
+      "file": "icons/ic_fluent_image_multiple_20_regular.svg",
+      "sha256": "838dc52d7065084e12f61591872c99b09d1f901ad44482c7dd8ab55926cf81b1"
+    },
+    {
+      "id": "Charts",
+      "source": "assets/Data Bar Vertical/SVG/ic_fluent_data_bar_vertical_20_regular.svg",
+      "file": "icons/ic_fluent_data_bar_vertical_20_regular.svg",
+      "sha256": "682edf8291389361110ab7911ca0999591e37fb18af66258d0eff493dfad1fa9"
+    },
+    {
+      "id": "ChartFilter",
+      "source": "assets/Data Funnel/SVG/ic_fluent_data_funnel_20_regular.svg",
+      "file": "icons/ic_fluent_data_funnel_20_regular.svg",
+      "sha256": "4d3238188eff06fb826381f8800375214dbbcd6f7c19350ed2dddc8814e07003"
+    },
+    {
+      "id": "PageSettings",
+      "source": "assets/Document Settings/SVG/ic_fluent_document_settings_20_regular.svg",
+      "file": "icons/ic_fluent_document_settings_20_regular.svg",
+      "sha256": "ec59ce2ddb59ca10695349dffaacb5c1bc6539a959244c8a3ff5fbb69e58890a"
+    },
+    {
+      "id": "SetPrintArea",
+      "source": "assets/Select All On/SVG/ic_fluent_select_all_on_20_regular.svg",
+      "file": "icons/ic_fluent_select_all_on_20_regular.svg",
+      "sha256": "e4bbc137ccaa11b35e41a0cbbf061c68249037d4da9f7177b5d6d353b782e737"
+    },
+    {
+      "id": "ClearPrintArea",
+      "source": "assets/Select All Off/SVG/ic_fluent_select_all_off_20_regular.svg",
+      "file": "icons/ic_fluent_select_all_off_20_regular.svg",
+      "sha256": "eaa15933449d0f994dbc114ff9ed29b8641ce968cb843767017d4258166c95da"
+    },
+    {
+      "id": "PageBreaks",
+      "source": "assets/Document Page Break/SVG/ic_fluent_document_page_break_20_regular.svg",
+      "file": "icons/ic_fluent_document_page_break_20_regular.svg",
+      "sha256": "218d3f0e207b6daa01ee2624e4248edccc422594da0492f9aed655fa606522a6"
+    },
+    {
+      "id": "AxisVisibility",
+      "source": "assets/Eye/SVG/ic_fluent_eye_20_regular.svg",
+      "file": "icons/ic_fluent_eye_20_regular.svg",
+      "sha256": "3fedb211bdbd5d47c9d1e2a820fe73ffd0067ebf555ed8fe435033a09d0d2d1d"
+    },
+    {
+      "id": "MoveAxis",
+      "source": "assets/Table Switch/SVG/ic_fluent_table_switch_20_regular.svg",
+      "file": "icons/ic_fluent_table_switch_20_regular.svg",
+      "sha256": "25a18add8d94e84b83b693574be05fccec4c55e63d8290e3edadf2d302f53ec5"
+    },
+    {
+      "id": "Names",
+      "source": "assets/Tag Multiple/SVG/ic_fluent_tag_multiple_20_regular.svg",
+      "file": "icons/ic_fluent_tag_multiple_20_regular.svg",
+      "sha256": "78bff06607e03fb2fdd79d2ffde4d3777a2ef572f9ed5c0cb6264010cfe3791a"
+    },
+    {
+      "id": "ProtectSheet",
+      "source": "assets/Table Lock/SVG/ic_fluent_table_lock_20_regular.svg",
+      "file": "icons/ic_fluent_table_lock_20_regular.svg",
+      "sha256": "dcb7a80086b69bbe538003cad852954405cf8db4683fa36c0ab5dce6040e4543"
+    },
+    {
+      "id": "ProtectCells",
+      "source": "assets/Lock Closed/SVG/ic_fluent_lock_closed_20_regular.svg",
+      "file": "icons/ic_fluent_lock_closed_20_regular.svg",
+      "sha256": "71582e20cc3028bc1ac0abb985d4ca9a0c3073b0c8d3c78969ff43ec22cb5467"
+    },
+    {
+      "id": "GoTo",
+      "source": "assets/Target/SVG/ic_fluent_target_20_regular.svg",
+      "file": "icons/ic_fluent_target_20_regular.svg",
+      "sha256": "52e391515fc3ca72a181ee7a9f17f244725d5102666121f67763ce30d772f9f4"
+    },
+    {
+      "id": "ApplyScripts",
+      "source": "assets/Document Checkmark/SVG/ic_fluent_document_checkmark_20_regular.svg",
+      "file": "icons/ic_fluent_document_checkmark_20_regular.svg",
+      "sha256": "3dc30dfa1186befb2f53ab125489343b5df52292424e7fb20b6f00e13b90b1b2"
+    },
+    {
+      "id": "Validation",
+      "source": "assets/Clipboard Checkmark/SVG/ic_fluent_clipboard_checkmark_20_regular.svg",
+      "file": "icons/ic_fluent_clipboard_checkmark_20_regular.svg",
+      "sha256": "b831cbfca57fc60715a010ee0950824d56e13a7b08e6b14054c58d586d4218b9"
+    },
+    {
+      "id": "WhatIf",
+      "source": "assets/Arrow Split/SVG/ic_fluent_arrow_split_20_regular.svg",
+      "file": "icons/ic_fluent_arrow_split_20_regular.svg",
+      "sha256": "e19258ae0a3505b33c9801a05752c4a1c89a0e45c584b206510a8b21b80bca7d"
+    },
+    {
+      "id": "NumberFormat",
+      "source": "assets/Text Number Format/SVG/ic_fluent_text_number_format_20_regular.svg",
+      "file": "icons/ic_fluent_text_number_format_20_regular.svg",
+      "sha256": "ebf59edf1a904660ffe79c284a73f057abdce9a00b2a6bd2b7b5bd6d7d0f6c8e"
     }
   ]
 }

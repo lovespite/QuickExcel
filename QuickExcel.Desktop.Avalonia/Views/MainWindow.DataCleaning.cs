@@ -12,12 +12,12 @@ public sealed partial class MainWindow
     private void InstallCleaning()
     {
         InstallOutline();
-        RibbonGroup(UiText.Get("数据"), UiText.Get("数据工具"), RibbonButton(UiText.Get("分列"), SplitTextAsync), RibbonButton(UiText.Get("快速填充  Ctrl+E"), FlashFillAsync), RibbonButton(UiText.Get("删除重复值"), RemoveDuplicatesAsync),
-            DataToolDropdown(UiText.Get("数据验证"), CommandMenu(UiText.Get("数据验证…"), EditValidationAsync), CommandMenu(UiText.Get("清除验证"), RemoveValidationAsync)), RibbonButton(UiText.Get("文本转数字"), ConvertNumbersAsync));
-        RibbonGroup(UiText.Get("数据"), UiText.Get("预测与模拟"), DataToolDropdown(UiText.Get("模拟分析"), CommandMenu(UiText.Get("单变量求解…"), GoalSeekAsync), CommandMenu(UiText.Get("模拟运算表…"), DataTableAsync), CommandMenu(UiText.Get("刷新模拟运算表"), RefreshDataTablesAsync), CommandMenu(UiText.Get("方案分析…"), ScenariosAsync)),
-            RibbonButton(UiText.Get("预测"), ForecastAsync));
-        RibbonGroup(UiText.Get("数据"), UiText.Get("条件格式"), RibbonButton(UiText.Get("条件格式管理"), ConditionalFormatsAsync));
-        RibbonGroup(UiText.Get("数据"), UiText.Get("分组与汇总"), RibbonButton(UiText.Get("分组"), () => GroupAsync(false)), RibbonButton(UiText.Get("取消分组"), () => GroupAsync(true)), RibbonButton(UiText.Get("展开/折叠"), OutlineAsync), RibbonButton(UiText.Get("分类汇总"), SubtotalsAsync));
+        RibbonGroup(UiText.Get("数据"), UiText.Get("数据工具"), RibbonButton(RibbonIcon.SplitText, UiText.Get("分列"), SplitTextAsync), RibbonButton(RibbonIcon.FlashFill, UiText.Get("快速填充  Ctrl+E"), FlashFillAsync), RibbonButton(RibbonIcon.RemoveDuplicates, UiText.Get("删除重复值"), RemoveDuplicatesAsync),
+            DataToolDropdown(RibbonIcon.Validation, UiText.Get("数据验证"), CommandMenu(UiText.Get("数据验证…"), EditValidationAsync), CommandMenu(UiText.Get("清除验证"), RemoveValidationAsync)), RibbonButton(RibbonIcon.ConvertNumbers, UiText.Get("文本转数字"), ConvertNumbersAsync));
+        RibbonGroup(UiText.Get("数据"), UiText.Get("预测与模拟"), DataToolDropdown(RibbonIcon.WhatIf, UiText.Get("模拟分析"), CommandMenu(UiText.Get("单变量求解…"), GoalSeekAsync), CommandMenu(UiText.Get("模拟运算表…"), DataTableAsync), CommandMenu(UiText.Get("刷新模拟运算表"), RefreshDataTablesAsync), CommandMenu(UiText.Get("方案分析…"), ScenariosAsync)),
+            RibbonButton(RibbonIcon.Forecast, UiText.Get("预测"), ForecastAsync));
+        RibbonGroup(UiText.Get("数据"), UiText.Get("条件格式"), RibbonButton(RibbonIcon.ConditionalRules, UiText.Get("条件格式管理"), ConditionalFormatsAsync));
+        RibbonGroup(UiText.Get("数据"), UiText.Get("分组与汇总"), RibbonButton(RibbonIcon.Group, UiText.Get("分组"), () => GroupAsync(false)), RibbonButton(RibbonIcon.Ungroup, UiText.Get("取消分组"), () => GroupAsync(true)), RibbonButton(RibbonIcon.Outline, UiText.Get("展开/折叠"), OutlineAsync), RibbonButton(RibbonIcon.Subtotals, UiText.Get("分类汇总"), SubtotalsAsync));
     }
     private static int[] ColumnNumbers(string text) => text.Split([',', '，', ' '], StringSplitOptions.RemoveEmptyEntries).Select(v => CellRectangle.Parse(v.Trim() + "1").Left).ToArray();
     private async Task RemoveDuplicatesAsync()

@@ -81,9 +81,11 @@ public sealed partial class MainWindow
         var rowHeader = new Point(20, 68);
         Down(rowHeader, right: true); Up(rowHeader, right: true);
         check(_grid.Current.Row == 1 && !_grid.IsContextSelectionBlocked, "Merged row header preserves its clicked boundary");
+        check(_grid.SelectionRanges.Single().Top == 1 && _grid.SelectionRanges.Single().Rows == 1, "Merged row header selects only the clicked row");
         var columnHeader = new Point(235, 18);
         Down(columnHeader, right: true); Up(columnHeader, right: true);
         check(_grid.Current.Column == 1 && !_grid.IsContextSelectionBlocked, "Merged column header preserves its clicked boundary");
+        check(_grid.SelectionRanges.Single().Left == 1 && _grid.SelectionRanges.Single().Columns == 1, "Merged column header selects only the clicked column");
 
         var id = Document.Snapshot.Sheets[0].Id;
         await ExecuteAsync(new SetCellProtectionCommand(id, new(0, 0, 0, 0), false));

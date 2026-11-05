@@ -10,7 +10,9 @@ public sealed partial class MainWindow
 {
     private int _borderLine = 1;
     private string? _borderColor;
-    private DropDownButton BorderDropdown()
+    private CellBorderPatch _lastBorderPatch = CellBorders.Preset(BorderPreset.Bottom);
+    private BorderPresetIcon? _borderIcon;
+    private SplitButton BorderDropdown()
     {
         var items = new List<Control>();
         foreach (var (preset, name) in BorderEditor.Presets)
@@ -19,7 +21,7 @@ public sealed partial class MainWindow
             var item = CommandMenu(name, () => ApplyBordersAsync(CellBorders.Preset(preset, _borderLine, _borderColor)));
             item.Name = "BorderMenu" + preset;
             var patch = CellBorders.Preset(preset);
-            item.Icon = new BorderPreview { Width = 22, Height = 22, Lines = [patch.Left ?? new(0), patch.Right ?? new(0), patch.Top ?? new(0), patch.Bottom ?? new(0), patch.InsideHorizontal ?? new(0), patch.InsideVertical ?? new(0), new(0), new(0)] };
+            item.Icon = new BorderPresetIcon(patch);
             items.Add(item);
         }
         items.Add(new Separator());
@@ -40,13 +42,21 @@ public sealed partial class MainWindow
             color.Header = UiText.Get("线条颜色 · ") + (_borderColor is null ? UiText.Get("自动") : "#" + _borderColor[2..]);
             line.Header = UiText.Get("线型 · ") + BorderEditor.StyleNames[_borderLine];
         };
-        var button = new DropDownButton { Name = "BorderDropdown", Content = UiText.Get("▦ 边框"), Flyout = menu,
-            Height = 28, MinHeight = 28, Padding = new(4, 2), Margin = new(2, 1), Background = Brushes.Transparent, BorderThickness = new(0) };
+        _borderIcon = new BorderPresetIcon(_lastBorderPatch);
+        var button = new SplitButton { Name = "BorderDropdown", Content = _borderIcon, Flyout = menu,
+            Height = 28, MinHeight = 28, MinWidth = 0, Padding = new(4, 2), Margin = new(2, 1), Background = Brushes.Transparent, BorderThickness = new(0) };
+        button.Classes.Add("ribbon-command");
+        button.Click += async (_, _) => await PerformAsync(() => ApplyBordersAsync(_lastBorderPatch));
         AutomationProperties.SetName(button, UiText.Get("单元格边框")); ToolTip.SetTip(button, UiText.Get("边框 · 线型 · 颜色")); _mutationControls.Add(button); return button;
     }
     private async Task ApplyBordersAsync(CellBorderPatch patch)
     {
-        if (await CommitEditorsAsync()) await ExecuteAsync(new SetCellBordersCommand(VisibleAddresses(), patch));
+        if (await CommitEditorsAsync() && await ExecuteAsync(new SetCellBordersCommand(VisibleAddresses(), patch))) RememberBorders(patch);
+    }
+    private void RememberBorders(CellBorderPatch patch)
+    {
+        _lastBorderPatch = patch;
+        if (_borderIcon is { } icon) icon.Patch = patch;
     }
     private BorderStroke?[] SelectionBorders(CellAddress[] addresses)
     {

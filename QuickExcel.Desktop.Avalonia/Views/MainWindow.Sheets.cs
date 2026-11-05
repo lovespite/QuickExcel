@@ -71,9 +71,9 @@ public sealed partial class MainWindow
             RibbonButton(RibbonIcon.Zoom, UiText.Get("缩放"), ZoomDialogAsync));
         RibbonGroup(UiText.Get("开始"), UiText.Get("行列"), RibbonButton(RibbonIcon.InsertRow, UiText.Get("插入行"), () => ShiftAxisAsync(SheetAxis.Row, false)), RibbonButton(RibbonIcon.DeleteRow, UiText.Get("删除行"), () => ShiftAxisAsync(SheetAxis.Row, true)),
             RibbonButton(RibbonIcon.InsertColumn, UiText.Get("插入列"), () => ShiftAxisAsync(SheetAxis.Column, false)), RibbonButton(RibbonIcon.DeleteColumn, UiText.Get("删除列"), () => ShiftAxisAsync(SheetAxis.Column, true)),
-            RibbonButton(UiText.Get("隐藏/显示行列"), AxisVisibilityAsync), RibbonButton(UiText.Get("移动行列"), MoveAxisAsync));
-        RibbonGroup(UiText.Get("公式"), UiText.Get("名称"), RibbonButton(UiText.Get("名称管理"), NamesAsync));
-        RibbonGroup(UiText.Get("审阅"), UiText.Get("保护"), RibbonButton(UiText.Get("工作表保护"), ProtectSheetAsync), RibbonButton(UiText.Get("单元格保护"), ProtectCellsAsync));
+            RibbonButton(RibbonIcon.AxisVisibility, UiText.Get("隐藏/显示行列"), AxisVisibilityAsync), RibbonButton(RibbonIcon.MoveAxis, UiText.Get("移动行列"), MoveAxisAsync));
+        RibbonGroup(UiText.Get("公式"), UiText.Get("名称"), RibbonButton(RibbonIcon.Names, UiText.Get("名称管理"), NamesAsync));
+        RibbonGroup(UiText.Get("审阅"), UiText.Get("保护"), RibbonButton(RibbonIcon.ProtectSheet, UiText.Get("工作表保护"), ProtectSheetAsync), RibbonButton(RibbonIcon.ProtectCells, UiText.Get("单元格保护"), ProtectCellsAsync));
         _grid.ViewportChanged += () =>
         {
             if (!_synchronizing && !_workspace.IsBusy && _grid.ScrollingCell is { } cell)
@@ -170,6 +170,14 @@ public sealed partial class MainWindow
         if (!await CommitEditorsAsync()) return;
         var range = SelectedRange(); var revision = Document.Snapshot.Revision;
         var first = axis == SheetAxis.Row ? range.Top : range.Left; var count = axis == SheetAxis.Row ? range.Rows : range.Columns;
+        var sheet = Document.Snapshot.GetSheet(Document.Snapshot.ActiveSheetId);
+        if (!delete && !SelectionPlanning.IsWholeRow(Rectangle(range)) && !SelectionPlanning.IsWholeColumn(Rectangle(range)) &&
+            sheet.MergedCells.Select(CellRectangle.Parse).Contains(Rectangle(range)))
+        {
+            if (await ExecuteAsync(ShiftAxisCommand.InsertIntoMergedCell(sheet.Id, axis, Rectangle(range)), revision))
+                _grid.Select(new(range.Top, range.Left));
+            return;
+        }
         if (delete && !await Dialogs.Confirm(this, UiText.Get("删除行列"), UiText.Format($"删除所选 {count} {(axis == SheetAxis.Row ? UiText.Get("行") : UiText.Get("列"))}？可撤销。"))) return;
         await ExecuteAsync(new ShiftAxisCommand(Document.Snapshot.ActiveSheetId, axis, first, count, delete), revision);
     }

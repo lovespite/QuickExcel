@@ -106,7 +106,7 @@ public sealed partial class WorkbookGrid : UserControl, IGridSurface, IDisposabl
         Configure(rows, columns); _rows.ScrollTo(0, ViewHeight); _columns.ScrollTo(0, ViewWidth);
         SelectCore(Sheet.View.ActiveCell, false, false);
         if (Sheet.View.Selection is { } selection)
-            _selection.Set(GridMergedSelection.Expand(new(selection.Range.Top, selection.Range.Left, selection.Range.Bottom, selection.Range.Right), _merges));
+            _selection.Set(ExpandSelection(new(selection.Range.Top, selection.Range.Left, selection.Range.Bottom, selection.Range.Right)));
         IncludeSelectionExtent();
         _pendingScrollCell = Sheet.View.HasFreeze ? Sheet.View.PaneTopLeftCell : Sheet.View.TopLeftCell;
         RestoreScrollViewport();
@@ -119,8 +119,14 @@ public sealed partial class WorkbookGrid : UserControl, IGridSurface, IDisposabl
             ReferenceEquals(previous.Sheets[_sheetIndex].Cells, snapshot.Sheets[_sheetIndex].Cells) &&
             previous.Sheets[_sheetIndex].View.Zoom == snapshot.Sheets[_sheetIndex].View.Zoom)
         { _snapshot = snapshot; if (!_editing) PrepareEditor(false); return; }
+        var selectedMerge = _selection.Ranges.Count == 1 && _merges.Contains(_selection.Ranges[0])
+            ? _selection.Ranges[0] : (GridCellRange?)null;
         if (!ReferenceEquals(_snapshot, snapshot)) ClearScene();
         _snapshot = snapshot; _zoom = Sheet.View.Zoom / 100d; Configure(_rows.Count, _columns.Count);
+        // Insert/undo/redo can resize the selected merged cell without moving its anchor.
+        if (selectedMerge is { } oldMerge)
+            foreach (var merge in _merges)
+                if (merge.Top == oldMerge.Top && merge.Left == oldMerge.Left) { _selection.Set(merge); break; }
         if (_selectedObject is { } selected && ObjectAnchor(selected) is null) ClearDrawingObjectSelection();
         UpdateScrollbars(); InvalidateContent(); if (!_editing) PrepareEditor(false); else PositionEditor();
     }
@@ -166,9 +172,13 @@ public sealed partial class WorkbookGrid : UserControl, IGridSurface, IDisposabl
         if (!CanSelectRanges([range], current)) return;
         if (!Commit() || !(BeforeSelection?.Invoke() ?? true)) return;
         ClearDrawingObjectSelection();
-        _selection.Set(GridMergedSelection.Expand(new(range.Top, range.Left, range.Bottom, range.Right), _merges));
+        _selection.Set(ExpandSelection(new(range.Top, range.Left, range.Bottom, range.Right)));
         _current = current; _anchor = new(range.Top, range.Left); IncludeSelectionExtent(); _overlay.InvalidateVisual(); PrepareEditor(false); SelectionChanged?.Invoke();
     }
+    private GridCellRange ExpandSelection(GridCellRange range) =>
+        // Whole-axis selections retain their explicit header boundaries, just like header drags.
+        range.Left == 0 && range.Right == _columns.Count - 1 || range.Top == 0 && range.Bottom == _rows.Count - 1
+            ? range : GridMergedSelection.Expand(range, _merges);
     public bool Commit()
     {
         var task = CommitAsync();

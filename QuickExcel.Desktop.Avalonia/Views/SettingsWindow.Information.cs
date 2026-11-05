@@ -59,6 +59,7 @@ internal sealed partial class SettingsWindow
         _page.Children.Add(Note($"{RuntimeInformation.FrameworkDescription}    ·    {RuntimeInformation.ProcessArchitecture}"));
         _page.Children.Add(Note("Copyright in the original code belongs to its respective authors. QuickExcel has not declared a project-wide open-source license. Third-party components are distributed under their respective licenses."));
         _page.Children.Add(Heading("Third-Party Components, Copyright and Licenses", 16));
+        _page.Children.Add(Note("Ribbon icons: Fluent UI System Icons — Copyright (c) 2020 Microsoft Corporation (MIT). Selected SVG paths are converted to native geometry; source details are in THIRD-PARTY-LICENSES.md."));
         var files = LicenseFiles(AppContext.BaseDirectory);
         var selector = new ComboBox { HorizontalAlignment = HorizontalAlignment.Stretch, ItemsSource = files };
         AutomationProperties.SetName(selector, UiText.Get("选择第三方许可证或来源声明"));

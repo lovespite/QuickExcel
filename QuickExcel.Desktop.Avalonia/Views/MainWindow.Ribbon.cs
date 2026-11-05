@@ -18,24 +18,14 @@ public sealed partial class MainWindow
     private readonly ComboBox _font = new() { Width = 160, Height = 28, MinHeight = 28, Padding = new(8, 2), VerticalContentAlignment = VerticalAlignment.Center },
         _fontSize = new() { Width = 72, Height = 28, MinHeight = 28, Padding = new(8, 2), VerticalContentAlignment = VerticalAlignment.Center };
     private readonly List<Control> _mutationControls = [];
-    private readonly Dictionary<string, StackPanel> _ribbonPages = [];
+    private readonly Dictionary<string, RibbonPage> _ribbonPages = [];
     private bool _updatingRibbon;
     private WorkbookClipboard? _formatBrush;
     private Guid _formatBrushSession;
     private StyleDefinition CurrentStyle => Document.Snapshot.Styles[Document.Snapshot.Sheets[SheetIndex].GetStyleId(_grid.Current.Row, _grid.Current.Column)];
-    private Button RibbonButton(string title, Func<Task> action, bool mutation = true)
-        => RibbonButton(RibbonIcon.Default, title, action, mutation);
     private Button RibbonButton(RibbonIcon icon, string title, Func<Task> action, bool mutation = true)
     {
-        Control content = RibbonIcons.Create(icon);
-        if (icon == RibbonIcon.Default)
-        {
-            var labeled = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
-            labeled.Children.Add(content);
-            labeled.Children.Add(new TextBlock { Text = title, VerticalAlignment = VerticalAlignment.Center });
-            content = labeled;
-        }
-        var button = new Button { Content = content, Padding = new(6, 3), Margin = new(2, 1), Height = 28, MinHeight = 28, MinWidth = 32,
+        var button = new Button { Content = new RibbonCommandContent(icon, title), Padding = new(6, 3), Margin = new(2, 1), Height = 28, MinHeight = 28, MinWidth = 32,
             Background = Brushes.Transparent, BorderThickness = new(0),
             HorizontalAlignment = HorizontalAlignment.Left, HorizontalContentAlignment = HorizontalAlignment.Left };
         button.Classes.Add("ribbon-command");
@@ -70,12 +60,10 @@ public sealed partial class MainWindow
     }
     private void RibbonContentGroup(string page, string name, Control body)
     {
-        if (!_ribbonPages.TryGetValue(page, out var row))
+        if (!_ribbonPages.TryGetValue(page, out var scroll))
         {
-            row = new StackPanel { Orientation = Orientation.Horizontal };
-            _ribbonPages.Add(page, row);
-            var scroll = new ScrollViewer { Content = row, VerticalAlignment = VerticalAlignment.Stretch, HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
-                VerticalScrollBarVisibility = ScrollBarVisibility.Disabled };
+            scroll = new RibbonPage(allowLabels: page != UiText.Get("开始"));
+            _ribbonPages.Add(page, scroll);
             scroll.PointerWheelChanged += (_, e) =>
             {
                 if (scroll.Extent.Width <= scroll.Viewport.Width || e.Delta.Y == 0) return;
@@ -86,7 +74,7 @@ public sealed partial class MainWindow
         var panel = new global::Avalonia.Controls.Grid { RowDefinitions = new("90,20"), Margin = new(7, 2) };
         var label = new TextBlock { Text = name, FontSize = 11, Foreground = Brushes.Gray, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
         global::Avalonia.Controls.Grid.SetRow(label, 1); panel.Children.Add(body); panel.Children.Add(label);
-        row.Children.Add(new Border { BorderBrush = Brushes.LightGray, BorderThickness = new(0, 0, 1, 0), Child = panel });
+        scroll.AddGroup(new Border { BorderBrush = Brushes.LightGray, BorderThickness = new(0, 0, 1, 0), Child = panel });
     }
     private void ArrangeRibbonTabs()
     {
@@ -98,7 +86,7 @@ public sealed partial class MainWindow
     {
         AutomationProperties.SetName(_ribbon, UiText.Get("功能区")); DockPanel.SetDock(_ribbon, Dock.Top); _book.Children.Insert(0, _ribbon);
         RibbonGroup(UiText.Get("开始"), UiText.Get("剪贴板"), RibbonButton(RibbonIcon.Paste, UiText.Get("粘贴"), () => PasteAsync("all")), RibbonButton(RibbonIcon.Copy, UiText.Get("复制"), () => CopyAsync(false), false),
-            RibbonButton(RibbonIcon.Cut, UiText.Get("剪切"), () => CopyAsync(true)), RibbonButton(UiText.Get("只贴值"), () => PasteAsync("values")), RibbonButton(RibbonIcon.FormatBrush, UiText.Get("格式刷"), FormatBrushAsync));
+            RibbonButton(RibbonIcon.Cut, UiText.Get("剪切"), () => CopyAsync(true)), RibbonButton(RibbonIcon.PasteValues, UiText.Get("只贴值"), () => PasteAsync("values")), RibbonButton(RibbonIcon.FormatBrush, UiText.Get("格式刷"), FormatBrushAsync));
         _font.ItemsSource = FontManager.Current.SystemFonts.Select(f => f.Name).Order(StringComparer.CurrentCultureIgnoreCase).ToArray();
         _fontSize.ItemsSource = new double[] { 8, 9, 10, 11, 12, 14, 16, 18, 20, 24, 28, 36, 48, 72 };
         AutomationProperties.SetName(_font, UiText.Get("字体")); AutomationProperties.SetName(_fontSize, UiText.Get("字号"));
@@ -117,13 +105,13 @@ public sealed partial class MainWindow
             RibbonButton(RibbonIcon.MergeCells, UiText.Get("合并"), () => MergeAsync(false)), RibbonButton(RibbonIcon.SplitCells, UiText.Get("取消合并"), () => MergeAsync(true)));
         InstallNumberFormatRibbon();
         InstallCellStyles();
-        RibbonGroup(UiText.Get("开始"), UiText.Get("单元格"), RibbonButton(UiText.Get("设置单元格格式"), CellFormatAsync), RibbonButton(RibbonIcon.ClearFormatting, UiText.Get("清除格式"), ClearFormatsAsync));
+        RibbonGroup(UiText.Get("开始"), UiText.Get("单元格"), RibbonButton(RibbonIcon.FormatCells, UiText.Get("设置单元格格式"), CellFormatAsync), RibbonButton(RibbonIcon.ClearFormatting, UiText.Get("清除格式"), ClearFormatsAsync));
         RibbonGroup(UiText.Get("公式"), UiText.Get("公式"), RibbonButton(RibbonIcon.AutoSum, UiText.Get("自动求和  Alt+="), () => { BeginAutoSum(); return Task.CompletedTask; }), RibbonButton(RibbonIcon.Calculate, UiText.Get("重算  F9"), CalculateAsync, false));
-        RibbonGroup(UiText.Get("开始"), UiText.Get("编辑"), RibbonButton(UiText.Get("向下填充"), () => FillDirectionAsync(false)), RibbonButton(UiText.Get("向右填充"), () => FillDirectionAsync(true)), RibbonButton(UiText.Get("序列"), SeriesAsync),
-            RibbonButton(UiText.Get("转为普通文本"), FlattenRichTextAsync));
+        RibbonGroup(UiText.Get("开始"), UiText.Get("编辑"), RibbonButton(RibbonIcon.FillDown, UiText.Get("向下填充"), () => FillDirectionAsync(false)), RibbonButton(RibbonIcon.FillRight, UiText.Get("向右填充"), () => FillDirectionAsync(true)), RibbonButton(RibbonIcon.FillSeries, UiText.Get("序列"), SeriesAsync),
+            RibbonButton(RibbonIcon.PlainText, UiText.Get("转为普通文本"), FlattenRichTextAsync));
         _grid.AutoFitRequested += (axis, index) => _ = PerformAsync(() => AutoFitAsync(axis, index));
-        RibbonGroup(UiText.Get("视图"), UiText.Get("行列尺寸"), RibbonButton(UiText.Get("自动行高"), () => AutoFitAsync(SheetAxis.Row, _grid.Current.Row)),
-            RibbonButton(UiText.Get("自动列宽"), () => AutoFitAsync(SheetAxis.Column, _grid.Current.Column)), RibbonButton(UiText.Get("行高"), () => AxisSizeAsync(SheetAxis.Row)), RibbonButton(UiText.Get("列宽"), () => AxisSizeAsync(SheetAxis.Column)));
+        RibbonGroup(UiText.Get("视图"), UiText.Get("行列尺寸"), RibbonButton(RibbonIcon.AutoFitHeight, UiText.Get("自动行高"), () => AutoFitAsync(SheetAxis.Row, _grid.Current.Row)),
+            RibbonButton(RibbonIcon.AutoFitWidth, UiText.Get("自动列宽"), () => AutoFitAsync(SheetAxis.Column, _grid.Current.Column)), RibbonButton(RibbonIcon.RowHeight, UiText.Get("行高"), () => AxisSizeAsync(SheetAxis.Row)), RibbonButton(RibbonIcon.ColumnWidth, UiText.Get("列宽"), () => AxisSizeAsync(SheetAxis.Column)));
     }
     private void UpdateRibbon()
     {

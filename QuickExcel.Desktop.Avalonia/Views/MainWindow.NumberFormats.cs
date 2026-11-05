@@ -54,8 +54,8 @@ public sealed partial class MainWindow
         actions.Children.Add(Symbol(",", UiText.Get("千位分隔样式"), () => ApplyStyleAsync(new(NumberFormatId: 4))));
         actions.Children.Add(RibbonButton(RibbonIcon.IncreaseDecimals, UiText.Get("增加小数位"), () => PrecisionAsync(1)));
         actions.Children.Add(RibbonButton(RibbonIcon.DecreaseDecimals, UiText.Get("减少小数位"), () => PrecisionAsync(-1)));
-        var more = new Button { Content = UiText.Get("其他数字格式…"), Height = 26, MinHeight = 26, Padding = new(6, 0), Background = Brushes.Transparent, BorderThickness = new(0), HorizontalAlignment = HorizontalAlignment.Right };
-        AutomationProperties.SetName(more, UiText.Get("其他数字格式")); more.Click += async (_, _) => await PerformAsync(NumberFormatAsync); _mutationControls.Add(more);
+        var more = RibbonButton(RibbonIcon.NumberFormat, UiText.Get("其他数字格式"), NumberFormatAsync);
+        more.Height = more.MinHeight = 26; more.Margin = new(0); more.HorizontalAlignment = HorizontalAlignment.Right;
         var body = new StackPanel { Spacing = 3 }; body.Children.Add(dropdown); body.Children.Add(actions); body.Children.Add(more);
         RibbonContentGroup(UiText.Get("开始"), UiText.Get("数字"), body);
     }
@@ -69,6 +69,7 @@ public sealed partial class MainWindow
         var dialog = new NumberFormatDialog(CurrentStyle, FormatSample, Document.Snapshot.DateSystem, Document.Snapshot.Styles, appearance, appearance ? SelectionBorders(addresses) : null, borderTab, alignmentTab);
         if (await dialog.ShowAsync(this) is not { } patch || patch == new CellStylePatch() && dialog.BorderPatch is null) return;
         if (session != Document.Session.SessionId) throw new InvalidOperationException(UiText.Get("工作簿已切换，请重新设置格式。"));
-        await ExecuteAsync(new SetCellFormatCommand(addresses, patch, dialog.BorderPatch), revision);
+        if (await ExecuteAsync(new SetCellFormatCommand(addresses, patch, dialog.BorderPatch), revision) && dialog.BorderPatch is { } borders)
+            RememberBorders(borders);
     }
 }

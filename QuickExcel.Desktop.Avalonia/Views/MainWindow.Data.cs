@@ -24,11 +24,11 @@ public sealed partial class MainWindow
     private void InstallDataCommands()
     {
         RibbonGroup(UiText.Get("数据"), UiText.Get("排序和筛选"), RibbonButton(RibbonIcon.SortAscending, UiText.Get("升序"), () => SortAsync(false)), RibbonButton(RibbonIcon.SortDescending, UiText.Get("降序"), () => SortAsync(true)),
-            RibbonButton(UiText.Get("多级排序"), () => SortAsync(null)), RibbonButton(RibbonIcon.Filter, UiText.Get("筛选区域"), EstablishFilterAsync), RibbonButton(UiText.Get("当前列筛选"), () => FilterAsync(_grid.Current.Column)),
-            RibbonButton(UiText.Get("清除全部筛选条件"), ClearFiltersAsync), RibbonButton(UiText.Get("取消筛选区域"), RemoveFilterAsync), RibbonButton(UiText.Get("清除排序标记"), ClearSortAsync));
-        RibbonGroup(UiText.Get("插入"), UiText.Get("表格"), RibbonButton(RibbonIcon.CreateTable, UiText.Get("创建表"), CreateTableAsync), RibbonButton(UiText.Get("调整表范围"), ResizeTableAsync), RibbonButton(UiText.Get("重命名表"), () => EditTableAsync(0)),
-            RibbonButton(UiText.Get("重命名表列"), () => EditTableAsync(1)), RibbonButton(UiText.Get("设置计算列"), () => EditTableAsync(2)));
-        RibbonGroup(UiText.Get("数据"),UiText.Get("透视表"),RibbonButton(UiText.Get("创建透视表"),CreatePivotAsync),RibbonButton(UiText.Get("刷新透视表"),RefreshPivotAsync),RibbonButton(UiText.Get("透视表转换为值"),ConvertPivotToValuesAsync));
+            RibbonButton(RibbonIcon.SortLevels, UiText.Get("多级排序"), () => SortAsync(null)), RibbonButton(RibbonIcon.Filter, UiText.Get("筛选区域"), EstablishFilterAsync), RibbonButton(RibbonIcon.FilterColumn, UiText.Get("当前列筛选"), () => FilterAsync(_grid.Current.Column)),
+            RibbonButton(RibbonIcon.ClearFilters, UiText.Get("清除全部筛选条件"), ClearFiltersAsync), RibbonButton(RibbonIcon.RemoveFilter, UiText.Get("取消筛选区域"), RemoveFilterAsync), RibbonButton(RibbonIcon.ClearSort, UiText.Get("清除排序标记"), ClearSortAsync));
+        RibbonGroup(UiText.Get("插入"), UiText.Get("表格"), RibbonButton(RibbonIcon.CreateTable, UiText.Get("创建表"), CreateTableAsync), RibbonButton(RibbonIcon.ResizeTable, UiText.Get("调整表范围"), ResizeTableAsync), RibbonButton(RibbonIcon.RenameTable, UiText.Get("重命名表"), () => EditTableAsync(0)),
+            RibbonButton(RibbonIcon.RenameColumn, UiText.Get("重命名表列"), () => EditTableAsync(1)), RibbonButton(RibbonIcon.CalculatedColumn, UiText.Get("设置计算列"), () => EditTableAsync(2)));
+        RibbonGroup(UiText.Get("数据"),UiText.Get("透视表"),RibbonButton(RibbonIcon.CreatePivot, UiText.Get("创建透视表"),CreatePivotAsync),RibbonButton(RibbonIcon.RefreshPivot, UiText.Get("刷新透视表"),RefreshPivotAsync),RibbonButton(RibbonIcon.PivotValues, UiText.Get("透视表转换为值"),ConvertPivotToValuesAsync));
         _grid.FilterRequested += column => _ = PerformAsync(() => FilterAsync(column));
         AddHandler(KeyDownEvent, async (_, e) =>
         { if (!e.Handled && e.Key == Key.Down && e.KeyModifiers == KeyModifiers.Alt && !_grid.IsEditing && !_formula.IsComposing &&

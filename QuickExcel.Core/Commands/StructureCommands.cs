@@ -37,6 +37,13 @@ public enum SheetAxis { Row, Column }
 /// <summary>Insertion/deletion uses cut-style reference semantics: dollar flags remain, targets follow structure.</summary>
 public sealed class ShiftAxisCommand(SheetId sheetId, SheetAxis axis, int index, int count, bool delete = false) : DocumentCommand
 {
+    private CellRectangle? MergedCellToExpand { get; init; }
+
+    /// <summary>Inserts one row/column after the merged anchor, retaining its content and expanding the merge.</summary>
+    public static ShiftAxisCommand InsertIntoMergedCell(SheetId sheetId, SheetAxis axis, CellRectangle mergedCell) =>
+        new(sheetId, axis, checked((axis == SheetAxis.Row ? mergedCell.Top : mergedCell.Left) + 1), 1)
+        { MergedCellToExpand = mergedCell };
+
     internal SheetId TargetSheet => sheetId;
     internal SheetAxis Axis => axis;
     internal bool Delete => delete;
@@ -47,6 +54,8 @@ public sealed class ShiftAxisCommand(SheetId sheetId, SheetAxis axis, int index,
         var limit = axis == SheetAxis.Row ? WorkbookLimits.MaxRows : WorkbookLimits.MaxColumns;
         if (!Enum.IsDefined(axis) || index < 0 || count < 1 || index > limit - count) throw new ArgumentOutOfRangeException(nameof(index));
         var target = snapshot.GetSheet(sheetId);
+        if (MergedCellToExpand is { } merge && !target.MergedCells.Select(CellRectangle.Parse).Contains(merge))
+            throw new ArgumentException("The selected merged cell no longer exists.", nameof(MergedCellToExpand));
         if (delete && (!target.Printing.RowBreaks.IsEmpty || !target.Printing.ColumnBreaks.IsEmpty))
             throw new NotSupportedException(MessageText.Get("含分页信息的工作表暂不支持删除行列；Excel 的分页重建规则尚未完整对齐，操作未应用。"));
         int? Position(int value)
@@ -61,7 +70,7 @@ public sealed class ShiftAxisCommand(SheetId sheetId, SheetAxis axis, int index,
             var right = end >= index + count ? end : Math.Min(end, index - 1);
             return left > right ? null : (Position(left)!.Value, Position(right)!.Value);
         }
-        var transformed = StructureEdits.Axis(snapshot, target, axis, Position, Interval);
+        var transformed = StructureEdits.Axis(snapshot, target, axis, Position, Interval, MergedCellToExpand);
         if (!delete)
         {
             transformed = InheritInsertedFormatting(transformed, target, axis, index, count);
@@ -195,7 +204,7 @@ internal static class StructureEdits
     }
 
     internal static WorkbookSnapshot Axis(WorkbookSnapshot snapshot, WorksheetSnapshot target, SheetAxis axis,
-        Func<int, int?> position, Func<int, int, (int Start, int End)?> interval)
+        Func<int, int?> position, Func<int, int, (int Start, int End)?> interval, CellRectangle? expandMerge = null)
     {
         if (!target.Data.Charts.IsEmpty || snapshot.Sheets.SelectMany(s => s.Data.Charts).SelectMany(c => c.Series).SelectMany(s => new[] { s.NameReference, s.Categories, s.Values })
             .OfType<string>().Any(f => string.Equals(WorksheetChart.ParseReference(f).Sheet, target.Name, StringComparison.OrdinalIgnoreCase)))
@@ -251,6 +260,12 @@ internal static class StructureEdits
             {
                 var original = CellRectangle.Parse(text);
                 if (MapRectangle(original) is not { } mapped) continue;
+                // The selected merge also grows when it originally occupies only one row/column.
+                if (original == expandMerge)
+                    mapped = axis == SheetAxis.Row ? original with { Bottom = checked(original.Bottom + 1) }
+                        : original with { Right = checked(original.Right + 1) };
+                if (mapped.Bottom >= WorkbookLimits.MaxRows || mapped.Right >= WorkbookLimits.MaxColumns)
+                    throw new ArgumentException(MessageText.Get("结构编辑会使图片或合并区域越界，操作未应用。"));
                 // A partial move must retain the top-left owner, otherwise its value would be hidden.
                 var owner = position(axis == SheetAxis.Row ? original.Top : original.Left);
                 if (owner is null || owner != (axis == SheetAxis.Row ? mapped.Top : mapped.Left))

@@ -49,7 +49,7 @@ public sealed partial class WorkbookGrid
         if (!CanSelectRanges(captured, current)) return;
         if (!Commit() || !(BeforeSelection?.Invoke() ?? true)) return;
         ClearDrawingObjectSelection();
-        _selection.Set(captured.Select(r => GridMergedSelection.Expand(new(r.Top, r.Left, r.Bottom, r.Right), _merges)));
+        _selection.Set(captured.Select(r => ExpandSelection(new(r.Top, r.Left, r.Bottom, r.Right))));
         _current = current; _anchor = current; IncludeSelectionExtent(); _overlay.InvalidateVisual(); PrepareEditor(false); SelectionChanged?.Invoke();
     }
     private bool CanSelectRanges(IReadOnlyList<GridRange> ranges, CellPosition current)

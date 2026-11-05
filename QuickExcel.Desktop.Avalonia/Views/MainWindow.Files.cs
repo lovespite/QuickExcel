@@ -15,7 +15,7 @@ public sealed partial class MainWindow
 
     private void InstallFileCommands()
     {
-        RibbonGroup(UiText.Get("审阅"), UiText.Get("文件兼容性"), RibbonButton(UiText.Get("兼容性报告"), CompatibilityAsync, false), RibbonButton(UiText.Get("导出值快照"), () => ExportAsync(false), false), RibbonButton(UiText.Get("导出可移植公式"), () => ExportAsync(true), false));
+        RibbonGroup(UiText.Get("审阅"), UiText.Get("文件兼容性"), RibbonButton(RibbonIcon.Compatibility, UiText.Get("兼容性报告"), CompatibilityAsync, false), RibbonButton(RibbonIcon.ExportValues, UiText.Get("导出值快照"), () => ExportAsync(false), false), RibbonButton(RibbonIcon.ExportFormulas, UiText.Get("导出可移植公式"), () => ExportAsync(true), false));
     }
     private async Task RecoveryAsync()
     {

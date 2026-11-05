@@ -41,12 +41,10 @@ public sealed partial class MainWindow
             CommandMenu(UiText.Get("清除整个工作表的规则"), () => ClearConditionalFormatsAsync(true)));
         clear.MinHeight = 34;
         var manage = CommandMenu(UiText.Get("管理规则(R)…"), ConditionalFormatsAsync); manage.Icon = RibbonIcons.Create(RibbonIcon.CreateTable);
-        var content = new StackPanel { Spacing = 6, HorizontalAlignment = HorizontalAlignment.Center };
-        content.Children.Add(new Viewbox { Width = 30, Height = 30, Child = new ConditionalFormatIcon(0) });
-        content.Children.Add(new TextBlock { Text = UiText.Get("条件格式"), HorizontalAlignment = HorizontalAlignment.Center });
         var button = new DropDownButton
         {
-            Name = "ConditionalFormatDropdown", Content = content, Height = 82, MinWidth = 100, Padding = new(8, 6), Margin = new(2, 1),
+            Name = "ConditionalFormatDropdown", Content = new ConditionalFormatIcon(0) { Width = 20, Height = 20, IsHitTestVisible = false },
+            Height = 28, MinHeight = 28, Padding = new(6, 3), Margin = new(2, 1),
             Background = Brushes.Transparent, BorderThickness = new(0),
             HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Center,
             Flyout = new MenuFlyout { ItemsSource = new Control[] { highlight, ranking, new Separator(),

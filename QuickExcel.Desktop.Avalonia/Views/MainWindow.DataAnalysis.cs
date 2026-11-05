@@ -11,11 +11,9 @@ namespace QuickExcel.Desktop.Avalonia;
 
 public sealed partial class MainWindow
 {
-    private DropDownButton DataToolDropdown(string title, params Control[] items)
+    private DropDownButton DataToolDropdown(RibbonIcon icon, string title, params Control[] items)
     {
-        var content = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
-        content.Children.Add(RibbonIcons.Create(RibbonIcon.Default)); content.Children.Add(new TextBlock { Text = title, VerticalAlignment = VerticalAlignment.Center });
-        var button = new DropDownButton { Content = content, Height = 28, MinHeight = 28, Padding = new(6, 3), Margin = new(2, 1),
+        var button = new DropDownButton { Content = new RibbonCommandContent(icon, title), Height = 28, MinHeight = 28, Padding = new(6, 3), Margin = new(2, 1),
             Background = Brushes.Transparent, BorderThickness = new(0), HorizontalAlignment = HorizontalAlignment.Left,
             Flyout = new MenuFlyout { ItemsSource = items } };
         button.Classes.Add("ribbon-command"); AutomationProperties.SetName(button, title); ToolTip.SetTip(button, title); _mutationControls.Add(button); return button;

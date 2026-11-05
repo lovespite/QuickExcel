@@ -60,7 +60,7 @@ public sealed partial class MainWindow
         RibbonContentGroup(UiText.Get("自动执行"), "Actions", body);
         _automationRun = RibbonButton(RibbonIcon.Run, UiText.Get("执行"), () => RunScriptActionAsync(_automationActions.SelectedItem as ScriptActionDescriptor), false);
         _automationRun.Name = "AutomationRun";
-        _automationLoad = RibbonButton(UiText.Get("加载操作"), ApplyScriptsAsync, false); _automationLoad.Name = "AutomationLoad";
+        _automationLoad = RibbonButton(RibbonIcon.LoadActions, UiText.Get("加载操作"), ApplyScriptsAsync, false); _automationLoad.Name = "AutomationLoad";
         ToolTip.SetTip(_automationLoad, UiText.Get("应用并授权当前脚本、重算工作簿，然后加载全部操作。操作内容仅在执行时运行。"));
         RibbonGroup(UiText.Get("自动执行"), UiText.Get("操作"), _automationRun, _automationLoad, RibbonButton(RibbonIcon.Code, UiText.Get("脚本编辑器"), OpenScriptsAsync, false));
     }
