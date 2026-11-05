@@ -205,6 +205,8 @@ public sealed class WorkbookSnapshotTests
     [InlineData("=")]
     [InlineData("=   ")]
     [InlineData("1,234")]
+    [InlineData("42\n")]
+    [InlineData("\r\nTRUE")]
     public void UserInputDoesNotMisinterpretIdentifiersOrUnsupportedValues(string text)
     {
         var content = CellInput.Parse(text);

@@ -22,7 +22,8 @@ public sealed partial class MainWindow : Window
     private readonly WorkbookWorkspace _workspace;
     private readonly WorkbookServices _services;
     private readonly WorkbookGrid _grid = new();
-    private readonly CompositionTextBox _formula = new() { TextWrapping = TextWrapping.Wrap, VerticalContentAlignment = VerticalAlignment.Top };
+    private readonly CompositionTextBox _formula = new() { AcceptsReturn = true, NewLine = "\n",
+        TextWrapping = TextWrapping.Wrap, VerticalContentAlignment = VerticalAlignment.Top };
     private readonly TextBlock _address = new() { Width = 86, VerticalAlignment = VerticalAlignment.Center };
     private readonly TextBlock _status = new() { Text = "就绪", Margin = new(12, 5) };
     private readonly ListBox _sheets = new() { MinHeight = 0, Padding = new(0), SelectionMode = SelectionMode.Single };

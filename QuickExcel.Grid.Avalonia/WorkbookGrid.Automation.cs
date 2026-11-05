@@ -36,7 +36,7 @@ public sealed partial class WorkbookGrid
             $"工作表 {_grid.Sheet.Name}，{ColumnName(_grid.Current.Column)} 列，第 {_grid.Current.Row + 1} 行，{(IsReadOnly ? "只读" : "可编辑")}";
         protected override string GetHelpTextCore() => "选区：" + string.Join("；", _grid.SelectionRanges.Take(64).Select(r =>
             $"{ColumnName(r.Left)}{r.Top + 1}:{ColumnName(r.Right)}{r.Bottom + 1}")) +
-            "。当前值：" + Value + "。F2 编辑，Enter 提交，Escape 取消，F6 切换网格、公式栏、工作表和菜单。";
+            "。当前值：" + Value + "。F2 编辑，Alt+Enter 换行，Enter 提交，Escape 取消，F6 切换网格、公式栏、工作表和菜单。";
         protected override void SetFocusCore() => _grid.CellEditor.Focus();
         protected override bool HasKeyboardFocusCore() => _grid.IsKeyboardFocusWithin;
     }

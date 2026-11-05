@@ -37,7 +37,7 @@ public sealed partial class WorkbookGrid : UserControl, IGridSurface, IDisposabl
     private readonly GridRangeSelection _selection = new();
     private bool _settingText, _editing, _scrolling, _dragging, _disposed;
     private double _zoom = 1;
-    public CompositionTextBox CellEditor { get; } = new() { Padding = new(2, 0), MinHeight = 0, MinWidth = 0,
+    public CompositionTextBox CellEditor { get; } = new() { AcceptsReturn = true, NewLine = "\n", Padding = new(2, 0), MinHeight = 0, MinWidth = 0,
         BorderThickness = new(1), BorderBrush = Brushes.Teal, Background = Brushes.White, Opacity = 0, IsHitTestVisible = false };
     public Func<int, CellPosition, string, bool>? CommitCell { get; set; }
     public Func<int, CellPosition, string, Task<bool>>? CommitCellAsync { get; set; }

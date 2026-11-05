@@ -38,6 +38,8 @@ public static class CellInput
         WorkbookLimits.ValidateText(text);
         if (text[0] == '=' && text.Length > 1 && !text.AsSpan(1).IsWhiteSpace())
             return CellContent.FromFormula(text, styleId);
+        if (text.AsSpan().ContainsAny('\r', '\n'))
+            return CellContent.FromLiteral(CellValue.FromText(text), styleId);
         var trimmed = text.AsSpan().Trim();
         if (trimmed.Equals("TRUE", StringComparison.OrdinalIgnoreCase))
             return CellContent.FromLiteral(CellValue.FromBoolean(true), styleId);

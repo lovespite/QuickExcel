@@ -49,6 +49,18 @@ public sealed partial class MainWindow
             if (e.Handled || _grid.IsComposing || _formula.IsComposing) return;
             var editor = _formula.IsKeyboardFocusWithin ? _formula : _grid.CellEditor.IsKeyboardFocusWithin ? _grid.CellEditor : null;
             if (editor is null) return;
+            if (e.Key == Key.Enter && e.KeyModifiers == KeyModifiers.Alt)
+            {
+                e.Handled = true;
+                if (editor.IsReadOnly) return;
+                if (editor == _grid.CellEditor && !_grid.IsEditing)
+                {
+                    if (!_grid.BeginEdit()) return;
+                    editor.SelectionStart = editor.SelectionEnd = editor.Text?.Length ?? 0;
+                }
+                editor.SelectedText = editor.NewLine;
+                return;
+            }
             if (e.Key == Key.OemPlus && e.KeyModifiers == KeyModifiers.Alt) { BeginAutoSum(); e.Handled = true; return; }
             if (!IsFormulaDraft(editor) || e.KeyModifiers != KeyModifiers.None) return;
             if (e.Key == Key.F4)
