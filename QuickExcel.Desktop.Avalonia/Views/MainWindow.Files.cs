@@ -1,3 +1,4 @@
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Templates;
 using Avalonia.Layout;
@@ -15,6 +16,10 @@ public sealed partial class MainWindow
 
     private void InstallFileCommands()
     {
+        var textExport = new MenuItem { Header = UiText.Get("导出 CSV / TSV") };
+        textExport.Bind(IsEnabledProperty, _book.GetObservable(IsVisibleProperty));
+        textExport.Click += async (_, _) => { if (_book.IsVisible) await PerformAsync(ExportTextAsync); };
+        ((MenuItem)_menu.Items[0]!).Items.Add(textExport);
         RibbonGroup(UiText.Get("审阅"), UiText.Get("文件兼容性"), RibbonButton(RibbonIcon.Compatibility, UiText.Get("兼容性报告"), CompatibilityAsync, false), RibbonButton(RibbonIcon.ExportValues, UiText.Get("导出值快照"), () => ExportAsync(false), false), RibbonButton(RibbonIcon.ExportFormulas, UiText.Get("导出可移植公式"), () => ExportAsync(true), false));
     }
     private async Task RecoveryAsync()

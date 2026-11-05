@@ -121,6 +121,7 @@ public sealed partial class MainWindow : Window
             if (Program.SmokeDirectory is { } featureDirectory && Program.SmokeMode == "ribbon-filter") { await RunRibbonFilterSmokeAsync(featureDirectory); return; }
             if (Program.SmokeDirectory is { } drawingDirectory && Program.SmokeMode == "drawing") { await RunDrawingSmokeAsync(drawingDirectory); return; }
             if (Program.SmokeDirectory is { } pageBreakDirectory && Program.SmokeMode == "page-break") { await RunPageBreakSmokeAsync(pageBreakDirectory); return; }
+            if (Program.SmokeDirectory is { } textDirectory && Program.SmokeMode == "text-exchange") { await RunTextExchangeSmokeAsync(textDirectory); return; }
             if (Program.SmokeDirectory is { } compatibilityDirectory && Program.SmokeMode == "compatibility") { await RunCompatibilitySmokeAsync(compatibilityDirectory); return; }
             if (Program.SmokeDirectory is { } smoke && Program.SmokeMode != "manual") { if (Program.SmokeMode == "grid") await RunGridSmokeAsync(smoke); else if (Program.SmokeMode == "benchmark") await RunGridBenchmarkAsync(smoke); else if (Program.SmokeMode == "web") await RunWebSmokeAsync(smoke); else if (Program.SmokeMode == "web-benchmark") await RunWebBenchmarkAsync(smoke); else await RunWorkspaceSmokeAsync(smoke); return; }
 #endif

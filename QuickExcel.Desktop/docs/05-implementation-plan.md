@@ -1,5 +1,7 @@
 # QuickExcel 实施计划
 
+2026-11-05：E6/E7 开始按 [82 号计划](82-excel-common-features-plan.md)逐项交付，定向验收与活动包记录见 [83](83-e6-e7-implementation-log.md)。
+
 2026-11-04 最新进度：XLSX / Excel 对齐 E0–E5 已完成声明子集。E5 的动态数组、基础透视表、复杂公式子项、Strict OOXML 和线程评论原位保留均有实现与真实 Excel 对照，764 项相关集成测试、90 项 Avalonia 检查通过；本地 Windows 自包含包已通过生产自检并激活。验收、包路径及未支持特性见 [74](74-e5-implementation-log.md)。M4/M5/M6 实机/安全等门禁仍独立待验；以下带旧日期的阶段说明保留为历史。
 
 ## 当前进度（2026-11-02）
