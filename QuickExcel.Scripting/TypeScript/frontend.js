@@ -62,7 +62,8 @@ globalThis.qxCompile = function qxCompile(request) {
         }
         files.set('/lib/' + name, source);
     }
-    files.set('/lib/quickexcel.d.ts', request.declarations);
+    files.set('/lib/quickexcel.d.ts', request.apiVersion === 4 ? request.declarations :
+        request.declarations.replace('interface Host {', 'interface Host extends LegacyRegistration {'));
     const options = {
         target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext,
         moduleResolution: ts.ModuleResolutionKind.Bundler, moduleDetection: ts.ModuleDetectionKind.Force,

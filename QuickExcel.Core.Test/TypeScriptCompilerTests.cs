@@ -77,7 +77,7 @@ public sealed class TypeScriptCompilerTests
         var identity = M4ProtocolTests.Identity();
         var hello = fault switch
         {
-            "execute-hello" => new WorkerHello(WorkerProtocol.Engine, WorkerProtocol.Policy, [3], WorkerProtocol.MaxFrameBytes),
+            "execute-hello" => new WorkerHello(WorkerProtocol.Engine, WorkerProtocol.Policy, [3, 4], WorkerProtocol.MaxFrameBytes),
             "compile-role" => CompilerProtocol.Hello with { Role = "execute" },
             "compiler-identity" => CompilerProtocol.Hello with { Compiler = new string('0', 64) },
             _ => CompilerProtocol.Hello

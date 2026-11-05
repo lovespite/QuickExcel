@@ -34,7 +34,7 @@ internal sealed class ScriptEditorPage : IAsyncDisposable
     internal ScriptEditorPage(WebAssetCatalog assets, ScriptDraftSession drafts, string document, long generation, string profileRoot)
     {
         Drafts = drafts;
-        string[] capabilities = ["draftChanged", "draftChunk", "draftAck", "initialized", "loadAck", "loaded", "released", "selected", "located", "definitionSelected", "navigate", "save", "focusHost", "console"];
+        string[] capabilities = ["draftChanged", "draftChunk", "draftAck", "initialized", "loadAck", "loaded", "released", "selected", "located", "definitionSelected", "navigate", "save", "focusHost", "console", "insertionCaptured", "templateInserted", "commandExecuted"];
         Browser = new(assets, "script.html", document, generation, profileRoot, Program.WebTestMode ? capabilities.Append("testResult") : capabilities);
         Browser.Message += OnMessage;
         Browser.Failed += ex => { Drafts.MarkFailed(); Failed?.Invoke(ex); };
@@ -71,7 +71,7 @@ internal sealed class ScriptEditorPage : IAsyncDisposable
     internal async Task LoadAsync(string module)
     {
         await Browser.Ready;
-        await Browser.RequestAsync("initialize", "initialized", new { modules = Drafts.Models.Keys.ToArray(), readOnly = Drafts.IsReadOnly,
+        await Browser.RequestAsync("initialize", "initialized", new { modules = Drafts.Models.Keys.ToArray(), readOnly = Drafts.IsReadOnly, apiVersion = Drafts.ApiVersion,
             languages = Drafts.Models.ToDictionary(p => p.Key, p => p.Value.Language == ScriptLanguage.TypeScript ? "typescript" : "javascript") });
         foreach (var (id, draft) in Drafts.Models)
         foreach (var chunk in ScriptDraftSession.Split(id, draft.Text, 0, 1))
@@ -103,6 +103,18 @@ internal sealed class ScriptEditorPage : IAsyncDisposable
         }
     }
     internal Task SelectAsync(string module) => Browser.RequestAsync("select", "selected", new { module });
+    internal async Task<JsonElement> CaptureInsertionAsync(string module)
+    {
+        var reply = await Browser.RequestAsync("captureInsertion", "insertionCaptured", new { module });
+        if (!reply.Payload.GetProperty("accepted").GetBoolean()) throw new InvalidOperationException(UiText.Get("请先完成输入，并在可编辑的事件脚本中放置光标。"));
+        return reply.Payload.GetProperty("anchor").Clone();
+    }
+    internal async Task InsertTemplateAsync(JsonElement anchor, string text)
+    {
+        var reply = await Browser.RequestAsync("insertTemplate", "templateInserted", new { anchor, text });
+        if (!reply.Payload.GetProperty("accepted").GetBoolean()) throw new InvalidOperationException(UiText.Get("脚本或光标所属模块已变化，请重新添加事件处理器。"));
+    }
+    internal Task ExecuteEditorCommandAsync(string command) => Browser.RequestAsync("editorCommand", "commandExecuted", new { command });
     internal Task OpenDefinitionAsync(string name, int? line = null, int? column = null) => IsDefinition(name) ?
         Browser.RequestAsync("definition", "definitionSelected", new { name, line, column }) : throw new InvalidDataException(UiText.Get("未知定义文件。"));
     internal Task LocateAsync(string module, int line, int column) => Browser.RequestAsync("locate", "located", new { module, line, column, version = Drafts.Models[module].Version });

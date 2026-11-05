@@ -174,7 +174,7 @@ public sealed class SharedWorkbookWorkerTests
             identity = identity with { RequestId = Guid.NewGuid() };
             await WorkerProtocol.WriteAsync(process.Input, WorkerProtocol.Message(identity, kind, payload), timeout.Token);
         }
-        await Send("hello", new WorkerHello(WorkerProtocol.Engine, WorkerProtocol.Policy, [3], WorkerProtocol.MaxFrameBytes));
+        await Send("hello", new WorkerHello(WorkerProtocol.Engine, WorkerProtocol.Policy, [3, 4], WorkerProtocol.MaxFrameBytes));
         _ = await WorkerProtocol.ReadAsync(process.Output, timeout.Token);
         var bundle = new LoadModules([new("main", "scripts/main.js", mixedBindings ? "while(true){}" : "")], ["main"], "")
         { FunctionEntries = !actions || mixedBindings ? ["main"] : [], ActionEntries = actions || mixedBindings ? ["main"] : [] };

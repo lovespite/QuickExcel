@@ -18,7 +18,7 @@ internal static class SharedScriptWorkers
 
     internal static ScriptWorkerLease Acquire(string executable, ScriptRuntimeRequest request, bool actions)
     {
-        if (!OperatingSystem.IsWindows() || request.Modules.ScriptApiVersion != 3 || !request.RuntimeLifetime.CanBeCanceled)
+        if (!OperatingSystem.IsWindows() || request.Modules.ScriptApiVersion is not (3 or 4) || !request.RuntimeLifetime.CanBeCanceled)
         {
             var isolated = ScriptWorkerRuntime.Start(executable, request, actions);
             return new(isolated, isolated.Dispose);
@@ -54,7 +54,11 @@ internal static class SharedScriptWorkers
         try
         {
             request.RuntimeLifetime.ThrowIfCancellationRequested();
-            if (entry.Runtime is { IsStopped: true }) { entry.Runtime.Dispose(); entry.Runtime = null; }
+            if (entry.Runtime is { IsStopped: true })
+            {
+                if (request.Modules.HasInitialization) throw new ScriptRuntimeFailureException("WorkerStopped", "初始化上下文已失效，请重新应用脚本。");
+                entry.Runtime.Dispose(); entry.Runtime = null;
+            }
             if (entry.Runtime is null) entry.Runtime = ScriptWorkerRuntime.Start(executable, request, actions, shared: true);
             else entry.Runtime.BeginRound(request, actions);
             request.RuntimeLifetime.ThrowIfCancellationRequested();

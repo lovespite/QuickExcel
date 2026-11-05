@@ -250,7 +250,7 @@ public sealed class M4ModuleTests
         try
         {
             var identity = M4ProtocolTests.Identity();
-            var hello = WorkerProtocol.Message(identity, "hello", new WorkerHello(WorkerProtocol.Engine, WorkerProtocol.Policy, [3], WorkerProtocol.MaxFrameBytes));
+            var hello = WorkerProtocol.Message(identity, "hello", new WorkerHello(WorkerProtocol.Engine, WorkerProtocol.Policy, [3, 4], WorkerProtocol.MaxFrameBytes));
             if (fault == "legacy-protocol")
             {
                 var bytes = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(hello with { ProtocolVersion = 1 }, WorkerProtocol.Json);

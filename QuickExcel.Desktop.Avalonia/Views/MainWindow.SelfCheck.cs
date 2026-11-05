@@ -86,6 +86,29 @@ public sealed partial class MainWindow
                 Check(Document.Undo(), "Published API v3 action undo");
             }
             var visualSheet = Document.Snapshot.ActiveSheetId;
+            if (OperatingSystem.IsWindows())
+            {
+                var startup = new ScriptModuleSet(new Dictionary<string, ScriptModule>
+                {
+                    ["main"] = new("scripts/main.js", "export function main(){ globalThis.count=40; }"),
+                    ["action"] = new("scripts/action.js", "export function main(w,h){ if('functions' in h || 'events' in h) throw Error('manual registration'); w.getActiveWorksheet().getRange('G1').setValue(++globalThis.count); }"),
+                    ["events"] = new("scripts/events.js", "export function onCellClick(c){ c.workbook.getActiveWorksheet().getRange('H1').setValue(++globalThis.count); }"),
+                    ["formula"] = new("scripts/formula.ts", "export function DOUBLE(value: unknown): number { if(typeof value !== 'number') throw Error('number required'); return value*2; }", ScriptLanguage.TypeScript)
+                }, ["main", "action", "events", "formula"], scriptApiVersion: 4,
+                    bindings: [new("main", "initialization"), new("action", "actions"), new("events", "events"), new("formula", "formula-functions")]);
+                using var initialized = new WorkbookDocument(Document.Snapshot.WithScriptModules(startup), _services);
+                initialized.SetCell(0, 0, 5, "=JS.formula.DOUBLE(21)");
+                await Task.Run(() => initialized.EnableScriptsAndCalculate());
+                await Task.Run(() => initialized.RunAction("action"));
+                initialized.Session.RaiseScriptEvent("cell.click", initialized.Snapshot.ActiveSheetId);
+                await Task.Run(() => initialized.DispatchScriptEvents());
+                await Task.Run(() => initialized.Calculate());
+                await Task.Run(() => initialized.RunAction("action"));
+                Check(initialized.GetCellValue(0, 0, 5) == "42" && initialized.GetCellValue(0, 0, 6) == "43" && initialized.GetCellValue(0, 0, 7) == "42",
+                    "Published API v4 initializes once, discovers UDF/Actions/Events and preserves isolated state across recalculation");
+                var startupPath = Path.Combine(directory, "initialized-scripts.xlsq"); initialized.Save(startupPath);
+                Check(_services.Storage.Open(startupPath).ScriptModules.ScriptApiVersion == 4, "Published API v4 roles and sources save/reopen");
+            }
             _workspace.Editor.Execute(new SetCellsCommand(Enumerable.Range(0, 3).SelectMany(column => Enumerable.Range(10, 4).Select(row =>
                 new CellEdit(new(visualSheet, row, column), CellContent.FromLiteral(CellValue.FromNumber((row - 11) * 10)))))));
             _workspace.Editor.Execute(new SetConditionalFormatsCommand(visualSheet, [

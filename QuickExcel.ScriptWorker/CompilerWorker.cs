@@ -32,7 +32,7 @@ internal static class CompilerWorker
             {
                 try
                 {
-                    var json = JscCompilerSession.Compile(JsonSerializer.Serialize(new { modules = request.Modules, entries = request.Entries }, WorkerProtocol.Json), CompilerProtocol.Identity);
+                    var json = JscCompilerSession.Compile(JsonSerializer.Serialize(new { modules = request.Modules, entries = request.Entries, apiVersion = request.ApiVersion }, WorkerProtocol.Json), CompilerProtocol.Identity);
                     result.SetResult(JsonSerializer.Deserialize<CompilerResult>(json, WorkerProtocol.Json) ?? throw new ProtocolException("Missing compiler output."));
                 }
                 catch (Exception error) { result.SetException(error); }

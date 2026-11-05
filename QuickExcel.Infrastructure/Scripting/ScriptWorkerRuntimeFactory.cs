@@ -14,7 +14,7 @@ public sealed class ScriptWorkerRuntimeFactory(string? executablePath = null) : 
     private readonly string _executable = Path.GetFullPath(executablePath ??
         Path.Combine(AppContext.BaseDirectory, "ScriptWorker", OperatingSystem.IsWindows() ? "QuickExcel.ScriptWorker.exe" : "QuickExcel.ScriptWorker"));
     public IScriptRuntime Create(string source) => Create(new ScriptRuntimeRequest(source, new(Guid.NewGuid(), 0, 0, 0), TimeSpan.FromSeconds(5), default));
-    public IScriptRuntime Create(ScriptRuntimeRequest request) => OperatingSystem.IsWindows() && request.Modules.ScriptApiVersion == 3 && request.RuntimeLifetime.CanBeCanceled
+    public IScriptRuntime Create(ScriptRuntimeRequest request) => OperatingSystem.IsWindows() && request.Modules.ScriptApiVersion is 3 or 4 && request.RuntimeLifetime.CanBeCanceled
         ? SharedScriptWorkers.Acquire(_executable, request, actions: false) : ScriptWorkerRuntime.Start(_executable, request);
 
     /// <summary>Reclaims abandoned rounds for the current Windows user, without executing scripts.</summary>
@@ -83,6 +83,8 @@ public sealed class ScriptWorkerRuntime : IScriptBatchRuntime
         if (request.Modules.Modules.Sum(m => (long)Encoding.UTF8.GetByteCount(m.Value.Source)) > 1024 * 1024)
             throw new ScriptRuntimeFailureException("SourceLimit", "脚本源码超过 1 MiB UTF-8 限额。");
         if (actionsMode && !request.Modules.HasActions) throw new InvalidOperationException("没有 actions 绑定。");
+        if (request.Modules.HasInitialization && !OperatingSystem.IsWindows())
+            throw new PlatformNotSupportedException("初始化主入口需要 Windows 持久隔离上下文；此平台尚未支持。");
         var compiled = ScriptCompilation.PrepareAsync(request.Modules, request.Stamp, request.CancellationToken).GetAwaiter().GetResult();
         var executableSources = compiled?.Result.Outputs.ToDictionary(o => o.Id, o => o.Javascript, StringComparer.Ordinal);
         var runtime = new ScriptWorkerRuntime(request, actionsMode, shared);
@@ -97,11 +99,12 @@ public sealed class ScriptWorkerRuntime : IScriptBatchRuntime
         {
             runtime._identity.Validate();
             runtime._deadline.CancelAfter(request.TimeLimit < TimeSpan.FromSeconds(5) ? request.TimeLimit : TimeSpan.FromSeconds(5));
-            runtime._process = OperatingSystem.IsWindows() ? WorkerProcess.Start(executable, runtime._lifetime.Token) : LinuxWorkerProcess.Start(executable, runtime._lifetime.Token);
+            runtime._process = OperatingSystem.IsWindows() ? WorkerProcess.Start(executable, runtime._lifetime.Token) : OperatingSystem.IsLinux()
+                ? LinuxWorkerProcess.Start(executable, runtime._lifetime.Token) : throw new PlatformNotSupportedException();
             runtime.ProcessId = runtime._process.Id;
             runtime._registration = runtime._lifetime.Token.Register(runtime.Abort);
             _ = runtime.DrainStderrAsync();
-            var hello = new WorkerHello(WorkerProtocol.Engine, WorkerProtocol.Policy, [3], WorkerProtocol.MaxFrameBytes);
+            var hello = new WorkerHello(WorkerProtocol.Engine, WorkerProtocol.Policy, [3, 4], WorkerProtocol.MaxFrameBytes);
             var accepted = runtime.Exchange<WorkerHello, WorkerHello>("hello", hello);
             if (accepted.Engine != hello.Engine || accepted.Policy != hello.Policy ||
                 accepted.Role != "execute" || accepted.Compiler is not null ||
@@ -110,16 +113,22 @@ public sealed class ScriptWorkerRuntime : IScriptBatchRuntime
             if (OperatingSystem.IsLinux() && runtime._process is LinuxWorkerProcess linux) linux.VerifyBeforeSource();
             string digest;
             LoadedScript loaded;
-            if (request.Modules.ScriptApiVersion == 3)
+            if (request.Modules.ScriptApiVersion is 3 or 4)
             {
                 // JscSession appends the main(workbook, host) registration to every
                 // entry module; no QuickExcel global wrapper is generated here.
-                var bundle = new LoadModules(request.Modules.Modules.Select(m => new ModuleSource(m.Key, m.Value.Path,
+                var permitted = request.Modules.Modules.Where(m => request.Modules.ScriptApiVersion != 4 ||
+                    !request.Modules.Bindings.Any(b => b.Module == m.Key &&
+                        (actionsMode ? b.Kind == "formula-functions" : b.Kind is "actions" or "events" or "initialization")));
+                var bundle = new LoadModules(permitted.Select(m => new ModuleSource(m.Key, m.Value.Path,
                     executableSources is null ? m.Value.Source : executableSources[m.Key], m.Value.Description
                     )).ToArray(),
-                    request.Modules.EntriesFor(actionsMode ? "actions" : "formula-functions").ToArray(), "")
+                    (actionsMode ? request.Modules.ActionContextEntries : request.Modules.EntriesFor("formula-functions")).ToArray(), "")
                 { FunctionEntries = shared && !actionsMode ? request.Modules.EntriesFor("formula-functions").ToArray() : [],
-                    ActionEntries = shared && actionsMode ? request.Modules.EntriesFor("actions").ToArray() : [] };
+                    ActionEntries = (shared || request.Modules.ScriptApiVersion == 4) && actionsMode ? request.Modules.EntriesFor("actions").ToArray() : [],
+                    EventEntries = actionsMode ? request.Modules.EntriesFor("events").ToArray() : [],
+                    InitializationEntries = actionsMode ? request.Modules.EntriesFor("initialization").ToArray() : [],
+                    ApiVersion = request.Modules.ScriptApiVersion };
                 digest = bundle.ComputeDigest();
                 if (shared)
                 {

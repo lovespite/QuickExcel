@@ -47,6 +47,9 @@ public sealed partial class JscSession : IDisposable
             let activeModel = false;
             let hostWriteFailed = false;
             let hostWrote = false;
+            let automatic = false;
+            let initialized = true;
+            const initializers = [];
             class ScriptError extends Error {
                 constructor(code, message, member) {
                     super(message);
@@ -86,6 +89,7 @@ public sealed partial class JscSession : IDisposable
             }
             /*EVENT_API*/
             /*WORKBOOK_MODEL*/
+            /*MODULE_CONVENTIONS*/
             return freeze({
                 load(source) {
                     if (loaded) throw new ScriptError('InvalidArgument', '脚本已经加载。');
@@ -93,19 +97,23 @@ public sealed partial class JscSession : IDisposable
                     loaded = true;
                     return ownKeys(registry);
                 },
-                prepareModules(useActions, share) {
+                prepareModules(useActions, options) {
                     if (loaded) throw new ScriptError('InvalidArgument', '脚本已经加载。');
                     actionMode = useActions === true;
-                    sharedMode = share === true;
+                    sharedMode = options.share === true;
+                    automatic = options.automatic === true;
+                    if (automatic) host = freeze({ values: host.values, get files() { return fileContext(); } });
                     Object.defineProperty(globalThis, 'host', { value: host });
                     Object.defineProperty(globalThis, 'console', { value: console });
                     Object.defineProperty(globalThis, '__qxRegisterMain', {
                         value: (id, entry) => { if (typeof id === 'string' && typeof entry === 'function') mains[id] = entry; },
                         configurable: true
                     });
+                    if (automatic) Object.defineProperty(globalThis, '__qxBindExports', { value: bindExports, configurable: true });
                 },
                 finishModules(entries, descriptions) {
                     delete globalThis.__qxRegisterMain;
+                    delete globalThis.__qxBindExports;
                     loaded = true;
                     const roots = isArray(entries) ? entries.filter(id => typeof id === 'string') : [];
                     actionEntries.length = 0;
@@ -143,6 +151,7 @@ public sealed partial class JscSession : IDisposable
                     // the action picker filters them out.
                     const result = actionEntries.filter(name => typeof mains[name] === 'function')
                         .map(name => ({ name, description: actionDescriptions[name] || '' }));
+                    if (initializers.length) result.push({ name: '@initialize', description: '' });
                     for (const name of ownKeys(eventHandlers)) result.push({ name: '@event/' + name, description: '' });
                     return result;
                 },
@@ -154,6 +163,7 @@ public sealed partial class JscSession : IDisposable
         """.Replace("/*VIRTUAL_FILES*/", VirtualFileBootstrap, StringComparison.Ordinal)
             .Replace("/*EVENT_API*/", EventApiBootstrap, StringComparison.Ordinal)
             .Replace("/*WORKBOOK_MODEL*/", WorkbookModelBootstrap, StringComparison.Ordinal)
+            .Replace("/*MODULE_CONVENTIONS*/", ModuleConventionsBootstrap, StringComparison.Ordinal)
             .Replace("/*CAPABILITIES*/", JsonSerializer.Serialize(ScriptCapabilities.Current.Json), StringComparison.Ordinal);
 
     public IReadOnlyList<string> FunctionNames { get; }
@@ -177,14 +187,15 @@ public sealed partial class JscSession : IDisposable
         }
     }
 
-    public JscSession(string source) : this(source, null, null, false, null, null) { }
+    public JscSession(string source) : this(source, null, null, false, null, null, false, null, null) { }
 
     public JscSession(IReadOnlyDictionary<string, string> modules, IReadOnlyList<string> entries, bool actions = false, IReadOnlyDictionary<string, int>? roles = null,
-        IReadOnlyDictionary<string, string>? descriptions = null)
-        : this(null, modules, entries, actions, roles, descriptions) { }
+        IReadOnlyDictionary<string, string>? descriptions = null, bool automatic = false,
+        IReadOnlyList<string>? eventEntries = null, IReadOnlyList<string>? initializationEntries = null)
+        : this(null, modules, entries, actions, roles, descriptions, automatic, eventEntries, initializationEntries) { }
 
     private JscSession(string? source, IReadOnlyDictionary<string, string>? modules, IReadOnlyList<string>? entries, bool actions, IReadOnlyDictionary<string, int>? roles,
-        IReadOnlyDictionary<string, string>? descriptions)
+        IReadOnlyDictionary<string, string>? descriptions, bool automatic, IReadOnlyList<string>? eventEntries, IReadOnlyList<string>? initializationEntries)
     {
         _hostCallback = HostCall;
         if (modules is null) ArgumentNullException.ThrowIfNull(source);
@@ -211,15 +222,26 @@ public sealed partial class JscSession : IDisposable
             if (modules is null) result = Call("load", new object?[] { source });
             else
             {
-                Call("prepareModules", [actions, roles is not null]);
+                Call("prepareModules", [actions, new { share = roles is not null, automatic }]);
                 // Each entry module registers its own main(workbook, host) binding
                 // during evaluation; the native loader does not expose exports.
                 var rooted = new Dictionary<string, string>(modules, StringComparer.Ordinal);
-                foreach (var entry in actions ? entries! : [])
-                    rooted[entry] += "\n;globalThis.__qxRegisterMain && globalThis.__qxRegisterMain(" +
+                foreach (var entry in automatic || actions ? entries! : [])
+                {
+                    if (automatic)
+                    {
+                        var local = "__qxExports";
+                        while (rooted[entry].Contains(local, StringComparison.Ordinal)) local += "_";
+                        var kind = !actions ? "udf" : initializationEntries?.Contains(entry) == true ? "initialization" : eventEntries?.Contains(entry) == true ? "events" : "actions";
+                        rooted[entry] += "\n;import * as " + local + " from " + JsonSerializer.Serialize(entry) + ";\nglobalThis.__qxBindExports(" +
+                            JsonSerializer.Serialize(entry) + "," + JsonSerializer.Serialize(kind) + "," + local + "," + JsonSerializer.Serialize(FunctionPrefix(entry)) + ");";
+                    }
+                    else rooted[entry] += "\n;globalThis.__qxRegisterMain && globalThis.__qxRegisterMain(" +
                         JsonSerializer.Serialize(entry) + ", typeof main === 'function' ? main : undefined);";
+                }
                 var actionEntries = actions
-                    ? (roles is null ? entries!.ToArray() : entries!.Where(id => (roles.GetValueOrDefault(id) & 2) != 0).ToArray())
+                    ? entries!.Where(id => (roles is null || (roles.GetValueOrDefault(id) & 2) != 0) &&
+                        initializationEntries?.Contains(id) != true && eventEntries?.Contains(id) != true).ToArray()
                     : [];
                 var json = JsonSerializer.Serialize(new { modules = rooted.Select(m => new { id = m.Key, source = m.Value, roles = roles is null ? 3 : roles.GetValueOrDefault(m.Key) }), entries });
                 if (Encoding.UTF8.GetByteCount(json) > MaxMessageBytes) throw new ArgumentException("Module payload exceeds 16 MiB UTF-8.");

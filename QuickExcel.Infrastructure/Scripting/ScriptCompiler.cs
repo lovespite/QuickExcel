@@ -57,7 +57,7 @@ public sealed class ScriptCompiler(string? executablePath = null)
                 WorkerProtocol.ValidateReply(response, identity, "hello");
                 var accepted = WorkerProtocol.Payload<WorkerHello>(response);
                 if (accepted.Engine != hello.Engine || accepted.Policy != hello.Policy || accepted.Role != "compile" ||
-                    accepted.Compiler != hello.Compiler || !accepted.ApiVersions.SequenceEqual([3]) || accepted.MaxFrameBytes != hello.MaxFrameBytes)
+                    accepted.Compiler != hello.Compiler || !accepted.ApiVersions.SequenceEqual(hello.ApiVersions) || accepted.MaxFrameBytes != hello.MaxFrameBytes)
                     throw new ProtocolException("Compiler handshake mismatch; no source was sent.");
                 if (OperatingSystem.IsLinux() && process is LinuxWorkerProcess linux) linux.VerifyBeforeSource();
                 identity = identity with { RequestId = Guid.NewGuid() };

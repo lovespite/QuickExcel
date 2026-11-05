@@ -46,8 +46,8 @@ for (const defaults of [typescript.javascriptDefaults, typescript.typescriptDefa
   // reflected when returning to its importer. Do not check 64 hidden editors.
   defaults.setDiagnosticsOptions({ noSemanticValidation: false, noSyntaxValidation: false, onlyVisible: true });
 }
-const extraLibs = [typescript.javascriptDefaults, typescript.typescriptDefaults].map(d => d.addExtraLib(declarations, baseUri + 'quickexcel.d.ts'));
-editor = monaco.editor.create(document.getElementById('editor')!, { model: null, automaticLayout: true, readOnly: true,
+let extraLibs = [typescript.javascriptDefaults, typescript.typescriptDefaults].map(d => d.addExtraLib(declarations, baseUri + 'quickexcel.d.ts'));
+editor = monaco.editor.create(document.getElementById('editor')!, { model: null, automaticLayout: true, readOnly: true, theme: 'vs-dark',
   minimap: { enabled: false }, fontSize: 14, scrollBeyondLastLine: false, accessibilitySupport: 'auto', ariaLabel: uiText('QuickExcel JavaScript / TypeScript 脚本编辑器'),
   quickSuggestions: { other: true, comments: false, strings: false }, suggestOnTriggerCharacters: true,
   parameterHints: { enabled: true }, hover: { enabled: true }, renderValidationDecorations: 'on',
@@ -238,7 +238,7 @@ async function handle(message: Message) {
       if (p.typeText !== undefined) editor.trigger('keyboard', 'type', { text: p.typeText });
       if (p.button) {
         const button = assistanceButtons.find(b => b.dataset.action === p.button);
-        if (!button) throw new Error('Unknown assistance button'); button.click();
+        if (button) button.click(); else { const action = editor.getAction(p.button); if (action) await action.run(); else editor.trigger('smoke', p.button, {}); }
       }
       if (p.command) editor.trigger('smoke', p.command, {});
       if (p.link) {
@@ -255,14 +255,44 @@ async function handle(message: Message) {
         suggestions: visibleText('.suggest-widget .monaco-list-row'), hover: visibleText('.monaco-hover'),
         parameters: visibleText('.parameter-hints-widget'), problems: visibleText('.monaco-editor .zone-widget'),
         markers: monaco.editor.getModelMarkers({ resource: editor.getModel()!.uri }).map(m => ({ code: m.code, line: m.startLineNumber, column: m.startColumn, message: m.message })),
-        suggestDisabled: assistanceButtons.find(b => b.dataset.action === 'editor.action.triggerSuggest')!.disabled }, message.requestId); return;
+        suggestDisabled: (disposed || !initialized || composing || locked || readOnly || !!selectedDefinition) }, message.requestId); return;
     }
     throw new Error('Unknown test operation');
   }
   switch (message.type) {
+    case 'captureInsertion': {
+      const accepted = initialized && !disposed && !readOnly && !locked && !composing && !selectedDefinition && selected === p.module;
+      post('insertionCaptured', { accepted, anchor: accepted ? { module: selected, version: models.get(selected!)!.version, position: editor.getPosition() } : null }, message.requestId); return;
+    }
+    case 'insertTemplate': {
+      const anchor = p.anchor;
+      const accepted = initialized && !disposed && !readOnly && !locked && !composing && !selectedDefinition &&
+        selected === anchor?.module && models.get(selected!)?.version === anchor.version &&
+        typeof p.text === 'string' && p.text.length <= 16384 &&
+        [...models.values()].reduce((sum, m) => sum + utf8.encode(m.model.getValue()).length, utf8.encode(p.text).length) <= 1048576;
+      if (accepted) {
+        const position = anchor.position;
+        editor.pushUndoStop();
+        editor.executeEdits('event-template', [{ range: new monaco.Range(position.lineNumber, position.column, position.lineNumber, position.column), text: p.text, forceMoveMarkers: true }]);
+        editor.pushUndoStop(); editor.focus();
+      }
+      post('templateInserted', { accepted }, message.requestId); return;
+    }
+    case 'editorCommand': {
+      const commands = ['undo', 'redo', 'editor.action.triggerSuggest', 'editor.action.triggerParameterHints', 'editor.action.showHover', 'editor.action.revealDefinition', 'editor.action.marker.next', 'editor.action.formatDocument'];
+      const accepted = initialized && !disposed && !locked && !composing && commands.includes(p.command) &&
+        (!(readOnly || selectedDefinition) || !['undo', 'redo', 'editor.action.formatDocument'].includes(p.command));
+      if (accepted) { editor.focus(); const action = editor.getAction(p.command); if (action) await action.run(); else editor.trigger('menu', p.command, {}); }
+      post('commandExecuted', { accepted }, message.requestId); return;
+    }
     case 'initialize': {
       if (models.size || !Array.isArray(p.modules) || p.modules.length < 1 || p.modules.length > 64) throw new Error('Invalid model initialization');
       readOnly = p.readOnly === true;
+      if (p.apiVersion !== 4) {
+        for (const lib of extraLibs) lib.dispose();
+        extraLibs = [typescript.javascriptDefaults, typescript.typescriptDefaults].map(d => d.addExtraLib(
+          declarations.replace('interface Host {', 'interface Host extends LegacyRegistration {'), baseUri + 'quickexcel.d.ts'));
+      }
       const paths: Record<string, string[]> = Object.create(null);
       let hasTypeScript = false;
       for (const id of p.modules) {

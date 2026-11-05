@@ -37,9 +37,10 @@ public sealed partial class MainWindow
         _workspace.Editor.Execute(new UpdateScriptSourceCommand("throw Error('Stored module must not execute in console');"));
         await OpenScriptsAsync(); var modules = Document.Snapshot.ScriptModules;
         await Layout();
+        var editorBody = (DockPanel)_scriptContent!.Parent!;
         check(!_scriptOutputTabs!.IsVisible && !_scriptOutputSplitter!.IsVisible && _scriptEditorPane!.RowDefinitions[2].ActualHeight == 0 &&
-            _scriptContent!.Bounds.Height == _scriptEditorPane.Bounds.Height,
-            "Script workspace starts with the console fully collapsed and the editor filling the right pane");
+            Math.Abs(_scriptContent.Bounds.Height + editorBody.Children[0].Bounds.Height - _scriptEditorPane.Bounds.Height) < 1,
+            "Script workspace starts with the console fully collapsed and the file tab plus editor filling the right pane");
         var navigation = (Control)_modulePicker!.Parent!;
         check(navigation.Bounds.Right <= _scriptEditorPane!.Bounds.X && navigation.Bounds.Height == _scriptEditorPane.Bounds.Height,
             "File navigation stays to the left of the editor and spans the workspace height");
@@ -72,10 +73,10 @@ public sealed partial class MainWindow
             _scriptEditorPane.RowDefinitions[2].Height.Value == 1 && _consoleInput.Text == "retained draft",
             "F12 from the actual WebView keyboard bridge opens the console and preserves the resized split and draft");
         var revisionBeforeToggle = Document.Snapshot.Revision;
-        _scriptConsoleToggle!.RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); await Layout();
+        _scriptConsoleToggle!.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent)); await Layout();
         await OpenScriptConsoleAsync(); await Layout();
         check(_scriptOutputTabs.IsVisible && _consoleInput.IsKeyboardFocusWithin && Document.Snapshot.Revision == revisionBeforeToggle,
-            "Toolbar collapse and the console menu reopen preserve document history and focus input");
+            "View-menu collapse and console reopen preserve document history and focus input");
         _scriptEditorPane.RowDefinitions[0].Height = new(3, GridUnitType.Star);
         _scriptEditorPane.RowDefinitions[2].Height = new(2, GridUnitType.Star);
         _consoleInput!.Focus(); _consoleInput.Text = "";

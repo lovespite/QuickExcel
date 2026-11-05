@@ -48,7 +48,7 @@ try
             var hello = WorkerProtocol.Payload<WorkerHello>(request);
             if (hello.Engine != WorkerProtocol.Engine || hello.Policy != WorkerProtocol.Policy ||
                 hello.Role != "execute" || hello.Compiler is not null ||
-                !hello.ApiVersions.SequenceEqual([3]) || hello.MaxFrameBytes != WorkerProtocol.MaxFrameBytes)
+                !hello.ApiVersions.SequenceEqual([3, 4]) || hello.MaxFrameBytes != WorkerProtocol.MaxFrameBytes)
                 throw new ProtocolException("Incompatible engine, API or execution policy.");
             round = request.Identity;
             await WorkerProtocol.WriteAsync(output, WorkerProtocol.Message(round, "hello", hello));
@@ -66,13 +66,15 @@ try
                 var bundle = WorkerProtocol.Payload<LoadModules>(request);
                 bundle.Validate();
                 if (sharedMode && (actionsMode
-                    ? bundle.FunctionEntries.Length != 0 || !bundle.EntryModules.SequenceEqual(bundle.ActionEntries)
-                    : bundle.ActionEntries.Length != 0 || !bundle.EntryModules.SequenceEqual(bundle.FunctionEntries)))
+                    ? bundle.FunctionEntries.Length != 0 || !bundle.EntryModules.ToHashSet().SetEquals(bundle.ActionEntries.Concat(bundle.EventEntries).Concat(bundle.InitializationEntries))
+                    : bundle.ActionEntries.Length != 0 || bundle.EventEntries.Length != 0 || bundle.InitializationEntries.Length != 0 || !bundle.EntryModules.SequenceEqual(bundle.FunctionEntries)))
                     throw new ProtocolException("A reusable worker must load exactly one bound role.");
                 digest = bundle.Sha256;
                 create = () => new JscSession(bundle.Modules.ToDictionary(m => m.Id, m => m.Source, StringComparer.Ordinal), bundle.EntryModules, actionsMode,
-                    sharedMode ? bundle.Modules.ToDictionary(m => m.Id, m => (bundle.FunctionEntries.Contains(m.Id) ? 1 : 0) | (bundle.ActionEntries.Contains(m.Id) ? 2 : 0)) : null,
-                    bundle.Modules.ToDictionary(m => m.Id, m => m.Description, StringComparer.Ordinal));
+                    sharedMode || bundle.ApiVersion == 4 ? bundle.Modules.ToDictionary(m => m.Id, m =>
+                        bundle.EntryModules.Contains(m.Id) ? (actionsMode ? 2 : 1) : 0) : null,
+                    bundle.Modules.ToDictionary(m => m.Id, m => m.Description, StringComparer.Ordinal),
+                    automatic: bundle.ApiVersion == 4, eventEntries: bundle.EventEntries, initializationEntries: bundle.InitializationEntries);
             }
             else
             {

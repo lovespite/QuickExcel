@@ -183,6 +183,15 @@ public sealed class WorkbookDocument : IDisposable
     {
         if (!Snapshot.ScriptModules.CanExecute) throw new NotSupportedException(MessageText.Get(ScriptModuleSet.MigrationMessage));
         Session.SetScriptsEnabled(true);
+        if (Snapshot.ScriptModules.HasInitialization)
+        {
+            try
+            {
+                _ = ListActions(cancellationToken);
+                RunAction("@initialize", cancellationToken);
+            }
+            catch { Session.SetScriptsEnabled(false); throw; }
+        }
         Calculate(cancellationToken);
     }
     public void DisableScripts() => Session.SetScriptsEnabled(false);
@@ -229,7 +238,7 @@ public sealed class WorkbookDocument : IDisposable
             _eventModules = request.Snapshot.ScriptModules;
             _eventNames = actions.Where(a => a.Name.StartsWith(ScriptEventNames.Prefix, StringComparison.Ordinal)).Select(a => a.Name).ToHashSet(StringComparer.Ordinal);
             Session.ConfigureScriptEvents(_eventModules, _eventNames.Select(n => n[ScriptEventNames.Prefix.Length..]));
-            return actions.Where(a => !a.Name.StartsWith(ScriptEventNames.Prefix, StringComparison.Ordinal)).ToArray();
+            return actions.Where(a => a.Name != "@initialize" && !a.Name.StartsWith(ScriptEventNames.Prefix, StringComparison.Ordinal)).ToArray();
         }
         catch (Exception e) { Session.InvalidateScriptRuntime(request.RuntimeLifetime); Session.TryFailCalculation(request.Stamp, e.Message, disableScripts: false); throw; }
     }

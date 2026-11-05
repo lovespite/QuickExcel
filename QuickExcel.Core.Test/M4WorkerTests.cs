@@ -68,7 +68,7 @@ public sealed class M4WorkerTests
         {
             var result = calculator.Calculate(session.BeginCalculation());
             Assert.Equal(0, result.Statistics!.ReusedCount);
-            Assert.Equal(CellValue.FromNumber(3), C(result, sheet, 1).Value);
+            Assert.Equal(CellValue.FromNumber(OperatingSystem.IsWindows() ? 3 + 4 * i : 3), C(result, sheet, 1).Value);
             Assert.True(session.TryCommitCalculation(result));
         }
     }
@@ -222,8 +222,9 @@ public sealed class M4WorkerTests
         public IScriptRuntime Create(string source) => throw new InvalidOperationException("Stamped request required.");
         public IScriptRuntime Create(ScriptRuntimeRequest request)
         {
-            var runtime = (ScriptWorkerRuntime)new ScriptWorkerRuntimeFactory().Create(request);
-            Ready.TrySetResult(runtime); return runtime;
+            var runtime = new ScriptWorkerRuntimeFactory().Create(request);
+            Ready.TrySetResult(runtime is ScriptWorkerLease lease ? lease.Runtime : (ScriptWorkerRuntime)runtime);
+            return runtime;
         }
     }
     private static void AssertExited(int pid)

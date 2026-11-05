@@ -24,11 +24,10 @@ public sealed partial class MainWindow
     private Window? _scriptWindow;
     private ContentControl? _scriptContent;
     private ListBox? _modulePicker;
-    private ComboBox? _actionPicker;
     private ListBox? _scriptDiagnostics;
     private TextBlock? _scriptStatus;
-    private Button? _scriptRecovery;
-    private Button? _scriptApiMigration;
+    private MenuItem? _scriptRecovery;
+    private MenuItem? _scriptApiMigration;
     private Guid _scriptDocument;
     private long _webGeneration;
     private string _selectedModule = "main";
@@ -56,34 +55,10 @@ public sealed partial class MainWindow
         if (!await CommitEditorsAsync()) return;
         _scriptDocument = Document.Session.SessionId; _selectedModule = Document.Snapshot.ScriptModules.EntryModules[0];
         var window = _scriptWindow = new Window { Title = UiText.Get("脚本工作区 · QuickExcel"), Width = 1080, Height = 760, MinWidth = 760, MinHeight = 500, WindowStartupLocation = WindowStartupLocation.CenterOwner };
-        var root = new DockPanel(); var toolbar = new WrapPanel { Margin = new(8), Orientation = Orientation.Horizontal };
-        Button Button(string text, Func<Task> action)
-        { var button = new Button { Content = text, Margin = new(4) }; button.Click += async (_, _) => await PerformAsync(action); toolbar.Children.Add(button); return button; }
-        _scriptApiMigration = Button(UiText.Get("确认使用 API v3"), MigrateScriptApiAsync);
-        RefreshScriptApiMigrationButton();
-        Button(UiText.Get("移除全部脚本"), RemoveScriptsAsync); Button(UiText.Get("添加模块"), AddScriptModuleAsync); Button(UiText.Get("应用并重算"), ApplyScriptsAsync);
-        Button(UiText.Get("停用"), () => { DisableScripts(); return Task.CompletedTask; }); Button(UiText.Get("保存"), async () => await SaveAsync(false));
-        _actionPicker = new ComboBox
-        {
-            MinWidth = 180, Margin = new(4), ItemTemplate = new FuncDataTemplate<ScriptActionDescriptor>((item, _) =>
-            {
-                if (item is null) return null;
-                var text = new StackPanel { Spacing = 1 };
-                text.Children.Add(new TextBlock { Text = item.Name, FontWeight = FontWeight.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis });
-                if (!string.IsNullOrWhiteSpace(item.Description))
-                    text.Children.Add(new TextBlock { Text = item.Description, FontSize = 11, TextTrimming = TextTrimming.CharacterEllipsis });
-                ToolTip.SetTip(text, string.IsNullOrWhiteSpace(item.Description) ? item.Name : item.Name + "\n" + item.Description);
-                return text;
-            })
-        };
-        AutomationProperties.SetName(_actionPicker, UiText.Get("脚本操作")); toolbar.Children.Add(_actionPicker); Button(UiText.Get("运行操作"), RunScriptActionAsync);
-        RefreshScriptActions(); _actionPicker.ItemsSource = _availableScriptActions; _actionPicker.SelectedIndex = _availableScriptActions.Count > 0 ? 0 : -1;
-        Button(UiText.Get("签名"), ScriptSignatureDetailsAsync);
-        _scriptConsoleToggle = new Button { Margin = new(4) };
-        _scriptConsoleToggle.Click += (_, _) => ToggleScriptConsole(); toolbar.Children.Add(_scriptConsoleToggle);
-        _scriptRecovery = new Button { Content = UiText.Get("恢复已确认草稿"), IsVisible = false, Margin = new(4) };
-        _scriptRecovery.Click += async (_, _) => await PerformAsync(RecoverScriptPageAsync); toolbar.Children.Add(_scriptRecovery);
-        DockPanel.SetDock(toolbar, Dock.Top); root.Children.Add(toolbar);
+        window.RequestedThemeVariant = global::Avalonia.Styling.ThemeVariant.Dark;
+        window.Background = Brush.Parse("#1E1E1E");
+        var root = new DockPanel();
+        var menu = CreateScriptMenu(); DockPanel.SetDock(menu, Dock.Top); root.Children.Add(menu);
         _scriptStatus = new TextBlock { Margin = new(12, 5), TextWrapping = TextWrapping.Wrap };
         DockPanel.SetDock(_scriptStatus, Dock.Bottom); root.Children.Add(_scriptStatus);
         _scriptDiagnostics = new ListBox { ItemTemplate = new FuncDataTemplate<ScriptDiagnostic>((item, _) => new TextBlock { Text = item?.Label, TextWrapping = TextWrapping.Wrap }) };
@@ -194,9 +169,9 @@ public sealed partial class MainWindow
         try { if (_scriptPage is not null) await _scriptPage.DisposeAsync(); window.Close(); }
         finally
         {
-            _scriptWindow = null; _scriptPage = null; _scriptContent = null; _modulePicker = null; _actionPicker = null; _scriptStatus = null; _scriptDiagnostics = null; _scriptRecovery = null; _scriptClosing = false;
+            _scriptWindow = null; _scriptPage = null; _scriptContent = null; _modulePicker = null; _scriptStatus = null; _scriptDiagnostics = null; _scriptRecovery = null; _scriptClosing = false;
             _scriptApiMigration = null;
-            _scriptExecution = null;
+            _scriptExecution = null; _scriptRunMenu = null; _scriptEventButton = null; _scriptFileTab = null;
             _scriptEditorPane = null; _scriptOutputSplitter = null; _scriptConsoleToggle = null;
             _scriptModuleGroups.Clear(); _scriptNavigationSelection = null;
             _definitionPicker = null; _definitionPanel = null; _selectedDefinition = null; _scriptDefinitionFiles.Clear();
@@ -221,7 +196,7 @@ public sealed partial class MainWindow
     private void RefreshScriptApiMigrationButton()
     {
         if (_scriptApiMigration is not null)
-            _scriptApiMigration.IsVisible = Document.Snapshot.ScriptModules.ScriptApiVersion is 1 or 2;
+            _scriptApiMigration.IsVisible = Document.Snapshot.ScriptModules.ScriptApiVersion < 4;
     }
     private void RefreshScriptChrome(bool revealSelected = false)
     {
@@ -229,6 +204,7 @@ public sealed partial class MainWindow
         RefreshScriptApiMigrationButton();
         _scriptWindow.Title = (_scriptPage?.Drafts.IsDirty == true ? "* " : "") + UiText.Get("脚本工作区 · QuickExcel");
         RefreshScriptNavigation(revealSelected);
+        RefreshScriptEditorHeader();
         var modules = Document.Snapshot.ScriptModules;
         if (_scriptStatus is not null && _scriptPage?.Drafts.Failed != true && _selectedDefinition is { } definition)
             _scriptStatus.Text = UiText.Format($"{definition} · 定义文件（只读）");
@@ -242,12 +218,12 @@ public sealed partial class MainWindow
     {
         if (!await CommitEditorsAsync()) return;
         var old = Document.Snapshot.ScriptModules;
-        if (old.CanExecute) return;
+        if (old.ScriptApiVersion == 4) return;
         var dialog = new FieldsDialog(UiText.Get("确认脚本已重写"))
-            .Note(UiText.Get("请先将全部模块重写为 QuickExcel API v3。此操作仅更新版本声明，不转换源码；原签名和执行授权将失效。"));
+            .Note(UiText.Get("请先按 API v4 导出约定重写全部模块。此操作不转换源码；原签名和执行授权将失效。主入口只能绑定初始化，其余模块只能绑定一个角色。"));
         if (!await dialog.ShowAsync(this)) return;
         _workspace.Editor.Execute(new UpdateScriptModulesCommand(new(old.Modules, old.EntryModules,
-            old.Revision, old.BindingRevision, 3, old.Bindings)));
+            old.Revision, old.BindingRevision, 4, old.Bindings.Select(b => b.Module == "main" ? new ScriptBinding(b.Module, "initialization") : b).Distinct())));
         Synchronize(); RefreshScriptChrome();
     }
     private async Task RemoveScriptsAsync()
@@ -263,18 +239,23 @@ public sealed partial class MainWindow
     {
         if (!await CommitEditorsAsync()) return;
         var document = Document;
-        if (document.Snapshot.ScriptModules.ScriptApiVersion != 3) throw new InvalidOperationException(UiText.Get("请先重写旧脚本，并选择“确认使用 API v3”；添加模块需要 API v3。"));
+        if (document.Snapshot.ScriptModules.ScriptApiVersion != 4 && document.Snapshot.ScriptModules.Modules.Values.Any(m => m.Source.Length != 0))
+            throw new InvalidOperationException(UiText.Get("请先按导出约定重写旧脚本，并选择“确认使用 API v4”。"));
         if (document.Snapshot.FileState?.FormulaReadOnly == true) throw new InvalidOperationException(UiText.Get(WorkbookFileState.FormulaReadOnlyMessage));
         var dialog = new FieldsDialog(UiText.Get("新建模块")).Text("id", UiText.Get("模块逻辑 ID"))
             .Text("description", UiText.Get("描述（可选）"), "")
-            .Choice("role", UiText.Get("角色"), ["Common", "Actions", "UDF"], selected: 1)
+            .Choice("role", UiText.Get("角色"), ["Common", "Actions", "UDF", "Events"], selected: 1)
             .Choice("language", UiText.Get("语言"), ["JavaScript (.js)", "TypeScript (.ts)"], selected: (int)ScriptLanguage.TypeScript)
-            .Note(UiText.Get("UDF 只用于注册函数；Actions 只用于定义操作，一个文件对应一个操作。事件请在主入口或由主入口导入的 Common 模块中注册。"))
+            .Note(UiText.Get("UDF 导出公式函数；Actions 导出 main；Events 导出约定名称的事件处理器；Common 通过 import 共享代码。各角色自动加载，不需要主入口导入。"))
             .Note(UiText.Get("描述显示在操作列表中，留空时只显示模块 ID。角色和语言在创建后不可更改。"));
         ScriptModuleSet BuildModules()
         {
             if (!ReferenceEquals(document, Document)) throw new InvalidOperationException(UiText.Get("所属文档已变化，请重新创建模块。"));
             var old = document.Snapshot.ScriptModules; var id = dialog.String("id").Trim();
+            // The canonical empty workbook has no source to migrate.
+            if (old.ScriptApiVersion != 4 && old.Modules.Values.All(m => m.Source.Length == 0))
+                old = new(old.Modules, old.EntryModules, old.Revision, old.BindingRevision, 4,
+                    old.Bindings.Select(b => b.Module == "main" ? new ScriptBinding("main", "initialization") : b).Distinct());
             if (old.Modules.ContainsKey(id)) throw new ArgumentException(UiText.Get("模块 ID 已存在。"));
             if (id.Length is < 1 or > 128 || id is "." or ".." || id.Any(c => !char.IsAsciiLetterOrDigit(c) && c is not ('_' or '-' or '.')))
                 throw new ArgumentException(UiText.Get("模块 ID 须为 1–128 个英文字母、数字、下划线、连字符或点，且不能仅为 . 或 ..。"));
@@ -286,13 +267,14 @@ public sealed partial class MainWindow
                 0 => null,
                 1 => "actions",
                 2 => "formula-functions",
+                3 => "events",
                 _ => throw new ArgumentException(UiText.Get("请选择模块角色。"))
             };
             var language = (ScriptLanguage)dialog.Index("language");
             var bindings = old.Bindings.ToList(); var entries = old.EntryModules.ToList();
             if (binding is not null) { bindings.Add(new(id, binding)); entries.Add(id); }
             var module = new ScriptModule($"scripts/{id}.{(language == ScriptLanguage.TypeScript ? "ts" : "js")}",
-                ScriptModuleTemplates.Create(id, language, binding == "formula-functions", binding == "actions"), language, description);
+                ScriptModuleTemplates.CreateConventional(id, language, binding), language, description);
             return new(old.Modules.Add(id, module), entries, old.Revision, old.BindingRevision, old.ScriptApiVersion, bindings);
         }
         dialog.Validate = () => BuildModules();
@@ -334,7 +316,6 @@ public sealed partial class MainWindow
         });
         await DispatchEventsAsync();
     }
-    private Task RunScriptActionAsync() => RunScriptActionAsync(_actionPicker?.SelectedItem as ScriptActionDescriptor);
     private async Task RunScriptActionAsync(ScriptActionDescriptor? action)
     {
         await using var hold = _scriptPage?.HoldEdits();

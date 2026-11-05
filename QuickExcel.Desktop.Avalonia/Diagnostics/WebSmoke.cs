@@ -100,10 +100,10 @@ public sealed partial class MainWindow
             if (DesktopServices.SupportsScripts)
             {
             _workspace.New();
-            const string actionSource = "function main(workbook) { workbook.getActiveWorksheet().getRange('A1').setValue(42); console.log('原子写入完成'); }";
-            _workspace.Editor.Execute(new UpdateScriptModulesCommand(new(new Dictionary<string, ScriptModule> { ["main"] = new("scripts/main.js", actionSource) }, ["main"], scriptApiVersion: 3, bindings: [new("main", "actions")])));
-            await OpenScriptsAsync(); await ApplyScriptsAsync(); await RunScriptActionAsync();
-            Check(Document.GetCellValue(0, 0, 0) == "42" && Document.ScriptErrors.Any(e => e.Contains("原子写入完成")), "Migrated action picker executes an immutable worker action and displays logs");
+            const string actionSource = "export function main(workbook) { workbook.getActiveWorksheet().getRange('A1').setValue(42); console.log('原子写入完成'); }";
+            _workspace.Editor.Execute(new UpdateScriptModulesCommand(new(new Dictionary<string, ScriptModule> { ["main"] = new("scripts/main.js", actionSource) }, ["main"], scriptApiVersion: 4, bindings: [new("main", "actions")])));
+            await OpenScriptsAsync(); await ApplyScriptsAsync(); await RunScriptActionAsync(_availableScriptActions.Single());
+            Check(Document.GetCellValue(0, 0, 0) == "42" && Document.ScriptErrors.Any(e => e.Contains("原子写入完成")), "The Run menu action executes an immutable worker action and displays logs");
             DisableScripts(); await History(false); Check(Document.GetCellInput(0, 0, 0) == "", "An action remains one undoable transaction after authorization is revoked");
             await History(true); Check(Document.GetCellValue(0, 0, 0) == "42", "Action redo restores its patch without executing the script again");
             var modules = Document.Snapshot.ScriptModules;
@@ -175,7 +175,7 @@ public sealed partial class MainWindow
             await ApplyScriptsAsync();
             Check(Document.ScriptsEnabled && Document.GetCellValue(0, 0, 0) == "12", "Apply automatically checks TS then runs emitted ESM in a fresh isolated execution worker");
             Check(await SaveAsync(false), "TS original sources save without an external toolchain");
-            var tsSaved = new QuickExcel.Storage.TypedWorkbookStorage().Open(Path.Combine(directory, "typescript-roundtrip.xlsq"));
+            var tsSaved = _services.Storage.Open(Path.Combine(directory, "typescript-roundtrip.xlsq"));
             Check(tsSaved.ScriptModules.Modules["main"].Language == ScriptLanguage.TypeScript && tsSaved.ScriptModules.PrimarySource.Contains("enum E"),
                 "Saved TS reopens with its original language and source, not emitted JavaScript");
             await CloseScriptWindowAsync();

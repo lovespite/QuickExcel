@@ -2,6 +2,9 @@ using Avalonia;
 using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Controls.Templates;
+using Avalonia.Controls.Primitives;
+using Avalonia.Controls.Presenters;
+using Avalonia.Data;
 using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Media;
@@ -17,7 +20,7 @@ public sealed partial class MainWindow
 {
     private LayoutGrid? _scriptEditorPane;
     private GridSplitter? _scriptOutputSplitter;
-    private Button? _scriptConsoleToggle;
+    private MenuItem? _scriptConsoleToggle;
     private GridLength _scriptEditorHeight, _scriptOutputHeight;
     private readonly List<(string Label, string? Kind, Expander Panel, ListBox Picker)> _scriptModuleGroups = [];
     private string? _scriptNavigationSelection;
@@ -29,21 +32,28 @@ public sealed partial class MainWindow
     private Control CreateScriptWorkspace(Control output)
     {
         // Both panes scale with the window after dragging, while retaining usable minimum widths.
-        var workspace = new LayoutGrid { ColumnDefinitions = new("200*,5,875*") };
+        var workspace = new LayoutGrid { ColumnDefinitions = new("240*,1,839*") };
         workspace.ColumnDefinitions[0].MinWidth = 150;
         workspace.ColumnDefinitions[2].MinWidth = 420;
-        var navigation = new DockPanel { Background = Brush.Parse("#F8F9FA") };
-        var heading = new TextBlock { Text = UiText.Get("脚本文件"), FontWeight = FontWeight.SemiBold, Margin = new(12, 10) };
+        var navigation = new DockPanel { Background = Brush.Parse("#181818") };
+        var heading = new DockPanel { Margin = new(16, 6, 8, 6) };
+        var add = new Button { Content = new global::Avalonia.Controls.Shapes.Path { Width = 20, Height = 20,
+            Data = Geometry.Parse("M3,2 L11,2 L15,6 L15,17 L3,17 Z M11,2 L11,6 L15,6 M11,12 L19,12 M15,8 L15,16"),
+            Stroke = Brush.Parse("#A0A0A0"), StrokeThickness = 1.2 }, Width = 30, Height = 30, Padding = new(0), Background = Brushes.Transparent, BorderThickness = new(0) };
+        ToolTip.SetTip(add, UiText.Get("添加模块")); AutomationProperties.SetName(add, UiText.Get("添加模块"));
+        add.Click += async (_, _) => await PerformAsync(AddScriptModuleAsync); DockPanel.SetDock(add, Dock.Right); heading.Children.Add(add);
+        heading.Children.Add(new TextBlock { Text = "Scripts", VerticalAlignment = VerticalAlignment.Center, FontSize = 13 });
         DockPanel.SetDock(heading, Dock.Top); navigation.Children.Add(heading);
         _modulePicker = CreateScriptModulePicker(UiText.Get("主入口脚本"));
         DockPanel.SetDock(_modulePicker, Dock.Top); navigation.Children.Add(_modulePicker);
         var groups = new StackPanel();
         _scriptModuleGroups.Clear(); _scriptNavigationSelection = null;
-        foreach (var (label, kind) in new (string, string?)[] { ("UDF", "formula-functions"), ("Actions", "actions"), ("Common", null) })
+        foreach (var (label, kind) in new (string, string?)[] { ("Actions", "actions"), ("Common", null), ("Events", "events"), ("UDF", "formula-functions") })
         {
             var picker = CreateScriptModulePicker(label + UiText.Get(" 脚本文件列表"));
-            var panel = new Expander { Header = label, Content = picker, IsExpanded = true, Padding = new(0),
+            var panel = new Expander { Header = label, Content = new Border { BorderBrush = Brush.Parse("#333333"), BorderThickness = new(1, 0, 0, 0), Margin = new(27, 0, 0, 0), Child = picker }, IsExpanded = true, Padding = new(0),
                 HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Stretch };
+            UseScriptTreeTemplate(panel);
             AutomationProperties.SetName(panel, label + UiText.Get(" 脚本分类"));
             _scriptModuleGroups.Add((label, kind, panel, picker)); groups.Children.Add(panel);
         }
@@ -59,20 +69,23 @@ public sealed partial class MainWindow
         };
         _definitionPanel = new Expander { Header = UiText.Get("定义文件（只读）"), Content = _definitionPicker, IsExpanded = true, Padding = new(0),
             HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Stretch };
+        UseScriptTreeTemplate(_definitionPanel);
         groups.Children.Add(_definitionPanel);
         navigation.Children.Add(new ScrollViewer { Content = groups,
             HorizontalScrollBarVisibility = global::Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled });
         workspace.Children.Add(navigation);
         var splitter = new GridSplitter { ResizeDirection = GridResizeDirection.Columns, ResizeBehavior = GridResizeBehavior.PreviousAndNext,
-            HorizontalAlignment = HorizontalAlignment.Stretch, Background = Brush.Parse("#E0E0E0") };
+            HorizontalAlignment = HorizontalAlignment.Stretch, Background = Brush.Parse("#2B2B2B") };
         AutomationProperties.SetName(splitter, UiText.Get("调整文件列表宽度"));
         LayoutGrid.SetColumn(splitter, 1); workspace.Children.Add(splitter);
 
         _scriptEditorPane = new LayoutGrid { RowDefinitions = new("*,0,0") };
         _scriptEditorPane.RowDefinitions[0].MinHeight = 100;
-        _scriptContent = new ContentControl(); _scriptEditorPane.Children.Add(_scriptContent);
+        _scriptContent = new ContentControl();
+        var editor = new DockPanel(); var editorHeader = CreateScriptEditorHeader(); DockPanel.SetDock(editorHeader, Dock.Top); editor.Children.Add(editorHeader); editor.Children.Add(_scriptContent);
+        _scriptEditorPane.Children.Add(editor);
         _scriptOutputSplitter = new GridSplitter { ResizeDirection = GridResizeDirection.Rows, ResizeBehavior = GridResizeBehavior.PreviousAndNext,
-            HorizontalAlignment = HorizontalAlignment.Stretch, VerticalAlignment = VerticalAlignment.Stretch, Background = Brush.Parse("#E0E0E0"), IsVisible = false };
+            HorizontalAlignment = HorizontalAlignment.Stretch, VerticalAlignment = VerticalAlignment.Stretch, Background = Brush.Parse("#2B2B2B"), IsVisible = false };
         AutomationProperties.SetName(_scriptOutputSplitter, UiText.Get("调整控制台高度"));
         LayoutGrid.SetRow(_scriptOutputSplitter, 1); _scriptEditorPane.Children.Add(_scriptOutputSplitter);
         output.IsVisible = false; LayoutGrid.SetRow(output, 2); _scriptEditorPane.Children.Add(output);
@@ -91,9 +104,41 @@ public sealed partial class MainWindow
         {
             new Setter(MinHeightProperty, 28d), new Setter(HeightProperty, 28d), new Setter(MarginProperty, new Thickness(0)),
             new Setter(PaddingProperty, new Thickness(12, 0)), new Setter(HorizontalContentAlignmentProperty, HorizontalAlignment.Stretch),
-            new Setter(VerticalContentAlignmentProperty, VerticalAlignment.Center), new Setter(CornerRadiusProperty, new CornerRadius(0))
+            new Setter(VerticalContentAlignmentProperty, VerticalAlignment.Center), new Setter(CornerRadiusProperty, new CornerRadius(0)),
+            new Setter(TemplateProperty, new FuncControlTemplate<ListBoxItem>((item, _) =>
+            {
+                var content = new ContentPresenter { Margin = new(12, 0), VerticalAlignment = VerticalAlignment.Center };
+                content.Bind(ContentPresenter.ContentProperty, new Binding(nameof(item.Content)) { Source = item });
+                content.Bind(ContentPresenter.ContentTemplateProperty, new Binding(nameof(item.ContentTemplate)) { Source = item });
+                var border = new Border { Child = content, Background = item.IsSelected ? Brush.Parse("#37373D") : Brushes.Transparent };
+                item.PropertyChanged += (_, change) => { if (change.Property == ListBoxItem.IsSelectedProperty) border.Background = item.IsSelected ? Brush.Parse("#37373D") : Brushes.Transparent; };
+                return border;
+            }))
         } });
+        picker.Styles.Add(new Style(s => s.OfType<ListBoxItem>().Class(":selected")) { Setters =
+        { new Setter(BackgroundProperty, Brush.Parse("#37373D")), new Setter(ForegroundProperty, Brush.Parse("#FFFFFF")) } });
         return picker;
+    }
+
+    private static void UseScriptTreeTemplate(Expander panel)
+    {
+        panel.Template = new FuncControlTemplate<Expander>((owner, _) =>
+        {
+            var rows = new StackPanel();
+            var arrow = new TextBlock { Text = owner.IsExpanded ? "⌄" : "›", Width = 17, FontSize = 16, VerticalAlignment = VerticalAlignment.Center, Foreground = Brush.Parse("#A0A0A0") };
+            var label = new TextBlock { Text = owner.Header?.ToString(), FontSize = 14, VerticalAlignment = VerticalAlignment.Center, Foreground = Brush.Parse("#CCCCCC") };
+            var caption = new StackPanel { Orientation = Orientation.Horizontal }; caption.Children.Add(arrow); caption.Children.Add(label);
+            var toggle = new Button { Content = caption, Height = 28, Padding = new(16, 0, 0, 0), Background = Brushes.Transparent,
+                BorderThickness = new(0), HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Left };
+            var content = new ContentPresenter { Content = owner.Content, IsVisible = owner.IsExpanded };
+            toggle.Click += (_, _) => owner.IsExpanded = !owner.IsExpanded;
+            owner.PropertyChanged += (_, change) =>
+            {
+                if (change.Property == Expander.IsExpandedProperty) { content.IsVisible = owner.IsExpanded; arrow.Text = owner.IsExpanded ? "⌄" : "›"; }
+                else if (change.Property == HeaderedContentControl.HeaderProperty) label.Text = owner.Header?.ToString();
+            };
+            rows.Children.Add(toggle); rows.Children.Add(content); return rows;
+        });
     }
 
     private ListBox CreateScriptModulePicker(string name)
@@ -102,8 +147,10 @@ public sealed partial class MainWindow
         picker.ItemTemplate = new FuncDataTemplate<string>((id, _) =>
             {
                 if (id is null || !Document.Snapshot.ScriptModules.Modules.TryGetValue(id, out var module)) return null;
-                var item = new TextBlock { Text = Path.GetFileName(module.Path), TextTrimming = TextTrimming.CharacterEllipsis,
-                    VerticalAlignment = VerticalAlignment.Center };
+                var item = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, VerticalAlignment = VerticalAlignment.Center };
+                item.Children.Add(new TextBlock { Text = module.Language == ScriptLanguage.TypeScript ? "TS" : "JS", FontSize = 11, FontWeight = FontWeight.Bold,
+                    Foreground = Brush.Parse(module.Language == ScriptLanguage.TypeScript ? "#519ABA" : "#CBCB41"), VerticalAlignment = VerticalAlignment.Center });
+                item.Children.Add(new TextBlock { Text = Path.GetFileName(module.Path), TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center });
                 ToolTip.SetTip(item, UiText.Format($"{module.Path}\n模块 ID：{id}\n{ScriptModuleProperties(Document.Snapshot.ScriptModules, id)}") +
                     (string.IsNullOrWhiteSpace(module.Description) ? string.Empty : UiText.Format($"\n描述：{module.Description}"))); return item;
             });
@@ -123,20 +170,21 @@ public sealed partial class MainWindow
 
     private static string ScriptModuleProperties(ScriptModuleSet modules, string id)
     {
-        var roles = modules.Bindings.Where(b => b.Module == id).Select(b => b.Kind == "formula-functions" ? "UDF" : "Actions").ToArray();
-        var role = IsMainScriptModule(id, modules.Modules[id]) ? UiText.Get("主入口") : roles.Length == 0 ? "Common" : string.Join(" / ", roles);
+        var roles = modules.Bindings.Where(b => b.Module == id).Select(b => b.Kind switch { "formula-functions" => "UDF", "events" => "Events", "initialization" => UiText.Get("主入口"), _ => "Actions" }).ToArray();
+        var role = IsMainScriptModule(modules, id) ? UiText.Get("主入口") : roles.Length == 0 ? "Common" : string.Join(" / ", roles);
         return $"{role} · {(modules.Modules[id].Language == ScriptLanguage.TypeScript ? "TypeScript" : "JavaScript")}";
     }
 
-    private static bool IsMainScriptModule(string id, ScriptModule module) => id == "main" ||
-        Path.GetFileName(module.Path).Equals("main.js", StringComparison.OrdinalIgnoreCase) ||
-        Path.GetFileName(module.Path).Equals("main.ts", StringComparison.OrdinalIgnoreCase);
+    private static bool IsMainScriptModule(ScriptModuleSet modules, string id) => modules.ScriptApiVersion == 4
+        ? modules.Bindings.Any(b => b.Module == id && b.Kind == "initialization")
+        : id == "main" || Path.GetFileName(modules.Modules[id].Path).Equals("main.js", StringComparison.OrdinalIgnoreCase) ||
+            Path.GetFileName(modules.Modules[id].Path).Equals("main.ts", StringComparison.OrdinalIgnoreCase);
 
     private void RefreshScriptNavigation(bool revealSelected)
     {
         if (_modulePicker is null) return;
         var modules = Document.Snapshot.ScriptModules;
-        var main = modules.Modules.Where(p => IsMainScriptModule(p.Key, p.Value)).Select(p => p.Key).Order(StringComparer.Ordinal).ToArray();
+        var main = modules.Modules.Where(p => IsMainScriptModule(modules, p.Key)).Select(p => p.Key).Order(StringComparer.Ordinal).ToArray();
         var others = modules.Modules.Keys.Except(main).Order(StringComparer.Ordinal).ToArray();
         void Update(ListBox picker, string[] ids)
         {
@@ -152,7 +200,7 @@ public sealed partial class MainWindow
             {
                 var ids = others.Where(id => kind is null ? !modules.Bindings.Any(b => b.Module == id) :
                     modules.Bindings.Any(b => b.Module == id && b.Kind == kind)).ToArray();
-                Update(picker, ids); panel.Header = $"{label} ({ids.Length})";
+                Update(picker, ids); panel.Header = label;
                 if (_selectedDefinition is null && (revealSelected || _scriptNavigationSelection != _selectedModule) && ids.Contains(_selectedModule)) panel.IsExpanded = true;
             }
             if (_definitionPicker is not null)
@@ -247,6 +295,6 @@ public sealed partial class MainWindow
     {
         if (_scriptConsoleToggle is null) return;
         var label = visible ? UiText.Get("隐藏控制台 · F12") : UiText.Get("显示控制台 · F12");
-        _scriptConsoleToggle.Content = label; AutomationProperties.SetName(_scriptConsoleToggle, label);
+        _scriptConsoleToggle.Header = label; AutomationProperties.SetName(_scriptConsoleToggle, label);
     }
 }

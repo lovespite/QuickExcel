@@ -293,7 +293,7 @@ public sealed partial class JscSession
         }
 
         const workbook = makeHandle('Workbook', {});
-        const host = freeze({
+        let host = freeze({
             functions: freeze({ register(name, fn) { registerFunction(name, fn); } }),
             values: freeze({ getErrorCode(value) {
                 const data = dataOf(value);
@@ -306,6 +306,7 @@ public sealed partial class JscSession
 
         function runAction(name, request) {
             if (!actionMode || !loaded || actionInvoked) throw new ScriptError('InvalidReference', '操作不可用。');
+            if (automatic && name !== '@initialize' && !initialized) throw new ScriptError('InvalidReference', '请先应用脚本，完成主入口初始化。');
             actionInvoked = true;
             activeModel = true;
             hostWriteFailed = false;
@@ -314,7 +315,14 @@ public sealed partial class JscSession
             const baseRevision = request && request.snapshot ? request.snapshot.baseRevision : 0;
             try {
                 let returned;
-                if (request && request.event) {
+                if (automatic && name === '@initialize') {
+                    if (initialized) throw new ScriptError('InvalidReference', '主入口在本次授权中已经运行。');
+                    for (const initialize of initializers) {
+                        returned = initialize(workbook, host);
+                        if (returned !== undefined && returned !== null) throw new ScriptError('InvalidArgument', '初始化主入口必须同步完成且不能返回值。');
+                    }
+                    initialized = true;
+                } else if (request && request.event) {
                     const handlers = eventHandlers[request.event.name] || [];
                     const context = freeze({ workbook, host, event: deepFreeze(request.event) });
                     for (const handler of handlers) {

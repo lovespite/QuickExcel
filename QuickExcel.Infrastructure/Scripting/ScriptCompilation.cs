@@ -23,7 +23,7 @@ public static class ScriptCompilation
         if (!modules.HasTypeScript) return null;
         if (ScriptModuleSet.TypeScriptOptions != CompilerProtocol.Options) throw new InvalidOperationException("Compilation option identity mismatch.");
         var request = new CompileRequest(modules.Modules.Select(m => new CompilerModule(m.Key,
-            m.Value.Language == ScriptLanguage.TypeScript ? "typescript" : "javascript", m.Value.Source)).ToArray(), modules.EntryModules.ToArray(), "");
+            m.Value.Language == ScriptLanguage.TypeScript ? "typescript" : "javascript", m.Value.Source)).ToArray(), modules.EntryModules.ToArray(), "") { ApiVersion = modules.ScriptApiVersion };
         request = request with { Sha256 = request.ComputeDigest() };
         var result = await Compilers.GetValue(modules.Modules, _ => new()).CompileAsync(request, stamp, cancellationToken).ConfigureAwait(false);
         cancellationToken.ThrowIfCancellationRequested();

@@ -21,7 +21,7 @@ public sealed class ScriptModuleSet
     {
         ArgumentOutOfRangeException.ThrowIfNegative(revision);
         ArgumentOutOfRangeException.ThrowIfNegative(bindingRevision);
-        if (scriptApiVersion is not (1 or 2 or 3)) throw new ArgumentException("Unsupported script API version.");
+        if (scriptApiVersion is not (1 or 2 or 3 or 4)) throw new ArgumentException("Unsupported script API version.");
         Modules = modules.ToImmutableDictionary(StringComparer.Ordinal);
         EntryModules = entryModules.ToImmutableArray();
         if (Modules.Count is < 1 or > 64 || EntryModules.Length is < 1 or > 64 ||
@@ -29,8 +29,10 @@ public sealed class ScriptModuleSet
             throw new ArgumentException("Invalid script module/entry mapping.");
         Bindings = (bindings ?? EntryModules.Select(id => new ScriptBinding(id, "formula-functions"))).ToImmutableArray();
         if (Bindings.Length is < 1 or > 128 || Bindings.Distinct().Count() != Bindings.Length ||
-            Bindings.Any(b => b is null || !EntryModules.Contains(b.Module) || b.Kind is not ("formula-functions" or "actions")) ||
+            Bindings.Any(b => b is null || !EntryModules.Contains(b.Module) ||
+                (b.Kind is not ("formula-functions" or "actions") && (scriptApiVersion < 4 || b.Kind is not ("events" or "initialization")))) ||
             EntryModules.Any(id => !Bindings.Any(b => b.Module == id)) ||
+            scriptApiVersion == 4 && (Bindings.GroupBy(b => b.Module).Any(g => g.Count() != 1) || Bindings.Count(b => b.Kind == "initialization") > 1) ||
             scriptApiVersion < 2 && Bindings.Any(b => b.Kind == "actions"))
             throw new ArgumentException("Invalid script bindings or action API version.");
         var paths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -58,13 +60,15 @@ public sealed class ScriptModuleSet
     public ScriptSignature? Signature { get; }
     public ScriptModuleSet WithSignature(ScriptSignature? signature) => Signature == signature ? this : new(
         Modules, EntryModules, Revision, BindingRevision, ScriptApiVersion, Bindings, signature);
-    public bool HasActions => Bindings.Any(b => b.Kind == "actions");
+    public bool HasActions => Bindings.Any(b => b.Kind is "actions" or "events" or "initialization");
+    public bool HasInitialization => Bindings.Any(b => b.Kind == "initialization");
+    public ImmutableArray<string> ActionContextEntries => EntryModules.Where(id => Bindings.Any(b => b.Module == id && b.Kind is "actions" or "events" or "initialization")).ToImmutableArray();
     public bool HasTypeScript => Modules.Values.Any(m => m.Language == ScriptLanguage.TypeScript);
     public ImmutableArray<string> EntriesFor(string kind) => EntryModules.Where(id => Bindings.Any(b => b.Module == id && b.Kind == kind)).ToImmutableArray();
     public string PrimarySource => Modules[EntryModules[0]].Source;
-    public bool CanExecuteSingleSource => ScriptApiVersion == 3 && Modules.Count == 1 && EntryModules.Length == 1;
-    public bool CanExecute => ScriptApiVersion == 3;
-    public const string MigrationMessage = "脚本使用已废弃的 API v1/v2，需要按 QuickExcel API v3 重写，或移除全部脚本后保存。";
+    public bool CanExecuteSingleSource => ScriptApiVersion is 3 or 4 && Modules.Count == 1 && EntryModules.Length == 1;
+    public bool CanExecute => ScriptApiVersion is 3 or 4;
+    public const string MigrationMessage = "脚本使用已废弃的 API v1/v2，需要按 QuickExcel API v4 重写，或移除全部脚本后保存。";
     public static ScriptModuleSet Single(string source, int scriptApiVersion = 3) => new(
         [new KeyValuePair<string, ScriptModule>("main", new("scripts/main.js", source))], ["main"], scriptApiVersion: scriptApiVersion);
     public ScriptModuleSet WithPrimarySource(string source) => source == PrimarySource ? this : new(

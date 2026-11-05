@@ -10,27 +10,18 @@ namespace QuickExcel.Core.Test;
 public sealed class WorkbookWorkspaceTests : IDisposable
 {
     [Fact]
-    public void DefaultMainSupportsTypedFunctionsAndMainAction()
+    public void DefaultMainIsInitializationAndNeverAnAction()
     {
         using var workspace = new WorkbookWorkspace(new(_storage, new WorkbookCalculator(new ScriptWorkerRuntimeFactory()),
             new ScriptWorkerActionExecutor()), new Files(_storage));
         var document = workspace.Document;
-        document.ScriptSource = """
-            const value: number = 42;
-            host.functions.register('ENTRYVALUE', () => value);
-            function main(workbook: QuickExcel.Workbook) {
-                workbook.getActiveCell().setValue(value);
-            }
-            """;
-        workspace.Editor.SetCell(0, 0, 1, "=ENTRYVALUE()");
+        document.ScriptSource = "export function main(workbook: QuickExcel.Workbook) { workbook.getActiveCell().setValue(42); }";
         document.EnableScriptsAndCalculate();
-        Assert.Equal("42", document.GetCellValue(0, 0, 1));
-        Assert.Equal("main", Assert.Single(document.ListActions()).Name);
-        Assert.True(document.RunAction("main").Changed);
+        Assert.Empty(document.ListActions());
         Assert.Equal("42", document.GetCellValue(0, 0, 0));
         Assert.True(document.Undo());
+        document.Calculate();
         Assert.Equal("", document.GetCellInput(0, 0, 0));
-        Assert.Equal("42", document.GetCellValue(0, 0, 1));
     }
 
     [Fact]
@@ -55,11 +46,13 @@ public sealed class WorkbookWorkspaceTests : IDisposable
         void CheckMain()
         {
             var modules = workspace.Document.Snapshot.ScriptModules;
-            Assert.Equal(3, modules.ScriptApiVersion);
+            Assert.Equal(4, modules.ScriptApiVersion);
             Assert.Equal("main", Assert.Single(modules.EntryModules));
-            Assert.Equal(new ScriptModule("scripts/main.ts", "", ScriptLanguage.TypeScript), Assert.Single(modules.Modules).Value);
-            Assert.Equal("main", Assert.Single(modules.EntriesFor("formula-functions")));
-            Assert.Equal("main", Assert.Single(modules.EntriesFor("actions")));
+            Assert.Equal("scripts/main.ts", Assert.Single(modules.Modules).Value.Path);
+            Assert.Contains("export function main", modules.PrimarySource);
+            Assert.Equal("main", Assert.Single(modules.EntriesFor("initialization")));
+            Assert.Empty(modules.EntriesFor("formula-functions"));
+            Assert.Empty(modules.EntriesFor("actions"));
             Assert.False(workspace.Document.IsDirty);
             Assert.False(workspace.Document.ScriptsEnabled);
         }

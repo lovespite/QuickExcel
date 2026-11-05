@@ -16,10 +16,10 @@ public sealed class ScriptWorkerActionExecutor(string? executablePath = null) : 
         // zero-capability action worker, with this immutable transaction context.
         // The console is one synthetic main(workbook, host) entry. Direct eval runs
         // only inside the zero-capability action worker with this transaction context.
-        var text = "function main(workbook, host) { const result = eval(" +
+        var text = "export function main(workbook, host) { const result = eval(" +
             JsonSerializer.Serialize(source) + "); console.log('=>', result); }";
         return new(new Dictionary<string, ScriptModule> { ["__console__"] = new("scripts/console.js", text) }, ["__console__"],
-            scriptApiVersion: 3, bindings: [new("__console__", "actions")]);
+            scriptApiVersion: 4, bindings: [new("__console__", "actions")]);
     }
     private ScriptWorkerLease Create(ScriptActionRequest request, CancellationToken token) => SharedScriptWorkers.Acquire(_executable,
         new ScriptRuntimeRequest(ExecutionModules(request), request.Stamp, TimeSpan.FromSeconds(5), token) { RuntimeLifetime = request.RuntimeLifetime }, actions: true);

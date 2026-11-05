@@ -74,7 +74,7 @@ public sealed class M4IsolationTests
                     var reply = WorkerProtocol.ReadAsync(worker.Output, deadline.Token).GetAwaiter().GetResult();
                     WorkerProtocol.ValidateReply(reply, identity, kind); return reply;
                 }
-                Exchange("hello", new WorkerHello(WorkerProtocol.Engine, WorkerProtocol.Policy, [3], WorkerProtocol.MaxFrameBytes));
+                Exchange("hello", new WorkerHello(WorkerProtocol.Engine, WorkerProtocol.Policy, [3, 4], WorkerProtocol.MaxFrameBytes));
                 Exchange("load", new LoadScript("isolation", "fixture"));
                 var reply = WorkerProtocol.Payload<BatchResult>(Exchange("invokeBatch", new InvokeBatch([new("F", [WireValue.FromObject(path), WireValue.FromObject(canary.DangerousGetHandle().ToInt64().ToString())])])));
                 json = Assert.IsType<string>(Assert.Single(reply.Results).Value!.ToObject());

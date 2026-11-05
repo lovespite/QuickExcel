@@ -13,12 +13,16 @@ public sealed record LoadModules(ModuleSource[] Modules, string[] EntryModules, 
     public const int MaxDescriptionLength = 200;
     public string[] FunctionEntries { get; init; } = [];
     public string[] ActionEntries { get; init; } = [];
+    public int ApiVersion { get; init; } = 3;
+    public string[] EventEntries { get; init; } = [];
+    public string[] InitializationEntries { get; init; } = [];
     public string ComputeDigest()
     {
         ValidateMapping();
         return Convert.ToHexString(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(new
         {
-            apiVersion = 2, entries = EntryModules, functionEntries = FunctionEntries, actionEntries = ActionEntries,
+            apiVersion = ApiVersion, entries = EntryModules, functionEntries = FunctionEntries, actionEntries = ActionEntries,
+            eventEntries = EventEntries, initializationEntries = InitializationEntries,
             modules = Modules.OrderBy(m => m.Id, StringComparer.Ordinal).Select(m => new
             { id = m.Id, path = m.Path, sha256 = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(m.Source))), description = m.Description })
         })));
@@ -50,8 +54,13 @@ public sealed record LoadModules(ModuleSource[] Modules, string[] EntryModules, 
         if (sourceBytes > 1024 * 1024) throw new ProtocolException("Combined module source exceeds 1 MiB UTF-8.");
         if (EntryModules.Any(id => id is null || !ids.Contains(id)) || EntryModules.Distinct(StringComparer.Ordinal).Count() != EntryModules.Length)
             throw new ProtocolException("Invalid entry module mapping.");
-        foreach (var entries in new[] { FunctionEntries, ActionEntries })
+        foreach (var entries in new[] { FunctionEntries, ActionEntries, EventEntries, InitializationEntries })
             if (entries is null || entries.Length > 64 || entries.Any(id => !EntryModules.Contains(id)) || entries.Distinct(StringComparer.Ordinal).Count() != entries.Length)
                 throw new ProtocolException("Invalid bound module mapping.");
+        if (ApiVersion is not (3 or 4) || InitializationEntries.Length > 1 ||
+            ApiVersion == 3 && (EventEntries.Length != 0 || InitializationEntries.Length != 0) ||
+            ApiVersion == 4 && FunctionEntries.Concat(ActionEntries).Concat(EventEntries).Concat(InitializationEntries).Distinct().Count() !=
+                FunctionEntries.Length + ActionEntries.Length + EventEntries.Length + InitializationEntries.Length)
+            throw new ProtocolException("Invalid script role or API version.");
     }
 }

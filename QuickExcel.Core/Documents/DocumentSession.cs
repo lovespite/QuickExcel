@@ -619,12 +619,20 @@ public sealed partial class DocumentSession : IDisposable
     {
         var previous = _runtimeLifetime; _runtimeLifetime = new();
         previous.Cancel(); previous.Dispose();
+        // A lost initialized heap cannot be reconstructed by replaying startup code.
+        if (_snapshot.ScriptModules.HasInitialization)
+        {
+            _scriptsEnabled = false;
+            _registeredEvents = null;
+            _scriptEvents.Clear();
+        }
     }
 
     internal void InvalidateScriptRuntime(CancellationToken lifetime)
     {
         lock (_gate)
-            if (!_closed && lifetime.CanBeCanceled && lifetime == _runtimeLifetime.Token) ResetScriptRuntime();
+            if (!_closed && lifetime.CanBeCanceled && lifetime == _runtimeLifetime.Token)
+                ResetScriptRuntime();
     }
 
     private sealed record HistoryEntry(WorkbookSnapshot Before, WorkbookSnapshot After, ImmutableArray<CellChange> Changes, bool StructureChanged, bool CalculationUnchanged)

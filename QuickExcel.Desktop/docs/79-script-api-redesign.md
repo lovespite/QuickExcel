@@ -1,5 +1,7 @@
 # 脚本 JavaScript API 重新设计（API v3）
 
+> 2026-11-05：新工作簿的初始化主入口、自动发现的 UDF/Actions/Events 和编辑器菜单使用 API v4 / IPC 11，见 [80](80-script-entrypoints-and-editor.md)。本章对象模型继续适用，手动注册部分仅描述 API v3 兼容路径。
+
 2026-11-04。本文替换 [76](76-live-workbook-script-model.md) 中的对象 API 部分：旧 `$` / `ExcelScript` 子集整体废弃，不提供兼容层。文件 `scriptApiVersion = 3`、IPC 10；隔离、事务、限额和 worker 生命周期契约沿用 11/15/16/69/72/77 号文档。P0、P1、P2 已实现；成员与参数支持边界见 §7.1 / §7.2。
 
 ## 1. 现状与问题

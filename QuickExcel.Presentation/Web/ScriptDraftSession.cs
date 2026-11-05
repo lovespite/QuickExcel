@@ -25,13 +25,14 @@ public sealed class ScriptDraftSession
     }
     public IReadOnlyDictionary<string, ScriptDraft> Models => _models;
     public bool IsReadOnly { get; }
+    public int ApiVersion { get; }
     public bool Failed { get; private set; }
     public bool HasPending => _transfer is not null || _models.Values.Any(m => m.Version != m.ObservedVersion);
     public bool IsDirty => HasPending || _models.Values.Any(m => m.Text != m.Committed);
 
     public ScriptDraftSession(ScriptModuleSet modules, bool readOnly = false, TimeProvider? clock = null)
     {
-        IsReadOnly = readOnly; _clock = clock ?? TimeProvider.System;
+        IsReadOnly = readOnly; ApiVersion = modules.ScriptApiVersion; _clock = clock ?? TimeProvider.System;
         _models = modules.Modules.ToDictionary(p => p.Key, p => new ScriptDraft(p.Value.Path, p.Value.Source, p.Value.Source, Language: p.Value.Language), StringComparer.Ordinal);
         if (_models.Values.Sum(m => (long)Utf8.GetByteCount(m.Text)) > MaximumSourceBytes) throw new InvalidDataException(UiText.Get("脚本总量不能超过 1 MiB。"));
     }

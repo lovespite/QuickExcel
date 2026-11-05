@@ -7,7 +7,7 @@ public sealed partial class MainWindow
 #if QUICKEXCEL_DIAGNOSTICS
     private Func<Window, Task>? _dialogDriver;
 #endif
-    internal async Task<T> ShowOwnedAsync<T>(Window window)
+    internal async Task<T> ShowOwnedAsync<T>(Window window, Window? owner = null)
     {
         Exception? failure = null;
 #if QUICKEXCEL_DIAGNOSTICS
@@ -21,7 +21,7 @@ public sealed partial class MainWindow
             };
         }
 #endif
-        var result = await window.ShowDialog<T>(this);
+        var result = await window.ShowDialog<T>(owner ?? this);
         if (failure is not null) throw new InvalidOperationException(UiText.Get("对话框专项检查失败。"), failure);
         return result;
     }

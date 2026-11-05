@@ -73,8 +73,8 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage, IW
                 }
                 else
                 {
-                    var scriptApiVersion = checked((int)Integer(root, "scriptApiVersion", 3));
-                    if (String(root, "format") != "QuickExcel" || Integer(root, "minReaderVersion", 2) != 2 || scriptApiVersion is not (1 or 2 or 3))
+                    var scriptApiVersion = checked((int)Integer(root, "scriptApiVersion", 4));
+                    if (String(root, "format") != "QuickExcel" || Integer(root, "minReaderVersion", 2) != 2 || scriptApiVersion is not (1 or 2 or 3 or 4))
                         throw new InvalidDataException(MessageText.Get("XLSQ 格式、读取器版本或脚本 API 不受支持。"));
                     var features = Array(root, "requiredFeatures").Select(e => e.GetString() ?? throw new InvalidDataException(MessageText.Get("能力名称必须为字符串。"))).ToArray();
                     declaredViews = features.Contains("workbook-views");

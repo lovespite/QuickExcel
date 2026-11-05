@@ -7,16 +7,17 @@ namespace QuickExcel.ScriptContracts;
 public sealed record CompilerModule(string Id, string Language, string Source);
 public sealed record CompileRequest(CompilerModule[] Modules, string[] Entries, string Sha256)
 {
+    public int ApiVersion { get; init; } = 3;
     public string ComputeDigest() => CompilerProtocol.Hash(JsonSerializer.Serialize(new
     {
         compiler = CompilerProtocol.Identity, compilerPolicy = CompilerProtocol.Policy, options = CompilerProtocol.Options,
-        engine = WorkerProtocol.Engine, policy = WorkerProtocol.Policy, api = 2,
+        engine = WorkerProtocol.Engine, policy = WorkerProtocol.Policy, api = ApiVersion,
         modules = Modules.OrderBy(m => m.Id, StringComparer.Ordinal), entries = Entries
     }, WorkerProtocol.Json));
 
     public void Validate()
     {
-        if (Modules.Length is < 1 or > 64 || Entries.Length is < 1 or > 64 ||
+        if (ApiVersion is not (3 or 4) || Modules.Length is < 1 or > 64 || Entries.Length is < 1 or > 64 ||
             Modules.Any(m => m is null || !CompilerProtocol.ValidId(m.Id) || m.Language is not ("javascript" or "typescript") || m.Source is null) ||
             Modules.Select(m => m.Id).Distinct(StringComparer.Ordinal).Count() != Modules.Length ||
             Entries.Distinct(StringComparer.Ordinal).Count() != Entries.Length || Entries.Any(id => !Modules.Any(m => m.Id == id)) ||
@@ -36,7 +37,7 @@ public static class CompilerProtocol
     public const string Options = "ts5.9.3-es2022-esnext-strict-isolated-verbatim-define-v1";
     public const string Policy = "typescript-check-1024m-5s-v1";
     public static string Identity { get; } = ReadIdentity();
-    public static WorkerHello Hello => new(WorkerProtocol.Engine, Policy, [3], WorkerProtocol.MaxFrameBytes, "compile", Identity);
+    public static WorkerHello Hello => new(WorkerProtocol.Engine, Policy, [3, 4], WorkerProtocol.MaxFrameBytes, "compile", Identity);
     private static string ReadIdentity()
     {
         using var stream = typeof(CompilerProtocol).Assembly.GetManifestResourceStream("QuickExcel.Compiler.Identity")

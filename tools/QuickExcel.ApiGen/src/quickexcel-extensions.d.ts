@@ -25,11 +25,15 @@ declare namespace QuickExcel {
   type Main = (workbook: Workbook, host: Host) => void;
 
   interface Host {
-    readonly events: Events;
-    readonly functions: Functions;
     readonly values: ValueUtilities;
     /** Available only inside an action, event or console transaction. */
     readonly files: VirtualFiles;
+  }
+
+  /** Legacy API v3 compatibility. API v4 has no registration methods. */
+  interface LegacyRegistration {
+    readonly events: Events;
+    readonly functions: Functions;
   }
 
   interface ValueUtilities {

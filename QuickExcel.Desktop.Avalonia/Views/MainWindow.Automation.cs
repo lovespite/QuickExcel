@@ -71,7 +71,6 @@ public sealed partial class MainWindow
         _automationActions.IsDropDownOpen = false;
         _automationActions.SelectedItem = null; _automationSearch.Text = "";
         _automationActions.ItemsSource = null;
-        if (_actionPicker is not null) _actionPicker.ItemsSource = null;
     }
 
     private void SetScriptActions(WorkbookDocument document, ScriptModuleSet modules, IReadOnlyList<ScriptActionDescriptor> actions)
@@ -81,7 +80,6 @@ public sealed partial class MainWindow
         _actionsSession = document.Session.SessionId; _actionsModules = modules; _availableScriptActions = actions;
         _automationActions.SelectedItem = null; _automationSearch.Text = "";
         FilterScriptActions();
-        if (_actionPicker is not null) { _actionPicker.ItemsSource = actions; _actionPicker.SelectedIndex = actions.Count > 0 ? 0 : -1; }
         RefreshScriptActions();
     }
 
@@ -115,6 +113,7 @@ public sealed partial class MainWindow
 
     private void RefreshScriptActionButtons()
     {
+        RefreshScriptRunMenu();
         var enabled = !Document.IsReadOnly && DesktopServices.SupportsScripts && !NonExecutionBusy && Document.Snapshot.FileState?.FormulaReadOnly != true;
         if (_automationLoad is not null) _automationLoad.IsEnabled = enabled;
         if (_automationRun is not null) _automationRun.IsEnabled = enabled && ScriptActionsCurrent && _automationActions.SelectedItem is ScriptActionDescriptor;

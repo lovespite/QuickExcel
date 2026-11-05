@@ -15,8 +15,10 @@ public sealed partial class MainWindow
         Action<bool, string> check, string directory)
     {
         _workspace.New(); await OpenScriptsAsync();
+        check(_scriptWindow!.GetVisualDescendants().OfType<Menu>().Any(menu => menu.Items.OfType<MenuItem>().Select(item => item.Header?.ToString()).SequenceEqual(["文件", "编辑", "视图", "运行", "签名"])),
+            "The script workspace groups commands into File, Edit, View, Run and Signature menus");
         check(_modulePicker!.Items.Cast<string>().SequenceEqual(["main"]) && _scriptModuleGroups.All(g => g.Picker.Items.Count == 0),
-            "The default main.ts stays above all three initially empty script categories");
+            "The default main.ts stays above all four initially empty script categories");
         var initial = await test(new { action = "inspect" });
         check(initial.GetProperty("language").GetString() == "typescript" &&
             Document.Snapshot.ScriptModules.Modules["main"].Path == "scripts/main.ts" &&
@@ -30,8 +32,8 @@ public sealed partial class MainWindow
         {
             var dialog = (FieldsDialog)window;
             check(dialog.String("id") == "" && dialog.Index("role") == 1 &&
-                ((ComboBox)dialog.Input("role")).Items.Cast<string>().SequenceEqual(["Common", "Actions", "UDF"]),
-                "Module creation starts with an empty ID and Actions selected from exactly Common, Actions and UDF");
+                ((ComboBox)dialog.Input("role")).Items.Cast<string>().SequenceEqual(["Common", "Actions", "UDF", "Events"]),
+                "Module creation starts with an empty ID and Actions selected from Common, Actions, UDF and Events");
             check(dialog.Index("language") == (int)ScriptLanguage.TypeScript,
                 "The module creation dialog defaults to TypeScript");
             await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Background);
@@ -41,7 +43,7 @@ public sealed partial class MainWindow
         };
         await AddScriptModuleAsync();
         check(ReferenceEquals(beforeCancel, Document.Snapshot.ScriptModules), "Cancelling module creation preserves the complete module set");
-        foreach (var (id, role, language) in new[] { ("utility", 0, 0), ("formula", 2, 1), ("action", 1, 0) })
+        foreach (var (id, role, language) in new[] { ("utility", 0, 0), ("formula", 2, 1), ("action", 1, 0), ("events", 3, 1) })
         {
             _dialogDriver = window =>
             {
@@ -67,9 +69,10 @@ public sealed partial class MainWindow
             common.Label == "Common" && ScriptModuleProperties(Document.Snapshot.ScriptModules, "utility") == "Common · JavaScript",
             "Created modules appear only in their selected category; Common has consistent labels and main stays ungrouped");
         var modules = Document.Snapshot.ScriptModules;
-        check(modules.EntryModules.SequenceEqual(["main", "formula", "action"]) && modules.Bindings.ToHashSet().SetEquals(
-            [new("main", "formula-functions"), new("main", "actions"), new("formula", "formula-functions"), new("action", "actions")]),
+        check(modules.EntryModules.SequenceEqual(["main", "formula", "action", "events"]) && modules.Bindings.ToHashSet().SetEquals(
+            [new("main", "initialization"), new("formula", "formula-functions"), new("action", "actions"), new("events", "events")]),
             "Creation persists exclusive UDF or Actions bindings without turning Common modules into execution entries");
+        await CheckEventTemplateInsertionAsync(test, select, check, directory);
         await select("main");
         var revision = Document.Snapshot.Revision;
         foreach (var group in _scriptModuleGroups) group.Panel.IsExpanded = false;
