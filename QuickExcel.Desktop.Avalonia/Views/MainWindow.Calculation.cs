@@ -43,6 +43,10 @@ public sealed partial class MainWindow
         {
             if (_windowClosed || !ReferenceEquals(sender, Document.Session)) return;
             RefreshScriptActions();
+            if (!change.CalculationOnly && Document.IsDirty)
+                _recoveryStatus.Text = _lastRecovery is { } recovery
+                    ? UiText.Get("恢复草稿：") + recovery.CapturedUtc.ToLocalTime().ToString("HH:mm:ss") + UiText.Get(" · 有未记录编辑")
+                    : UiText.Get("尚无完整恢复副本");
             if (!change.CalculationOnly && !change.CalculationUnchanged)
             {
                 _calculationPending = true;

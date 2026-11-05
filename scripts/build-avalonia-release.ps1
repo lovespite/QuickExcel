@@ -58,7 +58,7 @@ try {
             Copy-Item -LiteralPath (Join-Path $root "artifacts/jsc/distribution/$name") -Destination $licenses
         }
     }
-    $forbidden = @($all | Where-Object { $_.Name -match 'WorkerFixture|HostFixture|SandboxProbe|PlatformSmoke|TestProbe|TypeScriptProbe|JscProbe|quickexcel-jsc-probe|Designer|Avalonia\.Diagnostics|\.pdb$|\.map$|\.pfx$|ExcelIO|Grid\.Wpf|^PresentationFramework|^PresentationCore|Xpf|quickjs-eval' })
+    $forbidden = @($all | Where-Object { $_.Name -match 'RecoveryFixture|WorkerFixture|HostFixture|SandboxProbe|PlatformSmoke|TestProbe|TypeScriptProbe|JscProbe|quickexcel-jsc-probe|Designer|Avalonia\.Diagnostics|\.pdb$|\.map$|\.pfx$|ExcelIO|Grid\.Wpf|^PresentationFramework|^PresentationCore|Xpf|quickjs-eval' })
     if ($forbidden) { throw "Forbidden release payload: $($forbidden.FullName -join ', ')" }
     if (@($all | Where-Object { $_.FullName.StartsWith((Join-Path $package 'ScriptWorker') + [IO.Path]::DirectorySeparatorChar) -and $_.Name -match 'Avalonia|WebView|Skia|HarfBuzz|RichTextKit|PdfPig|Rendering|LibTiff|Monaco' })) { throw 'UI/Web/rendering payload leaked into ScriptWorker.' }
     $web = Get-Content -LiteralPath (Join-Path $package 'Web/manifest.json') -Raw | ConvertFrom-Json

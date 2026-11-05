@@ -50,4 +50,11 @@ public sealed class CellContentEditingTests
         Assert.Throws<InvalidOperationException>(() => session.Execute(new SetHyperlinkCommand(sheet.Id, new(0, 0), new("https://example.com"))));
         Assert.False(session.CanUndo);
     }
+    [Fact]
+    public void LinkMetadataRespectsAtomicHistoryBudget()
+    {
+        var sheet = Sheet("S"); using var session = new DocumentSession(Book(sheet), historyBudgetBytes: 4096);
+        Assert.Throws<InvalidOperationException>(() => session.Execute(new SetHyperlinkCommand(sheet.Id, new(0, 0), new("https://example.com", Tooltip: new string('x', 10000)))));
+        Assert.Empty(session.Snapshot.GetSheet(sheet.Id).Annotations.Links); Assert.False(session.CanUndo);
+    }
 }

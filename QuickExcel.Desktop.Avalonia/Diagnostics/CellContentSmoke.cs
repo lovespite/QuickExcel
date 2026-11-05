@@ -49,7 +49,14 @@ public sealed partial class MainWindow
             }
             Dialog(d => { Choose(d, "operation", 3); Choose(d, "selected", 0); }); await ThreadCommentsAsync();
             Check(Document.Snapshot.GetSheet(sheet).Data.ThreadComments.IsEmpty, "Deleting root deletes its replies atomically");
-            _dialogDriver = w => { var d = (RichTextDialog)w; d.Editor.SelectionStart = 0; d.Editor.SelectionEnd = 2; d.Apply(new(Bold: true)); w.Close(true); return Task.CompletedTask; };
+            _dialogDriver = async w =>
+            {
+                var d = (RichTextDialog)w; d.Editor.SelectionStart = 0; d.Editor.SelectionEnd = 2; d.Apply(new(Bold: true));
+                await global::Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => { }, global::Avalonia.Threading.DispatcherPriority.Background);
+                using var bitmap = new global::Avalonia.Media.Imaging.RenderTargetBitmap(new PixelSize((int)w.Bounds.Width, (int)w.Bounds.Height), new Vector(96, 96));
+                bitmap.Render(w); bitmap.Save(Path.Combine(directory, "rich-text-editor.png"), global::Avalonia.Media.Imaging.PngBitmapEncoderOptions.Default);
+                w.Close(true);
+            };
             await RichTextAsync();
             Check(Document.Snapshot.GetSheet(sheet).GetCell(0, 0)!.Content.RichText is { Runs.Length: 2 } rich && rich.Runs[0].Font!.Bold == true && rich.Text == "Text", "Rich text dialog applies formatting to selected characters");
             await History(false); Check(Document.Snapshot.GetSheet(sheet).GetCell(0, 0)!.Content.RichText is null, "Entire rich text edit undoes once"); await History(true);
@@ -60,6 +67,11 @@ public sealed partial class MainWindow
             _dialogDriver = w => { ((RichTextDialog)w).Editor.Text = "stale"; _workspace.Editor.SetCell(0, 8, 0, "latest"); w.Close(true); return Task.CompletedTask; };
             stale = false; try { await RichTextAsync(); } catch (InvalidOperationException) { stale = true; }
             Check(stale && Document.GetCellValue(0, 0, 0) == "中文\n😀", "Rich text dialog refuses stale commit");
+            await _workspace.OpenAsync(new(Path.Combine(directory, "content.xlsq")), readOnly: true); ShowBook();
+            _dialogDriver = w => { Check(((TextBox)((FieldsDialog)w).Input("target")).IsReadOnly, "Read-only hyperlink window permits inspection without editing"); w.Close(true); return Task.CompletedTask; };
+            await HyperlinkAsync();
+            _dialogDriver = w => { Check(((TextBox)((FieldsDialog)w).Input("history")).IsReadOnly, "Read-only thread window preserves discussion history"); w.Close(true); return Task.CompletedTask; };
+            await ThreadCommentsAsync(); Check(!Document.IsDirty, "Inspecting read-only attachments does not dirty workbook");
         }
         catch (Exception ex) { failure = ex; }
         finally { _dialogDriver = null; }

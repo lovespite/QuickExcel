@@ -124,6 +124,8 @@ public sealed partial class MainWindow : Window
             if (Program.SmokeDirectory is { } featureDirectory && Program.SmokeMode == "ribbon-filter") { await RunRibbonFilterSmokeAsync(featureDirectory); return; }
             if (Program.SmokeDirectory is { } drawingDirectory && Program.SmokeMode == "drawing") { await RunDrawingSmokeAsync(drawingDirectory); return; }
             if (Program.SmokeDirectory is { } pageBreakDirectory && Program.SmokeMode == "page-break") { await RunPageBreakSmokeAsync(pageBreakDirectory); return; }
+            if (Program.SmokeDirectory is { } recoveryBenchmark && Program.SmokeMode == "recovery-benchmark") { await RunRecoveryBenchmarkAsync(recoveryBenchmark); return; }
+            if (Program.SmokeDirectory is { } recoveryDirectory && Program.SmokeMode == "recovery") { await RunRecoverySmokeAsync(recoveryDirectory); return; }
             if (Program.SmokeDirectory is { } contentDirectory && Program.SmokeMode == "cell-content") { await RunCellContentSmokeAsync(contentDirectory); return; }
             if (Program.SmokeDirectory is { } auditDirectory && Program.SmokeMode == "formula-audit") { await RunFormulaAuditSmokeAsync(auditDirectory); return; }
             if (Program.SmokeDirectory is { } arithmeticDirectory && Program.SmokeMode == "arithmetic-paste") { await RunArithmeticPasteSmokeAsync(arithmeticDirectory); return; }
@@ -136,6 +138,7 @@ public sealed partial class MainWindow : Window
             if (Program.SmokeDirectory is { } smoke && Program.SmokeMode != "manual") { if (Program.SmokeMode == "grid") await RunGridSmokeAsync(smoke); else if (Program.SmokeMode == "benchmark") await RunGridBenchmarkAsync(smoke); else if (Program.SmokeMode == "web") await RunWebSmokeAsync(smoke); else if (Program.SmokeMode == "web-benchmark") await RunWebBenchmarkAsync(smoke); else await RunWorkspaceSmokeAsync(smoke); return; }
 #endif
             if (Program.InitialFile is { } path) await PerformAsync(() => OpenPathAsync(path));
+            StartRecovery(); await PerformAsync(() => ShowRecoveryAsync(true));
             if (Program.SettingsMigrationError is { } migrationError) _status.Text = migrationError;
         };
         Synchronize(); ShowHome();
@@ -173,7 +176,7 @@ public sealed partial class MainWindow : Window
         BuildHome();
         var content = new global::Avalonia.Controls.Grid(); content.Children.Add(_book); content.Children.Add(_start);
         var root = new DockPanel(); DockPanel.SetDock(_menu, Dock.Top);
-        var footer = new DockPanel(); DockPanel.SetDock(_selectionStatistics, Dock.Right); footer.Children.Add(_selectionStatistics); DockPanel.SetDock(_pivotStatus,Dock.Right); footer.Children.Add(_pivotStatus); footer.Children.Add(_status);
+        var footer = new DockPanel(); DockPanel.SetDock(_selectionStatistics, Dock.Right); footer.Children.Add(_selectionStatistics); DockPanel.SetDock(_pivotStatus,Dock.Right); footer.Children.Add(_pivotStatus); DockPanel.SetDock(_recoveryStatus, Dock.Right); footer.Children.Add(_recoveryStatus); footer.Children.Add(_status);
         DockPanel.SetDock(footer, Dock.Bottom); root.Children.Add(_menu); root.Children.Add(footer); root.Children.Add(content);
         Content = _execution = new ExecutionOverlay(this, root, () => _grid.IsComposing || _formula.IsComposing);
     }
@@ -393,7 +396,7 @@ public sealed partial class MainWindow : Window
 #endif
             accepted = choice == SaveDecision.Discard || choice == SaveDecision.Save && await SaveAsync(false);
         }
-        if (accepted) await CloseScriptWindowAsync();
+        if (accepted) { await CloseScriptWindowAsync(); await ClearRecoveryAsync(); }
         return accepted;
     }
     private Task OpenAsync() => OpenAsync(readOnly: false);
@@ -467,7 +470,7 @@ public sealed partial class MainWindow : Window
             selected = await _files.SaveAsync(new(UiText.Get("保存工作簿"), types, Path.GetFileNameWithoutExtension(current ?? UiText.Get("未命名")) + (migration ? "-v2" : discard ? UiText.Get("-受支持副本") : Document.IsReadOnly ? UiText.Get("-副本") : "") + extension, extension, preferXlsx ? 1 : 0));
         }
         if (selected is null) return false;
-        try { await _workspace.SaveAsync(selected, discard, overwrite); _recentFiles.Remember(selected.Path); _status.Text = UiText.Get("已保存 ") + Path.GetFileName(selected.Path) + (_calculationFailure is null ? "" : UiText.Get(" · 部分结果待重算：") + _calculationFailure); return true; }
+        try { await _workspace.SaveAsync(selected, discard, overwrite); if (!Document.IsDirty) await ClearRecoveryAsync(); _recentFiles.Remember(selected.Path); _status.Text = UiText.Get("已保存 ") + Path.GetFileName(selected.Path) + (_calculationFailure is null ? "" : UiText.Get(" · 部分结果待重算：") + _calculationFailure); return true; }
         catch (Exception ex) { Error(ex); return false; }
     }
     private async Task History(bool redo) { if (await CommitEditorsAsync()) TryEdit(() => redo ? _workspace.Editor.Redo() : _workspace.Editor.Undo()); }

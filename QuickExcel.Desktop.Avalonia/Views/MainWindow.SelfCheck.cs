@@ -148,6 +148,16 @@ public sealed partial class MainWindow
             await ClosePrintPreviewAsync();
             await _workspace.SaveAsync(new(Path.Combine(directory, "editable-copy.xlsq")));
             Check(!Document.IsReadOnly && !Document.IsDirty && !_grid.IsReadOnly, "Saving a writable copy restores editing");
+            var recoveryStore = new WorkbookRecoveryStore(Path.Combine(directory, "recovery"));
+            using (var lease = recoveryStore.Start(Document.Session.SessionId, Document.Snapshot.DocumentId))
+            {
+                await Task.Run(() => lease.Capture(Document.Snapshot, _workspace.FilePath, _workspace.Version, DateTimeOffset.UtcNow));
+                Check(recoveryStore.Scan().Items.Count == 0, "Published recovery excludes the live session lease");
+            }
+            var recoveryItem = recoveryStore.Scan().Items.Single(); var recovered = recoveryStore.Recover(recoveryItem);
+            using (var recoveredDocument = new WorkbookDocument(recovered, _services))
+                Check(!recoveredDocument.ScriptsEnabled && recoveredDocument.GetCellInput(0, 0, 0) == "安装检查 中文 123", "Published recovery restores typed content without script authorization");
+            recoveryStore.Discard(recoveryItem); Check(recoveryStore.Scan().Items.Count == 0, "Published recovery discard removes completed generations");
         }
         catch (Exception ex) { failure = ex; }
         finally { try { await CloseScriptWindowAsync(); await ClosePrintPreviewAsync(); } catch (Exception ex) { failure ??= ex; } }

@@ -23,7 +23,7 @@ internal sealed partial class TypedEvaluator(WorkbookSnapshot snapshot, IReadOnl
     internal static string Describe(object value) => value switch
     {
         CellValue scalar => CellInput.DisplayText(scalar) is { } text ? text.Length > 512 ? text[..512] + "…" : text : "",
-        FormulaArray array => MessageText.Format($"数组：{array.Rows} 行 × {array.Columns} 列") + " · " + CellInput.DisplayText(array[0, 0]),
+        FormulaArray array => MessageText.Format($"数组：{array.Rows} 行 × {array.Columns} 列") + " · " + Describe(array[0, 0]),
         Range range => FormulaSyntax.Print(range.Reference),
         _ => ""
     };

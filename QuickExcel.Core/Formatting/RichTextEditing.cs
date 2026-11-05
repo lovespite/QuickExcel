@@ -5,6 +5,8 @@ namespace QuickExcel.Core;
 /// <summary>Immutable UTF-16 selection edits. Insertions inherit the font to their left, replacements the first replaced character.</summary>
 public static class RichTextEditing
 {
+    public static long EstimatedBytes(RichCellText text) => 128L + text.Text.Length * 4L + text.Runs.Sum(r => 256L +
+        (r.Font is { } font ? 2L * ((font.Name?.Length ?? 0) + (font.ResolvedName?.Length ?? 0) + (font.EastAsianName?.Length ?? 0)) : 0));
     public static RichCellText Replace(RichCellText source, int start, int length, string text)
     {
         Validate(source, start, length); WorkbookLimits.ValidateText(text);

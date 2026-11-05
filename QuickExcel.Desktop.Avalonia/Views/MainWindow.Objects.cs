@@ -23,7 +23,7 @@ public sealed partial class MainWindow
         _grid.ChartFilterRequested += () => _ = PerformAsync(ChartFilterAsync);
         _grid.ViewportChanged += CloseChartFilter;
         RibbonGroup(UiText.Get("插入"), UiText.Get("对象"), RibbonButton(RibbonIcon.Images, UiText.Get("图片管理"), ImagesAsync), RibbonButton(RibbonIcon.Charts, UiText.Get("图表管理"), ChartsAsync), RibbonButton(RibbonIcon.ChartFilter, UiText.Get("图表筛选"), ChartFilterAsync), RibbonButton(RibbonIcon.Comment, UiText.Get("批注"), NoteAsync));
-        RibbonGroup(UiText.Get("插入"), UiText.Get("单元格内容"), RibbonButton(RibbonIcon.PlainText, UiText.Get("富文本编辑"), RichTextAsync), RibbonButton(RibbonIcon.Comment, UiText.Get("超链接"), HyperlinkAsync), RibbonButton(RibbonIcon.Comment, UiText.Get("线程评论"), ThreadCommentsAsync));
+        RibbonGroup(UiText.Get("插入"), UiText.Get("单元格内容"), RibbonButton(RibbonIcon.PlainText, UiText.Get("富文本编辑"), RichTextAsync), RibbonButton(RibbonIcon.Comment, UiText.Get("超链接"), HyperlinkAsync, false), RibbonButton(RibbonIcon.Comment, UiText.Get("线程评论"), ThreadCommentsAsync, false));
         RibbonGroup(UiText.Get("页面布局"), UiText.Get("页面设置"), RibbonButton(RibbonIcon.PageSettings, UiText.Get("页面设置"), PageSettingsAsync), RibbonButton(RibbonIcon.SetPrintArea, UiText.Get("设为打印区域"), () => PrintAreaAsync(false)),
             RibbonButton(RibbonIcon.ClearPrintArea, UiText.Get("清除打印区域"), () => PrintAreaAsync(true)), RibbonButton(RibbonIcon.PageBreaks, UiText.Get("分页"), PageBreaksAsync));
     }

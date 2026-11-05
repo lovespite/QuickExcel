@@ -55,6 +55,11 @@ public sealed class WorkbookWorkspace : IDisposable
     {
         RequireIdle(); Replace(new WorkbookDocument(snapshot, _services), null, null);
     }
+    public void Recover(WorkbookSnapshot snapshot)
+    {
+        RequireIdle(); var document = new WorkbookDocument(snapshot, _services);
+        document.Session.MarkRecoveredUnsaved(); Replace(document, null, null);
+    }
     private void Replace(WorkbookDocument document, string? path, FileVersion? version, IDisposable? lease = null)
     {
         var previous = Document; var previousLease = _fileLease;

@@ -60,6 +60,11 @@ public sealed partial class DocumentSession : IDisposable
     public bool CanRedo { get { lock (_gate) return !_closed && _redo.Count != 0; } }
     public long HistoryBytes { get { lock (_gate) return _historyBytes; } }
     public bool ScriptsEnabled { get { lock (_gate) return _scriptsEnabled; } }
+    /// <summary>Recovered copies require an explicit save even before their first edit.</summary>
+    public void MarkRecoveredUnsaved()
+    {
+        lock (_gate) { ThrowIfClosed(); RequireWritable(); _savedRevision = -1; }
+    }
     public bool IsClosed { get { lock (_gate) return _closed; } }
     public ImmutableArray<string> Diagnostics { get { lock (_gate) return _diagnostics; } }
 
@@ -668,7 +673,8 @@ public sealed partial class DocumentSession : IDisposable
             .Where(s => !to.Sheets.Any(other => other.Id == s.Id))
             .Sum(s => 96L * (s.Rows.Count + s.Columns.Count) + s.Images.Sum(image => 128L + image.Data.Length)
                 + s.MergedCells.Sum(merge => 32L + merge.Length * 2L) + Notes(s) + Printing(s));
-        private static long Notes(WorksheetSnapshot s) => s.Annotations.NoteDrawing.Length + s.Annotations.Notes.Sum(n => 256L + n.Value.Author.Length * 2L + n.Value.Text.Text.Length * 2L + n.Value.Text.Runs.Length * 128L);
+        private static long Notes(WorksheetSnapshot s) => s.Annotations.NoteDrawing.Length + s.Annotations.Notes.Sum(n => 256L + n.Value.Author.Length * 2L + n.Value.Text.Text.Length * 2L + n.Value.Text.Runs.Length * 128L)
+            + s.Annotations.Links.Sum(link => 256L + 2L * ((link.Value.Target?.Length ?? 0) + (link.Value.Location?.Length ?? 0) + (link.Value.Display?.Length ?? 0) + (link.Value.Tooltip?.Length ?? 0)));
         private static long Printing(WorksheetSnapshot s) => 512L + s.Printing.PrinterSettings.Length + 48L * (s.Printing.Areas.Length + s.Printing.Titles.Length + s.Printing.RowBreaks.Length + s.Printing.ColumnBreaks.Length) +
             (s.Printing.HeaderFooter is { } h ? new[] { h.OddHeader, h.EvenHeader, h.FirstHeader, h.OddFooter, h.EvenFooter, h.FirstFooter }.Sum(t => (t?.Length ?? 0) * 2L) : 0);
         private static long ChangedPresentationMetadata(WorkbookSnapshot from, WorkbookSnapshot to)
@@ -692,6 +698,7 @@ public sealed partial class DocumentSession : IDisposable
                 + (cell.Calculation?.Diagnostics.Sum(message => 32L + message.Length * 2L) ?? 0)));
         private static long Estimate(CellSnapshot? cell) => cell is null ? 0 : 256L
             + (cell.Content.Kind == CellContentKind.Formula ? cell.Content.FormulaText.Length * 2L
+                : cell.Content.RichText is { } rich ? RichTextEditing.EstimatedBytes(rich)
                 : cell.Content.LiteralValue.Kind == CellValueKind.Text ? cell.Content.LiteralValue.TextValue.Length * 2L : 0);
     }
 }

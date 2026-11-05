@@ -37,7 +37,7 @@ internal sealed class RichTextDialog : Window
         Button(UiText.Get("斜体"), () => Apply(new(Italic: !(CurrentFont()?.Italic ?? _style.Italic))));
         var name = new TextBox { PlaceholderText = UiText.Get("字体名称"), Width = 150, Margin = new(0, 0, 8, 8) }; tools.Children.Add(name);
         Button(UiText.Get("应用字体"), () => Apply(new(Name: name.Text?.Trim() ?? "")));
-        var size = new NumericUpDown { Minimum = 1, Maximum = 409, Value = (decimal)(style.FontSize ?? 11), Width = 90, Margin = new(0, 0, 8, 8) }; tools.Children.Add(size);
+        var size = new NumericUpDown { Minimum = 1, Maximum = 409, Value = (decimal)(style.FontSize ?? 11), Width = 120, Margin = new(0, 0, 8, 8) }; tools.Children.Add(size);
         Button(UiText.Get("应用字号"), () => Apply(new(Size: (double)(size.Value ?? 11))));
         var color = new TextBox { PlaceholderText = "#RRGGBB", Width = 100, Margin = new(0, 0, 8, 8) }; tools.Children.Add(color);
         Button(UiText.Get("应用颜色"), () => { var rgb = (color.Text ?? "").Trim().TrimStart('#'); if (rgb.Length == 6) rgb = "FF" + rgb; Apply(new(Color: rgb.ToUpperInvariant())); });
@@ -69,7 +69,8 @@ internal sealed class RichTextDialog : Window
     private void Change(RichCellText next)
     {
         if (Draft.Equals(next)) return; _undo.Push(Draft); _redo.Clear(); Draft = next;
-        if (_undo.Count > 100) { var newest = _undo.Take(100).Reverse().ToArray(); _undo.Clear(); foreach (var state in newest) _undo.Push(state); }
+        long bytes = 0; var newest = _undo.Take(100).TakeWhile(state => (bytes += RichTextEditing.EstimatedBytes(state)) <= 16 * 1024 * 1024).Reverse().ToArray();
+        _undo.Clear(); foreach (var state in newest) _undo.Push(state);
         RefreshPreview();
     }
     private void SyncText()

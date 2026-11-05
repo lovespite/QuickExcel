@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net10.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable></PropertyGroup>
+  <ItemGroup><ProjectReference Include="../../QuickExcel.Infrastructure/QuickExcel.Infrastructure.csproj" /></ItemGroup>
+  <Target Name="GetFixturePayload" Returns="@(FixturePayload)"><ItemGroup><FixturePayload Include="$(TargetDir)*" Exclude="$(TargetDir)*.pdb" /></ItemGroup></Target>
+</Project>

@@ -11,6 +11,7 @@
   <Project Path="QuickExcel.Core.Test/QuickExcel.Core.Test.csproj" />
   <Project Path="QuickExcel.Core.Test/WorkerFixture/WorkerFixture.csproj" />
   <Project Path="QuickExcel.Core.Test/SandboxHostFixture/SandboxHostFixture.csproj" />
+  <Project Path="QuickExcel.Core.Test/RecoveryFixture/RecoveryFixture.csproj" />
   <Project Path="QuickExcel.Rendering/QuickExcel.Rendering.csproj" />
   <Project Path="QuickExcel.Rendering.Skia/QuickExcel.Rendering.Skia.csproj" />
   <Project Path="QuickExcel.Rendering.Test/QuickExcel.Rendering.Test.csproj" />

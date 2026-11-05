@@ -36,6 +36,11 @@ public sealed partial class MainWindow
             .Text("display", UiText.Get("显示名称"), old?.Display ?? "")
             .Text("tooltip", UiText.Get("提示文字"), old?.Tooltip ?? "")
             .Check("remove", UiText.Get("删除此链接"));
+        if (Document.IsReadOnly)
+        {
+            foreach (var key in new[] { "target", "location", "display", "tooltip" }) ((TextBox)dialog.Input(key)).IsReadOnly = true;
+            dialog.Input("remove").IsEnabled = false; await dialog.ShowAsync(this); return;
+        }
         if (!await dialog.ShowAsync(this)) return;
         RequireContentDialogCurrent(session, snapshot);
         string? Field(string key) => string.IsNullOrWhiteSpace(dialog.String(key)) ? null : dialog.String(key);
@@ -49,7 +54,7 @@ public sealed partial class MainWindow
         var comments = sheet.Data.ThreadComments.Where(c => c.Position == position).OrderBy(c => c.ParentId is not null).ThenBy(c => c.Created).ToArray();
         var root = comments.FirstOrDefault(c => c.ParentId is null);
         var dialog = new FieldsDialog(UiText.Get("线程评论"));
-        var summary = string.Join("\n\n", comments.Select(c => $"{c.Author} · {c.Created.ToLocalTime():yyyy-MM-dd HH:mm} · {UiText.Get(c.Resolved ? "已解决" : "未解决")}\n{c.Content}"));
+        var summary = string.Join("\n\n", comments.Select(c => $"{c.Author} · {c.Created.ToLocalTime():yyyy-MM-dd HH:mm} · {UiText.Get((root?.Resolved ?? c.Resolved) ? "已解决" : "未解决")}\n{c.Content}"));
         dialog.Text("history", UiText.Get("讨论记录"), summary, true);
         ((TextBox)dialog.Input("history")).IsReadOnly = true;
         var preserved = sheet.Data.CommentFallback || snapshot.FileState?.PreservedAttachments.Any(a => a.Feature == ExtendedObjectSafety.ThreadedComments && a.SheetName == sheet.Name) == true ||
@@ -65,6 +70,12 @@ public sealed partial class MainWindow
             dialog.Choice("operation", UiText.Get("操作"), [UiText.Get("添加回复"), UiText.Get("解决讨论"), UiText.Get("重新打开讨论"), UiText.Get("删除选中评论"), UiText.Get("修改选中评论")]);
         }
         dialog.Text("author", UiText.Get("作者"), "QuickExcel").Text("text", UiText.Get("评论内容"), "", true);
+        if (root is not null)
+        {
+            void PopulateEdit() { if (dialog.Index("operation") == 4) ((TextBox)dialog.Input("text")).Text = comments[dialog.Index("selected")].Content; }
+            ((ComboBox)dialog.Input("operation")).SelectionChanged += (_, _) => PopulateEdit();
+            ((ComboBox)dialog.Input("selected")).SelectionChanged += (_, _) => PopulateEdit();
+        }
         if (!await dialog.ShowAsync(this)) return;
         RequireContentDialogCurrent(session, snapshot);
         var items = sheet.Data.ThreadComments.ToList(); var operation = root is null ? 0 : dialog.Index("operation");

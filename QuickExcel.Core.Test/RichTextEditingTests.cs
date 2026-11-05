@@ -46,4 +46,12 @@ public sealed class RichTextEditingTests
         Assert.Throws<ArgumentException>(() => RichTextEditing.Format(source, 0, 0, new(Bold: true), new()));
         Assert.Throws<ArgumentException>(() => RichTextEditing.Replace(source, 0, 0, new string('x', WorkbookLimits.MaxCellTextLength)));
     }
+    [Fact]
+    public void RunMetadataIsIncludedInHistoryBudget()
+    {
+        var sheet = Sheet("S"); using var session = new DocumentSession(Book(sheet), historyBudgetBytes: 4096);
+        var rich = new RichCellText(Enumerable.Range(0, 300).Select(i => new TextRun("a", new(Name: "Font" + i))));
+        Assert.Throws<InvalidOperationException>(() => session.Execute(new SetCellsCommand([new(new(sheet.Id, 0, 0), CellContent.FromRichText(rich))])));
+        Assert.Null(session.Snapshot.GetSheet(sheet.Id).GetCell(0, 0)); Assert.False(session.CanUndo);
+    }
 }

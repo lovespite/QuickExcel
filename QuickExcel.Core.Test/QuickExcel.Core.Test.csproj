@@ -11,6 +11,8 @@
     <None Update="Fixtures/*.json" CopyToOutputDirectory="PreserveNewest" />
     <Compile Remove="WorkerFixture\**\*.cs" />
     <Compile Remove="SandboxHostFixture\**\*.cs" />
+    <Compile Remove="RecoveryFixture\**\*.cs" />
+    <ProjectReference Include="RecoveryFixture\RecoveryFixture.csproj" ReferenceOutputAssembly="false" />
     <ProjectReference Include="WorkerFixture\WorkerFixture.csproj" ReferenceOutputAssembly="false" />
     <ProjectReference Include="SandboxHostFixture\SandboxHostFixture.csproj" ReferenceOutputAssembly="false" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
@@ -22,6 +24,10 @@
   </ItemGroup>
   <Import Project="../scripts/ScriptWorker.targets" />
   <Target Name="CopyWorkerFixture" AfterTargets="Build">
+    <MSBuild Projects="RecoveryFixture\RecoveryFixture.csproj" Targets="GetFixturePayload" Properties="Configuration=$(Configuration);RuntimeIdentifier=$(RuntimeIdentifier)">
+      <Output TaskParameter="TargetOutputs" ItemName="RecoveryFixturePayload" />
+    </MSBuild>
+    <Copy SourceFiles="@(RecoveryFixturePayload)" DestinationFolder="$(TargetDir)RecoveryFixture" SkipUnchangedFiles="true" />
     <MSBuild Projects="WorkerFixture\WorkerFixture.csproj" Targets="GetFixturePayload" Properties="Configuration=$(Configuration);RuntimeIdentifier=$(RuntimeIdentifier)">
       <Output TaskParameter="TargetOutputs" ItemName="TestFixturePayload" />
     </MSBuild>
