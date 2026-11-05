@@ -26,8 +26,9 @@ public sealed class WorkbookClipboard
         HasAnnotations = sheet.Annotations.Links.Keys.Concat(sheet.Annotations.Notes.Keys).Any(p => range.Contains(p.Row, p.Column));
         HasConditionalFormats = sheet.Data.ConditionalFormats.Any(r => r.Ranges.Any(a => ValidationSafety.Overlaps(a, range))) ||
             snapshot.FileState?.CompatibilityDiagnostics.Any(d => d.Feature.Contains("conditionalFormatting", StringComparison.OrdinalIgnoreCase)) == true;
-        HasOldResults = Cells.Any(c => c.Content.Kind == CellContentKind.Formula && (c.Calculation?.Value is null ||
-            c.Calculation.InputRevision != snapshot.Revision || c.Calculation.State is not (CalculationState.Fresh or CalculationState.Error)));
+        HasOldResults = Enumerable.Range(range.Top, Rows).SelectMany(row => Enumerable.Range(range.Left, Columns)
+            .Select(column => sheet.GetCell(row, column))).Any(c => c is not null && (c.Content.Kind == CellContentKind.Formula || c.SpillOwner is not null) &&
+                (c.Calculation?.Value is null || c.Calculation.InputRevision != snapshot.Revision || c.Calculation.State is not (CalculationState.Fresh or CalculationState.Error)));
     }
     public Guid DocumentId { get; }
     public long Revision { get; }

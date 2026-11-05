@@ -1,0 +1,199 @@
+{
+  "excelVersion": "16.0",
+  "excelBuild": 20527.0,
+  "sha256": "236B31A324B1FCBFDCB3CC095E15B526B95CAFD74F18149C931BA085800F31A6",
+  "cases": [
+    {
+      "operation": "add",
+      "kind": "numbers",
+      "value": 10.0,
+      "display": "10",
+      "formula": "10",
+      "hasFormula": false
+    },
+    {
+      "operation": "add",
+      "kind": "formula-target",
+      "value": 10.0,
+      "display": "10",
+      "formula": "=(4+4)+2",
+      "hasFormula": true
+    },
+    {
+      "operation": "add",
+      "kind": "formula-source",
+      "value": 10.0,
+      "display": "10",
+      "formula": "10",
+      "hasFormula": false
+    },
+    {
+      "operation": "add",
+      "kind": "blank-source",
+      "value": 8.0,
+      "display": "8",
+      "formula": "8",
+      "hasFormula": false
+    },
+    {
+      "operation": "add",
+      "kind": "skip-blank",
+      "value": 8.0,
+      "display": "8",
+      "formula": "8",
+      "hasFormula": false
+    },
+    {
+      "operation": "add",
+      "kind": "blank-target",
+      "value": 2.0,
+      "display": "2",
+      "formula": "2",
+      "hasFormula": false
+    },
+    {
+      "operation": "subtract",
+      "kind": "numbers",
+      "value": 6.0,
+      "display": "6",
+      "formula": "6",
+      "hasFormula": false
+    },
+    {
+      "operation": "subtract",
+      "kind": "formula-target",
+      "value": 6.0,
+      "display": "6",
+      "formula": "=(4+4)-2",
+      "hasFormula": true
+    },
+    {
+      "operation": "subtract",
+      "kind": "formula-source",
+      "value": 6.0,
+      "display": "6",
+      "formula": "6",
+      "hasFormula": false
+    },
+    {
+      "operation": "subtract",
+      "kind": "blank-source",
+      "value": 8.0,
+      "display": "8",
+      "formula": "8",
+      "hasFormula": false
+    },
+    {
+      "operation": "subtract",
+      "kind": "skip-blank",
+      "value": 8.0,
+      "display": "8",
+      "formula": "8",
+      "hasFormula": false
+    },
+    {
+      "operation": "subtract",
+      "kind": "blank-target",
+      "value": -2.0,
+      "display": "-2",
+      "formula": "-2",
+      "hasFormula": false
+    },
+    {
+      "operation": "multiply",
+      "kind": "numbers",
+      "value": 16.0,
+      "display": "16",
+      "formula": "16",
+      "hasFormula": false
+    },
+    {
+      "operation": "multiply",
+      "kind": "formula-target",
+      "value": 16.0,
+      "display": "16",
+      "formula": "=(4+4)*2",
+      "hasFormula": true
+    },
+    {
+      "operation": "multiply",
+      "kind": "formula-source",
+      "value": 16.0,
+      "display": "16",
+      "formula": "16",
+      "hasFormula": false
+    },
+    {
+      "operation": "multiply",
+      "kind": "blank-source",
+      "value": 0.0,
+      "display": "0",
+      "formula": "0",
+      "hasFormula": false
+    },
+    {
+      "operation": "multiply",
+      "kind": "skip-blank",
+      "value": 8.0,
+      "display": "8",
+      "formula": "8",
+      "hasFormula": false
+    },
+    {
+      "operation": "multiply",
+      "kind": "blank-target",
+      "value": 0.0,
+      "display": "0",
+      "formula": "0",
+      "hasFormula": false
+    },
+    {
+      "operation": "divide",
+      "kind": "numbers",
+      "value": 4.0,
+      "display": "4",
+      "formula": "4",
+      "hasFormula": false
+    },
+    {
+      "operation": "divide",
+      "kind": "formula-target",
+      "value": 4.0,
+      "display": "4",
+      "formula": "=(4+4)/2",
+      "hasFormula": true
+    },
+    {
+      "operation": "divide",
+      "kind": "formula-source",
+      "value": 4.0,
+      "display": "4",
+      "formula": "4",
+      "hasFormula": false
+    },
+    {
+      "operation": "divide",
+      "kind": "blank-source",
+      "value": -2146826281,
+      "display": "#DIV/0!",
+      "formula": "#DIV/0!",
+      "hasFormula": false
+    },
+    {
+      "operation": "divide",
+      "kind": "skip-blank",
+      "value": 8.0,
+      "display": "8",
+      "formula": "8",
+      "hasFormula": false
+    },
+    {
+      "operation": "divide",
+      "kind": "blank-target",
+      "value": 0.0,
+      "display": "0",
+      "formula": "0",
+      "hasFormula": false
+    }
+  ]
+}

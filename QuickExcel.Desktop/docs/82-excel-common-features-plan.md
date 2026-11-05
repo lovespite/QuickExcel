@@ -16,7 +16,8 @@
 - XC-0605a：填充/字体基础颜色及无填充筛选完成，1.24.0 已发布。
 - XC-0605b：前后 N 项及百分比筛选完成，1.25.0 已发布。
 - XC-0605c：年月日分组筛选完成，1.26.0 源码通过定向验证，随 E6/E7 最终批次发布。
-- XC-0606–0607 与 E7：待实施。E8/E9 保持原计划。
+- XC-0606a：数值加减乘除粘贴与跳过空白完成，1.27.0 源码验证通过，等待最终统一发布。
+- XC-0606b、XC-0607 与 E7：待实施。E8/E9 保持原计划。
 
 用户于 2026-11-05 调整交付节奏：每个独立功能验证后单独 commit，全部 E6/E7 完成后统一发布并验证活动包。此前已发布包保持可用，后续源码完成不等于本地包已更新。 / Delivery cadence: commit each independently verified feature, then publish and validate one package when E6/E7 are complete.
 

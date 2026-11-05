@@ -113,3 +113,13 @@ The normal filter menu accepts invariant YYYY / YYYY-MM / YYYY-MM-DD lines, appl
 验证：51 项日期/颜色/排名/筛选/分类汇总/本地化测试通过；12 项 AdvancedFilters 桌面检查通过，证据 `artifacts/avalonia/workspace/20261105-082502-09227465`。独立 Excel 8 案例及 QuickExcel 输出重应用通过，证据 `artifacts/e6/date-filter-excel-02`，固定原生 XML、版本和 SHA-256 为 `Fixtures/excel-date-filters.json`。Table 往返为自动化存储验证。桌面初次检查发现测试夹具未设置规范化数字格式 ID，修正为 ID 0 + 自定义代码后通过，失败证据保留。
 
 按用户新的交付要求，本项验证后独立提交，E6/E7 全部完成后统一生产发布；当前活动包仍为 1.25.0。 / This source change is committed independently; production publication is deferred until all requested E6/E7 work is complete.
+
+## XC-0606a — 运算粘贴 / Arithmetic paste
+
+2026-11-05，1.27.0 源码。编辑菜单新增加、减、乘、除及跳过真正的源空白。单格来源可填充矩形，矩形来源须同尺寸或选左上角，最多 20,000 格。源公式采用有效结果；目标公式保留原表达式并追加常量运算，后续引用变化继续重算。目标样式、超链接和传统批注保持原位置；值输入保留验证、保护及事务检查。
+
+The preview explicitly describes raw date serial arithmetic, zero for blanks, and preserving destination formulas. Numeric text uses a decimal point without thousands separators. Text/boolean/error operands, zero divisors and overflow reject the whole batch. This intentionally stricter division-by-zero policy differs from Excel producing an error cell. Hidden/filtered destinations, merged geometry, drawings and array ownership remain guarded. Stale local copies and stale previews reject; old spill caches stay marked stale even when capture exposes only their value.
+
+真实 Excel 24 案例覆盖四种运算、源/目标公式、源/目标空白及跳过空白，固定预期和来源哈希见 `Fixtures/excel-arithmetic-paste.json`，证据 `artifacts/e6/arithmetic-excel-02`。参考 [Microsoft PasteSpecial](https://learn.microsoft.com/en-us/office/vba/api/excel.range.pastespecial)。首轮在文件关闭前取哈希失败，01 证据保留，02 已修正关闭顺序。
+
+144 项相关运算/剪贴板/本地化检查通过；新增附件与溢出缓存边界后 16 项运算测试通过。7 项 ArithmeticPaste 桌面检查通过，最终证据 `artifacts/avalonia/workspace/20261105-083143-90664916`。XLSX/XLSQ、单次撤销/重做、引用重算、保护/验证/除零回滚及过期预览均覆盖。按用户要求独立提交，统一发布仍留到 E6/E7 完成。
