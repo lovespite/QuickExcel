@@ -270,3 +270,23 @@ RibbonFilter 诊断现在覆盖普通按钮与三个拆分按钮。标准矢量�
 首页历史列表关闭滚动条自动隐藏，让滚动条占用独立宽度，展开时不再覆盖 Pin 按钮；无溢出时仍自动移除滚动条。历史管理采用标题/配置、剩余高度的列表、底部操作三行布局，只有文件列表滚动，取消固定 300 高列表与整页滚动叠加的双滚动条。该分区最小窗口高度为 480，窄窗口说明换行后仍保留可用列表；其他设置分区恢复原先的整页滚动和 380 最小高度。
 
 定向验证：Release 桌面构建无警告/错误，Menus 108 项通过（`artifacts/avalonia/workspace/20261105-055844-8364edc7`）。新增实际边界检查覆盖 Pin 在最小/普通窗口、列表末尾和过滤后无滚动条时的避让，以及历史管理默认/最小尺寸和滚动末尾的单滚动区域、至少 80 高列表视口、底部按钮可见性和分区切换。相关截图已复核；未运行全量回归。
+
+## 文件退出、导出分组与常用快捷键（2026-11-05，3.2.0）
+
+打开被占用文件失败后，原先 `_operation` 保留失败的原始任务，Closing 再次等待它时抛出异常，中断退出；Exit 首次点击替换任务后才可第二次退出。现在记录完整的命令处理任务，等待错误展示、编辑持有释放和忙碌状态清理后继续关闭确认。占用错误仍显示，当前文档保留，未保存草稿的提交、取消与保存流程不变。新增 Closing 专项在真实独占文件上覆盖窗口关闭、一次 Exit、操作未结束时请求关闭及未保存草稿；修复前失败证据为 `artifacts/avalonia/workspace/20261105-122535-e13238a3`。
+
+“文件 → 导出”集中值快照、可移植公式、CSV/TSV 三项，首页禁用整个分组和子项，只读工作簿仍允许导出。全部文件命令安装后将 Exit 放到末项。常用快捷键新增 F12 另存为、Shift+F12 保存、Ctrl+F12 打开、Ctrl+P 打印预览、Ctrl+F4 关闭工作簿、F5 定位、Shift+F11 插入工作表、Ctrl+B/I/U/5 切换粗体/斜体/下划线/删除线。格式快捷键不抢占正在编辑的原生文本草稿，保留 IME、只读和工作区忙碌门禁；依据 Microsoft 的 Excel Windows 快捷键表：<https://support.microsoft.com/en-us/accessibility/excel/keyboard-shortcuts-in-excel>。
+
+定向验证：Release 构建 0 警告/0 错误；Closing 11 项（`20261105-123858-24b36efa`）、Workspace 182 项（`20261105-123900-950780f8`）、Menus 126 项（`20261105-123904-f0d4b147`）、PageBreak 24 项（`20261105-123909-86eb7c4f`）、Commands 20 项（`20261105-123724-8744242e`）通过，均在 `artifacts/avalonia/workspace/`。另有文本导出 11 项、执行界面 29 项和工作区/文件占用 18 项通过。同步修正诊断对原始失败任务抛异常的依赖，改查界面错误和文档保留；只读菜单旧断言现明确包含既有超链接和线程评论查看入口。未运行全量回归，程序化检查不替代物理输入验收。
+
+用户补充功能后明确恢复发布授权。已执行 `scripts/build-quickexcel.ps1 -SkipTests -RunSmoke -CreateArchive`，3.2.0 自包含包位于 `artifacts/avalonia/releases/20261105-124059-01b3ae19/application`，28 项生产自检通过。已核验活动指针、release 清单、宿主 EXE/DLL、Infrastructure/Presentation DLL 和生产 Web 清单哈希，`Start-QuickExcel.cmd` 使用此包；旧包保留。ZIP 为 `artifacts/avalonia/releases/QuickExcel-Avalonia-3.2.0-win-x64-20261105-124059-01b3ae19.zip`，SHA-256 为 `586B99BF804E5E316A51573409EB6DDB3A3BE7CBAB2F0B2A808AF9161A71DE26`。生产构建仅有既有的两个诊断字段 CS0649 警告。
+
+## 许可证自适应阅读区与 Markdown 渲染（2026-11-05，3.3.0）
+
+关于与许可改为受限的页头、文件选择器、占用剩余空间的正文、纯文本分页栏。正文取消固定 210 高度，随窗口宽高变化；页头优先使用自然高度，在小窗口中独立滚动，为正文预留至少 80 高的有效视口。原先重复的图标声明和许可标题合并到正文中的第三方声明，保留英文版权说明。
+
+引入 MIT 的 Markdown.Avalonia.Tight 12.0.2，仅新增同版本 ColorDocument.Avalonia、ColorTextBlock.Avalonia 两个托管依赖，三个 DLL 合计 289792 字节。`.md` 完整文档使用原生控件渲染标题、表格、列表与链接，支持选择复制、连续滚动，切换文件回到顶部，避免按 4000 字符分页截断 Markdown 结构。其他许可证继续显示原始纯文本并分页。完整上游许可证、各组件版权与 NuGet 源修订记录位于 `Licenses/MARKDOWN-AVALONIA-LICENSE.txt`，设置内声明和根第三方清单同步更新，依赖版本及内容哈希锁定；发布检查要求三个 DLL 与许可证同时存在。
+
+定向验证：Release 构建 0 警告/0 错误；`scripts/test-avalonia-workspace.ps1 -Mode Licenses` 15 项通过，证据为 `artifacts/avalonia/workspace/20261105-125953-12c9a1d8`。覆盖真实标题/表格控件、完整文档、放大与最小尺寸、滚动与切换复位、纯文本逐页重建、上游归属、分区切换；已复核默认 820×600、放大 1180×820、最小 580×380 及纯文本分页截图。未运行全量回归。
+
+已执行 `scripts/build-quickexcel.ps1 -SkipTests -RunSmoke`：3.3.0 自包含包 `artifacts/avalonia/releases/20261105-130146-b503bc60/application` 的 28 项生产自检通过。已核验活动指针、清单哈希、宿主 EXE/DLL、三个渲染 DLL 与分发声明/许可证哈希，`Start-QuickExcel.cmd` 使用该已验证包；此前活动包保留。生产构建仅有既有的两个诊断字段 CS0649 警告。

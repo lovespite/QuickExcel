@@ -11,6 +11,7 @@ namespace QuickExcel.Desktop.Avalonia;
 public sealed partial class MainWindow
 {
     private ScriptCertificateTrustStore ScriptTrust => new(Path.Combine(_userDataDirectory, "trusted-script-certificates.json"));
+    private ScriptSigningPreferencesStore SigningPreferences => new(Path.Combine(_userDataDirectory, "script-signing-preferences.json"));
     private static string CertificateDetails(ScriptSignatureVerification result) =>
         UiText.Format($"{result.Message}\n\n主体：{result.Subject ?? "—"}\n颁发者：{result.Issuer ?? "—"}\n有效期至：{result.NotAfter:yyyy-MM-dd HH:mm:ss}\nSHA-256 指纹：\n{result.Fingerprint ?? "—"}");
     private async Task<bool> CheckScriptTrustAsync()
@@ -58,19 +59,35 @@ public sealed partial class MainWindow
     {
         await using var hold = _scriptPage?.HoldEdits();
         if (!await CommitEditorsAsync()) return;
+        ScriptSigningPreferences remembered = new(); string? memoryError = null;
+        try { remembered = await Task.Run(() => SigningPreferences.Read()); }
+        catch (Exception ex) when (ex is IOException or CryptographicException or System.Text.Json.JsonException)
+        { memoryError = UiText.Get("无法读取本机签名记忆，请重新选择私钥并输入密码：") + ex.Message; }
+        var hasRememberedFile = remembered.RememberKeyFile;
         var choice = new FieldsDialog(UiText.Get("签署全部脚本")).Note(UiText.Get("修改源码或用途会移除签名并撤销授权；签名后请保存工作簿。私钥不会写入工作簿。"))
-            .Choice("kind", UiText.Get("证书"), [UiText.Get("使用 PFX / P12 证书"), UiText.Get("创建自签证书")]);
+            .Choice("kind", UiText.Get("证书"), hasRememberedFile
+                ? [UiText.Get("使用上次私钥文件"), UiText.Get("使用 PFX / P12 证书"), UiText.Get("创建自签证书")]
+                : [UiText.Get("使用 PFX / P12 证书"), UiText.Get("创建自签证书")]);
+        if (hasRememberedFile) choice.Note(remembered.KeyFilePath!);
+        if (memoryError is not null) choice.Note(memoryError);
         if (!await choice.ShowAsync(this)) return;
-        var create = choice.Index("kind") == 1;
+        var create = choice.Index("kind") == (hasRememberedFile ? 2 : 1);
         LocalFileSelection? file = create ? await _files.SaveAsync(new(UiText.Get("保存签名证书与私钥"), [new(UiText.Get("PFX 证书"), ["*.pfx"])], "QuickExcel-signing.pfx", ".pfx")) :
+            hasRememberedFile && choice.Index("kind") == 0 ? new(remembered.KeyFilePath!) :
             await _files.OpenAsync(new(UiText.Get("选择包含私钥的证书"), [new(UiText.Get("签名证书"), ["*.pfx", "*.p12"])]));
         if (file is null) return;
         var dialog = new FieldsDialog(create ? UiText.Get("创建自签证书") : UiText.Get("证书密码"));
         if (create) dialog.Text("name", UiText.Get("证书名称"), "QuickExcel Script Publisher");
-        dialog.Text("password", create ? UiText.Get("PFX 密码（至少 8 个字符）") : UiText.Get("PFX 密码")); ((TextBox)dialog.Input("password")).PasswordChar = '●';
+        dialog.Text("password", create ? UiText.Get("PFX 密码（至少 8 个字符）") : UiText.Get("PFX 密码"),
+            create ? "" : await Task.Run(() => remembered.PasswordForFile(file.Path)));
+        ((TextBox)dialog.Input("password")).PasswordChar = '●';
+        dialog.Check("rememberFile", UiText.Get("记住上次的私钥文件"), remembered.RememberKeyFile)
+            .Check("rememberPassword", UiText.Get("记住密码"), remembered.RememberPassword)
+            .Note(UiText.Get("仅保存在本机当前用户的受保护设置中，不写入 XLSQ。取消勾选并完成签名后会清除对应记忆。"));
         dialog.Validate = () => { if (create && dialog.String("password").Length < 8) throw new ArgumentException(UiText.Get("密码至少需要 8 个字符。")); };
-        if (!await dialog.ShowAsync(this)) return;
+        if (!await dialog.ShowAsync(this)) { ((TextBox)dialog.Input("password")).Text = ""; return; }
         var secret = dialog.String("password"); ((TextBox)dialog.Input("password")).Text = "";
+        var rememberFile = dialog.Boolean("rememberFile"); var rememberPassword = dialog.Boolean("rememberPassword");
         var subject = create ? dialog.String("name") : ""; var modules = Document.Snapshot.ScriptModules;
         try
         {
@@ -92,6 +109,9 @@ public sealed partial class MainWindow
                 return signature;
             });
             _workspace.Editor.Execute(new UpdateScriptSignatureCommand(modules, signature)); DisableScripts(); Synchronize(); _status.Text = UiText.Get("已签署全部脚本，请保存工作簿。");
+            try { await Task.Run(() => SigningPreferences.Save(file.Path, secret, rememberFile, rememberPassword)); }
+            catch (Exception ex) when (ex is IOException or CryptographicException)
+            { _status.Text += UiText.Get(" 未能保存本机签名记忆：") + ex.Message; }
         }
         finally { secret = ""; }
     }

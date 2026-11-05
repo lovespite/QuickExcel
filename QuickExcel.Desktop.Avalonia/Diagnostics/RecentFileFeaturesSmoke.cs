@@ -91,9 +91,10 @@ public sealed partial class MainWindow
             using (var locked = new FileStream(validPath, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
             {
                 _dialogDriver = window => { window.Close(); throw new InvalidOperationException("Locked workbook was incorrectly reported as missing."); };
-                try { await Open(validPath); throw new InvalidOperationException("A locked workbook unexpectedly opened."); }
-                catch (IOException) { await Layout(); }
-                check(_dialogDriver is not null && ReferenceEquals(Document, document) && _recentFiles.Paths.Contains(validPath),
+                _status.Text = "";
+                await Open(validPath);
+                check(_dialogDriver is not null && ReferenceEquals(Document, document) && _recentFiles.Paths.Contains(validPath) &&
+                    !string.IsNullOrWhiteSpace(_status.Text) && _operation.IsCompletedSuccessfully && !_working && !_workspace.IsBusy,
                     "A sharing violation retains its ordinary error path and keeps the history entry");
                 _dialogDriver = null;
             }

@@ -59,11 +59,12 @@ editor.onDidCompositionEnd(() => { composing = false; updateAssistance(); schedu
 editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => post('save', {}));
 editor.addCommand(monaco.KeyCode.F6, () => post('focusHost', {}));
 // Native WebView keyboard events do not bubble to the Avalonia window.
-// Capture F12 before Monaco/browser shortcuts, including focus in the assistance bar.
+// Capture host shortcuts before Monaco/browser shortcuts, including focus in the assistance bar.
 window.addEventListener('keydown', event => {
-  if (event.key !== 'F12' || event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) return;
+  if (!['F5', 'F12'].includes(event.key) || event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) return;
   event.preventDefault(); event.stopImmediatePropagation();
-  if (!event.repeat && !event.isComposing && !composing && initialized && !locked && !disposed) post('console', {});
+  if (!event.repeat && !event.isComposing && !composing && initialized && !locked && !disposed && (event.key === 'F12' || !readOnly))
+    post(event.key === 'F5' ? 'apply' : 'console', {});
 }, true);
 // Stay in the current module: model switching is owned by the host and must
 // preserve the original cell/module's composition and draft acknowledgement.
@@ -198,8 +199,9 @@ async function handle(message: Message) {
   const p = message.payload;
   // Eliminated by esbuild in every production resource bundle. No test mutation capability ships.
   if (__QUICKEXCEL_WEB_TEST__ && message.type === 'test') {
-    if (p.action === 'consoleShortcut') {
-      const event = new KeyboardEvent('keydown', { key: 'F12', code: 'F12', bubbles: true, cancelable: true,
+    if (p.action === 'consoleShortcut' || p.action === 'applyShortcut') {
+      const key = p.action === 'applyShortcut' ? 'F5' : 'F12';
+      const event = new KeyboardEvent('keydown', { key, code: key, bubbles: true, cancelable: true,
         repeat: !!p.repeat, isComposing: !!p.composing, ctrlKey: !!p.control });
       editor.getDomNode()!.dispatchEvent(event);
       post('testResult', { prevented: event.defaultPrevented }, message.requestId); return;

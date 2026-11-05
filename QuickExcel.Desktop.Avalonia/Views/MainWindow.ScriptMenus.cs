@@ -11,6 +11,7 @@ public sealed partial class MainWindow
 {
     private MenuItem? _scriptRunMenu;
     private Button? _scriptEventButton;
+    private Button? _scriptApplyButton;
     private TextBlock? _scriptFileTab;
 
     private Menu CreateScriptMenu()
@@ -34,7 +35,7 @@ public sealed partial class MainWindow
         _scriptConsoleToggle = Item(view, "显示控制台 · F12", () => { ToggleScriptConsole(); return Task.CompletedTask; });
         Item(view, "运行日志", () => { SetScriptOutputVisible(true, tab: 1); return Task.CompletedTask; });
         var run = Group("运行");
-        Item(run, "应用并重算", ApplyScriptsAsync);
+        Item(run, "应用并重算", ApplyScriptsAsync).InputGesture = new(global::Avalonia.Input.Key.F5);
         Item(run, "停用脚本", () => { DisableScripts(); return Task.CompletedTask; });
         _scriptRunMenu = new MenuItem { Header = UiText.Get("运行操作") }; run.Items.Add(_scriptRunMenu); RefreshScriptRunMenu();
         var security = Group("签名");
@@ -58,6 +59,19 @@ public sealed partial class MainWindow
     private Control CreateScriptEditorHeader()
     {
         var header = new DockPanel { Background = Brush.Parse("#181818"), MinHeight = 36 };
+        var playIcon = new global::Avalonia.Controls.Shapes.Path
+        {
+            Data = Geometry.Parse("M0,0 L12,7 L0,14 Z"), Width = 12, Height = 14,
+            Stretch = Stretch.None, IsHitTestVisible = false
+        };
+        _scriptApplyButton = new Button { Name = "ApplyScripts", Content = playIcon, Width = 34, Height = 30, Margin = new(8, 3),
+            Padding = new(0), Foreground = Brush.Parse("#73C991"), HorizontalContentAlignment = HorizontalAlignment.Center,
+            VerticalContentAlignment = VerticalAlignment.Center };
+        playIcon.Bind(global::Avalonia.Controls.Shapes.Shape.FillProperty, _scriptApplyButton.GetObservable(ForegroundProperty));
+        var applyLabel = UiText.Get("运行并应用脚本 · F5");
+        AutomationProperties.SetName(_scriptApplyButton, applyLabel); ToolTip.SetTip(_scriptApplyButton, applyLabel);
+        _scriptApplyButton.Click += async (_, _) => await RequestScriptApplyAsync();
+        DockPanel.SetDock(_scriptApplyButton, Dock.Right); header.Children.Add(_scriptApplyButton);
         _scriptEventButton = new Button { Content = UiText.Get("添加事件处理器"), Margin = new(8, 3), FontSize = 12, IsVisible = false };
         AutomationProperties.SetName(_scriptEventButton, UiText.Get("添加事件处理器"));
         _scriptEventButton.Click += async (_, _) => await PerformAsync(AddEventHandlerAsync);
@@ -71,6 +85,7 @@ public sealed partial class MainWindow
     private void RefreshScriptEditorHeader()
     {
         var modules = Document.Snapshot.ScriptModules;
+        if (_scriptApplyButton is not null) _scriptApplyButton.IsEnabled = CanApplyScriptsFromEditor;
         if (_scriptFileTab is not null) _scriptFileTab.Text = _selectedDefinition ?? Path.GetFileName(modules.Modules[_selectedModule].Path);
         if (_scriptEventButton is not null)
         {
@@ -79,6 +94,12 @@ public sealed partial class MainWindow
         }
         RefreshScriptRunMenu();
     }
+
+    private bool CanApplyScriptsFromEditor => !Document.IsReadOnly && DesktopServices.SupportsScripts &&
+        _scriptPage is { Drafts.IsReadOnly: false, Drafts.Failed: false } && _scriptCancellation is null &&
+        _scriptDocument == Document.Session.SessionId;
+    private Task RequestScriptApplyAsync() => CanApplyScriptsFromEditor && _consoleInput?.IsComposing != true
+        ? PerformAsync(ApplyScriptsAsync) : Task.CompletedTask;
 
     private async Task AddEventHandlerAsync()
     {

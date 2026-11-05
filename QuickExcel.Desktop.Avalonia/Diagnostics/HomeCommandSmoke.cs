@@ -10,7 +10,9 @@ public sealed partial class MainWindow
     private async Task CheckHomeCommandAvailabilityAsync(string path, Action<bool, string> check)
     {
         var fileMenu = (MenuItem)_menu.Items[0]!;
-        MenuItem FileItem(string title) => fileMenu.Items.OfType<MenuItem>().Single(item => Equals(item.Header, UiText.Get(title)));
+        var exportMenu = fileMenu.Items.OfType<MenuItem>().Single(item => Equals(item.Header, UiText.Get("导出")));
+        MenuItem FileItem(string title) => fileMenu.Items.OfType<MenuItem>().Concat(exportMenu.Items.OfType<MenuItem>())
+            .Single(item => Equals(item.Header, UiText.Get(title)));
         async Task Click(MenuItem item) { item.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent)); await _operation; }
         async Task Key(Key key, KeyModifiers modifiers = KeyModifiers.Control)
         {
@@ -21,7 +23,7 @@ public sealed partial class MainWindow
         {
             check(_start.IsVisible && !_book.IsVisible && _menu.Items.OfType<MenuItem>().Skip(1).All(item => !item.IsEnabled),
                 "Home disables Edit, Worksheet, View and Script menus");
-            check(new[] { "保存  Ctrl+S", "另存为", "导出值快照", "导出可移植公式", "打印预览 / PDF", "兼容性报告", "关闭工作簿" }
+            check(new[] { "保存  Ctrl+S", "另存为", "导出", "导出值快照", "导出可移植公式", "导出 CSV / TSV", "打印预览 / PDF", "兼容性报告", "关闭工作簿" }
                 .All(title => !FileItem(title).IsEnabled), "Home disables workbook-dependent File commands");
             check(new[] { "新建  Ctrl+N", "打开  Ctrl+O", "最近文件", "打开恢复副本", "设置", "退出" }.All(title => FileItem(title).IsEnabled),
                 "Home retains New, Open, Recent, Recovery, Settings and Exit");
@@ -35,7 +37,7 @@ public sealed partial class MainWindow
             var document = Document; var snapshot = document.Snapshot;
             foreach (var menu in _menu.Items.OfType<MenuItem>().Skip(1))
                 foreach (var item in menu.Items.OfType<MenuItem>()) await Click(item);
-            foreach (var title in new[] { "保存  Ctrl+S", "另存为", "导出值快照", "导出可移植公式", "打印预览 / PDF", "兼容性报告", "关闭工作簿" })
+            foreach (var title in new[] { "保存  Ctrl+S", "另存为", "导出", "导出值快照", "导出可移植公式", "导出 CSV / TSV", "打印预览 / PDF", "兼容性报告", "关闭工作簿" })
                 await Click(FileItem(title));
             foreach (var key in new[] { global::Avalonia.Input.Key.S, global::Avalonia.Input.Key.Z, global::Avalonia.Input.Key.Y,
                 global::Avalonia.Input.Key.V, global::Avalonia.Input.Key.X, global::Avalonia.Input.Key.D, global::Avalonia.Input.Key.R,

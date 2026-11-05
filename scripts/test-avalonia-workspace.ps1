@@ -1,5 +1,5 @@
 [CmdletBinding()]
-param([switch]$SkipBuild, [ValidateSet('Recovery', 'CellContent', 'FormulaAudit', 'ArithmeticPaste', 'AdvancedFilters', 'VisibleTransfer', 'SpecialSelection', 'CommonFunctions', 'TextExchange', 'PasteOptions', 'Workspace', 'Sheets', 'DataTools', 'Borders', 'TextRotation', 'NumberFormat', 'CellStyles', 'Menus', 'ConditionalFormat', 'Colors', 'Grid', 'Drawing', 'PageBreak', 'Compatibility', 'RibbonFilter', 'Automation', 'Execution')][string]$Mode = 'Workspace')
+param([switch]$SkipBuild, [ValidateSet('Licenses', 'Commands', 'Closing', 'Recovery', 'CellContent', 'FormulaAudit', 'ArithmeticPaste', 'AdvancedFilters', 'VisibleTransfer', 'SpecialSelection', 'CommonFunctions', 'TextExchange', 'PasteOptions', 'Workspace', 'Sheets', 'DataTools', 'Borders', 'TextRotation', 'NumberFormat', 'CellStyles', 'Menus', 'ConditionalFormat', 'Colors', 'Grid', 'Drawing', 'PageBreak', 'Compatibility', 'RibbonFilter', 'Automation', 'Execution')][string]$Mode = 'Workspace')
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 $root = [IO.Path]::GetFullPath((Split-Path $PSScriptRoot -Parent))
@@ -14,6 +14,9 @@ try {
     $exe = Join-Path $root 'artifacts/build/bin/QuickExcel.Desktop.Avalonia/release/QuickExcel.Avalonia.exe'
     $argument = switch ($Mode) { 'Recovery' { '--recovery-smoke' }; 'CellContent' { '--cell-content-smoke' }; 'FormulaAudit' { '--formula-audit-smoke' }; 'ArithmeticPaste' { '--arithmetic-paste-smoke' }; 'AdvancedFilters' { '--advanced-filters-smoke' }; 'VisibleTransfer' { '--visible-transfer-smoke' }; 'SpecialSelection' { '--special-selection-smoke' }; 'CommonFunctions' { '--common-functions-smoke' }; 'TextExchange' { '--text-exchange-smoke' }; 'PasteOptions' { '--paste-options-smoke' }; 'Sheets' { '--sheets-smoke' }; 'DataTools' { '--data-tools-smoke' }; 'Borders' { '--borders-smoke' }; 'TextRotation' { '--text-rotation-smoke' }; 'NumberFormat' { '--number-format-smoke' }; 'Menus' { '--menus-smoke' }; 'ConditionalFormat' { '--conditional-format-smoke' }; 'Colors' { '--colors-smoke' }; 'Drawing' { '--drawing-smoke' }; 'Grid' { '--grid-smoke' }; 'PageBreak' { '--page-break-smoke' }; 'Compatibility' { '--compatibility-smoke' }; 'RibbonFilter' { '--ribbon-filter-smoke' }; 'Automation' { '--automation-smoke' }; 'Execution' { '--execution-smoke' }; default { '--workspace-smoke' } }
     if ($Mode -eq 'CellStyles') { $argument = '--cell-styles-smoke' }
+    if ($Mode -eq 'Closing') { $argument = '--closing-smoke' }
+    if ($Mode -eq 'Licenses') { $argument = '--licenses-smoke' }
+    if ($Mode -eq 'Commands') { $argument = '--commands-smoke' }
     $process = Start-Process -FilePath $exe -ArgumentList @($argument, ('"{0}"' -f $run)) -WorkingDirectory $root -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $run 'stdout.log') -RedirectStandardError (Join-Path $run 'stderr.log')
     try {
         if (-not $process.WaitForExit(60000)) { throw "Avalonia workspace exceeded 60 seconds: $run" }

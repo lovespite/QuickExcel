@@ -63,12 +63,11 @@ public sealed partial class MainWindow
         async Task ClickMenu(string title, bool expectStale = false)
         {
             var item = Item(title); Check(item.IsEnabled, title + " is enabled");
+            if (expectStale) _status.Text = "";
             item.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
-            var rejected = false;
             try { await _operation; }
-            catch (InvalidOperationException ex) when (expectStale && ex.Message == "文档已发生变化，请重新提交操作。") { rejected = true; }
             finally { _grid.ContextMenu!.Close(); }
-            if (expectStale) Check(rejected, "Stale context-menu command reports revision conflict");
+            if (expectStale) Check(_status.Text == UiText.Get("文档已发生变化，请重新提交操作。"), "Stale context-menu command reports revision conflict");
             await Layout();
         }
         try

@@ -11,7 +11,7 @@ internal sealed class ScriptEditorPage : IAsyncDisposable
     internal LocalWebView Browser { get; }
     internal ScriptDraftSession Drafts { get; }
     internal event Action<Exception>? Failed;
-    internal event Action? SaveRequested, FocusRequested, ConsoleRequested, DraftChanged;
+    internal event Action? SaveRequested, FocusRequested, ConsoleRequested, ApplyRequested, DraftChanged;
     internal event Func<Navigation, Task<bool>>? NavigateRequested;
     internal sealed record Navigation(string? Module, string? Definition, int Line = 1, int Column = 1);
     internal static bool IsDefinition(string name) => name == "quickexcel.d.ts" ||
@@ -35,6 +35,7 @@ internal sealed class ScriptEditorPage : IAsyncDisposable
     {
         Drafts = drafts;
         string[] capabilities = ["draftChanged", "draftChunk", "draftAck", "initialized", "loadAck", "loaded", "released", "selected", "located", "definitionSelected", "navigate", "save", "focusHost", "console", "insertionCaptured", "templateInserted", "commandExecuted"];
+        capabilities = [.. capabilities, "apply"];
         Browser = new(assets, "script.html", document, generation, profileRoot, Program.WebTestMode ? capabilities.Append("testResult") : capabilities);
         Browser.Message += OnMessage;
         Browser.Failed += ex => { Drafts.MarkFailed(); Failed?.Invoke(ex); };
@@ -55,6 +56,7 @@ internal sealed class ScriptEditorPage : IAsyncDisposable
                 case "save": SaveRequested?.Invoke(); break;
                 case "focusHost": FocusRequested?.Invoke(); break;
                 case "console": ConsoleRequested?.Invoke(); break;
+                case "apply": ApplyRequested?.Invoke(); break;
                 case "navigate":
                     var target = message.Payload.Deserialize<Navigation>(WebMessage.Json) ?? throw new InvalidDataException(UiText.Get("缺少定义导航目标。"));
                     if ((target.Module is null) == (target.Definition is null) || target.Line < 1 || target.Column < 1 ||

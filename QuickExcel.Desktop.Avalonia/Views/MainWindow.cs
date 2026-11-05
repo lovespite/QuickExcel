@@ -107,6 +107,9 @@ public sealed partial class MainWindow : Window
             await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Background);
             if (Program.SelfCheckDirectory is { } evidence) { await RunSelfCheckAsync(evidence); return; }
 #if QUICKEXCEL_DIAGNOSTICS
+            if (Program.SmokeDirectory is { } closingDirectory && Program.SmokeMode == "closing") { await RunWindowClosingSmokeAsync(closingDirectory); return; }
+            if (Program.SmokeDirectory is { } commandsDirectory && Program.SmokeMode == "commands") { await RunDesktopCommandsSmokeAsync(commandsDirectory); return; }
+            if (Program.SmokeDirectory is { } licensesDirectory && Program.SmokeMode == "licenses") { await RunLicenseSmokeAsync(licensesDirectory); return; }
             if (Program.SmokeDirectory is { } pasteDirectory && Program.SmokeMode == "paste-options") { await RunPasteOptionsSmokeAsync(pasteDirectory); return; }
             if (Program.SmokeDirectory is { } cellStylesDirectory && Program.SmokeMode == "cell-styles") { await RunCellStylesSmokeAsync(cellStylesDirectory); return; }
             if (Program.SmokeDirectory is { } localizationDirectory && Program.SmokeMode == "localization") { await RunLocalizationSmokeAsync(localizationDirectory); return; }
@@ -152,6 +155,13 @@ public sealed partial class MainWindow : Window
             if (requiresWorkbook) _workbookMenuItems.Add(item);
             return item;
         }
+        var exportMenu = new MenuItem { Header = UiText.Get("导出"), Items =
+        {
+            Item(UiText.Get("导出值快照"), () => ExportAsync(false), mutation: false),
+            Item(UiText.Get("导出可移植公式"), () => ExportAsync(true), mutation: false),
+            Item(UiText.Get("导出 CSV / TSV"), ExportTextAsync, mutation: false)
+        } };
+        _workbookMenuItems.Add(exportMenu);
         _menu.Items.Add(new MenuItem { Header = UiText.Get("文件"), Items =
         {
             Item(UiText.Get("新建  Ctrl+N"), async () => { if (await ConfirmDiscardAsync()) { _workspace.New(); ShowBook(); } }, false),
@@ -159,7 +169,7 @@ public sealed partial class MainWindow : Window
             Item(UiText.Get("以只读方式打开…"), () => OpenAsync(readOnly: true), false),
             Item(UiText.Get("打开恢复副本"), RecoveryAsync, false), new Separator(),
             Item(UiText.Get("保存  Ctrl+S"), async () => await SaveAsync(false), mutation: false), Item(UiText.Get("另存为"), async () => await SaveAsync(true), mutation: false), new Separator(),
-            Item(UiText.Get("导出值快照"), () => ExportAsync(false), mutation: false), Item(UiText.Get("导出可移植公式"), () => ExportAsync(true), mutation: false),
+            exportMenu,
             Item(UiText.Get("打印预览 / PDF"), OpenPrintPreviewAsync, mutation: false), new Separator(), Item(UiText.Get("兼容性报告"), CompatibilityAsync, mutation: false), new Separator(),
             Item(UiText.Get("设置"), OpenSettingsAsync, false), new Separator(),
             Item(UiText.Get("关闭工作簿"), async () => { if (await ConfirmDiscardAsync()) { _workspace.New(); ShowHome(); } }, mutation: false), Item(UiText.Get("退出"), () => { Close(); return Task.CompletedTask; }, false)
@@ -373,11 +383,17 @@ public sealed partial class MainWindow : Window
         catch (Exception ex) { Error(ex); return false; }
     }
     private void Error(Exception ex) => _status.Text = ex.Message;
-    private async Task PerformAsync(Func<Task> action)
+    private Task PerformAsync(Func<Task> action)
     {
-        if (_working || _execution.IsRunning) return;
+        if (_working || _execution.IsRunning) return Task.CompletedTask;
+        // Closing waits for error reporting and cleanup, not the raw action task:
+        // an already-reported open/save failure must not veto every later close.
+        return _operation = PerformCoreAsync(action);
+    }
+    private async Task PerformCoreAsync(Func<Task> action)
+    {
         _working = true;
-        try { await using var hold = _scriptPage?.HoldEdits(); _operation = action(); await _operation; }
+        try { await using var hold = _scriptPage?.HoldEdits(); await action(); }
         catch (Exception ex) { Error(ex); }
         finally { _working = false; }
     }
@@ -508,8 +524,10 @@ public sealed partial class MainWindow : Window
     }
     private async void Shortcuts(object? sender, KeyEventArgs e)
     {
+        if (e.Handled || _grid.IsComposing || _formula.IsComposing) return;
         if (!_book.IsVisible)
         {
+            if (e.Key == Key.F12 && e.KeyModifiers == KeyModifiers.Control) { e.Handled = true; await PerformAsync(OpenAsync); return; }
             if (!e.Handled && (e.KeyModifiers.HasFlag(KeyModifiers.Control) || e.KeyModifiers.HasFlag(KeyModifiers.Meta)))
             {
                 if (e.Key == Key.O) { e.Handled = true; await PerformAsync(OpenAsync); }
@@ -529,7 +547,7 @@ public sealed partial class MainWindow : Window
         if (_filterPopup?.IsOpen == true || _chartFilterPopup?.IsOpen == true) return;
         if (e.Handled || _grid.IsComposing || _formula.IsComposing) return;
         if (Document.IsReadOnly && ((e.KeyModifiers.HasFlag(KeyModifiers.Control) || e.KeyModifiers.HasFlag(KeyModifiers.Meta)) &&
-                e.Key is Key.X or Key.V or Key.D or Key.R or Key.E or Key.Z or Key.Y or Key.D1 or Key.NumPad1 ||
+                e.Key is Key.X or Key.V or Key.D or Key.R or Key.E or Key.Z or Key.Y or Key.D1 or Key.NumPad1 or Key.B or Key.I or Key.U or Key.D5 or Key.NumPad5 ||
                 e.Key is Key.Delete or Key.Back or Key.F2 or Key.F9))
         {
             // Native text controls retain their own copy/select/navigation behavior.
@@ -550,6 +568,7 @@ public sealed partial class MainWindow : Window
         }
         // Search editing and dropdown navigation own their keys; they must not clear or paste into worksheet cells.
         if (AutomationPickerOwnsKeyboard) return;
+        if (ExcelShortcut(e) is { } excelAction) { e.Handled = true; await PerformAsync(excelAction); return; }
         if (e.Key == Key.Escape && _formatBrush is not null) { _formatBrush = null; _status.Text = UiText.Get("已取消格式刷。"); e.Handled = true; return; }
         if (e.Key == Key.Escape && _clipboardCells?.IsCut == true && !_grid.IsEditing)
         { _clipboardCells = null; _status.Text = UiText.Get("已取消剪切。"); e.Handled = true; return; }

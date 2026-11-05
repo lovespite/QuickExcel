@@ -7,8 +7,10 @@ using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
+using Markdown.Avalonia;
 using QuickExcel.ScriptContracts;
 using QuickExcel.Scripting;
+using LayoutGrid = Avalonia.Controls.Grid;
 
 namespace QuickExcel.Desktop.Avalonia;
 
@@ -58,16 +60,17 @@ internal sealed partial class SettingsWindow
         _page.Children.Add(new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10, Children = { icon, title } });
         _page.Children.Add(Note($"{RuntimeInformation.FrameworkDescription}    ·    {RuntimeInformation.ProcessArchitecture}"));
         _page.Children.Add(Note("Copyright in the original code belongs to its respective authors. QuickExcel has not declared a project-wide open-source license. Third-party components are distributed under their respective licenses."));
-        _page.Children.Add(Heading("Third-Party Components, Copyright and Licenses", 16));
-        _page.Children.Add(Note("Ribbon icons: Fluent UI System Icons — Copyright (c) 2020 Microsoft Corporation (MIT). Selected SVG paths are converted to native geometry; source details are in THIRD-PARTY-LICENSES.md."));
         var files = LicenseFiles(AppContext.BaseDirectory);
-        var selector = new ComboBox { HorizontalAlignment = HorizontalAlignment.Stretch, ItemsSource = files };
+        var selector = new ComboBox { Name = "SettingsLicenseSelector", HorizontalAlignment = HorizontalAlignment.Stretch, ItemsSource = files };
         AutomationProperties.SetName(selector, UiText.Get("选择第三方许可证或来源声明"));
-        var viewer = new TextBox { Name = "SettingsLicenseText", IsReadOnly = true, AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, Height = 210 };
+        var viewer = new TextBox { Name = "SettingsLicenseText", IsReadOnly = true, AcceptsReturn = true, TextWrapping = TextWrapping.Wrap };
         AutomationProperties.SetName(viewer, UiText.Get("许可证正文"));
+        var markdown = new MarkdownScrollViewer { Name = "SettingsLicenseMarkdown", SelectionEnabled = true, Padding = new(12), MarkdownStyle = MarkdownStyle.GithubLike };
+        AutomationProperties.SetName(markdown, UiText.Get("许可证正文"));
+        var readingArea = new LayoutGrid { Name = "SettingsLicenseViewer", Children = { viewer, markdown } };
         var previous = new Button { Content = UiText.Get("上一页") }; var next = new Button { Content = UiText.Get("下一页") }; var position = Note("");
         position.VerticalAlignment = VerticalAlignment.Center;
-        var navigation = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10, Children = { previous, next, position } };
+        var navigation = new StackPanel { Name = "SettingsLicensePagination", Orientation = Orientation.Horizontal, Spacing = 10, Children = { previous, next, position } };
         const int pageSize = 4000;
         var contents = ""; var page = 0;
         void Display()
@@ -81,13 +84,34 @@ internal sealed partial class SettingsWindow
         selector.SelectionChanged += (_, _) =>
         {
             if (selector.SelectedItem is not string file) return;
+            var isMarkdown = Path.GetExtension(file).Equals(".md", StringComparison.OrdinalIgnoreCase);
             try { contents = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, file)); }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { contents = ex.Message; }
-            page = 0; Display();
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { contents = ex.Message; isMarkdown = false; }
+            markdown.IsVisible = isMarkdown;
+            viewer.IsVisible = navigation.IsVisible = !isMarkdown;
+            // Parse the whole Markdown document so tables, lists and links are never split across pages.
+            markdown.Markdown = isMarkdown ? contents : "";
+            markdown.ScrollValue = default;
+            page = 0;
+            if (isMarkdown) viewer.Text = "";
+            else Display();
         };
         previous.Click += (_, _) => { page--; Display(); }; next.Click += (_, _) => { page++; Display(); };
-        _page.Children.Add(selector); _page.Children.Add(viewer); _page.Children.Add(navigation);
+        // Bound the header separately, leaving a reading viewport even at the minimum window size.
+        // The header uses its natural height up to the limit set by ResizeAboutHeader.
+        _page.Margin = default;
+        _pageLayout.Margin = new(24, 20); _pageLayout.RowSpacing = 14;
+        _pageLayout.RowDefinitions = new("Auto,Auto,*,Auto");
+        LayoutGrid.SetRow(selector, 1); _pageLayout.Children.Add(selector);
+        LayoutGrid.SetRow(readingArea, 2); _pageLayout.Children.Add(readingArea);
+        LayoutGrid.SetRow(navigation, 3); _pageLayout.Children.Add(navigation);
         selector.SelectedIndex = 0;
+    }
+
+    private void ResizeAboutHeader()
+    {
+        if (_navigation.SelectedIndex == (int)SettingsSection.About && _pageLayout.RowDefinitions.Count == 4)
+            _pageLayout.RowDefinitions[0].MaxHeight = Math.Max(80, _pageLayout.Bounds.Height - 200);
     }
 
     private static string[] LicenseFiles(string directory)

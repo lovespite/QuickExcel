@@ -20,6 +20,12 @@ public sealed partial class MainWindow
     }
     private void GroupMainMenus()
     {
+        var file = (MenuItem)_menu.Items[0]!;
+        var exit = file.Items.OfType<MenuItem>().Single(item => Equals(item.Header, UiText.Get("退出")));
+        file.Items.Remove(exit); file.Items.Add(new Separator()); file.Items.Add(exit);
+        file.Items.OfType<MenuItem>().Single(item => Equals(item.Header, UiText.Get("另存为"))).InputGesture = new(global::Avalonia.Input.Key.F12);
+        file.Items.OfType<MenuItem>().Single(item => Equals(item.Header, UiText.Get("打印预览 / PDF"))).InputGesture = new(global::Avalonia.Input.Key.P, global::Avalonia.Input.KeyModifiers.Control);
+        file.Items.OfType<MenuItem>().Single(item => Equals(item.Header, UiText.Get("关闭工作簿"))).InputGesture = new(global::Avalonia.Input.Key.W, global::Avalonia.Input.KeyModifiers.Control);
         SeparateBefore((MenuItem)_menu.Items[1]!, UiText.Get("复制结果值（对外）"), UiText.Get("粘贴  Ctrl+V"), UiText.Get("查找与替换  Ctrl+F"));
         SeparateBefore((MenuItem)_menu.Items[2]!, UiText.Get("向前移动"), UiText.Get("隐藏工作表"), UiText.Get("保护工作表"), UiText.Get("标签颜色"));
         SeparateBefore((MenuItem)_menu.Items[3]!, UiText.Get("标签在底部"));

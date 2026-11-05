@@ -46,6 +46,7 @@ internal sealed partial class SettingsWindow : Window
         nav.Children.Add(title); nav.Children.Add(_navigation); layout.Children.Add(nav);
         var scroll = new ScrollViewer { Name = "SettingsPageScroll", Content = _page, HorizontalScrollBarVisibility = global::Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled };
         _pageLayout.Children.Add(scroll);
+        _pageLayout.SizeChanged += (_, _) => ResizeAboutHeader();
         LayoutGrid.SetColumn(_pageLayout, 1); layout.Children.Add(_pageLayout);
         var footer = new DockPanel { Margin = new(16, 8) };
         var close = new Button { Content = UiText.Get("关闭"), MinWidth = 76, IsCancel = true, HorizontalContentAlignment = HorizontalAlignment.Center };
@@ -71,7 +72,7 @@ internal sealed partial class SettingsWindow : Window
                 ? global::Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled : global::Avalonia.Controls.Primitives.ScrollBarVisibility.Auto;
             _page.Children.Clear(); _page.Children.Add(Heading(section.Title, 22)); _feedback.Text = "";
             scroll.Offset = default;
-            try { section.Build(); }
+            try { section.Build(); ResizeAboutHeader(); }
             catch (Exception ex) { _feedback.Text = ex.Message; }
         };
         _navigation.SelectedIndex = Array.FindIndex(sections, section => section.Id == initialSection);

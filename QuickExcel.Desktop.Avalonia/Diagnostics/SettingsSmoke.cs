@@ -6,6 +6,7 @@ using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Microsoft.Win32;
+using Markdown.Avalonia;
 using QuickExcel.Presentation;
 using QuickExcel.Storage;
 
@@ -48,10 +49,10 @@ public sealed partial class MainWindow
                 "Copyright is displayed in English in either UI language");
             await capture(window, "settings-about");
             var licenses = window.GetVisualDescendants().OfType<ComboBox>().Single();
-            check(window.GetVisualDescendants().OfType<TextBox>().Single(b => b.Name == "SettingsLicenseText").Text!.StartsWith("# Third-party components and licenses"),
+            check(window.GetVisualDescendants().OfType<MarkdownScrollViewer>().Single().Markdown!.StartsWith("# Third-party components and licenses"),
                 "The bundled third-party declaration is shown in English");
             licenses.SelectedItem = licenses.Items.OfType<string>().Single(p => p.EndsWith("OFFICE-SCRIPTS-NOTICE.md"));
-            check(window.GetVisualDescendants().OfType<TextBox>().Single(b => b.Name == "SettingsLicenseText").Text!.Contains("CC BY 4.0"), "Bundled license text and attribution can be read offline");
+            check(window.GetVisualDescendants().OfType<MarkdownScrollViewer>().Single().Markdown!.Contains("CC BY 4.0"), "Bundled license text and attribution can be read offline");
             nav.SelectedItem = english ? "Appearance" : "界面"; await Layout();
             var language = window.GetVisualDescendants().OfType<ComboBox>().Single(b => b.Name == "DisplayLanguage");
             check(language.SelectedItem?.ToString() == (english ? "English" : "简体中文"), "The language selector shows the persisted choice");

@@ -15,6 +15,23 @@ public sealed partial class MainWindow
         Action<bool, string> check, string directory)
     {
         _workspace.New(); await OpenScriptsAsync();
+        if (DesktopServices.SupportsScripts)
+        {
+            check(_scriptApplyButton is { IsVisible: true, IsEnabled: true, Content: global::Avalonia.Controls.Shapes.Path }, "The script editor exposes its Run and Apply button");
+            await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Background);
+            using (var image = new RenderTargetBitmap(new PixelSize(136, 120), new Vector(384, 384)))
+            { image.Render(_scriptApplyButton!); image.Save(Path.Combine(directory, "script-run-button.png"), PngBitmapEncoderOptions.Default); }
+            _scriptApplyButton!.RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); await _operation;
+            check(Document.ScriptsEnabled, "The Run button applies scripts through the isolated execution workflow");
+            DisableScripts();
+            foreach (var request in new[] { new { action = "applyShortcut", repeat = true, composing = false, control = false },
+                new { action = "applyShortcut", repeat = false, composing = true, control = false },
+                new { action = "applyShortcut", repeat = false, composing = false, control = true } })
+            { await test(request); await _operation; check(!Document.ScriptsEnabled, "Modified, repeated or composing F5 does not apply scripts"); }
+            var pressed = await test(new { action = "applyShortcut" }); await _operation;
+            check(pressed.GetProperty("prevented").GetBoolean() && Document.ScriptsEnabled, "F5 in Monaco applies scripts without refreshing the WebView");
+            DisableScripts();
+        }
         check(_scriptWindow!.GetVisualDescendants().OfType<Menu>().Any(menu => menu.Items.OfType<MenuItem>().Select(item => item.Header?.ToString()).SequenceEqual(["文件", "编辑", "视图", "运行", "签名"])),
             "The script workspace groups commands into File, Edit, View, Run and Signature menus");
         check(_modulePicker!.Items.Cast<string>().SequenceEqual(["main"]) && _scriptModuleGroups.All(g => g.Picker.Items.Count == 0),

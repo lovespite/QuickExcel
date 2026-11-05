@@ -3,6 +3,7 @@ using System.Text.Json;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Interactivity;
 using Avalonia.VisualTree;
 using QuickExcel.Core;
 using QuickExcel.Presentation;
@@ -29,9 +30,12 @@ public sealed partial class MainWindow
             var path = Path.Combine(directory, "export.csv"); var files = new TextExchangeSmokeFiles(path); _files = files;
             _workspace.New(); ShowBook(); _workspace.Editor.SetCell(0, 0, 0, "中文,\"甲\"\n乙"); Synchronize();
             var before = Document.Snapshot; var revision = before.Revision;
-            Check(((MenuItem)_menu.Items[0]!).Items.OfType<MenuItem>().Any(i => i.Header as string == UiText.Get("导出 CSV / TSV") && i.IsEnabled), "Normal File menu exposes text export");
+            var exportMenu = ((MenuItem)_menu.Items[0]!).Items.OfType<MenuItem>().Single(i => Equals(i.Header, UiText.Get("导出")));
+            var textExport = exportMenu.Items.OfType<MenuItem>().Single(i => Equals(i.Header, UiText.Get("导出 CSV / TSV")));
+            Check(exportMenu.IsEnabled && textExport.IsEnabled && exportMenu.Items.OfType<MenuItem>().Select(i => i.Header as string)
+                .SequenceEqual(new[] { "导出值快照", "导出可移植公式", "导出 CSV / TSV" }.Select(UiText.Get)), "File Export submenu groups all three export commands");
             _dialogDriver = window => { ((FieldsDialog)window).Close(true); return Task.CompletedTask; };
-            await ExportTextAsync();
+            textExport.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent)); await _operation;
             var bytes = File.ReadAllBytes(path);
             Check(bytes.AsSpan().StartsWith(Encoding.UTF8.Preamble), "Default export writes UTF-8 BOM");
             Check(DelimitedText.ReadRows(Encoding.UTF8.GetString(bytes.AsSpan(3)), ',', 10).Single().Single() == "中文,\"甲\"\n乙", "Desktop export preserves quoted Unicode and newlines");

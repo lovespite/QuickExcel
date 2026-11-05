@@ -34,6 +34,17 @@
           "Avalonia": "12.1.4"
         }
       },
+      "Markdown.Avalonia.Tight": {
+        "type": "Direct",
+        "requested": "[12.0.2, 12.0.2]",
+        "resolved": "12.0.2",
+        "contentHash": "QZsXGBu9gbrLZPcILvikdlAPKlOOGrJNQEH3mz6f9FBJsat0JF5ue6LrDkfLsFHkkt0tXknefZvMJ5BjH8MHSQ==",
+        "dependencies": {
+          "Avalonia": "12.0.0",
+          "ColorDocument.Avalonia": "12.0.2",
+          "ColorTextBlock.Avalonia": "12.0.2"
+        }
+      },
       "AngleSharp": {
         "type": "Transitive",
         "resolved": "1.9.1",
@@ -138,6 +149,23 @@
         "type": "Transitive",
         "resolved": "2.4.660",
         "contentHash": "Drd0fDFVrR3v19IJtqiDVnjgcVZoGlzFw/CYni1OQ5/xVYvjPNp18E9eu+dH/RmpIUw6Pn/JhE/H+Yc3kHI89A=="
+      },
+      "ColorDocument.Avalonia": {
+        "type": "Transitive",
+        "resolved": "12.0.2",
+        "contentHash": "VJTbhop5m3FgWcbw4OLR2OfQPbdwwsbPYhXaNvSJCWb1Ft4uDWCYW866IKGY070sSwuGxu/s6Zt6jOtG/kYuoA==",
+        "dependencies": {
+          "Avalonia": "12.0.0",
+          "ColorTextBlock.Avalonia": "12.0.2"
+        }
+      },
+      "ColorTextBlock.Avalonia": {
+        "type": "Transitive",
+        "resolved": "12.0.2",
+        "contentHash": "mUmQFWakT0/nrPmi54RETLqkuaY3CkErYMtrrf3A93loy5B+uZonun/9sWhJHwCVYRWdouETIo66cua7MLyMUg==",
+        "dependencies": {
+          "Avalonia": "12.0.0"
+        }
       },
       "HarfBuzzSharp": {
         "type": "Transitive",

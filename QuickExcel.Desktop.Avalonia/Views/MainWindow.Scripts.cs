@@ -95,6 +95,7 @@ public sealed partial class MainWindow
         page.SaveRequested += () => _ = PerformAsync(async () => await SaveAsync(false));
         page.FocusRequested += FocusScriptNavigation;
         page.ConsoleRequested += ToggleScriptConsole;
+        page.ApplyRequested += () => _ = RequestScriptApplyAsync();
         page.NavigateRequested += NavigateScriptAsync;
         _scriptContent!.Content = page.Browser.View; RefreshScriptChrome();
         await page.LoadAsync(_selectedModule);
@@ -171,7 +172,7 @@ public sealed partial class MainWindow
         {
             _scriptWindow = null; _scriptPage = null; _scriptContent = null; _modulePicker = null; _scriptStatus = null; _scriptDiagnostics = null; _scriptRecovery = null; _scriptClosing = false;
             _scriptApiMigration = null;
-            _scriptExecution = null; _scriptRunMenu = null; _scriptEventButton = null; _scriptFileTab = null;
+            _scriptExecution = null; _scriptRunMenu = null; _scriptEventButton = null; _scriptApplyButton = null; _scriptFileTab = null;
             _scriptEditorPane = null; _scriptOutputSplitter = null; _scriptConsoleToggle = null;
             _scriptModuleGroups.Clear(); _scriptNavigationSelection = null;
             _definitionPicker = null; _definitionPanel = null; _selectedDefinition = null; _scriptDefinitionFiles.Clear();

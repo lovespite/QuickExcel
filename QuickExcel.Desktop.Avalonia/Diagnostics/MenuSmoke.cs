@@ -92,6 +92,7 @@ public sealed partial class MainWindow
             Check(_book.IsVisible && !_start.IsVisible && _workspace.FilePath == recentPath, "History button opens its workbook and hides the home page");
             Check(!_menu.Items.OfType<MenuItem>().Any(i => (i.Header as string)?.Contains("F9") == true), "Main menu no longer contains recalculate F9");
             Check(((MenuItem)_menu.Items[0]!).Items.OfType<Separator>().Count() >= 4, "File menu separates open, save, export, compatibility and close actions");
+            Check(((MenuItem)_menu.Items[0]!).Items.Last() is MenuItem exit && Equals(exit.Header, UiText.Get("退出")), "Exit remains the last File menu item after all commands are installed");
             await CheckSettingsAsync(directory, Check, Capture);
             _workspace.New(); ShowBook(); var id = Document.Snapshot.ActiveSheetId;
             await ExecuteAsync(new SetCellsCommand([new(new(id, 1, 0), CellInput.Parse("12")), new(new(id, 2, 0), CellInput.Parse("34")), new(new(id, 1, 1), CellInput.Parse("=A2*2"))]));

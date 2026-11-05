@@ -34,8 +34,10 @@ public sealed partial class MainWindow
             check(_mutationControls.All(control => !control.IsEnabled) && _readOnlyControls.All(control => !control.IsEnabled),
                 "Read-only mode disables formatting, structure, calculation and script controls");
             var fileMenu = (MenuItem)_menu.Items[0]!; var editMenu = (MenuItem)_menu.Items[1]!;
-            MenuItem Item(MenuItem menu, string title) => menu.Items.OfType<MenuItem>().Single(item => Equals(item.Header, UiText.Get(title)));
-            check(new[] { "另存为", "导出值快照", "打印预览 / PDF", "兼容性报告" }.All(title => Item(fileMenu, title).IsEnabled) &&
+            MenuItem Item(MenuItem menu, string title) => menu.Items.OfType<MenuItem>()
+                .Concat(menu.Items.OfType<MenuItem>().SelectMany(item => item.Items.OfType<MenuItem>()))
+                .Single(item => Equals(item.Header, UiText.Get(title)));
+            check(new[] { "另存为", "导出", "导出值快照", "导出可移植公式", "导出 CSV / TSV", "打印预览 / PDF", "兼容性报告" }.All(title => Item(fileMenu, title).IsEnabled) &&
                 Item(editMenu, "复制  Ctrl+C").IsEnabled && Item(editMenu, "查找与替换  Ctrl+F").IsEnabled,
                 "Read-only workbooks retain Save As, export, print, compatibility, copy and find");
             check(!Item(editMenu, "粘贴  Ctrl+V").IsEnabled && !Item(editMenu, "剪切  Ctrl+X").IsEnabled && !((MenuItem)_menu.Items[2]!).IsEnabled,
@@ -50,8 +52,9 @@ public sealed partial class MainWindow
             check(Document.Snapshot.Revision == revision && !Document.IsDirty && Document.GetCellInput(0, 0, 0) == "只读原件",
                 "Routed disabled menu clicks and edit shortcuts cannot modify a read-only workbook");
             BuildGridContextMenu(_grid.ContextMenu!, null);
-            check(_grid.ContextMenu!.Items.OfType<MenuItem>().All(item => ((string)item.Header!).StartsWith(UiText.Get("复制"))),
-                "Read-only cell context menus offer copy commands without editing commands");
+            check(_grid.ContextMenu!.Items.OfType<MenuItem>().Select(item => item.Header as string)
+                .SequenceEqual(new[] { "复制", "复制结果值（对外）", "超链接…", "线程评论…" }.Select(UiText.Get)),
+                "Read-only cell context menus retain copy and attachment inspection without editing commands");
             await NavigateToAsync(second.Id, new(2, 3, 2, 3));
             check(Document.Snapshot.ActiveSheetId == second.Id && _grid.Current == new CellPosition(2, 3) && !Document.IsDirty,
                 "Read-only navigation can change sheets and selection without dirtying the document");

@@ -252,10 +252,11 @@ public sealed partial class MainWindow
         return accepted;
     }
 
-    private void HandleScriptWorkspaceKey(object? sender, KeyEventArgs e)
+    private async void HandleScriptWorkspaceKey(object? sender, KeyEventArgs e)
     {
-        if (e.Handled || e.Key != Key.F12 || e.KeyModifiers != KeyModifiers.None || _consoleInput?.IsComposing == true) return;
-        e.Handled = true; ToggleScriptConsole();
+        if (e.Handled || e.KeyModifiers != KeyModifiers.None || _consoleInput?.IsComposing == true) return;
+        if (e.Key == Key.F5) { e.Handled = true; await RequestScriptApplyAsync(); }
+        else if (e.Key == Key.F12) { e.Handled = true; ToggleScriptConsole(); }
     }
 
     private void ToggleScriptConsole()

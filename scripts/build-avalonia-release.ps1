@@ -42,11 +42,14 @@ try {
     dotnet publish $project -c Release -r win-x64 --self-contained true --artifacts-path $build "-p:QuickExcelScriptEngine=$ScriptEngine" -p:QuickExcelDiagnostics=false -p:RestoreLockedMode=true "-p:QuickExcelReleaseLockDirectory=$lockDirectory" -p:DebugType=None -p:DebugSymbols=false -o $package -v minimal 2>&1 | Tee-Object (Join-Path $evidence 'publish.log')
     if ($LASTEXITCODE -ne 0) { throw 'Avalonia release publish failed.' }
     $engineFiles = @('JavaScriptCore.dll','icudt77.dll','icuuc77.dll','icuin77.dll','msvcp140.dll','msvcp140_2.dll','vcruntime140.dll','vcruntime140_1.dll','typescript.bundle.json','JSC-BUILD-IDENTITY.json')
-    foreach ($notice in @('THIRD-PARTY-LICENSES.md','OFFICE-SCRIPTS-NOTICE.md','DOTNET-LICENSE.txt','DOTNET-THIRD-PARTY-NOTICES.txt')) {
+    foreach ($notice in @('THIRD-PARTY-LICENSES.md','OFFICE-SCRIPTS-NOTICE.md','MARKDOWN-AVALONIA-LICENSE.txt','DOTNET-LICENSE.txt','DOTNET-THIRD-PARTY-NOTICES.txt')) {
         if (-not (Test-Path -LiteralPath (Join-Path $package "Licenses/$notice") -PathType Leaf)) { throw "Missing product license notice: $notice" }
     }
     foreach ($file in (@('QuickExcel.Avalonia.exe','QuickExcel.Avalonia.dll','QuickExcel.Avalonia.deps.json','Assets/QuickExcel-XLSQ.ico','coreclr.dll','hostfxr.dll','QuickExcel.Grid.Avalonia.dll','libSkiaSharp.dll','libHarfBuzzSharp.dll','Web/manifest.json','ScriptWorker/QuickExcel.ScriptWorker.exe','ScriptWorker/coreclr.dll') + @($engineFiles | ForEach-Object { 'ScriptWorker/' + $_ }))) {
         if (-not (Test-Path -LiteralPath (Join-Path $package $file) -PathType Leaf)) { throw "Missing release payload: $file" }
+    }
+    foreach ($file in @('Markdown.Avalonia.dll','ColorDocument.Avalonia.dll','ColorTextBlock.Avalonia.dll')) {
+        if (-not (Test-Path -LiteralPath (Join-Path $package $file) -PathType Leaf)) { throw "Missing license viewer dependency: $file" }
     }
     $all = @(Get-ChildItem -LiteralPath $package -File -Recurse)
     & python (Join-Path $root 'tools/QuickExcel.JscProbe/prepare_distribution.py')

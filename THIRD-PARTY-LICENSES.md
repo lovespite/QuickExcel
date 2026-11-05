@@ -7,6 +7,7 @@ QuickExcel includes the following third-party materials. Each license applies to
 | RichTextKit | Apache-2.0 | `third_party/RichTextKit` | Text layout, line breaking, and HarfBuzz integration. Original copyright headers and license retained. |
 | Office Scripts API definitions | CC BY 4.0 | `third_party/office-scripts-docs` | Input for generating script type declarations. QuickExcel implements the behavior independently. |
 | Avalonia, Avalonia WebView, BuildServices, MicroCom, Tmds.DBus, Fluent System Icons | MIT | Licenses | Desktop interface, platform integration, and icons. |
+| Markdown.Avalonia.Tight, ColorDocument.Avalonia, ColorTextBlock.Avalonia | MIT | Licenses/MARKDOWN-AVALONIA-LICENSE.txt | Native Markdown rendering for bundled license documents. |
 | FastWpfGrid | MIT | licenses/QuickExcel.Grid.Shared | Grid algorithms and their source attribution. |
 | ANGLE | BSD and accompanying notices | Licenses/ANGLE-LICENSE.txt | Graphics backend. |
 | SkiaSharp and HarfBuzzSharp | MIT and the individual native library licenses | SKIA and HARFBUZZ license and third-party notice files | Graphics and fonts. |
@@ -15,6 +16,17 @@ QuickExcel includes the following third-party materials. Each license applies to
 | Monaco Editor, PDF.js, esbuild | MIT, Apache-2.0, and MIT, respectively | Web/licenses | Editor, PDF preview, and build tooling. Fonts, character maps, and WebAssembly components include their own licenses. |
 | JavaScriptCore / WebKit, ICU, mimalloc, TypeScript | Individual component licenses | JSC-Licenses | The scripting package includes copyright and license notices, corresponding source, and rebuild instructions. Microsoft terms apply to the Windows VC++ runtime. |
 | .NET runtime | MIT and accompanying third-party terms | DOTNET-LICENSE and DOTNET-THIRD-PARTY-NOTICES in the self-contained distribution | Desktop application and isolated processes. |
+
+## Markdown.Avalonia
+
+Copyright (c) 2010 Bevan Arps, 2020 Whistyun. QuickExcel uses the unmodified
+[Markdown.Avalonia](https://github.com/whistyun/Markdown.Avalonia) Tight package
+12.0.2 and its ColorDocument.Avalonia (Copyright (c) 2024 whistyun) and
+ColorTextBlock.Avalonia (Copyright (c) 2020 whistyun) dependencies under the MIT
+license, from revision `f3f65f3f82b44f569958f0116c188e7a8e60686f`.
+The complete upstream license is distributed as
+`Licenses/MARKDOWN-AVALONIA-LICENSE.txt`. Markdown is rendered as native Avalonia
+controls; the optional HTML, SVG and syntax-highlighting packages are not included.
 
 ## Fluent UI System Icons
 
