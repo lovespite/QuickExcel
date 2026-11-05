@@ -8,7 +8,7 @@ using QuickExcel.Presentation;
 
 namespace QuickExcel.Desktop.Avalonia;
 
-internal sealed class NumberFormatDialog : Window
+internal sealed partial class NumberFormatDialog : Window
 {
     private readonly ListBox _categories = new() { Name = "FormatCategories", ItemsSource = NumberFormatOptions.Categories };
     private readonly ListBox _types = new() { Name = "FormatTypes", MinHeight = 100 };
@@ -27,13 +27,14 @@ internal sealed class NumberFormatDialog : Window
     private readonly ExcelDateSystem _dateSystem;
     private readonly string[] _customCodes;
     private Func<CellStylePatch, CellStylePatch>? _appearance;
+    private Func<CellStylePatch, CellStylePatch>? _fillAndProtection;
     private BorderEditor? _borders;
     public CellBorderPatch? BorderPatch => _borders?.Patch;
     private bool _loading;
     private bool _numberChanged;
     private NumberFormatCategory Category => (NumberFormatCategory)_categories.SelectedIndex;
 
-    public NumberFormatDialog(StyleDefinition style, CellValue sample, ExcelDateSystem dateSystem, IEnumerable<StyleDefinition> styles, bool appearance = false, BorderStroke?[]? borders = null, bool borderTab = false)
+    public NumberFormatDialog(StyleDefinition style, CellValue sample, ExcelDateSystem dateSystem, IEnumerable<StyleDefinition> styles, bool appearance = false, BorderStroke?[]? borders = null, bool borderTab = false, bool alignmentTab = false)
     {
         _original = style; _sample = sample.Kind == CellValueKind.Blank ? CellValue.FromNumber(1234.56) : sample; _dateSystem = dateSystem;
         _customCodes = new[] { NumberFormatOptions.Code(style) }.Concat(styles.Select(NumberFormatOptions.Code)).Concat(NumberFormatOptions.CustomCodes).Where(c => c.Length > 0).Distinct().ToArray();
@@ -68,7 +69,8 @@ internal sealed class NumberFormatDialog : Window
             tabs.Items.Add(new TabItem { Header = UiText.Get("对齐与字体"), Content = Appearance(style) });
             _borders = new BorderEditor(borders ?? new BorderStroke?[8]);
             tabs.Name = "CellFormatTabs"; tabs.Items.Add(new TabItem { Header = UiText.Get("边框"), Content = _borders });
-            if (borderTab) tabs.SelectedIndex = 2; root.Children.Add(tabs);
+            AddFillAndProtection(tabs, style);
+            if (borderTab) tabs.SelectedIndex = 2; else if (alignmentTab) tabs.SelectedIndex = 1; root.Children.Add(tabs);
         }
         else root.Children.Add(body);
         _error.Margin = new(0, 10, 0, 10); global::Avalonia.Controls.Grid.SetRow(_error, 1); root.Children.Add(_error);
@@ -148,7 +150,8 @@ internal sealed class NumberFormatDialog : Window
                 if (!CellDisplayFormatter.TryNormalizeNumberFormat(_code.Text ?? "", out var code)) return;
                 patch = patch with { NumberFormatId = 0, NumberFormatCode = code.Equals("General", StringComparison.OrdinalIgnoreCase) ? null : code };
             }
-            Close(_appearance?.Invoke(patch) ?? patch);
+            patch = _appearance?.Invoke(patch) ?? patch;
+            Close(_fillAndProtection?.Invoke(patch) ?? patch);
         }
         catch (ArgumentException ex) { _error.Text = ex.Message; }
     }
@@ -165,20 +168,24 @@ internal sealed class NumberFormatDialog : Window
         CheckBox Check(string label, bool value) { var box = new CheckBox { Content = label, IsChecked = value }; panel.Children.Add(box); return box; }
         var horizontal = Choice(UiText.Get("水平对齐"), [UiText.Get("常规"), UiText.Get("左对齐"), UiText.Get("居中"), UiText.Get("右对齐")], Math.Clamp(style.Horizontal, 0, 3));
         var vertical = Choice(UiText.Get("垂直对齐"), [UiText.Get("顶端"), UiText.Get("居中"), UiText.Get("底端"), UiText.Get("两端对齐")], Math.Clamp(style.Vertical, 0, 3));
+        var orientation = new TextOrientationEditor(style.TextRotation); panel.Children.Add(orientation);
         var wrap = Check(UiText.Get("自动换行"), style.WrapText); var bold = Check(UiText.Get("加粗"), style.Bold); var italic = Check(UiText.Get("倾斜"), style.Italic);
         panel.Children.Add(new TextBlock { Text = UiText.Get("字号") });
         var size = new NumericUpDown { Minimum = .1m, Maximum = 409, Value = (decimal)(style.FontSize ?? 11), Width = 120 }; AutomationProperties.SetName(size, UiText.Get("字号")); panel.Children.Add(size);
-        _appearance = patch => patch with
+        var font = AdditionalFontFields(panel, style);
+        _appearance = patch => font(patch with
         {
             Horizontal = horizontal.SelectedIndex == Math.Clamp(style.Horizontal, 0, 3) ? null : horizontal.SelectedIndex,
             Vertical = vertical.SelectedIndex == Math.Clamp(style.Vertical, 0, 3) ? null : vertical.SelectedIndex,
+            TextRotation = orientation.Rotation == style.TextRotation ? null : orientation.Rotation,
             WrapText = (wrap.IsChecked == true) == style.WrapText ? null : wrap.IsChecked == true,
             Bold = (bold.IsChecked == true) == style.Bold ? null : bold.IsChecked == true,
             Italic = (italic.IsChecked == true) == style.Italic ? null : italic.IsChecked == true,
             FontSize = size.Value is not { } value ? throw new ArgumentException(UiText.Get("请输入字号。")) : (double)value == (style.FontSize ?? 11) ? null : (double)value
-        };
+        });
         return new ScrollViewer { Content = panel };
     }
 
     public Task<CellStylePatch?> ShowAsync(MainWindow owner) => owner.ShowOwnedAsync<CellStylePatch?>(this);
+    public Task<CellStylePatch?> ShowAsync(Window owner) => owner is MainWindow main ? ShowAsync(main) : ShowDialog<CellStylePatch?>(owner);
 }

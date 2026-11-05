@@ -94,7 +94,6 @@ internal static class TypedStyles
             if (alignment is not null) package.Shape(alignment, "", "horizontal vertical wrapText indent shrinkToFit textRotation", path);
             var rotation = Int((string?)alignment?.Attribute("textRotation") ?? "0", 255);
             if (rotation is > 180 and < 255) throw new InvalidDataException("文字旋转值无效。");
-            if (rotation == 255) package.Loss($"{path}: 竖排文字暂仅保留", "styles/stackedText", path, range: "cellXfs[" + result.Count + "]");
             var scheme = (string?)font.Element(Main + "scheme")?.Attribute("val");
             if (scheme == "none") scheme = null;
             if (scheme is not (null or "major" or "minor")) throw new InvalidDataException("主题字体方案无效。");

@@ -251,17 +251,36 @@ public sealed partial class WorkbookGrid : UserControl, IGridSurface, IDisposabl
         CellEditor.IsVisible = !_dragging && _selectedObject is null;
         Canvas.SetLeft(CellEditor, rect.X); Canvas.SetTop(CellEditor, rect.Y);
         CellEditor.Width = Math.Max(1, Math.Min(rect.Width, _canvas.Bounds.Width - rect.X)); CellEditor.Height = Math.Max(1, Math.Min(rect.Height, _canvas.Bounds.Height - rect.Y));
-        CellEditor.FontSize = 14 * _zoom;
         var anchor = CellAnchor(_draftOwner);
         var style = ResolveStyle?.Invoke(_snapshot, Sheet, anchor.Row, anchor.Column)
             ?? TablePresentation.GetStyle(_snapshot, Sheet, anchor.Row, anchor.Column);
+        var value = Sheet.GetCell(anchor.Row, anchor.Column)?.Value ?? CellValue.Blank;
+        var display = CellDisplayFormatter.FormatDisplay(value, style, _snapshot.DateSystem);
+        var font = Renderer.ResolveFont(new(style.FontName ?? "Microsoft YaHei UI", style.EastAsianFontName,
+            style.FontSize ?? 14 * 72d / 96, style.Bold, style.Italic));
+        CellEditor.FontFamily = new FontFamily(font.Family!);
+        CellEditor.FontSize = font.Points * 96 / 72 * _zoom;
+        CellEditor.FontWeight = font.Bold ? FontWeight.Bold : FontWeight.Normal;
+        CellEditor.FontStyle = font.Italic ? FontStyle.Italic : FontStyle.Normal;
+        var foreground = SkiaRenderer.Color(display.Color ?? style.FontColor, SKColors.Black);
+        CellEditor.Foreground = new SolidColorBrush(Color.FromArgb(foreground.Alpha, foreground.Red, foreground.Green, foreground.Blue));
+        CellEditor.CaretBrush = CellEditor.Foreground;
+        var background = SkiaRenderer.Color(style.FillColor, SKColors.White);
+        CellEditor.Background = new SolidColorBrush(Color.FromArgb(background.Alpha, background.Red, background.Green, background.Blue));
+        CellEditor.TextWrapping = style.WrapText ? TextWrapping.Wrap : TextWrapping.NoWrap;
+        ScrollViewer.SetHorizontalScrollBarVisibility(CellEditor, style.WrapText ? ScrollBarVisibility.Disabled : ScrollBarVisibility.Hidden);
+        ScrollViewer.SetVerticalScrollBarVisibility(CellEditor, ScrollBarVisibility.Hidden);
+        // The renderer reserves two pixels on each horizontal edge and one vertically.
+        // Include the editor border in that inset so both layouts wrap at the same width.
+        CellEditor.BorderThickness = new(_zoom);
+        CellEditor.Padding = new(_zoom, 0);
         // Match the grid's effective style and General alignment, including merged anchors
         // and inherited row/column formatting. Keep the native presenter responsible for caret/IME layout.
         CellEditor.TextAlignment = style.Horizontal switch
         {
             2 => TextAlignment.Center,
             3 => TextAlignment.Right,
-            0 when Sheet.GetCell(anchor.Row, anchor.Column)?.Value.Kind == CellValueKind.Number => TextAlignment.Right,
+            0 when value.Kind == CellValueKind.Number => TextAlignment.Right,
             _ => TextAlignment.Left
         };
         CellEditor.VerticalContentAlignment = style.Vertical switch

@@ -22,6 +22,12 @@ public sealed partial class SkiaRenderer : IDisposable
     }
     public SkiaTextLayout Layout(TextLayoutRequest request, string location = "") =>
         SkiaTextLayout.Create(request, Fonts, (code, message) => Diagnostic(code, location, message));
+    /// <summary>Resolve the base font face for a native editor using the same substitutions as cell rendering.</summary>
+    public FontRequest ResolveFont(FontRequest request)
+    {
+        var face = Fonts.Resolve(" ", request, (code, message) => Diagnostic(code, "", message));
+        return request with { Family = face.FamilyName, Bold = Fonts.Weight(face) >= 600, Italic = face.IsItalic };
+    }
     public static SKColor Color(string? argb, SKColor fallback) => argb is { Length: 8 } && uint.TryParse(argb,
         System.Globalization.NumberStyles.HexNumber, System.Globalization.CultureInfo.InvariantCulture, out var color) ? new SKColor(color) : fallback;
     public static SKRect Rect(RenderRect r) => SKRect.Create((float)r.X, (float)r.Y, (float)r.Width, (float)r.Height);
@@ -55,9 +61,9 @@ public sealed partial class SkiaRenderer : IDisposable
         var style = request.Style; var metrics = layout.Metrics;
         canvas.Save(); canvas.ClipRect(rect);
         var left = rect.Left + 2 + (style.Horizontal == 3 ? 0 : layout.Indent);
-        if (style.TextRotation is > 0 and <= 180)
+        if (style.TextRotation is > 0 and <= 180 or 255)
         {
-            var angle = style.TextRotation <= 90 ? -style.TextRotation : style.TextRotation - 90;
+            var angle = style.TextRotation == 255 ? 0 : style.TextRotation <= 90 ? -style.TextRotation : style.TextRotation - 90;
             var matrix = SKMatrix.CreateRotationDegrees(angle);
             var bounds = matrix.MapRect(SKRect.Create((float)metrics.Width, (float)metrics.Height));
             var dx = style.Horizontal switch { 2 => (rect.Width - 4 - layout.Indent - bounds.Width) / 2, 3 => rect.Width - 4 - bounds.Width, _ => 0 };

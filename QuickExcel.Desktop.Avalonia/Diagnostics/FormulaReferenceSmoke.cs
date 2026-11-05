@@ -10,6 +10,16 @@ public sealed partial class MainWindow
 {
     private async Task RunFormulaReferenceChecksAsync(Action<bool, string> check)
     {
+        // These gestures are routed below, not injected through the OS pointer.
+        // Keep a stationary real mouse from setting CellEditor.IsPointerOver and intercepting them.
+        var hitTestVisible = _grid.IsHitTestVisible;
+        _grid.IsHitTestVisible = false;
+        try { await RunFormulaReferenceGesturesAsync(check); }
+        finally { _grid.IsHitTestVisible = hitTestVisible; }
+    }
+
+    private async Task RunFormulaReferenceGesturesAsync(Action<bool, string> check)
+    {
         var canvas = (Canvas)((global::Avalonia.Controls.Grid)_grid.Content!).Children[0];
         using var pointer = new Pointer(126, PointerType.Mouse, true);
         ulong timestamp = 0;

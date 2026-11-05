@@ -105,10 +105,12 @@ public sealed partial class MainWindow : Window
             if (Program.SelfCheckDirectory is { } evidence) { await RunSelfCheckAsync(evidence); return; }
 #if QUICKEXCEL_DIAGNOSTICS
             if (Program.SmokeDirectory is { } pasteDirectory && Program.SmokeMode == "paste-options") { await RunPasteOptionsSmokeAsync(pasteDirectory); return; }
+            if (Program.SmokeDirectory is { } cellStylesDirectory && Program.SmokeMode == "cell-styles") { await RunCellStylesSmokeAsync(cellStylesDirectory); return; }
             if (Program.SmokeDirectory is { } localizationDirectory && Program.SmokeMode == "localization") { await RunLocalizationSmokeAsync(localizationDirectory); return; }
             if (Program.SmokeDirectory is { } sheetsDirectory && Program.SmokeMode == "sheets") { await RunSheetsSmokeAsync(sheetsDirectory); return; }
             if (Program.SmokeDirectory is { } dataToolsDirectory && Program.SmokeMode == "data-tools") { await RunDataToolsSmokeAsync(dataToolsDirectory); return; }
             if (Program.SmokeDirectory is { } borderDirectory && Program.SmokeMode == "borders") { await RunBorderSmokeAsync(borderDirectory); return; }
+            if (Program.SmokeDirectory is { } rotationDirectory && Program.SmokeMode == "text-rotation") { await RunTextRotationSmokeAsync(rotationDirectory); return; }
             if (Program.SmokeDirectory is { } numberDirectory && Program.SmokeMode == "number-format") { await RunNumberFormatSmokeAsync(numberDirectory); return; }
             if (Program.SmokeDirectory is { } menuDirectory && Program.SmokeMode == "menus") { await RunMenuSmokeAsync(menuDirectory); return; }
             if (Program.SmokeDirectory is { } colorDirectory && Program.SmokeMode == "colors") { await RunColorSmokeAsync(colorDirectory); return; }

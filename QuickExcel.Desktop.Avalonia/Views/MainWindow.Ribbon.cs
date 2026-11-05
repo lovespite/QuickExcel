@@ -112,11 +112,12 @@ public sealed partial class MainWindow
             RibbonButton(RibbonIcon.AlignTop, UiText.Get("顶端对齐"), () => ApplyStyleAsync(new(Vertical: 0))),
             RibbonButton(RibbonIcon.AlignMiddle, UiText.Get("垂直居中"), () => ApplyStyleAsync(new(Vertical: 1))),
             RibbonButton(RibbonIcon.AlignBottom, UiText.Get("底端对齐"), () => ApplyStyleAsync(new(Vertical: 2))),
+            TextRotationDropdown(),
             RibbonButton(RibbonIcon.WrapText, UiText.Get("自动换行"), () => ApplyStyleAsync(new(WrapText: !CurrentStyle.WrapText))),
             RibbonButton(RibbonIcon.MergeCells, UiText.Get("合并"), () => MergeAsync(false)), RibbonButton(RibbonIcon.SplitCells, UiText.Get("取消合并"), () => MergeAsync(true)));
         InstallNumberFormatRibbon();
+        InstallCellStyles();
         RibbonGroup(UiText.Get("开始"), UiText.Get("单元格"), RibbonButton(UiText.Get("设置单元格格式"), CellFormatAsync), RibbonButton(RibbonIcon.ClearFormatting, UiText.Get("清除格式"), ClearFormatsAsync));
-        RibbonContentGroup(UiText.Get("开始"), UiText.Get("样式"), ConditionalFormatDropdown());
         RibbonGroup(UiText.Get("公式"), UiText.Get("公式"), RibbonButton(RibbonIcon.AutoSum, UiText.Get("自动求和  Alt+="), () => { BeginAutoSum(); return Task.CompletedTask; }), RibbonButton(RibbonIcon.Calculate, UiText.Get("重算  F9"), CalculateAsync, false));
         RibbonGroup(UiText.Get("开始"), UiText.Get("编辑"), RibbonButton(UiText.Get("向下填充"), () => FillDirectionAsync(false)), RibbonButton(UiText.Get("向右填充"), () => FillDirectionAsync(true)), RibbonButton(UiText.Get("序列"), SeriesAsync),
             RibbonButton(UiText.Get("转为普通文本"), FlattenRichTextAsync));
@@ -137,6 +138,7 @@ public sealed partial class MainWindow
             _font.SelectedItem = name; _fontSize.SelectedItem = size;
             _numberFormatLabel.Text = NumberFormatOptions.Label(style);
             UpdateColorSwatches();
+            UpdateCellStyleSelection();
         }
         finally { _updatingRibbon = false; }
         RefreshScriptActions();

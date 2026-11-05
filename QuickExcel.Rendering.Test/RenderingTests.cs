@@ -98,6 +98,44 @@ public sealed class RenderingTests
         return bitmap.Pixels;
     }
 
+    [Fact]
+    public void StackedTextKeepsGraphemesUprightAndRichFontsIntact()
+    {
+        using var renderer = Renderer();
+        var rich = new RichCellText([new("We\u0301", new(Bold: true, Color: "FFFF0000")), new("中", new(Size: 18, Underline: "single"))]);
+        using var stacked = renderer.Layout(new(rich.Text, Default with { TextRotation = 255 }, RichText: rich));
+        var lines = new RichCellText([new("W\ne\u0301\n", rich.Runs[0].Font), new("中", rich.Runs[1].Font)]);
+        using var expected = renderer.Layout(new(lines.Text, Default with { Horizontal = 2 }, stacked.Metrics.Width, lines));
+        Assert.Equal(3, stacked.Metrics.Lines);
+        Assert.Equal(expected.Metrics, stacked.Metrics);
+        Assert.Equal(RenderPixels(expected), RenderPixels(stacked));
+        Assert.Equal("We\u0301中", rich.Text); Assert.Equal(2, rich.Runs.Length);
+        Assert.Contains(stacked.FontIdentities, font => font.Contains("weight=700"));
+    }
+
+    [Theory]
+    [InlineData(45)] [InlineData(135)] [InlineData(90)] [InlineData(180)] [InlineData(255)]
+    public void RotatedTextUsesTheRequestedDirectionAndCellAlignment(int rotation)
+    {
+        using var renderer = Renderer();
+        using var bitmap = new SKBitmap(240, 240); using var canvas = new SKCanvas(bitmap);
+        canvas.Clear(SKColors.White);
+        renderer.DrawText(canvas, new("WWWWW", Default with { TextRotation = rotation, Horizontal = 2, Vertical = 1 }), SKRect.Create(20, 20, 200, 200));
+        var ink = new List<(int X, int Y)>();
+        for (var y = 0; y < 240; y++) for (var x = 0; x < 240; x++) if (bitmap.GetPixel(x, y).Red < 128) ink.Add((x, y));
+        Assert.NotEmpty(ink);
+        Assert.All(ink, p => { Assert.InRange(p.X, 20, 219); Assert.InRange(p.Y, 20, 219); });
+        Assert.InRange(ink.Average(p => p.X), 110, 130); Assert.InRange(ink.Average(p => p.Y), 110, 130);
+        var width = ink.Max(p => p.X) - ink.Min(p => p.X); var height = ink.Max(p => p.Y) - ink.Min(p => p.Y);
+        if (rotation is 90 or 180 or 255) Assert.True(height > width * 3);
+        else
+        {
+            var middle = ink.Average(p => p.Y);
+            var slope = ink.Where(p => p.Y < middle).Average(p => p.X) - ink.Where(p => p.Y > middle).Average(p => p.X);
+            Assert.True(rotation == 45 ? slope > 10 : slope < -10);
+        }
+    }
+
     [Theory]
     [InlineData("\n", false)]
     [InlineData("\n", true)]

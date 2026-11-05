@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Avalonia;
+using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Controls.Presenters;
@@ -35,6 +36,7 @@ public sealed partial class MainWindow
             throw new InvalidOperationException("Color check did not become idle.");
         }
         async Task Click(MenuItem item) { item.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent)); await Idle(); }
+        async Task Press(Button button) { button.RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); await Idle(); }
         async Task Capture(Control control, string name)
         {
             await Layout(); using var bitmap = new RenderTargetBitmap(new PixelSize((int)Math.Ceiling(control.Bounds.Width), (int)Math.Ceiling(control.Bounds.Height)), new Vector(96, 96));
@@ -126,13 +128,36 @@ public sealed partial class MainWindow
             await PlaceSheets(SheetNavigationPlacement.Bottom); await Idle();
             foreach (var fill in new[] { false, true })
             {
-                var button = Named<DropDownButton>(this, fill ? "FillColorDropdown" : "FontColorDropdown");
+                var button = Named<SplitButton>(this, fill ? "FillColorDropdown" : "FontColorDropdown");
+                var primary = Named<Button>(button, "PART_PrimaryButton");
+                var secondary = Named<Button>(button, "PART_SecondaryButton");
                 var flyout = (MenuFlyout)button.Flyout!;
-                button.Flyout!.ShowAt(button); await Layout();
+                var row = fill ? 4 : 0;
+                string? CellColor(int r, int c = 0)
+                {
+                    var snapshot = Document.Snapshot; var style = snapshot.Styles[snapshot.GetSheet(first).GetStyleId(r, c)];
+                    return fill ? style.FillColor : style.FontColor;
+                }
+                bool SwatchIs(string value) => (fill ? _fillColorSwatch : _fontColorSwatch)?.Background is SolidColorBrush brush && brush.Color == Color.Parse("#" + value);
+                _grid.Select(new(row, 0)); await Idle();
+                await Press(primary);
+                Check(!flyout.IsOpen && CellColor(row) == (fill ? "FFFFFF00" : null), "Primary button applies the initial color without opening a menu: " + fill);
+                await ApplyStyleAsync(fill ? new(FillColor: "FFFF0000") : new(FontColor: "FFFF0000"));
+                var beforeOpen = Document.Snapshot.Revision;
+                await Press(secondary);
+                Check(Document.Snapshot.Revision == beforeOpen, "Arrow opens the palette without applying a color: " + fill);
                 Check(flyout.IsOpen && ColorPalette.Common.All(c => Item(flyout.Items, c.Name).Icon is Border), "Dropdown opens with named color samples: " + fill);
                 if (TopLevel.GetTopLevel(Item(flyout.Items, "红色")) is { } popup) await Capture(popup, fill ? "fill-color-menu" : "font-color-menu");
                 flyout.Hide(); await Click(Item(flyout.Items, "蓝色"));
                 Check((fill ? CurrentStyle.FillColor : CurrentStyle.FontColor) == "FF0000FF", "Preset applies to selected cell: " + fill);
+                _grid.SelectRange(new(row + 1, 0, row + 1, 1), new(row + 1, 0)); await Idle();
+                Check(CellColor(row + 1) is null && SwatchIs("FF0000FF"), "Moving to unformatted cells retains the last chosen color sample: " + fill);
+                await Press(primary);
+                Check(!flyout.IsOpen && CellColor(row + 1) == "FF0000FF" && CellColor(row + 1, 1) == "FF0000FF", "Primary button repeats the preset across the new selection: " + fill);
+                await History(false);
+                Check(CellColor(row + 1) is null && CellColor(row + 1, 1) is null && SwatchIs("FF0000FF"), "Repeated color undoes atomically without changing the remembered color: " + fill);
+                await History(true);
+                Check(CellColor(row + 1) == "FF0000FF" && CellColor(row + 1, 1) == "FF0000FF", "Repeated color redoes across the selection: " + fill);
                 _dialogDriver = async window =>
                 {
                     Check(window is CustomColorDialog, "Cell custom entry reuses the same dialog: " + fill); await Layout();
@@ -144,19 +169,53 @@ public sealed partial class MainWindow
                 await Click(Item(flyout.Items, "自定义颜色…"));
                 Check((fill ? CurrentStyle.FillColor : CurrentStyle.FontColor) == "80114466", "Custom cell color commits: " + fill);
                 await History(false); Check((fill ? CurrentStyle.FillColor : CurrentStyle.FontColor) == "FF0000FF", "Cell color undo restores preset: " + fill);
+                Check(SwatchIs("80114466"), "Undo retains the confirmed custom color including alpha: " + fill);
                 var beforeCancel = Document.Snapshot.Revision;
                 _dialogDriver = async window => { await Layout(); Named<TextBox>(window, "ColorHex").Text = "#FFFFFF"; Named<Button>(window, "ColorCancel").RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); };
                 await Click(Item(flyout.Items, "自定义颜色…")); Check(Document.Snapshot.Revision == beforeCancel, "Cancel leaves cell color and history unchanged: " + fill);
+                await Press(primary);
+                Check(!flyout.IsOpen && CellColor(row + 1) == "80114466" && CellColor(row + 1, 1) == "80114466", "Primary repeats the confirmed custom color after undo and cancel: " + fill);
                 await Click(Item(flyout.Items, fill ? "无填充" : "自动字体色"));
                 Check((fill ? CurrentStyle.FillColor : CurrentStyle.FontColor) is null, "Default cell color can be restored: " + fill);
+                await ApplyStyleAsync(fill ? new(FillColor: "FFFF0000") : new(FontColor: "FFFF0000"));
+                await Press(primary);
+                Check(CellColor(row + 1) is null && CellColor(row + 1, 1) is null, "Primary repeats no fill or automatic font color on formatted cells: " + fill);
                 var origin = button.TranslatePoint(default, _ribbon)!.Value;
                 Check(button.Bounds.Height <= 28 && origin.Y + button.Bounds.Height <= _ribbon.Bounds.Height, "Color dropdown fits ribbon height: " + fill);
+                var icon = button.GetVisualDescendants().OfType<PathIcon>().Single(i => i.Classes.Contains("fluent-ribbon-icon"));
+                var iconOrigin = icon.TranslatePoint(default, primary)!.Value;
+                Check(icon.Bounds.Size == new Size(20, 20) && iconOrigin.X >= 0 && iconOrigin.Y >= 0 &&
+                      iconOrigin.X + 20 <= primary.Bounds.Width && iconOrigin.Y + 20 <= primary.Bounds.Height,
+                    "Color icon fits entirely inside the primary button: " + fill);
+                Check(!string.IsNullOrWhiteSpace(AutomationProperties.GetName(button)) && ToolTip.GetTip(button) is string { Length: > 0 },
+                    "Color split button retains an accessible name and tooltip: " + fill);
+                foreach (var part in new[] { primary, secondary })
+                {
+                    var partOrigin = part.TranslatePoint(default, button)!.Value;
+                    Check(part.Bounds.Width > 0 && partOrigin.Y >= 0 && partOrigin.Y + part.Bounds.Height <= button.Bounds.Height,
+                        "Both split button targets fit the ribbon: " + fill + " / " + part.Name);
+                }
+                button.IsEnabled = false; await Layout();
+                Check(!primary.IsEffectivelyEnabled && !secondary.IsEffectivelyEnabled && !icon.IsEffectivelyEnabled,
+                    "Disabling a color command disables both button targets: " + fill);
+                button.IsEnabled = true;
             }
+            var fontButton = Named<SplitButton>(this, "FontColorDropdown");
+            var fillButton = Named<SplitButton>(this, "FillColorDropdown");
+            await Click(Item(((MenuFlyout)fontButton.Flyout!).Items, "红色"));
+            await Click(Item(((MenuFlyout)fillButton.Flyout!).Items, "绿色"));
+            _grid.Select(new(8, 0)); await Idle();
+            await Press(Named<Button>(fontButton, "PART_PrimaryButton"));
+            await Press(Named<Button>(fillButton, "PART_PrimaryButton"));
+            Check(CurrentStyle.FontColor == "FFFF0000" && CurrentStyle.FillColor == "FF008000", "Font and fill independently remember their last selected colors");
             _grid.BeginEdit(); var presenter = _grid.CellEditor.GetVisualDescendants().OfType<TextPresenter>().Single(); presenter.PreeditText = "ni";
             revision = Document.Snapshot.Revision;
             await SetSheetTabColorAsync(null); await ApplyCellColorAsync(true, "FFFF0000");
+            await Press(Named<Button>(fillButton, "PART_PrimaryButton"));
             Check(Document.Snapshot.Revision == revision, "Composition blocks tab and cell color commands");
             presenter.PreeditText = null; _grid.Cancel();
+            _grid.Select(new(9, 0)); await Idle(); await Press(Named<Button>(fillButton, "PART_PrimaryButton"));
+            Check(CurrentStyle.FillColor == "FF008000", "Blocked color selection does not replace the last successful color");
             await Capture(this, "colors-workspace");
         }
         catch (Exception ex) { failure = ex; }

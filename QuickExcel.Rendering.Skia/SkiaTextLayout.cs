@@ -114,6 +114,13 @@ public sealed class SkiaTextLayout : IDisposable
                 // Interlinear annotation delimiters also have no visible glyph.
                 // Leave joiners, bidi controls and selectors in the shaping input.
                 if (char.IsControl(element[0]) || element[0] is >= '\uFFF9' and <= '\uFFFB') continue;
+                // Stacked text keeps each Unicode text element upright, with its rich font.
+                // Shape whole graphemes so combining marks and joined emoji stay together.
+                if (style.TextRotation == 255)
+                {
+                    Flush();
+                    if (block.Length > 0) FinishParagraph();
+                }
                 var face = fonts.Resolve(element, fontRequest, diagnostic);
                 if (face != previous) { Flush(); previous = face; }
                 buffer.Append(element);
@@ -187,12 +194,21 @@ public sealed class SkiaTextLayout : IDisposable
                 // RichTextKit positions lines and bidi runs. Apply horizontal cell alignment per line.
                 var dx = double.IsFinite(request.Width) ? style.Horizontal switch
                 { 2 => ((float)request.Width - Indent - line.Width) / 2, 3 => (float)request.Width - Indent - line.Width, _ => 0 } : 0;
-                if (style.TextRotation != 0) dx = 0;
+                if (style.TextRotation != 0) dx = style.TextRotation == 255 ? -line.Width / 2 : 0;
                 _runs.Add(new(blob, run.Style.TextColor, top + dy, run.XCoord + dx, run.XCoord + run.Width + dx,
                     line.YCoord + line.BaseLine, run.Style.FontSize, decoration.CellUnderline, decoration.CellStrike));
                 _offsets.Add(dx);
             }
         });
+        if (style.TextRotation == 255)
+        {
+            // Center narrow Latin glyphs and wide CJK glyphs on the same column axis.
+            for (var i = 0; i < _runs.Count; i++)
+            {
+                _offsets[i] += maxWidth / 2;
+                _runs[i] = _runs[i] with { Left = _runs[i].Left + maxWidth / 2, Right = _runs[i].Right + maxWidth / 2 };
+            }
+        }
         var angle = style.TextRotation is > 0 and <= 180 ? style.TextRotation <= 90 ? -style.TextRotation : style.TextRotation - 90 : 0;
         var radians = angle * Math.PI / 180;
         Metrics = new(maxWidth, height, Math.Abs(maxWidth * Math.Cos(radians)) + Math.Abs(height * Math.Sin(radians)),
