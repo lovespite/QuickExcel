@@ -1,5 +1,5 @@
-[CmdletBinding()]
-param([switch]$SkipBuild, [ValidateSet('CommonFunctions', 'TextExchange', 'PasteOptions', 'Workspace', 'Sheets', 'DataTools', 'Borders', 'TextRotation', 'NumberFormat', 'CellStyles', 'Menus', 'ConditionalFormat', 'Colors', 'Grid', 'Drawing', 'PageBreak', 'Compatibility', 'RibbonFilter', 'Automation', 'Execution')][string]$Mode = 'Workspace')
+﻿[CmdletBinding()]
+param([switch]$SkipBuild, [ValidateSet('SpecialSelection', 'CommonFunctions', 'TextExchange', 'PasteOptions', 'Workspace', 'Sheets', 'DataTools', 'Borders', 'TextRotation', 'NumberFormat', 'CellStyles', 'Menus', 'ConditionalFormat', 'Colors', 'Grid', 'Drawing', 'PageBreak', 'Compatibility', 'RibbonFilter', 'Automation', 'Execution')][string]$Mode = 'Workspace')
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 $root = [IO.Path]::GetFullPath((Split-Path $PSScriptRoot -Parent))
@@ -12,7 +12,7 @@ try {
         if ($LASTEXITCODE -ne 0) { throw 'Avalonia workspace build failed.' }
     }
     $exe = Join-Path $root 'artifacts/build/bin/QuickExcel.Desktop.Avalonia/release/QuickExcel.Avalonia.exe'
-    $argument = switch ($Mode) { 'CommonFunctions' { '--common-functions-smoke' }; 'TextExchange' { '--text-exchange-smoke' }; 'PasteOptions' { '--paste-options-smoke' }; 'Sheets' { '--sheets-smoke' }; 'DataTools' { '--data-tools-smoke' }; 'Borders' { '--borders-smoke' }; 'TextRotation' { '--text-rotation-smoke' }; 'NumberFormat' { '--number-format-smoke' }; 'Menus' { '--menus-smoke' }; 'ConditionalFormat' { '--conditional-format-smoke' }; 'Colors' { '--colors-smoke' }; 'Drawing' { '--drawing-smoke' }; 'Grid' { '--grid-smoke' }; 'PageBreak' { '--page-break-smoke' }; 'Compatibility' { '--compatibility-smoke' }; 'RibbonFilter' { '--ribbon-filter-smoke' }; 'Automation' { '--automation-smoke' }; 'Execution' { '--execution-smoke' }; default { '--workspace-smoke' } }
+    $argument = switch ($Mode) { 'SpecialSelection' { '--special-selection-smoke' }; 'CommonFunctions' { '--common-functions-smoke' }; 'TextExchange' { '--text-exchange-smoke' }; 'PasteOptions' { '--paste-options-smoke' }; 'Sheets' { '--sheets-smoke' }; 'DataTools' { '--data-tools-smoke' }; 'Borders' { '--borders-smoke' }; 'TextRotation' { '--text-rotation-smoke' }; 'NumberFormat' { '--number-format-smoke' }; 'Menus' { '--menus-smoke' }; 'ConditionalFormat' { '--conditional-format-smoke' }; 'Colors' { '--colors-smoke' }; 'Drawing' { '--drawing-smoke' }; 'Grid' { '--grid-smoke' }; 'PageBreak' { '--page-break-smoke' }; 'Compatibility' { '--compatibility-smoke' }; 'RibbonFilter' { '--ribbon-filter-smoke' }; 'Automation' { '--automation-smoke' }; 'Execution' { '--execution-smoke' }; default { '--workspace-smoke' } }
     if ($Mode -eq 'CellStyles') { $argument = '--cell-styles-smoke' }
     $process = Start-Process -FilePath $exe -ArgumentList @($argument, ('"{0}"' -f $run)) -WorkingDirectory $root -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $run 'stdout.log') -RedirectStandardError (Join-Path $run 'stderr.log')
     try {

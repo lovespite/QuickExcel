@@ -61,3 +61,13 @@ The six functions use the existing bounded array model, dependency tracking, spi
 39 项相关测试通过；追加存储/重开/增量缩小与撤销后 CommonFunctionTests 10 项通过。59 个累计真实 Excel 公式样例通过，来源 `artifacts/e6/common-functions-excel-05`；CommonFunctions 桌面检查 12 项通过，证据 `artifacts/avalonia/workspace/20261105-072315-25917d23`。规范参考 [TEXTBEFORE](https://support.microsoft.com/en-us/excel/functions/textbefore-function)、[TEXTSPLIT](https://support.microsoft.com/en-us/excel/functions/textsplit-function)、[TAKE](https://support.microsoft.com/en-us/excel/functions/take-function)。空源文本边界采用本机 Excel 16.0 build 20527 的独立样例（TEXTBEFORE 空源为 #N/A，TEXTSPLIT 空源为 #VALUE!），未以文档示意代替实测。
 
 发布与生产自检通过，活动包 `artifacts/avalonia/releases/20261105-072720-269583df/application`。
+
+## XC-0603 — 定位条件 / Go To Special
+
+2026-11-05，1.22.0。编辑菜单新增定位条件，支持当前选区或当前表已用范围内的空白、常量、公式、错误值和可见单元格。空文本属于常量，返回空文本的公式属于公式，溢出子格不属于常量或空白；错误定位拒绝旧公式缓存。可见模式排除手动隐藏行列及筛除行。合并格以锚点分类，只选择完全在范围内、整体允许选择的合并区域；不扩展到范围外。
+
+Go To Special creates a navigation-only selection. It deduplicates overlapping scopes, coalesces contiguous matches, respects selection protection and supports cancellation. Confirmation rechecks session, sheet, revision, calculated sheet identity and selection. Statistics, formatting and clear use the existing multi-area command paths; clear is one undoable operation.
+
+范围：最多 64 个连续结果区域，空白/可见扫描范围最多 1,000,000 格，比较及访问预算 2,000,000；远端稀疏常量/公式无需枚举完整已用矩形。超限、取消和过期预览均不应用部分结果。后续写入继续受现有 20,000 格编辑预算、隐藏/筛选及保护规则约束。
+
+验证：15 项定位、统计和本地化定向测试通过；8 项 Avalonia SpecialSelection 检查通过，包括取消、统计、多区格式、清除/一次撤销和过期预览。证据 `artifacts/avalonia/workspace/20261105-073642-55d889a4`。生产发布和自检通过，活动包 `artifacts/avalonia/releases/20261105-073652-32784661/application`，清单哈希已核对。
