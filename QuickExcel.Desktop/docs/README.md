@@ -45,6 +45,7 @@ E1 七项实现及各自真实 Excel 对照已完成；[行列样式优先级](2
 | 文档 | 解决的问题 |
 | --- | --- |
 | [Excel 常用功能完善计划](82-excel-common-features-plan.md) | E6–E9 待办范围、优先级、依赖和验收；覆盖 CSV/TSV、常用公式、可见行编辑、恢复、透视图表与容量 |
+| [E6/E7 实施与交付记录](83-e6-e7-implementation-log.md) | 3.0.0 活动包、定向验收、公式审核、自动恢复、富文本及链接/评论编辑范围 |
 | [脚本 JavaScript API 重新设计](79-script-api-redesign.md) | API v3：ExcelScript 同步基线、QuickExcel 命名空间、main 动作、能力清单与声明生成；运行时与声明已落地，v3 存储待实施 |
 | [Excel 与 QuickExcel 剪贴板互操作方案](78-excel-clipboard-interoperability-plan.md) | Windows Excel 双向值/格式/合并与相对公式交换；筛选列头可直接粘贴、必要时自动只贴值；日期系统、跨实例和真实剪贴板证据 |
 | [JSC 单引擎替换与 TypeScript 接入方案](70-jsc-typescript-migration-plan.md) | JSC 原生桥、TS 自动处理、缓存/签名/IPC、平台隔离、J0–J6 迁移与定向验收 |
