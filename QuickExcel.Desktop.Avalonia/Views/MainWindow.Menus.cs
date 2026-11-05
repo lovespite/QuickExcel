@@ -88,7 +88,7 @@ public sealed partial class MainWindow
             Group(Submenu(UiText.Get("插入"), Item(UiText.Get("插入行"), () => ShiftAxisAsync(SheetAxis.Row, false)), Item(UiText.Get("插入列"), () => ShiftAxisAsync(SheetAxis.Column, false))),
                 Submenu(UiText.Get("删除"), Item(UiText.Get("删除行"), () => ShiftAxisAsync(SheetAxis.Row, true)), Item(UiText.Get("删除列"), () => ShiftAxisAsync(SheetAxis.Column, true))),
                 Item(UiText.Get("清除内容"), ClearAsync), Item(UiText.Get("清除格式"), ClearFormatsAsync));
-            Group(Item(UiText.Get("设置单元格格式…"), CellFormatAsync), Item(UiText.Get("数字格式…"), NumberFormatAsync),
+            Group(Item(UiText.Get("设置单元格格式…"), CellFormatAsync), Item(UiText.Get("数字格式…"), NumberFormatAsync), Item(UiText.Get("富文本编辑…"), RichTextAsync),
                 Item(UiText.Get("合并单元格"), () => MergeAsync(false)), Item(UiText.Get("取消合并单元格"), () => MergeAsync(true)));
             Group(Submenu(UiText.Get("排序与筛选"), Item(UiText.Get("升序排序"), () => SortAsync(false)), Item(UiText.Get("降序排序"), () => SortAsync(true)), Item(UiText.Get("建立筛选"), EstablishFilterAsync), Item(UiText.Get("清除筛选条件"), ClearFiltersAsync)),
                 Submenu(UiText.Get("填充"), Item(UiText.Get("向下填充"), () => FillDirectionAsync(false)), Item(UiText.Get("向右填充"), () => FillDirectionAsync(true)), Item(UiText.Get("填充序列…"), SeriesAsync)),

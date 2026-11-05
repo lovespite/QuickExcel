@@ -49,6 +49,17 @@ public sealed partial class MainWindow
             }
             Dialog(d => { Choose(d, "operation", 3); Choose(d, "selected", 0); }); await ThreadCommentsAsync();
             Check(Document.Snapshot.GetSheet(sheet).Data.ThreadComments.IsEmpty, "Deleting root deletes its replies atomically");
+            _dialogDriver = w => { var d = (RichTextDialog)w; d.Editor.SelectionStart = 0; d.Editor.SelectionEnd = 2; d.Apply(new(Bold: true)); w.Close(true); return Task.CompletedTask; };
+            await RichTextAsync();
+            Check(Document.Snapshot.GetSheet(sheet).GetCell(0, 0)!.Content.RichText is { Runs.Length: 2 } rich && rich.Runs[0].Font!.Bold == true && rich.Text == "Text", "Rich text dialog applies formatting to selected characters");
+            await History(false); Check(Document.Snapshot.GetSheet(sheet).GetCell(0, 0)!.Content.RichText is null, "Entire rich text edit undoes once"); await History(true);
+            _dialogDriver = w => { ((RichTextDialog)w).Editor.Text = "中文\n😀"; w.Close(false); return Task.CompletedTask; };
+            await RichTextAsync(); Check(Document.GetCellValue(0, 0, 0) == "Text", "Canceled rich text replacement preserves original runs");
+            _dialogDriver = w => { ((RichTextDialog)w).Editor.Text = "中文\n😀"; w.Close(true); return Task.CompletedTask; };
+            await RichTextAsync(); Check(Document.GetCellValue(0, 0, 0) == "中文\n😀" && Document.Snapshot.GetSheet(sheet).Annotations.Links.Count == 1, "Rich text replacement preserves Unicode and hyperlink attachment");
+            _dialogDriver = w => { ((RichTextDialog)w).Editor.Text = "stale"; _workspace.Editor.SetCell(0, 8, 0, "latest"); w.Close(true); return Task.CompletedTask; };
+            stale = false; try { await RichTextAsync(); } catch (InvalidOperationException) { stale = true; }
+            Check(stale && Document.GetCellValue(0, 0, 0) == "中文\n😀", "Rich text dialog refuses stale commit");
         }
         catch (Exception ex) { failure = ex; }
         finally { _dialogDriver = null; }

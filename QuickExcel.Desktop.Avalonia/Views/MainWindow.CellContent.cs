@@ -6,6 +6,19 @@ namespace QuickExcel.Desktop.Avalonia;
 
 public sealed partial class MainWindow
 {
+    private async Task RichTextAsync()
+    {
+        if (!await FlushEditsAsync()) return;
+        var snapshot = Document.Snapshot; var session = Document.Session.SessionId; var sheet = snapshot.Sheets[SheetIndex]; var position = _grid.Current;
+        var cell = sheet.GetCell(position.Row, position.Column);
+        if (cell?.SpillOwner is not null || cell?.Content.Kind == CellContentKind.Formula || cell?.Value.Kind is not (null or CellValueKind.Blank or CellValueKind.Text))
+            throw new InvalidOperationException(UiText.Get("富文本编辑仅适用于文字或空白单元格。"));
+        var source = cell?.Content.RichText ?? new RichCellText([new(cell?.Value is { Kind: CellValueKind.Text } text ? text.TextValue : "")]);
+        var dialog = new RichTextDialog(source, snapshot.Styles[sheet.GetStyleId(position.Row, position.Column)]);
+        if (!await ShowOwnedAsync<bool>(dialog)) return;
+        RequireContentDialogCurrent(session, snapshot);
+        if (!source.Equals(dialog.Draft)) await ExecuteAsync(new SetCellsCommand([new(new(sheet.Id, position.Row, position.Column), CellContent.FromRichText(dialog.Draft, cell?.Content.StyleId ?? 0))]), snapshot.Revision);
+    }
     private void RequireContentDialogCurrent(Guid session, WorkbookSnapshot snapshot)
     {
         if (session != Document.Session.SessionId || snapshot.Revision != Document.Snapshot.Revision || snapshot.ActiveSheetId != Document.Snapshot.ActiveSheetId)

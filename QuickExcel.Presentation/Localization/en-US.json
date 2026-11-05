@@ -2472,5 +2472,15 @@
   "单元格内容": "Cell content",
   "超链接…": "Hyperlink…",
   "线程评论…": "Thread comments…",
-  "超链接": "Hyperlink"
+  "超链接": "Hyperlink",
+  "请先选择要设置格式的文字。": "Select the text to format first.",
+  "选择范围不能拆开 Unicode 字符。": "A selection cannot split a Unicode character.",
+  "富文本编辑": "Rich text editor",
+  "在文字框选中文字后设置格式。下方预览使用网格/打印的文本引擎；超出预览范围的内容仍完整保存。确定后整次编辑可一次撤销。": "Select text in the editor, then apply formatting. The preview uses the grid and print text engine; all text is saved even if clipped in the preview. Confirmed changes form one workbook undo step.",
+  "字体名称": "Font name",
+  "应用字体": "Apply font",
+  "应用字号": "Apply size",
+  "应用颜色": "Apply color",
+  "富文本编辑仅适用于文字或空白单元格。": "Rich text editing requires a text or blank cell.",
+  "富文本编辑…": "Rich text editor…"
 }
