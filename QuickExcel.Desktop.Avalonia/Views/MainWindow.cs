@@ -151,7 +151,7 @@ public sealed partial class MainWindow : Window
           Item(UiText.Get("标签在底部"), () => PlaceSheets(SheetNavigationPlacement.Bottom)), Item(UiText.Get("标签在左侧"), () => PlaceSheets(SheetNavigationPlacement.Left)), Item(UiText.Get("标签在右侧"), () => PlaceSheets(SheetNavigationPlacement.Right)) } });
         _book.Children.Add(BuildWorksheetLayout()); ApplySheetPlacement();
         BuildHome();
-        var content = new global::Avalonia.Controls.Grid(); content.Children.Add(_book); content.Children.Add(new ScrollViewer { Content = _start, HorizontalScrollBarVisibility = global::Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled });
+        var content = new global::Avalonia.Controls.Grid(); content.Children.Add(_book); content.Children.Add(_start);
         var root = new DockPanel(); DockPanel.SetDock(_menu, Dock.Top);
         var footer = new DockPanel(); DockPanel.SetDock(_selectionStatistics, Dock.Right); footer.Children.Add(_selectionStatistics); DockPanel.SetDock(_pivotStatus,Dock.Right); footer.Children.Add(_pivotStatus); footer.Children.Add(_status);
         DockPanel.SetDock(footer, Dock.Bottom); root.Children.Add(_menu); root.Children.Add(footer); root.Children.Add(content);
@@ -193,14 +193,19 @@ public sealed partial class MainWindow : Window
     private void ShowHome()
     {
         if (_book.IsVisible) Document.Session.RaiseScriptEvent("workbook.deactivate");
-        _book.IsVisible = false; ((Control)_start.Parent!).IsVisible = true;
+        _book.IsVisible = false; _start.IsVisible = true;
         RefreshRecentFiles();
     }
     private void RefreshRecentFiles()
     {
         _recentFiles.Load();
+        FilterRecentFiles();
+    }
+    private void FilterRecentFiles()
+    {
+        var query = _recentSearch.Text?.Trim() ?? "";
         _recent.Children.Clear();
-        foreach (var path in _recentFiles.Paths)
+        foreach (var path in _recentFiles.Paths.Where(path => path.Contains(query, StringComparison.OrdinalIgnoreCase)))
         {
             var label = new StackPanel { Spacing = 5 };
             label.Children.Add(new TextBlock { Text = Path.GetFileName(path), FontSize = 16, FontWeight = FontWeight.Bold, Foreground = Brushes.Black, TextTrimming = TextTrimming.CharacterEllipsis });
@@ -210,9 +215,13 @@ public sealed partial class MainWindow : Window
             AutomationProperties.SetName(button, Path.GetFileName(path) + "，" + Path.GetDirectoryName(path));
             button.Click += async (_, _) => await PerformAsync(async () => { if (await ConfirmDiscardAsync()) await OpenPathAsync(path); }); _recent.Children.Add(button);
         }
-        if (_recent.Children.Count == 0) _recent.Children.Add(new TextBlock { Text = UiText.Get("暂无历史文件，打开工作簿后会显示在这里。"), Foreground = Brushes.Gray, TextWrapping = TextWrapping.Wrap, Margin = new(0, 12) });
+        if (_recent.Children.Count == 0) _recent.Children.Add(new TextBlock
+        {
+            Text = _recentFiles.Paths.Count == 0 ? UiText.Get("暂无历史文件，打开工作簿后会显示在这里。") : UiText.Get("没有匹配的历史文件。"),
+            Foreground = Brushes.Gray, TextWrapping = TextWrapping.Wrap, Margin = new(0, 12)
+        });
     }
-    private void ShowBook() { if (!_book.IsVisible) Document.Session.RaiseScriptEvent("workbook.activate"); ((Control)_start.Parent!).IsVisible = false; _book.IsVisible = true; }
+    private void ShowBook() { if (!_book.IsVisible) Document.Session.RaiseScriptEvent("workbook.activate"); _start.IsVisible = false; _book.IsVisible = true; }
     private void Synchronize()
     {
         if (_synchronizing) return;

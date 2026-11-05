@@ -192,3 +192,21 @@ Skia 网格和打印改为先画背景/内容，再画边框；双线围绕共�
 定向验证：Core 边框 19 项、Skia 边框像素 11 项通过；Borders 桌面专项 45 项通过，覆盖四方向分段、冻结窗格内滚动、原始样例及其值快照 XLSX 在两个滚动位置的 B8/B9 像素。证据：`artifacts/avalonia/workspace/20261105-035240-f7d1e1ab`。普通专项使用独立生成的工作簿；设置 `QUICKEXCEL_BORDER_SAMPLE` 可额外检查该本地样例，输入只复制到隔离证据目录。未运行全量回归；物理输入和打印设备验收边界保持不变。
 
 另有打印重复标题/隐藏行及多页矢量 PDF 两项定向测试通过。已执行 `scripts/build-quickexcel.ps1 -SkipTests -RunSmoke`，发布并激活 `artifacts/avalonia/releases/20261105-035359-eb89ee62/application`（1.5.3），14 项生产自检通过；已复核活动指针、清单哈希及 EXE/宿主/Core/Grid/Skia 文件哈希，`Start-QuickExcel.cmd` 使用此包。原样例 SHA-256 与测试前复制件一致。生产构建仅有既有诊断字段的两项 CS0649 警告。
+
+## 主页历史文件容器与搜索（2026-11-05，1.6.0）
+
+主页移除整页 ScrollViewer，右侧历史文件改为随窗口高度伸缩的独立容器。标题、搜索框及右下角“管理历史文件”按钮固定，中间列表单独滚动；最小窗口下左侧操作区可独立滚动，不受历史列表滚动影响。文件名、目录、完整路径提示与点击打开行为保留。
+
+搜索按完整路径进行不区分大小写的子串匹配，忽略输入首尾空白，支持中文文件名；修改搜索回到列表顶部，清空搜索恢复原有顺序。筛选不写入历史记录，空历史与无匹配结果分别提示。管理按钮直接打开设置“历史管理”；关闭设置后重新读取记录并保留当前搜索条件，移除/清空记录立即反映到主页。
+
+验证：Release 桌面构建 0 警告/0 错误；Menus 专项 73 项、本地化目录测试 5 项通过。新增检查覆盖十条记录在普通/最小窗口下的滚动边界、滚轮路由、固定控件、文件名/路径/中文搜索、无匹配结果、直接导航及管理后的筛选刷新。证据与已复核截图：`artifacts/avalonia/workspace/20261105-035819-2829fb1d`。未运行全量回归；程序化检查不替代物理输入与设备验收。
+
+已执行 `scripts/build-quickexcel.ps1 -SkipTests -RunSmoke`，发布并激活 `artifacts/avalonia/releases/20261105-035952-9102f705/application`（1.6.0），14 项生产自检通过。已核验 `active-windows.json`、发布清单及 EXE/宿主/Presentation 程序集哈希，`Start-QuickExcel.cmd` 使用该包；旧包保留。生产构建仍仅有既有 `WebScriptsOnly` / `WebModulesOnly` 两项 CS0649 警告。
+
+## 单元格编辑器对齐修复（2026-11-05，1.6.1）
+
+原生单元格编辑器现在按网格使用的有效样式设置文字水平对齐和内容垂直对齐：左/中/右及顶端/居中/底端。合并区域使用主格样式，继承行列格式、样式刷新及撤销、缩放后重新定位均重新应用对齐；常规水平对齐沿用网格规则，已有数字及数值公式右对齐，文本左对齐。光标、选择及输入法布局仍由原生 TextPresenter 负责，不改写单元格内容或样式。
+
+Release 桌面构建 0 警告/0 错误；Grid 专项 216 项通过（新增 48 项，`artifacts/avalonia/workspace/20261105-040439-77247f9e`），Workspace 专项 94 项通过（`artifacts/avalonia/workspace/20261105-040510-75f662e5`）。新增检查直接测量编辑器渲染后的文字像素位置，覆盖九种组合、常规文本/数字/公式、行列继承、合并多行、样式修改/撤销、150% 缩放以及合成 IME 提交门禁；右下对齐与合并多行居中截图已复核。第一次 Grid 在既有公式拖选断言失败，增加状态诊断后未修改交互逻辑，完整复跑通过；失败证据保留于 `20261105-040350-d5d7cdbd`。未运行全量回归；物理输入及设备验收边界不变。
+
+已执行 `scripts/build-quickexcel.ps1 -SkipTests -RunSmoke`，发布并激活 `artifacts/avalonia/releases/20261105-040544-7ab735be/application`（1.6.1），14 项生产自检通过。已核验 `active-windows.json` 指向、发布清单及 EXE/宿主/Grid 程序集哈希，`Start-QuickExcel.cmd` 使用该包；原 1.6.0 包保留。生产构建仅有既有 `WebScriptsOnly` / `WebModulesOnly` 两项 CS0649 警告。

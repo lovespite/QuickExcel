@@ -122,3 +122,15 @@ Ribbon 命令使用本地 Fluent UI System Icons 的 20px Regular SVG。37 个�
 定向验证：粘贴相关 Core 测试 111 项通过；补充验证失败的原子性后，PasteOptions/DocumentSession/DataValidation 45 项通过（包含重复的粘贴用例）。新增 `scripts/test-avalonia-workspace.ps1 -Mode PasteOptions`，面板及既有外部/合并剪贴板共 61 项检查通过，Release 构建 0 警告/0 错误；证据和复核截图：`artifacts/avalonia/workspace/20261105-034556-0963bb2c`。未运行全量回归；程序化检查不替代物理输入和辅助技术验收。
 
 粘贴面板发布：`scripts/build-quickexcel.ps1 -SkipTests -RunSmoke` 已生成并激活 `artifacts/avalonia/releases/20261105-034634-d96344de/application`（产品版本 1.5.0，共享工作区包含并行滚动范围改动），14 项生产自检通过。已核验 `active-windows.json`、release manifest SHA-256 和启动脚本读取路径；旧包保留。生产构建仅有既有 `WebScriptsOnly` / `WebModulesOnly` 两项 CS0649 警告。
+
+## 2026-11-05 主页历史文件优化（1.6.0）
+
+历史文件采用固定标题/搜索框/管理入口、列表独立滚动的容器，主页不再随记录溢出整页滚动。搜索匹配文件名和路径，管理入口直达设置“历史管理”，返回时保留搜索并刷新记录。Release 桌面构建无警告/错误，Menus 73 项及本地化目录测试 5 项通过；普通/最小窗口截图已复核。行为与证据见 [64 号记录](64-avalonia-grid-and-workspace.md)。
+
+已自动发布并激活 `artifacts/avalonia/releases/20261105-035952-9102f705/application`，14 项生产自检通过；活动指针、清单及启动载荷哈希已核验，`Start-QuickExcel.cmd` 使用 1.6.0 包，旧包保留。生产构建仅有两项既有诊断字段 CS0649 警告。
+
+## 2026-11-05 单元格编辑器对齐（1.6.1）
+
+单元格编辑器应用与网格一致的有效水平/垂直对齐，支持合并主格、继承格式及常规数字右对齐。新增原生编辑器文字像素检查，Grid 216 项、Workspace 94 项通过，Release 桌面构建无警告/错误。详细覆盖、首次公式拖选断言失败与复跑证据见 [64 号记录](64-avalonia-grid-and-workspace.md)。物理输入与设备门禁保持原状态。
+
+已自动发布并激活 `artifacts/avalonia/releases/20261105-040544-7ab735be/application`，14 项生产自检通过；活动指针、清单及宿主/Grid 载荷哈希已核验，`Start-QuickExcel.cmd` 使用 1.6.1 包，旧包保留。生产构建仅有两项既有诊断字段 CS0649 警告。

@@ -69,9 +69,10 @@ public sealed partial class MainWindow
             _workspace.New(true);
             var recentPath = Path.Combine(directory, "年度预算与项目计划.xlsq");
             new TypedWorkbookStorage().Save(recentPath, Document.Snapshot);
+            for (var i = 0; i < 8; i++) _recentFiles.Remember(Path.Combine(directory, "HistoryFolder-" + i, $"历史工作簿-{i:D2}.xlsx"));
             _workspace.New(); _recentFiles.Remember(Path.Combine(directory, "同名文件示例", "年度预算与项目计划.xlsq")); _recentFiles.Remember(recentPath);
             ShowHome(); await Layout();
-            var actions = ((StackPanel)_start.Children[0]).Children.OfType<Button>().ToArray();
+            var actions = ((StackPanel)((ScrollViewer)_start.Children[0]).Content!).Children.OfType<Button>().ToArray();
             Check(actions.Length == 5 && actions.All(b => b.Bounds.Height >= 76 && b.GetVisualDescendants().OfType<Viewbox>().Any()), "Home has five large icon buttons including Settings");
             Check(_recent.TranslatePoint(default, _start)!.Value.X > actions[0].Bounds.Right, "Recent files are to the right of the home actions");
             var labels = ((StackPanel)((Button)_recent.Children[0]).Content!).Children.OfType<TextBlock>().ToArray();
@@ -84,9 +85,10 @@ public sealed partial class MainWindow
             await Capture(this, "home");
             Width = 760; Height = 480; await Layout(); await Capture(this, "home-minimum");
             Check(_recent.Bounds.Width > 200 && actions.All(b => b.Bounds.Width >= 280), "Minimum window keeps both home columns usable");
+            await CheckHomeHistoryAsync(directory, Check, Capture);
             Width = 1280; Height = 820; await Layout();
             ((Button)_recent.Children[0]).RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); await _operation;
-            Check(_book.IsVisible && _workspace.FilePath == recentPath, "History button opens its workbook");
+            Check(_book.IsVisible && !_start.IsVisible && _workspace.FilePath == recentPath, "History button opens its workbook and hides the home page");
             Check(!_menu.Items.OfType<MenuItem>().Any(i => (i.Header as string)?.Contains("F9") == true), "Main menu no longer contains recalculate F9");
             Check(((MenuItem)_menu.Items[0]!).Items.OfType<Separator>().Count() >= 4, "File menu separates open, save, export, compatibility and close actions");
             await CheckSettingsAsync(directory, Check, Capture);

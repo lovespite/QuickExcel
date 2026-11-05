@@ -11,15 +11,19 @@ namespace QuickExcel.Desktop.Avalonia;
 
 public sealed partial class MainWindow
 {
-    private async Task OpenSettingsAsync()
+    private Task OpenSettingsAsync() => OpenSettingsAsync(SettingsSection.Associations);
+
+    private async Task OpenSettingsAsync(SettingsSection section)
     {
         if (!await CommitEditorsAsync()) return;
-        await ShowOwnedAsync<bool>(new SettingsWindow(_settings, _recentFiles));
+        await ShowOwnedAsync<bool>(new SettingsWindow(_settings, _recentFiles, section));
         ApplySheetPlacement();
         ScheduleCalculation();
         RefreshRecentFiles();
     }
 }
+
+internal enum SettingsSection { Associations, History, Calculation, Appearance, Scripts, About }
 
 internal sealed partial class SettingsWindow : Window
 {
@@ -29,7 +33,7 @@ internal sealed partial class SettingsWindow : Window
     private readonly StackPanel _page = new() { Spacing = 14, Margin = new(24, 20) };
     private readonly TextBlock _feedback = new() { TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Center };
 
-    public SettingsWindow(DesktopSettings settings, RecentFileStore history)
+    public SettingsWindow(DesktopSettings settings, RecentFileStore history, SettingsSection initialSection = SettingsSection.Associations)
     {
         _settings = settings; _history = history;
         FontFamily = new FontFamily("Segoe UI, Microsoft YaHei UI, Noto Sans CJK SC, sans-serif");
@@ -46,8 +50,10 @@ internal sealed partial class SettingsWindow : Window
         close.Click += (_, _) => Close(true); DockPanel.SetDock(close, Dock.Right);
         footer.Children.Add(close); footer.Children.Add(_feedback); LayoutGrid.SetRow(footer, 1); LayoutGrid.SetColumnSpan(footer, 2);
         layout.Children.Add(footer); Content = layout;
-        (string Title, Action Build)[] sections = [(UiText.Get("文件关联"), Associations), (UiText.Get("历史文件"), History),
-            (UiText.Get("保存与计算"), Calculation), (UiText.Get("界面"), Appearance), (UiText.Get("脚本与 API"), ScriptInformation), (UiText.Get("关于与许可"), About)];
+        (SettingsSection Id, string Title, Action Build)[] sections = [
+            (SettingsSection.Associations, UiText.Get("文件关联"), Associations), (SettingsSection.History, UiText.Get("历史管理"), History),
+            (SettingsSection.Calculation, UiText.Get("保存与计算"), Calculation), (SettingsSection.Appearance, UiText.Get("界面"), Appearance),
+            (SettingsSection.Scripts, UiText.Get("脚本与 API"), ScriptInformation), (SettingsSection.About, UiText.Get("关于与许可"), About)];
         _navigation.ItemsSource = sections.Select(s => s.Title).ToArray();
         AutomationProperties.SetName(_navigation, UiText.Get("设置分区"));
         _navigation.SelectionChanged += (_, _) =>
@@ -59,7 +65,7 @@ internal sealed partial class SettingsWindow : Window
             try { section.Build(); }
             catch (Exception ex) { _feedback.Text = ex.Message; }
         };
-        _navigation.SelectedIndex = 0;
+        _navigation.SelectedIndex = Array.FindIndex(sections, section => section.Id == initialSection);
     }
 
     private static TextBlock Heading(string text, double size) => new() { Text = text, FontSize = size, FontWeight = FontWeight.SemiBold };

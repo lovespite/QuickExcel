@@ -24,7 +24,7 @@ public sealed partial class MainWindow
             var english = UiText.Language == UiText.English;
             var nav = window.GetVisualDescendants().OfType<ListBox>().Single(l => l.Name == "SettingsNavigation");
             check(nav.ItemCount == 6, "Settings exposes six separately navigable sections");
-            nav.SelectedItem = UiText.Get("历史文件"); await Layout();
+            nav.SelectedItem = UiText.Get("历史管理"); await Layout();
             var recent = window.GetVisualDescendants().OfType<ListBox>().Single(l => l.Name == "SettingsRecentFiles");
             recent.SelectedIndex = 1; var before = recent.ItemCount; Click(window, "移除选中记录");
             check(recent.ItemCount == before - 1, "Remove updates only the selected history entry");

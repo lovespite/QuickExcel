@@ -61,7 +61,7 @@ public sealed partial class MainWindow
         Move(new(7, 1)); Up(new(7, 1));
         check(_grid.CellEditor.Text == "=SUM(A6:B8)" && _grid.IsEditing && _grid.CellEditor.IsKeyboardFocusWithin &&
             _grid.Current == new CellPosition(4, 4) && ReferenceEquals(before, Document.Snapshot),
-            "In-cell pointer drag preserves the editor, original owner and uncommitted draft");
+            $"In-cell pointer drag preserves the editor, original owner and uncommitted draft (text={_grid.CellEditor.Text}, editing={_grid.IsEditing}, focus={_grid.CellEditor.IsKeyboardFocusWithin}, current={_grid.Current}, sameSnapshot={ReferenceEquals(before, Document.Snapshot)}, pointerOver={_grid.CellEditor.IsPointerOver})");
         _grid.Cancel();
         check(ReferenceEquals(before, Document.Snapshot), "Cancelling a pointer-picked formula leaves the workbook unchanged");
 

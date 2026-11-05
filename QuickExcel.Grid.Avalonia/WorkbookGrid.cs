@@ -252,6 +252,24 @@ public sealed partial class WorkbookGrid : UserControl, IGridSurface, IDisposabl
         Canvas.SetLeft(CellEditor, rect.X); Canvas.SetTop(CellEditor, rect.Y);
         CellEditor.Width = Math.Max(1, Math.Min(rect.Width, _canvas.Bounds.Width - rect.X)); CellEditor.Height = Math.Max(1, Math.Min(rect.Height, _canvas.Bounds.Height - rect.Y));
         CellEditor.FontSize = 14 * _zoom;
+        var anchor = CellAnchor(_draftOwner);
+        var style = ResolveStyle?.Invoke(_snapshot, Sheet, anchor.Row, anchor.Column)
+            ?? TablePresentation.GetStyle(_snapshot, Sheet, anchor.Row, anchor.Column);
+        // Match the grid's effective style and General alignment, including merged anchors
+        // and inherited row/column formatting. Keep the native presenter responsible for caret/IME layout.
+        CellEditor.TextAlignment = style.Horizontal switch
+        {
+            2 => TextAlignment.Center,
+            3 => TextAlignment.Right,
+            0 when Sheet.GetCell(anchor.Row, anchor.Column)?.Value.Kind == CellValueKind.Number => TextAlignment.Right,
+            _ => TextAlignment.Left
+        };
+        CellEditor.VerticalContentAlignment = style.Vertical switch
+        {
+            0 => global::Avalonia.Layout.VerticalAlignment.Top,
+            1 => global::Avalonia.Layout.VerticalAlignment.Center,
+            _ => global::Avalonia.Layout.VerticalAlignment.Bottom
+        };
     }
     private CellPosition? Hit(Point point)
     {

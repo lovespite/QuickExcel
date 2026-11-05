@@ -198,6 +198,7 @@ public sealed partial class MainWindow
             await Capture("data-features");
             await RunScrollRangeChecksAsync(directory, Check);
             await Capture("bounded-scrollbars");
+            await RunCellEditorAlignmentChecksAsync(directory, Check);
         }
         catch (Exception ex) { error = ex; }
         await File.WriteAllTextAsync(Path.Combine(directory, "result.json"), JsonSerializer.Serialize(new { passed = error is null, checks, error = error?.ToString(),
