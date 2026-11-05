@@ -9,6 +9,8 @@ public readonly record struct CellRectangle(int Top, int Left, int Bottom, int R
     public int Columns => Right - Left + 1;
     public long Count => (long)Rows * Columns;
     public bool Contains(int row, int column) => row >= Top && row <= Bottom && column >= Left && column <= Right;
+    public bool Contains(CellRectangle other) => Contains(other.Top, other.Left) && Contains(other.Bottom, other.Right);
+    public CellRectangle Offset(int rows, int columns) => new(Top + rows, Left + columns, Bottom + rows, Right + columns);
     public static CellRectangle Parse(string reference)
     {
         if (FormulaSyntax.Parse("=" + reference) is not ReferenceNode node || node.Sheet is not null || node.WholeColumns)

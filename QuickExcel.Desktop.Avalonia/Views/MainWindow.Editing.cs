@@ -110,7 +110,7 @@ public sealed partial class MainWindow
         await _clipboard.WriteAsync(new(text, token, xml, html));
         _clipboardCells = capture; _clipboardToken = token; _clipboardAxes = axes;
         _clipboardSession = Document.Session.SessionId; _clipboardRevision = snapshot.Revision;
-        _status.Text = limitation is not null ? "已内部复制；未发布外部数据。" + limitation : cut ? "已准备内部剪切；跨应用粘贴仅复制，来源不会删除。Esc 取消。" :
+        _status.Text = limitation is not null ? (cut ? "已准备内部剪切，Esc 取消。" : "已内部复制。") + "未发布外部数据。" + limitation : cut ? "已准备内部剪切；跨应用粘贴仅复制，来源不会删除。Esc 取消。" :
             plain ? "已复制可见行显示文本。" : externalFormulas ? "已对外复制公式（相对引用）。" : valuesOnly ? "已复制类型化结果值。" : "已复制；对外粘贴结果值、格式和完整合并区域。";
     }
     private async Task PasteAsync(string mode)

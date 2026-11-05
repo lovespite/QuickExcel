@@ -157,67 +157,6 @@ public sealed class MoveAxisCommand(SheetId sheetId, SheetAxis axis, int start, 
     }
 }
 
-public sealed class MoveCellsCommand(SheetId sourceSheet, CellPosition first, CellPosition last,
-    SheetId destinationSheet, CellPosition destination) : DocumentCommand
-{
-    internal override CommandDraft Prepare(WorkbookSnapshot snapshot)
-    {
-        WorkbookLimits.ValidatePosition(first.Row, first.Column); WorkbookLimits.ValidatePosition(last.Row, last.Column);
-        if (first.Row > last.Row || first.Column > last.Column) throw new ArgumentException("移动区域顺序无效。");
-        WorkbookLimits.ValidatePosition(destination.Row, destination.Column);
-        var dr = destination.Row - first.Row; var dc = destination.Column - first.Column;
-        WorkbookLimits.ValidatePosition(last.Row + dr, last.Column + dc);
-        if (sourceSheet == destinationSheet && dr == 0 && dc == 0) return new(snapshot, [], false);
-        var source = snapshot.GetSheet(sourceSheet); var target = snapshot.GetSheet(destinationSheet);
-        if (!source.Data.IsEmpty || !target.Data.IsEmpty)
-            throw new NotSupportedException("含筛选或排序状态的工作表暂不支持移动单元格，请使用复制或清除数据区域状态；操作未应用。");
-        if (source.Printing.HasReferences || target.Printing.HasReferences)
-            throw new NotSupportedException("含打印区域或重复标题的工作表暂不支持移动单元格，请先使用复制；操作未应用。");
-        StructureEdits.RequireSimpleStructure(source); StructureEdits.RequireSimpleStructure(target);
-        bool Inside(CellPosition p) => p.Row >= first.Row && p.Row <= last.Row && p.Column >= first.Column && p.Column <= last.Column;
-        var sourceRange = new ReferenceNode(source.Name, first.Row, first.Column, last.Row, last.Column, IsRange: true);
-        FormulaNode Transform(FormulaNode node, SheetId context)
-        {
-            if (node is not ReferenceNode r) return node;
-            var name = r.Sheet ?? snapshot.GetSheet(context).Name;
-            if (!name.Equals(source.Name, StringComparison.OrdinalIgnoreCase)) return node;
-            var intersects = r.Row <= last.Row && r.EndRow >= first.Row && r.Column <= last.Column && r.EndColumn >= first.Column;
-            if (!intersects) return node;
-            if (!sourceRange.Contains(r.Row, r.Column) || !sourceRange.Contains(r.EndRow, r.EndColumn))
-                throw new NotSupportedException("移动仅覆盖了引用区域的一部分，无法保留连续区域语义，操作未应用。");
-            return r with { Sheet = target.Name, Row = r.Row + dr, EndRow = r.EndRow + dr, Column = r.Column + dc, EndColumn = r.EndColumn + dc };
-        }
-        var transformed = StructureEdits.Transform(snapshot, Transform);
-        var moved = transformed.GetSheet(sourceSheet).Cells.Where(p => Inside(p.Key)).ToArray();
-        var sheets = transformed.Sheets.Select(sheet =>
-        {
-            var cells = sheet.Cells.ToBuilder();
-            if (sheet.Id == sourceSheet) foreach (var p in sheet.Cells.Keys.Where(Inside)) cells.Remove(p);
-            if (sheet.Id == destinationSheet)
-            {
-                foreach (var p in sheet.Cells.Keys.Where(p => p.Row >= destination.Row && p.Row <= last.Row + dr && p.Column >= destination.Column && p.Column <= last.Column + dc)) cells.Remove(p);
-                foreach (var (p, original) in moved)
-                {
-                    var cell = original;
-                    if (cell.Content.Kind == CellContentKind.Formula && sourceSheet != destinationSheet)
-                    {
-                        var expression = FormulaSyntax.Map(FormulaSyntax.Parse(cell.Content.FormulaText), n => n switch
-                        {
-                            ReferenceNode r when r.Sheet is null => r with { Sheet = source.Name },
-                            NameNode n1 when n1.Sheet is null => n1 with { Sheet = source.Name },
-                            _ => n
-                        });
-                        cell = new(cell.Content.WithFormula("=" + FormulaSyntax.Print(expression)));
-                    }
-                    cells[new(p.Row + dr, p.Column + dc)] = cell;
-                }
-            }
-            return sheet.WithCells(cells.ToImmutable());
-        });
-        return StructureEdits.Draft(snapshot, transformed.WithSheets(sheets));
-    }
-}
-
 internal static class StructureEdits
 {
     internal static void RequireTransformableFunctions(WorkbookSnapshot snapshot)

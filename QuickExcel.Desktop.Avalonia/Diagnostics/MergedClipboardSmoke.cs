@@ -40,6 +40,26 @@ public sealed partial class MainWindow
                 "Single unmerged cell format paste unmerges the selected target and reveals its retained contents");
             await History(false);
             check(Document.Snapshot.Sheets[0].MergedCells.Contains("D4:E5"), "Format-paste unmerge is one undoable UI operation");
+
+            await ExecuteAsync(new SetCellsCommand([
+                new(new(sheet, 0, 2), CellInput.Parse("数量")), new(new(sheet, 1, 2), CellInput.Parse("7"))]));
+            await ExecuteAsync(new CreateTableCommand(sheet, new(0, 2, 1, 2), "Orders"));
+            await AddSheetAsync();
+            var destination = Document.Snapshot.ActiveSheetId;
+            await NavigateToAsync(sheet, new(0, 0, 1, 2));
+            await CopyAsync(true);
+            check(_clipboardCells?.IsCut == true && memory.Value.Token is not null,
+                "Cut prepares a typed internal move for a selection containing a merge and an Excel table");
+            await NavigateToAsync(destination, new(5, 4, 5, 4));
+            await PasteAsync("all");
+            var moved = Document.Snapshot.GetSheet(destination);
+            check(moved.MergedCells.Contains("E6:F7") && moved.Data.Tables.Single().Range == new CellRectangle(5, 6, 6, 6) &&
+                moved.GetCell(6, 6)!.Value == CellValue.FromNumber(7) && Document.Snapshot.GetSheet(sheet).Data.Tables.IsEmpty && _clipboardCells is null,
+                "Cross-sheet paste moves both structures and consumes the cut");
+            await History(false);
+            check(Document.Snapshot.GetSheet(sheet).Data.Tables.Single().Name == "Orders" && Document.Snapshot.GetSheet(sheet).MergedCells.Contains("A1:B2") &&
+                Document.Snapshot.GetSheet(destination).MergedCells.IsEmpty && Document.Snapshot.GetSheet(destination).Data.Tables.IsEmpty,
+                "One UI undo restores source and destination after a structured cut");
         }
         finally { _clipboard = originalClipboard; }
     }

@@ -101,7 +101,8 @@ internal static class XlsxTables
             var xml = new XElement(Main + "table", new XAttribute("id", table.Id), new XAttribute("name", Encode(table.Name)), new XAttribute("displayName", Encode(table.Name)), new XAttribute("ref", table.Range),
                 new XAttribute("headerRowCount", table.HeaderRow ? 1 : 0), new XAttribute("totalsRowCount", table.TotalsRow ? 1 : 0), new XAttribute("totalsRowShown", table.TotalsRowShown ? 1 : 0));
                 if (table.InsertRow) xml.Add(new XAttribute("insertRow", 1));
-            var sort = XlsxFiltering.WriteSort(table.Sort, styles); xml.Add(XlsxFiltering.WriteFilter(table.Filter, sort)); if (table.Filter is null) xml.Add(sort);
+            // Excel exposes the table's SortFields when sortState belongs to the table itself.
+            xml.Add(XlsxFiltering.WriteFilter(table.Filter, null), XlsxFiltering.WriteSort(table.Sort, styles));
             xml.Add(new XElement(Main + "tableColumns", new XAttribute("count", table.Columns.Length), table.Columns.Select(column =>
             {
                 var element = new XElement(Main + "tableColumn", new XAttribute("id", column.Id), new XAttribute("name", Encode(column.Name)));

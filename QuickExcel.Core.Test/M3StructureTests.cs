@@ -138,6 +138,7 @@ public sealed class M3StructureTests
         Assert.Equal(0, session.Revision); Assert.False(session.CanUndo);
         var merged = new WorksheetSnapshot(data.Id, data.Name, mergedCells: ["A1:B1"]);
         using var protectedSession = new DocumentSession(Book(merged));
-        Assert.Throws<NotSupportedException>(() => protectedSession.Execute(new MoveCellsCommand(data.Id, new(0, 0), new(0, 1), data.Id, new(1, 0))));
+        Assert.Throws<InvalidOperationException>(() => protectedSession.Execute(new MoveCellsCommand(data.Id, new(0, 0), new(0, 0), data.Id, new(1, 0))));
+        Assert.False(protectedSession.CanUndo);
     }
 }

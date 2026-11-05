@@ -133,12 +133,12 @@ public sealed class MergedClipboardTests
     }
 
     [Fact]
-    public void PartialMergeCaptureAndCutKeepTheirExplicitGuards()
+    public void PartialMergeCaptureRejectsBothCopyAndCut()
     {
         var book = MixedBook(); var id = book.Sheets[0].Id;
         Assert.Throws<InvalidOperationException>(() => WorkbookClipboard.Capture(book, id, new(0, 0, 0, 1)));
         Assert.Throws<InvalidOperationException>(() => WorkbookClipboard.Capture(book, id, new(1, 1, 2, 3)));
-        Assert.Throws<NotSupportedException>(() => WorkbookClipboard.Capture(book, id, new(0, 0, 1, 1), cut: true));
+        Assert.Throws<InvalidOperationException>(() => WorkbookClipboard.Capture(book, id, new(1, 1, 2, 3), cut: true));
     }
 
     [Theory]

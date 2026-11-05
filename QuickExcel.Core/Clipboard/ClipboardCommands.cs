@@ -46,16 +46,8 @@ public sealed class WorkbookClipboard
     {
         ValidateRange(range); var sheet = snapshot.GetSheet(sheetId);
         ExtendedObjectSafety.ValidateCopy(snapshot, sheetId, range);
-        if (cut) RequirePlainGeometry(sheet, range);
-        else { RequireCompleteMerges(sheet, range); RequireNoDrawings(sheet, range); }
-        RequireVisibleDimensions(sheet, range);
-        if (cut)
-            foreach (var (position,cell) in sheet.Cells.Where(p => p.Value.Calculation?.Array is not null))
-            {
-                var array = cell.Calculation!.Array!; var spill = new CellRectangle(position.Row,position.Column,position.Row + array.Rows - 1,position.Column + array.Columns - 1);
-                if (ValidationSafety.Overlaps(spill,range) && !(range.Contains(spill.Top,spill.Left) && range.Contains(spill.Bottom,spill.Right)))
-                    throw new InvalidOperationException("剪切需要包含整个数组溢出区域。");
-            }
+        if (cut) MoveCellsCommand.ValidateSource(snapshot, sheet, range);
+        else { RequireCompleteMerges(sheet, range); RequireNoDrawings(sheet, range); RequireVisibleDimensions(sheet, range); }
         return new(snapshot, sheet, range, cut);
     }
     internal static void ValidateRange(CellRectangle range)
@@ -72,9 +64,8 @@ public sealed class WorkbookClipboard
     }
     internal static void RequireCompleteMerges(WorksheetSnapshot sheet, CellRectangle range)
     {
-        if (sheet.MergedCells.Select(CellRectangle.Parse).Any(m => ValidationSafety.Overlaps(m, range) &&
-            !(range.Contains(m.Top, m.Left) && range.Contains(m.Bottom, m.Right))))
-            throw new InvalidOperationException("复制/粘贴区域必须包含完整的合并单元格；整批操作未应用。");
+        if (sheet.MergedCells.Select(CellRectangle.Parse).Any(m => ValidationSafety.Overlaps(m, range) && !range.Contains(m)))
+            throw new InvalidOperationException("选区必须包含完整的合并单元格；整批操作未应用。");
     }
     internal static void RequireNoDrawings(WorksheetSnapshot sheet, CellRectangle range)
     {
@@ -118,40 +109,24 @@ public sealed class PasteCellsCommand(WorkbookClipboard clipboard, SheetId sheet
         var single = destination.Top == destination.Bottom && destination.Left == destination.Right;
         var fill = clipboard.Rows == 1 && clipboard.Columns == 1 && !clipboard.IsCut;
         if (fill) { rows = destination.Bottom - destination.Top + 1; columns = destination.Right - destination.Left + 1; }
-        if (!single && !fill && (destination.Bottom - destination.Top + 1 != rows || destination.Right - destination.Left + 1 != columns))
+        var cutToMerge = clipboard.IsCut && !single && sheet.MergedCells.Select(CellRectangle.Parse).Contains(target);
+        if (!single && !fill && !cutToMerge && (destination.Rows != rows || destination.Columns != columns))
             throw new ArgumentException("选区尺寸须与粘贴数据相同，或只选择左上角单元格。");
         var output = new CellRectangle(destination.Top, destination.Left, checked(destination.Top + rows - 1), checked(destination.Left + columns - 1));
         WorkbookClipboard.ValidateRange(output);
-        if (clipboard.IsCut) WorkbookClipboard.RequirePlainGeometry(sheet, output);
-        else
-        {
-            if (!scalarMerge) WorkbookClipboard.RequireCompleteMerges(sheet, output);
-            WorkbookClipboard.RequireNoDrawings(sheet, scalarMerge ? target : output);
-        }
-        WorkbookClipboard.RequireVisibleDimensions(sheet, scalarMerge ? target : output);
-        if (mode is CellPasteMode.All or CellPasteMode.Formats && (clipboard.HasConditionalFormats ||
-            sheet.Data.ConditionalFormats.Any(r => r.Ranges.Any(a => ValidationSafety.Overlaps(a, output)))))
-            throw new NotSupportedException("完整/格式粘贴涉及条件格式，尚不能复制或拆分其作用范围；可明确选择只贴值或公式，规则可在条件格式管理器中编辑。");
         if (clipboard.IsCut)
         {
             if (mode != CellPasteMode.All || transpose) throw new NotSupportedException("剪切仅支持完整粘贴，不支持选择性粘贴或转置；源区域尚未修改。");
             if (expectedRevision != clipboard.Revision) throw new InvalidOperationException("剪切后文档已改变，请重新剪切。");
-            var source = snapshot.GetSheet(clipboard.SheetId);
-            for (var r = 0; r < rows; r++)
-            for (var c = 0; c < columns; c++)
-                if (!(source.Id == sheet.Id && clipboard.Range.Contains(output.Top + r, output.Left + c)) &&
-                    sheet.GetCell(output.Top + r, output.Left + c)?.Content.RichText is not null &&
-                    clipboard.Cells[r * clipboard.Columns + c].Content.RichText is null)
-                    throw new InvalidOperationException("剪切目标包含富文本，请先明确转换为普通文本；源区域尚未修改。");
-            // MoveCells preserves explicit styles. Inherited axis styles need separate move semantics.
-            if (Enumerable.Range(clipboard.Range.Top, clipboard.Rows).Any(r => source.Rows.GetValueOrDefault(r)?.ApplyStyle == true) ||
-                Enumerable.Range(clipboard.Range.Left, clipboard.Columns).Any(c => source.Columns.GetValueOrDefault(c)?.StyleId > 0) ||
-                Enumerable.Range(output.Top, rows).Any(r => sheet.Rows.GetValueOrDefault(r)?.ApplyStyle == true) ||
-                Enumerable.Range(output.Left, columns).Any(c => sheet.Columns.GetValueOrDefault(c)?.StyleId > 0))
-                throw new NotSupportedException("含整行/整列继承样式的区域暂不支持剪切；请使用复制。");
             return new MoveCellsCommand(clipboard.SheetId, new(clipboard.Range.Top, clipboard.Range.Left),
                 new(clipboard.Range.Bottom, clipboard.Range.Right), sheetId, new(output.Top, output.Left)).Prepare(snapshot);
         }
+        if (!scalarMerge) WorkbookClipboard.RequireCompleteMerges(sheet, output);
+        WorkbookClipboard.RequireNoDrawings(sheet, scalarMerge ? target : output);
+        WorkbookClipboard.RequireVisibleDimensions(sheet, scalarMerge ? target : output);
+        if (mode is CellPasteMode.All or CellPasteMode.Formats && (clipboard.HasConditionalFormats ||
+            sheet.Data.ConditionalFormats.Any(r => r.Ranges.Any(a => ValidationSafety.Overlaps(a, output)))))
+            throw new NotSupportedException("完整/格式粘贴涉及条件格式，尚不能复制或拆分其作用范围；可明确选择只贴值或公式，规则可在条件格式管理器中编辑。");
         if (mode == CellPasteMode.All && (clipboard.HasAnnotations ||
             sheet.Annotations.Links.Keys.Concat(sheet.Annotations.Notes.Keys).Any(p => output.Contains(p.Row, p.Column))))
             throw new NotSupportedException("完整粘贴涉及超链接/批注，尚不能安全变换附件；可明确选择只贴值、公式或格式。");
