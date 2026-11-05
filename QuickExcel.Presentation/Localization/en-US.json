@@ -2426,5 +2426,22 @@
   "脚本或光标所属模块已变化，请重新添加事件处理器。": "The script or cursor module changed. Add the event handler again.",
   "请先按 API v4 导出约定重写全部模块。此操作不转换源码；原签名和执行授权将失效。主入口只能绑定初始化，其余模块只能绑定一个角色。": "Rewrite all modules using API v4 export conventions first. This does not convert source; signatures and authorization will be invalidated. The main entry is for initialization; each other module has one role.",
   "请先按导出约定重写旧脚本，并选择“确认使用 API v4”。": "Rewrite legacy scripts using export conventions, then select Confirm API v4.",
-  "UDF 导出公式函数；Actions 导出 main；Events 导出约定名称的事件处理器；Common 通过 import 共享代码。各角色自动加载，不需要主入口导入。": "UDF exports formula functions; Actions exports main; Events exports named event handlers; Common shares imported code. Roles load automatically, independently of the main entry."
+  "UDF 导出公式函数；Actions 导出 main；Events 导出约定名称的事件处理器；Common 通过 import 共享代码。各角色自动加载，不需要主入口导入。": "UDF exports formula functions; Actions exports main; Events exports named event handlers; Common shares imported code. Roles load automatically, independently of the main entry.",
+  "数组：{0} 行 × {1} 列": "Array: {0} rows × {1} columns",
+  "引用包含未计算或过期结果；请先重新计算再求值。": "A reference has missing or stale results. Recalculate before evaluating.",
+  "当前单元格没有可显示的公式。": "This cell has no visible formula.",
+  "来源公式语义未完整支持；仅显示已有计算状态。": "Source formula semantics are not fully supported. Only existing calculation status is shown.",
+  "循环依赖无法逐步求值；请先修正引用。": "A circular dependency cannot be evaluated step by step. Correct the references first.",
+  "逐步求值超过分析预算。": "Step evaluation exceeded its analysis budget.",
+  "脚本、未知函数和时钟函数仅显示当前计算状态，不重新执行。": "Scripts, unknown functions and clock functions show their current status without running again.",
+  "展开后的子表达式": "Expanded subexpression",
+  "公式结果（数组溢出布局另行检查）": "Formula result (array spill placement is checked separately)",
+  "引用箭头": "Precedent arrows",
+  "从属箭头": "Dependent arrows",
+  "清除箭头": "Clear arrows",
+  "下一步求值": "Evaluate next step",
+  "重新查看步骤": "Restart steps",
+  "箭头仅连接当前视图可见的同表端点（最多 50 条）；跨表和视图外目标请用列表定位。错误列表最多显示 500 项，排除旧缓存。": "Arrows connect visible endpoints on this sheet (up to 50). Use lists for other sheets or offscreen targets. The error list shows up to 500 current errors, excluding stale caches.",
+  "当前错误单元格": "Current error cells",
+  "点击“下一步求值”按实际执行顺序查看子表达式；未选择的惰性分支不执行。": "Click Evaluate next step to inspect subexpressions in execution order. Unselected lazy branches do not run."
 }

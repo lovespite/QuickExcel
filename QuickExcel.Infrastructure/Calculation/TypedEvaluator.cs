@@ -18,6 +18,15 @@ internal sealed partial class TypedEvaluator(WorkbookSnapshot snapshot, IReadOnl
     internal bool ArrayMode { get; set; }
     internal Func<CellAddress, CellValue?>? DerivedValue { get; set; }
     internal Func<IEnumerable<CellAddress>>? DerivedPositions { get; set; }
+    internal Action<FormulaNode, string>? Trace { get; set; }
+    internal bool RequireCurrentInputs { get; set; }
+    internal static string Describe(object value) => value switch
+    {
+        CellValue scalar => CellInput.DisplayText(scalar) is { } text ? text.Length > 512 ? text[..512] + "…" : text : "",
+        FormulaArray array => MessageText.Format($"数组：{array.Rows} 行 × {array.Columns} 列") + " · " + CellInput.DisplayText(array[0, 0]),
+        Range range => FormulaSyntax.Print(range.Reference),
+        _ => ""
+    };
     internal object FormulaResult(FormulaNode node)
     {
         var value = Evaluate(node);
@@ -49,6 +58,22 @@ internal sealed partial class TypedEvaluator(WorkbookSnapshot snapshot, IReadOnl
 
     private object Evaluate(FormulaNode node)
     {
+        if (Trace is null) return EvaluateCore(node);
+        try
+        {
+            var value = EvaluateCore(node);
+            Trace(node, Describe(value));
+            return value;
+        }
+        catch (Exception ex) when (ex is FormulaValueException or FormatException or OverflowException or ArgumentException)
+        {
+            Trace(node, CellInput.DisplayText(Error(ex is FormulaValueException error ? error.Code : CellErrorCode.Value)));
+            throw;
+        }
+    }
+
+    private object EvaluateCore(FormulaNode node)
+    {
         check();
         switch (node)
         {
@@ -62,6 +87,8 @@ internal sealed partial class TypedEvaluator(WorkbookSnapshot snapshot, IReadOnl
                 if (spill.Operand is ValueNode { Value.Kind: CellValueKind.Error } error) return error.Value;
                 if (spill.Operand is not ReferenceNode anchor) return Error(CellErrorCode.Reference);
                 var targetSheet = snapshot.Sheets.First(s => s.Name.Equals(anchor.Sheet, StringComparison.OrdinalIgnoreCase));
+                if (RequireCurrentInputs && !results.ContainsKey(new(targetSheet.Id, anchor.Row, anchor.Column)) && targetSheet.GetCell(anchor.Row, anchor.Column)?.Content.Kind == CellContentKind.Formula)
+                    throw new InvalidOperationException(MessageText.Get("引用包含未计算或过期结果；请先重新计算再求值。"));
                 return results.TryGetValue(new(targetSheet.Id, anchor.Row, anchor.Column), out var result) && result.Array is { } spilled
                     ? spilled : Error(CellErrorCode.Reference);
             case UnaryNode unary:
@@ -88,6 +115,8 @@ internal sealed partial class TypedEvaluator(WorkbookSnapshot snapshot, IReadOnl
         if (results.TryGetValue(new(sheet.Id, row, column), out var calculated)) return calculated.Value ?? CellValue.Blank;
         if (DerivedValue?.Invoke(new(sheet.Id, row, column)) is { } derived) return derived;
         var cell = sheet.Cells.GetValueOrDefault(new(row, column));
+        if (RequireCurrentInputs && (cell?.SpillOwner is not null || cell?.Content.Kind == CellContentKind.Formula))
+            throw new InvalidOperationException(MessageText.Get("引用包含未计算或过期结果；请先重新计算再求值。"));
         if (cell?.SpillOwner is not null) return CellValue.Blank;
         if (cell?.Content.Kind == CellContentKind.Formula) throw new InvalidOperationException("依赖计划尝试读取尚未计算的公式。");
         return cell?.Value ?? CellValue.Blank;

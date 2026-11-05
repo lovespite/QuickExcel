@@ -102,6 +102,7 @@ public sealed partial class WorkbookGrid : UserControl, IGridSurface, IDisposabl
     public void Bind(WorkbookSnapshot snapshot, int sheetIndex, int rows, int columns, Guid sessionId, bool readOnly = false)
     {
         IsReadOnly = readOnly;
+        SetFormulaAuditArrows(null);
         ClearDrawingObjectSelection();
         Cancel(); ReleaseRendering(); _snapshot = snapshot; _sheetIndex = sheetIndex; _zoom = Sheet.View.Zoom / 100d;
         BindScrollExtent(sessionId);

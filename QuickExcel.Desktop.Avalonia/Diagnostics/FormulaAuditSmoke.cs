@@ -23,6 +23,8 @@ public sealed partial class MainWindow
             Check(((MenuItem)_menu.Items[3]!).Items.OfType<MenuItem>().Any(m => m.Name == "FormulaAuditMenu" && m.IsEnabled), "View menu exposes formula audit");
             await ShowFormulaAuditAsync(); var result = _formulaAudit!.Result!;
             Check(result.Precedents.Count == 1 && result.Dependents.Count == 2 && result.Formula == "=A1+1", "Audit shows direct references and same/cross-sheet consumers");
+            Check(_grid.FormulaAuditArrowCount == 1, "Audit connects precedent and origin with a grid arrow");
+            _formulaAudit.NextStep();
             var revision = Document.Snapshot.Revision; await _formulaAudit.NavigateAsync(result.Dependents.Single(t => t.Address.SheetId == add.Id));
             Check(Document.Snapshot.ActiveSheetId == add.Id && _grid.Current == new CellPosition(0, 0) && Document.Snapshot.Revision == revision, "Cross-sheet audit navigation does not dirty the workbook");
             await _formulaAudit.RefreshAsync(false, true);
@@ -34,6 +36,12 @@ public sealed partial class MainWindow
             var rejected = false; try { await _formulaAudit.NavigateAsync(old); } catch (InvalidOperationException) { rejected = true; }
             Check(rejected && Document.Snapshot.ActiveSheetId == add.Id, "Stale audit navigation requires selecting a refreshed result");
             _formulaAudit.Close(); Check(_formulaAudit is null, "Closing audit releases its refresh lifecycle");
+            Check(_grid.FormulaAuditArrowCount == 0, "Closing audit clears grid arrows");
+            await ExecuteAsync(new SetCellsCommand([new(new(add.Id, 3, 0), CellContent.FromFormula("=1/0"))])); await CalculatePendingAsync();
+            await ShowFormulaAuditAsync();
+            var errors = QuickExcel.Calculation.FormulaEvaluation.Errors(Document.Snapshot);
+            await _formulaAudit!.NavigateAsync(errors.Single());
+            Check(_grid.Current == new CellPosition(3, 0), "Current error list navigates to the failing cell");
         }
         catch (Exception ex) { failure = ex; }
         finally { _formulaAudit?.Close(); }

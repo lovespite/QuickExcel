@@ -242,6 +242,7 @@ public sealed partial class WorkbookGrid
         }
         if (FillHandle() is { } handle)
             context.DrawRectangle(Brushes.Teal, null, new Rect(handle.X / _zoom, handle.Y / _zoom, handle.Width / _zoom, handle.Height / _zoom));
+        PaintFormulaAuditArrows(context);
         RenderingTrace?.Invoke("selection-end", Stopwatch.GetTimestamp());
     }
 }
