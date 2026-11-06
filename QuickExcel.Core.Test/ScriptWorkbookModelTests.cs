@@ -131,7 +131,7 @@ public sealed class ScriptWorkbookModelTests
         using var doc = new WorkbookDocument(Book(Sheet("Data", (0, 0, N(5)), (1, 0, F(udf ? "=TWICE(A1)" : "=A1*2"))))
             .WithScriptModules(M4ActionTests.Actions(source, udf)),
             new(new TypedWorkbookStorage(), new WorkbookCalculator(new ScriptWorkerRuntimeFactory()), new ScriptWorkerActionExecutor()));
-        if (udf && fail) doc.Session.SetScriptsEnabled(true); // Also cover a cold formula worker started during the action.
+        if (udf) doc.Session.SetScriptsEnabled(true); // Cover successful reads and rollback with a cold formula worker.
         else doc.EnableScriptsAndCalculate();
         var revision = doc.Snapshot.Revision;
         var changes = new List<DocumentChange>(); doc.Session.Changed += (_, change) => changes.Add(change);

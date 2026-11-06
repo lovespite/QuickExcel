@@ -7,14 +7,14 @@ using QuickExcel.ScriptContracts;
 
 namespace QuickExcel.Runtime;
 
-/// <summary>Leases the isolated formula worker on Windows API v2; actions use a separate worker and context.
+/// <summary>Leases the isolated formula worker on Windows/macOS API v3/v4; actions use a separate worker and context.
 /// No in-process fallback or automatic replay.</summary>
 public sealed class ScriptWorkerRuntimeFactory(string? executablePath = null) : IScriptRuntimeFactory
 {
     private readonly string _executable = Path.GetFullPath(executablePath ??
         Path.Combine(AppContext.BaseDirectory, "ScriptWorker", OperatingSystem.IsWindows() ? "QuickExcel.ScriptWorker.exe" : "QuickExcel.ScriptWorker"));
     public IScriptRuntime Create(string source) => Create(new ScriptRuntimeRequest(source, new(Guid.NewGuid(), 0, 0, 0), TimeSpan.FromSeconds(5), default));
-    public IScriptRuntime Create(ScriptRuntimeRequest request) => OperatingSystem.IsWindows() && request.Modules.ScriptApiVersion is 3 or 4 && request.RuntimeLifetime.CanBeCanceled
+    public IScriptRuntime Create(ScriptRuntimeRequest request) => SharedScriptWorkers.CanReuse(request)
         ? SharedScriptWorkers.Acquire(_executable, request, actions: false) : ScriptWorkerRuntime.Start(_executable, request);
 
     /// <summary>Reclaims abandoned rounds for the current user, without executing scripts.</summary>
@@ -92,8 +92,8 @@ public sealed class ScriptWorkerRuntime : IScriptBatchRuntime
         if (request.Modules.Modules.Sum(m => (long)Encoding.UTF8.GetByteCount(m.Value.Source)) > 1024 * 1024)
             throw new ScriptRuntimeFailureException("SourceLimit", "脚本源码超过 1 MiB UTF-8 限额。");
         if (actionsMode && !request.Modules.HasActions) throw new InvalidOperationException("没有 actions 绑定。");
-        if (request.Modules.HasInitialization && !OperatingSystem.IsWindows())
-            throw new PlatformNotSupportedException("初始化主入口需要 Windows 持久隔离上下文；此平台尚未支持。");
+        if (request.Modules.HasInitialization && !SharedScriptWorkers.SupportedPlatform)
+            throw new PlatformNotSupportedException("初始化主入口需要持久隔离上下文；此平台尚未支持。");
         var compiled = ScriptCompilation.PrepareAsync(request.Modules, request.Stamp, request.CancellationToken).GetAwaiter().GetResult();
         var executableSources = compiled?.Result.Outputs.ToDictionary(o => o.Id, o => o.Javascript, StringComparer.Ordinal);
         var runtime = new ScriptWorkerRuntime(request, actionsMode, shared);
@@ -112,7 +112,7 @@ public sealed class ScriptWorkerRuntime : IScriptBatchRuntime
             runtime._deadline.CancelAfter(request.TimeLimit < TimeSpan.FromSeconds(5) ? request.TimeLimit : TimeSpan.FromSeconds(5));
             runtime._process = OperatingSystem.IsWindows() ? WorkerProcess.Start(executable, runtime._lifetime.Token) : OperatingSystem.IsLinux()
                 ? LinuxWorkerProcess.Start(executable, runtime._lifetime.Token) : OperatingSystem.IsMacOS()
-                ? MacWorkerProcess.Start(executable, runtime._lifetime.Token) : throw new PlatformNotSupportedException();
+                ? MacWorkerProcess.Start(executable, runtime._lifetime.Token, persistent: shared) : throw new PlatformNotSupportedException();
             runtime.ProcessId = runtime._process.Id;
             // This registration remains active between rounds, when the per-round registration is released.
             runtime._policyRegistration = runtime._processLifetime.Token.Register(runtime.Abort);
@@ -354,6 +354,7 @@ public sealed class ScriptWorkerRuntime : IScriptBatchRuntime
         {
             Abort();
             _request.CancellationToken.ThrowIfCancellationRequested();
+            _request.RuntimeLifetime.ThrowIfCancellationRequested();
             if (_deadline.IsCancellationRequested) throw new TimeoutException("脚本 worker 达到本轮时间上限，已终止；结果未提交。", e);
             throw new ScriptRuntimeFailureException(e is ProtocolException ? "Protocol" : "WorkerExit", "脚本 worker 退出或通信中断，本轮结果未提交。", e);
         }

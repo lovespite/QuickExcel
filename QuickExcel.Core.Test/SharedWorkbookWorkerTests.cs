@@ -11,22 +11,26 @@ namespace QuickExcel.Core.Test;
 
 public sealed class SharedWorkbookWorkerTests
 {
+    private static bool SupportedPlatform => OperatingSystem.IsWindows() || OperatingSystem.IsMacOS();
+    private static string WorkerExecutable => Path.Combine(AppContext.BaseDirectory, "ScriptWorker",
+        OperatingSystem.IsWindows() ? "QuickExcel.ScriptWorker.exe" : "QuickExcel.ScriptWorker");
+
     private static WorkbookDocument Document(string source) => new(Book(Sheet("Data")).WithScriptModules(M4ActionTests.Actions(source)),
         new(new TypedWorkbookStorage(), new WorkbookCalculator(new ScriptWorkerRuntimeFactory()), new ScriptWorkerActionExecutor()));
 
     private static int WorkerId(WorkbookDocument document, bool actions = true)
     {
         var request = document.Session.BeginCalculation();
-        using var lease = SharedScriptWorkers.Acquire(Path.Combine(AppContext.BaseDirectory, "ScriptWorker", "QuickExcel.ScriptWorker.exe"),
+        using var lease = SharedScriptWorkers.Acquire(WorkerExecutable,
             new ScriptRuntimeRequest(request.Snapshot.ScriptModules, request.Stamp, TimeSpan.FromSeconds(5), request.CancellationToken)
             { RuntimeLifetime = request.RuntimeLifetime }, actions);
         return lease.Runtime.ProcessId;
     }
 
     [Fact]
-    public async Task WindowsKeepsOneIsolatedProcessAndContextAcrossIdleTimeAndReleasesItWhenDisabled()
+    public async Task KeepsOneIsolatedProcessAndContextAcrossIdleTimeAndReleasesItWhenDisabled()
     {
-        if (!OperatingSystem.IsWindows()) return;
+        if (!SupportedPlatform) return;
         using var document = Document("let count=0; function main(workbook){ workbook.getActiveCell().setValue(++count); }");
         document.EnableScriptsAndCalculate();
         document.ListActions(); var first = WorkerId(document);
@@ -43,7 +47,7 @@ public sealed class SharedWorkbookWorkerTests
     [Fact]
     public void WorkbookStateIsSeparateAndFailureRebuildsTheContextWithoutReplayingWrites()
     {
-        if (!OperatingSystem.IsWindows()) return;
+        if (!SupportedPlatform) return;
         const string source = "let n=0; function main(workbook){ workbook.getActiveCell().setValue(++n); if(n===3) throw Error('fail'); }";
         using var first = Document(source); using var second = Document(source);
         first.EnableScriptsAndCalculate(); second.EnableScriptsAndCalculate();
@@ -59,7 +63,7 @@ public sealed class SharedWorkbookWorkerTests
     [Fact]
     public void StateOnlyActionsCannotChangeFormulaStateOrInvalidateItsCache()
     {
-        if (!OperatingSystem.IsWindows()) return;
+        if (!SupportedPlatform) return;
         var source = "let n=0; host.functions.register('STATE',()=>n); function main(){n++;}";
         using var doc = new WorkbookDocument(Book(Sheet("Data", (0, 0, F("=STATE()")))).WithScriptModules(M4ActionTests.Actions(source, true)),
             new(new TypedWorkbookStorage(), new WorkbookCalculator(new ScriptWorkerRuntimeFactory()), new ScriptWorkerActionExecutor()));
@@ -73,7 +77,7 @@ public sealed class SharedWorkbookWorkerTests
     [Fact]
     public void RejectedHostCommitDiscardsProvisionalExecutionStateWithoutPublishingWrites()
     {
-        if (!OperatingSystem.IsWindows()) return;
+        if (!SupportedPlatform) return;
         var source = """
             let n=0;
             host.functions.register('STATE',()=>n);
@@ -95,7 +99,7 @@ public sealed class SharedWorkbookWorkerTests
     [Fact]
     public void SharedModuleRoleCannotBeForgedByReplacingGlobalPropertiesOrRegisteringFromAnotherEntry()
     {
-        if (!OperatingSystem.IsWindows()) return;
+        if (!SupportedPlatform) return;
         var modules = new ScriptModuleSet(new Dictionary<string, ScriptModule>
         {
             ["a"] = new("scripts/a.js", "globalThis.__qxRegistrationRole=()=>3; host.functions.register('WRONG',()=>77); export function main(workbook){ workbook.getActiveCell().setValue(1); }"),
@@ -114,7 +118,7 @@ public sealed class SharedWorkbookWorkerTests
     [Fact]
     public void FormulaAndActionContextsAreBothReusedButTheirClosuresAndGlobalsAreSeparate()
     {
-        if (!OperatingSystem.IsWindows()) return;
+        if (!SupportedPlatform) return;
         const string source = """
             let calls=0;
             globalThis.marker=10;
@@ -140,7 +144,7 @@ public sealed class SharedWorkbookWorkerTests
     [Fact]
     public void FormulaWorkerDoesNotInitializeActionRootsAndCannotAccessWorkbookObjects()
     {
-        if (!OperatingSystem.IsWindows()) return;
+        if (!SupportedPlatform) return;
         var modules = new ScriptModuleSet(new Dictionary<string, ScriptModule>
         {
             ["actions"] = new("scripts/actions.js", "throw Error('action root must not run during calculation');"),
@@ -165,9 +169,11 @@ public sealed class SharedWorkbookWorkerTests
     [InlineData(true, true)]
     public async Task ReusableWorkerRejectsMixedBindingsAndChangingItsRole(bool actions, bool mixedBindings)
     {
-        if (!OperatingSystem.IsWindows()) return;
+        if (!SupportedPlatform) return;
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-        using var process = WorkerProcess.Start(Path.Combine(AppContext.BaseDirectory, "ScriptWorker", "QuickExcel.ScriptWorker.exe"), timeout.Token);
+        using IWorkerProcess process = OperatingSystem.IsWindows() ? WorkerProcess.Start(WorkerExecutable, timeout.Token)
+            : OperatingSystem.IsMacOS() ? MacWorkerProcess.Start(WorkerExecutable, timeout.Token, persistent: true)
+            : throw new PlatformNotSupportedException();
         var identity = M4ProtocolTests.Identity() with { CalculationGeneration = actions ? null : 1 };
         async Task Send<T>(string kind, T payload)
         {

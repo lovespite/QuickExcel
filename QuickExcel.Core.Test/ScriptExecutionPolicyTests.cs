@@ -26,7 +26,7 @@ public sealed class ScriptExecutionPolicyTests
     [Fact]
     public void DisablingKillsAnIdlePersistentWorkerBetweenRounds()
     {
-        if (!OperatingSystem.IsWindows()) return;
+        if (!OperatingSystem.IsWindows() && !OperatingSystem.IsMacOS()) return;
         var policy = ScriptExecutionPolicy.Current;
         var original = policy.UserSetting;
         using var session = new CancellationTokenSource();
@@ -36,7 +36,7 @@ public sealed class ScriptExecutionPolicyTests
             var modules = new ScriptModuleSet(new Dictionary<string, ScriptModule>
                 { ["main"] = new("scripts/main.js", "export function VALUE(){return 42;}") }, ["main"], scriptApiVersion: 4,
                 bindings: [new("main", "formula-functions")]);
-            var executable = Path.Combine(AppContext.BaseDirectory, "ScriptWorker", "QuickExcel.ScriptWorker.exe");
+            var executable = Path.Combine(AppContext.BaseDirectory, "ScriptWorker", OperatingSystem.IsWindows() ? "QuickExcel.ScriptWorker.exe" : "QuickExcel.ScriptWorker");
             var request = new ScriptRuntimeRequest(modules, new(Guid.NewGuid(), 0, 0, 0), TimeSpan.FromSeconds(5), default) { RuntimeLifetime = session.Token };
             var lease = SharedScriptWorkers.Acquire(executable, request, actions: false);
             var runtime = lease.Runtime;

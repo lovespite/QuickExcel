@@ -38,6 +38,18 @@ public sealed class ScriptWorkerActionExecutor(string? executablePath = null) : 
         linked.CancelAfter(TimeSpan.FromSeconds(5));
         linked.Token.ThrowIfCancellationRequested();
         if (request.Name is null) throw new InvalidOperationException("Missing action name.");
+        if (OperatingSystem.IsMacOS() && request.Model is not null && request.RuntimeLifetime.CanBeCanceled &&
+            request.ConsoleSource is null && request.Snapshot.ScriptModules.Bindings.Any(b => b.Kind == "formula-functions"))
+        {
+            // A live model read can calculate UDFs, including during v4 initialization.
+            // macOS's durable private-payload copy can exceed the native action's
+            // one-second budget. Prepare the separate persistent formula context
+            // before entering that operation, within the same five-second host
+            // deadline. No UDF is invoked and no calculation result is published.
+            using var formulas = SharedScriptWorkers.Acquire(_executable,
+                new ScriptRuntimeRequest(request.Snapshot.ScriptModules, request.Stamp, TimeSpan.FromSeconds(5), linked.Token)
+                { RuntimeLifetime = request.RuntimeLifetime }, actions: false);
+        }
         if (request.Model is null && request.Snapshot.Sheets.Sum(s => (long)s.Cells.Count) > ActionProtocol.MaxSnapshotCells)
             throw new InvalidOperationException("动作快照最多支持 100000 个存储单元格。");
         var snapshot = new ActionSnapshot(request.Stamp.InputRevision, request.Snapshot.DateSystem.ToString(), request.Snapshot.Sheets.Select(s => new ActionSheet(s.Id.ToString(), s.Name,

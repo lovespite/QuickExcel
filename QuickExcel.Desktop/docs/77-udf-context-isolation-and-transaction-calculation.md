@@ -2,6 +2,8 @@
 
 2026-11-04。更新 76 中的运行契约。文件 `scriptApiVersion` 保持 2；IPC 为 10（对象 API 见 [79](79-script-api-redesign.md)）；原生桥 ABI 和 `JavaScriptCore/2.54.2/b95c91b1/qx-sync-2` 标识不变。本次没有修改引擎、放松沙箱或新增进程内回退。
 
+2026-11-06 更新：以下 Windows 历史实现的两个持久上下文模型现已扩展至 macOS API v3/v4；当前入口规则见 [80](80-script-entrypoints-and-editor.md)，macOS 实现与验证见 [67](67-avalonia-platforms.md)。下文初始版本与历史验证记录保留。
+
 ## 两个持久上下文
 
 Windows API v2 的每个授权工作簿按角色惰性创建两个独立零能力 AppContainer worker：

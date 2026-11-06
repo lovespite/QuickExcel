@@ -28,9 +28,10 @@ internal sealed class MacWorkerProcess : IWorkerProcess
     [DllImport("/usr/lib/libproc.dylib", EntryPoint = "proc_pidpath")]
     private static extern int ProcessPath(int pid, byte[] buffer, uint size);
 
-    internal static MacWorkerProcess Start(string executable, CancellationToken cancellation, bool compilation = false)
+    internal static MacWorkerProcess Start(string executable, CancellationToken cancellation, bool compilation = false, bool persistent = false)
     {
         ScriptExecutionPolicy.Current.RequireEnabled();
+        if (compilation && persistent) throw new ArgumentException("Compiler workers cannot be persistent.");
         if (geteuid() == 0) throw new PlatformNotSupportedException("macOS worker 必须在普通用户会话中运行。");
         var child = new MacWorkerProcess();
         try
@@ -43,6 +44,7 @@ internal sealed class MacWorkerProcess : IWorkerProcess
             start.ArgumentList.Add(child.PayloadDirectory);
             start.ArgumentList.Add(Environment.ProcessId.ToString(CultureInfo.InvariantCulture));
             if (compilation) start.ArgumentList.Add("compile");
+            else if (persistent) start.ArgumentList.Add("persistent");
             cancellation.ThrowIfCancellationRequested();
             ScriptExecutionPolicy.Current.RequireEnabled();
             child._process = Process.Start(start) ?? throw new IOException("Cannot start macOS sandbox launcher.");

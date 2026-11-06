@@ -169,12 +169,18 @@ static void qx_require(int result, const char *operation) {
 }
 
 int main(int argc, char **argv) {
-    if ((argc != 3 && (argc != 4 || strcmp(argv[3], "compile"))) ||
+    if ((argc != 3 && (argc != 4 || (strcmp(argv[3], "compile") && strcmp(argv[3], "persistent")))) ||
         getuid() == 0 || getuid() != geteuid() || getgid() != getegid()) return 2;
-    const int compilation = argc == 4;
+    const int compilation = argc == 4 && !strcmp(argv[3], "compile");
+    const int persistent = argc == 4 && !strcmp(argv[3], "persistent");
     const pid_t parent = (pid_t)strtol(argv[2], NULL, 10);
     if (parent <= 1 || getppid() != parent) return 125;
     struct rlimit zero = {0, 0}, files = {128, 128}, cpu = {30, 31};
+    // RLIMIT_CPU counts all CPU time since launch, including successful earlier
+    // rounds. Persistent execution uses the same 1 s native operation / 5 s host
+    // round deadlines as Windows, not a cumulative process lifetime budget.
+    // The footprint/thread/parent watchdog remains active even between rounds.
+    if (persistent) cpu = (struct rlimit){RLIM_INFINITY, RLIM_INFINITY};
     qx_require(setrlimit(RLIMIT_CORE, &zero), "core limit");
     qx_require(setrlimit(RLIMIT_FSIZE, &zero), "file size limit");
     qx_require(setrlimit(RLIMIT_NOFILE, &files), "descriptor limit");

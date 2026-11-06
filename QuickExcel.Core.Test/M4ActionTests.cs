@@ -54,7 +54,7 @@ public sealed class M4ActionTests
     }
 
     [Fact]
-    public void WindowsWorkbookFunctionsAndActionsReuseSeparateStateAcrossRounds()
+    public void WorkbookFunctionsAndActionsReuseSeparateStateAcrossRounds()
     {
         var source = """
             let n=0;
@@ -65,8 +65,8 @@ public sealed class M4ActionTests
         doc.EnableScriptsAndCalculate(); Assert.Equal("1", doc.GetCellValue(0, 0, 0));
         Assert.Single(doc.ListActions()); Assert.Null(doc.Snapshot.Sheets[0].GetCell(0, 1));
         doc.RunAction("A"); Assert.Equal("1", doc.GetCellValue(0, 0, 1));
-        Assert.Equal(OperatingSystem.IsWindows(), doc.RunAction("A").Changed);
-        doc.Calculate(); Assert.Equal(OperatingSystem.IsWindows() ? "2" : "1", doc.GetCellValue(0, 0, 0));
+        Assert.Equal((OperatingSystem.IsWindows() || OperatingSystem.IsMacOS()), doc.RunAction("A").Changed);
+        doc.Calculate(); Assert.Equal((OperatingSystem.IsWindows() || OperatingSystem.IsMacOS()) ? "2" : "1", doc.GetCellValue(0, 0, 0));
     }
 
     [Theory]

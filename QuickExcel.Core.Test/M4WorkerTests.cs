@@ -68,7 +68,7 @@ public sealed class M4WorkerTests
         {
             var result = calculator.Calculate(session.BeginCalculation());
             Assert.Equal(0, result.Statistics!.ReusedCount);
-            Assert.Equal(CellValue.FromNumber(OperatingSystem.IsWindows() ? 3 + 4 * i : 3), C(result, sheet, 1).Value);
+            Assert.Equal(CellValue.FromNumber((OperatingSystem.IsWindows() || OperatingSystem.IsMacOS()) ? 3 + 4 * i : 3), C(result, sheet, 1).Value);
             Assert.True(session.TryCommitCalculation(result));
         }
     }
@@ -152,9 +152,11 @@ public sealed class M4WorkerTests
     [Fact]
     public async Task HostDeadlineKillsIdleWorkerWithoutAnotherInvocation()
     {
-        using var runtime = Create(IdentitySource, limit: TimeSpan.FromMilliseconds(800));
+        // macOS durably copies and hashes the self-contained payload before
+        // launch; allow that cold start to finish before checking idle expiry.
+        using var runtime = Create(IdentitySource, limit: OperatingSystem.IsMacOS() ? TimeSpan.FromSeconds(3) : TimeSpan.FromMilliseconds(800));
         using var process = Process.GetProcessById(runtime.ProcessId);
-        await process.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(3));
+        await process.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(5));
         Assert.Throws<TimeoutException>(() => runtime.Invoke("IDENTITY", [1d]));
     }
 

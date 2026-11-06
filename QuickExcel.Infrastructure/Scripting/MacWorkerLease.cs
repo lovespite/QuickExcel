@@ -6,7 +6,7 @@ using System.Text.Json;
 
 namespace QuickExcel.Runtime;
 
-/// <summary>Only journaled, exclusively leased macOS rounds may be reclaimed.</summary>
+/// <summary>Only journaled, exclusively leased macOS workers may be reclaimed.</summary>
 [SupportedOSPlatform("macos")]
 internal sealed class MacWorkerLease : IDisposable
 {
@@ -41,7 +41,7 @@ internal sealed class MacWorkerLease : IDisposable
 
     internal static MacWorkerLease Create(string executable, CancellationToken cancellation)
     {
-        using var gate = LockRoot();
+        using var gate = LockRoot(cancellation);
         RecoverLocked(cancellation);
         var id = Guid.NewGuid().ToString("N"); var directory = Path.Combine(Root, id);
         Directory.CreateDirectory(directory, PrivateDirectory);
@@ -96,15 +96,29 @@ internal sealed class MacWorkerLease : IDisposable
         return BitConverter.ToUInt64(buffer, StartTimeSecondsOffset) * 1_000_000UL + BitConverter.ToUInt64(buffer, StartTimeMicrosecondsOffset);
     }
     internal static int Recover(CancellationToken cancellation = default)
-    { using var gate = LockRoot(); return RecoverLocked(cancellation); }
-    private static FileStream LockRoot()
+    { using var gate = LockRoot(cancellation); return RecoverLocked(cancellation); }
+    private static FileStream LockRoot(CancellationToken cancellation = default)
     {
+        cancellation.ThrowIfCancellationRequested();
         NoLinks(Path.GetDirectoryName(Root)!);
         Directory.CreateDirectory(Root, PrivateDirectory); NoLinks(Root);
         if ((File.GetUnixFileMode(Root) & (UnixFileMode.GroupRead | UnixFileMode.GroupWrite | UnixFileMode.GroupExecute | UnixFileMode.OtherRead | UnixFileMode.OtherWrite | UnixFileMode.OtherExecute)) != 0)
             throw new IOException("macOS worker records require a private user directory.");
         var path = Path.Combine(Root, "root.lock"); NoLinks(path);
-        return new FileStream(path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
+        // Shared workers are cleaned up asynchronously on session invalidation.
+        // A new round (or the other role) may start while that cleanup holds the
+        // root lock. Serialize ownership changes, as on Windows, without making
+        // transient lock contention a script failure or bypassing the lease.
+        var timer = Stopwatch.StartNew();
+        while (true)
+        {
+            cancellation.ThrowIfCancellationRequested();
+            NoLinks(path);
+            try { return new FileStream(path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None); }
+            // Darwin reports flock contention as EWOULDBLOCK (35).
+            catch (IOException error) when ((error.HResult & 0xffff) == 35 && timer.Elapsed < TimeSpan.FromSeconds(5))
+            { cancellation.WaitHandle.WaitOne(20); }
+        }
     }
     private static int RecoverLocked(CancellationToken cancellation)
     {

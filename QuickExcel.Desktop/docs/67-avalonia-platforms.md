@@ -90,3 +90,23 @@ Linux 依赖、普通用户启动、自检与失败条件在 `scripts/README-ava
 macOS worker 已实现并通过本机工程检查，但签名/公证、签名包持久信任和物理门禁仍未完成，不能把本机自检当作完整平台验收。旧缓存保持 blocked/stale；没有证据时不扩大执行范围。App Sandbox/XPC 仍是未来可选架构；当前的 Seatbelt 路径必须保留默认拒绝、宿主核对、父进程/资源看门狗与负向证据，不能用普通子进程或仅列 entitlement 替代。依据：[Apple App Sandbox](https://developer.apple.com/library/archive/documentation/Miscellaneous/Reference/EntitlementKeyReference/Chapters/EnablingAppSandbox.html)、[XPC](https://developer.apple.com/documentation/xpc)。不把 Mac 完整支持标为完成。
 
 用户延期的是实机验证，不是降低隔离标准。当前工程包默认交付目标仍为 Windows，Linux 为受测 Ubuntu 候选；macOS 不在默认交付支持范围。A7 已清理 WPF 生产入口并保留归档回退，见 [68 号记录](68-avalonia-retirement.md)；Mac 设备/隔离工程和各平台实机门禁继续独立跟踪。Windows 原 M4/M5/M6 未关闭门槛保持原状态。
+
+
+## macOS worker 复用修复（3.8.1）
+
+2026-11-06。macOS API v3/v4 的授权工作簿接入与 Windows 相同的 `SharedScriptWorkers`：按 SessionId、授权生命周期 token 和角色分池，UDF 与 Actions/Events 各自惰性启动独立进程/JSC 上下文。成功的调用、批次、计算轮和空闲时间均保留上下文，避免每轮重新复制/校验完整载荷、启动进程和加载模块。API v4 初始化入口随 Actions/Events 上下文执行一次；失败、撤权、脚本修改和关闭沿用 Windows 的终止、事务回滚和禁止自动重放规则。控制台、无授权生命周期的显式调用、编译器和 Linux 路径仍保持一次性执行。
+
+macOS launcher 新增宿主选择的 `persistent` 模式。原来的 `RLIMIT_CPU=30/31s` 是进程启动以来的累计 CPU 时间，会误杀完成多次正常轮次的持久进程，因此只对持久执行取消该累计期限；一次性执行和编译器仍保留。每次原生操作一秒、每个活动轮最多五秒的宿主截止不变，空闲不消耗活动轮期限。Seatbelt 默认拒绝、源码发送前宿主核验、父进程退出、256 MiB footprint/32 线程轮询看门狗、私有只读载荷与登记租约均保留，空闲期间也继续受保护。该内存限制仍不是 cgroup 等价硬限，JSC-MEM-001 仍 OPEN。
+
+macOS 的实时动作在进入原生操作前准备独立 UDF 上下文（仅有 formula-functions 绑定、已授权且带实时模型的工作簿；不包括控制台）。私有载荷的持久复制可能超过一秒，不能留到动作中的模型回调才启动。准备仍计入动作原有五秒宿主期限，只加载模块、不调用 UDF 或发布计算结果。后续动作、事件和重算使用相同 UDF worker。初始化中的首次公式读取与动作内冷 UDF 写后读均覆盖这一时序。
+
+持久 worker 的异步退出清理与新启动可能竞争租约根锁；macOS 现在针对 Darwin EWOULDBLOCK 做有截止、可取消的等待，不绕过独占所有权。源码修改先取消 worker 生命周期时，正在执行的旧计算按过期请求处理，避免与计算轮取消的先后时序将其误报为 worker 通信故障。
+
+### 本次验证与交付
+
+- 原生 JSC 固定来源重建、macOS sandbox 重建通过；来源校验与原有签名/内存限制边界保持。
+- osx-arm64 / .NET 10 Release 定向测试 **147/147**，未运行全量回归。覆盖 API v3/v4 的 PID/闭包跨轮保留、空闲超过五秒、两个角色/不同工作簿隔离、源码失效/撤权/关闭清理、初始化不重放、冷 UDF 事务读取/回滚、控制台一次性状态、根锁竞争及取消、一次性/持久 worker 的超限分配，以及累计 **32 秒 CPU** 后仍复用同一 PID、随后无限循环仍触发超时终止。记录：`artifacts/test-results/macos-worker-reuse/worker-reuse-final.trx`；中间失败记录保留用于说明已修复的租约竞争、失效取消时序和冷启动计时问题。
+- 独立于测试/构建的真实 worker 小样本：每轮一个批次、**64 次简单 UDF 调用**；一次性路径 10 轮、10 个 PID，中位 **1659.309 ms/轮**；持久路径首轮 **1661.039 ms**，随后 30 轮仅 1 个 PID，中位 **1.341 ms/轮**。包括创建/取得 runtime、批次调用与释放轮次；所有返回值逐个校验。数据为自包含测试载荷，原始样本 `artifacts/test-results/macos-worker-reuse/performance.json`，采样程序在 `artifacts/macos-worker-probe/`。这衡量重复调用的启动开销，不是复杂工作簿整体性能结论。
+- macOS 生产发布成功，完整 worker、247 个离线 Web 资源、许可证及 macOS 对应源码齐全，无测试 fixture/诊断载荷。发布有两个既存 CS0649 警告（诊断关闭后的 WebScriptsOnly/WebModulesOnly），无错误；生产自检 **32/32**，新增覆盖原来只在 Windows 检查的 API v4 初始化/跨轮状态和 IStorage。候选与证据：`artifacts/avalonia/platform-releases/osx-arm64-worker-reuse-3.8.1/`。
+- 通过自检并逐文件校验后，已更新本地原始启动包 `artifacts/publish-mac-app`；`release.json` 为 **3.8.1 / passed**，入口为 `Start-QuickExcel.sh` 或 `QuickExcel.Avalonia`。旧包保留在上述候选目录的 `previous-publish-mac-app`，切换记录为 `activation.json`。既有 `.app` 预览归档不作为这次已更新的启动入口，签名/公证状态未改变。
+- 按仓库要求尝试 `scripts/build-quickexcel.ps1 -SkipTests -RunSmoke`，本机没有 `pwsh`，命令无法启动。Windows 包未发布或验证；本机原本没有 `artifacts/avalonia/active-windows.json`，本次也未创建或切换该指针。失败记录：`artifacts/test-results/macos-worker-reuse/windows-publish.log`。

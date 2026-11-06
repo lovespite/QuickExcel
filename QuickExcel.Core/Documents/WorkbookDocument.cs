@@ -209,7 +209,8 @@ public sealed class WorkbookDocument : IDisposable
             if (!committed) Session.InvalidateScriptRuntime(request.RuntimeLifetime);
             return committed;
         }
-        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested && request.CancellationToken.IsCancellationRequested)
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested &&
+            (request.CancellationToken.IsCancellationRequested || request.RuntimeLifetime.IsCancellationRequested))
         {
             Session.InvalidateScriptRuntime(request.RuntimeLifetime);
             return false; // Superseded/closed session: preserve the existing stale-result contract.

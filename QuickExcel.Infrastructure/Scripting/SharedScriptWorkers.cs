@@ -6,6 +6,10 @@ namespace QuickExcel.Runtime;
 /// Linux retains its existing OS-enforced five-second process lifetime.</summary>
 internal static class SharedScriptWorkers
 {
+    internal static bool SupportedPlatform => OperatingSystem.IsWindows() || OperatingSystem.IsMacOS();
+    internal static bool CanReuse(ScriptRuntimeRequest request) => SupportedPlatform &&
+        request.Modules.ScriptApiVersion is 3 or 4 && request.RuntimeLifetime.CanBeCanceled;
+
     private static readonly object Gate = new();
     private static readonly Dictionary<(Guid, CancellationToken, bool Actions), Entry> Entries = [];
     private sealed class Entry(string executable)
@@ -19,7 +23,7 @@ internal static class SharedScriptWorkers
     internal static ScriptWorkerLease Acquire(string executable, ScriptRuntimeRequest request, bool actions)
     {
         ScriptExecutionPolicy.Current.RequireEnabled();
-        if (!OperatingSystem.IsWindows() || request.Modules.ScriptApiVersion is not (3 or 4) || !request.RuntimeLifetime.CanBeCanceled)
+        if (!CanReuse(request))
         {
             var isolated = ScriptWorkerRuntime.Start(executable, request, actions);
             return new(isolated, isolated.Dispose);

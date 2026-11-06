@@ -87,7 +87,7 @@ public sealed partial class MainWindow
                 Check(Document.Undo(), "Published API v3 action undo");
             }
             var visualSheet = Document.Snapshot.ActiveSheetId;
-            if (OperatingSystem.IsWindows())
+            if (OperatingSystem.IsWindows() || OperatingSystem.IsMacOS())
             {
                 var startup = new ScriptModuleSet(new Dictionary<string, ScriptModule>
                 {

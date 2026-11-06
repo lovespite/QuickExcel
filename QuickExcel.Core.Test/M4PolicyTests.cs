@@ -41,7 +41,7 @@ public sealed class M4PolicyTests
         for (var i = 0; i < 2; i++)
         {
             var result = calculator.Calculate(session.BeginCalculation());
-            var offset = OperatingSystem.IsWindows() ? i * 2 : 0;
+            var offset = (OperatingSystem.IsWindows() || OperatingSystem.IsMacOS()) ? i * 2 : 0;
             Assert.Equal(CellValue.FromNumber(2 + offset), C(result, sheet).Value);
             Assert.Equal(CellValue.FromNumber(3 + offset), C(result, sheet, 1).Value);
             Assert.Equal(CellValue.FromNumber(5 + offset * 2), C(result, sheet, 2).Value);
