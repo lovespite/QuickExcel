@@ -5,7 +5,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AssemblyName>QuickExcel.Avalonia</AssemblyName>
-    <Version>3.7.0</Version>
+    <Version>3.8.0</Version>
     <QuickExcelDiagnostics Condition="'$(QuickExcelDiagnostics)' == ''">true</QuickExcelDiagnostics>
     <DefineConstants Condition="'$(QuickExcelDiagnostics)' == 'true'">$(DefineConstants);QUICKEXCEL_DIAGNOSTICS</DefineConstants>
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
@@ -33,8 +33,12 @@
          be stale or modified; it must not win over the generated source bundle. -->
     <None Include="../artifacts/avalonia/web/**/*" Link="Web/%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="IfDifferent" CopyToPublishDirectory="IfDifferent" />
   </ItemGroup>
-  <!-- macOS remains a no-script preview until its separate sandbox is qualified. -->
-  <Import Project="../scripts/ScriptWorker.targets" Condition="'$(RuntimeIdentifier)' != 'osx-arm64' and '$(RuntimeIdentifier)' != 'osx-x64'" />
+  <!-- macOS arm64 uses the same isolated worker with a Seatbelt profile. The
+       host loads the sandbox-check wrappers from the same signed library. -->
+  <Import Project="../scripts/ScriptWorker.targets" Condition="'$(RuntimeIdentifier)' != 'osx-x64'" />
+  <ItemGroup Condition="'$(RuntimeIdentifier)' == 'osx-arm64' or ('$(RuntimeIdentifier)' == '' and $([MSBuild]::IsOSPlatform('OSX')))">
+    <None Include="../artifacts/native/osx-arm64/libquickexcel-sandbox.dylib" Link="libquickexcel-sandbox.dylib" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
   <ItemGroup Condition="'$(QuickExcelDiagnostics)' != 'true'">
     <Compile Remove="Diagnostics/**/*.cs" />
   </ItemGroup>

@@ -192,7 +192,7 @@ public sealed class M4ActionTests
     [InlineData("model-method")] [InlineData("model-sheet")] [InlineData("model-value")]
     public void FaultyWorkerCannotBypassProtocolOrHostValidation(string fault)
     {
-        var executor = new ScriptWorkerActionExecutor(Path.Combine(AppContext.BaseDirectory, "WorkerFixture", "WorkerFixture.exe"));
+        var executor = new ScriptWorkerActionExecutor(Path.Combine(AppContext.BaseDirectory, "Fixtures", "WorkerFixture", "WorkerFixture.exe"));
         using var doc = new WorkbookDocument(Book(Sheet("S", (0, 0, N(42)))).WithScriptModules(Actions(fault)), Services(executor));
         doc.EnableScriptsAndCalculate(); var revision = doc.Snapshot.Revision;
         Assert.NotNull(Record.Exception(() => doc.RunAction("A")));

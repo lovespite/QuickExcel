@@ -6,7 +6,7 @@ namespace QuickExcel.Core.Test;
 public sealed class M4WorkerFaultTests
 {
     private static ScriptWorkerRuntime Create(string mode) => (ScriptWorkerRuntime)new ScriptWorkerRuntimeFactory(
-        Path.Combine(AppContext.BaseDirectory, "WorkerFixture", "WorkerFixture.exe")).Create(new ScriptRuntimeRequest(
+        Path.Combine(AppContext.BaseDirectory, "Fixtures", "WorkerFixture", "WorkerFixture.exe")).Create(new ScriptRuntimeRequest(
             mode, new(Guid.NewGuid(), 1, 2, 3), TimeSpan.FromSeconds(2), default));
 
     [Theory]

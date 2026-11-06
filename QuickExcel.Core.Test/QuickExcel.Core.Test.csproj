@@ -13,8 +13,8 @@
     <Compile Remove="SandboxHostFixture\**\*.cs" />
     <Compile Remove="RecoveryFixture\**\*.cs" />
     <ProjectReference Include="RecoveryFixture\RecoveryFixture.csproj" ReferenceOutputAssembly="false" />
-    <ProjectReference Include="WorkerFixture\WorkerFixture.csproj" ReferenceOutputAssembly="false" />
-    <ProjectReference Include="SandboxHostFixture\SandboxHostFixture.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="WorkerFixture\WorkerFixture.csproj" ReferenceOutputAssembly="false" Condition="'$(RuntimeIdentifier)' != 'osx-arm64'" />
+    <ProjectReference Include="SandboxHostFixture\SandboxHostFixture.csproj" ReferenceOutputAssembly="false" Condition="'$(RuntimeIdentifier)' != 'osx-arm64'" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
     <PackageReference Include="xunit" Version="2.9.3" />
     <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
@@ -27,14 +27,14 @@
     <MSBuild Projects="RecoveryFixture\RecoveryFixture.csproj" Targets="GetFixturePayload" Properties="Configuration=$(Configuration);RuntimeIdentifier=$(RuntimeIdentifier)">
       <Output TaskParameter="TargetOutputs" ItemName="RecoveryFixturePayload" />
     </MSBuild>
-    <Copy SourceFiles="@(RecoveryFixturePayload)" DestinationFolder="$(TargetDir)RecoveryFixture" SkipUnchangedFiles="true" />
-    <MSBuild Projects="WorkerFixture\WorkerFixture.csproj" Targets="GetFixturePayload" Properties="Configuration=$(Configuration);RuntimeIdentifier=$(RuntimeIdentifier)">
+    <Copy SourceFiles="@(RecoveryFixturePayload)" DestinationFolder="$(TargetDir)Fixtures/RecoveryFixture" SkipUnchangedFiles="true" />
+    <MSBuild Projects="WorkerFixture\WorkerFixture.csproj" Targets="GetFixturePayload" Properties="Configuration=$(Configuration);RuntimeIdentifier=$(RuntimeIdentifier)" Condition="'$(RuntimeIdentifier)' != 'osx-arm64'">
       <Output TaskParameter="TargetOutputs" ItemName="TestFixturePayload" />
     </MSBuild>
-    <Copy SourceFiles="@(TestFixturePayload)" DestinationFolder="$(TargetDir)WorkerFixture" SkipUnchangedFiles="true" />
-    <MSBuild Projects="SandboxHostFixture\SandboxHostFixture.csproj" Targets="GetFixturePayload" Properties="Configuration=$(Configuration);RuntimeIdentifier=$(RuntimeIdentifier)">
+    <Copy SourceFiles="@(TestFixturePayload)" DestinationFolder="$(TargetDir)Fixtures/WorkerFixture" SkipUnchangedFiles="true" Condition="'$(RuntimeIdentifier)' != 'osx-arm64'" />
+    <MSBuild Projects="SandboxHostFixture\SandboxHostFixture.csproj" Targets="GetFixturePayload" Properties="Configuration=$(Configuration);RuntimeIdentifier=$(RuntimeIdentifier)" Condition="'$(RuntimeIdentifier)' != 'osx-arm64'">
       <Output TaskParameter="TargetOutputs" ItemName="SandboxHostFixturePayload" />
     </MSBuild>
-    <Copy SourceFiles="@(SandboxHostFixturePayload)" DestinationFolder="$(TargetDir)SandboxHostFixture" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(SandboxHostFixturePayload)" DestinationFolder="$(TargetDir)Fixtures/SandboxHostFixture" SkipUnchangedFiles="true" Condition="'$(RuntimeIdentifier)' != 'osx-arm64'" />
   </Target>
 </Project>

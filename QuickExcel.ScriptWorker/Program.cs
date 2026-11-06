@@ -9,8 +9,8 @@ using QuickExcel.Scripting;
 if (args.SequenceEqual(["--compile"])) return await CompilerWorker.Run();
 if (args.Length != 0 || !Console.IsInputRedirected || !Console.IsOutputRedirected) return 2;
 // No request, source, or native JavaScript is accepted before the mandatory
-// Linux OS guard verifies launch restrictions and synchronizes the final filter.
-try { LinuxWorkerGuard.Enter(); } catch { return 125; }
+// platform guard verifies launch restrictions and applies the final filter.
+try { WorkerGuard.Enter(); } catch { return 125; }
 using var input = Console.OpenStandardInput();
 using var output = Console.OpenStandardOutput();
 JscSession? runtime = null;

@@ -134,7 +134,10 @@ public sealed partial class MainWindow
             Check(visualModel.Data.ConditionalFormats.Zip(visualReopened.Sheets[0].Data.ConditionalFormats).All(p => p.First.ContentEquals(p.Second)) &&
                 visualReopened.Sheets[0].Data.ConditionalFormats.Length == 3, "Published visual conditional rules save/reopen");
             Synchronize();
-            await OpenPrintPreviewAsync(); Check(_pdfPage!.Browser.IsReady && _printSession!.Job.Layout.Pages.Length > 0, "Production PDF.js worker and complete print-session PDF");
+            for (var wait = 0; wait < 250 && _execution.IsRunning; wait++) await Task.Delay(20);
+            Check(!_execution.IsRunning, "Pending calculation settled before print preview");
+            await OpenPrintPreviewAsync(); Check(_pdfPage is not null && _printSession is not null, "Production print preview was created");
+            Check(_pdfPage!.Browser.IsReady && _printSession!.Job.Layout.Pages.Length > 0, "Production PDF.js worker and complete print-session PDF");
             await _printSession!.ExportAsync(Path.Combine(directory, "installation.pdf"));
             await ClosePrintPreviewAsync(); Check(true, "PDF export and browser/resource cleanup");
             await _workspace.OpenAsync(new(file), readOnly: true);
@@ -144,7 +147,10 @@ public sealed partial class MainWindow
             try { Document.SetCell(0, 0, 0, "must not change"); }
             catch (InvalidOperationException) { blocked = true; }
             Check(blocked && !Document.IsDirty && Document.GetCellInput(0, 0, 0) == "安装检查 中文 123", "Read-only session rejects edits without changing the source");
+            for (var wait = 0; wait < 250 && _execution.IsRunning; wait++) await Task.Delay(20);
+            Check(!_execution.IsRunning, "Read-only workbook finished its pending calculation before print preview");
             await OpenPrintPreviewAsync();
+            Check(_pdfPage is not null && _printSession is not null, "Read-only workbook print preview was created");
             Check(_pdfPage!.Browser.IsReady && _printSession!.Job.Layout.Pages.Length > 0, "Read-only workbook retains print preview");
             await ClosePrintPreviewAsync();
             await _workspace.SaveAsync(new(Path.Combine(directory, "editable-copy.xlsq")));

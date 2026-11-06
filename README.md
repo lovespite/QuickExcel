@@ -4,7 +4,7 @@
 
 2026-11-03：JSC / TypeScript 已完成 70 号方案 J0–J6，Windows 默认包已切换为 `0.6.0-preview.8`，Linux 已独立验证；实现、发布与回退证据见 [71 号记录](QuickExcel.Desktop/docs/71-jsc-typescript-implementation-log.md)。64 MiB 引擎硬限额 `JSC-MEM-001` 保持开放，按用户要求延期且不阻止后续工作。
 
-Avalonia 迁移：Windows A0–A5 工程切换完成，A7 已移除 WPF 生产入口。Linux 有受测 Ubuntu 候选包；macOS worker 未实现，脚本保持关闭。实机验证按用户要求延期，详见 [平台状态](QuickExcel.Desktop/docs/67-avalonia-platforms.md) 与 [收尾记录](QuickExcel.Desktop/docs/68-avalonia-retirement.md)。
+Avalonia 迁移：Windows A0–A5 工程切换完成，A7 已移除 WPF 生产入口。Linux 有受测 Ubuntu 候选包；macOS arm64 已实现隔离 worker 并通过本机发布自检，签名/公证和实机验证仍延期，详见 [平台状态](QuickExcel.Desktop/docs/67-avalonia-platforms.md) 与 [收尾记录](QuickExcel.Desktop/docs/68-avalonia-retirement.md)。
 
 2026-10-30 进度同步：M1–M3 受支持子集已交付，当前处于 **M5 桌面交互收敛**；M4 严格策略/部署与 M6 恢复/发布验收仍未完成。当前状态与后续顺序统一见 [实施计划](QuickExcel.Desktop/docs/05-implementation-plan.md)。
 
@@ -66,6 +66,6 @@ dotnet run --project .\QuickExcel.Scripting\smoke\QuickExcel.Scripting.Smoke.csp
 
 当前计算范围、脚本描述符与验收见 [M3 支持矩阵](QuickExcel.Desktop/docs/10-m3-calculation.md)。
 
-Linux 发布使用 `scripts/publish-avalonia-unix.ps1 -Rid linux-x64 -CreateArchive`，先在目标平台构建固定来源 native。Linux worker 必须通过 Landlock/seccomp/cgroup 的逐轮核验，Secret Service 不可用时不持久信任。macOS 发布工具只准备工程预览，不能据此声明平台支持。
+Linux 发布使用 `scripts/publish-avalonia-unix.ps1 -Rid linux-x64 -CreateArchive`，先在目标平台构建固定来源 native。Linux worker 必须通过 Landlock/seccomp/cgroup 的逐轮核验，Secret Service 不可用时不持久信任。macOS arm64 使用同一脚本的 `-Rid osx-arm64`（需要 PowerShell 7）；worker 使用默认拒绝的 Seatbelt、宿主核对和父进程/资源看门狗，内存上限是轮询看门狗而非 cgroup 硬限。签名/公证与签名包持久信任尚未验证，不能据此声明完整平台支持。
 
 WPF 源码保存在标签 `avalonia-wpf-baseline-20261102`，受测归档包与校验清单在 `artifacts/avalonia/rollback`。回退用 `scripts/select-quickexcel-package.ps1 -PackageDirectory <归档目录>`；不重新编译或在当前宿主中加载 WPF。

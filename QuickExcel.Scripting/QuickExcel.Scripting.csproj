@@ -9,21 +9,25 @@
     <QuickExcelNativeLibrary Condition="'$(QuickExcelNativeRid)' == 'win-x64'">$(QuickExcelJscDirectory)/JavaScriptCore.dll</QuickExcelNativeLibrary>
     <QuickExcelJscLinuxDirectory>$(MSBuildProjectDirectory)/../artifacts/jsc/build/linux-x64/payload</QuickExcelJscLinuxDirectory>
     <QuickExcelNativeLibrary Condition="'$(QuickExcelNativeRid)' == 'linux-x64'">$(QuickExcelJscLinuxDirectory)/libJavaScriptCore.so</QuickExcelNativeLibrary>
+    <QuickExcelJscMacDirectory>$(MSBuildProjectDirectory)/../artifacts/jsc/build/osx-arm64/payload</QuickExcelJscMacDirectory>
+    <QuickExcelNativeLibrary Condition="'$(QuickExcelNativeRid)' == 'osx-arm64'">$(QuickExcelJscMacDirectory)/libJavaScriptCore.dylib</QuickExcelNativeLibrary>
     <!-- Identity is the successful build stamp; an unchanged Ninja output keeps
          its older timestamp. Missing library leaves the stamp empty and rebuilds. -->
     <QuickExcelJscBuildStamp Condition="Exists('$(QuickExcelNativeLibrary)')">$(QuickExcelJscDirectory)/../identity.json</QuickExcelJscBuildStamp>
+    <QuickExcelJscBuildStamp Condition="Exists('$(QuickExcelNativeLibrary)') and '$(QuickExcelNativeRid)' == 'osx-arm64'">$(QuickExcelJscMacDirectory)/identity.txt</QuickExcelJscBuildStamp>
   </PropertyGroup>
   <ItemGroup>
     <Compile Remove="smoke\**\*.cs" />
     <EmbeddedResource Include="capabilities.json" LogicalName="QuickExcel.Scripting.capabilities.json" />
     <None Condition="'$(QuickExcelNativeLibrary)' != ''" Include="$(QuickExcelNativeLibrary)" Link="%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
-  <ItemGroup Condition="'$(QuickExcelNativeRid)' == 'win-x64' or '$(QuickExcelNativeRid)' == 'linux-x64'">
+  <ItemGroup Condition="'$(QuickExcelNativeRid)' == 'win-x64' or '$(QuickExcelNativeRid)' == 'linux-x64' or '$(QuickExcelNativeRid)' == 'osx-arm64'">
     <None Include="../artifacts/jsc/compiler/typescript.bundle.json" Link="typescript.bundle.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <None Include="$(QuickExcelJscDirectory)/icudt77.dll;$(QuickExcelJscDirectory)/icuin77.dll;$(QuickExcelJscDirectory)/icuuc77.dll;$(QuickExcelJscDirectory)/msvcp140.dll;$(QuickExcelJscDirectory)/msvcp140_2.dll;$(QuickExcelJscDirectory)/vcruntime140.dll;$(QuickExcelJscDirectory)/vcruntime140_1.dll" Link="%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" Condition="'$(QuickExcelNativeRid)' == 'win-x64'" />
     <None Include="$(QuickExcelJscDirectory)/../identity.json" Link="JSC-BUILD-IDENTITY.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" Condition="'$(QuickExcelNativeRid)' == 'win-x64'" />
     <None Include="$(QuickExcelJscLinuxDirectory)/libicudata.so.77;$(QuickExcelJscLinuxDirectory)/libicuuc.so.77;$(QuickExcelJscLinuxDirectory)/libicui18n.so.77" Link="%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" Condition="'$(QuickExcelNativeRid)' == 'linux-x64'" />
     <None Include="$(QuickExcelJscLinuxDirectory)/../identity.txt" Link="JSC-BUILD-IDENTITY.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" Condition="'$(QuickExcelNativeRid)' == 'linux-x64'" />
+    <None Include="$(QuickExcelJscMacDirectory)/identity.txt" Link="JSC-BUILD-IDENTITY.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" Condition="'$(QuickExcelNativeRid)' == 'osx-arm64'" />
   </ItemGroup>
   <Target Name="BuildJscNative" BeforeTargets="PrepareForBuild" Condition="$([MSBuild]::IsOSPlatform('Windows')) and '$(QuickExcelNativeRid)' == 'win-x64'"
           Inputs="$(MSBuildProjectDirectory)/native/jsc/bridge.cpp;$(MSBuildProjectDirectory)/native/jsc/build.ps1;$(MSBuildProjectDirectory)/../tools/QuickExcel.JscProbe/build.ps1;$(MSBuildProjectDirectory)/../tools/QuickExcel.JscProbe/prepare.py;$(MSBuildProjectDirectory)/../tools/QuickExcel.JscProbe/sources.json;$(MSBuildProjectDirectory)/../tools/QuickExcel.JscProbe/windows-sources.json;$(MSBuildProjectDirectory)/../tools/QuickExcel.JscProbe/source-adjustments.json;$(MSBuildProjectDirectory)/../tools/QuickExcel.JscProbe/CMakeLists.txt;$(MSBuildProjectDirectory)/../tools/QuickExcel.JscProbe/cmake-hook.cmake"
@@ -31,7 +35,7 @@
     <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)/native/jsc/build.ps1&quot;" />
   </Target>
   <Target Name="RequireJscNative" BeforeTargets="PrepareForBuild" DependsOnTargets="BuildJscNative">
-    <Error Condition="'$(QuickExcelNativeLibrary)' == '' and '$(QuickExcelNativeRid)' != 'osx-arm64' and '$(QuickExcelNativeRid)' != 'osx-x64'" Text="Unsupported native bridge RID: $(QuickExcelNativeRid)." />
-    <Error Condition="'$(QuickExcelNativeLibrary)' != '' and !Exists('$(QuickExcelNativeLibrary)')" Text="Build the pinned JSC native payload with QuickExcel.Scripting/native/jsc/build.ps1 or build-linux.sh on the target platform first." />
+    <Error Condition="'$(QuickExcelNativeLibrary)' == ''" Text="Unsupported native bridge RID: $(QuickExcelNativeRid)." />
+    <Error Condition="'$(QuickExcelNativeLibrary)' != '' and !Exists('$(QuickExcelNativeLibrary)')" Text="Build the pinned JSC native payload with QuickExcel.Scripting/native/jsc/build.ps1, build-linux.sh or build-macos.sh on the target platform first." />
   </Target>
 </Project>

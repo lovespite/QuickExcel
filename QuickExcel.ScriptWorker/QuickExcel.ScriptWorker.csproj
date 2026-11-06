@@ -13,6 +13,9 @@
   <ItemGroup Condition="'$(RuntimeIdentifier)' == 'linux-x64' or ('$(RuntimeIdentifier)' == '' and $([MSBuild]::IsOSPlatform('Linux')))">
     <None Include="../artifacts/native/linux-x64/quickexcel-sandbox;../artifacts/native/linux-x64/libquickexcel-sandbox.so" Link="%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
+  <ItemGroup Condition="'$(RuntimeIdentifier)' == 'osx-arm64' or ('$(RuntimeIdentifier)' == '' and $([MSBuild]::IsOSPlatform('OSX')))">
+    <None Include="../artifacts/native/osx-arm64/quickexcel-sandbox;../artifacts/native/osx-arm64/libquickexcel-sandbox.dylib;../artifacts/native/osx-arm64/sandbox-build-identity.txt" Link="%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
   <Target Name="GetWorkerPayload" Returns="@(WorkerPayload)">
     <ItemGroup><WorkerPayload Include="$(TargetDir)*" Exclude="$(TargetDir)*.pdb" /></ItemGroup>
   </Target>

@@ -10,9 +10,13 @@ namespace QuickExcel.Desktop.Avalonia;
 
 internal static class DesktopServices
 {
-    // Linux verifies the actual kernel/cgroup protection on every launch.
-    internal static bool SupportsScripts => (OperatingSystem.IsWindows() || OperatingSystem.IsLinux()) &&
-        System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture == System.Runtime.InteropServices.Architecture.X64;
+    // Linux verifies the actual kernel/cgroup protection on every launch; macOS
+    // verifies the Seatbelt profile and its polling limits on every launch.
+    internal static bool SupportsScripts =>
+        (OperatingSystem.IsWindows() || OperatingSystem.IsLinux()) &&
+        System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture == System.Runtime.InteropServices.Architecture.X64 ||
+        OperatingSystem.IsMacOS() &&
+        System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture == System.Runtime.InteropServices.Architecture.Arm64;
     public static WorkbookServices Create() => new(new TypedWorkbookStorage(),
         new WorkbookCalculator(SupportsScripts ? new ScriptWorkerRuntimeFactory() : new UnavailableScripts()),
         SupportsScripts ? new ScriptWorkerActionExecutor() : null);

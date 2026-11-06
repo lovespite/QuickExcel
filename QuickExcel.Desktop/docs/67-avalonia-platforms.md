@@ -2,7 +2,7 @@
 
 > 2026-11-03 引擎迁移更新：当前生产路径为固定 JSC、IPC 6，隔离 TS 编译与同步模块/中断契约见 [71 号实施记录](71-jsc-typescript-implementation-log.md)。执行仍为 256 MiB 进程 / 256 KiB 栈 / 1 秒操作 / 5 秒整轮；64 MiB 引擎硬限额 `JSC-MEM-001` 未实现，用户明确延期且不作为推进门禁。下文 QuickJS、旧协议、预算及构建入口均为当时版本的历史证据，不代表当前实现。
 
-2026-11-03。A5 独立提交 `4b2d313`。Linux 工程实现与受测 Ubuntu 包完成，实机验收延期；macOS 仍为脚本关闭的工程准备，完整平台支持未完成。Windows、Linux、macOS 分别记录，不以 UI 能启动或设备验收延期替代工程安全证据。物理输入、打印、DPI、辅助技术和干净设备按用户要求统一延期。Linux 中文输入无候选框仍未解决。
+2026-11-03。A5 独立提交 `4b2d313`。Linux 工程实现与受测 Ubuntu 包完成，实机验收延期；macOS arm64 已完成脚本 worker 的工程实现与本机自检（Seatbelt、看门狗、登记恢复），签名/公证、持久信任与实机门禁仍独立记录，不把 macOS 完整支持标为完成。Windows、Linux、macOS 分别记录，不以 UI 能启动或设备验收延期替代工程安全证据。物理输入、打印、DPI、辅助技术和干净设备按用户要求统一延期。Linux 中文输入无候选框仍未解决。
 
 ## Linux worker 决策
 
@@ -74,10 +74,19 @@ Linux 自包含候选包：`artifacts/avalonia/platform-releases/linux-x64-20261
 
 Linux 依赖、普通用户启动、自检与失败条件在 `scripts/README-avalonia-unix.txt`。开发验证工具 `tools/QuickExcel.PlatformSmoke` 和其中 TestProbe 绝不可进入产品；脚本 `test-linux-worker-lifetime.py`、`test-linux-secret-service.py`、`test-cups-handoff.py`、`test-avalonia-linux-package.py` 均只处理显式的新夹具路径。
 
-## macOS 独立结论与未完成项
+## macOS arm64 实现、证据与未完成项
 
-已准备 arm64 native 构建、Keychain 保护、CUPS 打印适配、RID 发布以及 `.app`/签名/公证工具 `package-avalonia-macos.py`。该工具仅允许 Mac arm64，在 repository artifacts 内建立新包；逐个签署 Mach-O，再验证整个 bundle。只有明确提供 Developer ID 与 `--notary-profile` 才会提交 Apple 服务；当前没有执行任何签名或上传。签名后完整哈希清单在 bundle 外记录，避免修改已签名资源。仅声明 .NET 所需的 allow-jit，不开启调试或禁用库校验。依据：[.NET macOS 部署](https://learn.microsoft.com/en-us/dotnet/core/deploying/macos)、[Apple 公证](https://developer.apple.com/documentation/security/notarizing-macos-software-before-distribution)。
+2026-11-06。macOS 26.6 arm64 实现了脚本执行的独立路径，不改变 Windows/Linux 契约：
 
-macOS worker **尚未实现和验证**，因此桌面执行能力保持关闭、包不包含 worker；旧缓存保持 blocked/stale。公开 App Sandbox/XPC 是后续候选，但仅列 entitlement、使用普通子进程或 sandbox-exec 不能满足隔离证据。需要在 Mac 上实现与验证服务身份、无文件/网络/外部 IPC、进程/线程限制、实际内存限额、宿主退出绑定和登记恢复。依据：[Apple App Sandbox](https://developer.apple.com/library/archive/documentation/Miscellaneous/Reference/EntitlementKeyReference/Chapters/EnablingAppSandbox.html)、[XPC](https://developer.apple.com/documentation/xpc)。没有足够证据时不开放执行；不把 Mac 完整支持标为完成。
+- **原生引擎**：以同一 WebKit 2.54.2 提交构建 JSCOnly arm64 的 JavaScriptCore。GTK 发布包缺失的 104 个 macOS 源文件由 `tools/QuickExcel.JscProbe/macos-sources.json` 固定哈希补入；`WebKitFS.cmake` 的 framework 头目录与 `PlatformJSCOnly.cmake` 的重复 TimeZoneCocoa 修正记录在 `source-adjustments.json` 并写明原因。WebKit Apple 端口按上游设计链接系统 `libicucore`（macOS 26.6 为 ICU 78.1），macOS 包不再分发 ICU 77 动态库。
+- **worker**：宿主建立私有 0700 载荷目录、只允许扁平常规文件、记录 SHA-256 并持有独占租约；启动同目录 `quickexcel-sandbox`，launcher 等待单字节屏障后才应用默认拒绝的 Seatbelt 配置并 exec worker。worker 在读取任何协议字节前调用 `qx_macos_lock_worker` 验证 `/etc/passwd` 读取、载荷写入和网络连接均被拒绝，并启动 kqueue 父进程退出看门狗与物理内存/线程轮询看门狗；宿主通过 `libquickexcel-sandbox` 的固定参数包装器再次核对文件写入、网络和 fork 拒绝。没有同权限或 in-process 后备。
+- **资源**：执行 GC 堆硬限 128 MiB（Windows/Linux 仍 64 MiB）；256 MiB 进程上限由 25 ms 轮询的 phys_footprint/线程看门狗执行，是有界超调的轮询上限，**不等于** cgroup 硬限。一次 768 MiB 快速分配的实测在 526,239,160 字节处被终止，超调真实存在。线程上限 32。
+- **信任**：Data Protection Keychain 适配已在本机执行。未签名测试宿主没有 application-identifier，Keychain 返回 -34018，持久信任失败关闭，只允许用户明确的一次性授权；签名包上的持久信任、权限和公证仍未验证。
+- **本机证据**：发布包 `--self-check` **27/27**，包含 JSC 隔离 worker、隔离 TypeScript 编译器、API v3 动作/撤销、P2 对象、WKWebView Monaco/PDF.js、只读与恢复；定向测试 **24/24**（`MacScriptWorkerTests` 5 项，策略/执行/信任 19 项）；独立协议往返 `41→42`；父进程被 SIGKILL 后 worker 在 0.6 s 内消失；看门狗在超限分配时杀死 worker。
+- **未完成**：Developer ID 签名/公证的实际流程、多文件 `.app` 封签（需 single-file/Resources 布局）与签名包持久信任验证；物理打印、输入、DPI、辅助功能和干净设备验收；Windows AppContainer 故障 fixture 不适配 osx-arm64，不纳入 macOS 定向门禁。仅列 entitlement、普通子进程或 `sandbox-exec` 仍不能替代上述证据。
+
+已准备 arm64 native 构建、Keychain 保护、CUPS 打印适配、RID 发布以及 `.app`/签名/公证工具 `package-avalonia-macos.py`。该工具仅允许 Mac arm64，在 repository artifacts 内建立新包并逐个签署 Mach-O 与托管 DLL；多文件 .NET bundle 的最终封签仍受 `codesign` 将 `Contents/MacOS` 中非代码文件视为未签名子组件的限制，当前未完成，需改为 single-file 或 Resources 布局。只有明确提供 Developer ID 与 `--notary-profile` 才会提交 Apple 服务；当前没有执行任何签名或上传。本机预览直接运行原始发布目录，不把 `.app` 签名/公证标为通过。签名后完整哈希清单在 bundle 外记录，避免修改已签名资源。仅声明 .NET 所需的 allow-jit，不开启调试或禁用库校验。依据：[.NET macOS 部署](https://learn.microsoft.com/en-us/dotnet/core/deploying/macos)、[Apple 公证](https://developer.apple.com/documentation/security/notarizing-macos-software-before-distribution)。
+
+macOS worker 已实现并通过本机工程检查，但签名/公证、签名包持久信任和物理门禁仍未完成，不能把本机自检当作完整平台验收。旧缓存保持 blocked/stale；没有证据时不扩大执行范围。App Sandbox/XPC 仍是未来可选架构；当前的 Seatbelt 路径必须保留默认拒绝、宿主核对、父进程/资源看门狗与负向证据，不能用普通子进程或仅列 entitlement 替代。依据：[Apple App Sandbox](https://developer.apple.com/library/archive/documentation/Miscellaneous/Reference/EntitlementKeyReference/Chapters/EnablingAppSandbox.html)、[XPC](https://developer.apple.com/documentation/xpc)。不把 Mac 完整支持标为完成。
 
 用户延期的是实机验证，不是降低隔离标准。当前工程包默认交付目标仍为 Windows，Linux 为受测 Ubuntu 候选；macOS 不在默认交付支持范围。A7 已清理 WPF 生产入口并保留归档回退，见 [68 号记录](68-avalonia-retirement.md)；Mac 设备/隔离工程和各平台实机门禁继续独立跟踪。Windows 原 M4/M5/M6 未关闭门槛保持原状态。

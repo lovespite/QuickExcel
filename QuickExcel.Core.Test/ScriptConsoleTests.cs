@@ -105,7 +105,7 @@ public sealed class ScriptConsoleTests
     public void MalformedWorkerFailureLogsAreRejectedBeforePresentation(string fault)
     {
         var snapshot = Book(Sheet("Data")).WithScriptModules(M4ActionTests.Actions(fault));
-        var executor = new ScriptWorkerActionExecutor(Path.Combine(AppContext.BaseDirectory, "WorkerFixture", "WorkerFixture.exe"));
+        var executor = new ScriptWorkerActionExecutor(Path.Combine(AppContext.BaseDirectory, "Fixtures", "WorkerFixture", "WorkerFixture.exe"));
         var error = Assert.Throws<ScriptRuntimeFailureException>(() => executor.Run(
             new(new(Guid.NewGuid(), snapshot.Revision, 1, 1), Guid.NewGuid(), "A", snapshot, default), default));
         Assert.Equal("Protocol", error.Code); Assert.Empty(error.Logs);

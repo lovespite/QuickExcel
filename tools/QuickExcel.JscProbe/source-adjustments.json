@@ -22,5 +22,17 @@
     "before": "if (WIN32)\n    set(ENABLE_API_TESTS OFF)\nelse ()\n    set(ENABLE_API_TESTS ON)\nendif ()\n",
     "after": "if (NOT DEFINED ENABLE_API_TESTS)\n    if (WIN32)\n        set(ENABLE_API_TESTS OFF)\n    else ()\n        set(ENABLE_API_TESTS ON)\n    endif ()\nendif ()\n",
     "reason": "Respect the explicitly frozen ENABLE_API_TESTS=OFF build setting on Linux as on Windows. The upstream JSCOnly unconditional assignment otherwise overrides the cache flag and requires the excluded development test tree. No engine behavior changes."
+  },
+  {
+    "path": "webkitgtk-2.54.2/Source/cmake/WebKitFS.cmake",
+    "before": "    set(JavaScriptCore_HEADERS_DIR         \"${CMAKE_BINARY_DIR}/JavaScriptCore.framework/${_version}Headers\")\n    set(JavaScriptCore_PRIVATE_HEADERS_DIR \"${CMAKE_BINARY_DIR}/JavaScriptCore.framework/${_version}PrivateHeaders\")\n",
+    "after": "    set(JavaScriptCore_HEADERS_DIR         \"${CMAKE_BINARY_DIR}/JavaScriptCore.framework/${_version}Headers/JavaScriptCore\")\n    set(JavaScriptCore_PRIVATE_HEADERS_DIR \"${CMAKE_BINARY_DIR}/JavaScriptCore.framework/${_version}PrivateHeaders/JavaScriptCore\")\n    set(JavaScriptCore_FRAMEWORK_HEADERS_DIR         \"${CMAKE_BINARY_DIR}/JavaScriptCore.framework/${_version}Headers\")\n    set(JavaScriptCore_PRIVATE_FRAMEWORK_HEADERS_DIR \"${CMAKE_BINARY_DIR}/JavaScriptCore.framework/${_version}PrivateHeaders\")\n",
+    "reason": "The JSCOnly port on Darwin copies generated headers into JavaScriptCore.framework but leaves the interface include directories at the non-framework paths, so <JavaScriptCore/JSExportMacros.h> resolves to the system framework and compilation fails. Point the interface paths at the freshly generated bundle headers. No engine behavior changes."
+  },
+  {
+    "path": "webkitgtk-2.54.2/Source/WTF/wtf/PlatformJSCOnly.cmake",
+    "before": "        cocoa/MemoryFootprintCocoa.cpp\n        cocoa/TimeZoneCocoa.cpp\n",
+    "after": "        cocoa/MemoryFootprintCocoa.cpp\n",
+    "reason": "JSCOnly intentionally does not define PLATFORM(COCOA). On Darwin it still compiles TimeZoneCocoa.cpp, whose observer duplicates the generic no-op listenForTimeZoneChangeNotifications() from TimeZone.cpp and breaks the link. JSCOnly workers are one-shot on macOS, so omitting the notification observer keeps the existing generic time-zone behavior. No executable logic changes."
   }
 ]

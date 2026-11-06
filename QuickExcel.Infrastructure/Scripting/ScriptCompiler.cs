@@ -37,7 +37,8 @@ public sealed class ScriptCompiler(string? executablePath = null)
             throw new ScriptRuntimeFailureException("CompilerBusy", "已有 TypeScript 编译正在进行，请稍后重试。");
         try
         {
-            if (!OperatingSystem.IsWindows() && !OperatingSystem.IsLinux()) throw new PlatformNotSupportedException("此平台尚未验证隔离 TypeScript 编译角色。");
+            if ((!OperatingSystem.IsWindows() && !OperatingSystem.IsLinux() && !OperatingSystem.IsMacOS()) ||
+                !ScriptWorkerRuntimeFactory.SupportedArchitecture()) throw new PlatformNotSupportedException("此平台尚未验证隔离 TypeScript 编译角色。");
             if (!File.Exists(_executable)) throw new ScriptRuntimeFailureException("WorkerMissing", "找不到完整的脚本 worker。");
             using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(6));
             using var lifetime = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, deadline.Token, policyLifetime);
@@ -46,6 +47,7 @@ public sealed class ScriptCompiler(string? executablePath = null)
             {
                 process = await Task.Run<IWorkerProcess>(() => OperatingSystem.IsWindows() ? WorkerProcess.Start(_executable, lifetime.Token, compilation: true)
                     : OperatingSystem.IsLinux() ? LinuxWorkerProcess.Start(_executable, lifetime.Token, compilation: true)
+                    : OperatingSystem.IsMacOS() ? MacWorkerProcess.Start(_executable, lifetime.Token, compilation: true)
                     : throw new PlatformNotSupportedException(), lifetime.Token).ConfigureAwait(false);
                 ProcessLaunchCount++;
                 using var stop = lifetime.Token.Register(process.Kill);
@@ -61,6 +63,7 @@ public sealed class ScriptCompiler(string? executablePath = null)
                     accepted.Compiler != hello.Compiler || !accepted.ApiVersions.SequenceEqual(hello.ApiVersions) || accepted.MaxFrameBytes != hello.MaxFrameBytes)
                     throw new ProtocolException("Compiler handshake mismatch; no source was sent.");
                 if (OperatingSystem.IsLinux() && process is LinuxWorkerProcess linux) linux.VerifyBeforeSource();
+                if (OperatingSystem.IsMacOS() && process is MacWorkerProcess mac) mac.VerifyBeforeSource();
                 identity = identity with { RequestId = Guid.NewGuid() };
                 await WorkerProtocol.WriteAsync(process.Input, WorkerProtocol.Message(identity, "compile", request), lifetime.Token).ConfigureAwait(false);
                 response = await WorkerProtocol.ReadAsync(process.Output, lifetime.Token).ConfigureAwait(false);

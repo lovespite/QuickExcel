@@ -21,6 +21,17 @@ def artifact_path(path):
     return path
 
 
+def file_digest(stream, algorithm):
+    digest = hashlib.new(algorithm)
+    for chunk in iter(lambda: stream.read(1 << 20), b""):
+        digest.update(chunk)
+    return digest
+
+
+def is_junction(path):
+    return getattr(path, "is_junction", lambda: False)()
+
+
 def download(pin):
     path = artifact_path(ROOT / "downloads" / pin["url"].rsplit("/", 1)[1])
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -32,7 +43,7 @@ def download(pin):
         partial.replace(path)
     algorithm = "sha512" if "sha512" in pin else "sha256"
     with path.open("rb") as stream:
-        actual = hashlib.file_digest(stream, algorithm).hexdigest()
+        actual = file_digest(stream, algorithm).hexdigest()
     if actual != pin[algorithm]:
         raise ValueError(f"Pinned {algorithm} mismatch: {path}. No extraction or build permitted.")
     return path
@@ -49,11 +60,11 @@ def archive_source(archive, destination, webkit=False):
         if relative.is_absolute() or '..' in relative.parts or '\\' in name or ':' in name:
             raise ValueError("Archive path escapes destination")
         target = destination / name
-        if target.is_symlink() or target.is_junction():
+        if target.is_symlink() or is_junction(target):
             raise ValueError("Source cache contains a reparse point")
         parent = target.parent
         while parent != destination.parent and parent not in checked_directories:
-            if parent.is_symlink() or parent.is_junction():
+            if parent.is_symlink() or is_junction(parent):
                 raise ValueError('Source cache contains a directory reparse point')
             checked_directories.add(parent)
             parent = parent.parent

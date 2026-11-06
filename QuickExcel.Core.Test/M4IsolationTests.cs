@@ -58,7 +58,7 @@ public sealed class M4IsolationTests
             Assert.True(ReadFile(canary, buffer, buffer.Length, out var count, IntPtr.Zero));
             Assert.True(count > 0);
             Assert.True(SetFilePointerEx(canary, 0, out _, 0));
-            var executable = Path.Combine(AppContext.BaseDirectory, "WorkerFixture", "WorkerFixture.exe");
+            var executable = Path.Combine(AppContext.BaseDirectory, "Fixtures", "WorkerFixture", "WorkerFixture.exe");
             string json;
             if (compilation)
             {

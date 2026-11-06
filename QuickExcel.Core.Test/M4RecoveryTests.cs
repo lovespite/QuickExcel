@@ -207,7 +207,7 @@ public sealed class M4RecoveryTests : IDisposable
 
     private ProcessStartInfo HostStartInfo(string stage, string worker)
     {
-        var start = new ProcessStartInfo(Path.Combine(AppContext.BaseDirectory, "SandboxHostFixture", "SandboxHostFixture.exe"))
+        var start = new ProcessStartInfo(Path.Combine(AppContext.BaseDirectory, "Fixtures", "SandboxHostFixture", "SandboxHostFixture.exe"))
         { UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true };
         start.ArgumentList.Add(_root); start.ArgumentList.Add(stage); start.ArgumentList.Add(worker);
         return start;

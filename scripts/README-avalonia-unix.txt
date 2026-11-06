@@ -18,10 +18,14 @@ these requirements before sending workbook code. Unsupported environments fail
 closed: there is no in-process or same-permission script fallback. Do not disable
 AppArmor, browser sandboxing or kernel security to make the application run.
 
-macOS arm64 is an engineering preview only. Script execution is disabled and no
-worker is shipped until its separate platform sandbox is implemented and qualified.
-WKWebView, Keychain, native binaries, printing, signing and notarization require
-macOS validation; a cross-build is not evidence of working Mac support.
+macOS arm64 ships the pinned JSC engine and the isolated worker. Execution uses a
+denied-by-default Seatbelt profile, host-verified file/write/network/fork denials,
+a parent-death watchdog and polling footprint/thread watchdogs; the 256 MiB bound
+is a polling limit with bounded overshoot, not a cgroup-equivalent hard cap.
+Persistent trust needs a signed bundle with an application identifier; without it
+only explicit one-time consent is allowed (the Keychain returns -34018). WKWebView,
+Keychain fail-closed behavior and CUPS print preview were exercised locally; signing,
+notarization, signed-bundle trust and physical acceptance remain unverified.
 
 Physical IME, DPI/multi-screen, accessibility, printer and clean-device acceptance
 are deferred, not passed. Linux Chinese IME had no candidate window in the prior

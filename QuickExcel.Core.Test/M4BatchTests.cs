@@ -119,7 +119,7 @@ public sealed class M4BatchTests
         var sheet = Sheet("S", (0, 0, F("=F()", 41)), (1, 0, F("=F()", 42)));
         using var session = new DocumentSession(Book(sheet).WithScriptSource(fault));
         session.SetScriptsEnabled(true);
-        var factory = new ObservedFactory(Path.Combine(AppContext.BaseDirectory, "WorkerFixture", "WorkerFixture.exe"));
+        var factory = new ObservedFactory(Path.Combine(AppContext.BaseDirectory, "Fixtures", "WorkerFixture", "WorkerFixture.exe"));
         var before = session.Snapshot;
         Assert.Equal("Protocol", Assert.Throws<ScriptRuntimeFailureException>(() => new WorkbookCalculator(factory).Calculate(session.BeginCalculation())).Code);
         Assert.Same(before, session.Snapshot);

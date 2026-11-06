@@ -103,5 +103,9 @@ and records native identities and licenses. Native outputs are never committed.
 The ordinary production desktop never uses the in-process bridge as a fallback.
 
 Linux Landlock/seccomp/cgroup requirements, negative probes, lifetime and resource
-evidence are in `QuickExcel.Desktop/docs/67-avalonia-platforms.md`. macOS script
-execution remains closed; a portable bridge or signed app is not a worker sandbox.
+evidence are in `QuickExcel.Desktop/docs/67-avalonia-platforms.md`. macOS arm64
+builds the pinned JSC with `tools/QuickExcel.JscProbe/build-macos.sh`; its worker
+uses a default-deny Seatbelt profile plus parent-death and polling footprint/thread
+watchdogs (not cgroup-equivalent). WebKit's Apple port links the OS `libicucore`.
+Signing/notarization, signed-bundle persistent trust and physical acceptance remain
+unverified; a portable bridge or signed app alone is not a worker sandbox.

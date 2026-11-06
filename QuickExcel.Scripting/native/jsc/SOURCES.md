@@ -2,10 +2,20 @@
 
 The product embeds source-built WebKitGTK 2.54.2 / JavaScriptCore commit
 `b95c91b1c0ee43cc86d25ff7af73038f67a88e04`, ICU 77.1 and bundled mimalloc 3.2.8.
-Exact archive and supplemental Windows source hashes, four explicit source
+Exact archive and supplemental Windows/macOS source hashes, six explicit source
 adjustments, tools and options are under `tools/QuickExcel.JscProbe/`.
 See its [build README](../../../tools/QuickExcel.JscProbe/README.md) and
 [implementation evidence](../../../QuickExcel.Desktop/docs/71-jsc-typescript-implementation-log.md).
+
+macOS arm64 is built with `tools/QuickExcel.JscProbe/build-macos.sh` (Apple
+clang, CMake/Ninja, Python 3.9+, system Ruby). The GTK archive omits macOS WTF
+files, so `macos-sources.json` pins 104 unchanged upstream files with SHA-256;
+`WebKitFS.cmake` and `PlatformJSCOnly.cmake` carry the documented framework
+header and duplicate-timezone build fixes. WebKit's Apple port links the OS
+`libicucore` (macOS 26.6: ICU 78.1) rather than the pinned ICU build. The
+macOS worker enforces the 256 MiB process bound with a polling footprint/thread
+watchdog, not a cgroup-equivalent hard limit; signing/notarization and
+signed-bundle persistent trust remain unverified.
 
 `bridge.cpp` is QuickExcel-owned code compiled into the JSC shared library.
 Managed callers see only `qx_create`, `qx_create_compiler`, `qx_load_modules`,

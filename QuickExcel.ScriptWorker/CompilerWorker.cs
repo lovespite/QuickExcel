@@ -6,8 +6,10 @@ internal static class CompilerWorker
 {
     public static async Task<int> Run()
     {
-        if ((!OperatingSystem.IsWindows() && !OperatingSystem.IsLinux()) || !Console.IsInputRedirected || !Console.IsOutputRedirected) return 125;
-        try { LinuxWorkerGuard.Enter(); } catch { return 125; }
+        if ((!OperatingSystem.IsWindows() && !OperatingSystem.IsLinux() &&
+             !(OperatingSystem.IsMacOS() && System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture == System.Runtime.InteropServices.Architecture.Arm64)) ||
+            !Console.IsInputRedirected || !Console.IsOutputRedirected) return 125;
+        try { WorkerGuard.Enter(); } catch { return 125; }
         using var input = Console.OpenStandardInput();
         using var output = Console.OpenStandardOutput();
         try

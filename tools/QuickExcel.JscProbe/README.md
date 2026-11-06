@@ -40,6 +40,24 @@ disabled because the GTK archive omits hmaptool. Linux validation must run as a
 normal user with Landlock ABI >= 3 and a systemd user session/cgroup v2.
 Building the native library alone is not platform acceptance.
 
+macOS 26 arm64, from the repository root:
+
+```sh
+QX_BUILD_PARALLEL=2 bash tools/QuickExcel.JscProbe/build-macos.sh
+bash QuickExcel.ScriptWorker/native/build-macos.sh
+dotnet publish QuickExcel.Desktop.Avalonia/QuickExcel.Desktop.Avalonia.csproj -c Release -r osx-arm64 --self-contained true -p:QuickExcelNativeRid=osx-arm64 -o artifacts/publish-mac
+```
+
+macOS prerequisites: Xcode Command Line Tools (Apple clang), CMake 4 + Ninja,
+Python 3.9+ (the preparation scripts avoid 3.11-only APIs), system Ruby and curl.
+The first run downloads the pinned WebKit/ICU/TypeScript archives. `macos-sources.json`
+adds 104 unchanged WebKit files omitted from the GTK archive; the WebKitFS and
+PlatformJSCOnly adjustments are recorded in `source-adjustments.json`. WebKit's
+Apple port links the OS `libicucore`, so the pinned ICU build is not shipped on
+macOS. The worker sandbox (Seatbelt, parent-death and polling resource watchdogs)
+is built by `QuickExcel.ScriptWorker/native/build-macos.sh`. Building these
+artifacts is not signing, notarization or device acceptance.
+
 All downloads, sources, builds, logs and uniquely named results stay in ignored
 `artifacts/jsc/`. `sources.json` pins archive URLs/hashes and the WebKit commit.
 The GTK release omits 27 Windows WTF files: `windows-sources.json` pins those

@@ -17,15 +17,20 @@ public sealed class ScriptWorkerRuntimeFactory(string? executablePath = null) : 
     public IScriptRuntime Create(ScriptRuntimeRequest request) => OperatingSystem.IsWindows() && request.Modules.ScriptApiVersion is 3 or 4 && request.RuntimeLifetime.CanBeCanceled
         ? SharedScriptWorkers.Acquire(_executable, request, actions: false) : ScriptWorkerRuntime.Start(_executable, request);
 
-    /// <summary>Reclaims abandoned rounds for the current Windows user, without executing scripts.</summary>
+    /// <summary>Reclaims abandoned rounds for the current user, without executing scripts.</summary>
     public static int RecoverAbandonedSandboxes(CancellationToken cancellation = default)
     {
         if (OperatingSystem.IsLinux()) return LinuxWorkerLease.Recover(cancellation);
+        if (OperatingSystem.IsMacOS()) return MacWorkerLease.Recover(cancellation);
         if (!OperatingSystem.IsWindows()) throw new PlatformNotSupportedException("此平台尚未开放脚本隔离。");
         try { return WorkerSandboxLease.Recover(cancellation); }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or Win32Exception)
         { throw new ScriptRuntimeFailureException("WorkerCleanup", "脚本 worker 残留资源回收失败，将在下次启动时重试。", e); }
     }
+
+    internal static bool SupportedArchitecture() => OperatingSystem.IsMacOS()
+        ? System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture == System.Runtime.InteropServices.Architecture.Arm64
+        : System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture == System.Runtime.InteropServices.Architecture.X64;
 }
 
 public sealed class ScriptWorkerRuntime : IScriptBatchRuntime
@@ -80,7 +85,7 @@ public sealed class ScriptWorkerRuntime : IScriptBatchRuntime
         ScriptExecutionPolicy.Current.RequireEnabled();
         request.CancellationToken.ThrowIfCancellationRequested();
         if (request.TimeLimit <= TimeSpan.Zero) throw new TimeoutException("重算已达到时间限制。");
-        if ((!OperatingSystem.IsWindows() && !OperatingSystem.IsLinux()) || System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture != System.Runtime.InteropServices.Architecture.X64)
+        if (!ScriptWorkerRuntimeFactory.SupportedArchitecture() || (!OperatingSystem.IsWindows() && !OperatingSystem.IsLinux() && !OperatingSystem.IsMacOS()))
             throw new PlatformNotSupportedException("此平台尚未开放脚本隔离。");
         if (!File.Exists(executable)) throw new ScriptRuntimeFailureException("WorkerMissing", "找不到脚本 worker，请重新构建或安装完整发布包。");
         if (!request.Modules.CanExecute) throw new NotSupportedException(MessageText.Get(QuickExcel.Domain.ScriptModuleSet.MigrationMessage));
@@ -106,7 +111,8 @@ public sealed class ScriptWorkerRuntime : IScriptBatchRuntime
             runtime._identity.Validate();
             runtime._deadline.CancelAfter(request.TimeLimit < TimeSpan.FromSeconds(5) ? request.TimeLimit : TimeSpan.FromSeconds(5));
             runtime._process = OperatingSystem.IsWindows() ? WorkerProcess.Start(executable, runtime._lifetime.Token) : OperatingSystem.IsLinux()
-                ? LinuxWorkerProcess.Start(executable, runtime._lifetime.Token) : throw new PlatformNotSupportedException();
+                ? LinuxWorkerProcess.Start(executable, runtime._lifetime.Token) : OperatingSystem.IsMacOS()
+                ? MacWorkerProcess.Start(executable, runtime._lifetime.Token) : throw new PlatformNotSupportedException();
             runtime.ProcessId = runtime._process.Id;
             // This registration remains active between rounds, when the per-round registration is released.
             runtime._policyRegistration = runtime._processLifetime.Token.Register(runtime.Abort);
@@ -119,6 +125,7 @@ public sealed class ScriptWorkerRuntime : IScriptBatchRuntime
                 !accepted.ApiVersions.SequenceEqual(hello.ApiVersions) || accepted.MaxFrameBytes != hello.MaxFrameBytes)
                 throw new ProtocolException("Worker handshake is incompatible.");
             if (OperatingSystem.IsLinux() && runtime._process is LinuxWorkerProcess linux) linux.VerifyBeforeSource();
+            if (OperatingSystem.IsMacOS() && runtime._process is MacWorkerProcess mac) mac.VerifyBeforeSource();
             string digest;
             LoadedScript loaded;
             if (request.Modules.ScriptApiVersion is 3 or 4)

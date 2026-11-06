@@ -211,8 +211,9 @@ public sealed partial class JscSession : IDisposable
                 modules.Sum(m => (long)Encoding.UTF8.GetByteCount(m.Value)) > 1024 * 1024)
                 throw new ArgumentException("Invalid package module mapping or source budget.");
         }
-        if (!Environment.Is64BitProcess || !(OperatingSystem.IsWindows() || OperatingSystem.IsLinux()))
-            throw new PlatformNotSupportedException("QuickExcel scripting requires Windows x64 or qualified Linux x64 isolation.");
+        if (!Environment.Is64BitProcess || (!OperatingSystem.IsWindows() && !OperatingSystem.IsLinux() &&
+            !(OperatingSystem.IsMacOS() && System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture == System.Runtime.InteropServices.Architecture.Arm64)))
+            throw new PlatformNotSupportedException("QuickExcel scripting requires Windows x64, Linux x64 or qualified macOS arm64 isolation.");
         if (Marshal.PtrToStringUTF8(NativeEngineIdentity()) != EngineIdentity)
             throw new InvalidOperationException("Native JSC build identity does not match this worker.");
         _session = NativeCreate(Bootstrap, out var error);

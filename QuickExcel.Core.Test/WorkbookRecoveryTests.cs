@@ -89,7 +89,7 @@ public sealed class WorkbookRecoveryTests
     [InlineData("writing")]
     public async Task ProcessCrashReleasesLeaseAndRestoresOnlyCompleteGeneration(string stage)
     {
-        var root = Folder(); var start = new ProcessStartInfo(Path.Combine(AppContext.BaseDirectory, "RecoveryFixture", OperatingSystem.IsWindows() ? "RecoveryFixture.exe" : "RecoveryFixture")) { UseShellExecute = false, CreateNoWindow = true };
+        var root = Folder(); var start = new ProcessStartInfo(Path.Combine(AppContext.BaseDirectory, "Fixtures", "RecoveryFixture", OperatingSystem.IsWindows() ? "RecoveryFixture.exe" : "RecoveryFixture")) { UseShellExecute = false, CreateNoWindow = true };
         start.ArgumentList.Add(root); start.ArgumentList.Add(stage); using var child = Process.Start(start)!;
         try
         {

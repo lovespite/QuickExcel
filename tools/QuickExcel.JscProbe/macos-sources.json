@@ -1,0 +1,526 @@
+{
+  "commit": "b95c91b1c0ee43cc86d25ff7af73038f67a88e04",
+  "reason": "macOS files omitted from the GTK source archive; unchanged upstream files at the same release commit",
+  "files": [
+    {
+      "path": "Source/WTF/wtf/cf/CFTypeTraits.h",
+      "sha256": "4ae18a40650fb8e9e2954dd405c3a1eff542dc6d10bafe411a83c3f6b76a8d42",
+      "gitBlob": "1095d1d060586510c905c6861257f02ed3e16e6f"
+    },
+    {
+      "path": "Source/WTF/wtf/cf/CFURLExtras.cpp",
+      "sha256": "686aee20f65fdfbb22b40017e040c612fb716067336a47896c0c8dbf5058957c",
+      "gitBlob": "aa8ced94673ab2921ee562536886345c70d3bc2d"
+    },
+    {
+      "path": "Source/WTF/wtf/cf/CFURLExtras.h",
+      "sha256": "634325f416beeaf11eae66d2e22ea92d8348bff2adabc9ac7059c5dd95b2f5f0",
+      "gitBlob": "91794b5464586bc95b5a80c3a21459bd83530f5c"
+    },
+    {
+      "path": "Source/WTF/wtf/cf/FileSystemCF.cpp",
+      "sha256": "c4bf047473799920d52d23df2bee6349aa195d88bee9be1715174a2231746065",
+      "gitBlob": "bba71910deaa3c9b610ef55b0128f6d46335028d"
+    },
+    {
+      "path": "Source/WTF/wtf/cf/LanguageCF.cpp",
+      "sha256": "b2144024175a8ed217feb14e70a1e7dca17667098bab4a7fdf8783ecb725a5b2",
+      "gitBlob": "e24a7d85921de339cc82749ed493ff5d002a0b72"
+    },
+    {
+      "path": "Source/WTF/wtf/cf/NotificationCenterCF.h",
+      "sha256": "f3309f1e721987ed162ef09797be4ec5a8c1099d6af951c2ea24bc9559e70d83",
+      "gitBlob": "b28eef7f11639031ccc34859d102417c32897771"
+    },
+    {
+      "path": "Source/WTF/wtf/cf/RunLoopCF.cpp",
+      "sha256": "6f815c1a54b23585be420936c722e6802b16e6ffb7c0d0ee2bbd41ca9a90a54b",
+      "gitBlob": "c4488bac66b04ed3373074b84f074f92d271c4e4"
+    },
+    {
+      "path": "Source/WTF/wtf/cf/SchedulePairCF.cpp",
+      "sha256": "55c4d671f28ad097d58028e64dc74e8da5e53dac17b4a43af739ce5c891c0b95",
+      "gitBlob": "6ac2cb0bc23faabf8e68092a6e78c88d229c957e"
+    },
+    {
+      "path": "Source/WTF/wtf/cf/TypeCastsCF.h",
+      "sha256": "617eb8e3ff824aba7e5e35eecdb5d96136f4c4e4db40a6f85bf6d982fa580bd4",
+      "gitBlob": "612ccaa2047c8ca7edb0bc3f0f3083c29574c3b7"
+    },
+    {
+      "path": "Source/WTF/wtf/cf/URLCF.cpp",
+      "sha256": "87701f755a69c615afdc97e29c18f482bb8d73da91dc9fbe57442ddd8bb1f55e",
+      "gitBlob": "816445ba0cd33143bd0c218634d8db9ba2c2beef"
+    },
+    {
+      "path": "Source/WTF/wtf/cf/VectorCF.h",
+      "sha256": "16ab5d3dc409a1c8d5181e53b8cd51563afe502d58cdd9edf0d706dac2c58989",
+      "gitBlob": "761a468231dfa55edc8ef4be1c5508079aa0e1d3"
+    },
+    {
+      "path": "Source/WTF/wtf/cocoa/AuditToken.h",
+      "sha256": "e2b6243bdc6441c84faba04f230d47eac7e376792abee3b165d370f970cd1d32",
+      "gitBlob": "ce8b92b44c8e7d9e5d0fab7b2c6669af798ee944"
+    },
+    {
+      "path": "Source/WTF/wtf/cocoa/AuditToken.mm",
+      "sha256": "a5f6525294c49a1c7ce7e59f30c45301cabfe276cc1e80c13a46e9b0709eb856",
+      "gitBlob": "697a2ea011818d5875a01c9d983fecb23d559c0b"
+    },
+    {
+      "path": "Source/WTF/wtf/cocoa/AutodrainedPool.cpp",
+      "sha256": "eb15e83ae9790f0cb680ed9f28aff0895ac683b895cc3ff8891c34a522eb6d0c",
+      "gitBlob": "11bdbff889bc8244f36315e5baf238715d8684fe"
+    },
+    {
+      "path": "Source/WTF/wtf/cocoa/CrashReporter.cpp",
+      "sha256": "7f68b8f031737a2391af9d1ff56cbf2ccfcbc3a697965c38b9e5fc66347e8b96",
+      "gitBlob": "cc0d96d7345bf40e280fda19cefd7638aeb27295"
+    },
+    {
+      "path": "Source/WTF/wtf/cocoa/CrashReporter.h",
+      "sha256": "4af988c8814bc8e17c7b33d2ae264bd719cba31a86272e44c1d4a031e89882b1",
+      "gitBlob": "0d5ccfc41424e96ac2eead96bc36b42029766cfc"
+    },
+    {
+      "path": "Source/WTF/wtf/cocoa/Entitlements.h",
+      "sha256": "888b52179504779a8ca1f69ad494020853efdf8a44dbefcc9abaeb5d0abe0f11",
+      "gitBlob": "63f929da119b28b23bda75ac433ba284164e7556"
+    },
+    {
+      "path": "Source/WTF/wtf/cocoa/Entitlements.mm",
+      "sha256": "c227542a9eadde723e957c0c23c90a22e202d5703f35a931cbce36bde142b042",
+      "gitBlob": "f50de5866fc55085dee4043dbf94f2a0e1d0e97d"
+    },
+    {
+      "path": "Source/WTF/wtf/cocoa/FileSystemCocoa.mm",
+      "sha256": "741d72c385094b7391ce530ba82b905aef5176f913aecfbd6ede1f78721948e6",
+      "gitBlob": "89bb3e40801c4e5726a65f34c197348ff6306965"
+    },
+    {
+      "path": "Source/WTF/wtf/cocoa/LanguageCocoa.mm",
+      "sha256": "2f24e0c449b050fa19098750dcae7a3febf31df421cbd92e29fca8ffc2ef7491",
+      "gitBlob": "35efb70a355f6233b4b8a9680461f3cb8ab98c74"
+    },
+    {
+      "path": "Source/WTF/wtf/cocoa/LoggingCocoa.mm",
+      "sha256": "651c3253587300395dbda8a74ddba8133dccca21999a8ce2e176097be76b9b00",
+      "gitBlob": "00fc3808551ac479cba3fe63cc6b7555b3ea487d"
+    },
+    {
+      "path": "Source/WTF/wtf/cocoa/MachSendRight.cpp",
+      "sha256": "8716ca08fa4b9797fcb15aa3e59a13038872661ea96432a706946a752f6c6533",
+      "gitBlob": "187df462b0bcbfdda949cb4566ae717a5b41f8b0"
+    },
+    {
+      "path": "Source/WTF/wtf/cocoa/MainThreadCocoa.mm",
+      "sha256": "b60432b8f417ba0681e21a3b526b66ebe8226cafcddbecddf2fd63aced5b6abc",
+      "gitBlob": "a43c5cd3fb4b834f3b7336e12295424afa12e7e8"
+    },
+    {
+      "path": "Source/WTF/wtf/cocoa/MemoryFootprintCocoa.cpp",
+      "sha256": "85a7c5b2f2341c60c943347a23581d22f1dbd2a71568bee43b0309a73f9403bd",
+      "gitBlob": "86e280b542843960a1845809a99a5d262bf6b278"
+    },
+    {
+      "path": "Source/WTF/wtf/cocoa/MemoryPressureHandlerCocoa.mm",
+      "sha256": "7dcffa3e30e727803a0bfc55d763f8ae50e9d08406c07c771072a9cb44a236d0",
+      "gitBlob": "4832d8c36323b5e8e1529c023adac9ed905339e3"
+    },
+    {
+      "path": "Source/WTF/wtf/cocoa/NSStringExtras.h",
+      "sha256": "568142a54ace79663d19de88e268aef8631fd08649b8c62e27778caed3552bf4",
+      "gitBlob": "1194ddf259923ebf599f765422c64bbe40b5d471"
+    },
+    {
+      "path": "Source/WTF/wtf/cocoa/NSTypeTraits.h",
+      "sha256": "4121670b6a1f13f48ab679aa018ffe382ab7f84bb67fa253b9afba148ad967ab",
+      "gitBlob": "fb9ec664431b9491876a8acc647b83b2879cb17b"
+    },
+    {
+      "path": "Source/WTF/wtf/cocoa/NSURLExtras.h",
+      "sha256": "76d7d39028044e30694fe52cede5b181ace51bafe1a88c7363efe4d72ea2a04c",
+      "gitBlob": "0e3cc9c804821f128b4f42f6af8acf0433704ab2"
+    },
+    {
+      "path": "Source/WTF/wtf/cocoa/NSURLExtras.mm",
+      "sha256": "a9a2ad996497aa02d870b14b7e62e6aa9cea0d30b98c18560bc7eb9ea6573587",
+      "gitBlob": "ea6814d43e6ede42e281c3fb62bc1a8bdb29a7ef"
+    },
+    {
+      "path": "Source/WTF/wtf/cocoa/ResourceUsageCocoa.cpp",
+      "sha256": "f932fc641b2d67eb21532619eb97fc4b7827c21017a27564f331227a9f05d4a4",
+      "gitBlob": "5177d546f18ca7c562efa9a7364718b90badc85e"
+    },
+    {
+      "path": "Source/WTF/wtf/cocoa/RuntimeApplicationChecksCocoa.h",
+      "sha256": "60adc0b911d02c209649dae2c2259d0b9963c4279160545e58d154f2e97e6ef6",
+      "gitBlob": "544918adf78f66097362937db8429b184b5f12f3"
+    },
+    {
+      "path": "Source/WTF/wtf/cocoa/RuntimeApplicationChecksCocoa.mm",
+      "sha256": "74d907be9db685453c300ffb6a9471e2a87433a211b9d17c8f9b7ac70536e711",
+      "gitBlob": "1c6a6ea0b02be1332d04e1f3724365b6c18c5360"
+    },
+    {
+      "path": "Source/WTF/wtf/cocoa/SchedulePairCocoa.mm",
+      "sha256": "ded7211ef27f2d56cd8286f2a0e8c09f58f32618556a80c3a76a3cd0d705b534",
+      "gitBlob": "c673c03680af49e90163832dc9c989ccae7ded36"
+    },
+    {
+      "path": "Source/WTF/wtf/cocoa/SoftLinking.h",
+      "sha256": "3b2ddee9a9632236889378001c631a1a284c278e8a7a1714815a4e5291775187",
+      "gitBlob": "3bf34318d1b49a43e2b2059e6dbc5d6bd2f5057c"
+    },
+    {
+      "path": "Source/WTF/wtf/cocoa/SpanCocoa.h",
+      "sha256": "96bc6181012a677f5422894b68a7af03d4dd1e30d0aa750c5446fb1532e95552",
+      "gitBlob": "9b7644968357696122a9efedde61f82c748d813c"
+    },
+    {
+      "path": "Source/WTF/wtf/cocoa/SpanCocoa.mm",
+      "sha256": "a8b4b44a4ae2452ed1bde9904da789c19bf720f0b6fb703552530b49a582c55c",
+      "gitBlob": "be638d356ff56b669a4d325947de3f14c4aba806"
+    },
+    {
+      "path": "Source/WTF/wtf/cocoa/SystemTracingCocoa.cpp",
+      "sha256": "c070c0da3d023c0e13a5ae1b11ddda5fdf0b05c9f802ae2ee9d60a186ac59ad5",
+      "gitBlob": "272544aa98ecb4644da8d1da7b419c8cadbfa414"
+    },
+    {
+      "path": "Source/WTF/wtf/cocoa/TimeZoneCocoa.cpp",
+      "sha256": "4f683ffdeef529912d85fdbd3a41ca3354996d134e2b4936133111025aad76d2",
+      "gitBlob": "9aaf78f12a92d62177b78c7a4fe516e1ef260a47"
+    },
+    {
+      "path": "Source/WTF/wtf/cocoa/TollFreeBridging.h",
+      "sha256": "af6d66fb81a60f4ba069f47c5497da13a2abb2a0675c079e055fd414ee01de75",
+      "gitBlob": "ed50593f8549b1d80cc2e114d380814ee0cb7121"
+    },
+    {
+      "path": "Source/WTF/wtf/cocoa/TypeCastsCocoa.h",
+      "sha256": "81b5d3df75a0c47ea8c44d9c31158da689d7083b28be9ce084c2075b291041a4",
+      "gitBlob": "db2c20f1af55066550f0085df0d5b5058624e66b"
+    },
+    {
+      "path": "Source/WTF/wtf/cocoa/URLCocoa.mm",
+      "sha256": "f30be3dfd62c029ce747ff8137424b0ee1a6739b2721bed5e781a5b2bdefba68",
+      "gitBlob": "aec67aadf7cd6234b5314ced90ac5711d5de7b33"
+    },
+    {
+      "path": "Source/WTF/wtf/cocoa/UUIDCocoa.mm",
+      "sha256": "4af4d3235dc1620eea8b3028759b2c5a6800608f0f6ff2c3ecb42dbf4550e745",
+      "gitBlob": "e679f2fe52af25946288f977a52b5ce2fbddbc31"
+    },
+    {
+      "path": "Source/WTF/wtf/cocoa/VectorCocoa.h",
+      "sha256": "1121b02e2fbcce884a60f0ebd55b357319a70a34a8f4f83728f1e102cc44cfc2",
+      "gitBlob": "23e394e0c39c94e006a8e2571898a1c1e97ca0a6"
+    },
+    {
+      "path": "Source/WTF/wtf/cocoa/WorkQueueCocoa.cpp",
+      "sha256": "8d20418b514a5d01361e45befd6f33bc871d30809ecfedd9cb830615f4d2e49a",
+      "gitBlob": "2c08b5a445584f19f73a4c9db62c1cc78da160ef"
+    },
+    {
+      "path": "Source/WTF/wtf/darwin/DispatchExtras.h",
+      "sha256": "b97c0972349f35293d60c23dd067e24b1753444fd049abe8eebce64cd11763aa",
+      "gitBlob": "dfac7c6d66717cca4e40f1c87f960fc9298c741f"
+    },
+    {
+      "path": "Source/WTF/wtf/darwin/DispatchOSObject.h",
+      "sha256": "fbc633eb47848cc261e09cdad429229811b52429065a2720eb05384d31dfccdb",
+      "gitBlob": "c41971dafe435b3d7a71234bd28af5078659a708"
+    },
+    {
+      "path": "Source/WTF/wtf/darwin/LibraryPathDiagnostics.h",
+      "sha256": "8c74765afd823c0cb27dda088abe8eeb4d5e08ff425adc430f6323ff392bbb0c",
+      "gitBlob": "666adc7b646856bbfa159e58ffcdf0e2fb82c3d3"
+    },
+    {
+      "path": "Source/WTF/wtf/darwin/LibraryPathDiagnostics.mm",
+      "sha256": "375e33841d36743fa3f4b76ada947538bf54891443fb2d495575ee1fe73865eb",
+      "gitBlob": "a122974f6be9dc546ec03f3fe9c82394d4cd36c6"
+    },
+    {
+      "path": "Source/WTF/wtf/darwin/NetworkOSObject.h",
+      "sha256": "4661c84f21e048cf2df794cc8a0bb896d65068994af8739fc3d0cb38d34f45fc",
+      "gitBlob": "7fce6fa97585f0385a4573940d2c7c472bd07b0a"
+    },
+    {
+      "path": "Source/WTF/wtf/darwin/OSLogPrintStream.h",
+      "sha256": "3415fd8c52b42f9c781de3c71e2817f6259c0303361e599219124698df76abf9",
+      "gitBlob": "33c2fe88b1d7e0085d4cec7fe079223c697bd122"
+    },
+    {
+      "path": "Source/WTF/wtf/darwin/OSLogPrintStream.mm",
+      "sha256": "b8856e220cfb5265df1c42f302f805a38c3f485017317d4da36c46bb86e80958",
+      "gitBlob": "25e98aff67402525edf5b86003ddd414c89eeaa4"
+    },
+    {
+      "path": "Source/WTF/wtf/darwin/TypeCastsOSObject.h",
+      "sha256": "a0cea774cd93d283bcdd60760a815c0dbd3599865d0a24d7b70f3dacc6f1ca4e",
+      "gitBlob": "b0b900d0d09062e1e83ecd63deeb76cdd5c9246a"
+    },
+    {
+      "path": "Source/WTF/wtf/darwin/WeakLinking.h",
+      "sha256": "b9e96843ae74ef4a724da50b1e3d4927b3e1f5f6bfe8ff7cb7bb5267abec11c3",
+      "gitBlob": "82755e2a43ebd3489f56414c745f1a06bac5b4b8"
+    },
+    {
+      "path": "Source/WTF/wtf/darwin/XPCExtras.h",
+      "sha256": "ddb8480e5f85284c3b93d6326b6343b0889b394af171003507186a99ba455c67",
+      "gitBlob": "81428819f54d26a2a47c12de0f950ae19ee8a718"
+    },
+    {
+      "path": "Source/WTF/wtf/darwin/XPCObjectPtr.h",
+      "sha256": "5990d04f34e3403deab0582fd8a033d6a5e43997824fd597e492c8ffee014278",
+      "gitBlob": "7147b46db25a1532217c120b42965a6b20012802"
+    },
+    {
+      "path": "Source/WTF/wtf/mac/FileSystemMac.mm",
+      "sha256": "b47f90fc105d3df4719aafe4420365fa7439e28c91af81282fbfea5d8cb5ffa5",
+      "gitBlob": "69f828859a3c604bc2d4625bf3cc5eac4c6740b8"
+    },
+    {
+      "path": "Source/WTF/wtf/mac/MachExceptions.defs",
+      "sha256": "bde6624c928cd71551a5432b893d9a3ea9b9cf92ffcab4e67a02177f15c80f26",
+      "gitBlob": "4205742a4ed500f8064feeb4955a7c970d99af0b"
+    },
+    {
+      "path": "Source/WTF/wtf/spi/cf/CFBundleSPI.h",
+      "sha256": "f40aeeb7800441fc5de338c09ca65ebc338fd4c5a177190cf2447dfd51641747",
+      "gitBlob": "fad8aa1c531054beebc8e2fc0cf25c56c5f8f2c4"
+    },
+    {
+      "path": "Source/WTF/wtf/spi/cf/CFPrivSPI.h",
+      "sha256": "cabf63c0c83903e5a8675cfe8f4f62095a06aa636523e97544a309c3637268b3",
+      "gitBlob": "294b14ec119df43427ee6248cb9a1938bbe70c69"
+    },
+    {
+      "path": "Source/WTF/wtf/spi/cf/CFRunLoopSPI.h",
+      "sha256": "084af4b4efe2228c0d6cb8156a6c73d2daf98ad33ad1810fcdf3b88ab621a063",
+      "gitBlob": "aad923ed6246c4f96dffa265fab9d18745038c53"
+    },
+    {
+      "path": "Source/WTF/wtf/spi/cf/CFStringSPI.h",
+      "sha256": "90b6fd01a0495b82d0984798ad34628c671c1da74bcc0d8e6e34e53b5ffe97d4",
+      "gitBlob": "1144a2f8282e485db646bf1fb8a2f966f1fc45cb"
+    },
+    {
+      "path": "Source/WTF/wtf/spi/cocoa/BOMSPI.h",
+      "sha256": "afbf3477f4630608bd29a597bd6da7b240d284cdad91198844771ec15c2b7d29",
+      "gitBlob": "109048aec71eeb77bacb29c0161971c8549a3dcc"
+    },
+    {
+      "path": "Source/WTF/wtf/spi/cocoa/CFXPCBridgeSPI.h",
+      "sha256": "74aee4b9da3347b9c7c23ee601420e35ffe4b4074b4c1d448f72d39f530e2bc2",
+      "gitBlob": "4673addf287f281a0cf1ea70ca65dacfd961ef4a"
+    },
+    {
+      "path": "Source/WTF/wtf/spi/cocoa/CrashReporterClientSPI.h",
+      "sha256": "1b708a681a1a14a7db8b25f0e9b0b096fdde04a8a6ff17d0e9d7902c3193e33f",
+      "gitBlob": "3e03dcd76b63f88ca6989282b3c0fdd272bb9210"
+    },
+    {
+      "path": "Source/WTF/wtf/spi/cocoa/IOReturnSPI.h",
+      "sha256": "cbf2acf044e8e13fe2a888edbfa9cb01b0eb84142e8a1b3bf48ac4953aa6060f",
+      "gitBlob": "2fe27b3acbf5d535944827eac1b5086ded0d9499"
+    },
+    {
+      "path": "Source/WTF/wtf/spi/cocoa/IOSurfaceSPI.h",
+      "sha256": "b18953b0ad52298d77124dfdc9b286ddd2a113f2a79bd034b92b95438e40a118",
+      "gitBlob": "60335869b973665b7768124cfd79d6c073e7ab61"
+    },
+    {
+      "path": "Source/WTF/wtf/spi/cocoa/IOTypesSPI.h",
+      "sha256": "39a885d0dec3c5098af3a2c0ab89e749e06029f5614f53407a4cc18fea627395",
+      "gitBlob": "32ec17f7da14c995ef2e9e6c4ef58b5951f55bc8"
+    },
+    {
+      "path": "Source/WTF/wtf/spi/cocoa/MachVMSPI.h",
+      "sha256": "f12cc04a9656302916cf8399f22bfc8dbf3199b30b5b15177ee0c8bd63dfaeef",
+      "gitBlob": "93656ce16beb5e453c1ebca0da5cdbebd6961562"
+    },
+    {
+      "path": "Source/WTF/wtf/spi/cocoa/NSLocaleSPI.h",
+      "sha256": "7f18f93c17c6a288fb47f7db05cfb4320a38b2383c40de09da1245f25ee6f247",
+      "gitBlob": "2836f2c01a9919096757ec7f3e1dc3eb9fdff7bc"
+    },
+    {
+      "path": "Source/WTF/wtf/spi/cocoa/NSObjCRuntimeSPI.h",
+      "sha256": "5532cf21f9178d33ae5033a5a327515b9aea714ead943bb3314a79b64476bf07",
+      "gitBlob": "eaf6532836874a3bd1a15fde2c7458b4bd738dd6"
+    },
+    {
+      "path": "Source/WTF/wtf/spi/cocoa/OSLogSPI.h",
+      "sha256": "f93bc7f6f2cc2e2ac53805aa388f3f1fff0e9df3e49f45fd46263135f1e3e60c",
+      "gitBlob": "a066a0fcba4cd1cf05908fc0b087288717b8a101"
+    },
+    {
+      "path": "Source/WTF/wtf/spi/cocoa/SecuritySPI.h",
+      "sha256": "bf635eeb176aee4335d37a71d6267bdf272e8769aab8c5289eaed0d67cda6231",
+      "gitBlob": "bed4dfe8f958b0a7fe9279f05d6192ae04da0123"
+    },
+    {
+      "path": "Source/WTF/wtf/spi/cocoa/XTSPI.h",
+      "sha256": "4d92aa486eba7f1cabf17f74c34a602a17aa2c682396206317faa2ce2595c5a4",
+      "gitBlob": "2d18372fdb898ab14f6c70294390bf77019b41d5"
+    },
+    {
+      "path": "Source/WTF/wtf/spi/cocoa/objcSPI.h",
+      "sha256": "d96613bb14fed5fbe7fc6c2182316d1505638973c0cdf2353c3b0cbf5123e968",
+      "gitBlob": "17fefdd0140fdc96c1124797fe75aa0841d81fa7"
+    },
+    {
+      "path": "Source/WTF/wtf/spi/darwin/CodeSignSPI.h",
+      "sha256": "036ff6b123027cae46db35c23411047b060bf7b675967f36dc3f63426981e427",
+      "gitBlob": "be00c7c07c56ee54f90bec42dd83adf550c37bbc"
+    },
+    {
+      "path": "Source/WTF/wtf/spi/darwin/DataVaultSPI.h",
+      "sha256": "6ce85855eb57d26288958eeffa0f9354ed9500c94635755fb808bbde7f8174bd",
+      "gitBlob": "f83a5366a2fd63e22b090b9fe4448c1c2c1a1690"
+    },
+    {
+      "path": "Source/WTF/wtf/spi/darwin/DispatchSPI.h",
+      "sha256": "f6476cfdf490c5e018879c78a5d9479e675c04ea90568d9a44ebdef56c686d69",
+      "gitBlob": "351618e3a835f65eb4f6c259b3d8d517814041e8"
+    },
+    {
+      "path": "Source/WTF/wtf/spi/darwin/MemoryStatusSPI.h",
+      "sha256": "e5fa037b8ddb28ae89ba85497db6c0a0bb60c70aaee95b8c5da1042b2d0e6125",
+      "gitBlob": "4bb5e98d15d513b94f7bfbc4a5c41bdbc312e74e"
+    },
+    {
+      "path": "Source/WTF/wtf/spi/darwin/OSVariantSPI.h",
+      "sha256": "ba8e7a999251ae9439868e3bccae9a78eaf9087b138ea426147cf573bf3744e0",
+      "gitBlob": "f372020988a0b48f7ab36a9dea5a18c5d5769c7f"
+    },
+    {
+      "path": "Source/WTF/wtf/spi/darwin/ProcessMemoryFootprint.h",
+      "sha256": "3e57ac71fe7af0b3fd170f1eb95436da346abb40856ac0044c482b3bcf707793",
+      "gitBlob": "a140a4f1e1974df13a0935ff99c3b001406729d6"
+    },
+    {
+      "path": "Source/WTF/wtf/spi/darwin/ReasonSPI.h",
+      "sha256": "27e9e47e169132acd813296db0bd375fca24d22aac89b668a46306b29489339a",
+      "gitBlob": "069a582dea9e6e003e5145765de106deb166bb29"
+    },
+    {
+      "path": "Source/WTF/wtf/spi/darwin/SandboxSPI.h",
+      "sha256": "0be7da8de60c86b0a15eac61bffbee37d412e94d9e1358faa15e14518f8765d3",
+      "gitBlob": "e836c807604448c780fcb28480ead0609eb28377"
+    },
+    {
+      "path": "Source/WTF/wtf/spi/darwin/XPCSPI.h",
+      "sha256": "3f4457867c0d8942e3cfb1f8025a9d51dbc88f3c74eb7b0a53d4cfce67c54222",
+      "gitBlob": "4bb236e323690ba1dbca981ccc5a9c55ef897f24"
+    },
+    {
+      "path": "Source/WTF/wtf/spi/darwin/dyldSPI.h",
+      "sha256": "c6b9e1234298a0203be49fdf87d2a78099be2211f03185ba400eee8c236c1310",
+      "gitBlob": "5a27287cc8fc60264a2e9551dacdbcee83f0d882"
+    },
+    {
+      "path": "Source/WTF/wtf/spi/mac/MetadataSPI.h",
+      "sha256": "f30e527d5505615e6f1d63d59b6fc8135c2640c9f67b1c056b05f38f48f8043a",
+      "gitBlob": "97bb27e092061a8210034ea16910e0a95c947039"
+    },
+    {
+      "path": "Source/WTF/wtf/text/cf/AtomStringImplCF.cpp",
+      "sha256": "5227ec6d9e8a488cbcb6d574a3a6acb955add0c1581d41f7ba66b30449b4b49d",
+      "gitBlob": "6c2287203e6b4e7dde8eeb988a4a65f617fbbe0e"
+    },
+    {
+      "path": "Source/WTF/wtf/text/cf/StringCF.cpp",
+      "sha256": "9ce6b34a267c7a850b6df9553c76aa0fffe807d4dbfb20b90d47277cd71067a2",
+      "gitBlob": "741b3f37d9b93269a1958f2dfb3c4a7a57a27330"
+    },
+    {
+      "path": "Source/WTF/wtf/text/cf/StringConcatenateCF.h",
+      "sha256": "d6f3428dc289123123079490ec47836a10849470ef0322a1953ec5df60bab2f1",
+      "gitBlob": "139cc2837e6db9812b55dceb1400fb4868b313b9"
+    },
+    {
+      "path": "Source/WTF/wtf/text/cf/StringImplCF.cpp",
+      "sha256": "481cfaea1caf89fcf768fae20749893b57519a17ca633d010766b9c6f10be05e",
+      "gitBlob": "6c083f54b0da30dbfe0e3c237bc35b650b5cbed2"
+    },
+    {
+      "path": "Source/WTF/wtf/text/cf/StringViewCF.cpp",
+      "sha256": "e6966f335563a54845a9bb8ab18f6aaf52367cb715f51030788ff21196539334",
+      "gitBlob": "406f220760c169539aece0a5c038af9273ebc2ef"
+    },
+    {
+      "path": "Source/WTF/wtf/text/cf/TextBreakIteratorCF.h",
+      "sha256": "884418a62a7cde0bf062ddd307a9b10d97fd12907be8522baa4234188c3a4d14",
+      "gitBlob": "bd099ebb8041537d96266eaf2f4dea87bc169fa2"
+    },
+    {
+      "path": "Source/WTF/wtf/text/cf/TextBreakIteratorCFCharacterCluster.h",
+      "sha256": "8484257fb068b95cc4410cfe2f3cdcec4e363cb8afda5894e2ced6c87d3c563e",
+      "gitBlob": "045c58bc843dc7c0ca0b0cdbefd0dc26580cfb2f"
+    },
+    {
+      "path": "Source/WTF/wtf/text/cf/TextBreakIteratorCFStringTokenizer.h",
+      "sha256": "16a663dcd6059309b01c61aa5d9add58883c71b3476398a717f9846e2a28d87a",
+      "gitBlob": "724acc9caea84f5c88065bf42c8959653b315716"
+    },
+    {
+      "path": "Source/WTF/wtf/text/cocoa/ASCIILiteralCocoa.mm",
+      "sha256": "e35d369e572e7f50a3981abe85db49d2d8eb1cbdd2f715d43bfe7de41f5f4abe",
+      "gitBlob": "8d14c00a3c3e44b2ab7ce38e15b4c08ae43b6d99"
+    },
+    {
+      "path": "Source/WTF/wtf/text/cocoa/ContextualizedCFString.h",
+      "sha256": "9f91047c96fb153ac05061f7bda91b3a2d1f2580928b892bea8c9331db76c56c",
+      "gitBlob": "75bfbe2c43a36a3932d36af9e25eb8f94cbd0c1e"
+    },
+    {
+      "path": "Source/WTF/wtf/text/cocoa/ContextualizedCFString.mm",
+      "sha256": "0362b075d0384a604ace7de04f3b573500f1b0a8994972ef90190973c1ce1e1a",
+      "gitBlob": "58d5914196de9321e4491f4b0903ece214d00970"
+    },
+    {
+      "path": "Source/WTF/wtf/text/cocoa/ContextualizedNSString.h",
+      "sha256": "c194d07bd01dffc552629119ae393f34a353af9767ab87dd8d6ef3757df2d025",
+      "gitBlob": "912b94778d9b0f543c21cb1856fcee099dd6ee14"
+    },
+    {
+      "path": "Source/WTF/wtf/text/cocoa/ContextualizedNSString.mm",
+      "sha256": "f69ba5043fb6baaaccd99b727b65506c79921308af8e98aec365bcbbada942db",
+      "gitBlob": "5e52c2c0149d6542d307b474b40735b7782f39e0"
+    },
+    {
+      "path": "Source/WTF/wtf/text/cocoa/StringCocoa.mm",
+      "sha256": "f6e74458138baf59e7d6d05769b00b4a6b20888d56aaec9596f2fb935415452a",
+      "gitBlob": "7a4f1cba76797bfcb773dc73e173beaf58009cbb"
+    },
+    {
+      "path": "Source/WTF/wtf/text/cocoa/StringImplCocoa.mm",
+      "sha256": "f59d177485bf9ff4a0aaf39178c3fe757d0a7ec4d56351e49851d536238c98ba",
+      "gitBlob": "2f0c53b856b7f5514f75c352065f7545de5aa2b2"
+    },
+    {
+      "path": "Source/WTF/wtf/text/cocoa/StringViewCocoa.mm",
+      "sha256": "d31306befbee05133830bec3ead28d12a08d268a95f3196d05e8117621e2e5dc",
+      "gitBlob": "d8bfd1e6cbcef98f23b7444e2ff3c389d86ff54a"
+    },
+    {
+      "path": "Source/WTF/wtf/text/cocoa/TextBreakIteratorInternalICUCocoa.cpp",
+      "sha256": "feb2c48ed36634d1080fb83ee48126b732c57bd7eb2052c7b340269dfc1008d0",
+      "gitBlob": "4f5988340729aa2a24dad16dfe997b65c65a326f"
+    },
+    {
+      "path": "Source/WTF/wtf/text/cocoa/TextStreamCocoa.mm",
+      "sha256": "6c89c86ebc8264f77eceb8fa1b4cfa97f5551ab270fd6caac74c21856bb1bfc5",
+      "gitBlob": "26b30d5a599e7eb6ae13993dce8d86fcefa574d6"
+    },
+    {
+      "path": "Source/bmalloc/bmalloc/ProcessCheck.mm",
+      "sha256": "a207e8efe72b3923101e7a623f5f079f908370fd53b1ecb9ed66275a74783c29",
+      "gitBlob": "9beafcf7cd77355931b51b52c380d72e27438687"
+    }
+  ]
+}
