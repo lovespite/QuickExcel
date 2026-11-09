@@ -255,6 +255,50 @@ P2 定向证据在 `artifacts/test-results/api-p2/`：`ScriptP2Tests` 覆盖 JS/
 
 交付：`scripts/build-quickexcel.ps1 -SkipTests -RunSmoke` 已发布并激活 `artifacts/avalonia/releases/20261104-120050-b8cbf778/application`。生产自检 **12 项通过**，包括真实隔离 worker 中 P2 对象事务、XLSQ 保存重开和动作撤销；`active-windows.json` 指向该包，发布清单 SHA-256 已核对，与 `Start-QuickExcel.cmd` 使用的启动选择一致。
 
+### 7.3 P3 首个切片：工作表、命名区域与区域结构
+
+2026-11-09 新增 67 个成员，累计 **420/1932（21.7%）**、43/315 个类型。工作表生命周期、命名区域和区域导航/结构编辑是日常脚本最常撞到的缺口，先于数据透视表、形状等大型对象补齐。
+
+| 范围 | 已支持 | 明确限制 |
+| --- | --- | --- |
+| 工作表管理 | `addWorksheet`、`getFirstWorksheet`/`getLastWorksheet`（含仅可见）、`getNext`/`getPrevious`、`delete`、`setName`、`getPosition`/`setPosition`、`getVisibility`/`setVisibility`、`getTabColor`/`setTabColor`、`getShowGridlines`/`setShowGridlines`、`getFreezePanes`（`freezeAt`/`freezeRows`/`freezeColumns`/`unfreeze`/`getLocation`）、`getRangeByIndexes`、`getRanges` | 不支持 `activate`；标准行高/列宽读写未开放。删除活动工作表时自动选择第一张可见工作表；不能隐藏最后一张可见工作表。 |
+| 命名区域 | 工作簿/工作表 `getNames`、`getNamedItem`、`addNamedItem`；`NamedItem.getName`、`delete`、`getFormula`/`setFormula`、`getValue`、`getType`、`getScope`、`getWorksheet`、`getRange` | 不支持 `getArrayValues`、`getComment`/`setComment`、`getVisible`/`setVisible`；`addNamedItem` 的 comment 参数显式拒绝。引用必须是单个矩形区域（Range 或工作簿限定 A1 字符串）或简单常量；名称遵循 Core 的校验规则。重命名后旧句柄按失效处理。 |
+| 区域导航 | `getCell`、`getRow`、`getColumn`、`getEntireRow`/`getEntireColumn`、`getOffsetRange`、`getResizedRange`、`getAbsoluteResizedRange`、`getBoundingRect`、`getIntersection`、`getLastCell`/`getLastRow`/`getLastColumn`、`getRowsAbove`/`getRowsBelow`、`getColumnsBefore`/`getColumnsAfter`、`getAddressLocal`、`getUsedRange`、`getMergedAreas`、`getTables` | `getSurroundingRegion`、`getRangeEdge`、`getSpecialCells`、`getVisibleView` 仍未实现。 |
+| 区域结构 | `merge`（含 `across`）、`unmerge`、`insert`、`delete`、`getRowHidden`/`setRowHidden`、`getColumnHidden`/`setColumnHidden` | `insert`/`delete` 只接受整行或整列区域；部分单元格位移仍显式拒绝。`select`、`getSpecialCells`、`getVisibleView` 等仍未实现。 |
+
+结构操作按受影响的行/列数计入写预算（单次上限 20000），重复操作重复计费；合并、隐藏和插删仍经过 Core 命令的保护、合并区域与引用更新检查。工作表插入/删除、重命名和位置调整与单元格写入、命名区域同属一次动作，一次撤销整体回滚。
+
+定向证据：`ScriptP3Tests` 覆盖工作表增删改/可见性/冻结、命令行和单元格级命名区域、区域偏移与边界、合并/取消合并、隐藏行列、整行整列插删、删除活动工作表回退和最后可见工作表保护；同时复跑 `ScriptP1Tests`、`ScriptP2Tests`、`ScriptWorkbookModelTests`、`ScriptValueWriteTests`，共 77 项通过。
+
+### 7.4 第二批：查找替换、数据工具与超链接
+
+2026-11-09 新增 11 个成员，累计 **431/1932（22.3%）**、44/315 个类型。这一批补齐日常脚本中最常用的数据整理入口。
+
+| 范围 | 已支持 | 明确限制 |
+| --- | --- | --- |
+| 查找与替换 | `find`（完整/部分匹配、区分大小写、正向/反向；单格范围从该格之后搜索整表并回绕）、`replaceAll`（返回替换次数） | 按显示文本匹配；`replaceAll` 不修改公式结果，匹配到公式格时显式拒绝；富文本匹配也显式拒绝，避免隐式展开。 |
+| 删除重复项 | `removeDuplicates(columns, includesHeader)` 和 `RemoveDuplicatesResult.getRemoved`/`getUniqueRemaining`，零基列索引相对当前区域 | 沿用 Core 限制：最多 20000 格；不压缩筛选、排序、Table、条件格式、验证区域或分组；不自动扩展相邻列。 |
+| 自动填充 | `autoFill` 的 `fillDefault`、`fillSeries`、`fillCopy`、`fillValues`、`fillFormats`、`fillDays`、`fillWeekdays`、`fillMonths`、`fillYears`、`linearTrend`、`growthTrend`；省略目标区域时按相邻数据区域向下延伸 | 序列类填充只支持从源区域向下或向右扩展；日历步长取前两个种子，工作日每次前进一个工作日，增长趋势取前两个种子的比值。 |
+| 快速填充 | `flashFill`，单列目标区域，自动吸收左右相邻来源列 | 沿用 Core 的 5 秒推断、20,000 格和 256 字符/格限制；目标列必须已有示例和空白格。 |
+| 超链接 | `getHyperlink`（读取左上格）、`setHyperlink`（单格写入；`{}` 清除） | 只写单格；`textToDisplay` 作为链接元数据保存，不隐式改写单元格文本；仅接受 http/https/mailto 或工作簿内引用。 |
+| 工作表激活与计算 | `Worksheet.activate`、`Range.calculate` | 激活隐藏工作表显式拒绝；`calculate` 只触发私有事务计算，不发布中间结果。 |
+
+查找/替换、删除重复、自动填充和快速填充都在私有事务内完成，读取公式显示值前先做事务内计算；所有写入仍与单元格、虚拟文件和对象修改共享同一次撤销。`ScriptP4Tests` 覆盖查找方向与大小写、公式替换拒绝、数值替换、删除重复结果、自动/快速填充、超链接读写与清除、工作表激活，以及失败回滚；批次一、二合计复跑 81 项脚本回归。
+
+### 7.5 第三批：剩余区域能力
+
+2026-11-09 新增 8 个成员，累计 **439/1932（22.7%）**、44/315 个类型。
+
+| 范围 | 已支持 | 明确限制 |
+| --- | --- | --- |
+| 复制 | `Range.copyFrom` 的 `all`、`formulas`、`values`、`formats`，支持转置 | 源必须是单个矩形区域；目标必须是单格或与源区域等大；`skipBlanks`、`link`、多区域源和自动平铺尚未实现。完整复制仍受合并单元格、图片/图表、条件格式和附件保护限制。 |
+| 清除 | `clear` 新增 `hyperlinks`、`removeHyperlinks`；`clearOrResetContents` | `removeHyperlinks` 同时清除格式但保留内容和批注；`resetContents` 与单元格控件语义未建模。 |
+| 区域推断 | `getSurroundingRegion`（连通数据块）、`getRangeEdge`（Ctrl+方向键，含回绕到工作表边界） | 合并单元格按锚点内容判断；稠密格式但没有值的单元格不计为数据。 |
+| 分组 | `group`/`ungroup`（整行或整列）、`hideGroupDetails`/`showGroupDetails`（与区域完全一致的分组） | 分组最多 7 层；分组必须保留区域外的汇总行列；隐藏/显示分组沿用 Core 的嵌套分组规则。 |
+| 自动填充 | 补齐 `fillValues`、`fillFormats`、`fillDays`、`fillWeekdays`、`fillMonths`、`fillYears`、`linearTrend`、`growthTrend` | 值/格式按源区域平铺；序列只支持向下或向右；工作日每次前进一个工作日；增长趋势按前两个种子比值。 |
+
+`ScriptP5Tests` 覆盖复制模式/转置/等大目标、公式转值、格式填充、超链接清除、连通区域、Ctrl+方向键、分组隐藏显示、全部自动填充类型和失败回滚；批次一至三脚本回归 84 项、相关 Core 数据/剪贴板/分组测试 125 项均通过。
+
 ## 8. 验证计划
 
 | 检查 | 方法 | 通过标准 |

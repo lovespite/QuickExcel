@@ -312,6 +312,15 @@ public sealed class DeleteSheetCommand(SheetId sheetId) : DocumentCommand
         var remaining = transformed.WithDefinedNames(transformed.DefinedNames.Where(n => n.Scope != sheetId));
         var changes = StructureEdits.Draft(snapshot, transformed).Changes.Where(c => c.Address.SheetId != sheetId)
             .Concat(sheet.Cells.Select(c => new CellChange(new(sheetId, c.Key.Row, c.Key.Column), c.Value, null))).ToImmutableArray();
-        return new(remaining.WithSheets(remaining.Sheets.Where(s => s.Id != sheetId)), changes, true);
+        var survivors = remaining.Sheets.Where(s => s.Id != sheetId).ToImmutableArray();
+        if (!survivors.Any(s => s.Visibility == SheetVisibility.Visible))
+            throw new InvalidOperationException(MessageText.Get("至少保留一张可见工作表。"));
+        var active = SurvivingActive(remaining, survivors);
+        return new(remaining.WithActiveSheet(active).WithSheets(survivors), changes, true);
     }
+
+    private static SheetId SurvivingActive(WorkbookSnapshot snapshot, ImmutableArray<WorksheetSnapshot> survivors) =>
+        survivors.Any(s => s.Id == snapshot.ActiveSheetId && s.Visibility == SheetVisibility.Visible)
+            ? snapshot.ActiveSheetId
+            : survivors.First(s => s.Visibility == SheetVisibility.Visible).Id;
 }

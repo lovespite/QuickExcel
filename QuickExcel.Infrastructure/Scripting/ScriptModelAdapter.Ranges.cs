@@ -9,6 +9,8 @@ internal sealed partial class ScriptModelAdapter
     private object? WorkbookApi(string member, JsonElement[] args)
     {
         if (member.Contains("Comment", StringComparison.Ordinal)) return Comments(null, member, args);
+        if (member is "addWorksheet" or "getFirstWorksheet" or "getLastWorksheet") return WorkbookSheetApi(member, args);
+        if (member is "getNames" or "getNamedItem" or "addNamedItem") return Names(null, member, args);
         if (member is "getTables" or "getTable")
         {
             Arity(args, member == "getTable" ? 1 : 0); Spend(1, false);
@@ -23,6 +25,11 @@ internal sealed partial class ScriptModelAdapter
     {
         if (member.Contains("Comment", StringComparison.Ordinal)) return Comments(sheet, member, args);
         if (member is "getCharts" or "getChart" or "addChart") return WorksheetCharts(sheet, member, args);
+        if (member is "setName" or "getPosition" or "setPosition" or "getVisibility" or "setVisibility" or
+            "getTabColor" or "setTabColor" or "getShowGridlines" or "setShowGridlines" or
+            "getNext" or "getPrevious" or "delete" or "activate")
+            return WorksheetSheetApi(sheet, member, args);
+        if (member is "getNames" or "getNamedItem" or "addNamedItem") return Names(sheet.Id, member, args);
         switch (member)
         {
             case "getProtection": case "getAutoFilter":
@@ -52,10 +59,19 @@ internal sealed partial class ScriptModelAdapter
     {
         if (member == "getDataValidation") { Arity(args, 0); return Handle("DataValidation", new { sheetId = sheet.Id.ToString(), address = range.ToString() }); }
         if (member.Contains("ConditionalFormat", StringComparison.Ordinal)) return RangeConditional(sheet, range, member, args);
+        if (member is "find" or "replaceAll" or "removeDuplicates" or "autoFill" or "flashFill" or "calculate" or
+            "getHyperlink" or "setHyperlink" or "copyFrom" or "getSurroundingRegion" or "getRangeEdge" or
+            "group" or "ungroup" or "hideGroupDetails" or "showGroupDetails" or "clearOrResetContents")
+            return RangeDataApi(sheet, range, member, args);
+        if (member is "getUsedRange" or "getMergedAreas" or "getTables" or "getRowHidden" or "setRowHidden" or
+            "getColumnHidden" or "setColumnHidden")
+            return RangeObjectApi(sheet, range, member, args);
+        if (member is "merge" or "unmerge" or "insert" or "delete")
+            return RangeStructureApi(sheet, range, member, args);
         if (member == "clear")
         {
             Arity(args, 0, 1); var mode = args.Length == 0 ? 0 : Int(args[0]);
-            if (mode is < 0 or > 2) throw Unsupported("clear 目前支持 all、formats、contents。");
+            if (mode is < 0 or > 4) throw Unsupported("clear 支持 all、formats、contents、hyperlinks、removeHyperlinks。");
             Write(sheet.Id, range, new ClearScriptRangeCommand(sheet.Id, range, mode)); return null;
         }
         if (member is "getRowIndex" or "getColumnIndex" or "getRowCount" or "getColumnCount" or "getCellCount" or "getSort")

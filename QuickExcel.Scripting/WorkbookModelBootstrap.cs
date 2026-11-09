@@ -77,6 +77,50 @@ public sealed partial class JscSession
             if (b[0] < a[0] || b[1] < a[1]) throw new ScriptError('InvalidArgument', '区域起止顺序颠倒。');
             return { rows: b[0] - a[0] + 1, columns: b[1] - a[1] + 1 };
         }
+        function rangeRect(address) {
+            const parts = address.split(':');
+            function point(text) {
+                const match = /^([A-Z]+)([1-9][0-9]*)$/.exec(text);
+                if (!match) throw new ScriptError('InvalidArgument', 'A1 地址无效。');
+                let column = 0;
+                for (const c of match[1]) column = column * 26 + c.charCodeAt(0) - 64;
+                return { row: Number(match[2]) - 1, column: column - 1 };
+            }
+            const a = point(parts[0]), b = point(parts[1] || parts[0]);
+            return { top: a.row, left: a.column, bottom: b.row, right: b.column };
+        }
+        function rangeText(top, left, bottom, right) {
+            if (!Number.isInteger(top) || !Number.isInteger(left) || !Number.isInteger(bottom) || !Number.isInteger(right) ||
+                top < 0 || left < 0 || bottom >= capabilities.limits.rows || right >= capabilities.limits.columns || top > bottom || left > right)
+                throw new ScriptError('InvalidArgument', '区域超出工作表范围。');
+            function name(value) {
+                let n = value + 1, text = '';
+                while (n > 0) { n--; text = String.fromCharCode(65 + n % 26) + text; n = Math.floor(n / 26); }
+                return text;
+            }
+            const first = name(left) + (top + 1), last = name(right) + (bottom + 1);
+            return first === last ? first : first + ':' + last;
+        }
+        function rangeFrom(value, sheetId) {
+            if (value && typeof value === 'object' && handleData.has(value)) {
+                const data = dataOf(value);
+                if (typeof data.address !== 'string') throw new ScriptError('InvalidArgument', '需要 Range。');
+                if (sheetId !== undefined && data.sheetId !== sheetId)
+                    throw new ScriptError('InvalidArgument', '区域必须属于同一工作表。');
+                return { sheetId: data.sheetId, address: data.address, rect: rangeRect(data.address) };
+            }
+            if (typeof value !== 'string') throw new ScriptError('InvalidArgument', '需要 Range 或 A1 地址。');
+            const address = modelAddress(value);
+            return { sheetId, address, rect: rangeRect(address) };
+        }
+        function checkIndex(value, name) {
+            if (!Number.isInteger(value) || value < 0) throw new ScriptError('InvalidArgument', name + ' 必须是非负整数。');
+            return value;
+        }
+        function checkCount(value, name) {
+            if (!Number.isInteger(value) || value === 0) throw new ScriptError('InvalidArgument', name + ' 必须是非零整数。');
+            return value;
+        }
         function checkScalar(value) {
             if (typeof value === 'string' && value.length <= 32767) return value;
             if (typeof value === 'number' && isFiniteNumber(value)) return value;
@@ -150,12 +194,140 @@ public sealed partial class JscSession
                     }
                     return range(data.sheetId, text);
                 },
-                getRange(address) { const data = dataOf(this); return range(data.sheetId, modelAddress(address)); }
+                getRange(address) { const data = dataOf(this); return range(data.sheetId, modelAddress(address)); },
+                getRangeByIndexes(startRow, startColumn, rowCount, columnCount) {
+                    const data = dataOf(this);
+                    checkIndex(startRow, 'startRow'); checkIndex(startColumn, 'startColumn');
+                    if (!Number.isInteger(rowCount) || rowCount < 1 || !Number.isInteger(columnCount) || columnCount < 1)
+                        throw new ScriptError('InvalidArgument', '行数和列数必须是正整数。');
+                    return range(data.sheetId, rangeText(startRow, startColumn, startRow + rowCount - 1, startColumn + columnCount - 1));
+                },
+                getRanges(address) {
+                    const data = dataOf(this);
+                    if (typeof address !== 'string' || address.trim().length === 0)
+                        throw new ScriptError('InvalidArgument', 'getRanges 需要逗号分隔的 A1 地址。');
+                    const addresses = address.split(',').map(part => modelAddress(part.trim()));
+                    if (addresses.length > 64) throw new ScriptError('InvalidArgument', '一次最多返回 64 个区域。');
+                    return makeHandle('RangeAreas', { sheetId: data.sheetId, addresses });
+                },
+                getFreezePanes() { return makeHandle('WorksheetFreezePanes', dataOf(this)); }
             },
             Range: {
                 getAddress() { return dataOf(this).address; },
+                getAddressLocal() { return dataOf(this).address; },
                 getWorksheet() { return worksheet(dataOf(this).sheetId); },
-                getFormat() { return makeHandle('RangeFormat', dataOf(this)); }
+                getFormat() { return makeHandle('RangeFormat', dataOf(this)); },
+                getCell(row, column) {
+                    const data = dataOf(this), rect = rangeRect(data.address);
+                    checkIndex(row, 'row'); checkIndex(column, 'column');
+                    const r = rect.top + row, c = rect.left + column;
+                    return range(data.sheetId, rangeText(r, c, r, c));
+                },
+                getRow(row) {
+                    const data = dataOf(this), rect = rangeRect(data.address);
+                    checkIndex(row, 'row');
+                    if (rect.top + row > rect.bottom) throw new ScriptError('InvalidArgument', '行索引超出区域。');
+                    return range(data.sheetId, rangeText(rect.top + row, rect.left, rect.top + row, rect.right));
+                },
+                getColumn(column) {
+                    const data = dataOf(this), rect = rangeRect(data.address);
+                    checkIndex(column, 'column');
+                    if (rect.left + column > rect.right) throw new ScriptError('InvalidArgument', '列索引超出区域。');
+                    return range(data.sheetId, rangeText(rect.top, rect.left + column, rect.bottom, rect.left + column));
+                },
+                getEntireRow() {
+                    const data = dataOf(this), rect = rangeRect(data.address);
+                    return range(data.sheetId, rangeText(rect.top, 0, rect.bottom, capabilities.limits.columns - 1));
+                },
+                getEntireColumn() {
+                    const data = dataOf(this), rect = rangeRect(data.address);
+                    return range(data.sheetId, rangeText(0, rect.left, capabilities.limits.rows - 1, rect.right));
+                },
+                getOffsetRange(rowOffset, columnOffset) {
+                    const data = dataOf(this), rect = rangeRect(data.address);
+                    if (!Number.isInteger(rowOffset) || !Number.isInteger(columnOffset))
+                        throw new ScriptError('InvalidArgument', '偏移量必须是整数。');
+                    return range(data.sheetId, rangeText(rect.top + rowOffset, rect.left + columnOffset,
+                        rect.bottom + rowOffset, rect.right + columnOffset));
+                },
+                getResizedRange(deltaRows, deltaColumns) {
+                    const data = dataOf(this), rect = rangeRect(data.address);
+                    if (!Number.isInteger(deltaRows) || !Number.isInteger(deltaColumns))
+                        throw new ScriptError('InvalidArgument', '调整量必须是整数。');
+                    return range(data.sheetId, rangeText(rect.top, rect.left, rect.bottom + deltaRows, rect.right + deltaColumns));
+                },
+                getAbsoluteResizedRange(numRows, numColumns) {
+                    const data = dataOf(this), rect = rangeRect(data.address);
+                    if (!Number.isInteger(numRows) || numRows < 1 || !Number.isInteger(numColumns) || numColumns < 1)
+                        throw new ScriptError('InvalidArgument', '行数和列数必须是正整数。');
+                    return range(data.sheetId, rangeText(rect.top, rect.left, rect.top + numRows - 1, rect.left + numColumns - 1));
+                },
+                getBoundingRect(value) {
+                    const data = dataOf(this), rect = rangeRect(data.address), other = rangeFrom(value, data.sheetId).rect;
+                    return range(data.sheetId, rangeText(Math.min(rect.top, other.top), Math.min(rect.left, other.left),
+                        Math.max(rect.bottom, other.bottom), Math.max(rect.right, other.right)));
+                },
+                getIntersection(value) {
+                    const data = dataOf(this), rect = rangeRect(data.address), other = rangeFrom(value, data.sheetId).rect;
+                    const top = Math.max(rect.top, other.top), left = Math.max(rect.left, other.left);
+                    const bottom = Math.min(rect.bottom, other.bottom), right = Math.min(rect.right, other.right);
+                    if (top > bottom || left > right) throw new ScriptError('InvalidArgument', '区域没有交集。');
+                    return range(data.sheetId, rangeText(top, left, bottom, right));
+                },
+                getLastCell() {
+                    const data = dataOf(this), rect = rangeRect(data.address);
+                    return range(data.sheetId, rangeText(rect.bottom, rect.right, rect.bottom, rect.right));
+                },
+                getLastRow() {
+                    const data = dataOf(this), rect = rangeRect(data.address);
+                    return range(data.sheetId, rangeText(rect.bottom, rect.left, rect.bottom, rect.right));
+                },
+                getLastColumn() {
+                    const data = dataOf(this), rect = rangeRect(data.address);
+                    return range(data.sheetId, rangeText(rect.top, rect.right, rect.bottom, rect.right));
+                },
+                getRowsAbove(count) {
+                    const data = dataOf(this), rect = rangeRect(data.address);
+                    count = count === undefined ? 1 : checkCount(count, 'count');
+                    return count > 0
+                        ? range(data.sheetId, rangeText(rect.top - count, rect.left, rect.top - 1, rect.right))
+                        : range(data.sheetId, rangeText(rect.top, rect.left, rect.top - count - 1, rect.right));
+                },
+                getRowsBelow(count) {
+                    const data = dataOf(this), rect = rangeRect(data.address);
+                    count = count === undefined ? 1 : checkCount(count, 'count');
+                    return count > 0
+                        ? range(data.sheetId, rangeText(rect.bottom + 1, rect.left, rect.bottom + count, rect.right))
+                        : range(data.sheetId, rangeText(rect.bottom + count + 1, rect.left, rect.bottom, rect.right));
+                },
+                getColumnsBefore(count) {
+                    const data = dataOf(this), rect = rangeRect(data.address);
+                    count = count === undefined ? 1 : checkCount(count, 'count');
+                    return count > 0
+                        ? range(data.sheetId, rangeText(rect.top, rect.left - count, rect.bottom, rect.left - 1))
+                        : range(data.sheetId, rangeText(rect.top, rect.left, rect.bottom, rect.left - count - 1));
+                },
+                getColumnsAfter(count) {
+                    const data = dataOf(this), rect = rangeRect(data.address);
+                    count = count === undefined ? 1 : checkCount(count, 'count');
+                    return count > 0
+                        ? range(data.sheetId, rangeText(rect.top, rect.right + 1, rect.bottom, rect.right + count))
+                        : range(data.sheetId, rangeText(rect.top, rect.right + count + 1, rect.bottom, rect.right));
+                }
+            },
+            NamedItem: {
+                getName() { return dataOf(this).name; },
+                getScope() {
+                    return dataOf(this).scopeSheetId ? QuickExcel.NamedItemScope.worksheet : QuickExcel.NamedItemScope.workbook;
+                },
+                getWorksheet() {
+                    const data = dataOf(this);
+                    return data.scopeSheetId ? worksheet(data.scopeSheetId) : undefined;
+                }
+            },
+            RemoveDuplicatesResult: {
+                getRemoved() { return dataOf(this).removed; },
+                getUniqueRemaining() { return dataOf(this).uniqueRemaining; }
             },
             RangeFormat: {
                 getFill() { return makeHandle('RangeFill', dataOf(this)); }
@@ -202,7 +374,8 @@ public sealed partial class JscSession
                         const result = model(spec.host, data, args.map(value => apiArgument(value)));
                         if (name === 'getCreationDate' && (type === 'Comment' || type === 'CommentReply')) return new Date(result);
                         return result && typeof result === 'object' ? apiResult(result) : result === null &&
-                            ['getTable','getColumn','getColumnById','getColumnByName','getUsedRange','getChart','getComment','getCommentReply','getConditionalFormat','getCustom','getCellValue','getTextComparison','getPreset'].includes(name) ? undefined : result;
+                            ['getTable','getColumn','getColumnById','getColumnByName','getUsedRange','getChart','getComment','getCommentReply','getConditionalFormat','getCustom','getCellValue','getTextComparison','getPreset',
+                             'getNext','getPrevious','getFirstWorksheet','getLastWorksheet','getNamedItem','getLocation','getHyperlink','find'].includes(name) ? undefined : result;
                     }
                     if (type === 'Range') {
                         if (name === 'setValue') args = [checkScalar(args[0])];

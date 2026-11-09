@@ -80,6 +80,42 @@
           "host": "getApi:Workbook.getComment",
           "arity": 2,
           "cost": 100000
+        },
+        "addWorksheet": {
+          "kind": "host",
+          "host": "setApi:Workbook.addWorksheet",
+          "arity": 2,
+          "cost": 20000
+        },
+        "getFirstWorksheet": {
+          "kind": "host",
+          "host": "getApi:Workbook.getFirstWorksheet",
+          "arity": 2,
+          "cost": 1
+        },
+        "getLastWorksheet": {
+          "kind": "host",
+          "host": "getApi:Workbook.getLastWorksheet",
+          "arity": 2,
+          "cost": 1
+        },
+        "getNames": {
+          "kind": "host",
+          "host": "getApi:Workbook.getNames",
+          "arity": 2,
+          "cost": 100000
+        },
+        "getNamedItem": {
+          "kind": "host",
+          "host": "getApi:Workbook.getNamedItem",
+          "arity": 2,
+          "cost": 1
+        },
+        "addNamedItem": {
+          "kind": "host",
+          "host": "setApi:Workbook.addNamedItem",
+          "arity": 2,
+          "cost": 20000
         }
       }
     },
@@ -183,6 +219,111 @@
           "host": "getApi:Worksheet.getComment",
           "arity": 2,
           "cost": 100000
+        },
+        "setName": {
+          "kind": "host",
+          "host": "setApi:Worksheet.setName",
+          "arity": 2,
+          "cost": 20000
+        },
+        "getPosition": {
+          "kind": "host",
+          "host": "getApi:Worksheet.getPosition",
+          "arity": 2,
+          "cost": 1
+        },
+        "setPosition": {
+          "kind": "host",
+          "host": "setApi:Worksheet.setPosition",
+          "arity": 2,
+          "cost": 20000
+        },
+        "getVisibility": {
+          "kind": "host",
+          "host": "getApi:Worksheet.getVisibility",
+          "arity": 2,
+          "cost": 1
+        },
+        "setVisibility": {
+          "kind": "host",
+          "host": "setApi:Worksheet.setVisibility",
+          "arity": 2,
+          "cost": 20000
+        },
+        "getTabColor": {
+          "kind": "host",
+          "host": "getApi:Worksheet.getTabColor",
+          "arity": 2,
+          "cost": 1
+        },
+        "setTabColor": {
+          "kind": "host",
+          "host": "setApi:Worksheet.setTabColor",
+          "arity": 2,
+          "cost": 20000
+        },
+        "getShowGridlines": {
+          "kind": "host",
+          "host": "getApi:Worksheet.getShowGridlines",
+          "arity": 2,
+          "cost": 1
+        },
+        "setShowGridlines": {
+          "kind": "host",
+          "host": "setApi:Worksheet.setShowGridlines",
+          "arity": 2,
+          "cost": 20000
+        },
+        "getFreezePanes": {
+          "kind": "local"
+        },
+        "getRangeByIndexes": {
+          "kind": "local"
+        },
+        "getRanges": {
+          "kind": "local"
+        },
+        "getNext": {
+          "kind": "host",
+          "host": "getApi:Worksheet.getNext",
+          "arity": 2,
+          "cost": 1
+        },
+        "getPrevious": {
+          "kind": "host",
+          "host": "getApi:Worksheet.getPrevious",
+          "arity": 2,
+          "cost": 1
+        },
+        "getNames": {
+          "kind": "host",
+          "host": "getApi:Worksheet.getNames",
+          "arity": 2,
+          "cost": 100000
+        },
+        "getNamedItem": {
+          "kind": "host",
+          "host": "getApi:Worksheet.getNamedItem",
+          "arity": 2,
+          "cost": 1
+        },
+        "addNamedItem": {
+          "kind": "host",
+          "host": "setApi:Worksheet.addNamedItem",
+          "arity": 2,
+          "cost": 20000
+        },
+        "delete": {
+          "kind": "host",
+          "host": "setApi:Worksheet.delete",
+          "arity": 2,
+          "cost": 20000
+        },
+        "activate": {
+          "kind": "host",
+          "host": "setApi:Worksheet.activate",
+          "arity": 2,
+          "cost": 20000
         }
       }
     },
@@ -374,6 +515,222 @@
         "clearAllConditionalFormats": {
           "kind": "host",
           "host": "setApi:Range.clearAllConditionalFormats",
+          "arity": 2,
+          "cost": 20000
+        },
+        "getAddressLocal": {
+          "kind": "local"
+        },
+        "getCell": {
+          "kind": "local"
+        },
+        "getRow": {
+          "kind": "local"
+        },
+        "getColumn": {
+          "kind": "local"
+        },
+        "getEntireRow": {
+          "kind": "local"
+        },
+        "getEntireColumn": {
+          "kind": "local"
+        },
+        "getOffsetRange": {
+          "kind": "local"
+        },
+        "getResizedRange": {
+          "kind": "local"
+        },
+        "getAbsoluteResizedRange": {
+          "kind": "local"
+        },
+        "getBoundingRect": {
+          "kind": "local"
+        },
+        "getIntersection": {
+          "kind": "local"
+        },
+        "getLastCell": {
+          "kind": "local"
+        },
+        "getLastRow": {
+          "kind": "local"
+        },
+        "getLastColumn": {
+          "kind": "local"
+        },
+        "getRowsAbove": {
+          "kind": "local"
+        },
+        "getRowsBelow": {
+          "kind": "local"
+        },
+        "getColumnsBefore": {
+          "kind": "local"
+        },
+        "getColumnsAfter": {
+          "kind": "local"
+        },
+        "getUsedRange": {
+          "kind": "host",
+          "host": "getApi:Range.getUsedRange",
+          "arity": 2,
+          "cost": 100000
+        },
+        "getMergedAreas": {
+          "kind": "host",
+          "host": "getApi:Range.getMergedAreas",
+          "arity": 2,
+          "cost": 100000
+        },
+        "getTables": {
+          "kind": "host",
+          "host": "getApi:Range.getTables",
+          "arity": 2,
+          "cost": 100000
+        },
+        "getRowHidden": {
+          "kind": "host",
+          "host": "getApi:Range.getRowHidden",
+          "arity": 2,
+          "cost": 100000
+        },
+        "setRowHidden": {
+          "kind": "host",
+          "host": "setApi:Range.setRowHidden",
+          "arity": 2,
+          "cost": 20000
+        },
+        "getColumnHidden": {
+          "kind": "host",
+          "host": "getApi:Range.getColumnHidden",
+          "arity": 2,
+          "cost": 100000
+        },
+        "setColumnHidden": {
+          "kind": "host",
+          "host": "setApi:Range.setColumnHidden",
+          "arity": 2,
+          "cost": 20000
+        },
+        "merge": {
+          "kind": "host",
+          "host": "setApi:Range.merge",
+          "arity": 2,
+          "cost": 20000
+        },
+        "unmerge": {
+          "kind": "host",
+          "host": "setApi:Range.unmerge",
+          "arity": 2,
+          "cost": 20000
+        },
+        "insert": {
+          "kind": "host",
+          "host": "setApi:Range.insert",
+          "arity": 2,
+          "cost": 20000
+        },
+        "delete": {
+          "kind": "host",
+          "host": "setApi:Range.delete",
+          "arity": 2,
+          "cost": 20000
+        },
+        "find": {
+          "kind": "host",
+          "host": "getApi:Range.find",
+          "arity": 2,
+          "cost": 100000
+        },
+        "replaceAll": {
+          "kind": "host",
+          "host": "setApi:Range.replaceAll",
+          "arity": 2,
+          "cost": 20000
+        },
+        "removeDuplicates": {
+          "kind": "host",
+          "host": "setApi:Range.removeDuplicates",
+          "arity": 2,
+          "cost": 20000
+        },
+        "autoFill": {
+          "kind": "host",
+          "host": "setApi:Range.autoFill",
+          "arity": 2,
+          "cost": 20000
+        },
+        "flashFill": {
+          "kind": "host",
+          "host": "setApi:Range.flashFill",
+          "arity": 2,
+          "cost": 20000
+        },
+        "calculate": {
+          "kind": "host",
+          "host": "getApi:Range.calculate",
+          "arity": 2,
+          "cost": 1
+        },
+        "getHyperlink": {
+          "kind": "host",
+          "host": "getApi:Range.getHyperlink",
+          "arity": 2,
+          "cost": 1
+        },
+        "setHyperlink": {
+          "kind": "host",
+          "host": "setApi:Range.setHyperlink",
+          "arity": 2,
+          "cost": 20000
+        },
+        "copyFrom": {
+          "kind": "host",
+          "host": "setApi:Range.copyFrom",
+          "arity": 2,
+          "cost": 20000
+        },
+        "getSurroundingRegion": {
+          "kind": "host",
+          "host": "getApi:Range.getSurroundingRegion",
+          "arity": 2,
+          "cost": 100000
+        },
+        "getRangeEdge": {
+          "kind": "host",
+          "host": "getApi:Range.getRangeEdge",
+          "arity": 2,
+          "cost": 100000
+        },
+        "group": {
+          "kind": "host",
+          "host": "setApi:Range.group",
+          "arity": 2,
+          "cost": 20000
+        },
+        "ungroup": {
+          "kind": "host",
+          "host": "setApi:Range.ungroup",
+          "arity": 2,
+          "cost": 20000
+        },
+        "hideGroupDetails": {
+          "kind": "host",
+          "host": "setApi:Range.hideGroupDetails",
+          "arity": 2,
+          "cost": 20000
+        },
+        "showGroupDetails": {
+          "kind": "host",
+          "host": "setApi:Range.showGroupDetails",
+          "arity": 2,
+          "cost": 20000
+        },
+        "clearOrResetContents": {
+          "kind": "host",
+          "host": "setApi:Range.clearOrResetContents",
           "arity": 2,
           "cost": 20000
         }
@@ -2246,6 +2603,99 @@
           "host": "getApi:ChartAxis.getMinimum"
         }
       }
+    },
+    "RemoveDuplicatesResult": {
+      "members": {
+        "getRemoved": {
+          "kind": "local"
+        },
+        "getUniqueRemaining": {
+          "kind": "local"
+        }
+      }
+    },
+    "NamedItem": {
+      "members": {
+        "getName": {
+          "kind": "local"
+        },
+        "getFormula": {
+          "kind": "host",
+          "host": "getApi:NamedItem.getFormula",
+          "arity": 2,
+          "cost": 1
+        },
+        "setFormula": {
+          "kind": "host",
+          "host": "setApi:NamedItem.setFormula",
+          "arity": 2,
+          "cost": 20000
+        },
+        "getValue": {
+          "kind": "host",
+          "host": "getApi:NamedItem.getValue",
+          "arity": 2,
+          "cost": 100000
+        },
+        "getType": {
+          "kind": "host",
+          "host": "getApi:NamedItem.getType",
+          "arity": 2,
+          "cost": 100000
+        },
+        "getScope": {
+          "kind": "local"
+        },
+        "getWorksheet": {
+          "kind": "local"
+        },
+        "getRange": {
+          "kind": "host",
+          "host": "getApi:NamedItem.getRange",
+          "arity": 2,
+          "cost": 100000
+        },
+        "delete": {
+          "kind": "host",
+          "host": "setApi:NamedItem.delete",
+          "arity": 2,
+          "cost": 20000
+        }
+      }
+    },
+    "WorksheetFreezePanes": {
+      "members": {
+        "freezeAt": {
+          "kind": "host",
+          "host": "setApi:WorksheetFreezePanes.freezeAt",
+          "arity": 2,
+          "cost": 20000
+        },
+        "freezeColumns": {
+          "kind": "host",
+          "host": "setApi:WorksheetFreezePanes.freezeColumns",
+          "arity": 2,
+          "cost": 20000
+        },
+        "freezeRows": {
+          "kind": "host",
+          "host": "setApi:WorksheetFreezePanes.freezeRows",
+          "arity": 2,
+          "cost": 20000
+        },
+        "getLocation": {
+          "kind": "host",
+          "host": "getApi:WorksheetFreezePanes.getLocation",
+          "arity": 2,
+          "cost": 1
+        },
+        "unfreeze": {
+          "kind": "host",
+          "host": "setApi:WorksheetFreezePanes.unfreeze",
+          "arity": 2,
+          "cost": 20000
+        }
+      }
     }
   },
   "enums": [
@@ -2278,7 +2728,17 @@
     "DataValidationAlertStyle",
     "ContentType",
     "ConditionalRangeBorderIndex",
-    "ConditionalRangeBorderLineStyle"
+    "ConditionalRangeBorderLineStyle",
+    "SheetVisibility",
+    "InsertShiftDirection",
+    "DeleteShiftDirection",
+    "NamedItemScope",
+    "NamedItemType",
+    "SearchDirection",
+    "AutoFillType",
+    "KeyboardDirection",
+    "GroupOption",
+    "RangeCopyType"
   ],
   "limits": {
     "rows": 200000,

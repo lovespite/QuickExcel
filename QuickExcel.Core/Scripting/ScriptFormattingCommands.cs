@@ -7,7 +7,7 @@ public sealed class ClearScriptRangeCommand(SheetId sheetId, CellRectangle range
 {
     internal override CommandDraft Prepare(WorkbookSnapshot snapshot)
     {
-        if (range.Count > 20_000 || mode is < 0 or > 2) throw new ArgumentException("清除范围或模式无效。");
+        if (range.Count > 20_000 || mode is < 0 or > 4) throw new ArgumentException("清除范围或模式无效。");
         var sheet = snapshot.GetSheet(sheetId);
         if (mode == 0 && sheet.Annotations.Links.Keys.Concat(sheet.Annotations.Notes.Keys).Any(p => range.Contains(p.Row, p.Column)))
             throw new NotSupportedException("清除全部涉及链接或批注；请使用 contents 或 formats，附件必须显式处理。");
@@ -15,9 +15,18 @@ public sealed class ClearScriptRangeCommand(SheetId sheetId, CellRectangle range
         for (var r = range.Top; r <= range.Bottom; r++)
         for (var c = range.Left; c <= range.Right; c++) addresses.Add(new(sheetId, r, c));
         var current = snapshot;
-        if (mode != 1) current = new ClearCellsCommand(addresses).Prepare(current).Snapshot;
-        if (mode != 2) current = new ClearCellFormatsCommand(addresses).Prepare(current).Snapshot;
-        return StructureEdits.Draft(snapshot, current) with { CalculationUnchanged = mode == 1 };
+        if (mode is 3 or 4)
+        {
+            var links = sheet.Annotations.Links.Where(p => !range.Contains(p.Key.Row, p.Key.Column)).ToImmutableDictionary();
+            if (links.Count != sheet.Annotations.Links.Count)
+            {
+                var annotations = new WorksheetAnnotations(links, sheet.Annotations.Notes, sheet.Annotations.NoteDrawing);
+                current = current.WithSheets(current.Sheets.Select(s => s.Id == sheetId ? s.WithAnnotations(annotations) : s));
+            }
+        }
+        if (mode is 0 or 2) current = new ClearCellsCommand(addresses).Prepare(current).Snapshot;
+        if (mode is 0 or 1 or 4) current = new ClearCellFormatsCommand(addresses).Prepare(current).Snapshot;
+        return StructureEdits.Draft(snapshot, current) with { CalculationUnchanged = mode is 1 or 3 or 4 };
     }
 }
 

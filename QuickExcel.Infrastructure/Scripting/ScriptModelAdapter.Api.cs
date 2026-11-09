@@ -74,9 +74,11 @@ internal sealed partial class ScriptModelAdapter
         var data = transport[0]; var args = transport[1].EnumerateArray().ToArray();
         if (args.Length > 8) throw Invalid("对象调用参数过多。");
         if (name.StartsWith("Workbook.", StringComparison.Ordinal)) return WorkbookApi(name[9..], args);
+        if (name.StartsWith("NamedItem.", StringComparison.Ordinal)) return NamedItemApi(data, name[10..], args);
         if (!Guid.TryParse(Text(data.GetProperty("sheetId")), out var id)) throw Invalid("工作表 ID 无效。");
         var sheet = Model.View.Sheets.FirstOrDefault(s => s.Id.Value == id) ?? throw new ModelFailure("InvalidReference", "工作表句柄已失效。");
         if (name.StartsWith("Worksheet.", StringComparison.Ordinal)) return WorksheetApi(sheet, name[10..], args);
+        if (name.StartsWith("WorksheetFreezePanes.", StringComparison.Ordinal)) return FreezePanesApi(sheet, name[21..], args);
         if (name.StartsWith("WorksheetProtection.", StringComparison.Ordinal)) return ProtectionApi(sheet, name[20..], args);
         if (name.StartsWith("Chart", StringComparison.Ordinal)) return ChartApi(sheet, data, name, args);
         if (name.StartsWith("Comment", StringComparison.Ordinal)) return CommentApi(sheet, data, name.Split('.')[1], args);
