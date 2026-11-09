@@ -40,7 +40,7 @@ public sealed class WorkbookWorkspace : IDisposable
         using var blank = WorkbookDocument.CreateBlank(_services);
         return new(blank.Snapshot.WithScriptModules(new(
             [KeyValuePair.Create("main", new ScriptModule("scripts/main.ts", "export function main(workbook: QuickExcel.Workbook, host: QuickExcel.Host): void {\n    // Initialize shared Actions / Events state here.\n}\n", ScriptLanguage.TypeScript))],
-            ["main"], scriptApiVersion: 4, bindings: [new("main", "initialization")])), _services);
+            ["main"], scriptApiVersion: ScriptModuleSet.CurrentApiVersion, bindings: [new("main", "initialization")])), _services);
     }
     private void RequireIdle()
     {

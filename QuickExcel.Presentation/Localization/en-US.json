@@ -1240,7 +1240,7 @@
   "支持的对象成员和枚举值": "Supported object members and enum values",
   "没有匹配的已支持成员。": "No matching supported members.",
   "显示 {0} / {1} 项": "Showing {0} of {1} items",
-  "宿主扩展入口包括 host.functions.register（自定义函数）和 host.events.on（事件）。": "Host extensions include host.functions.register for custom functions and host.events.on for events.",
+  "脚本按模块角色自动发现导出的自定义函数、操作和事件处理器；主入口用于初始化。": "Exported custom functions, actions, and event handlers are discovered automatically by module role; the main entry handles initialization.",
   "选择第三方许可证或来源声明": "Select a third-party license or source notice",
   "许可证正文": "License text",
   "上一页": "Previous Page",

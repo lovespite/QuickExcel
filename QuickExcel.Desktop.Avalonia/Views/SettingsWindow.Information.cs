@@ -8,6 +8,7 @@ using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Markdown.Avalonia;
+using QuickExcel.Domain;
 using QuickExcel.ScriptContracts;
 using QuickExcel.Scripting;
 using QuickExcel.Presentation;
@@ -43,7 +44,7 @@ internal sealed partial class SettingsWindow
         _page.Children.Add(sourceMap);
         _page.Children.Add(Note(UiText.Get("无：不生成映射，运行错误显示生成 JS 的位置。\n精简（默认）：保留原始行列映射，不重复保存源码。\n完整：保留映射及嵌入的原始源码。")));
         _page.Children.Add(Note(UiText.Get("仅保存在本机。更改后当前脚本会停用；下次应用或签名时使用新设置，已有签名保持有效。")));
-        _page.Children.Add(Heading(UiText.Format($"脚本 API v{ScriptCapabilities.ApiVersion}"), 18));
+        _page.Children.Add(Heading(UiText.Format($"脚本 API v{ScriptModuleSet.CurrentApiVersion}"), 18));
         _page.Children.Add(Note(DesktopServices.SupportsScripts
             ? UiText.Format($"JSC 内核    {WorkerProtocol.Engine}\nWorker 协议    {WorkerProtocol.Version}")
             : UiText.Get("当前平台的脚本执行已停用。")));
@@ -58,7 +59,7 @@ internal sealed partial class SettingsWindow
             foreach (var member in type.Value.EnumerateObject())
                 rows.Add(UiText.Format($"{type.Name}.{member.Name}    ·    枚举值 {member.Value.GetInt32()}"));
         rows.Sort(StringComparer.OrdinalIgnoreCase);
-        var filter = new TextBox { PlaceholderText = UiText.Get("搜索对象或成员，如 Range.getValues") };
+        var filter = new TextBox { Name = "SettingsApiSearch", PlaceholderText = UiText.Get("搜索对象或成员，如 Range.getValues") };
         var list = new ListBox { Name = "SettingsApiMatrix", Height = 230 };
         var summary = Note("");
         AutomationProperties.SetName(filter, UiText.Get("搜索 API 支持矩阵")); AutomationProperties.SetName(list, UiText.Get("支持的对象成员和枚举值"));
@@ -70,7 +71,7 @@ internal sealed partial class SettingsWindow
         }
         filter.TextChanged += (_, _) => Filter();
         _page.Children.Add(filter); _page.Children.Add(summary); _page.Children.Add(list); Filter();
-        _page.Children.Add(Note(UiText.Get("宿主扩展入口包括 host.functions.register（自定义函数）和 host.events.on（事件）。")));
+        _page.Children.Add(Note(UiText.Get("脚本按模块角色自动发现导出的自定义函数、操作和事件处理器；主入口用于初始化。")));
     }
 
     private void About()

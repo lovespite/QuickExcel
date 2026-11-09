@@ -11,6 +11,7 @@ namespace QuickExcel.Scripting;
 public sealed class ScriptCapabilities
 {
     public const string ResourceName = "QuickExcel.Scripting.capabilities.json";
+    // Capability contract shared by file APIs v3/v4, not the current workbook API version.
     public const int ApiVersion = 3;
 
     private readonly Dictionary<string, HashSet<int>> _hostArities;

@@ -38,9 +38,10 @@ public sealed partial class MainWindow
             check(!window.GetVisualDescendants().OfType<ToggleSwitch>().Single().IsEnabled, "Autosave is a disabled placeholder");
             await capture(window, "settings-calculation");
             nav.SelectedItem = UiText.Get("脚本与 API"); await Layout();
-            var search = window.GetVisualDescendants().OfType<TextBox>().Single(); search.Text = "Range.getValues"; await Layout();
+            var search = window.GetVisualDescendants().OfType<TextBox>().Single(t => t.Name == "SettingsApiSearch"); search.Text = "Range.getValues"; await Layout();
             var matrix = window.GetVisualDescendants().OfType<ListBox>().Single(l => l.Name == "SettingsApiMatrix");
             check(matrix.ItemCount == 1, "Manifest-backed matrix filters by object and member");
+            await capture(window, "settings-scripts");
             nav.SelectedItem = UiText.Get("关于与许可"); await Layout();
             var icon = window.GetVisualDescendants().OfType<Image>().Single(i => i.Name == "AboutProductIcon");
             check(icon.Source is Bitmap && ReferenceEquals(icon.Source, Application.Current!.Resources[DesktopApp.ProductIconKey])

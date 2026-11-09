@@ -2,6 +2,8 @@
 
 2026-11-05，产品 2.0.0。新工作簿使用文件 `scriptApiVersion: 4`，IPC 11。对象模型及能力清单沿用 79 的实现边界；本章替换其入口与注册规则。API v3 文件保持原版本执行与保存，不自动改写源码；旧 v1/v2 的执行和保存门禁不变。v3 的注册方法只存在于版本隔离的兼容路径，v4 的 `host` 没有 `functions`、`events`、`actions` 或注册方法。
 
+产品 3.8.2 起，设置页的脚本 API 标题与新建工作簿共用 `ScriptModuleSet.CurrentApiVersion`，升级当前 API 时无需另改设置页版本号。`ScriptCapabilities.ApiVersion` 是 v3/v4 共用的能力清单契约版本，不用于显示当前文件 API；既有文件仍保留自己的版本声明。
+
 ## 角色与加载
 
 ### 环境级禁用（3.7.0）

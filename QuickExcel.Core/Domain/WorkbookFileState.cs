@@ -12,6 +12,8 @@ public sealed record ScriptSignature(int Version, string Algorithm, string Certi
 /// <summary>Source metadata only. It never carries execution authorization.</summary>
 public sealed class ScriptModuleSet
 {
+    /// <summary>File API used for new workbooks and product information. Legacy source keeps its declared version.</summary>
+    public const int CurrentApiVersion = 4;
     public const string TypeScriptOptions = "ts5.9.3-es2022-esnext-strict-isolated-verbatim-define-v1";
     /// <summary>Descriptions are inert single-line metadata shown in the action picker; they never affect execution.</summary>
     public const int MaximumDescriptionLength = 200;
