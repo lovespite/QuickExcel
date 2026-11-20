@@ -469,6 +469,31 @@ public sealed partial class DocumentSession : IDisposable
         return true;
     }
 
+    // Rebase the captured package's lineage, including cell history, under the document's
+    // save gate. Distinct states can be authored virtual-package edits and remain undoable.
+    // MarkSaved publishes notifications outside the IO gate.
+    internal void BindSavedFileState(WorkbookFileState? previous, WorkbookFileState state)
+    {
+        lock (_gate)
+        {
+            if (_closed) return;
+            var snapshots = new Dictionary<WorkbookSnapshot, WorkbookSnapshot>();
+            WorkbookSnapshot Bind(WorkbookSnapshot snapshot)
+            {
+                if (!ReferenceEquals(snapshot.FileState, previous)) return snapshot;
+                if (!snapshots.TryGetValue(snapshot, out var bound))
+                    snapshots.Add(snapshot, bound = snapshot.WithFileState(state));
+                return bound;
+            }
+            HistoryEntry BindEntry(HistoryEntry entry) => entry with { Before = Bind(entry.Before), After = Bind(entry.After) };
+            _snapshot = Bind(_snapshot);
+            for (var node = _undo.First; node is not null; node = node.Next) node.Value = BindEntry(node.Value);
+            var redo = _redo.ToArray(); _redo.Clear();
+            foreach (var entry in redo.Reverse()) _redo.Push(BindEntry(entry));
+            _historyBytes = _undo.Sum(entry => entry.Bytes) + _redo.Sum(entry => entry.Bytes);
+        }
+    }
+
     public bool MarkSaved(Guid sessionId, long capturedRevision)
     {
         lock (_gate)

@@ -5,7 +5,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AssemblyName>QuickExcel.Avalonia</AssemblyName>
-    <Version>4.2.1</Version>
+    <Version>4.2.2</Version>
     <QuickExcelDiagnostics Condition="'$(QuickExcelDiagnostics)' == ''">true</QuickExcelDiagnostics>
     <DefineConstants Condition="'$(QuickExcelDiagnostics)' == 'true'">$(DefineConstants);QUICKEXCEL_DIAGNOSTICS</DefineConstants>
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>

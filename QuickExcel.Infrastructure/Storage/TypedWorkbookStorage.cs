@@ -19,7 +19,7 @@ public sealed class WorkbookCompatibilityException(IEnumerable<string> issues) :
 }
 
 /// <summary>Typed XLSX and XLSQ v2 storage, with read-only import and migration of XLSQ v1 packages.</summary>
-public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage, IWorkbookVirtualFiles
+public sealed partial class TypedWorkbookStorage : IWorkbookSaveStateStorage, IWorkbookVirtualFiles
 {
     private static readonly string[] Features = ["typed-workbook", "stable-sheet-ids", "script-modules"];
     private static bool HasExtendedErrors(WorkbookSnapshot snapshot) => snapshot.Sheets.Any(s => s.Cells.Values.Any(c => c.Value is { Kind: CellValueKind.Error, ErrorCode: CellErrorCode.Calculation or CellErrorCode.Spill }));
@@ -292,13 +292,22 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage, IW
     public void Save(string path, WorkbookSnapshot snapshot, bool discardUnsupported, CancellationToken cancellationToken) =>
         SaveCore(path, snapshot, discardUnsupported, cancellationToken, null);
     public FileVersion SaveChecked(string path, WorkbookSnapshot snapshot, bool discardUnsupported, FileVersion expected) =>
-        SaveCore(path, snapshot, discardUnsupported, CancellationToken.None, expected);
+        SaveCore(path, snapshot, discardUnsupported, CancellationToken.None, expected).Version;
     public FileVersion OverwriteChecked(string path, WorkbookSnapshot snapshot, FileVersion expected)
     {
         if (expected.Sha256 is null) throw new InvalidOperationException(MessageText.Get("覆盖原文件需要已打开文件的版本记录。"));
-        return SaveCore(path, snapshot, true, CancellationToken.None, expected, overwriteOriginal: true);
+        return SaveCore(path, snapshot, true, CancellationToken.None, expected, overwriteOriginal: true).Version;
     }
-    private FileVersion SaveCore(string path, WorkbookSnapshot snapshot, bool discardUnsupported, CancellationToken cancellationToken, FileVersion? expected, bool overwriteOriginal = false)
+    public WorkbookSaveResult SaveWithState(string path, WorkbookSnapshot snapshot, bool discardUnsupported,
+        FileVersion? expected = null, bool overwriteOriginal = false)
+    {
+        if (overwriteOriginal && !discardUnsupported)
+            throw new ArgumentException(MessageText.Get("覆盖必须明确接受兼容性损失。"), nameof(discardUnsupported));
+        if (overwriteOriginal && expected?.Sha256 is null)
+            throw new InvalidOperationException(MessageText.Get("覆盖原文件需要已打开文件的版本记录。"));
+        return SaveCore(path, snapshot, discardUnsupported, CancellationToken.None, expected, overwriteOriginal);
+    }
+    private WorkbookSaveResult SaveCore(string path, WorkbookSnapshot snapshot, bool discardUnsupported, CancellationToken cancellationToken, FileVersion? expected, bool overwriteOriginal = false)
     {
         RequireExtension(path, ".xlsq", ".xlsx");
         if (OwnedFile(path)?.IsReadOnly == true) throw new InvalidOperationException(MessageText.Get(DocumentSession.ReadOnlyMessage));
@@ -437,17 +446,27 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage, IW
 
     private static byte[] SerializePackage(WorkbookSnapshot snapshot, bool discardUnsupported, CancellationToken cancellationToken) => Zip(BuildPackage(snapshot, discardUnsupported, cancellationToken));
 
-    private FileVersion WritePackage(string path, WorkbookSnapshot snapshot, bool discardUnsupported, CancellationToken cancellationToken, FileVersion? expected)
+    // Use the saved capture as the baseline: XLSX import generates new sheet identities,
+    // and serialization may normalize formulas or round dimensions. Neither replaces the
+    // live model. Drop its old provenance so repeated saves do not retain prior packages.
+    private static WorkbookFileState SavedFileState(WorkbookSnapshot snapshot, WorkbookFileState verified) => new(
+        verified.SourcePath, verified.SourceFormatVersion, verified.OriginalWorkbook, snapshot.WithFileState(null),
+        verified.SheetParts, verified.CompatibilityIssues, verified.ManifestJson, verified.StateJson,
+        verified.CompatibilityDiagnostics, verified.PreservedFormulas, verified.PreservedAttachments);
+
+    private WorkbookSaveResult WritePackage(string path, WorkbookSnapshot snapshot, bool discardUnsupported, CancellationToken cancellationToken, FileVersion? expected)
     {
         var bytes = SerializePackage(snapshot, discardUnsupported, cancellationToken);
+        WorkbookFileState? state = null;
         PackageIO.AtomicWrite(path, bytes, temp =>
         {
             var checkedSnapshot = OpenBytes(ReadFile(temp, new(cancellationToken)), path, true, new(cancellationToken));
             if (!ContentEquals(snapshot, checkedSnapshot, allowRowHeightRounding: true) || snapshot.DocumentId != checkedSnapshot.DocumentId || snapshot.Revision != checkedSnapshot.Revision ||
                 !snapshot.Sheets.Select(s => s.Id).SequenceEqual(checkedSnapshot.Sheets.Select(s => s.Id)) || snapshot.ScriptModules.Signature != checkedSnapshot.ScriptModules.Signature || snapshot.ScriptModules.ScriptApiVersion != checkedSnapshot.ScriptModules.ScriptApiVersion || ScriptHash(snapshot.ScriptModules) != ScriptHash(checkedSnapshot.ScriptModules) || !snapshot.PackageFiles.ContentEquals(checkedSnapshot.PackageFiles) || !snapshot.LocalStorage.ContentEquals(checkedSnapshot.LocalStorage))
                 throw new InvalidDataException(MessageText.Get("保存后重开校验未能还原完整快照。"));
+            state = SavedFileState(snapshot, checkedSnapshot.FileState!);
         }, cancellationToken, expected, OwnedFile(path) is { } lease ? lease.Commit : null);
-        return new(Convert.ToHexString(SHA256.HashData(bytes)));
+        return new(new(Convert.ToHexString(SHA256.HashData(bytes))), state!);
     }
 
     public void Export(string path, WorkbookSnapshot snapshot) => Export(path, snapshot, false, false);

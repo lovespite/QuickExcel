@@ -94,7 +94,9 @@ public sealed class WorkbookDocument : IDisposable
         lock (_saveGate)
         {
             captured = Snapshot;
-            if (_services.Storage is IWorkbookStorageOptions options) options.Save(path, captured, discardUnsupported);
+            if (_services.Storage is IWorkbookSaveStateStorage stateStorage)
+                Session.BindSavedFileState(captured.FileState, stateStorage.SaveWithState(path, captured, discardUnsupported).FileState);
+            else if (_services.Storage is IWorkbookStorageOptions options) options.Save(path, captured, discardUnsupported);
             else if (discardUnsupported) throw new NotSupportedException("Storage does not support compatibility choices.");
             else _services.Storage.Save(path, captured);
         }
@@ -122,7 +124,13 @@ public sealed class WorkbookDocument : IDisposable
             captured = Snapshot;
             if (_services.Storage is not IVersionedWorkbookStorage storage) throw new NotSupportedException(MessageText.Get("存储不支持外部文件冲突检查。"));
             if (overwriteOriginal && !discardUnsupported) throw new ArgumentException(MessageText.Get("覆盖必须明确接受兼容性损失。"), nameof(discardUnsupported));
-            version = overwriteOriginal ? storage.OverwriteChecked(path, captured, expected)
+            if (storage is IWorkbookSaveStateStorage stateStorage)
+            {
+                var saved = stateStorage.SaveWithState(path, captured, discardUnsupported, expected, overwriteOriginal);
+                version = saved.Version;
+                Session.BindSavedFileState(captured.FileState, saved.FileState);
+            }
+            else version = overwriteOriginal ? storage.OverwriteChecked(path, captured, expected)
                 : storage.SaveChecked(path, captured, discardUnsupported, expected);
         }
         Session.MarkSaved(Session.SessionId, captured.Revision);

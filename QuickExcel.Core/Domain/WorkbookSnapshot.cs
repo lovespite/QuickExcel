@@ -386,7 +386,7 @@ public sealed class WorkbookSnapshot
     public QuickExcel.Core.VirtualFileSet PackageFiles { get; }
     public WorkbookSnapshot WithPackageFiles(QuickExcel.Core.VirtualFileSet files) =>
         new(DocumentId, Revision, DateSystem, Sheets, ScriptSource, Styles, ScriptModules, FileState, DefinedNames, ActiveSheetId, Window, TextCompatibilityVersion, files, LocalStorage);
-    public WorkbookSnapshot WithFileState(WorkbookFileState state) =>
+    public WorkbookSnapshot WithFileState(WorkbookFileState? state) =>
         new(DocumentId, Revision, DateSystem, Sheets, ScriptSource, Styles, ScriptModules, state, DefinedNames, ActiveSheetId, Window, TextCompatibilityVersion, PackageFiles, LocalStorage);
     public SheetId ActiveSheetId { get; }
     public WorkbookWindow Window { get; }

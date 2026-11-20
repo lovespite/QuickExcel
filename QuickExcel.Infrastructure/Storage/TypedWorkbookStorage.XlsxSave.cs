@@ -39,7 +39,7 @@ public sealed partial class TypedWorkbookStorage
         return result;
     }
 
-    private static FileVersion SaveXlsx(string path, WorkbookSnapshot snapshot, bool discardUnsupported,
+    private static WorkbookSaveResult SaveXlsx(string path, WorkbookSnapshot snapshot, bool discardUnsupported,
         CancellationToken cancellationToken, FileVersion? expected)
     {
         if (snapshot.LocalStorage.Entries.Count > 0) throw new InvalidOperationException(
@@ -69,6 +69,7 @@ public sealed partial class TypedWorkbookStorage
             }
         }
         var bytes = preserve ? XlsxCharts.RepairPreservedExtendedCharts(snapshot.FileState!.OriginalWorkbook.ToArray(), snapshot, cancellationToken) : TypedWorkbookXml.Write(snapshot, false, cancellationToken);
+        WorkbookFileState? state = null;
         PackageIO.AtomicWrite(path, bytes, temp =>
         {
             var saved = PackageIO.ReadFile(temp, new(cancellationToken));
@@ -76,7 +77,8 @@ public sealed partial class TypedWorkbookStorage
             if (!ContentEquals(snapshot, reopened, allowRowHeightRounding: true))
                 throw new InvalidDataException(MessageText.Get("XLSX 保存后重开校验未能还原单元格、公式、样式与工作表配置。"));
             if (!preserve) XlsxMetadata.VerifyWritten(snapshot, saved, cancellationToken);
+            state = SavedFileState(snapshot, reopened.FileState!);
         }, cancellationToken, expected);
-        return new(Convert.ToHexString(SHA256.HashData(bytes)));
+        return new(new(Convert.ToHexString(SHA256.HashData(bytes))), state!);
     }
 }

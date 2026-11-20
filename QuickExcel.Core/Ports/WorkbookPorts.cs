@@ -18,6 +18,13 @@ public interface IWorkbookStorageOptions : IWorkbookStorage
 
 /// <summary>A null digest means the destination must still be absent.</summary>
 public sealed record FileVersion(string? Sha256);
+public sealed record WorkbookSaveResult(FileVersion Version, WorkbookFileState FileState);
+/// <summary>Returns the committed package's verified provenance without reopening a mutable destination.</summary>
+public interface IWorkbookSaveStateStorage : IVersionedWorkbookStorage
+{
+    WorkbookSaveResult SaveWithState(string path, WorkbookSnapshot snapshot, bool discardUnsupported,
+        FileVersion? expected = null, bool overwriteOriginal = false);
+}
 public sealed class WorkbookFileConflictException() : IOException("文件已被其他程序修改、替换或删除。请重新打开，或另存到其他文件；当前编辑仍保留。");
 public interface IVersionedWorkbookStorage : IWorkbookStorageOptions
 {

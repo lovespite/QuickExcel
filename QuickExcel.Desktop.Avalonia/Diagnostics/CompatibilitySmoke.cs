@@ -96,15 +96,24 @@ public sealed partial class MainWindow
             files.NextSave = source; AcceptReport();
             Check(!await SaveAsync(false) && Document.IsDirty, "Confirmed lossy save still rejects overwriting the original file");
             Check(original.SequenceEqual(File.ReadAllBytes(source)), "Canceled and rejected saves leave original bytes intact");
-            files.NextSave = Path.Combine(directory, "supported-copy.xlsx"); AcceptReport();
+            files.NextSave = Path.Combine(directory, "supported-copy.xlsq"); AcceptReport();
+            var sessionId = Document.Session.SessionId;
             Check(await SaveAsync(false) && !Document.IsDirty && _workspace.FilePath == files.NextSave, "Explicit report confirmation saves and binds the supported copy");
-            var copy = new TypedWorkbookStorage().Open(files.NextSave);
+            var copy = _services.Storage.Open(files.NextSave);
             Check(copy.Sheets[0].GetCell(0, 0)!.Content.LiteralValue.TextValue == "修改后值" && copy.FileState!.CompatibilityIssues.IsEmpty, "Supported copy contains the edits and removes only unsupported content");
             Check(copy.Sheets[0].GetCell(2, 2)!.Content.RichText?.Text == "保留富文本", "Supported copy retains modeled rich text");
             Check(original.SequenceEqual(File.ReadAllBytes(source)), "Successful copy also preserves the original file");
-            await OpenPathAsync(files.NextSave);
             var pickerCalls = files.SaveCalls;
-            Check(await SaveAsync(false) && files.SaveCalls == pickerCalls, "Reopened supported copy saves without a loss prompt");
+            Check(Document.Session.SessionId == sessionId && Document.CanUndo && Document.Snapshot.FileState!.SourcePath == files.NextSave &&
+                Document.Snapshot.FileState.CompatibilityIssues.IsEmpty, "Saved XLSQ adopts the supported package provenance without replacing the session or history");
+            _dialogDriver = async window => { await Layout(); Click(window, "取消"); };
+            Check(await SaveAsync(false) && files.SaveCalls == pickerCalls, "Supported XLSQ saves again without reopening or repeating the loss prompt");
+            _workspace.Editor.SetCell(0, 0, 0, "副本新修改"); Synchronize();
+            Check(await SaveAsync(false) && files.SaveCalls == pickerCalls, "Further edits to the supported XLSQ save without a loss prompt");
+            await History(false);
+            Check(Document.GetCellInput(0, 0, 0) == "修改后值" && await SaveAsync(false) && files.SaveCalls == pickerCalls,
+                "Undo retains the supported package provenance and saves without a loss prompt");
+            Check(original.SequenceEqual(File.ReadAllBytes(source)), "Repeated supported-copy saves and undo leave the XLSX source intact");
             _dialogDriver = async window =>
             {
                 await Layout();
@@ -133,6 +142,8 @@ public sealed partial class MainWindow
                 "Overwrite replaces original bytes with current edits and removes reported unsupported content");
             Check(overwritten.Sheets[0].GetCell(2, 2)!.Content.RichText?.Text == "保留富文本" && _workspace.Version == FileVersions.Read(source),
                 "Overwrite preserves rich text and updates the checked file fingerprint");
+            _dialogDriver = async window => { await Layout(); Click(window, "取消"); };
+            Check(await SaveAsync(false) && files.SaveCalls == pickerCalls, "Confirmed overwrite also saves again without repeating the loss prompt");
         }
         catch (Exception ex) { failure = ex; }
         finally { _dialogDriver = null; }
