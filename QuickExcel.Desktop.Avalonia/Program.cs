@@ -26,6 +26,7 @@ internal static class Program
     internal static string WebBenchmarkKind = "all";
     internal static bool WebScriptsOnly;
     internal static bool WebModulesOnly;
+    internal static bool WebNetworkOnly;
     [STAThread]
     public static int Main(string[] args)
     {
@@ -53,6 +54,7 @@ internal static class Program
         if (SmokeMode == "web")
         {
             WebScriptsOnly = args.ElementAtOrDefault(2) == "--scripts-only";
+            WebNetworkOnly = args.ElementAtOrDefault(2) == "--network-only";
             WebModulesOnly = args.ElementAtOrDefault(2) == "--modules-only";
         }
 #else

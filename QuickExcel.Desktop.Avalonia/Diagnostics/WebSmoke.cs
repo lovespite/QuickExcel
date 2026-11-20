@@ -30,7 +30,12 @@ public sealed partial class MainWindow
         try
         {
             ShowBook();
-            if (Program.WebModulesOnly) await CheckScriptNavigationAsync(Test, SelectModule, Check, directory);
+            if (Program.WebNetworkOnly)
+            {
+                _workspace.New(); await OpenScriptsAsync();
+                await CheckScriptNetworkPanelAsync(Check, directory);
+            }
+            else if (Program.WebModulesOnly) await CheckScriptNavigationAsync(Test, SelectModule, Check, directory);
             else
             {
             _workspace.New(); _files = new SmokeFiles { NextSave = Path.Combine(directory, "script-roundtrip.xlsq") };

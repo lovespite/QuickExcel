@@ -112,8 +112,13 @@ public sealed class ScriptNetworkSession : IDisposable
         {
             ObjectDisposedException.ThrowIf(_disposed, this);
             if (declared.Length != 0 && !_options.AllowNetwork) throw new InvalidOperationException("设置已禁止访问网络，授权申请已拒绝。");
-            if (declared.All(_granted.Contains)) return;
-            generation = _generation;
+            if (declared.Length == 0) { _granted.Clear(); _generation++; return; }
+            if (_granted.SetEquals(declared)) return;
+            // Consent belongs to this exact declaration list, not the union of
+            // previously approved lists. A changed list drops the old grant even
+            // when the replacement is empty, denied or cancelled.
+            _granted.Clear();
+            generation = ++_generation;
         }
         // The UI callback must not run under the session lock: closing or revoking while
         // the dialog is open invalidates this response instead of resurrecting a grant.
@@ -131,6 +136,13 @@ public sealed class ScriptNetworkSession : IDisposable
     public void Revoke()
     {
         lock (_gate) { _granted.Clear(); _generation++; }
+    }
+
+    // Rebuilding a worker cancels pending consent but keeps an already approved
+    // list for the open document. The next discovery must still match it exactly.
+    internal void InvalidatePendingAuthorization()
+    {
+        lock (_gate) { _generation++; }
     }
 
     public void Record(ScriptNetworkEntry entry)

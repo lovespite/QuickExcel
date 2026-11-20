@@ -57,7 +57,7 @@ public sealed partial class MainWindow
                 var addresses = new ListBox { ItemsSource = hosts, FontFamily = new("Consolas"), FontSize = 14 };
                 AutomationProperties.SetName(addresses, UiText.Get("请求授权的网络地址"));
                 LayoutGrid.SetRow(addresses, 1); root.Children.Add(addresses);
-                var note = new TextBlock { Text = UiText.Get("授权仅用于当前工作簿会话。修改脚本或停用脚本后需要重新授权。脚本可以向这些地址发送工作簿数据；只允许列出的地址，重定向也会检查。"),
+                var note = new TextBlock { Text = UiText.Get("授权仅用于当前工作簿会话。地址清单不变时，重复加载无需再次授权；清单变化、停用脚本或关闭网络访问后需要重新授权。脚本可以向这些地址发送工作簿数据；只允许列出的地址，重定向也会检查。"),
                     TextWrapping = TextWrapping.Wrap, Margin = new(0, 12) };
                 LayoutGrid.SetRow(note, 2); root.Children.Add(note);
                 var buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Spacing = 10 };

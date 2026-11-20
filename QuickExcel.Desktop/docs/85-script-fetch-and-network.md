@@ -1,6 +1,6 @@
 # 脚本 fetch 与网络面板
 
-2026-11-20，产品 6.1.0。文件脚本 API 仍为 v4（保留 v3 兼容执行），IPC 为 13，原生桥标识仍为 `qx-async-3`。6.0.0 引入 fetch 与异步 Actions，6.1.0 增加本机网络开关和可配置限额。此文补充 80 号入口约定，并替代其中初始化 / Actions 必须同步的限制；UDF、Events、控制台仍遵守原有执行约定。
+2026-11-20，产品 6.1.1。文件脚本 API 仍为 v4（保留 v3 兼容执行），IPC 为 13，原生桥标识仍为 `qx-async-3`。6.0.0 引入 fetch 与异步 Actions，6.1.0 增加本机网络开关和可配置限额，6.1.1 修复同一会话重复加载脚本时的重复网络授权。此文补充 80 号入口约定，并替代其中初始化 / Actions 必须同步的限制；UDF、Events、控制台仍遵守原有执行约定。
 
 ## 声明和授权
 
@@ -18,7 +18,7 @@ export function main(workbook, host) {
 
 不接受 URL、路径、端口、通配符或子域名通配。域名按 IDN ASCII、大小写及尾点规范化；IPv4 / IPv6 使用规范地址。授权某个域名不授权其子域名或其他重定向目标。端口由请求 URL 指定。声明最多 64 项，只允许在初始化根模块顶层完成；导入的辅助模块、Actions、Events 和运行期间不能追加声明。拼写仅为 `request`。
 
-宿主首次加载入口后、执行初始化前显示完整地址清单，说明 Actions 可向这些地址发送工作簿数据。用户明确同意后方可执行。授权只属于当前打开的工作簿会话，修改源代码 / 绑定、停用脚本、重新应用或关闭会话会撤销。拒绝授权不会执行初始化，也不会发送请求。用户阅读弹窗期间没有活动 worker 轮次计时。
+宿主首次加载入口后、执行初始化前显示完整地址清单，说明 Actions 可向这些地址发送工作簿数据。用户明确同意后方可执行。授权只属于当前打开的工作簿会话；重复加载、修改源码 / 绑定后重新应用时，规范化、去重后的完整地址清单不变即复用授权，不再弹窗。清单增删或替换会先丢弃旧授权，再为新的非空清单请求同意；空清单无需弹窗，不累积历史清单的权限。明确停用脚本、关闭网络访问或关闭会话仍撤销授权。重建运行上下文照常取消旧请求、废弃旧授权弹窗结果并重新执行显式初始化，不保留旧 worker。拒绝授权不会执行初始化，也不会发送请求。用户阅读弹窗期间没有活动 worker 轮次计时。
 
 ## 本机设置（6.1.0）
 
@@ -90,6 +90,14 @@ worker 中 Response 正文保留预算独立于网络面板，取 `max(8 MiB, 2 
 ## 验证
 
 相关测试覆盖 broker 的本机 HTTP 服务、规范地址、禁止头部、跨地址重定向、HTTP 错误、压缩后正文限制、取消；原生 worker 集成覆盖授权顺序、async 初始化 / Action、返回 Promise、超过原生 1 秒的网络等待、拒绝后无请求、非 Actions 拒绝和事务回滚；Core 覆盖授权失效与记录淘汰。
+
+### 6.1.1 会话授权复用验证
+
+`ScriptNetworkSessionTests`、`ScriptFetchIntegrationTests` 和 `DocumentSessionTests` 定向组 57 项通过，0 失败 / 跳过；证据 `artifacts/fetch-validation/network-consent-final.trx`。使用已发布 Native AOT worker 覆盖，测试副本与发布副本 SHA-256 一致。新增覆盖重复加载、同清单源码修改、规范化 / 重排 / 去重、清单缩小或移除、拒绝 / 取消、进行中的旧授权弹窗失效，以及初始化失败后显式重试；保持旧上下文取消、初始化事务回滚和明确停用撤销。
+
+`scripts/test-avalonia-web.ps1 -SkipBuild -NetworkOnly` 23 项专项检查通过，证据 `artifacts/avalonia/web-tests/20261120-095317-eb28d665/result.json`。实际 Avalonia / Monaco 验证加载和编辑后重新加载的弹窗次数、清单变更和停用后的重新授权，以及网络面板和设置开关；授权弹窗截图已检查。新增 `-NetworkOnly` 可独立运行这组检查，避免重复执行不相关的编辑器检查。较宽的 `-ScriptsOnly` 尝试曾在 TypeScript 应用断言处间歇性失败，本次不声称该组整体通过；失败证据保留在 `artifacts/avalonia/web-tests`。未运行完整回归。
+
+`scripts/build-quickexcel.ps1 -SkipTests -RunSmoke` 已发布并激活 6.1.1，生产自检 36 项通过。`artifacts/avalonia/active-windows.json` 指向 `artifacts/avalonia/releases/20261120-095327-8221d5e5/application`，发布清单 SHA-256 校验匹配，`Start-QuickExcel.cmd` 使用此指针。新增三项真实 worker 回归又针对该包的 Native AOT worker 全部通过，证据 `artifacts/fetch-validation/network-consent-release-aot.trx`；发布、`evidence/worker-native` 与测试副本 worker EXE 的 SHA-256 均为 `EDD21F0011F8B86032A262CC5463170B748C352BFEDF06453C4828240810E80A`。发布仍报告诊断标志未赋值及 Markdown / ODBC / DataSet 裁剪告警，不声称零告警。
 
 ### 6.1.0 设置和大正文验证
 

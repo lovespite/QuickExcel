@@ -1,5 +1,5 @@
 [CmdletBinding()]
-param([switch]$SkipBuild, [switch]$ScriptsOnly, [switch]$ModulesOnly)
+param([switch]$SkipBuild, [switch]$ScriptsOnly, [switch]$ModulesOnly, [switch]$NetworkOnly)
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 $root = [IO.Path]::GetFullPath((Split-Path $PSScriptRoot -Parent))
@@ -15,7 +15,8 @@ try {
     }
     $exe = Join-Path $root 'artifacts/build/bin/QuickExcel.Desktop.Avalonia/release/quickxl.exe'
     $arguments = @('--web-smoke', ('"{0}"' -f $run))
-    if ($ModulesOnly) { $arguments += '--modules-only' }
+    if ($NetworkOnly) { $arguments += '--network-only' }
+    elseif ($ModulesOnly) { $arguments += '--modules-only' }
     elseif ($ScriptsOnly) { $arguments += '--scripts-only' }
     $process = Start-Process -FilePath $exe -ArgumentList $arguments -WorkingDirectory $root -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $run 'stdout.log') -RedirectStandardError (Join-Path $run 'stderr.log')
     try {

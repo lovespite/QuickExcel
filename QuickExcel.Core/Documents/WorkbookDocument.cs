@@ -198,7 +198,7 @@ public sealed class WorkbookDocument : IDisposable
                 _ = ListActions(cancellationToken);
                 RunAction("@initialize", cancellationToken);
             }
-            catch { Session.SetScriptsEnabled(false); throw; }
+            catch { Session.InvalidateScriptExecution(); throw; }
         }
         Calculate(cancellationToken);
     }

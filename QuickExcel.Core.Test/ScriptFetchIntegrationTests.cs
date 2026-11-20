@@ -60,6 +60,81 @@ public sealed class ScriptFetchIntegrationTests
     }
 
     [Fact]
+    public void RepeatedLoadingAndSourceEditsReuseUnchangedNetworkConsentUntilExplicitDisable()
+    {
+        const string initialize = "export function main(w) { const cell = w.getActiveWorksheet().getRange('C1'); cell.setValue(Number(cell.getValue() || 0) + 1); }";
+        using var doc = Document("export function main(w) { w.getActiveCell().setValue('ready'); }",
+            "host.permissions.network.request('api.example.com'); host.permissions.network.request('127.0.0.1'); " + initialize);
+        var prompts = new List<string[]>();
+        doc.Session.Network.Authorize = (hosts, _) => { prompts.Add(hosts.ToArray()); return true; };
+
+        doc.EnableScriptsAndCalculate();
+        doc.EnableScriptsAndCalculate();
+        doc.ListActions();
+        Assert.Single(prompts); Assert.Equal(new[] { "127.0.0.1", "api.example.com" }, prompts[0]);
+        Assert.Equal("2", doc.GetCellValue(0, 0, 2));
+
+        // Editing and loading still replace the execution context, while the complete
+        // normalized network declaration remains the same despite order and duplicates.
+        doc.ScriptSource = "host.permissions.network.request('127.0.0.1'); host.permissions.network.request('API.EXAMPLE.COM.'); host.permissions.network.request('api.example.com'); " + initialize;
+        Assert.False(doc.ScriptsEnabled);
+        doc.EnableScriptsAndCalculate(); doc.RunAction("download");
+        Assert.Single(prompts); Assert.Equal("3", doc.GetCellValue(0, 0, 2));
+        Assert.Equal("ready", doc.GetCellValue(0, 0, 0));
+
+        doc.DisableScripts();
+        doc.EnableScriptsAndCalculate();
+        Assert.Equal(2, prompts.Count); Assert.Equal("4", doc.GetCellValue(0, 0, 2));
+    }
+
+    [Fact]
+    public void FailedInitializationKeepsConsentButNeverReplaysOrRetainsTheFailedContext()
+    {
+        const string declaration = "host.permissions.network.request('api.example.com'); ";
+        using var doc = Document("export function main() {}", declaration +
+            "export function main(w) { w.getActiveCell().setValue('partial'); throw Error('initialization failed'); }");
+        var prompts = 0;
+        doc.Session.Network.Authorize = (_, _) => { prompts++; return true; };
+        Assert.ThrowsAny<Exception>(() => doc.EnableScriptsAndCalculate());
+        Assert.False(doc.ScriptsEnabled); Assert.Equal("", doc.GetCellValue(0, 0, 0));
+        Assert.ThrowsAny<Exception>(() => doc.EnableScriptsAndCalculate());
+        Assert.False(doc.ScriptsEnabled); Assert.Equal("", doc.GetCellValue(0, 0, 0)); Assert.Equal(1, prompts);
+        doc.ScriptSource = declaration + "export function main(w) { w.getActiveCell().setValue('initialized'); }";
+        doc.EnableScriptsAndCalculate();
+        Assert.True(doc.ScriptsEnabled); Assert.Equal("initialized", doc.GetCellValue(0, 0, 0)); Assert.Equal(1, prompts);
+    }
+
+    [Fact]
+    public void ChangedNetworkListRequiresFreshConsentBeforeInitialization()
+    {
+        using var doc = Document("export function main() {}",
+            "host.permissions.network.request('api.example.com'); host.permissions.network.request('127.0.0.1'); export function main(w) { w.getActiveCell().setValue('original'); }");
+        var prompts = new List<string[]>(); var allow = true;
+        doc.Session.Network.Authorize = (hosts, _) =>
+        {
+            prompts.Add(hosts.ToArray());
+            if (prompts.Count > 1) Assert.Equal("original", doc.GetCellValue(0, 0, 0));
+            return allow;
+        };
+        doc.EnableScriptsAndCalculate();
+
+        // Removing a host changes the complete list too; an earlier superset grant
+        // cannot silently authorize this new declaration or run its initialization.
+        doc.ScriptSource = "host.permissions.network.request('api.example.com'); export function main(w) { w.getActiveCell().setValue('changed'); }";
+        allow = false;
+        Assert.ThrowsAny<Exception>(() => doc.EnableScriptsAndCalculate());
+        Assert.False(doc.ScriptsEnabled); Assert.Equal("original", doc.GetCellValue(0, 0, 0));
+        Assert.Equal(2, prompts.Count); Assert.Equal(new[] { "api.example.com" }, prompts[1]);
+        Assert.Throws<InvalidOperationException>(() => doc.Session.Network.CaptureNetworkAccess(["127.0.0.1"]));
+
+        allow = true;
+        doc.EnableScriptsAndCalculate();
+        Assert.Equal(3, prompts.Count); Assert.Equal("changed", doc.GetCellValue(0, 0, 0));
+        Assert.Throws<InvalidOperationException>(() => doc.Session.Network.CaptureNetworkAccess(["127.0.0.1"]));
+        doc.EnableScriptsAndCalculate(); Assert.Equal(3, prompts.Count);
+    }
+
+    [Fact]
     public async Task ReturnedPromiseAndHttpErrorStatusFollowFetchSemantics()
     {
         await using var server = new ScriptFetchTestServer(_ => Task.FromResult(new ScriptFetchTestServer.Response(404, "missing")));

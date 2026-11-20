@@ -379,7 +379,12 @@ public sealed partial class DocumentSession : IDisposable
         return result;
     }
 
-    public void SetScriptsEnabled(bool enabled)
+    public void SetScriptsEnabled(bool enabled) => SetScriptsEnabled(enabled, revokeNetworkConsent: !enabled);
+
+    /// <summary>Stop execution for source editing or trust verification without forgetting session network consent.</summary>
+    public void InvalidateScriptExecution() => SetScriptsEnabled(false, revokeNetworkConsent: false);
+
+    private void SetScriptsEnabled(bool enabled, bool revokeNetworkConsent)
     {
         DocumentChange change;
         lock (_gate)
@@ -390,6 +395,7 @@ public sealed partial class DocumentSession : IDisposable
             if (enabled && _snapshot.FileState?.FormulaReadOnly == true) throw new InvalidOperationException(MessageText.Get(WorkbookFileState.FormulaReadOnlyMessage));
             if (enabled && !_snapshot.ScriptModules.CanExecute) throw new NotSupportedException(MessageText.Get(ScriptModuleSet.MigrationMessage));
             // Reapply also invalidates an in-flight compile of the same source.
+            if (revokeNetworkConsent) Network.Revoke();
             ResetScriptRuntime();
             _scriptsEnabled = enabled;
             _registeredEvents = null;
@@ -655,7 +661,7 @@ public sealed partial class DocumentSession : IDisposable
 
     private void ResetScriptRuntime()
     {
-        Network.Revoke();
+        Network.InvalidatePendingAuthorization();
         var previous = _runtimeLifetime; _runtimeLifetime = new();
         previous.Cancel(); previous.Dispose();
         // A lost initialized heap cannot be reconstructed by replaying startup code.

@@ -7,6 +7,7 @@ using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using QuickExcel.Core;
+using QuickExcel.Domain;
 
 namespace QuickExcel.Desktop.Avalonia;
 
@@ -31,14 +32,57 @@ public sealed partial class MainWindow
         try { await Task.Run(() => network.EnsureAuthorized(["api.example.com", "127.0.0.1", "::1"], default)); }
         catch (InvalidOperationException error) when (error.Message.Contains("未授权")) { denied = true; }
         check(denied, "Rejecting the actual network consent dialog prevents execution authorization");
-        _dialogDriver = window =>
+        await CloseScriptWindowAsync();
+        const string initialization = "host.permissions.network.request('api.example.com'); export function main(w) { const cell = w.getActiveWorksheet().getRange('D1'); cell.setValue((Number(cell.getValue()) || 0) + 1); }";
+        _workspace.Editor.Execute(new UpdateScriptModulesCommand(new(new Dictionary<string, ScriptModule>
         {
+            ["main"] = new("scripts/main.js", initialization),
+            ["action"] = new("scripts/action.js", "export function main() {}")
+        }, ["main", "action"], scriptApiVersion: 4, bindings: [new("main", "initialization"), new("action", "actions")])));
+        await OpenScriptsAsync();
+        var prompts = new List<string[]>();
+        string ConsentState() => $"Enabled={Document.ScriptsEnabled}; prompts={prompts.Count} [{string.Join("; ", prompts.Select(hosts => string.Join(", ", hosts)))}]; status={_scriptStatus?.Text}; documentStatus={_status.Text}; source={Document.Snapshot.ScriptModules.Modules["main"].Source}; errors={string.Join("; ", Document.ScriptErrors)}";
+        Task AllowNetwork(Window window)
+        {
+            prompts.Add(window.GetVisualDescendants().OfType<ListBox>().Single().Items.Cast<string>().ToArray());
+            // ShowOwnedAsync consumes its driver once; keep counting every prompt,
+            // including an unexpected prompt on a repeated load.
+            _dialogDriver = AllowNetwork;
             window.GetVisualDescendants().OfType<Button>().Single(b => b.Content as string == "允许本次会话").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
             return Task.CompletedTask;
-        };
-        await Task.Run(() => network.EnsureAuthorized(["api.example.com"], default));
-        await Task.Run(() => network.EnsureAuthorized(["api.example.com"], default));
-        check(_scriptWindow!.OwnedWindows.Count == 0, "Explicit network consent is reused within the same document session");
+        }
+        _dialogDriver = AllowNetwork;
+        await ApplyScriptsAsync();
+        check(Document.ScriptsEnabled && prompts.Count == 1 && prompts[0].SequenceEqual(new[] { "api.example.com" }),
+            "Loading scripts requests the declared network list once before initialization");
+        await ApplyScriptsAsync();
+        check(Document.ScriptsEnabled && prompts.Count == 1 && Document.GetCellValue(0, 0, 3) == "2" && _scriptWindow!.OwnedWindows.Count == 0,
+            "Repeated loading reruns initialization without repeating unchanged session network consent");
+        await _scriptPage!.Browser.RequestAsync("test", "testResult", new Dictionary<string, object?>
+            { ["action"] = "edit", ["module"] = "main", ["text"] = initialization + "\n// edited without changing the network list\n" }, TimeSpan.FromSeconds(30));
+        check(!Document.ScriptsEnabled, "Editing the actual Monaco draft invalidates script execution");
+        await ApplyScriptsAsync();
+        check(Document.ScriptsEnabled && prompts.Count == 1 && Document.GetCellValue(0, 0, 3) == "3",
+            "Loading an edited draft reuses network consent when its declared list is unchanged");
+        var changedDeclaration = "host.permissions.network.request('127.0.0.1');\n" + initialization;
+        await _scriptPage.Browser.RequestAsync("test", "testResult", new Dictionary<string, object?>
+            { ["action"] = "edit", ["module"] = "main", ["text"] = changedDeclaration }, TimeSpan.FromSeconds(30));
+        var changedCommitted = await CommitScriptsAsync();
+        check(changedCommitted && Document.Snapshot.ScriptModules.Modules["main"].Source.ReplaceLineEndings("\n") == changedDeclaration,
+            "Changed network declaration commits from the actual Monaco draft; " + ConsentState());
+        await ApplyScriptsAsync();
+        await File.WriteAllTextAsync(Path.Combine(directory, "script-network-reload-state.json"), System.Text.Json.JsonSerializer.Serialize(new
+        {
+            prompts, enabled = Document.ScriptsEnabled, source = Document.Snapshot.ScriptModules.Modules["main"].Source,
+            scriptStatus = _scriptStatus?.Text, documentStatus = _status.Text, errors = Document.ScriptErrors,
+            console = Document.Session.ConsoleEntries.TakeLast(10).Select(entry => entry.Text).ToArray()
+        }));
+        check(Document.ScriptsEnabled && prompts.Count == 2 && prompts[1].SequenceEqual(new[] { "127.0.0.1", "api.example.com" }),
+            "Loading a changed declaration asks for the complete updated network list; " + ConsentState());
+        DisableScripts(); await ApplyScriptsAsync();
+        check(Document.ScriptsEnabled && prompts.Count == 3,
+            "Explicitly disabling scripts revokes network consent before the next load");
+        _dialogDriver = null;
         network.Revoke();
         check(!network.RecordingEnabled, "Network capture is disabled while the console tab is selected");
         SetScriptOutputVisible(true, tab: 2); await Layout();

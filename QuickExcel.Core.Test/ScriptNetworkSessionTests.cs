@@ -87,10 +87,79 @@ public sealed class ScriptNetworkSessionTests
         var prompts = new List<string[]>();
         network.Authorize = (hosts, _) => { prompts.Add(hosts.ToArray()); return true; };
         network.EnsureAuthorized(["example.org", "example.com", "example.com"], default);
-        network.EnsureAuthorized(["example.com"], default);
+        network.EnsureAuthorized(["example.com", "example.org"], default);
         Assert.Single(prompts); Assert.Equal(["example.com", "example.org"], prompts[0]);
         network.EnsureAuthorized(["new.example.com"], default); Assert.Equal(2, prompts.Count);
+        Assert.Throws<InvalidOperationException>(() => network.CaptureNetworkAccess(["example.com"]));
         network.Revoke(); network.EnsureAuthorized(["example.com"], default); Assert.Equal(3, prompts.Count);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void ChangedListDropsPreviousConsentEvenIfReplacementIsRejected(bool cancelled)
+    {
+        using var network = new ScriptNetworkSession();
+        network.Authorize = (_, _) => true;
+        network.EnsureAuthorized(["example.com", "example.org"], default);
+        using var cancellation = new CancellationTokenSource();
+        network.Authorize = (hosts, _) =>
+        {
+            Assert.Equal(["example.com"], hosts);
+            if (cancelled) cancellation.Cancel();
+            return false;
+        };
+        if (cancelled)
+            Assert.Throws<OperationCanceledException>(() => network.EnsureAuthorized(["example.com"], cancellation.Token));
+        else
+            Assert.Throws<InvalidOperationException>(() => network.EnsureAuthorized(["example.com"], default));
+        Assert.Throws<InvalidOperationException>(() => network.CaptureNetworkAccess(["example.com"]));
+        Assert.Throws<InvalidOperationException>(() => network.CaptureNetworkAccess(["example.org"]));
+        network.Authorize = null;
+        Assert.Throws<InvalidOperationException>(() => network.EnsureAuthorized(["example.com", "example.org"], default));
+    }
+
+    [Fact]
+    public void RemovingAllDeclarationsDropsConsentWithoutPrompting()
+    {
+        using var network = new ScriptNetworkSession();
+        var prompts = 0; network.Authorize = (_, _) => { prompts++; return true; };
+        network.EnsureAuthorized(["example.com"], default);
+        network.EnsureAuthorized([], default); Assert.Equal(1, prompts);
+        Assert.Throws<InvalidOperationException>(() => network.CaptureNetworkAccess(["example.com"]));
+        network.EnsureAuthorized(["example.com"], default); Assert.Equal(2, prompts);
+    }
+
+    [Fact]
+    public void EmptyDeclarationInvalidatesAnEarlierPendingPrompt()
+    {
+        using var network = new ScriptNetworkSession();
+        network.Authorize = (_, _) => { network.EnsureAuthorized([], default); return true; };
+        Assert.Throws<OperationCanceledException>(() => network.EnsureAuthorized(["example.com"], default));
+        Assert.Throws<InvalidOperationException>(() => network.CaptureNetworkAccess(["example.com"]));
+    }
+
+    [Fact]
+    public void ReapplyAndDraftInvalidationKeepConsentButCancelOldRequestsAndPendingPrompts()
+    {
+        var snapshot = new WorkbookSnapshot(Guid.NewGuid(), 0, ExcelDateSystem.Windows1900, [new WorksheetSnapshot(SheetId.New(), "Sheet1")]);
+        using var session = new DocumentSession(snapshot);
+        session.SetScriptsEnabled(true);
+        var network = session.Network;
+        var prompts = 0; network.Authorize = (_, _) => { prompts++; return true; };
+        network.EnsureAuthorized(["example.com"], default);
+        var first = session.BeginCalculation();
+        session.SetScriptsEnabled(true);
+        Assert.True(first.RuntimeLifetime.IsCancellationRequested);
+        network.EnsureAuthorized(["example.com"], default); Assert.Equal(1, prompts);
+        var second = session.BeginCalculation();
+        session.InvalidateScriptExecution();
+        Assert.False(session.ScriptsEnabled); Assert.True(second.RuntimeLifetime.IsCancellationRequested);
+        session.SetScriptsEnabled(true);
+        network.EnsureAuthorized(["example.com"], default); Assert.Equal(1, prompts);
+        network.Authorize = (_, _) => { session.SetScriptsEnabled(true); return true; };
+        Assert.Throws<OperationCanceledException>(() => network.EnsureAuthorized(["example.org"], default));
+        Assert.Throws<InvalidOperationException>(() => network.CaptureNetworkAccess(["example.org"]));
     }
 
     [Fact]

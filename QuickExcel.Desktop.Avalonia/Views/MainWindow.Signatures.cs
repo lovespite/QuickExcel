@@ -19,7 +19,7 @@ public sealed partial class MainWindow
         RequireScriptsEnabled();
         var modules = Document.Snapshot.ScriptModules;
         if (modules.Signature is null) return true; // Explicit Apply is required for unsigned sources.
-        DisableScripts();
+        DisableScripts(preserveNetworkConsent: true);
         ScriptSignatureVerification result; string? protectionFailure=null;
         try { result=await Task.Run(() => ScriptTrust.Verify(modules)); }
         catch(UserProtectionUnavailableException ex) {protectionFailure=ex.Message;result=await Task.Run(()=>ScriptSignatures.Verify(modules));}

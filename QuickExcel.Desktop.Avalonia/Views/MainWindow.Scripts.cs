@@ -91,7 +91,7 @@ public sealed partial class MainWindow
     {
         var page = _scriptPage = new ScriptEditorPage(WebAssets, drafts, _scriptDocument.ToString("N"), ++_webGeneration, _userDataDirectory);
         page.Failed += ScriptPageFailed;
-        page.DraftChanged += () => { ScriptCompilation.InvalidateCache(Document.Snapshot.ScriptModules); DisableScripts(); UpdateTitle(); if (_scriptWindow is not null) _scriptWindow.Title = UiText.Get("* 脚本工作区 · QuickExcel"); if (_scriptStatus is not null) _scriptStatus.Text = UiText.Get("源码草稿已修改，编译缓存已失效，脚本授权已撤销。"); };
+        page.DraftChanged += () => { ScriptCompilation.InvalidateCache(Document.Snapshot.ScriptModules); DisableScripts(preserveNetworkConsent: true); UpdateTitle(); if (_scriptWindow is not null) _scriptWindow.Title = UiText.Get("* 脚本工作区 · QuickExcel"); if (_scriptStatus is not null) _scriptStatus.Text = UiText.Get("源码草稿已修改，编译缓存已失效，脚本授权已撤销。"); };
         page.SaveRequested += () => _ = PerformAsync(async () => await SaveAsync(false));
         page.FocusRequested += FocusScriptNavigation;
         page.ConsoleRequested += ToggleScriptConsole;
@@ -214,8 +214,13 @@ public sealed partial class MainWindow
             _scriptStatus.Text = $"{modules.Modules[_selectedModule].Path} · {ScriptModuleProperties(modules, _selectedModule)} · API v{modules.ScriptApiVersion} · {(Document.ScriptsEnabled ? UiText.Get("已授权") : UiText.Get("未授权"))}" +
              (!modules.CanExecute ? " · " + UiText.Get(ScriptModuleSet.MigrationMessage) : DesktopServices.SupportsScripts ? string.Empty : UiText.Get("(此平台尚未开放脚本执行)"));
     }
-    private void DisableScripts()
-    { _scriptCancellation?.Cancel(); Document.DisableScripts(); ClearScriptActions(); RefreshScriptActions(); RefreshScriptChrome(); }
+    private void DisableScripts(bool preserveNetworkConsent = false)
+    {
+        _scriptCancellation?.Cancel();
+        if (preserveNetworkConsent) Document.Session.InvalidateScriptExecution();
+        else Document.DisableScripts();
+        ClearScriptActions(); RefreshScriptActions(); RefreshScriptChrome();
+    }
     private void RequireScriptsEnabled()
     {
         try { ScriptExecutionPolicy.Current.RequireEnabled(); }
