@@ -11,6 +11,7 @@ namespace QuickExcel.Scripting;
 [JsonSerializable(typeof(JsActionDescriptor[]))]
 [JsonSerializable(typeof(PrepareModulesOptions))]
 [JsonSerializable(typeof(NativeModuleBundle))]
+[JsonSerializable(typeof(System.Text.Json.JsonElement))]
 [JsonSerializable(typeof(HostCallFailure))]
 internal sealed partial class ScriptingJsonContext : JsonSerializerContext;
 

@@ -4,6 +4,7 @@ import path from 'node:path';
 import fs from 'node:fs/promises';
 import crypto from 'node:crypto';
 import { patchPdfWorker } from './patch-pdfjs.mjs';
+import '../tools/QuickExcel.ScriptLibraries/build.mjs';
 
 const source = path.dirname(fileURLToPath(import.meta.url));
 const root = path.dirname(source);

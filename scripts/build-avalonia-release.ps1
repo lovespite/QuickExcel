@@ -67,13 +67,18 @@ try {
     dotnet publish $project -c Release -r win-x64 --self-contained true --artifacts-path $build "-p:QuickExcelScriptEngine=$ScriptEngine" -p:QuickExcelDiagnostics=false -p:RestoreLockedMode=true "-p:QuickExcelReleaseLockDirectory=$lockDirectory" "-p:QuickExcelPublishedWorkerDirectory=$workerDirectory" -p:DebugType=None -p:DebugSymbols=false -o $package -v minimal 2>&1 | Tee-Object (Join-Path $evidence 'publish.log')
     if ($LASTEXITCODE -ne 0) { throw 'Avalonia release publish failed.' }
     $engineFiles = @('JavaScriptCore.dll','icudt77.dll','icuuc77.dll','icuin77.dll','msvcp140.dll','msvcp140_2.dll','vcruntime140.dll','vcruntime140_1.dll','typescript.bundle.json','JSC-BUILD-IDENTITY.json')
-    foreach ($notice in @('THIRD-PARTY-LICENSES.md','OFFICE-SCRIPTS-NOTICE.md','MARKDOWN-AVALONIA-LICENSE.txt','DOTNET-LICENSE.txt','DOTNET-THIRD-PARTY-NOTICES.txt')) {
+    foreach ($notice in @('THIRD-PARTY-LICENSES.md','OFFICE-SCRIPTS-NOTICE.md','SCRIPT-LIBRARIES-NOTICE.md','THIRD-PARTY-SCRIPT-LIBRARIES.txt','MARKDOWN-AVALONIA-LICENSE.txt','DOTNET-LICENSE.txt','DOTNET-THIRD-PARTY-NOTICES.txt')) {
         if (-not (Test-Path -LiteralPath (Join-Path $package "Licenses/$notice") -PathType Leaf)) { throw "Missing product license notice: $notice" }
     }
     foreach ($file in (@('quickxl.exe','QuickExcel.Avalonia.dll','QuickExcel.Avalonia.deps.json','Assets/QuickExcel-XLSQ.ico','Assets/QuickExcel-XLSX.ico','Assets/QuickExcel-CSV.ico','coreclr.dll','hostfxr.dll','QuickExcel.Grid.Avalonia.dll','libSkiaSharp.dll','libHarfBuzzSharp.dll','Web/manifest.json','ScriptWorker/QuickExcel.ScriptWorker.exe') + @($engineFiles | ForEach-Object { 'ScriptWorker/' + $_ }))) {
         if (-not (Test-Path -LiteralPath (Join-Path $package $file) -PathType Leaf)) { throw "Missing release payload: $file" }
     }
     & "$PSScriptRoot/test-windows-payload.ps1" -PackageDirectory $package
+    $samples=Get-Content -LiteralPath (Join-Path $package 'samples/catalog.json') -Raw | ConvertFrom-Json
+    if ($samples.schemaVersion -ne 1 -or $samples.samples.Count -ne 9) { throw 'Missing bundled workbook samples.' }
+    foreach ($sample in $samples.samples) {
+        if ((Get-FileHash -LiteralPath (Join-Path $package ('samples/' + $sample.file)) -Algorithm SHA256).Hash -ne $sample.sha256) { throw "Changed sample workbook: $($sample.file)" }
+    }
     if (Test-Path -LiteralPath (Join-Path $package 'QuickExcel.Avalonia.exe')) { throw 'The Windows package must contain only the renamed quickxl.exe apphost.' }
     foreach ($file in @('Markdown.Avalonia.dll','ColorDocument.Avalonia.dll','ColorTextBlock.Avalonia.dll')) {
         if (-not (Test-Path -LiteralPath (Join-Path $package $file) -PathType Leaf)) { throw "Missing license viewer dependency: $file" }
@@ -109,6 +114,8 @@ try {
     Copy-Item -LiteralPath $lockDirectory -Destination $metadata -Recurse
     Copy-Item -LiteralPath $workerLockDirectory -Destination $metadata -Recurse
     Copy-Item -LiteralPath (Join-Path $root 'QuickExcel.Web/package-lock.json') -Destination (Join-Path $metadata 'web-package-lock.json')
+    Copy-Item -LiteralPath (Join-Path $root 'tools/QuickExcel.ScriptLibraries/package-lock.json') -Destination (Join-Path $metadata 'script-libraries-package-lock.json')
+    Copy-Item -LiteralPath (Join-Path $root 'artifacts/script-libraries/catalog.json') -Destination (Join-Path $metadata 'script-libraries-catalog.json')
     if ($CodeSigningCertificateThumbprint) {
         $code = @(Get-ChildItem -LiteralPath $package -Recurse -File | Where-Object { $_.Name -match '^QuickExcel\..*\.(exe|dll)$|^quickxl\.exe$' } | ForEach-Object FullName)
         & "$PSScriptRoot/sign-windows-code.ps1" -CertificateThumbprint $CodeSigningCertificateThumbprint -Path $code

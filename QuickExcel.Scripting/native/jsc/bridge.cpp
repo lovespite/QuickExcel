@@ -68,6 +68,9 @@ struct qx_session {
     bool poisoned { false };
     bool asyncRejected { false };
     const char* (*hostCall)(const char*) { nullptr };
+    const char* (*builtinCall)(const char*) { nullptr };
+    unsigned builtinCount { 0 };
+    size_t builtinBytes { 0 };
     std::atomic<bool> interrupted { false };
     std::mutex timerMutex;
     std::condition_variable timerChanged;
@@ -307,6 +310,23 @@ static JSModuleRecord* prepareModule(qx_session& s, Module& module, char** error
             setError(error, "Import attributes and deferred imports are not supported."); return nullptr;
         }
         Module* dependency = findModule(s, request.m_specifier.string());
+        if (!dependency && validId(request.m_specifier.string()) && s.builtinCall && s.builtinCount < 16) {
+            // Exact IDs are looked up only in the worker's verified embedded
+            // catalog. This callback has no filesystem/network loader.
+            auto id = request.m_specifier.string();
+            auto* source = s.builtinCall(utf8(id).c_str());
+            if (source) {
+                auto length = strnlen(source, 4 * 1024 * 1024 + 1);
+                if (length > 4 * 1024 * 1024 || s.builtinBytes + length > 4 * 1024 * 1024) {
+                    setError(error, "Built-in source budget exceeded."); return nullptr;
+                }
+                s.builtinBytes += length; ++s.builtinCount;
+                // qx_load_modules reserves user + builtin capacity before any
+                // graph pointers exist; appending never invalidates them.
+                s.modules.push_back({ id, String::fromUTF8(source), { }, 0, 0 });
+                dependency = &s.modules.back();
+            }
+        }
         if (!dependency) { setError(error, "Import must name a declared package module ID."); return nullptr; }
         auto* imported = prepareModule(s, *dependency, error);
         if (!imported) return nullptr;
@@ -401,6 +421,7 @@ static qx_session* createSession(const char* bootstrap, char** error, bool compi
 QX_EXPORT qx_session* qx_create(const char* bootstrap, char** error) { return createSession(bootstrap, error, false); }
 QX_EXPORT qx_session* qx_create_compiler(const char* bootstrap, char** error) { return createSession(bootstrap, error, true); }
 QX_EXPORT void qx_set_host_call(qx_session* s, const char* (*callback)(const char*)) { if (s && !s->compiler) s->hostCall = callback; }
+QX_EXPORT void qx_set_builtin_call(qx_session* s, const char* (*callback)(const char*)) { if (s && !s->compiler && !s->modulesAttempted) s->builtinCall = callback; }
 
 QX_EXPORT int qx_load_modules(qx_session* s, const char* json, char** error)
 {
@@ -427,7 +448,7 @@ QX_EXPORT int qx_load_modules(qx_session* s, const char* json, char** error)
     }
     // The parsed package stays rooted across parser/GC calls.
     Strong<Unknown> package(s->vm(), toJS(s->global(), parsed));
-    s->modules.reserve(array->length());
+    s->modules.reserve(array->length() + 16);
     size_t bytes = 0;
     for (unsigned i = 0; i < array->length(); ++i) {
         auto item = array->getIndex(s->global(), i);
@@ -538,4 +559,4 @@ QX_EXPORT char* qx_call(qx_session* s, const char* method, const char* json, cha
 QX_EXPORT void qx_free_string(char* text) { free(text); }
 QX_EXPORT int qx_was_interrupted(qx_session* s) { return s && s->interrupted.load(); }
 QX_EXPORT int qx_is_usable(qx_session* s) { return s && !s->poisoned; }
-QX_EXPORT const char* qx_engine_identity() { return "JavaScriptCore/2.54.2/b95c91b1/qx-async-3"; }
+QX_EXPORT const char* qx_engine_identity() { return "JavaScriptCore/2.54.2/b95c91b1/qx-libraries-1"; }

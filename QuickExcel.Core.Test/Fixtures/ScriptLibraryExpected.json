@@ -1,0 +1,298 @@
+{
+  "lodash": {
+    "named-export": {
+      "value": 5
+    },
+    "collection": {
+      "value": [
+        {
+          "id": 2,
+          "n": 1
+        },
+        {
+          "id": 1,
+          "n": 2
+        }
+      ]
+    },
+    "chain": {
+      "value": [
+        1,
+        3
+      ]
+    },
+    "unicode": {
+      "value": [
+        "你好",
+        "world",
+        "123"
+      ]
+    },
+    "template": {
+      "value": "hi QX"
+    },
+    "debounce": {
+      "error": "setTimeout"
+    },
+    "delay": {
+      "error": "setTimeout"
+    }
+  },
+  "decimal.js": {
+    "precision": {
+      "value": "0.3"
+    },
+    "rounding": {
+      "value": "1.01"
+    },
+    "large-number": {
+      "value": "9007199254740994"
+    },
+    "clone": {
+      "value": "0.33333333"
+    }
+  },
+  "dayjs": {
+    "leap-year": {
+      "value": "2025-02-28"
+    },
+    "invalid": {
+      "value": false
+    },
+    "utc": {
+      "value": "2024-01-01T00:00:00+00:00"
+    },
+    "timezone": {
+      "value": "2024-07-01T16:00:00+00:00"
+    },
+    "strict-parse": {
+      "value": false
+    },
+    "duration": {
+      "value": 150
+    }
+  },
+  "papaparse": {
+    "quoted-csv": {
+      "value": [
+        {
+          "name": "a,b",
+          "n": 2
+        }
+      ]
+    },
+    "multiline": {
+      "value": [
+        [
+          "a\nb",
+          "3"
+        ]
+      ]
+    },
+    "unparse": {
+      "value": "a,b\r\n1,\"x,y\""
+    },
+    "step": {
+      "value": [
+        [
+          "a",
+          "b"
+        ],
+        [
+          "1",
+          "2"
+        ]
+      ]
+    },
+    "worker": {
+      "error": "TypeError: Papa Parse worker mode is unavailable in the isolated QuickExcel worker."
+    },
+    "download": {
+      "error": "TypeError: Use the permission-gated fetch in an Action, then parse the response text."
+    },
+    "blob": {
+      "error": "TypeError: Papa Parse accepts text in QuickExcel. Read logical files with host.files, or await Blob.text() in an Action."
+    }
+  },
+  "simple-statistics": {
+    "descriptive": {
+      "value": [
+        2,
+        0,
+        2.5
+      ]
+    },
+    "regression": {
+      "value": {
+        "m": 2,
+        "b": 1
+      }
+    },
+    "correlation": {
+      "value": 1
+    },
+    "clustering": {
+      "value": [
+        [
+          1,
+          2,
+          3
+        ],
+        [
+          10,
+          11,
+          12
+        ]
+      ]
+    }
+  },
+  "zod": {
+    "schema": {
+      "value": [
+        {
+          "name": "x",
+          "amount": 2
+        },
+        false
+      ]
+    },
+    "url": {
+      "value": [
+        true,
+        false
+      ]
+    },
+    "coerce": {
+      "value": 42
+    },
+    "json-schema": {
+      "value": "number"
+    },
+    "file": {
+      "value": true
+    }
+  },
+  "fuse.js": {
+    "fuzzy": {
+      "value": [
+        "apple"
+      ]
+    },
+    "index": {
+      "value": "hello"
+    },
+    "extended": {
+      "value": [
+        "apple"
+      ]
+    }
+  },
+  "arquero": {
+    "group": {
+      "value": [
+        {
+          "g": "A",
+          "total": 5
+        },
+        {
+          "g": "B",
+          "total": 4
+        }
+      ]
+    },
+    "join": {
+      "value": [
+        {
+          "id": 1,
+          "n": 2,
+          "label": "A"
+        },
+        {
+          "id": 2,
+          "n": 3
+        }
+      ]
+    },
+    "pivot": {
+      "value": [
+        {
+          "id": 1,
+          "a": 2,
+          "b": 3
+        }
+      ]
+    },
+    "window": {
+      "value": [
+        {
+          "n": 1,
+          "rank": 1
+        },
+        {
+          "n": 3,
+          "rank": 2
+        }
+      ]
+    },
+    "csv": {
+      "value": [
+        {
+          "a": 1,
+          "b": 2
+        }
+      ]
+    },
+    "arrow": {
+      "value": [
+        {
+          "name": "你好",
+          "n": 1
+        },
+        {
+          "name": "b",
+          "n": 2
+        }
+      ]
+    },
+    "html": {
+      "value": true
+    }
+  },
+  "mathjs": {
+    "matrix": {
+      "value": [
+        [
+          11
+        ]
+      ]
+    },
+    "units": {
+      "value": 5.08
+    },
+    "expression": {
+      "value": 6
+    },
+    "symbolic": {
+      "value": "2 * x"
+    },
+    "bignumber": {
+      "value": "0.3"
+    },
+    "complex": {
+      "value": "5"
+    },
+    "linear-system": {
+      "value": [
+        [
+          2
+        ],
+        [
+          2
+        ]
+      ]
+    },
+    "random": {
+      "value": "number"
+    }
+  }
+}

@@ -44,8 +44,8 @@ public sealed class ProtocolException(string message, Exception? inner = null) :
 public static class WorkerProtocol
 {
     public const int Version = 13;
-    public const string Engine = "JavaScriptCore/2.54.2/b95c91b1/qx-async-3";
-    public const string Policy = "conservative-jsc-v1-memory-issue-open";
+    public const string Engine = "JavaScriptCore/2.54.2/b95c91b1/qx-libraries-1";
+    public static string Policy { get; } = "conservative-jsc-v1-memory-issue-open/libraries-" + BuiltInLibraryIdentity.Value;
     public const int MaxFrameBytes = 16 * 1024 * 1024;
     public const int MaxBatchCalls = 256;
     public const int MaxCellTextLength = 32767;

@@ -69,12 +69,15 @@ with zipfile.ZipFile(OUT / 'JSC-CORRESPONDING-SOURCE.zip', 'w', zipfile.ZIP_DEFL
             archive.write(path, path.relative_to(REPO).as_posix())
     for path in (REPO / 'QuickExcel.Scripting/native/jsc').rglob('*'):
         if path.is_file(): archive.write(path, path.relative_to(REPO).as_posix())
+    for path in sorted((REPO / 'tools/QuickExcel.ScriptLibraries').rglob('*')):
+        if path.is_file(): archive.write(path, path.relative_to(REPO).as_posix())
     for path in (REPO / 'QuickExcel.Scripting/TypeScript/frontend.js', REPO / 'QuickExcel.Web/src/quickexcel.d.ts'):
         archive.write(path, path.relative_to(REPO).as_posix())
 (OUT / 'JSC-REBUILD.txt').write_text(
     'Corresponding source and QuickExcel bridge/build adjustments are supplied in JSC-CORRESPONDING-SOURCE.zip.\n'
     'Extract into a QuickExcel checkout and put archives in artifacts/jsc/downloads. Run tools/QuickExcel.JscProbe/build.ps1\n'
     'on Windows, build-linux.sh on Linux or build-macos.sh on macOS arm64. Requirements and pinned hashes are in sources.json and the README.\n'
+    'Compiler/library resources also require Node/npm at build time; QuickExcel.ScriptLibraries/package-lock.json pins downloads.\n'
     'The bridge is dynamically linked. Modified libraries can replace the same-named libraries in a private installation.\n'
     'Rebuild the managed host/worker if the C ABI or identity is changed; update local package hashes/active pointer or launch that private executable directly.\n'
     'Do not mix host and worker protocol versions. No reverse-engineering restriction is imposed for debugging modifications to LGPL components.\n'

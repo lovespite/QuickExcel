@@ -38,9 +38,12 @@ public static class JscCompilerSession
         using var payload = JsonDocument.Parse(data);
         var p = payload.RootElement;
         if (p.GetProperty("version").GetString() != "5.9.3") throw new InvalidOperationException("Unsupported compiler.");
+        if (p.GetProperty("builtinsIdentity").GetString() != QuickExcel.ScriptContracts.BuiltInLibraryIdentity.Value)
+            throw new InvalidOperationException("Compiler and runtime library catalogs differ.");
         var bootstrap = p.GetProperty("compiler").GetString() + "\n" + p.GetProperty("frontend").GetString() +
             "\n({compile(request) {return qxCompile({...request, mode:'check', libraries:" + p.GetProperty("libraries").GetRawText() +
-            ", declarations:" + p.GetProperty("declarations").GetRawText() + "});}})";
+            ", declarations:" + p.GetProperty("declarations").GetRawText() +
+            ", builtins:" + p.GetProperty("builtins").GetRawText() + "});}})";
         if (Encoding.UTF8.GetByteCount(bootstrap) > 16 * 1024 * 1024)
             throw new InvalidOperationException("Compiler bridge input exceeds its budget.");
         var session = Create(bootstrap, out var error);

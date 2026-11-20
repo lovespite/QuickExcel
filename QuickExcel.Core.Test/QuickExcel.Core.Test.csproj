@@ -9,6 +9,8 @@
     <ProjectReference Include="../QuickExcel.Presentation/QuickExcel.Presentation.csproj" />
 
     <None Update="Fixtures/*.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="../tools/QuickExcel.ScriptLibraries/cases.json" Link="Fixtures/ScriptLibraryCases.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="../samples/**/*" Link="samples/%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="IfDifferent" />
     <Compile Remove="WorkerFixture\**\*.cs" />
     <Compile Remove="SandboxHostFixture\**\*.cs" />
     <Compile Remove="RecoveryFixture\**\*.cs" />

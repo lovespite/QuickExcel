@@ -3,12 +3,21 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <QuickExcelLibraryBuildStamp Condition="Exists('../artifacts/script-libraries/runtime.json') and Exists('../artifacts/script-libraries/catalog.json') and Exists('../artifacts/script-libraries/declarations.json') and Exists('../artifacts/script-libraries/identity.txt') and Exists('../artifacts/script-libraries/definition-index.json') and Exists('../artifacts/script-libraries/THIRD-PARTY-SCRIPT-LIBRARIES.txt')">$(MSBuildProjectDirectory)/../artifacts/script-libraries/build.stamp</QuickExcelLibraryBuildStamp>
   </PropertyGroup>
   <ItemGroup>
+    <ScriptLibraryBuildInput Include="../tools/QuickExcel.ScriptLibraries/build.mjs;../tools/QuickExcel.ScriptLibraries/package.json;../tools/QuickExcel.ScriptLibraries/package-lock.json;../tools/QuickExcel.ScriptLibraries/runtime/*" />
     <EmbeddedResource Include="../artifacts/jsc/compiler/identity.txt" LogicalName="QuickExcel.Compiler.Identity" />
+    <EmbeddedResource Include="../artifacts/script-libraries/identity.txt" LogicalName="QuickExcel.ScriptLibraries.Identity" />
+    <EmbeddedResource Include="../artifacts/script-libraries/definition-index.json" LogicalName="QuickExcel.ScriptLibraries.Definitions" />
   </ItemGroup>
-  <Target Name="PrepareCompilerIdentity" BeforeTargets="PrepareForBuild"
-          Inputs="$(MSBuildProjectDirectory)/../tools/QuickExcel.JscProbe/prepare_compiler.py;$(MSBuildProjectDirectory)/../tools/QuickExcel.JscProbe/sources.json;$(MSBuildProjectDirectory)/../QuickExcel.Scripting/TypeScript/frontend.js;$(MSBuildProjectDirectory)/../QuickExcel.Web/src/quickexcel.d.ts"
+  <Target Name="PrepareScriptLibraries" BeforeTargets="PrepareCompilerIdentity"
+          Inputs="@(ScriptLibraryBuildInput)"
+          Outputs="$(QuickExcelLibraryBuildStamp)">
+    <Exec Command="node &quot;$(MSBuildProjectDirectory)/../tools/QuickExcel.ScriptLibraries/build.mjs&quot;" />
+  </Target>
+  <Target Name="PrepareCompilerIdentity" BeforeTargets="PrepareForBuild" DependsOnTargets="PrepareScriptLibraries"
+          Inputs="$(MSBuildProjectDirectory)/../tools/QuickExcel.JscProbe/prepare_compiler.py;$(MSBuildProjectDirectory)/../tools/QuickExcel.JscProbe/sources.json;$(MSBuildProjectDirectory)/../QuickExcel.Scripting/TypeScript/frontend.js;$(MSBuildProjectDirectory)/../QuickExcel.Web/src/quickexcel.d.ts;$(MSBuildProjectDirectory)/../artifacts/script-libraries/declarations.json;$(MSBuildProjectDirectory)/../artifacts/script-libraries/identity.txt"
           Outputs="$(MSBuildProjectDirectory)/../artifacts/jsc/compiler/identity.txt;$(MSBuildProjectDirectory)/../artifacts/jsc/compiler/typescript.bundle.json">
     <Exec Command="$(QuickExcelPython) &quot;$(MSBuildProjectDirectory)/../tools/QuickExcel.JscProbe/prepare_compiler.py&quot;" />
   </Target>

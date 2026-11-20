@@ -17,6 +17,9 @@
     <QuickExcelJscBuildStamp Condition="Exists('$(QuickExcelNativeLibrary)') and '$(QuickExcelNativeRid)' == 'osx-arm64'">$(QuickExcelJscMacDirectory)/identity.txt</QuickExcelJscBuildStamp>
   </PropertyGroup>
   <ItemGroup>
+    <ProjectReference Include="../QuickExcel.ScriptContracts/QuickExcel.ScriptContracts.csproj" />
+    <EmbeddedResource Include="../artifacts/script-libraries/runtime.json" LogicalName="QuickExcel.ScriptLibraries.Runtime" />
+    <EmbeddedResource Include="../artifacts/script-libraries/catalog.json" LogicalName="QuickExcel.ScriptLibraries.Catalog" />
     <Compile Remove="smoke\**\*.cs" />
     <EmbeddedResource Include="capabilities.json" LogicalName="QuickExcel.Scripting.capabilities.json" />
     <None Condition="'$(QuickExcelNativeLibrary)' != ''" Include="$(QuickExcelNativeLibrary)" Link="%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />

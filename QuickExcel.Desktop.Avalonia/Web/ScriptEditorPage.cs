@@ -14,7 +14,7 @@ internal sealed class ScriptEditorPage : IAsyncDisposable
     internal event Action? SaveRequested, FocusRequested, ConsoleRequested, ApplyRequested, DraftChanged;
     internal event Func<Navigation, Task<bool>>? NavigateRequested;
     internal sealed record Navigation(string? Module, string? Definition, int Line = 1, int Column = 1);
-    internal static bool IsDefinition(string name) => name == "quickexcel.d.ts" ||
+    internal static bool IsDefinition(string name) => name == "quickexcel.d.ts" || QuickExcel.ScriptContracts.BuiltInLibraryIdentity.IsDefinition(name) ||
         Regex.IsMatch(name, @"\Alib\.(?:es(?:5|6|20\d\d|next)(?:\.[a-z0-9]+)*|decorators(?:\.legacy)?)\.d\.ts\z", RegexOptions.CultureInvariant);
     private Task? _flush;
     private bool _closed;

@@ -19,13 +19,13 @@ signed-bundle persistent trust remain unverified.
 
 `bridge.cpp` is QuickExcel-owned code compiled into the JSC shared library.
 Managed callers see only `qx_create`, `qx_create_compiler`, `qx_load_modules`,
-`qx_call`, `qx_set_host_call`, `qx_destroy`, `qx_free_string`, `qx_was_interrupted`, `qx_is_usable`
+`qx_call`, `qx_set_host_call`, `qx_set_builtin_call`, `qx_destroy`, `qx_free_string`, `qx_was_interrupted`, `qx_is_usable`
 and `qx_engine_identity`. No JSC C++ type crosses this ABI. UTF-8 buffers are
 copied across it and released by the same allocator; native/IPC output is capped
 at 16 MiB and diagnostic text at 16 KiB.
 
-The live model bridge identity is `JavaScriptCore/2.54.2/b95c91b1/qx-async-3`
-(IPC 12/13; previous synchronous bridge was `qx-sync-2`). `qx_set_host_call` accepts a bounded synchronous UTF-8 callback; its
+The live model bridge identity is `JavaScriptCore/2.54.2/b95c91b1/qx-libraries-1`
+(IPC 13; previous asynchronous bridge was `qx-async-3`). `qx_set_host_call` accepts a bounded synchronous UTF-8 callback; its
 reply is owned by the managed caller until the native operation returns, never
 freed by the engine allocator. The worker forwards only the validated model
 protocol through its inherited IPC pipes, exposing no CLR objects or OS paths.
@@ -44,6 +44,17 @@ inspection and raw stack-frame formatting. All are confined to this bridge.
 Upgrading WebKit requires rerunning native and isolated-worker contracts.
 
 Modules resolve declared logical IDs entirely from immutable in-memory source.
+QuickExcel 7.0 also resolves nine exact built-in IDs through `qx_set_builtin_call`,
+registered by the worker before module loading. The callback returns verified
+embedded sources, never files or network responses. User IDs take precedence;
+NUL, relative paths, URL specifiers and unknown package IDs cannot select a builtin.
+Native builtin sources have a separate limit of 16 modules / 4 MiB, with capacity
+reserved before graph pointers are retained. Buffers are copied before the next
+callback and freed by the managed allocator after loading. Builtins have no entry
+roles and consume no user module/source quota. Code, type and adapter hashes bind
+the worker handshake, compiler cache and consent policy. Pins and modification
+notices are in `tools/QuickExcel.ScriptLibraries/NOTICE.md`; compatibility and
+verification are in `QuickExcel.Desktop/docs/86-builtin-script-libraries.md`.
 With file API v3 / IPC 10, managed and IPC validation still cap raw user module
 sources at 1 MiB. The native executable-source aggregate permits an additional
 32 KiB for host-generated `main` registration trailers (at most 64 declared

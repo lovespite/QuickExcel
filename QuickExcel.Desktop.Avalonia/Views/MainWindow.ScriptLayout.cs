@@ -57,9 +57,11 @@ public sealed partial class MainWindow
             _scriptModuleGroups.Add((label, kind, panel, picker)); groups.Children.Add(panel);
         }
         _selectedDefinition = null; _scriptDefinitionFiles.Clear(); _scriptDefinitionFiles.Add("quickexcel.d.ts");
+        _scriptDefinitionFiles.AddRange(QuickExcel.ScriptContracts.BuiltInLibraryIdentity.EntryDefinitions.Values);
         _definitionPicker = CreateCompactScriptPicker();
         _definitionPicker.ItemTemplate = new FuncDataTemplate<string>((name, _) => new TextBlock
-            { Text = name, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center });
+            { Text = QuickExcel.ScriptContracts.BuiltInLibraryIdentity.EntryDefinitions.FirstOrDefault(p => p.Value == name).Key is { } library ? library + ".d.ts" : name,
+                TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center });
         AutomationProperties.SetName(_definitionPicker, UiText.Get("只读定义文件列表"));
         _definitionPicker.SelectionChanged += async (_, _) =>
         {

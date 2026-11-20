@@ -5,7 +5,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AssemblyName>QuickExcel.Avalonia</AssemblyName>
-    <Version>6.1.1</Version>
+    <Version>7.1.0</Version>
     <QuickExcelDiagnostics Condition="'$(QuickExcelDiagnostics)' == ''">true</QuickExcelDiagnostics>
     <DefineConstants Condition="'$(QuickExcelDiagnostics)' == 'true'">$(DefineConstants);QUICKEXCEL_DIAGNOSTICS</DefineConstants>
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
@@ -44,6 +44,9 @@
     <ProjectReference Include="../QuickExcel.Infrastructure/QuickExcel.Infrastructure.csproj" />
     <None Include="Licenses/*.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <None Include="../THIRD-PARTY-LICENSES.md" Link="Licenses/THIRD-PARTY-LICENSES.md" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="../artifacts/script-libraries/THIRD-PARTY-SCRIPT-LIBRARIES.txt" Link="Licenses/THIRD-PARTY-SCRIPT-LIBRARIES.txt" CopyToOutputDirectory="IfDifferent" CopyToPublishDirectory="IfDifferent" />
+    <None Include="../tools/QuickExcel.ScriptLibraries/NOTICE.md" Link="Licenses/SCRIPT-LIBRARIES-NOTICE.md" CopyToOutputDirectory="IfDifferent" CopyToPublishDirectory="IfDifferent" />
+    <None Include="../samples/**/*" Link="samples/%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="IfDifferent" CopyToPublishDirectory="IfDifferent" />
     <None Include="../third_party/office-scripts-docs/NOTICE.md" Link="Licenses/OFFICE-SCRIPTS-NOTICE.md" CopyToOutputDirectory="PreserveNewest" />
     <!-- The manifest and assets are one verified bundle. A newer destination may
          be stale or modified; it must not win over the generated source bundle. -->

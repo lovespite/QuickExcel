@@ -8,11 +8,13 @@ namespace QuickExcel.Scripting;
 public sealed partial class JscSession : IDisposable
 {
     private const string NativeLibrary = "JavaScriptCore";
-    public const string EngineIdentity = "JavaScriptCore/2.54.2/b95c91b1/qx-async-3";
+    public const string EngineIdentity = "JavaScriptCore/2.54.2/b95c91b1/qx-libraries-1";
     public const int MaxMessageBytes = 16 * 1024 * 1024;
     private readonly object _gate = new();
     private IntPtr _session;
     private readonly HostCallback _hostCallback;
+    private readonly HostCallback _builtinCallback;
+    private IntPtr _builtinSource;
     private IntPtr _hostResponse;
     public Func<string, string>? HostRequest { get; set; }
     /// <summary>Worker-only typed path avoids multiple UTF-16 copies of large fetch bodies.</summary>
@@ -93,6 +95,7 @@ public sealed partial class JscSession : IDisposable
             /*WORKBOOK_MODEL*/
             /*STORAGE*/
             /*NETWORK*/
+            /*LIBRARY_SUPPORT*/
             /*MODULE_CONVENTIONS*/
             return freeze({
                 load(source) {
@@ -172,6 +175,7 @@ public sealed partial class JscSession : IDisposable
             .Replace("/*WORKBOOK_MODEL*/", WorkbookModelBootstrap, StringComparison.Ordinal)
             .Replace("/*STORAGE*/", StorageBootstrap, StringComparison.Ordinal)
             .Replace("/*NETWORK*/", NetworkBootstrap, StringComparison.Ordinal)
+            .Replace("/*LIBRARY_SUPPORT*/", BuiltInLibraries.Support, StringComparison.Ordinal)
             .Replace("/*MODULE_CONVENTIONS*/", ModuleConventionsBootstrap, StringComparison.Ordinal)
             .Replace("/*CAPABILITIES*/", JsonSerializer.Serialize(ScriptCapabilities.Current.Json, ScriptingJsonContext.Default.String), StringComparison.Ordinal);
 
@@ -208,6 +212,7 @@ public sealed partial class JscSession : IDisposable
         IReadOnlyDictionary<string, string>? descriptions, bool automatic, IReadOnlyList<string>? eventEntries, IReadOnlyList<string>? initializationEntries)
     {
         _hostCallback = HostCall;
+        _builtinCallback = BuiltinSource;
         if (modules is null) ArgumentNullException.ThrowIfNull(source);
         else
         {
@@ -227,6 +232,7 @@ public sealed partial class JscSession : IDisposable
         _session = NativeCreate(Bootstrap, out var error);
         if (_session == IntPtr.Zero) throw ReadException(error);
         NativeSetHostCall(_session, _hostCallback);
+        NativeSetBuiltinCall(_session, _builtinCallback);
         try
         {
             string result;
@@ -257,7 +263,8 @@ public sealed partial class JscSession : IDisposable
                 var json = JsonSerializer.Serialize(new NativeModuleBundle(rooted.Select(m => new NativeModule(m.Key, m.Value,
                     roles is null ? 3 : roles.GetValueOrDefault(m.Key))).ToArray(), entries!.ToArray()), ScriptingJsonContext.Default.NativeModuleBundle);
                 if (Encoding.UTF8.GetByteCount(json) > MaxMessageBytes) throw new ArgumentException("Module payload exceeds 16 MiB UTF-8.");
-                if (NativeLoadModules(_session, json, out var moduleError) == 0) throw ReadException(moduleError);
+                try { if (NativeLoadModules(_session, json, out var moduleError) == 0) throw ReadException(moduleError); }
+                finally { if (_builtinSource != IntPtr.Zero) { Marshal.FreeCoTaskMem(_builtinSource); _builtinSource = IntPtr.Zero; } }
                 result = Call("finishModules", [actionEntries, descriptions is null ? new Dictionary<string, string>() : new Dictionary<string, string>(descriptions, StringComparer.Ordinal)]);
             }
             FunctionNames = Array.AsReadOnly(JsonSerializer.Deserialize(result, ScriptingJsonContext.Default.StringArray) ?? []);
@@ -380,6 +387,17 @@ public sealed partial class JscSession : IDisposable
         return _hostResponse = Marshal.StringToCoTaskMemUTF8(response);
     }
 
+    private IntPtr BuiltinSource(string id)
+    {
+        try
+        {
+            if (_builtinSource != IntPtr.Zero) { Marshal.FreeCoTaskMem(_builtinSource); _builtinSource = IntPtr.Zero; }
+            var source = BuiltInLibraries.Modules.FirstOrDefault(m => m.Id == id)?.Source;
+            return source is null ? IntPtr.Zero : _builtinSource = Marshal.StringToCoTaskMemUTF8(source);
+        }
+        catch { return IntPtr.Zero; } // No exception may cross reverse P/Invoke.
+    }
+
     private static InvalidOperationException ReadException(IntPtr error)
     {
         try { return new InvalidOperationException(Marshal.PtrToStringUTF8(error) ?? "JavaScript execution failed."); }
@@ -403,6 +421,8 @@ public sealed partial class JscSession : IDisposable
     private delegate IntPtr HostCallback([MarshalAs(UnmanagedType.LPUTF8Str)] string request);
     [DllImport(NativeLibrary, EntryPoint = "qx_set_host_call", CallingConvention = CallingConvention.Cdecl)]
     private static extern void NativeSetHostCall(IntPtr session, HostCallback callback);
+    [DllImport(NativeLibrary, EntryPoint = "qx_set_builtin_call", CallingConvention = CallingConvention.Cdecl)]
+    private static extern void NativeSetBuiltinCall(IntPtr session, HostCallback callback);
 
     [DllImport(NativeLibrary, EntryPoint = "qx_create", CallingConvention = CallingConvention.Cdecl)]
     private static extern IntPtr NativeCreate([MarshalAs(UnmanagedType.LPUTF8Str)] string bootstrap, out IntPtr error);

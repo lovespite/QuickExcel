@@ -5,6 +5,7 @@ globalThis.qxCompile = function qxCompile(request) {
     const diagnostics = [];
     let diagnosticBytes = 2, diagnosticsTruncated = false; // JSON array brackets.
     const files = new Map(), ids = new Map(), originalIds = new Map();
+    const builtinPaths = request?.builtins?.paths ?? {};
     function bytes(text) {
         let size = 0;
         for (let i = 0; i < text.length; i++) {
@@ -66,6 +67,7 @@ globalThis.qxCompile = function qxCompile(request) {
     }
     files.set('/lib/quickexcel.d.ts', request.apiVersion === 4 ? request.declarations :
         request.declarations.replace('interface Host {', 'interface Host extends LegacyRegistration {'));
+    for (const [name, source] of Object.entries(request.builtins?.files ?? {})) files.set(name, source);
     const options = {
         target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext,
         moduleResolution: ts.ModuleResolutionKind.Bundler, moduleDetection: ts.ModuleDetectionKind.Force,
@@ -89,7 +91,7 @@ globalThis.qxCompile = function qxCompile(request) {
         function visit(node, functionDepth) {
             if (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) {
                 if (node.attributes) fail('Import attributes are not supported', file, node);
-                if (node.moduleSpecifier && (!ts.isStringLiteral(node.moduleSpecifier) || !ids.has(node.moduleSpecifier.text)))
+                if (node.moduleSpecifier && (!ts.isStringLiteral(node.moduleSpecifier) || !ids.has(node.moduleSpecifier.text) && !Object.hasOwn(builtinPaths, node.moduleSpecifier.text)))
                     fail('Imports must name a declared logical module ID', file, node);
             }
             if (ts.isImportEqualsDeclaration(node) || ts.isExportAssignment(node) && node.isExportEquals)
@@ -120,6 +122,8 @@ globalThis.qxCompile = function qxCompile(request) {
         }
     } else {
         const emitted = new Map();
+        const directories = new Set(['/','/modules','/lib']);
+        for (const name of files.keys()) { let p = name; while ((p=p.slice(0,p.lastIndexOf('/')))) directories.add(p); }
         const host = {
             getSourceFile(name, languageVersion) {
                 if (parsed.has(name)) return parsed.get(name);
@@ -130,15 +134,17 @@ globalThis.qxCompile = function qxCompile(request) {
             getCurrentDirectory: () => '/', getCanonicalFileName: name => name,
             useCaseSensitiveFileNames: () => true, getNewLine: () => '\n',
             fileExists: name => files.has(name), readFile: name => files.get(name),
-            directoryExists: name => name === '/' || name === '/modules' || name === '/lib',
+            directoryExists: name => directories.has(name),
             getDirectories: () => [],
             writeFile: (name, content) => emitted.set(name, content),
-            resolveModuleNames: names => names.map(id => {
+            resolveModuleNames: (names, containingFile) => names.map(id => {
                 const name = ids.get(id);
-                return name ? { resolvedFileName: name, extension: name.endsWith('.ts') ? ts.Extension.Ts : ts.Extension.Js } : undefined;
+                if (!containingFile.startsWith('/builtin/') && name) return { resolvedFileName: name, extension: name.endsWith('.ts') ? ts.Extension.Ts : ts.Extension.Js };
+                if (Object.hasOwn(builtinPaths,id)) return { resolvedFileName: builtinPaths[id], extension: ts.Extension.Dts };
+                return containingFile.startsWith('/builtin/') ? ts.resolveModuleName(id,containingFile,options,host).resolvedModule : undefined;
             })
         };
-        const program = ts.createProgram([...ids.values(), '/lib/quickexcel.d.ts'], options, host);
+        const program = ts.createProgram([...ids.values(), '/lib/quickexcel.d.ts', ...(request.builtins?.roots ?? [])], options, host);
         ts.getPreEmitDiagnostics(program).forEach(diagnostic);
         if (!diagnostics.length) {
             program.emit().diagnostics.forEach(diagnostic);

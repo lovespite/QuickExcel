@@ -48,6 +48,7 @@ internal static class Program
         if (args.Length >= 2 && args[0] == "--cell-styles-smoke") { SmokeDirectory = Path.GetFullPath(args[1]); SmokeMode = "cell-styles"; InitialFile = null; }
         if (args.Length >= 2 && args[0] == "--closing-smoke") { SmokeDirectory = Path.GetFullPath(args[1]); SmokeMode = "closing"; InitialFile = null; }
         if (args.Length >= 2 && args[0] == "--commands-smoke") { SmokeDirectory = Path.GetFullPath(args[1]); SmokeMode = "commands"; InitialFile = null; }
+        if (args.Length >= 2 && args[0] == "--samples-smoke") { SmokeDirectory = Path.GetFullPath(args[1]); SmokeMode = "samples"; InitialFile = null; }
         if (args.Length >= 2 && args[0] == "--licenses-smoke") { SmokeDirectory = Path.GetFullPath(args[1]); SmokeMode = "licenses"; InitialFile = null; }
         if (args.Length >= 2 && args[0] == "--no-scripts-smoke") { SmokeDirectory = Path.GetFullPath(args[1]); SmokeMode = "no-scripts"; InitialFile = null; }
         if (SmokeMode == "web-benchmark") WebBenchmarkKind = args.ElementAtOrDefault(2) ?? "all";

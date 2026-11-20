@@ -42,6 +42,30 @@ public sealed partial class MainWindow
             ScriptModuleProperties(Document.Snapshot.ScriptModules, "main") == "主入口 · TypeScript" &&
             _scriptStatus!.Text!.Contains("主入口 · TypeScript"),
             "New workbooks open a TypeScript main entry and show its entry role in the status and file properties");
+        var originalMain = initial.GetProperty("source").GetString()!;
+        foreach (var (id,source) in new (string,string)[] {
+            ("lodash", "import {sumBy} from 'lodash'; const n:number=sumBy([{n:1}],'n');"),
+            ("decimal.js", "import Decimal from 'decimal.js'; const n:string=new Decimal('0.1').plus('0.2').toString();"),
+            ("dayjs", "import dayjs from 'dayjs'; const n:number=dayjs.duration({minutes:1}).asMinutes(); dayjs.tz('2024-01-01','Asia/Shanghai');"),
+            ("papaparse", "import Papa from 'papaparse'; const rows=Papa.parse<{n:number}>('n\\n1',{header:true,dynamicTyping:true}).data; const n:number=rows[0].n;"),
+            ("simple-statistics", "import {mean} from 'simple-statistics'; const n:number=mean([1,2]);"),
+            ("zod", "import {z} from 'zod'; const n:number=z.number().parse(1); const f:File=z.file().parse(new File(['x'],'x'));"),
+            ("fuse.js", "import Fuse from 'fuse.js'; const n:number=new Fuse([{n:1,name:'a'}],{keys:['name']}).search('a')[0].item.n;"),
+            ("arquero", "import {from,op} from 'arquero'; const n:number=from([{n:1}]).rollup({n:op.sum('n')}).get('n',0) as number;"),
+            ("mathjs", "import {add} from 'mathjs'; const n:number=add(1,2);") })
+        {
+            await test(new Dictionary<string,object?> { ["action"]="edit",["module"]="main",["text"]=source });
+            var typed=await test(new Dictionary<string,object?> { ["action"]="inspect" });
+            await File.WriteAllTextAsync(Path.Combine(directory,"library-"+id+".json"),typed.ToString());
+            check(typed.GetProperty("diagnostics").GetArrayLength()==0,"Monaco checks the bundled declarations for "+id);
+        }
+        var lodashDefinition=QuickExcel.ScriptContracts.BuiltInLibraryIdentity.EntryDefinitions["lodash"];
+        check(await NavigateScriptAsync(new(null,lodashDefinition)),"Bundled library definitions are navigable through the host allowlist");
+        var definition=await test(new Dictionary<string,object?> { ["action"]="inspect" });
+        check(definition.GetProperty("readOnly").GetBoolean() && definition.GetProperty("source").GetString()!.Contains("LoDashStatic"),"Library definitions open read-only with upstream types");
+        await NavigateScriptAsync(new("main",null));
+        await test(new Dictionary<string,object?> { ["action"]="edit",["module"]="main",["text"]=originalMain });
+        check(await CommitScriptsAsync(),"Library editor probes restore and commit the original draft");
         check(!_scriptWindow!.GetVisualDescendants().OfType<Button>().Any(b => b.Content is "模块角色" or "JS / TS"),
             "The workspace exposes no post-creation role or language editor");
         var beforeCancel = Document.Snapshot.ScriptModules;

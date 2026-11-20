@@ -15,6 +15,7 @@ import * as typescript from 'monaco-editor/language/typescript/monaco.contributi
 import 'monaco-editor/languages/definitions/javascript/register';
 import 'monaco-editor/languages/definitions/typescript/register';
 import declarations from './quickexcel.d.ts';
+import builtinDeclarations from '../../artifacts/script-libraries/declarations.json';
 import { start, post, request, fail, fromBase64, toBase64, hash, Message } from './bridge';
 
 type Model = { model: monaco.editor.ITextModel; version: number; accepted: number; state: monaco.editor.ICodeEditorViewState | null };
@@ -34,7 +35,7 @@ const status = document.getElementById('status')!;
 const assistanceButtons = [...document.querySelectorAll<HTMLButtonElement>('button[data-action]')];
 const baseUri = `file:///quickexcel/${new URLSearchParams(location.hash.slice(1)).get('document')}/`;
 const declarationUri = monaco.Uri.parse(baseUri + 'quickexcel.d.ts');
-const isDefinition = (name: string) => name === 'quickexcel.d.ts' || /^lib\.(?:es(?:5|6|20\d\d|next)(?:\.[a-z0-9]+)*|decorators(?:\.legacy)?)\.d\.ts$/.test(name);
+const isDefinition = (name: string) => name === 'quickexcel.d.ts' || Object.hasOwn(builtinDeclarations.files, name) && /\.d\.[cm]?ts$/.test(name) || /^lib\.(?:es(?:5|6|20\d\d|next)(?:\.[a-z0-9]+)*|decorators(?:\.legacy)?)\.d\.ts$/.test(name);
 declare const __QUICKEXCEL_WEB_TEST__: boolean;
 (window as any).MonacoEnvironment = { getWorker(_id: string, label: string) {
   const worker = new Worker(new URL(label === 'typescript' || label === 'javascript' ? 'ts.worker.js' : 'editor.worker.js', location.href), { type: 'module' });
@@ -47,6 +48,8 @@ for (const defaults of [typescript.javascriptDefaults, typescript.typescriptDefa
   defaults.setDiagnosticsOptions({ noSemanticValidation: false, noSyntaxValidation: false, onlyVisible: true });
 }
 let extraLibs = [typescript.javascriptDefaults, typescript.typescriptDefaults].map(d => d.addExtraLib(declarations, baseUri + 'quickexcel.d.ts'));
+const builtinExtraLibs = [typescript.javascriptDefaults, typescript.typescriptDefaults].flatMap(d =>
+  Object.entries(builtinDeclarations.files).map(([name, source]) => d.addExtraLib(source, 'file://' + name)));
 editor = monaco.editor.create(document.getElementById('editor')!, { model: null, automaticLayout: true, readOnly: true, theme: 'vs-dark',
   minimap: { enabled: false }, fontSize: 14, scrollBeyondLastLine: false, accessibilitySupport: 'auto', ariaLabel: uiText('QuickExcel JavaScript / TypeScript 脚本编辑器'),
   quickSuggestions: { other: true, comments: false, strings: false }, suggestOnTriggerCharacters: true,
@@ -113,11 +116,12 @@ async function openDefinition(name: string) {
   if (!isDefinition(name)) throw new Error('Unknown definition file');
   let next = definitions.get(name);
   if (!next) {
-    const uri = name === 'quickexcel.d.ts' ? declarationUri : monaco.Uri.parse('file:///' + name);
+    const uri = name === 'quickexcel.d.ts' ? declarationUri : monaco.Uri.parse('file://' + (name.startsWith('/') ? name : '/' + name));
     let model = monaco.editor.getModel(uri);
     if (!model) {
       let text: string | undefined = declarations;
-      if (name !== 'quickexcel.d.ts') {
+      if (Object.hasOwn(builtinDeclarations.files, name)) text = (builtinDeclarations.files as Record<string,string>)[name];
+      else if (name !== 'quickexcel.d.ts') {
         // Monaco registers each language service lazily. A JavaScript-only book
         // has no TypeScript worker yet; its existing worker also owns the libs.
         const source = models.get(selected!)!.model;
@@ -145,7 +149,7 @@ const editorOpener = monaco.editor.registerEditorOpener({ async openCodeEditor(_
   if (!initialized || disposed || composing || locked || navigating) return true;
   if (resource.toString() === editor.getModel()?.uri.toString()) return false;
   const module = [...models].find(([, item]) => item.model.uri.toString() === resource.toString())?.[0];
-  const name = resource.path.slice(1);
+  const name = Object.hasOwn(builtinDeclarations.files, resource.path) ? resource.path : resource.path.slice(1);
   const definition = resource.toString() === declarationUri.toString() ? 'quickexcel.d.ts' :
     resource.scheme === 'file' && !resource.authority && !resource.query && !resource.fragment && isDefinition(name) ? name : undefined;
   if (!module && !definition) return true;
@@ -295,7 +299,7 @@ async function handle(message: Message) {
         extraLibs = [typescript.javascriptDefaults, typescript.typescriptDefaults].map(d => d.addExtraLib(
           declarations.replace('interface Host {', 'interface Host extends LegacyRegistration {'), baseUri + 'quickexcel.d.ts'));
       }
-      const paths: Record<string, string[]> = Object.create(null);
+      const paths: Record<string, string[]> = Object.assign(Object.create(null), Object.fromEntries(Object.entries(builtinDeclarations.paths).map(([id,name])=>[id,['file://'+name]])));
       let hasTypeScript = false;
       for (const id of p.modules) {
         if (typeof id !== 'string' || !/^[A-Za-z0-9_.-]{1,128}$/.test(id) || id === '.' || id === '..' || models.has(id)) throw new Error('Invalid module ID');
@@ -357,7 +361,7 @@ async function handle(message: Message) {
 async function dispose() {
   if (disposed) return; disposed = true; if (scheduled !== undefined) clearTimeout(scheduled);
   markerListener.dispose(); editorOpener.dispose(); linkOpener.dispose(); updateAssistance();
-  editor.dispose(); for (const model of monaco.editor.getModels()) model.dispose(); models.clear(); definitions.clear(); for (const lib of extraLibs) lib.dispose();
+  editor.dispose(); for (const model of monaco.editor.getModels()) model.dispose(); models.clear(); definitions.clear(); for (const lib of [...extraLibs,...builtinExtraLibs]) lib.dispose();
   for (const worker of workers) worker.terminate(); workers.clear();
 }
 start(handle, dispose);

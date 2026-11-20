@@ -373,7 +373,10 @@
         "type": "Project"
       },
       "quickexcel.scripting": {
-        "type": "Project"
+        "type": "Project",
+        "dependencies": {
+          "QuickExcel.ScriptContracts": "[1.0.0, )"
+        }
       }
     }
   }

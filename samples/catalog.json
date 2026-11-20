@@ -1,0 +1,86 @@
+{
+  "schemaVersion": 1,
+  "samples": [
+    {
+      "id": "lodash",
+      "file": "01-lodash.xlsq",
+      "title": "Lodash · 订单去重与分组",
+      "titleEn": "Orders: deduplicate and group",
+      "description": "按订单号去重，按类别汇总金额并排序。",
+      "descriptionEn": "Deduplicate orders, group totals by category and sort.",
+      "sha256": "E6B9582FD7E421D0BC5BA91DD6C069353C8F5BD98052CF4351B4EB13F3970566"
+    },
+    {
+      "id": "decimal.js",
+      "file": "02-decimal.js.xlsq",
+      "title": "decimal.js · 精确金额计算",
+      "titleEn": "Exact decimal amounts",
+      "description": "保留文本单价精度，计算小计和金额合计。",
+      "descriptionEn": "Calculate exact subtotals and totals from text prices.",
+      "sha256": "2AC349CD35BAD18410CDDB2E0ABB9668252FDC3E859C1B73C42A6A818CD0779D"
+    },
+    {
+      "id": "dayjs",
+      "file": "03-dayjs.xlsq",
+      "title": "Day.js · 日期与时区",
+      "titleEn": "Dates and time zones",
+      "description": "严格校验日期，转换 UTC 并计算七天后日期。",
+      "descriptionEn": "Validate dates, convert to UTC and add seven days.",
+      "sha256": "66DD50A5E92F190CD81841DC353E36A88EBC8E533040BE55C26BD70C94CED385"
+    },
+    {
+      "id": "papaparse",
+      "file": "04-papaparse.xlsq",
+      "title": "Papa Parse · CSV 解析与导出",
+      "titleEn": "Parse and export CSV",
+      "description": "解析含引号、逗号和换行的 CSV，再生成 CSV 文本。",
+      "descriptionEn": "Parse quoted CSV with commas and line breaks, then export it.",
+      "sha256": "53CE2B59D303BE5A61501E2B970C7E12FAA9421C8328CDFA6AA45A604DBD3C30"
+    },
+    {
+      "id": "simple-statistics",
+      "file": "05-simple-statistics.xlsq",
+      "title": "simple-statistics · 统计与回归",
+      "titleEn": "Statistics and regression",
+      "description": "计算均值、中位数、标准差、相关性与线性预测。",
+      "descriptionEn": "Compute descriptive statistics, correlation and linear predictions.",
+      "sha256": "5161B303E952291C81096B85981DBABB1CFD2BAADFDB25EC0E5467F7838526A8"
+    },
+    {
+      "id": "zod",
+      "file": "06-zod.xlsq",
+      "title": "Zod · 表格数据校验",
+      "titleEn": "Validate table data",
+      "description": "逐行检查姓名、邮箱和年龄，显示可读错误信息。",
+      "descriptionEn": "Validate names, emails and ages with readable row errors.",
+      "sha256": "8AFEC7A91641D009EC510A65D499F99980DF14300B904DBDBF29354D6E7D1F02"
+    },
+    {
+      "id": "fuse.js",
+      "file": "07-fuse.js.xlsq",
+      "title": "Fuse.js · 商品模糊搜索",
+      "titleEn": "Fuzzy product search",
+      "description": "使用带拼写错误的搜索词查找商品。",
+      "descriptionEn": "Find products even when the search term has a typo.",
+      "sha256": "BA33E1712DEFBC8CF706CF8D36BB6083DC501656D81B4AB13DC88FC25657A8E2"
+    },
+    {
+      "id": "arquero",
+      "file": "08-arquero.xlsq",
+      "title": "Arquero · 表格分组聚合",
+      "titleEn": "Group and aggregate tables",
+      "description": "将单元格数据转为表，分组计数、求和并排序。",
+      "descriptionEn": "Create a table, group rows, aggregate amounts and sort.",
+      "sha256": "F406C00A868D6B0767B4FD5A96CFF206B88B1B1CA90391642B1AA19CE079187A"
+    },
+    {
+      "id": "mathjs",
+      "file": "09-mathjs.xlsq",
+      "title": "math.js · 数学运算",
+      "titleEn": "Expressions, units and matrices",
+      "description": "演示表达式、单位换算、符号求导、矩阵与大数。",
+      "descriptionEn": "Evaluate expressions, convert units, differentiate and multiply matrices.",
+      "sha256": "9525F8F2C3F8AB73581C116F949680D096F8EBC0F63D443B9DF24D1FA9CF3E6D"
+    }
+  ]
+}

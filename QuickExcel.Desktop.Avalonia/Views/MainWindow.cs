@@ -113,6 +113,7 @@ public sealed partial class MainWindow : Window
             if (Program.SmokeDirectory is { } noScriptsDirectory && Program.SmokeMode == "no-scripts") { await RunNoScriptsSmokeAsync(noScriptsDirectory); return; }
             if (Program.SmokeDirectory is { } closingDirectory && Program.SmokeMode == "closing") { await RunWindowClosingSmokeAsync(closingDirectory); return; }
             if (Program.SmokeDirectory is { } commandsDirectory && Program.SmokeMode == "commands") { await RunDesktopCommandsSmokeAsync(commandsDirectory); return; }
+            if (Program.SmokeDirectory is { } samplesDirectory && Program.SmokeMode == "samples") { await RunSamplesSmokeAsync(samplesDirectory); return; }
             if (Program.SmokeDirectory is { } licensesDirectory && Program.SmokeMode == "licenses") { await RunLicenseSmokeAsync(licensesDirectory); return; }
             if (Program.SmokeDirectory is { } pasteDirectory && Program.SmokeMode == "paste-options") { await RunPasteOptionsSmokeAsync(pasteDirectory); return; }
             if (Program.SmokeDirectory is { } cellStylesDirectory && Program.SmokeMode == "cell-styles") { await RunCellStylesSmokeAsync(cellStylesDirectory); return; }
@@ -173,6 +174,7 @@ public sealed partial class MainWindow : Window
             Item(UiText.Get("新建  Ctrl+N"), async () => { if (await ConfirmDiscardAsync()) { _workspace.New(); ShowBook(); } }, false),
             Item(UiText.Get("打开  Ctrl+O"), OpenAsync, false), Item(UiText.Get("最近文件"), async () => { if (await ConfirmDiscardAsync()) { _workspace.New(); ShowHome(); } }, false),
             Item(UiText.Get("以只读方式打开…"), () => OpenAsync(readOnly: true), false),
+            Item(UiText.Get("打开示例工作簿"), OpenSampleWorkbooksAsync, false),
             Item(UiText.Get("打开恢复副本"), RecoveryAsync, false), new Separator(),
             Item(UiText.Get("保存  Ctrl+S"), async () => await SaveAsync(false), mutation: false), Item(UiText.Get("另存为"), async () => await SaveAsync(true), mutation: false), new Separator(),
             exportMenu,

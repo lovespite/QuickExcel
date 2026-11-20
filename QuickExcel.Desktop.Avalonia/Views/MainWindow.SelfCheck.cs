@@ -30,6 +30,23 @@ public sealed partial class MainWindow
                 _menu.Items.OfType<global::Avalonia.Controls.MenuItem>().Skip(1).All(item => !item.IsEnabled),
                 "Home disables workbook commands before a document is opened or created");
             _ = new WebAssetCatalog(Path.Combine(AppContext.BaseDirectory, "Web")); Check(true, "Production resource hashes and mode verified");
+            var sampleCatalog=new WorkbookSampleCatalog(Path.Combine(AppContext.BaseDirectory,"samples"));
+            Check(sampleCatalog.Samples.Count==9&&sampleCatalog.Samples.All(sample=>
+            {
+                var snapshot=sampleCatalog.Read(sample.Id);
+                return snapshot.ScriptModules.ScriptApiVersion==4&&snapshot.ScriptModules.Signature is null&&
+                    snapshot.Sheets.Length==4&&snapshot.ScriptModules.Modules.ContainsKey("example");
+            }),"Published sample catalog and all nine workbook payloads are complete and hash verified");
+            var samplePicker=new SampleWorkbookDialog(sampleCatalog.Samples) { ShowActivated=false };
+            try
+            {
+                samplePicker.Show(this);
+                await Dispatcher.UIThread.InvokeAsync(()=>{},DispatcherPriority.Background);
+                Check(samplePicker.GetVisualDescendants().OfType<ListBox>().Single(list=>list.Name=="SampleWorkbooks").Items.Count==9&&
+                    _start.GetVisualDescendants().OfType<Button>().Any(button=>button.Name=="OpenSampleWorkbooks"&&button.IsEnabled),
+                    "Published home button and sample picker expose nine examples");
+            }
+            finally { samplePicker.Close(); }
             // Exercise the actual license viewer in the trimmed package, including
             // its compiled styles and rendered Markdown text rather than only the input.
             var settings = new SettingsWindow(_settings, _recentFiles, SettingsSection.About) { ShowActivated = false };
@@ -91,6 +108,30 @@ public sealed partial class MainWindow
                 { ["main"] = new("scripts/main.ts", "const value:number=42; host.functions.register('TSCHECK',()=>value);", ScriptLanguage.TypeScript) }, ["main"], scriptApiVersion: 3);
                 using var compiled = await Task.Run(() => new ScriptWorkerRuntimeFactory().Create(new ScriptRuntimeRequest(modules, new(Guid.NewGuid(), 0, 0, 0), TimeSpan.FromSeconds(5), default)));
                 Check(Convert.ToDouble(await Task.Run(() => compiled.Invoke("TSCHECK", []))) == 42, "Published isolated TypeScript compiler and verified emitted ESM");
+                var libraries = new ScriptModuleSet(new Dictionary<string, ScriptModule>
+                { ["main"] = new("scripts/main.ts", """
+                    import {sumBy} from 'lodash'; import Decimal from 'decimal.js'; import dayjs from 'dayjs';
+                    import Papa from 'papaparse'; import {mean} from 'simple-statistics'; import {z} from 'zod';
+                    import Fuse from 'fuse.js'; import {from,op} from 'arquero'; import {add} from 'mathjs';
+                    export function CHECK():number {
+                      const rows=Papa.parse<{name:string,n:number}>('name,n\napple,20\nbanana,22',{header:true,dynamicTyping:true}).data;
+                      if(sumBy(rows,'n')!==42 || mean(rows.map(r=>r.n))!==21)throw Error('collections');
+                      if(new Fuse(rows,{keys:['name']}).search('aple')[0].item.n!==20)throw Error('search');
+                      if(dayjs.duration({minutes:42}).asMinutes()!==42 || Number(add(20,22))!==42)throw Error('date/math');
+                      if(!z.url().safeParse('https://example.com').success || !z.file().safeParse(new File(['x'],'x')).success)throw Error('data globals');
+                      return z.number().parse(new Decimal(from(rows).rollup({n:op.sum('n')}).get('n',0) as number).toNumber());
+                    }
+                    """, ScriptLanguage.TypeScript) }, ["main"], scriptApiVersion:4);
+                using var bundled = await Task.Run(() => new ScriptWorkerRuntimeFactory().Create(new ScriptRuntimeRequest(libraries, new(Guid.NewGuid(),0,0,0),TimeSpan.FromSeconds(5),default)));
+                Check(Convert.ToDouble(await Task.Run(() => bundled.Invoke("JS.main.CHECK", []))) == 42,
+                    "Published nine built-in libraries, upstream TypeScript declarations and data-only URL/File helpers");
+                using(var sample=new WorkbookDocument(sampleCatalog.Read("lodash"),_services))
+                {
+                    Check(!sample.ScriptsEnabled,"Opening a published sample leaves scripts disabled");
+                    await Task.Run(()=>{sample.EnableScriptsAndCalculate();sample.RunAction("example");});
+                    Check(sample.GetCellValue(2,1,2)=="200"&&sample.Undo()&&sample.GetCellValue(2,1,2)=="",
+                        "Published sample executes its embedded TypeScript through the isolated worker and supports undo");
+                }
                 var action = new ScriptModuleSet(new Dictionary<string, ScriptModule>
                 { ["main"] = new("scripts/main.ts", """
                     function main(workbook: QuickExcel.Workbook) {
