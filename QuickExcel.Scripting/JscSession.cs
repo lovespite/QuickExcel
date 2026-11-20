@@ -8,13 +8,15 @@ namespace QuickExcel.Scripting;
 public sealed partial class JscSession : IDisposable
 {
     private const string NativeLibrary = "JavaScriptCore";
-    public const string EngineIdentity = "JavaScriptCore/2.54.2/b95c91b1/qx-sync-2";
+    public const string EngineIdentity = "JavaScriptCore/2.54.2/b95c91b1/qx-async-3";
     public const int MaxMessageBytes = 16 * 1024 * 1024;
     private readonly object _gate = new();
     private IntPtr _session;
     private readonly HostCallback _hostCallback;
     private IntPtr _hostResponse;
     public Func<string, string>? HostRequest { get; set; }
+    /// <summary>Worker-only typed path avoids multiple UTF-16 copies of large fetch bodies.</summary>
+    public Func<JsonElement, bool, JscNetworkReply>? NetworkRequest { get; set; }
 
     // The bridge object is held by native code, not exposed on globalThis. Module
     // code sees only the host extension object and a bounded console.
@@ -90,6 +92,7 @@ public sealed partial class JscSession : IDisposable
             /*EVENT_API*/
             /*WORKBOOK_MODEL*/
             /*STORAGE*/
+            /*NETWORK*/
             /*MODULE_CONVENTIONS*/
             return freeze({
                 load(source) {
@@ -103,7 +106,7 @@ public sealed partial class JscSession : IDisposable
                     actionMode = useActions === true;
                     sharedMode = options.share === true;
                     automatic = options.automatic === true;
-                    if (automatic) host = freeze({ localStorage, sessionStorage, values: host.values, get files() { return fileContext(); } });
+                    if (automatic) host = freeze({ localStorage, sessionStorage, values: host.values, permissions, get files() { return fileContext(); } });
                     Object.defineProperty(globalThis, 'host', { value: host });
                     Object.defineProperty(globalThis, 'console', { value: console });
                     Object.defineProperty(globalThis, '__qxRegisterMain', {
@@ -158,6 +161,9 @@ public sealed partial class JscSession : IDisposable
                 },
                 beginRound() { logs.length = 0; actionInvoked = false; activeModel = false; hostWriteFailed = false; hostWrote = false; },
                 runAction,
+                runAsyncAction,
+                settleFetch,
+                networkHosts() { return [...networkHosts]; },
                 logs() { return logs.slice(); }
             });
         })()
@@ -165,12 +171,14 @@ public sealed partial class JscSession : IDisposable
             .Replace("/*EVENT_API*/", EventApiBootstrap, StringComparison.Ordinal)
             .Replace("/*WORKBOOK_MODEL*/", WorkbookModelBootstrap, StringComparison.Ordinal)
             .Replace("/*STORAGE*/", StorageBootstrap, StringComparison.Ordinal)
+            .Replace("/*NETWORK*/", NetworkBootstrap, StringComparison.Ordinal)
             .Replace("/*MODULE_CONVENTIONS*/", ModuleConventionsBootstrap, StringComparison.Ordinal)
             .Replace("/*CAPABILITIES*/", JsonSerializer.Serialize(ScriptCapabilities.Current.Json, ScriptingJsonContext.Default.String), StringComparison.Ordinal);
 
     public IReadOnlyList<string> FunctionNames { get; }
     public IReadOnlyList<JsFunctionDescriptor> FunctionDescriptors { get; }
     public IReadOnlyList<JsActionDescriptor> ActionDescriptors { get; }
+    public IReadOnlyList<string> NetworkHosts { get; }
 
     public bool LastOperationInterrupted
     {
@@ -255,6 +263,7 @@ public sealed partial class JscSession : IDisposable
             FunctionNames = Array.AsReadOnly(JsonSerializer.Deserialize(result, ScriptingJsonContext.Default.StringArray) ?? []);
             FunctionDescriptors = Array.AsReadOnly(JsonSerializer.Deserialize(Call("descriptors", []), ScriptingJsonContext.Default.JsFunctionDescriptorArray) ?? []);
             ActionDescriptors = Array.AsReadOnly(JsonSerializer.Deserialize(Call("actionDescriptors", []), ScriptingJsonContext.Default.JsActionDescriptorArray) ?? []);
+            NetworkHosts = Array.AsReadOnly(JsonSerializer.Deserialize(Call("networkHosts", []), ScriptingJsonContext.Default.StringArray) ?? []);
         }
         catch
         {
@@ -297,8 +306,49 @@ public sealed partial class JscSession : IDisposable
     {
         lock (_gate)
         {
-            using var json = JsonDocument.Parse(Call("runAction", [name, request]));
-            return json.RootElement.Clone();
+            if (request.TryGetProperty("maxNetworkBodyBytes", out var networkLimit) &&
+                (!networkLimit.TryGetInt32(out var maxBodyBytes) || maxBodyBytes is < 1024 * 1024 or > 10 * 1024 * 1024))
+                throw new InvalidOperationException("Network body limit must be between 1 and 10 MiB.");
+            if (name.StartsWith("@event/", StringComparison.Ordinal) || name == "__console__")
+            {
+                using var json = JsonDocument.Parse(Call("runAction", [name, request]));
+                return json.RootElement.Clone();
+            }
+            string? progress = Call("runAsyncAction", [name, request]);
+            for (var turn = 0; turn <= 16; turn++)
+            {
+                var largePayload = progress!.Length > 1024 * 1024;
+                using var state = JsonDocument.Parse(progress!);
+                progress = null; // The parsed UTF-8 buffer now owns the response.
+                var value = state.RootElement;
+                if (value.GetProperty("error").ValueKind == JsonValueKind.String)
+                    throw new InvalidOperationException(value.GetProperty("error").GetString());
+                if (!value.GetProperty("pending").GetBoolean()) return value.GetProperty("patch").Clone();
+                var requests = value.GetProperty("requests");
+                if (requests.GetArrayLength() == 0)
+                    throw new InvalidOperationException("Action Promise is pending with no supported asynchronous operation.");
+                var next = requests[0];
+                if (NetworkRequest is { } network)
+                {
+                    // CLR and JSC share the worker's process bound. Return dead
+                    // large native-to-managed JSON copies before creating IPC
+                    // frames; this happens while the VM and its watchdog are idle.
+                    if (largePayload) GC.Collect(2, GCCollectionMode.Forced, blocking: true, compacting: false);
+                    var networkReply = network(next, largePayload);
+                    GC.Collect(2, GCCollectionMode.Optimized, blocking: true, compacting: false);
+                    progress = Call("settleFetch", [next.GetProperty("id").GetInt32(), new Dictionary<string, object?>
+                    { ["ok"] = networkReply.Ok, ["value"] = networkReply.Value, ["error"] = networkReply.Error }]);
+                    continue;
+                }
+                var outbound = "{\"method\":\"network.fetch\",\"args\":[" + next.GetRawText() + "]}";
+                // The VM is idle here. Host HTTP waits do not consume the native
+                // one-second JavaScript watchdog; the host round deadline remains.
+                var response = HostRequest?.Invoke(outbound)
+                    ?? "{\"ok\":false,\"error\":\"Network broker is unavailable.\"}";
+                using var reply = JsonDocument.Parse(response);
+                progress = Call("settleFetch", [next.GetProperty("id").GetInt32(), reply.RootElement]);
+            }
+            throw new InvalidOperationException("Action exceeds its fetch turn limit.");
         }
     }
 
@@ -308,6 +358,8 @@ public sealed partial class JscSession : IDisposable
         var json = ScriptJsonValues.Serialize(arguments);
         if (Encoding.UTF8.GetByteCount(json) > MaxMessageBytes)
             throw new InvalidOperationException("JavaScript arguments exceed the 16 MiB UTF-8 input limit.");
+        if (json.Length > 1024 * 1024)
+            GC.Collect(2, GCCollectionMode.Forced, blocking: true, compacting: false);
         IntPtr result; IntPtr error;
         try { result = NativeCall(_session, method, json, out error); }
         finally { if (_hostResponse != IntPtr.Zero) { Marshal.FreeCoTaskMem(_hostResponse); _hostResponse = IntPtr.Zero; } }
@@ -369,3 +421,6 @@ public sealed partial class JscSession : IDisposable
     [DllImport(NativeLibrary, EntryPoint = "qx_engine_identity", CallingConvention = CallingConvention.Cdecl)]
     private static extern IntPtr NativeEngineIdentity();
 }
+
+/// <summary>Internal worker network reply; serialized only at the native boundary.</summary>
+public sealed record JscNetworkReply(bool Ok, JsonElement Value, string? Error);

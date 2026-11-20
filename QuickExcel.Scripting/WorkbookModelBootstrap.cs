@@ -468,6 +468,7 @@ public sealed partial class JscSession
 
         const workbook = makeHandle('Workbook', {});
         let host = freeze({
+            get permissions() { return permissions; },
             get localStorage() { return localStorage; },
             get sessionStorage() { return sessionStorage; },
             functions: freeze({ register(name, fn) { registerFunction(name, fn); } }),
@@ -483,6 +484,7 @@ public sealed partial class JscSession
         function runAction(name, request) {
             if (!actionMode || !loaded || actionInvoked) throw new ScriptError('InvalidReference', '操作不可用。');
             if (automatic && name !== '@initialize' && !initialized) throw new ScriptError('InvalidReference', '请先应用脚本，完成主入口初始化。');
+            configureNetwork(request);
             actionInvoked = true;
             activeModel = true;
             hostWriteFailed = false;

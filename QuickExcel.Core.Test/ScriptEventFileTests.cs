@@ -104,7 +104,7 @@ public sealed class ScriptEventFileTests
     [InlineData("try { fs.writeText('//temp/../escape','x'); } catch {}")]
     [InlineData("fs.writeJson('//xlsq/manifest.json',{})")]
     [InlineData("fs.writeBytes('//mem/big',new Uint8Array(8388608))")]
-    [InlineData("return Promise.resolve()")]
+    [InlineData("return Promise.reject(new Error('async failure'))")]
     public void FailedWorkerNeverCommitsAnyVolumeOrCell(string tail)
     {
         using var doc = Document("function main(workbook, host){const fs=host.files;fs.writeText('//mem/a','memory');fs.writeText('//temp/a','temp');fs.writeText('//xlsq/a','package');workbook.getActiveWorksheet().getRange('A1').setValue(42);" + tail + ";}");

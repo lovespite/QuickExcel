@@ -109,7 +109,7 @@ try {
             visualStudio = Invoke-CapturedCommand $vswherePath @('-latest', '-products', '*', '-requires', 'Microsoft.VisualStudio.Component.VC.Tools.x86.x64', '-property', 'installationVersion')
         }
         native = [ordered]@{
-            engine = 'JavaScriptCore/2.54.2/b95c91b1/qx-sync-2'
+            engine = 'JavaScriptCore/2.54.2/b95c91b1/qx-async-3'
             expectedArchiveSha256 = 'A76345B391BEF6211FB5AB6CFAB2E86B285D18CDA17CBB9ADE595F1252B86065'
             interpretation = 'Existing binaries are hashed, not rebuilt by this script. Matching archive hashes do not prove that an observed DLL was rebuilt during this validation run.'
             buildContract = 'Pinned JSCOnly/ICU source build; JIT/DFG/mimalloc; no FTL/Wasm/inspector. Full compiler, options and binary hashes are in native identity. JSC-MEM-001 open.'

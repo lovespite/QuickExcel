@@ -64,7 +64,9 @@ public sealed class ScriptConsoleTests
     {
         using var doc = Document();
         doc.RunConsole("const privateVariable=5; [typeof document,typeof process,typeof require,typeof fetch]");
-        Assert.Contains(doc.Session.ConsoleEntries, e => e.Text == "=> [undefined, undefined, undefined, undefined]");
+        Assert.Contains(doc.Session.ConsoleEntries, e => e.Text == "=> [undefined, undefined, undefined, function]");
+        Assert.ThrowsAny<Exception>(() => doc.RunConsole("fetch('https://example.com/')"));
+        Assert.False(doc.ScriptsEnabled);
         doc.RunConsole("typeof privateVariable"); Assert.Contains(doc.Session.ConsoleEntries, e => e.Text == "=> undefined");
         doc.RunConsole("""const circular={value:1}; circular.self=circular; console.log(circular); 'quotes " and slash \\';""");
         Assert.Contains(doc.Session.ConsoleEntries, e => e.Text.Contains("[Circular]"));

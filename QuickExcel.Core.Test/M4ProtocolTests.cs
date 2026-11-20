@@ -9,6 +9,7 @@ public sealed class M4ProtocolTests
 {
     [Theory]
     [InlineData(1)] [InlineData(2)] [InlineData(3)] [InlineData(4)] [InlineData(5)] [InlineData(6)]
+    [InlineData(12)]
     public void PreviousWorkersCannotBeMixedWithCurrentProtocol(int oldVersion)
     {
         var identity = Identity();
@@ -101,6 +102,29 @@ public sealed class M4ProtocolTests
         await Assert.ThrowsAsync<ProtocolException>(() => WorkerProtocol.ReadAsync(deep));
         using var invalidUtf8 = Frame([0xFF, 0xFE]);
         await Assert.ThrowsAsync<ProtocolException>(() => WorkerProtocol.ReadAsync(invalidUtf8));
+    }
+
+    [Fact]
+    public async Task MaximumFrameRoundtripsAndOneExtraByteWritesNothing()
+    {
+        var identity = Identity();
+        using var baseline = new MemoryStream();
+        await WorkerProtocol.WriteAsync(baseline, WorkerProtocol.Message(identity, "load", new LoadScript("", "hash")));
+        var textLength = WorkerProtocol.MaxFrameBytes - checked((int)baseline.Length - 4);
+        var text = new string('x', textLength);
+        using var stream = new MemoryStream();
+        await WorkerProtocol.WriteAsync(stream, WorkerProtocol.Message(identity, "load", new LoadScript(text, "hash")));
+        Assert.Equal(WorkerProtocol.MaxFrameBytes + 4L, stream.Length);
+        Assert.Equal(WorkerProtocol.MaxFrameBytes, BinaryPrimitives.ReadInt32LittleEndian(stream.GetBuffer()));
+        stream.Position = 0;
+        var decoded = await WorkerProtocol.ReadAsync(stream);
+        WorkerProtocol.ValidateReply(decoded, identity, "load");
+        Assert.Equal(text, WorkerProtocol.Payload<LoadScript>(decoded).Source);
+
+        using var rejected = new MemoryStream();
+        await Assert.ThrowsAsync<ProtocolException>(() => WorkerProtocol.WriteAsync(rejected,
+            WorkerProtocol.Message(identity, "load", new LoadScript(text + "x", "hash"))));
+        Assert.Equal(0, rejected.Length);
     }
 
     [Theory]

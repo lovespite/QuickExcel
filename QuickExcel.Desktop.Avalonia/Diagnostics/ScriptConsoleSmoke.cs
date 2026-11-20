@@ -189,6 +189,7 @@ public sealed partial class MainWindow
         var revision = Document.Snapshot.Revision;
         _scriptWindow!.GetVisualDescendants().OfType<Button>().Single(b => AutomationProperties.GetName(b) == "清空输出").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
         check(ConsoleVisibleText == "" && _consoleOutput!.ItemCount == 0 && _consoleEmpty!.IsVisible && Document.Snapshot.Revision == revision, "Clear output changes no workbook content");
+        await CheckScriptNetworkPanelAsync(check, directory);
         await CloseScriptWindowAsync();
         _workspace.New(); await OpenScriptsAsync();
         check(ConsoleVisibleText == "" && _consoleOutput!.ItemCount == 0 && _consoleHistory.Count == 0 && !_scriptOutputTabs!.IsVisible,

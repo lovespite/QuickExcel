@@ -24,7 +24,10 @@ public sealed record WorkerHello(string Engine, string Policy, int[] ApiVersions
 public sealed record LoadScript(string Source, string Sha256);
 public sealed record FunctionInfo(string Name, int ApiVersion, int MinArguments, int MaxArguments, string ReturnType, string Profile);
 public sealed record LoadedScript(string Sha256, FunctionInfo[] Functions);
-public sealed record LoadedWorkbook(string Sha256, FunctionInfo[] Functions, ActionInfo[] Actions);
+public sealed record LoadedWorkbook(string Sha256, FunctionInfo[] Functions, ActionInfo[] Actions)
+{
+    public string[] NetworkHosts { get; init; } = [];
+}
 public sealed record BeginWorkerRound;
 public sealed record FunctionCall(string Name, WireValue[] Arguments);
 public sealed record InvokeBatch(FunctionCall[] Calls);
@@ -40,8 +43,8 @@ public sealed class ProtocolException(string message, Exception? inner = null) :
 
 public static class WorkerProtocol
 {
-    public const int Version = 11;
-    public const string Engine = "JavaScriptCore/2.54.2/b95c91b1/qx-sync-2";
+    public const int Version = 13;
+    public const string Engine = "JavaScriptCore/2.54.2/b95c91b1/qx-async-3";
     public const string Policy = "conservative-jsc-v1-memory-issue-open";
     public const int MaxFrameBytes = 16 * 1024 * 1024;
     public const int MaxBatchCalls = 256;
@@ -65,8 +68,10 @@ public static class WorkerProtocol
     {
         using var buffer = new LimitedBuffer();
         JsonSerializer.Serialize(buffer, value, TypeInfo<T>());
-        buffer.Position = 0;
-        using var document = JsonDocument.Parse(buffer, new() { MaxDepth = 24 });
+        // Parse the existing capped buffer while it is alive. The stream overload
+        // copies large bodies into another pooled buffer; Clone below supplies
+        // the independent lifetime needed after this buffer/document are disposed.
+        using var document = JsonDocument.Parse(buffer.GetBuffer().AsMemory(0, checked((int)buffer.Length)), new() { MaxDepth = 24 });
         return document.RootElement.Clone();
     }
 
@@ -89,6 +94,46 @@ public static class WorkerProtocol
         // Serialize through a capped stream: oversized output never allocates an unbounded byte array.
         using var payload = new LimitedBuffer();
         await JsonSerializer.SerializeAsync(payload, message, TypeInfo<WorkerEnvelope>(), cancellationToken).ConfigureAwait(false);
+        var header = new byte[4];
+        BinaryPrimitives.WriteInt32LittleEndian(header, checked((int)payload.Length));
+        await stream.WriteAsync(header, cancellationToken).ConfigureAwait(false);
+        payload.Position = 0;
+        await payload.CopyToAsync(stream, cancellationToken).ConfigureAwait(false);
+        await stream.FlushAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>Writes a model request without materializing a second large JSON payload tree.</summary>
+    public static Task WriteModelCallAsync(Stream stream, RequestIdentity identity, ModelCall call, CancellationToken cancellationToken = default) =>
+        WriteModelFrameAsync(stream, identity, call.OperationId, call.Sequence, call.Request, network: false, cancellationToken);
+
+    /// <summary>Wraps a fetch request directly in its model frame, without cloning its body into another JSON document.</summary>
+    public static Task WriteNetworkCallAsync(Stream stream, RequestIdentity identity, Guid operationId, int sequence,
+        JsonElement fetch, CancellationToken cancellationToken = default) =>
+        WriteModelFrameAsync(stream, identity, operationId, sequence, fetch, network: true, cancellationToken);
+
+    private static async Task WriteModelFrameAsync(Stream stream, RequestIdentity identity, Guid operationId, int sequence,
+        JsonElement content, bool network, CancellationToken cancellationToken)
+    {
+        identity.Validate();
+        if (operationId == Guid.Empty || sequence <= 0 || content.ValueKind != JsonValueKind.Object)
+            throw new ProtocolException("Invalid model request.");
+        cancellationToken.ThrowIfCancellationRequested();
+        using var payload = new LimitedBuffer();
+        using (var writer = new Utf8JsonWriter(payload, new() { MaxDepth = 24 }))
+        {
+            writer.WriteStartObject(); writer.WriteNumber("protocolVersion", Version);
+            writer.WritePropertyName("identity"); JsonSerializer.Serialize(writer, identity, TypeInfo<RequestIdentity>());
+            writer.WriteString("kind", "model"); writer.WritePropertyName("payload");
+            writer.WriteStartObject(); writer.WriteString("operationId", operationId); writer.WriteNumber("sequence", sequence);
+            writer.WritePropertyName("request");
+            if (network)
+            {
+                writer.WriteStartObject(); writer.WriteString("method", "network.fetch"); writer.WriteStartArray("args");
+                content.WriteTo(writer); writer.WriteEndArray(); writer.WriteEndObject();
+            }
+            else content.WriteTo(writer);
+            writer.WriteEndObject(); writer.WriteEndObject();
+        }
         var header = new byte[4];
         BinaryPrimitives.WriteInt32LittleEndian(header, checked((int)payload.Length));
         await stream.WriteAsync(header, cancellationToken).ConfigureAwait(false);
@@ -145,7 +190,13 @@ public static class WorkerProtocol
     private sealed class LimitedBuffer : MemoryStream
     {
         private void Check(int count)
-        { if (Position + count > MaxFrameBytes) throw new ProtocolException("IPC frame exceeds its byte budget."); }
+        {
+            if (Position + count > MaxFrameBytes) throw new ProtocolException("IPC frame exceeds its byte budget.");
+            // A large payload followed by a small envelope suffix must not make
+            // MemoryStream double its backing array past the frame budget.
+            if (Capacity < Position + count)
+                Capacity = (int)Math.Min(MaxFrameBytes, Math.Max((long)Capacity * 2, Position + count));
+        }
         public override void Write(byte[] buffer, int offset, int count) { Check(count); base.Write(buffer, offset, count); }
         public override void Write(ReadOnlySpan<byte> buffer) { Check(buffer.Length); base.Write(buffer); }
         public override ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken token = default)

@@ -72,7 +72,7 @@ try
                 digest = bundle.Sha256;
                 create = () => new JscSession(bundle.Modules.ToDictionary(m => m.Id, m => m.Source, StringComparer.Ordinal), bundle.EntryModules, actionsMode,
                     sharedMode || bundle.ApiVersion == 4 ? bundle.Modules.ToDictionary(m => m.Id, m =>
-                        bundle.EntryModules.Contains(m.Id) ? (actionsMode ? 2 : 1) : 0) : null,
+                        bundle.EntryModules.Contains(m.Id) ? (actionsMode ? bundle.InitializationEntries.Contains(m.Id) ? 4 : 2 : 1) : 0) : null,
                     bundle.Modules.ToDictionary(m => m.Id, m => m.Description, StringComparer.Ordinal),
                     automatic: bundle.ApiVersion == 4, eventEntries: bundle.EventEntries, initializationEntries: bundle.InitializationEntries);
             }
@@ -98,10 +98,10 @@ try
                 d.MinArguments, d.MaxArguments, d.ReturnType, d.Profile)).ToArray();
             if (sharedMode)
                 await WorkerProtocol.WriteAsync(output, WorkerProtocol.Message(request.Identity, request.Kind,
-                    new LoadedWorkbook(digest, descriptors, runtime.ActionDescriptors.Select(a => new ActionInfo(a.Name, a.Description)).ToArray())));
+                    new LoadedWorkbook(digest, descriptors, runtime.ActionDescriptors.Select(a => new ActionInfo(a.Name, a.Description)).ToArray()) { NetworkHosts = runtime.NetworkHosts.ToArray() }));
             else if (actionsMode)
                 await WorkerProtocol.WriteAsync(output, WorkerProtocol.Message(request.Identity, request.Kind,
-                    new LoadedActions(digest, runtime.ActionDescriptors.Select(a => new ActionInfo(a.Name, a.Description)).ToArray())));
+                    new LoadedActions(digest, runtime.ActionDescriptors.Select(a => new ActionInfo(a.Name, a.Description)).ToArray()) { NetworkHosts = runtime.NetworkHosts.ToArray() }));
             else await WorkerProtocol.WriteAsync(output, WorkerProtocol.Message(request.Identity, request.Kind, new LoadedScript(digest, descriptors)));
         }
         else if (request.Kind == "invokeBatch" && runtime is not null && !actionsMode && request.Identity.CalculationGeneration is not null)
@@ -151,6 +151,7 @@ try
             var action = WorkerProtocol.Payload<RunAction>(request);
             ActionProtocol.Name(action.Name);
             ActionProtocol.ValidateSnapshot(action.Snapshot);
+            ActionProtocol.ValidateNetworkBodyLimit(action.MaxNetworkBodyBytes);
             VirtualFileProtocol.Validate(action.Files);
             if (action.Event is { } ev && (action.Name != "@event/" + ev.Name || ev.SessionId != request.Identity.SessionId || ev.Revision > request.Identity.Revision || ev.Sequence <= 0 || ev.Ranges is null || ev.Ranges.Length > 64) ||
                 action.Event is null && action.Name.StartsWith("@event/", StringComparison.Ordinal)) throw new ProtocolException("Invalid event identity.");
@@ -158,17 +159,39 @@ try
             try
             {
                 var modelSequence = 0;
-                runtime.HostRequest = action.LiveModel ? json =>
+                void NextModelSequence()
                 {
                     if (++modelSequence > 4096) throw new InvalidOperationException("模型请求超过 4096 次。");
-                    using var parsed = JsonDocument.Parse(json);
-                    var call = new ModelCall(action.OperationId, modelSequence, parsed.RootElement.Clone());
-                    WorkerProtocol.WriteAsync(output, WorkerProtocol.Message(request.Identity, "model", call)).GetAwaiter().GetResult();
+                }
+                ModelReply ReadModelReply()
+                {
                     var response = WorkerProtocol.ReadAsync(input).GetAwaiter().GetResult();
                     WorkerProtocol.ValidateReply(response, request.Identity, "model");
                     var reply = WorkerProtocol.Payload<ModelReply>(response);
                     if (reply.OperationId != action.OperationId || reply.Sequence != modelSequence) throw new ProtocolException("Model reply identity mismatch.");
+                    return reply;
+                }
+                ModelReply ExchangeModel(JsonElement payload)
+                {
+                    NextModelSequence();
+                    WorkerProtocol.WriteModelCallAsync(output, request.Identity, new(action.OperationId, modelSequence, payload)).GetAwaiter().GetResult();
+                    return ReadModelReply();
+                }
+                runtime.HostRequest = action.LiveModel ? json =>
+                {
+                    using var parsed = JsonDocument.Parse(json);
+                    var reply = ExchangeModel(parsed.RootElement);
                     return JsonSerializer.Serialize(new ModelBridgeReply(reply.Ok, reply.Value, reply.Error, reply.Code), WorkerBridgeJsonContext.Default.ModelBridgeReply);
+                } : null;
+                runtime.NetworkRequest = action.LiveModel ? (fetch, largePayload) =>
+                {
+                    NextModelSequence();
+                    WorkerProtocol.WriteNetworkCallAsync(output, request.Identity, action.OperationId, modelSequence, fetch).GetAwaiter().GetResult();
+                    // Drop the large serialized frame while JSC is idle before
+                    // receiving a response; the process limit covers both heaps.
+                    if (largePayload) GC.Collect(2, GCCollectionMode.Forced, blocking: true, compacting: false);
+                    var reply = ReadModelReply();
+                    return new JscNetworkReply(reply.Ok, reply.Value, reply.Error);
                 } : null;
                 var raw = runtime.RunAction(action.Name, WorkerProtocol.EncodePayload(action));
                 var patch = WorkerProtocol.Payload<ActionPatch>(request with { Payload = raw });
@@ -186,7 +209,7 @@ try
                     new WorkerFailure(runtime.LastOperationInterrupted ? "Timeout" : "Action", Bounded("操作脚本失败，本次变更未提交：" + error.Message)) { Logs = failureLogs }));
                 return 7;
             }
-            finally { runtime.HostRequest = null; }
+            finally { runtime.HostRequest = null; runtime.NetworkRequest = null; }
         }
         else if (request.Kind == "logs" && runtime is not null)
         {

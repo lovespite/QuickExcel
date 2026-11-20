@@ -21,21 +21,40 @@ public sealed class ScriptWorkerActionExecutor(string? executablePath = null) : 
         return new(new Dictionary<string, ScriptModule> { ["__console__"] = new("scripts/console.js", text) }, ["__console__"],
             scriptApiVersion: 4, bindings: [new("__console__", "actions")]);
     }
-    private ScriptWorkerLease Create(ScriptActionRequest request, CancellationToken token) => SharedScriptWorkers.Acquire(_executable,
-        new ScriptRuntimeRequest(ExecutionModules(request), request.Stamp, TimeSpan.FromSeconds(5), token) { RuntimeLifetime = request.RuntimeLifetime }, actions: true);
+    private ScriptWorkerLease Create(ScriptActionRequest request, CancellationToken token, TimeSpan? timeLimit = null) => SharedScriptWorkers.Acquire(_executable,
+        new ScriptRuntimeRequest(ExecutionModules(request), request.Stamp, timeLimit ?? TimeSpan.FromSeconds(5), token) { RuntimeLifetime = request.RuntimeLifetime }, actions: true);
 
     public IReadOnlyList<ScriptActionDescriptor> List(ScriptActionRequest request, CancellationToken cancellationToken)
     {
         using var linked = CancellationTokenSource.CreateLinkedTokenSource(request.CancellationToken, cancellationToken);
-        using var lease = Create(request, linked.Token);
-        return lease.Runtime.ActionDescriptors;
+        IReadOnlyList<ScriptActionDescriptor> actions;
+        IReadOnlyList<string> hosts;
+        using (var lease = Create(request, linked.Token))
+        {
+            actions = lease.Runtime.ActionDescriptors;
+            hosts = lease.Runtime.NetworkHosts;
+        }
+        // The user may take arbitrarily long to decide. End the worker round
+        // before prompting, keeping the isolated context without an active deadline.
+        request.Network.EnsureAuthorized(hosts, linked.Token);
+        return actions;
     }
 
     public ScriptActionResult Run(ScriptActionRequest request, CancellationToken cancellationToken)
     {
         using var linked = CancellationTokenSource.CreateLinkedTokenSource(request.CancellationToken, cancellationToken);
+        var networkOptions = request.Network.Options;
+        var isAction = request.ConsoleSource is null && request.Event is null && request.Name is { } name && !name.StartsWith('@') &&
+            request.Snapshot.ScriptModules.EntriesFor("actions").Contains(name);
+        var timeLimit = isAction ? networkOptions.ActionTimeout : TimeSpan.FromSeconds(5);
         ScriptCompilation.PrepareAsync(ExecutionModules(request), request.Stamp, linked.Token).GetAwaiter().GetResult();
-        linked.CancelAfter(TimeSpan.FromSeconds(5));
+        IReadOnlyList<string> authorizedHosts = [];
+        if (request.ConsoleSource is null)
+        {
+            using (var discovery = Create(request, linked.Token)) authorizedHosts = discovery.Runtime.NetworkHosts.ToArray();
+            request.Network.EnsureAuthorized(authorizedHosts, linked.Token);
+        }
+        linked.CancelAfter(timeLimit);
         linked.Token.ThrowIfCancellationRequested();
         if (request.Name is null) throw new InvalidOperationException("Missing action name.");
         if (OperatingSystem.IsMacOS() && request.Model is not null && request.RuntimeLifetime.CanBeCanceled &&
@@ -58,19 +77,54 @@ public sealed class ScriptWorkerActionExecutor(string? executablePath = null) : 
                 c.Value.Content.Kind == CellContentKind.Formula ? (c.Value.Calculation?.State.ToString() ?? "Dirty") : "literal",
                 c.Value.Content.Kind == CellContentKind.Literal || c.Value.Calculation?.Value is not null)).ToArray())).ToArray());
         ActionProtocol.ValidateSnapshot(snapshot);
-        using var lease = Create(request, linked.Token);
+        using var lease = Create(request, linked.Token, timeLimit);
         var runtime = lease.Runtime;
+        if (request.ConsoleSource is null && !runtime.NetworkHosts.SequenceEqual(authorizedHosts))
+            throw new InvalidOperationException("网络权限声明在加载期间发生变化，请重新应用脚本。");
         if (!runtime.ActionDescriptors.Any(a => a.Name == request.Name))
         {
             if (request.Event is not null) return new(request.OperationId, request.Stamp.InputRevision, request.Name, [], []);
             throw new InvalidOperationException("找不到已绑定的操作脚本。");
         }
+        var adapter = request.Model is null ? null : new ScriptModelAdapter(request, linked.Token);
+        var networkRequests = 0;
+        ModelReply HostCall(ModelCall call)
+        {
+            if (call.Request.ValueKind != JsonValueKind.Object ||
+                !call.Request.TryGetProperty("method", out var method) || method.GetString() != "network.fetch")
+                return adapter?.Call(call) ?? throw new ProtocolException("No live model for this request.");
+            linked.Token.ThrowIfCancellationRequested();
+            request.RuntimeLifetime.ThrowIfCancellationRequested();
+            if (call.OperationId != request.OperationId || call.Request.EnumerateObject().Count() != 2 ||
+                !call.Request.TryGetProperty("args", out var args) || args.ValueKind != JsonValueKind.Array || args.GetArrayLength() != 1)
+                throw new ProtocolException("Invalid network request.");
+            try
+            {
+                // Check the host-owned action identity, independently of the JS gate.
+                if (request.ConsoleSource is not null || request.Event is not null || request.Name.StartsWith('@') ||
+                    !request.Snapshot.ScriptModules.EntriesFor("actions").Contains(request.Name))
+                    throw new InvalidOperationException("fetch 只能在 Actions 中调用。");
+                if (++networkRequests > 16) throw new InvalidOperationException("一次 Action 最多发送 16 个网络请求。");
+                using var access = CancellationTokenSource.CreateLinkedTokenSource(linked.Token, request.Network.CaptureNetworkAccess(authorizedHosts));
+                var response = ScriptNetworkBroker.Fetch(args[0], authorizedHosts, access.Token, request.Network.Record, networkOptions);
+                access.Token.ThrowIfCancellationRequested();
+                return new(call.OperationId, call.Sequence, true, response, null);
+            }
+            catch (Exception error) when (error is ArgumentException or InvalidOperationException or IOException or HttpRequestException)
+            {
+                var message = error.Message.Length <= 1000 ? error.Message : "网络请求失败。";
+                return new(call.OperationId, call.Sequence, false, WorkerProtocol.EncodePayload<string?>(null), message) { Code = "NetworkError" };
+            }
+        }
         var patch = runtime.RunAction(new(request.OperationId, request.Name, snapshot)
         {
             LiveModel = request.Model is not null,
+            MaxNetworkBodyBytes = networkOptions.BodyLimitBytes,
+            AllowNetwork = request.ConsoleSource is null && request.Event is null && !request.Name.StartsWith('@') &&
+                request.Snapshot.ScriptModules.EntriesFor("actions").Contains(request.Name),
             Files = request.Model is not null ? [] : request.Files.Entries.Values.Select(e => new VirtualEntry(e.Path, e.IsDirectory ? null : Convert.ToBase64String(e.Data.AsSpan()), e.IsDirectory)).ToArray(),
             Event = request.Event is { } ev ? new(ev.Name, ev.SessionId, ev.Sequence, ev.Revision, ev.SheetId, ev.SheetName, ev.Ranges.ToArray(), ev.IsUndoOrRedo) : null
-        }, request.Model is null ? null : new ScriptModelAdapter(request, linked.Token).Call);
+        }, HostCall);
         var logs = runtime.GetLogs().ToImmutableArray();
         linked.Token.ThrowIfCancellationRequested();
         return new(patch.OperationId, patch.BaseRevision, patch.Name, patch.Edits.Select(e => new ScriptActionEdit(

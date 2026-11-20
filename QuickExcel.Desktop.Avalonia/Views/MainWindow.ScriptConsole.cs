@@ -109,8 +109,10 @@ public sealed partial class MainWindow
         LayoutGrid.SetRow(footer, 3); panel.Children.Add(footer);
         _scriptOutputTabs = new TabControl { Background = ConsoleBackground, Foreground = ConsoleInk, ItemsSource = new[] {
             new TabItem { Header = UiText.Get("控制台"), FontSize = 13, MinHeight = 30, Padding = new(10, 6), Content = panel },
-            new TabItem { Header = UiText.Get("运行诊断"), FontSize = 13, MinHeight = 30, Padding = new(10, 6), Content = _scriptDiagnostics } } };
-        _scriptOutputTabs.SelectionChanged += (_, _) => UpdateScriptConsoleToggle(_scriptOutputTabs.IsVisible && _scriptOutputTabs.SelectedIndex == 0);
+            new TabItem { Header = UiText.Get("运行诊断"), FontSize = 13, MinHeight = 30, Padding = new(10, 6), Content = _scriptDiagnostics },
+            new TabItem { Header = UiText.Get("网络"), FontSize = 13, MinHeight = 30, Padding = new(10, 6), Content = CreateScriptNetworkPanel() } } };
+        _scriptOutputTabs.SelectionChanged += (_, _) => { UpdateScriptConsoleToggle(_scriptOutputTabs.IsVisible && _scriptOutputTabs.SelectedIndex == 0); UpdateNetworkRecording(); };
+        _scriptOutputTabs.PropertyChanged += (_, change) => { if (change.Property == IsVisibleProperty) UpdateNetworkRecording(); };
         RefreshScriptConsole(); return _scriptOutputTabs;
     }
     private static Button ConsoleButton(string text, string description)

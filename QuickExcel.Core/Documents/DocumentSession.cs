@@ -43,6 +43,7 @@ public sealed partial class DocumentSession : IDisposable
     }
 
     public Guid SessionId { get; } = Guid.NewGuid();
+    public ScriptNetworkSession Network { get; } = new();
     public const string ReadOnlyMessage = "工作簿以只读模式打开。请另存为可编辑副本后再修改。";
     public bool IsReadOnly { get; }
     public void RequireWritable()
@@ -268,7 +269,7 @@ public sealed partial class DocumentSession : IDisposable
             _activeConsoleSource = consoleSource;
             if (consoleSource is not null) AppendConsole([consoleSource], "input");
             request = new(new(SessionId, _snapshot.Revision, _calculationGeneration, _scriptGeneration), _activeActionId, name, _snapshot, _activeCalculation.Token)
-            { Files = _transientFiles, Event = scriptEvent, ConsoleSource = consoleSource,
+            { Files = _transientFiles, Event = scriptEvent, ConsoleSource = consoleSource, Network = Network,
                 RuntimeLifetime = consoleSource is null ? _runtimeLifetime.Token : default };
             if (name is not null) request = request with { Model = CreateScriptModel(request) };
         }
@@ -642,6 +643,7 @@ public sealed partial class DocumentSession : IDisposable
             if (_closed) return;
             _closed = true;
             _runtimeLifetime.Cancel(); _runtimeLifetime.Dispose();
+            Network.Dispose();
             CancelActiveCalculation();
             _scriptsEnabled = false;
             _undo.Clear(); _redo.Clear(); _historyBytes = 0;
@@ -653,6 +655,7 @@ public sealed partial class DocumentSession : IDisposable
 
     private void ResetScriptRuntime()
     {
+        Network.Revoke();
         var previous = _runtimeLifetime; _runtimeLifetime = new();
         previous.Cancel(); previous.Dispose();
         // A lost initialized heap cannot be reconstructed by replaying startup code.

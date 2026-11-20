@@ -19,6 +19,10 @@ public sealed partial class JscSession
             if (typeof fn !== 'function' || functionTag(fn) !== '[object Function]')
                 throw new ScriptError('InvalidArgument', name + ' must be a synchronous function.');
         }
+        function actionFunction(fn, name) {
+            if (typeof fn !== 'function' || !['[object Function]', '[object AsyncFunction]'].includes(functionTag(fn)))
+                throw new ScriptError('InvalidArgument', name + ' must be a function.');
+        }
         function bindExports(id, kind, exports, prefix) {
             if (loaded) throw new ScriptError('InvalidArgument', 'Module discovery has finished.');
             if (kind === 'udf') {
@@ -35,7 +39,7 @@ public sealed partial class JscSession
                     registerFunction(descriptor, fn);
                 }
             } else {
-                if (!actionMode || !(registrationRole() & 2)) throw new ScriptError('InvalidArgument', 'Invalid Actions / Events role.');
+                if (!actionMode || !(registrationRole() & (kind === 'initialization' ? 4 : 2))) throw new ScriptError('InvalidArgument', 'Invalid Actions / Events role.');
                 if (kind === 'events') {
                     for (const event of eventNames) {
                         const name = 'on' + event.split('.').map(part => part[0].toUpperCase() + part.slice(1)).join('');
@@ -49,11 +53,11 @@ public sealed partial class JscSession
                         if (/^on[A-Z]/.test(name) && !eventNames.some(event => name === 'on' + event.split('.').map(p => p[0].toUpperCase() + p.slice(1)).join('')))
                             throw new ScriptError('InvalidArgument', 'Unknown event handler: ' + name);
                 } else if (kind === 'initialization') {
-                    if (exports.main !== undefined) synchronous(exports.main, 'main');
+                    if (exports.main !== undefined) actionFunction(exports.main, 'main');
                     initializers.push(exports.main ?? (() => {}));
                     initialized = false;
                 } else {
-                    synchronous(exports.main, id + '.main');
+                    actionFunction(exports.main, id + '.main');
                     mains[id] = exports.main;
                 }
             }

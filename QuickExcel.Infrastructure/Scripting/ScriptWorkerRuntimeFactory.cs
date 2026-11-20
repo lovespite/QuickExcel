@@ -77,6 +77,7 @@ public sealed class ScriptWorkerRuntime : IScriptBatchRuntime
     public IReadOnlyList<string> FunctionNames { get; private set; } = [];
     public IReadOnlyList<ScriptFunctionDescriptor> FunctionDescriptors { get; private set; } = [];
     public IReadOnlyList<ScriptActionDescriptor> ActionDescriptors { get; private set; } = [];
+    public IReadOnlyList<string> NetworkHosts { get; private set; } = [];
     public int InvocationBatchCount { get; private set; }
     public int InvocationCount { get; private set; }
 
@@ -109,7 +110,7 @@ public sealed class ScriptWorkerRuntime : IScriptBatchRuntime
         try
         {
             runtime._identity.Validate();
-            runtime._deadline.CancelAfter(request.TimeLimit < TimeSpan.FromSeconds(5) ? request.TimeLimit : TimeSpan.FromSeconds(5));
+            runtime._deadline.CancelAfter(runtime.RoundTimeLimit(request));
             runtime._process = OperatingSystem.IsWindows() ? WorkerProcess.Start(executable, runtime._lifetime.Token) : OperatingSystem.IsLinux()
                 ? LinuxWorkerProcess.Start(executable, runtime._lifetime.Token) : OperatingSystem.IsMacOS()
                 ? MacWorkerProcess.Start(executable, runtime._lifetime.Token, persistent: shared) : throw new PlatformNotSupportedException();
@@ -151,12 +152,15 @@ public sealed class ScriptWorkerRuntime : IScriptBatchRuntime
                     if (actionsMode ? workbook.Functions.Length != 0 : workbook.Actions.Length != 0)
                         throw new ProtocolException("Worker registered capabilities outside its role.");
                     ValidateActions(workbook.Sha256, workbook.Actions);
+                    runtime.NetworkHosts = ScriptNetworkBroker.NormalizeHosts(workbook.NetworkHosts);
+                    if (!actionsMode && runtime.NetworkHosts.Count != 0) throw new ProtocolException("Formula workers cannot declare network permissions.");
                     loaded = new(workbook.Sha256, workbook.Functions);
                 }
                 else if (actionsMode)
                 {
                     var actions = runtime.Exchange<LoadModules, LoadedActions>("loadActions", bundle with { Sha256 = digest });
                     ValidateActions(actions.Sha256, actions.Actions);
+                    runtime.NetworkHosts = ScriptNetworkBroker.NormalizeHosts(actions.NetworkHosts);
                     return runtime;
                 }
                 else loaded = runtime.Exchange<LoadModules, LoadedScript>("loadModules", bundle with { Sha256 = digest });
@@ -212,10 +216,18 @@ public sealed class ScriptWorkerRuntime : IScriptBatchRuntime
         _identity = _identity with { RequestId = Guid.NewGuid(), RoundId = Guid.NewGuid(), Revision = request.Stamp.InputRevision,
             CalculationGeneration = actions ? null : request.Stamp.CalculationGeneration };
         _lifetime = CancellationTokenSource.CreateLinkedTokenSource(request.CancellationToken, _deadline.Token, _processLifetime.Token);
-        _deadline.CancelAfter(request.TimeLimit < TimeSpan.FromSeconds(5) ? request.TimeLimit : TimeSpan.FromSeconds(5));
+        _deadline.CancelAfter(RoundTimeLimit(request));
         _registration = _lifetime.Token.Register(Abort);
         InvocationBatchCount = InvocationCount = 0;
         _ = Exchange<BeginWorkerRound, EmptyPayload>("beginRound", new());
+    }
+
+    private TimeSpan RoundTimeLimit(ScriptRuntimeRequest request)
+    {
+        // Formula/compiler and Linux's OS-enforced one-shot limits remain independent.
+        var maximum = _actionsMode && SharedScriptWorkers.SupportedPlatform
+            ? TimeSpan.FromSeconds(ScriptNetworkOptions.MaxActionTimeoutSeconds) : TimeSpan.FromSeconds(5);
+        return request.TimeLimit < maximum ? request.TimeLimit : maximum;
     }
 
     internal void EndRound()
@@ -315,6 +327,7 @@ public sealed class ScriptWorkerRuntime : IScriptBatchRuntime
         if (!_actionsMode) throw new InvalidOperationException("Formula workers cannot run actions.");
         ActionProtocol.Name(request.Name);
         ActionProtocol.ValidateSnapshot(request.Snapshot);
+        ActionProtocol.ValidateNetworkBodyLimit(request.MaxNetworkBodyBytes);
         if (request.OperationId == Guid.Empty || request.Snapshot.BaseRevision != _request.Stamp.InputRevision) throw new ProtocolException("Action input identity mismatch.");
         _model = model; _modelOperation = request.OperationId;
         try { var patch = Exchange<RunAction, ActionPatch>("runAction", request); ActionProtocol.ValidatePatch(patch, request); return patch; }

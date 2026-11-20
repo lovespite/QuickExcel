@@ -34,7 +34,7 @@ public static class DesktopSettingsMigration
                 using var json = JsonDocument.Parse(bytes);
                 if (name == "settings.json")
                 {
-                    var value = json.Deserialize(PresentationJsonContext.Default.DesktopPreferences);
+                    var value = DesktopSettings.ReadPreferences(json.RootElement);
                     if (value is null || !value.IsValid) throw new InvalidDataException(UiText.Get("旧界面设置无效。"));
                 }
                 else if (json.Deserialize(PresentationJsonContext.Default.StringArray) is not { } paths || paths.Any(p => p is null)) throw new InvalidDataException(UiText.Get("旧最近文件记录无效。"));
@@ -45,7 +45,7 @@ public static class DesktopSettingsMigration
             WriteNew(marker, JsonSerializer.SerializeToUtf8Bytes(new MigrationMarker(1, imported, DateTime.UtcNow), PresentationJsonContext.Default.MigrationMarker));
             return null;
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException or ArgumentException)
+        catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException or JsonException or ArgumentException)
         { return UiText.Get("旧设置未完全导入；原设置保留，可继续使用独立设置。") + ex.Message; }
     }
     private static void WriteNew(string path, byte[] bytes)

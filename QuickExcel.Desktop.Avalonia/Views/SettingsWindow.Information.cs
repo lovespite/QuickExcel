@@ -29,6 +29,7 @@ internal sealed partial class SettingsWindow
         _page.Children.Add(disableScripts);
         _page.Children.Add(Note(UiText.Get("立即停用所有脚本及编译 worker，包括已签名且受信任的脚本。取消勾选后需重新应用脚本。")));
         _page.Children.Add(Note(UiText.Get("命令行 --no-scripts 或环境变量 QUICKEXCEL_NO_SCRIPTS=1 也会禁用脚本；任一来源生效时均不可执行。命令行及环境变量在启动时读取。")));
+        NetworkSettings();
         _page.Children.Add(new Separator());
         _page.Children.Add(Heading(UiText.Get("Source Map（源码映射）"), 18));
         var sourceMap = new ComboBox { Name = "ScriptSourceMapMode", HorizontalAlignment = HorizontalAlignment.Stretch,

@@ -23,6 +23,7 @@ using var session = new JscSession("""
     host.functions.register('BAD', () => ({}));
     host.functions.register('PROMISE', () => Promise.resolve(42));
     host.functions.register('ENV', () => typeof std + ',' + typeof os + ',' + typeof require + ',' + typeof fetch);
+    host.functions.register('NETWORK', () => fetch('https://example.com/'));
     """);
 
 Assert(session.FunctionNames.Contains("DISCOUNT"), "Case normalization");
@@ -31,7 +32,8 @@ Assert(Equals(session.Invoke("RANGESUM", [new List<object> { 1d, 2d, 3d }]), 6d)
 Assert(Equals(session.Invoke("TEXT", ["测试"]), "中文 测试"), "UTF-8");
 Assert(Equals(session.Invoke("BOOL", [1d]), true), "Boolean");
 Assert(session.Invoke("EMPTY", []) is null, "Null");
-Assert(Equals(session.Invoke("ENV", []), "undefined,undefined,undefined,undefined"), "No host APIs");
+Assert(Equals(session.Invoke("ENV", []), "undefined,undefined,undefined,function"), "No OS APIs; fetch has an action-only gate");
+Fails(() => session.Invoke("NETWORK", []), "only available in workbook Actions");
 Assert(session.GetLogs().Single() == "JSC ready", "Console logs");
 Fails(() => session.Invoke("BAD", []), "objects and promises");
 Fails(() => session.Invoke("PROMISE", []), "objects and promises");

@@ -170,6 +170,7 @@ public sealed partial class MainWindow
         try { if (_scriptPage is not null) await _scriptPage.DisposeAsync(); window.Close(); }
         finally
         {
+            CloseScriptNetworkPanel();
             _scriptWindow = null; _scriptPage = null; _scriptContent = null; _modulePicker = null; _scriptStatus = null; _scriptDiagnostics = null; _scriptRecovery = null; _scriptClosing = false;
             _scriptApiMigration = null;
             _scriptExecution = null; _scriptRunMenu = null; _scriptEventButton = null; _scriptApplyButton = null; _scriptFileTab = null;
@@ -227,6 +228,8 @@ public sealed partial class MainWindow
     }
     private void UpdateScriptExecutionPolicy()
     {
+        BindScriptNetwork();
+        RefreshScriptNetwork();
         var policy = ScriptExecutionPolicy.Current;
         var changed = policy.UserSetting != _settings.Value.DisableScripts;
         policy.UserSetting = _settings.Value.DisableScripts;

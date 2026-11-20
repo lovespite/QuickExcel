@@ -4,6 +4,8 @@
 
 产品 3.8.2 起，设置页的脚本 API 标题与新建工作簿共用 `ScriptModuleSet.CurrentApiVersion`，升级当前 API 时无需另改设置页版本号。`ScriptCapabilities.ApiVersion` 是 v3/v4 共用的能力清单契约版本，不用于显示当前文件 API；既有文件仍保留自己的版本声明。
 
+产品 6.1.0 当前使用 IPC 13，文件 API 仍为 v4。初始化与 Actions 支持 async / 返回 Promise。网络地址只能在初始化根模块顶层声明；用户授权后也只有 Actions 可以调用 fetch。设置中的网络总开关、正文 / Action 超时 / 网络面板限额，以及保持不变的 UDF / 初始化 / Events / 控制台执行边界，见 [85：脚本 fetch 与网络面板](85-script-fetch-and-network.md)。
+
 ## 角色与加载
 
 ### 环境级禁用（3.7.0）
@@ -22,9 +24,9 @@
 
 | 角色 | 绑定 | 发现规则 | 执行时机 |
 | --- | --- | --- | --- |
-| 主入口 | `initialization`，最多一个 | 可选导出的同步 `main(workbook, host)` | 每次应用脚本，或打开工作簿后获准启用脚本时一次 |
+| 主入口 | `initialization`，最多一个 | 可选导出的 `main(workbook, host)`，支持 async / Promise | 每次应用脚本，或打开工作簿后获准启用脚本时一次 |
 | UDF | `formula-functions` | 导出的同步函数 | 公式求值 |
-| Actions | `actions` | 必须导出同步 `main(workbook, host)`，模块 ID 为操作名 | 用户执行操作 |
+| Actions | `actions` | 必须导出 `main(workbook, host)`，支持 async / Promise，模块 ID 为操作名 | 用户执行操作 |
 | Events | `events` | 导出的约定名称处理器 | 对应事件派发 |
 | Common | 无绑定、不是根入口 | 按逻辑 ID `import` | 被所在上下文的模块依赖加载 |
 

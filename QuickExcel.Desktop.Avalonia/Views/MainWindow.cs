@@ -314,6 +314,7 @@ public sealed partial class MainWindow : Window
         if (_chartFilterContextCurrent?.Invoke() == false) CloseChartFilter();
         if (_lastPaste is not null && !IsPasteOptionsCurrent()) DismissPasteOptions();
         ObserveDocument();
+        BindScriptNetwork();
         RefreshScriptApiMigrationButton();
         _synchronizing = true;
         try

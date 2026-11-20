@@ -103,14 +103,15 @@ static thread_local qx_session* activeSession = nullptr;
 
 static Module* findModule(qx_session&, const String&);
 
-static JSValueRef registrationRole(JSContextRef context, JSObjectRef, JSObjectRef, size_t, const JSValueRef[], JSValueRef*)
+static JSValueRef registrationRole(JSContextRef context, JSObjectRef, JSObjectRef, size_t count, const JSValueRef values[], JSValueRef*)
 {
     if (!activeSession) return JSValueMakeNumber(context, 0);
     Vector<StackFrame> frames;
     activeSession->vm().interpreter.getStackTrace(activeSession->global(), frames, 0, 64);
     for (const auto& frame : frames) {
         auto* module = findModule(*activeSession, frame.sourceURL(activeSession->vm(), AllowURLOverride::No));
-        if (module) return JSValueMakeNumber(context, module->roles);
+        if (module) return JSValueMakeNumber(context,
+            count == 1 && JSValueToBoolean(context, values[0]) ? module->declaredRoles : module->roles);
     }
     return JSValueMakeNumber(context, 0);
 }
@@ -434,7 +435,7 @@ QX_EXPORT int qx_load_modules(qx_session* s, const char* json, char** error)
         auto id = asObject(item)->get(s->global(), Identifier::fromString(s->vm(), "id"_s));
         auto source = asObject(item)->get(s->global(), Identifier::fromString(s->vm(), "source"_s));
         auto role = asObject(item)->get(s->global(), Identifier::fromString(s->vm(), "roles"_s));
-        if (!role.isUndefined() && (!role.isInt32() || role.asInt32() < 0 || role.asInt32() > 3)) { setError(error, "Invalid module role."); return fail(); }
+        if (!role.isUndefined() && (!role.isInt32() || role.asInt32() < 0 || role.asInt32() > 7)) { setError(error, "Invalid module role."); return fail(); }
         if (!id.isString() || !source.isString()) { setError(error, "Invalid module source."); return fail(); }
         auto idText = asString(id)->value(s->global()).data;
         auto text = asString(source)->value(s->global()).data;
@@ -496,6 +497,14 @@ QX_EXPORT char* qx_call(qx_session* s, const char* method, const char* json, cha
     auto fn = exception || !JSValueIsObject(s->context, fnValue) ? nullptr : JSValueToObject(s->context, fnValue, &exception);
     auto value = fn && JSObjectIsFunction(s->context, fn) ? JSObjectCallAsFunction(s->context, fn, s->bridge, 2, argv, &exception) : nullptr;
     JSValueUnprotect(s->context, args);
+    // Only the private action scheduler advances jobs. Network I/O happens in
+    // managed code between these bounded native turns, never inside the VM.
+    // Module loading, UDF calls, events and compiler calls remain synchronous.
+    if (!exception && value && (!strcmp(method, "runAsyncAction") || !strcmp(method, "settleFetch"))) {
+        JSValueProtect(s->context, value);
+        s->global()->microtaskQueue().performMicrotaskCheckpoint<true>(s->vm(), [](JSGlobalObject*, JSGlobalObject*) { });
+        JSValueUnprotect(s->context, value);
+    }
     if (exception || !value) {
         exceptionError(*s, exception ? toJS(s->global(), exception) : jsUndefined(), error);
         char* completionError = nullptr;
@@ -529,4 +538,4 @@ QX_EXPORT char* qx_call(qx_session* s, const char* method, const char* json, cha
 QX_EXPORT void qx_free_string(char* text) { free(text); }
 QX_EXPORT int qx_was_interrupted(qx_session* s) { return s && s->interrupted.load(); }
 QX_EXPORT int qx_is_usable(qx_session* s) { return s && !s->poisoned; }
-QX_EXPORT const char* qx_engine_identity() { return "JavaScriptCore/2.54.2/b95c91b1/qx-sync-2"; }
+QX_EXPORT const char* qx_engine_identity() { return "JavaScriptCore/2.54.2/b95c91b1/qx-async-3"; }

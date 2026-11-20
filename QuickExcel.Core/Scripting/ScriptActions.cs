@@ -12,6 +12,7 @@ public sealed record ScriptActionRequest(CalculationStamp Stamp, Guid OperationI
     public VirtualFileSet Files { get => DeferredFiles?.Value ?? _files; init => _files = value; }
     public ScriptWorkbookModel? Model { get; internal init; }
     public CancellationToken RuntimeLifetime { get; internal init; }
+    public ScriptNetworkSession Network { get; internal init; } = new();
     public ScriptEvent? Event { get; init; }
     /// <summary>Only an explicit session console request sets this; workbook modules are never loaded for it.</summary>
     public string? ConsoleSource { get; internal init; }

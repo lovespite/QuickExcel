@@ -45,7 +45,7 @@ macOS 26 arm64, from the repository root:
 ```sh
 QX_BUILD_PARALLEL=2 bash tools/QuickExcel.JscProbe/build-macos.sh
 bash QuickExcel.ScriptWorker/native/build-macos.sh
-dotnet publish QuickExcel.Desktop.Avalonia/QuickExcel.Desktop.Avalonia.csproj -c Release -r osx-arm64 --self-contained true -p:QuickExcelNativeRid=osx-arm64 -o artifacts/publish-mac
+dotnet publish QuickExcel.Desktop.Avalonia/QuickExcel.Desktop.Avalonia.csproj -c Release -r osx-arm64 --self-contained true --artifacts-path artifacts/build-mac -p:QuickExcelNativeRid=osx-arm64 -o artifacts/publish-mac
 ```
 
 macOS prerequisites: Xcode Command Line Tools (Apple clang), CMake 4 + Ninja,
@@ -68,7 +68,7 @@ for an explicit `ENABLE_API_TESTS=OFF` on Linux. Arbitrary source edits fail ver
 
 JIT/DFG and bundled mimalloc 3.2.8 are enabled; FTL, WebAssembly, remote inspector
 and upstream API tests are disabled. Native identity is
-`JavaScriptCore/2.54.2/b95c91b1/qx-sync-2`; IPC is 8. Build identity files
+`JavaScriptCore/2.54.2/b95c91b1/qx-async-3`; IPC is 13. Build identity files
 record compiler/options/source/binary hashes. JSC is the sole production engine.
 J5 Windows and Linux isolation/recovery evidence is recorded independently.
 Production build defaults to the JavaScriptCore target; use `-IncludeProbe` only
@@ -85,8 +85,14 @@ J5 real-worker measurements superseded the J0 probe's 768 MiB compiler budget:
 the fixed compiler process budget is now 1 GiB, retaining its five/six-second
 deadlines. The 768 MiB failed samples remain in the implementation log.
 
-Execution keeps a 256 MiB process cap, 256 KiB JS stack, one-second native wall
-deadline and five-second round. Compilation has its own 1 GiB process cap,
+Execution keeps a 256 MiB process bound, 256 KiB JS stack and one-second native
+wall deadline for each operation or continuation. UDF, initialization, Events
+and console host rounds remain five seconds. User Actions use the local Settings
+deadline, including network waits: ten seconds by default, configurable from one
+to 300 seconds. Network waits do not consume the native JavaScript watchdog.
+Linux retains its independent five-second OS worker lifetime; a larger Action
+setting does not expand that limit. See [fetch and network contracts](../../QuickExcel.Desktop/docs/85-script-fetch-and-network.md).
+Compilation has its own 1 GiB process cap,
 5 MiB JS stack, five-second native deadline/six-second host kill, concurrency 1
 and queue 0. Both roles use the same fixed JSC library and OS access isolation.
 **JSC-MEM-001 remains open:** a 64 MiB total engine allocation hard cap is not

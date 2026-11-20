@@ -16,8 +16,7 @@ public static class ScriptJsonValues
     public static JsonElement ToElement(object? value, int maxBytes = JscSession.MaxMessageBytes)
     {
         using var stream = Encode(value, maxBytes);
-        stream.Position = 0;
-        using var document = JsonDocument.Parse(stream);
+        using var document = JsonDocument.Parse(stream.GetBuffer().AsMemory(0, checked((int)stream.Length)));
         return document.RootElement.Clone();
     }
 
@@ -89,6 +88,8 @@ public static class ScriptJsonValues
                 throw new InvalidOperationException(maxBytes == JscSession.MaxMessageBytes
                     ? "JavaScript JSON exceeds the 16 MiB UTF-8 input limit."
                     : "JavaScript JSON exceeds its UTF-8 byte limit.");
+            if (Capacity < Position + count)
+                Capacity = (int)Math.Min(maxBytes, Math.Max((long)Capacity * 2, Position + count));
         }
 
         public override void Write(byte[] buffer, int offset, int count) { Check(count); base.Write(buffer, offset, count); }

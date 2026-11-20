@@ -286,6 +286,7 @@ public sealed partial class MainWindow
         }
         if (visible) _scriptOutputTabs.SelectedIndex = tab;
         UpdateScriptConsoleToggle(visible && tab == 0);
+        UpdateNetworkRecording();
         if (focusInput)
         {
             // Newly expanded content must be arranged before it can accept keyboard focus.

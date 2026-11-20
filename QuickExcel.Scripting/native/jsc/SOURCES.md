@@ -24,18 +24,21 @@ and `qx_engine_identity`. No JSC C++ type crosses this ABI. UTF-8 buffers are
 copied across it and released by the same allocator; native/IPC output is capped
 at 16 MiB and diagnostic text at 16 KiB.
 
-The live model bridge identity is `JavaScriptCore/2.54.2/b95c91b1/qx-sync-2`
-(introduced with IPC 8; also used by IPC 9, with no native ABI change). `qx_set_host_call` accepts a bounded synchronous UTF-8 callback; its
+The live model bridge identity is `JavaScriptCore/2.54.2/b95c91b1/qx-async-3`
+(IPC 12/13; previous synchronous bridge was `qx-sync-2`). `qx_set_host_call` accepts a bounded synchronous UTF-8 callback; its
 reply is owned by the managed caller until the native operation returns, never
 freed by the engine allocator. The worker forwards only the validated model
 protocol through its inherited IPC pipes, exposing no CLR objects or OS paths.
 Registration roles come from native module source stack frames, with URL overrides
 disabled; scripts cannot grant themselves another entry's binding by replacing
-global properties. Source pins, hashes and licenses are unchanged.
+global properties. The private role selector can also inspect declared entry roles:
+network grants may be requested only from the initialization root, before loading
+finishes, never from an imported helper or another role. Source pins, hashes and
+licenses are unchanged.
 
 Private version adaptation points are `JSModuleLoader::makeModule`, module
 record `loadedModules`/link/evaluateSync, `GlobalObjectMethodTable`, `Strong`,
-`VM::DrainMicrotaskDelayScope`, microtask queue inspection/clear,
+`VM::DrainMicrotaskDelayScope`, microtask queue inspection/clear/action checkpoint,
 `VM::ensureTerminationException`/`notifyNeedTermination`, native exception
 inspection and raw stack-frame formatting. All are confined to this bridge.
 Upgrading WebKit requires rerunning native and isolated-worker contracts.
@@ -50,11 +53,28 @@ process, stack and time limits remain unchanged. The exact 1 MiB action case
 is covered by `ScriptP1Tests.MaximumRawActionSourceBudgetIncludesRoomForHostRegistration`.
 
 The bridge consumes an already settled internal parse Promise, links records
-directly, then synchronously evaluates entries in order. It never drains user
+directly, then synchronously evaluates entries in order. Loading never drains user
 microtasks. Records stay rooted before recursive linking, preserving cycles,
 live bindings and TDZ. Dynamic import, import attributes, deferred imports,
 top-level await, unknown IDs and external paths are rejected. API v2 pending
-jobs poison the VM; API v1 preserves its prior inert-job behavior.
+jobs outside explicit action scheduler turns poison the VM; API v1 preserves its
+prior inert-job behavior. Actions and the v4 initialization main may return a
+Promise. Only private `runAsyncAction` and `settleFetch` calls advance microtasks,
+under the same native watchdog. Events, console and UDFs retain their synchronous
+contracts. Dynamic import remains forbidden in every role.
+
+Fetch queues bounded requests inside an Action and returns a Promise. Between
+native turns, managed code sends the request through the existing authenticated
+model IPC to the host broker. The worker remains zero-capability and never opens
+network sockets. HTTP waiting consumes the configured host Action round budget but not
+the one-second native JavaScript turn budget. Up to sixteen requests are dispatched
+serially; the returned action Promise must settle before its transaction commits.
+The Fetch objects are QuickExcel-owned code with a host-supplied body bound
+(1–10 MiB, default 8 MiB; IPC 13). Runtime response retention is independently
+bounded to the greater of 8 MiB and twice that body bound, plus 64 bodies, with
+explicit eviction of old bodies. Panel retention is a separate host setting.
+Private fetch IPC bodies use padded base64url to avoid JSON escaping expansion;
+the existing 16 MiB frame and cumulative model round limits are unchanged.
 
 Each operation arms one steady-clock deadline across load/call/serialization/error
 formatting. A separate timer thread requests an uncatchable JSC termination trap;
@@ -64,8 +84,10 @@ async work permanently invalidate the VM; the worker abandons the whole batch
 and the host kills the round without replay. Error inspection does not invoke
 user message/stack/toString getters. Script text cannot forge the native invalid flag.
 
-Execution has 1 second per native operation, 256 KiB JS stack and independent
-5-second active-round host / 256 MiB process enforcement. Windows API v2 retains
+Execution has 1 second per native operation/async continuation turn, 256 KiB JS stack and independent
+5-second UDF round / 256 MiB process enforcement. Actions use a separately configured
+host round deadline (default 10 seconds); this does not enlarge the native turn or
+UDF limits, or override a platform's independent OS lifetime. Windows API v2 retains
 one worker and module context per authorized workbook between rounds; idle time
 does not consume a round deadline. Linux retains its five-second OS process
 lifetime and one-shot workers. Compiler processes lock their role
