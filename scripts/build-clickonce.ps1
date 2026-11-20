@@ -116,6 +116,9 @@ $deployment = Join-Path $output 'QuickExcel.application'
 Invoke-Mage -Arguments @('-New','Deployment','-ToFile',$deployment,'-Name','QuickExcel','-Publisher','QuickExcel','-Version',$deploymentVersion,'-Processor','msil','-Install','true','-IncludeProviderURL','false','-AppManifest',$appManifest,'-AppCodeBase',($folder + '/QuickExcel.manifest'),'-Algorithm','sha256RSA')
 # Manual application updates do not use Mage's before-startup update check.
 [xml]$manifest = Get-Content -LiteralPath $deployment -Raw
+# Let ClickOnce own the desktop app reference, including update/uninstall
+# maintenance. A shortcut to the versioned cache executable would go stale.
+[void]$manifest.SelectSingleNode('//*[local-name()="deployment"]').SetAttribute('createDesktopShortcut','urn:schemas-microsoft-com:clickonce.v1','true')
 $manifest.SelectSingleNode('//*[local-name()="compatibleFrameworks"]/*[local-name()="framework"]').SetAttribute('targetVersion','4.8')
 foreach ($node in @($manifest.SelectNodes('//*[local-name()="subscription" or local-name()="deploymentProvider"]'))) { [void]$node.ParentNode.RemoveChild($node) }
 $manifest.Save($deployment)

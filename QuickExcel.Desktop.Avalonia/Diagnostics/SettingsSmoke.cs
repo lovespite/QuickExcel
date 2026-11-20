@@ -5,7 +5,6 @@ using Avalonia.Interactivity;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
-using Microsoft.Win32;
 using Markdown.Avalonia;
 using QuickExcel.Presentation;
 using QuickExcel.Storage;
@@ -105,32 +104,10 @@ public sealed partial class MainWindow
         check(await SaveAsync(false) && _workspace.FilePath == dialogs.NextSave && await File.ReadAllTextAsync(source) == csv,
             "Saving imported CSV creates a workbook and preserves the source");
         _settings.Save(_settings.Value with { Calculation = DesktopCalculationMode.Automatic });
-        if (OperatingSystem.IsWindows()) CheckAssociationRegistration(check);
+        if (OperatingSystem.IsWindows()) CheckAssociationRegistration(directory, check);
     }
 
     [SupportedOSPlatform("windows")]
-    private static void CheckAssociationRegistration(Action<bool, string> check)
-    {
-        var name = @"Software\QuickExcel-Association-Test-" + Guid.NewGuid().ToString("N");
-        try
-        {
-            using var root = Registry.CurrentUser.CreateSubKey(name);
-            check(WindowsFileAssociations.ReadSelection(root).SequenceEqual([".xlsq"]), "Initial association selection defaults to XLSQ");
-            var executable = Path.Combine(AppContext.BaseDirectory, "quickxl.exe");
-            check(File.Exists(executable), "File associations target the packaged quickxl.exe launcher");
-            WindowsFileAssociations.Register(root, executable, [".xlsq", ".csv"]);
-            var iconPath = Path.Combine(AppContext.BaseDirectory, "Assets", "QuickExcel-XLSQ.ico");
-            using var icon = root.OpenSubKey(@"Software\Classes\QuickExcel.xlsq\DefaultIcon");
-            check(File.Exists(iconPath) && Equals(icon?.GetValue(""), $"\"{iconPath}\",0"),
-                "The XLSQ file type uses the packaged workbook icon");
-            using var command = root.OpenSubKey(@"Software\Classes\QuickExcel.csv\shell\open\command");
-            check(Equals(command?.GetValue(""), $"\"{executable}\" \"%1\""), "Registered CSV command quotes both the executable and selected file");
-            WindowsFileAssociations.Register(root, executable, [".xlsx"]);
-            using var xlsxIcon = root.OpenSubKey(@"Software\Classes\QuickExcel.xlsx\DefaultIcon");
-            using var csvIcon = root.OpenSubKey(@"Software\Classes\QuickExcel.csv\DefaultIcon");
-            check(xlsxIcon is null && csvIcon is null, "The XLSQ file icon is exclusive to the native workbook format");
-            check(WindowsFileAssociations.ReadSelection(root).SequenceEqual([".xlsx"]), "Reapplying associations removes deselected advertisements");
-        }
-        finally { Registry.CurrentUser.DeleteSubKeyTree(name, throwOnMissingSubKey: false); }
-    }
+    private static void CheckAssociationRegistration(string directory, Action<bool, string> check) =>
+        AssociationSmoke.CheckRegistration(directory, check);
 }

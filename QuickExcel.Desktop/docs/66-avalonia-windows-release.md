@@ -2,7 +2,57 @@
 
 ## Windows ClickOnce 发布（2026-11-20）
 
-当前产品版本为 `4.1.0`，Windows 发布使用独立 Native AOT Worker、主程序
+### 4.2.1 文件关联与安装快捷方式修复
+
+XLSQ、XLSX、CSV 分别使用紫色、绿色、蓝色的专用文档图标，完整尺寸含对应
+扩展名轮廓文字，小尺寸保留简化的纸张与表格轮廓。图标沿用现有原创 SVG
+设计；`scripts/export-file-icons.py` 可通过 ImageMagick 导出 ICO，每个 ICO
+包含 16–256 像素的 10 个透明 RGBA 帧。程序图标保持独立。
+
+正常 ClickOnce 启动从 launcher 的 `ClickOnce_IsNetworkDeployed` 判断部署环境，
+检查此前注册的 QuickExcel ProgID，把打开命令和图标路径修复到当前版本缓存目录。
+仅恢复准确匹配的已有 Capabilities 广告；已取消勾选但仍存在的 ProgID 也会刷新
+路径，因为 Windows 默认应用可能仍引用它，但不重新广告该类型。未注册用户不
+自动关联，已删除的未选类型不重建；Windows `UserChoice`、扩展名默认值、其他
+应用的 OpenWith 记录均保持不变。修复前先检查 EXE 和所需 ICO，修复失败不阻止
+打开文件，在状态栏显示错误并于下次正常启动重试；无变化时不写注册表，成功
+修改后发送 `SHCNE_ASSOCCHANGED` 刷新 Shell。自检、冒烟、`--user-data` 和普通
+非 ClickOnce 启动不自动修复真实注册表。
+
+部署清单在签名前设置原生 `urn:schemas-microsoft-com:clickonce.v1` 命名空间的
+`createDesktopShortcut="true"`；首次安装由 ClickOnce 创建桌面应用引用并负责
+后续更新/卸载，不创建指向版本缓存 EXE 的普通快捷方式。发布验证要求签名后的
+清单保留该属性及三种文档 ICO。部署属性的依据为微软
+[现代 .NET ClickOnce 部署属性](https://learn.microsoft.com/en-us/visualstudio/deployment/access-clickonce-deployment-properties-dotnet)
+及 [GenerateDeploymentManifest](https://learn.microsoft.com/en-us/visualstudio/msbuild/generatedeploymentmanifest-task)。
+
+`scripts/test-avalonia-workspace.ps1 -Mode Associations` 提供隔离的定向检查：
+使用唯一 HKCU 测试子树及 artifacts 内的新旧版本路径，验证迁移、图标加载、
+重复启动、默认应用保留、取消注册与失败重试，不修改真实文件关联或桌面。
+实际干净设备的 ClickOnce 首次安装及更新仍属于既有延期物理验收范围。
+
+2026-11-20 定向验证：Associations 49 项通过
+（`artifacts/avalonia/workspace/20261120-040438-3d529812`），Menus 179 项通过
+（`artifacts/avalonia/workspace/20261120-040504-a3cde8a5`），
+`LocalizationCatalogTests` 5 项通过。桌面快捷方式配置由 Microsoft.Build
+清单读取器识别；缺失属性和错误命名空间均被拒绝，证据为
+`artifacts/clickonce-tests/desktop-shortcut-7e1793a498904ce095d8d61fa2cd7048/result.json`。
+图标结构及人工预览证据在 `artifacts/file-icon-fix/`。未运行全量回归。
+
+已执行 `scripts/build-quickexcel.ps1 -SkipTests -RunSmoke`（沿用原签名证书），
+34 项生产自检通过，`active-windows.json` 已指向
+`artifacts/avalonia/releases/20261120-040517-d421d1da/application`，清单哈希已核对。
+`Start-QuickExcel.cmd` 对同一活动包的 34 项自检也通过，证据为
+`artifacts/avalonia/launcher-self-check-4.2.1-51000254`。旧活动包保留。
+新的 ClickOnce 分发包为
+`artifacts/clickonce/QuickExcel-4.2.1-win-x64-20261120-041024-e0f38f9c.zip`，
+两个清单签名、434 项应用文件哈希、代码签名、桌面快捷方式属性及实际载荷的
+34 项自检均通过，证据为
+`artifacts/clickonce/work/20261120-041024-e0f38f9c/verification/`。
+
+### 历史发布
+
+`4.1.0` Windows 发布使用独立 Native AOT Worker、主程序
 部分运行时裁剪和仅一份 JSC/ICU/TypeScript。实现、兼容性与本次验证见
 [84-native-aot-and-trimming.md](84-native-aot-and-trimming.md)。
 以下保留 `3.13.0` 起的安装器合同与历史验证。Windows 主可执行文件为 `quickxl.exe`；

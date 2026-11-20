@@ -147,6 +147,7 @@ public sealed partial class MainWindow : Window
             if (Program.InitialFile is { } path) await PerformAsync(() => OpenPathAsync(path));
             StartRecovery(); await PerformAsync(() => ShowRecoveryAsync(true));
             if (Program.SettingsMigrationError is { } migrationError) _status.Text = migrationError;
+            if (Program.AssociationRepairError is { } associationError) _status.Text = associationError;
         };
         Synchronize(); ShowHome();
     }

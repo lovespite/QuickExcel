@@ -40,6 +40,7 @@ $deploymentPath = Join-Path $package 'QuickExcel.application'
 $deployment = Read-SignedManifest $deploymentPath
 if ($deployment.SelectNodes('//*[local-name()="subscription" or local-name()="deploymentProvider"]').Count -ne 0) { throw 'The manual-update installer must not poll an application update URL.' }
 if ($deployment.SelectSingleNode('//*[local-name()="deployment"]').GetAttribute('install') -ne 'true') { throw 'Local application installation must be enabled.' }
+if ($deployment.SelectSingleNode('//*[local-name()="deployment"]').GetAttribute('createDesktopShortcut','urn:schemas-microsoft-com:clickonce.v1') -ne 'true') { throw 'ClickOnce must create and maintain the desktop application shortcut.' }
 $appReference = $deployment.SelectSingleNode('//*[local-name()="dependentAssembly" and @dependencyType="install"]')
 $appPath = Check-Hash $appReference $package $appReference.GetAttribute('codebase')
 $app = Read-SignedManifest $appPath
@@ -81,7 +82,7 @@ $exeBytes = [IO.File]::ReadAllBytes((Join-Path $payload 'quickxl.exe'))
 $peOffset = [BitConverter]::ToInt32($exeBytes, 0x3c)
 if ([BitConverter]::ToUInt16($exeBytes, $peOffset + 4) -ne 0x8664) { throw 'The application must be Windows x64.' }
 if (Test-Path -LiteralPath (Join-Path $payload 'QuickExcel.Avalonia.exe')) { throw 'The old Windows apphost must not enter new packages.' }
-foreach ($relative in @('QuickExcel.Avalonia.dll','QuickExcel.Avalonia.deps.json','QuickExcel.Avalonia.runtimeconfig.json','coreclr.dll','ScriptWorker/QuickExcel.ScriptWorker.exe','ScriptWorker/JavaScriptCore.dll','ScriptWorker/vcruntime140.dll','ScriptWorker/msvcp140.dll','Web/manifest.json','Licenses/CLICKONCE-LICENSE.txt','Licenses/WINDOWS-INSTALLER-NOTICES.txt')) {
+foreach ($relative in @('QuickExcel.Avalonia.dll','QuickExcel.Avalonia.deps.json','QuickExcel.Avalonia.runtimeconfig.json','Assets/QuickExcel-XLSQ.ico','Assets/QuickExcel-XLSX.ico','Assets/QuickExcel-CSV.ico','coreclr.dll','ScriptWorker/QuickExcel.ScriptWorker.exe','ScriptWorker/JavaScriptCore.dll','ScriptWorker/vcruntime140.dll','ScriptWorker/msvcp140.dll','Web/manifest.json','Licenses/CLICKONCE-LICENSE.txt','Licenses/WINDOWS-INSTALLER-NOTICES.txt')) {
     if (-not (Test-Path -LiteralPath (Join-Path $payload $relative))) { throw "Missing prerequisite or notice: $relative" }
 }
 & "$PSScriptRoot/test-windows-payload.ps1" -PackageDirectory $payload
@@ -98,5 +99,5 @@ try {
     $result = Get-Content -LiteralPath (Join-Path $check 'result.json') -Raw | ConvertFrom-Json
     if ($process.ExitCode -ne 0 -or -not $result.passed) { throw "ClickOnce payload self-check failed: $($result.error)" }
 } finally { if (-not $process.HasExited) { $process.Kill(); [void]$process.WaitForExit(5000) }; $process.Dispose() }
-[ordered]@{ passed=$true; version=$version; manifestFileCount=$seen.Count; xmlSignaturesVerified=$true; fileHashesVerified=$true; codeSignaturesVerified=$true; jscSourceUrl=$sourceUrl; jscSourceArchiveIncluded=$false; certificateTrust='Self-signed; no trust store changes'; selfCheck=$result; installedThroughClickOnce=$false } | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath (Join-Path $evidence 'result.json') -Encoding utf8
+[ordered]@{ passed=$true; version=$version; manifestFileCount=$seen.Count; xmlSignaturesVerified=$true; fileHashesVerified=$true; codeSignaturesVerified=$true; desktopShortcutRequested=$true; jscSourceUrl=$sourceUrl; jscSourceArchiveIncluded=$false; certificateTrust='Self-signed; no trust store changes'; selfCheck=$result; installedThroughClickOnce=$false } | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath (Join-Path $evidence 'result.json') -Encoding utf8
 Write-Host "PASS: ClickOnce signatures, $($seen.Count) file hashes, versions, prerequisites and production self-check."

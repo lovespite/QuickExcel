@@ -28,6 +28,7 @@
   "QuickExcel 工作簿与 CSV 文件": "QuickExcel workbooks and CSV files",
   "QuickExcel {0} 文件": "QuickExcel {0} file",
   "找不到 QuickExcel 启动程序。": "Could not find the QuickExcel launcher.",
+  "文件关联自动修复失败：{0}": "Could not repair file associations automatically: {0}",
   "系统打印对话框需要所属窗口。": "The system print dialog requires an owner window.",
   "打印机没有提供绘图上下文。": "The printer did not provide a drawing context.",
   "打印页范围无效。": "Invalid print page range.",

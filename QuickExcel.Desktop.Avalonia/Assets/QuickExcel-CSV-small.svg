@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 128 128" role="img" aria-labelledby="title">
+  <title id="title">QuickExcel CSV 文本文件</title>
+  <defs>
+    <linearGradient id="paper" x1="28" y1="9" x2="96" y2="88" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#fffaf2"/>
+      <stop offset="1" stop-color="#edf2f7"/>
+    </linearGradient>
+    <linearGradient id="ink" x1="24" y1="78" x2="96" y2="120" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#2f6e9d"/>
+      <stop offset="1" stop-color="#244a70"/>
+    </linearGradient>
+    <clipPath id="sheet">
+      <path d="M29 6H83L109 32V111Q109 122 98 122H30Q19 122 19 111V17Q19 6 29 6Z"/>
+    </clipPath>
+    <clipPath id="grid-ring">
+      <path clip-rule="evenodd" fill-rule="evenodd" d="M55 29H73C91 29 101 39 101 56V72C101 89 91 99 73 99H55         C37 99 27 89 27 72V56C27 39 37 29 55 29Z         M55 44C46 44 42 48 42 57V60H55Z         M61 44V60H86V57C86 48 82 44 73 44Z         M42 66V71C42 80 46 84 55 84V66Z         M61 66V84H73C82 84 86 80 86 71V66Z"/>
+    </clipPath>
+  </defs>
+
+  <g clip-path="url(#sheet)">
+    <rect x="19" y="6" width="90" height="116" fill="url(#paper)"/>
+    <path d="M83 8L108 32V37L89 33Q83 32 83 25Z" fill="#312a64" opacity=".12"/>
+    <path d="M83 6L109 32H92Q83 32 83 23Z" fill="#bed4e9"/>
+    <path d="M19 105H109V122H19Z" fill="url(#ink)"/>
+  </g>
+  <path d="M29 6H83L109 32V111Q109 122 98 122H30Q19 122 19 111V17Q19 6 29 6Z"
+        fill="none" stroke="#315b7e" stroke-width="5" stroke-linejoin="round"/>
+
+  <g transform="translate(8.96 5) scale(.86)">
+    <g clip-path="url(#grid-ring)">
+      <rect x="27" y="29" width="74" height="70" fill="#356c92"/>
+      <path d="M63 70H82L109 101H90Z" fill="#ff9478"/>
+    </g>
+  </g>
+
+</svg>

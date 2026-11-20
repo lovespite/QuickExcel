@@ -22,6 +22,7 @@ internal static class Program
 #endif
     internal static string? SelfCheckDirectory, UserDataDirectory;
     internal static string? SettingsMigrationError;
+    internal static string? AssociationRepairError;
     internal static string WebBenchmarkKind = "all";
     internal static bool WebScriptsOnly;
     internal static bool WebModulesOnly;
@@ -37,6 +38,8 @@ internal static class Program
 #endif
         if (args.Length >= 2 && args[0] == "--self-check" && Directory.Exists(args[1])) return 2;
 #if QUICKEXCEL_DIAGNOSTICS
+        if (args.Length == 2 && args[0] == "--associations-smoke")
+            return AssociationSmoke.Run(Path.GetFullPath(args[1]));
         if (args.Length >= 2 && args[0] is "--recovery-benchmark" or "--recovery-smoke" or "--cell-content-smoke" or "--formula-audit-smoke" or "--arithmetic-paste-smoke" or "--advanced-filters-smoke" or "--visible-transfer-smoke" or "--special-selection-smoke" or "--common-functions-smoke" or "--text-exchange-smoke" or "--paste-options-smoke" or "--localization-smoke" or "--sheets-smoke" or "--data-tools-smoke" or "--borders-smoke" or "--text-rotation-smoke" or "--number-format-smoke" or "--menus-smoke" or "--conditional-format-smoke" or "--colors-smoke" or "--clipboard-exchange" or "--drawing-smoke" or "--workspace-smoke" or "--execution-smoke" or "--automation-smoke" or "--ribbon-filter-smoke" or "--page-break-smoke" or "--compatibility-smoke" or "--grid-smoke" or "--grid-benchmark" or "--web-smoke" or "--web-benchmark" or "--manual-check")
         { SmokeDirectory = Path.GetFullPath(args[1]); SmokeMode = args[0] switch { "--recovery-benchmark" => "recovery-benchmark", "--recovery-smoke" => "recovery", "--cell-content-smoke" => "cell-content", "--formula-audit-smoke" => "formula-audit", "--arithmetic-paste-smoke" => "arithmetic-paste", "--advanced-filters-smoke" => "advanced-filters", "--visible-transfer-smoke" => "visible-transfer", "--special-selection-smoke" => "special-selection", "--common-functions-smoke" => "common-functions", "--text-exchange-smoke" => "text-exchange", "--paste-options-smoke" => "paste-options", "--localization-smoke" => "localization", "--sheets-smoke" => "sheets", "--data-tools-smoke" => "data-tools", "--borders-smoke" => "borders", "--text-rotation-smoke" => "text-rotation", "--number-format-smoke" => "number-format", "--menus-smoke" => "menus", "--conditional-format-smoke" => "conditional-format", "--colors-smoke" => "colors", "--clipboard-exchange" => "clipboard-exchange", "--drawing-smoke" => "drawing", "--execution-smoke" => "execution", "--automation-smoke" => "automation", "--ribbon-filter-smoke" => "ribbon-filter", "--page-break-smoke" => "page-break", "--compatibility-smoke" => "compatibility", "--grid-smoke" => "grid", "--grid-benchmark" => "benchmark", "--web-smoke" => "web", "--web-benchmark" => "web-benchmark", "--manual-check" => "manual", _ => "workspace" }; if (SmokeMode == "manual") InitialFile = args.ElementAtOrDefault(2); }
         else InitialFile = args.FirstOrDefault(a => !a.StartsWith("--", StringComparison.Ordinal));
@@ -91,6 +94,9 @@ public sealed class DesktopApp : Application
             var settings = new QuickExcel.Presentation.DesktopSettings(Path.Combine(data, "settings.json"));
             settings.Load();
             UiText.Initialize(settings.Value.Language);
+            if (OperatingSystem.IsWindows())
+                Program.AssociationRepairError = WindowsFileAssociations.RepairCurrentDeployment(
+                    Program.UserDataDirectory is not null || Program.SmokeDirectory is not null || Program.SelfCheckDirectory is not null);
             desktop.MainWindow = new MainWindow(data, settings);
         }
         base.OnFrameworkInitializationCompleted();

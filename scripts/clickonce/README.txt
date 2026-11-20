@@ -3,13 +3,18 @@ QuickExcel Windows x64 — ClickOnce 安装包
 1. 解压完整 ZIP，保留全部目录和文件，再运行 setup.exe。
 2. setup.exe 检测 WebView2 Runtime；缺少时使用包内微软在线引导程序下载并安装，
    此步骤需要连接 Internet。已经安装运行库的设备跳过此步骤。
-3. 在 ClickOnce 提示中核对发布者及版本并安装。安装后可从开始菜单启动。
+3. 在 ClickOnce 提示中核对发布者及版本并安装。首次安装会创建桌面快捷方式，
+   也可从开始菜单启动。快捷方式由 ClickOnce 管理，更新后继续使用。
 
 应用包含部分裁剪的 .NET 10；隔离脚本 worker 使用 Native AOT，原生依赖随包携带。
 JSC、ICU、TypeScript 只保留在 ScriptWorker 目录，无需另装 .NET SDK 或运行时。
 系统要求：受支持的 Windows 10/11 x64，启用系统自带的 .NET Framework 4.8
 和 ClickOnce。包内不再携带 WebView2 完整离线安装器。请勿只复制 setup.exe。
 本包不配置固定发布地址或自动更新；后续可从新版本的完整包手动安装更新。
+更新后首次通过 ClickOnce 启动时，自动修复此前已注册的 QuickExcel 文件类型
+打开路径及图标，保留 Windows 中选择的默认应用。首次关联仍需在应用设置的
+“文件关联”页注册，并在 Windows 默认应用设置中确认。修复失败会显示错误，
+下次启动会重试；也可从文件关联设置页手动注册。
 
 签名采用 QuickExcel 自签代码签名证书。自签证书不自动获得 Windows 信任，
 因此可能出现“未知发布者”或策略阻止。请先通过可信渠道核对随包公钥证书

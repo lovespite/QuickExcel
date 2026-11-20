@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 128 128" role="img" aria-labelledby="title">
+  <title id="title">QuickExcel XLSX 工作簿</title>
+  <defs>
+    <linearGradient id="paper" x1="28" y1="9" x2="96" y2="88" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#fffaf2"/>
+      <stop offset="1" stop-color="#edf5ef"/>
+    </linearGradient>
+    <linearGradient id="ink" x1="24" y1="78" x2="96" y2="120" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#237750"/>
+      <stop offset="1" stop-color="#155134"/>
+    </linearGradient>
+    <clipPath id="sheet">
+      <path d="M29 6H83L109 32V111Q109 122 98 122H30Q19 122 19 111V17Q19 6 29 6Z"/>
+    </clipPath>
+    <clipPath id="grid-ring">
+      <path clip-rule="evenodd" fill-rule="evenodd" d="M55 29H73C91 29 101 39 101 56V72C101 89 91 99 73 99H55         C37 99 27 89 27 72V56C27 39 37 29 55 29Z         M55 44C46 44 42 48 42 57V60H55Z         M61 44V60H86V57C86 48 82 44 73 44Z         M42 66V71C42 80 46 84 55 84V66Z         M61 66V84H73C82 84 86 80 86 71V66Z"/>
+    </clipPath>
+  </defs>
+
+  <g clip-path="url(#sheet)">
+    <rect x="19" y="6" width="90" height="116" fill="url(#paper)"/>
+    <path d="M83 8L108 32V37L89 33Q83 32 83 25Z" fill="#312a64" opacity=".12"/>
+    <path d="M83 6L109 32H92Q83 32 83 23Z" fill="#bedbc9"/>
+    <path d="M19 85H109V122H19Z" fill="url(#ink)"/>
+  </g>
+  <path d="M29 6H83L109 32V111Q109 122 98 122H30Q19 122 19 111V17Q19 6 29 6Z"
+        fill="none" stroke="#235f44" stroke-width="2.5" stroke-linejoin="round"/>
+
+  <g transform="translate(21.76 8.76) scale(.66)">
+    <g clip-path="url(#grid-ring)">
+      <rect x="27" y="29" width="74" height="70" fill="#276b49"/>
+      <path d="M63 70H82L109 101H90Z" fill="#ff9478"/>
+    </g>
+  </g>
+
+  <!-- Custom outline lettering keeps the file extension independent of installed fonts. -->
+  <g fill="#fff6e9">
+    <path d="M28 94H33L37 100.4L41 94H46L39.5 103L46.2 112H41.1L36.9 105.6L32.6 112H27.5L34.2 102.9Z"/>
+    <path d="M49 94H53.2V108.4H61.8V112H49Z"/>
+    <path d="M78.4 95.8L76.5 98.9C74.8 97.8 73.2 97.2 71.4 97.2C69.5 97.2 68.5 97.8 68.5 99       C68.5 100.1 69.4 100.6 72.3 101.3C76.9 102.4 79 103.9 79 106.9C79 110.3 76.2 112.3 71.9 112.3       C68.8 112.3 66.1 111.4 63.9 109.5L66.2 106.6C68.1 108.1 69.9 108.8 72.1 108.8C73.9 108.8 75 108.2 75 107       C75 105.9 74.2 105.4 71.1 104.7C66.7 103.7 64.5 102.3 64.5 99C64.5 95.8 67.2 93.7 71.3 93.7       C73.9 93.7 76.4 94.5 78.4 95.8Z"/>
+    <path transform="translate(54.5 0)" d="M28 94H33L37 100.4L41 94H46L39.5 103L46.2 112H41.1L36.9 105.6L32.6 112H27.5L34.2 102.9Z"/>
+  </g>
+</svg>
