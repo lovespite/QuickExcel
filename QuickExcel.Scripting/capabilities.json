@@ -3051,7 +3051,10 @@
     "NamedItem": {
       "members": {
         "getName": {
-          "kind": "local",
+          "kind": "host",
+          "host": "getApi:NamedItem.getName",
+          "arity": 2,
+          "cost": 1,
           "signature": "getName(): string"
         },
         "getFormula": {

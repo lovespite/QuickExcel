@@ -71,8 +71,10 @@ public sealed partial class MainWindow
             RibbonButton(RibbonIcon.Zoom, UiText.Get("缩放"), ZoomDialogAsync));
         RibbonGroup(UiText.Get("开始"), UiText.Get("行列"), RibbonButton(RibbonIcon.InsertRow, UiText.Get("插入行"), () => ShiftAxisAsync(SheetAxis.Row, false)), RibbonButton(RibbonIcon.DeleteRow, UiText.Get("删除行"), () => ShiftAxisAsync(SheetAxis.Row, true)),
             RibbonButton(RibbonIcon.InsertColumn, UiText.Get("插入列"), () => ShiftAxisAsync(SheetAxis.Column, false)), RibbonButton(RibbonIcon.DeleteColumn, UiText.Get("删除列"), () => ShiftAxisAsync(SheetAxis.Column, true)),
+            RibbonButton(RibbonIcon.DeleteColumn, UiText.Get("删除单元格…"), DeleteCellsAsync),
             RibbonButton(RibbonIcon.AxisVisibility, UiText.Get("隐藏/显示行列"), AxisVisibilityAsync), RibbonButton(RibbonIcon.MoveAxis, UiText.Get("移动行列"), MoveAxisAsync));
-        RibbonGroup(UiText.Get("公式"), UiText.Get("名称"), RibbonButton(RibbonIcon.Names, UiText.Get("名称管理"), NamesAsync));
+        RibbonGroup(UiText.Get("公式"), UiText.Get("名称"), RibbonButton(RibbonIcon.Names, UiText.Get("名称管理器"), NamesAsync),
+            RibbonButton(RibbonIcon.Names, UiText.Get("新建名称"), CreateNameAsync));
         RibbonGroup(UiText.Get("审阅"), UiText.Get("保护"), RibbonButton(RibbonIcon.ProtectSheet, UiText.Get("工作表保护"), ProtectSheetAsync), RibbonButton(RibbonIcon.ProtectCells, UiText.Get("单元格保护"), ProtectCellsAsync));
         _grid.ViewportChanged += () =>
         {
@@ -178,7 +180,6 @@ public sealed partial class MainWindow
                 _grid.Select(new(range.Top, range.Left));
             return;
         }
-        if (delete && !await Dialogs.Confirm(this, UiText.Get("删除行列"), UiText.Format($"删除所选 {count} {(axis == SheetAxis.Row ? UiText.Get("行") : UiText.Get("列"))}？可撤销。"))) return;
         await ExecuteAsync(new ShiftAxisCommand(Document.Snapshot.ActiveSheetId, axis, first, count, delete), revision);
     }
     private async Task MoveAxisAsync()
@@ -229,24 +230,5 @@ public sealed partial class MainWindow
         var dialog = new FieldsDialog(UiText.Get("单元格保护")).Check("locked", UiText.Get("锁定"), style.Locked).Check("hidden", UiText.Get("隐藏公式"), style.FormulaHidden)
             .Note(UiText.Get("这些限制在工作表保护启用后生效。"));
         if (await dialog.ShowAsync(this)) await ExecuteAsync(new SetCellProtectionCommand(Document.Snapshot.ActiveSheetId, Rectangle(range), dialog.Boolean("locked"), dialog.Boolean("hidden")), revision);
-    }
-    private async Task NamesAsync()
-    {
-        if (!await CommitEditorsAsync()) return;
-        var snapshot = Document.Snapshot; var names = snapshot.DefinedNames.ToArray(); var range = SelectedRange(); var sheet = snapshot.Sheets[SheetIndex];
-        var choose = new FieldsDialog(UiText.Get("名称管理")).Choice("name", UiText.Get("名称 / 作用域"), new[] { UiText.Get("新建名称") }.Concat(names.Select(n => n.Name + " · " + (n.Scope is { } id ? snapshot.GetSheet(id).Name : UiText.Get("工作簿")))).ToArray())
-            .Choice("action", UiText.Get("操作"), [UiText.Get("新建 / 编辑"), UiText.Get("删除")]);
-        if (!await choose.ShowAsync(this)) return;
-        var selected = choose.Index("name") == 0 ? null : names[choose.Index("name") - 1];
-        if (choose.Index("action") == 1)
-        { if (selected is not null) await ExecuteAsync(new DeleteDefinedNameCommand(selected.Name, selected.Scope), snapshot.Revision); return; }
-        var formula = "=" + FormulaSyntax.Print(new ReferenceNode(sheet.Name, range.Top, range.Left, range.Bottom, range.Right, true, true, true, true, range.Count > 1));
-        var edit = new FieldsDialog(selected is null ? UiText.Get("新建名称") : UiText.Get("编辑名称")).Text("name", UiText.Get("名称"), selected?.Name ?? "").Text("formula", UiText.Get("引用位置 / 公式"), selected?.Formula ?? formula);
-        if (selected is null) edit.Choice("scope", UiText.Get("作用域"), [UiText.Get("工作簿"), UiText.Get("当前工作表")]);
-        else edit.Note(UiText.Get("作用域：") + (selected.Scope is { } id ? snapshot.GetSheet(id).Name : UiText.Get("工作簿")));
-        if (!await edit.ShowAsync(this)) return;
-        DocumentCommand command = selected is null ? new DefineNameCommand(new(edit.String("name"), edit.String("formula"), edit.Index("scope") == 0 ? null : sheet.Id)) :
-            new EditDefinedNameCommand(selected.Name, selected.Scope, edit.String("name"), edit.String("formula"));
-        if (await ExecuteAsync(command, snapshot.Revision)) await CalculatePendingAsync();
     }
 }

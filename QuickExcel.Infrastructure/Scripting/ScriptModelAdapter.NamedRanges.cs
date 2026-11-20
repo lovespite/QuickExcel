@@ -37,18 +37,18 @@ internal sealed partial class ScriptModelAdapter
         Arity(args, 2, 3);
         var name = Text(args[0]);
         ValidateDefinedName(name);
-        if (args.Length == 3 && args[2].ValueKind != JsonValueKind.Null && Text(args[2]).Length > 0)
-            throw Unsupported("命名区域的注释尚未建模；请省略 comment。");
+        var comment = args.Length == 3 && args[2].ValueKind != JsonValueKind.Null ? Text(args[2]) : "";
         if (Model.View.DefinedNames.Any(item => item.Scope == scope && item.Name.Equals(name, StringComparison.OrdinalIgnoreCase)))
             throw Invalid("名称已存在。");
         var defaultSheet = scope ?? Model.View.ActiveSheetId;
         var formula = NamedReference(args[1], defaultSheet);
-        ExecuteObject(defaultSheet, new DefineNameCommand(new DefinedName(name, formula, scope)));
-        return NamedHandle(new DefinedName(name, formula, scope));
+        var definition = new DefinedName(name, formula, scope, comment);
+        ExecuteObject(defaultSheet, new DefineNameCommand(definition));
+        return NamedHandle(definition);
     }
 
     private object NamedHandle(DefinedName definition) =>
-        Handle("NamedItem", new Dictionary<string, object?> { ["name"] = definition.Name, ["scopeSheetId"] = definition.Scope?.ToString() });
+        Handle("NamedItem", new Dictionary<string, object?> { ["name"] = definition.Name, ["scopeSheetId"] = definition.Scope?.ToString(), ["namedItemId"] = definition.ScriptId.ToString() });
 
     private string NamedReference(JsonElement reference, SheetId defaultSheet)
     {
@@ -83,6 +83,9 @@ internal sealed partial class ScriptModelAdapter
         var definition = FindNamedItem(data);
         switch (member)
         {
+            case "getName":
+                Arity(args, 0); Spend(1, false);
+                return definition.Name;
             case "getFormula":
                 Arity(args, 0); Spend(1, false);
                 return definition.Formula;
@@ -141,15 +144,9 @@ internal sealed partial class ScriptModelAdapter
 
     private DefinedName FindNamedItem(JsonElement data)
     {
-        if (!data.TryGetProperty("name", out var nameValue) || nameValue.ValueKind != JsonValueKind.String)
+        if (!data.TryGetProperty("namedItemId", out var idValue) || idValue.ValueKind != JsonValueKind.String || !Guid.TryParse(idValue.GetString(), out var id))
             throw new ModelFailure("InvalidReference", "命名区域句柄已失效。");
-        SheetId? scope = null;
-        if (data.TryGetProperty("scopeSheetId", out var scopeValue) && scopeValue.ValueKind == JsonValueKind.String &&
-            Guid.TryParse(scopeValue.GetString(), out var scopeId))
-            scope = new SheetId(scopeId);
-        var name = nameValue.GetString()!;
-        return Model.View.DefinedNames.FirstOrDefault(item =>
-            item.Scope == scope && item.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
+        return Model.View.DefinedNames.FirstOrDefault(item => item.ScriptId == id)
             ?? throw new ModelFailure("InvalidReference", "命名区域句柄已失效。");
     }
 

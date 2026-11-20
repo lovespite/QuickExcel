@@ -27,7 +27,9 @@ public sealed class DefineNameCommand(DefinedName definition) : DocumentCommand
     internal override CommandDraft Prepare(WorkbookSnapshot snapshot)
     {
         if (snapshot.DefinedNames.Contains(definition)) return new(snapshot, [], false);
-        var names = snapshot.DefinedNames.Where(n => n.Scope != definition.Scope || !n.Name.Equals(definition.Name, StringComparison.OrdinalIgnoreCase)).Append(definition);
+        var existing = snapshot.DefinedNames.FirstOrDefault(n => n.Scope == definition.Scope && n.Name.Equals(definition.Name, StringComparison.OrdinalIgnoreCase));
+        var replacement = existing is null ? definition : definition with { ScriptId = existing.ScriptId };
+        var names = snapshot.DefinedNames.Where(n => n != existing).Append(replacement);
         return StructureEdits.Draft(snapshot, snapshot.WithDefinedNames(names));
     }
 }

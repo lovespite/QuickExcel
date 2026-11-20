@@ -219,7 +219,9 @@ public sealed partial class MainWindow
         edit.Items.Add(CommandMenu(UiText.Get("复制对象为图片"), CopyDrawingPictureAsync, true, mutation: false));
         foreach (var (title, mode) in new[] { (UiText.Get("粘贴  Ctrl+V"), "all"), (UiText.Get("只贴值"), "values"), (UiText.Get("粘贴公式"), "formulas"), (UiText.Get("只贴格式"), "formats"), (UiText.Get("转置粘贴"), "transpose"), (UiText.Get("粘贴为可编辑图表（附带数据快照）"), "chart"), (UiText.Get("粘贴为图片"), "image") })
             edit.Items.Add(CommandMenu(title, () => PasteAsync(mode)));
-        edit.Items.Add(new Separator()); edit.Items.Add(CommandMenu(UiText.Get("清除内容"), ClearAsync)); edit.Items.Add(CommandMenu(UiText.Get("清除格式"), ClearFormatsAsync));
+        edit.Items.Add(new Separator()); edit.Items.Add(CommandMenu(UiText.Get("删除单元格…"), DeleteCellsAsync));
+        edit.Items.Add(CommandMenu(UiText.Get("清除内容"), ClearAsync)); edit.Items.Add(CommandMenu(UiText.Get("清除格式"), ClearFormatsAsync));
+        edit.Items.Add(CommandMenu(UiText.Get("名称管理器"), NamesAsync));
         edit.Items.Add(new Separator()); edit.Items.Add(CommandMenu(UiText.Get("向下填充  Ctrl+D"), () => FillDirectionAsync(false)));
         edit.Items.Add(CommandMenu(UiText.Get("向右填充  Ctrl+R"), () => FillDirectionAsync(true))); edit.Items.Add(CommandMenu(UiText.Get("填充序列"), SeriesAsync));
         InstallGridContextMenu();

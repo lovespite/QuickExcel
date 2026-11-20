@@ -362,7 +362,7 @@ public sealed class WorkbookSnapshot
         var seenNames = new HashSet<(SheetId?, string)>();
         foreach (var name in DefinedNames)
         {
-            if (name is null || name.Formula is null || !name.Formula.StartsWith('=') || string.IsNullOrWhiteSpace(name.Name) || name.Name.Length > 255 ||
+            if (name is null || name.Formula is null || !name.Formula.StartsWith('=') || name.Comment is null || name.Comment.Length > 32767 || string.IsNullOrWhiteSpace(name.Name) || name.Name.Length > 255 ||
                 !System.Text.RegularExpressions.Regex.IsMatch(name.Name, @"^[\p{L}_][\p{L}\p{N}_.]*$") ||
                 QuickExcel.Formulas.FormulaSyntax.IsCellName(name.Name) ||
                 name.Name.Equals("R", StringComparison.OrdinalIgnoreCase) || name.Name.Equals("C", StringComparison.OrdinalIgnoreCase) ||

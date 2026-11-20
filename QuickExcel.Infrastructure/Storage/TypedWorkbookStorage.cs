@@ -519,7 +519,7 @@ public sealed partial class TypedWorkbookStorage : IWorkbookSaveStateStorage, IW
         bool SameHeight(double? a, double? b) => a == b || allowRowHeightRounding && a.HasValue && b.HasValue &&
             Math.Abs(a.Value - b.Value) <= Math.Max(1, Math.Max(Math.Abs(a.Value), Math.Abs(b.Value))) * 1e-14;
         string NameKey(WorkbookSnapshot book, QuickExcel.Formulas.DefinedName name) =>
-            (name.Scope is { } scope ? book.GetSheet(scope).Name : "") + "\0" + name.Name + "\0" + (allowRowHeightRounding ? QuickExcel.Formulas.StructuredReferences.CanonicalFormula(name.Formula) : name.Formula);
+            (name.Scope is { } scope ? book.GetSheet(scope).Name : "") + "\0" + name.Name + "\0" + (allowRowHeightRounding ? QuickExcel.Formulas.StructuredReferences.CanonicalFormula(name.Formula) : name.Formula) + "\0" + name.Comment;
         bool SameContent(CellContent a, CellContent b) => a == b || allowRowHeightRounding && a.Kind == CellContentKind.Formula && b.Kind == CellContentKind.Formula &&
             a.StyleId == b.StyleId && a.DynamicArray == b.DynamicArray && QuickExcel.Formulas.StructuredReferences.CanonicalFormula(a.FormulaText) == QuickExcel.Formulas.StructuredReferences.CanonicalFormula(b.FormulaText);
         FormulaArrayDimensions? SpillSize(CellSnapshot cell) => cell.Calculation?.BlockedSpill ??

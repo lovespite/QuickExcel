@@ -17,6 +17,7 @@ public sealed class ReorderSheetCommand(SheetId sheetId, int destination) : Docu
 
 public sealed class CopySheetCommand : DocumentCommand
 {
+    private readonly Dictionary<Guid, Guid> _copiedNameIds = [];
     public CopySheetCommand(SheetId source, string name, int destination) { Source = source; Name = name; Destination = destination; Id = SheetId.New(); }
     public SheetId Source { get; }
     public string Name { get; }
@@ -89,7 +90,13 @@ public sealed class CopySheetCommand : DocumentCommand
                 TotalsFormula = c.TotalsFormula is { } total ? Formula(total, false, Source) : null }), t.HeaderRow, t.TotalsRow, t.TotalsRowShown, t.Style, t.Filter, t.Sort, t.InsertRow)).ToImmutableArray() };
         var copy = new WorksheetSnapshot(Id, Name, cells, source.Rows, source.Columns, source.MergedCells, source.Images,
             source.ShowGridLines, source.DefaultRowHeight, source.TabColor, source.View, source.Visibility, source.Printing, source.Annotations, data);
-        var names = snapshot.DefinedNames.Concat(copiedNames.Select(n => new DefinedName(n.Name, Formula(n.Formula, true, n.Scope ?? Source), Id)));
+        DefinedName CopyName(DefinedName name)
+        {
+            if (!_copiedNameIds.TryGetValue(name.ScriptId, out var copiedId))
+                _copiedNameIds.Add(name.ScriptId, copiedId = Guid.NewGuid());
+            return new(name.Name, Formula(name.Formula, true, name.Scope ?? Source), Id, name.Comment) { ScriptId = copiedId };
+        }
+        var names = snapshot.DefinedNames.Concat(copiedNames.Select(CopyName));
         var after = new WorkbookSnapshot(snapshot.DocumentId, snapshot.Revision, snapshot.DateSystem, snapshot.Sheets.Insert(Destination, copy), snapshot.ScriptSource,
             snapshot.Styles, snapshot.ScriptModules, snapshot.FileState, names, copy.Visibility == SheetVisibility.Visible ? Id : snapshot.ActiveSheetId, snapshot.Window, snapshot.TextCompatibilityVersion, snapshot.PackageFiles, snapshot.LocalStorage);
         return new(after, cells.Select(p => new CellChange(new(Id, p.Key.Row, p.Key.Column), null, p.Value)).ToImmutableArray(), true);
@@ -157,7 +164,7 @@ public sealed class DeleteDefinedNameCommand(string name, SheetId? scope) : Docu
 }
 
 /// <summary>Rename and replace a definition in the same history entry; scope stays fixed.</summary>
-public sealed class EditDefinedNameCommand(string oldName, SheetId? scope, string name, string formula) : DocumentCommand
+public sealed class EditDefinedNameCommand(string oldName, SheetId? scope, string name, string formula, string? comment = null) : DocumentCommand
 {
     internal override CommandDraft Prepare(WorkbookSnapshot snapshot)
     {
@@ -165,7 +172,7 @@ public sealed class EditDefinedNameCommand(string oldName, SheetId? scope, strin
             ?? throw new ArgumentException(MessageText.Get("名称不存在。"));
         var renamed = new RenameDefinedNameCommand(oldName, scope, name).Prepare(snapshot).Snapshot;
         var nextFormula = formula == original.Formula ? renamed.DefinedNames.Single(n => n.Scope == scope && n.Name == name).Formula : formula;
-        var updated = new DefineNameCommand(new(name, nextFormula, scope)).Prepare(renamed).Snapshot;
+        var updated = new DefineNameCommand(new(name, nextFormula, scope, comment ?? original.Comment)).Prepare(renamed).Snapshot;
         return ReferenceEquals(snapshot, updated) ? new(snapshot, [], false) : StructureEdits.Draft(snapshot, updated);
     }
 }

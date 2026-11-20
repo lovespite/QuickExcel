@@ -94,7 +94,7 @@ public sealed partial class MainWindow
         else
         {
             Group(Submenu(UiText.Get("插入"), Item(UiText.Get("插入行"), () => ShiftAxisAsync(SheetAxis.Row, false)), Item(UiText.Get("插入列"), () => ShiftAxisAsync(SheetAxis.Column, false))),
-                Submenu(UiText.Get("删除"), Item(UiText.Get("删除行"), () => ShiftAxisAsync(SheetAxis.Row, true)), Item(UiText.Get("删除列"), () => ShiftAxisAsync(SheetAxis.Column, true))),
+                Item(UiText.Get("删除单元格…"), DeleteCellsAsync),
                 Item(UiText.Get("清除内容"), ClearAsync), Item(UiText.Get("清除格式"), ClearFormatsAsync));
             Group(Item(UiText.Get("设置单元格格式…"), CellFormatAsync), Item(UiText.Get("数字格式…"), NumberFormatAsync), Item(UiText.Get("富文本编辑…"), RichTextAsync),
                 Item(UiText.Get("合并单元格"), () => MergeAsync(false)), Item(UiText.Get("取消合并单元格"), () => MergeAsync(true)));
@@ -103,6 +103,7 @@ public sealed partial class MainWindow
                 Item(UiText.Get("批注…"), NoteAsync), Item(UiText.Get("超链接…"), HyperlinkAsync), Item(UiText.Get("线程评论…"), ThreadCommentsAsync));
             Group(Item(UiText.Get("粘贴为可编辑图表（附带数据快照）"), () => PasteAsync("chart")), Item(UiText.Get("粘贴为图片"), () => PasteAsync("image")));
         }
+        Group(Item(UiText.Get("创建命名区域…"), CreateNameAsync), Item(UiText.Get("名称管理器"), NamesAsync));
         InstallPageBreakMenu(menu);
     }
     private async Task InsertCopiedAxisAsync(SheetAxis axis)

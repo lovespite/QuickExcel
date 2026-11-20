@@ -316,11 +316,12 @@ public sealed partial class JscSession
                 }
             },
             NamedItem: {
-                getName() { return dataOf(this).name; },
                 getScope() {
+                    this.getName();
                     return dataOf(this).scopeSheetId ? QuickExcel.NamedItemScope.worksheet : QuickExcel.NamedItemScope.workbook;
                 },
                 getWorksheet() {
+                    this.getName();
                     const data = dataOf(this);
                     return data.scopeSheetId ? worksheet(data.scopeSheetId) : undefined;
                 }

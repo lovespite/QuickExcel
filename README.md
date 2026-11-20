@@ -1,8 +1,24 @@
-# QuickExcel 4.2.0
+# QuickExcel 5.1.0
 
 QuickExcel 是基于 .NET 10、Avalonia 和 Skia 的桌面电子表格应用，提供自有的类型化 XLSX/XLSQ 存储、增量公式计算，以及在独立沙箱中运行的 JavaScript / TypeScript 脚本。默认交付平台为 Windows x64；Linux x64 与 macOS arm64 的支持范围单独验证。
 
 当前源码版本以 [桌面项目的 Version](QuickExcel.Desktop.Avalonia/QuickExcel.Desktop.Avalonia.csproj) 为准。4.0.0 的 Windows 发布采用 **Native AOT 脚本 worker + 部分裁剪的自包含桌面运行时**，JSC、ICU 与 TypeScript 仅随 worker 分发。实现与交付证据见 [4.0 发布记录](QuickExcel.Desktop/docs/84-native-aot-and-trimming.md)。
+
+## 最近更新
+
+以下版本均更新于 2026-11-20，按版本从新到旧排列：
+
+| 版本 | 更新内容 |
+| --- | --- |
+| **5.1.0** | 删除行列不再弹出确认；选区删除支持左移、上移、整行和整列，支持撤销。新增列表式名称管理器、作用域筛选、批注和右键创建命名区域，支持 XLSX/XLSQ 保存及脚本访问。见[删除单元格与名称管理器](QuickExcel.Desktop/docs/87-delete-cells-and-name-manager.md)。 |
+| **5.0.0** | 统一 XLSX、CSV/TSV、ODBC 和 SQLite 数据导入导出，支持工作表选择、重名处理、当前工作簿导入与撤销、数据库事务写入；兼容报告聚合同类问题并保留更多 Excel 元数据。新增 Windows/macOS GitHub Release 自动打包流程。见[数据交换](QuickExcel.Desktop/docs/86-data-import-export.md)、[兼容性记录](QuickExcel.Desktop/docs/39-xlsx-diagnostic-closure.md)和[发布流程](QuickExcel.Desktop/docs/85-github-actions-release.md)。 |
+| **4.2.2** | 另存受支持副本后，兼容状态与实际保存的文件同步；后续保存及撤销/重做不再沿用原文件的过期兼容信息。 |
+| **4.2.1** | 修复 ClickOnce 更新后的文件关联与桌面快捷方式；新增 XLSX、CSV 专用文件图标。 |
+| **4.2.0** | 只选表头建立筛选时，向下纳入所选列中的连续记录；保留明确多行选区的范围，阻止对仅含表头的区域排序。 |
+| **4.1.0** | ClickOnce 安装包改用 JSC 完整对应源码下载地址，保留源码获取、修改说明和构建信息；普通发布归档仍保留源码包。 |
+| **4.0.0** | Windows 脚本 worker 改为 Native AOT，桌面使用部分裁剪的自包含运行时，消除桌面根目录重复的 JSC/ICU/TypeScript 载荷。 |
+
+5.1.0 已通过相关 Core/存储测试、7 项发布 AOT worker 测试、220 项界面检查及 36 项生产自检；验证范围和证据见[专题记录](QuickExcel.Desktop/docs/87-delete-cells-and-name-manager.md#定向验证)。
 
 ## 快速开始
 
@@ -22,7 +38,7 @@ Windows 发布包自带 .NET 10，运行无需安装 SDK。Monaco 脚本编辑�
 
 ## GitHub Release 自动打包
 
-推送与桌面项目 `Version` 一致的 `vMAJOR.MINOR.PATCH` 标签（例如 `v4.2.0`），[Release Windows and macOS](.github/workflows/release.yml) 会分别构建 Windows x64 ZIP 和 macOS arm64 tar.gz，运行生产包自检与相关 worker 测试，并在两端都成功后自动发布到 GitHub Release，附带 SHA-256 校验文件。也可从 Actions 手动输入已有标签重跑。Linux 暂不参与此发布流程。
+推送与桌面项目 `Version` 一致的 `vMAJOR.MINOR.PATCH` 标签（例如 `v5.1.0`），[Release Windows and macOS](.github/workflows/release.yml) 会分别构建 Windows x64 ZIP 和 macOS arm64 tar.gz，运行生产包自检与相关 worker 测试，并在两端都成功后自动发布到 GitHub Release，附带 SHA-256 校验文件。也可从 Actions 手动输入已有标签重跑。Linux 暂不参与此发布流程。
 
 macOS 当前交付原始目录压缩包，尚不是 Developer ID 签名、公证的 `.app`。触发方式、产物与失败恢复见 [GitHub Actions 发布说明](QuickExcel.Desktop/docs/85-github-actions-release.md)。
 
@@ -34,7 +50,8 @@ macOS 当前交付原始目录压缩包，尚不是 Developer ID 签名、公证
 | --- | --- |
 | 文件与兼容 | XLSQ v2、XLSX 读写及 Strict OOXML 支持子集；CSV/TSV 导入预览、编码与逐列类型选择、导出；兼容报告、外部文件变更检测和原子保存 |
 | 数据导入导出 | [统一视图](QuickExcel.Desktop/docs/86-data-import-export.md)汇集 XLSX、CSV/TSV、ODBC 数据库和 SQLite 文件；工作表重名预览、当前工作簿导入与撤销、数据库新建/追加及事务写入 |
-| 日常编辑 | 撤销/重做、查找替换、内部复制/剪切、选择性与运算粘贴、可见行复制粘贴、填充/序列、定位条件、工作表与名称管理 |
+| 日常编辑 | 撤销/重做、查找替换、内部复制/剪切、选择性与运算粘贴、可见行复制粘贴、填充/序列、定位条件、直接删除行列、选区左移/上移删除、工作表管理 |
+| 名称管理 | 名称列表、数值预览、搜索与作用域筛选、新建/编辑/删除、批注、右键选区创建命名区域、XLSX/XLSQ 保存及脚本访问 |
 | 格式与内容 | 数字格式、样式、合并、冻结/缩放、富文本分段编辑、超链接、传统批注与线程评论、图片和绘图对象 |
 | 数据处理 | 多键排序、颜色/前后 N 项/日期分组筛选、Excel Table 与结构化引用、数据验证、条件格式、分列、去重、快速填充、分组与分类汇总 |
 | 公式与分析 | 跨表引用、名称、稀疏依赖与增量计算；条件统计、查找、日期/数学/文本函数、LET、动态数组、基础透视表；公式引用/从属追踪、错误定位与逐步求值 |
@@ -59,6 +76,8 @@ E0–E5 及 E6/E7 已完成各自声明的交付子集；E8/E9 的分析、复�
 新工作簿使用 **文件 API v4、IPC 11**：一个可选初始化主入口，UDF、Actions、Events 各有独立角色，并从模块导出自动发现。v4 不使用 `host.functions.register` 或 `host.events.on`。现有 API v3 文件保留版本隔离的兼容执行；文件 API v1/v2 仅供源码检查，须显式改写为 v3 才能执行，保存前需完成改写或移除全部脚本，不自动迁移源码。文件 API 版本与函数描述符的参数语义版本相互独立。
 
 Actions/Events 通过 `QuickExcel.Workbook` 等对象访问宿主拥有的事务，可以读取本事务先前的写入；工作簿和虚拟文件变更统一校验后原子提交，失败全部回滚，可撤销的变更合为一次历史记录。`localStorage` 随 XLSQ 保存，`sessionStorage` 随文档会话释放；两者的事务及历史规则见 [脚本存储](QuickExcel.Desktop/docs/81-script-storage.md)。`//xlsq/`、`//temp/`、`//mem/` 是逻辑虚拟文件空间，不是本机路径。
+
+在网格中右键选区并选择「创建命名区域…」，即可在脚本中通过名称访问。例如工作簿作用域的 `ELN` 使用 `workbook.getNamedItem("ELN").getRange()`；工作表作用域名称使用 `workbook.getWorksheet("配额表").getNamedItem("ELN").getRange()`。名称重命名后已有脚本句柄仍有效，删除后重新创建同名区域不会复用旧句柄身份。
 
 Windows/macOS 在每个已授权工作簿会话中分别复用 UDF 与 Actions/Events 的隔离 worker 和上下文；UDF 不共享初始化状态。失败或撤权后丢弃上下文，不自动重放初始化。控制台、编译器及 Linux worker 保持一次性执行；Linux 当前拒绝持久初始化绑定。
 

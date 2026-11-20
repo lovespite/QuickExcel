@@ -16,6 +16,61 @@ public sealed class ScriptP3Tests
     private static void Run(WorkbookDocument doc) { doc.EnableScriptsAndCalculate(); doc.RunAction("main"); }
 
     [Fact]
+    public void NamedRegionsCreatedByTheEditorAreAccessibleFromScripts()
+    {
+        using var doc = Document("""
+            function main(workbook) {
+              const amount=workbook.getNamedItem('Amount'), sheet=workbook.getActiveWorksheet();
+              if(amount.getValue()!==42||amount.getRange().getAddress()!=='A1')throw Error('editor range');
+              amount.getRange().setValue(63);
+              const local=sheet.addNamedItem('LocalAmount',sheet.getRange('A1'),'Local description');
+              if(local.getValue()!==63)throw Error('local value');
+              amount.setFormula('=Data!$A$1');
+            }
+            """);
+        doc.Session.Execute(new DefineNameCommand(new("Amount", "=Data!$A$1", Comment: "Editor description")));
+        Run(doc);
+        Assert.Equal("63", doc.GetCellValue(0, 0, 0));
+        Assert.Equal("Editor description", doc.Snapshot.DefinedNames.Single(n => n.Scope is null).Comment);
+        Assert.Equal("Local description", doc.Snapshot.DefinedNames.Single(n => n.Scope is not null).Comment);
+        Assert.True(doc.Undo()); Assert.Equal("42", doc.GetCellValue(0, 0, 0)); Assert.Single(doc.Snapshot.DefinedNames);
+    }
+
+    [Fact]
+    public void DeletedNameHandleCannotAccessAReplacementWithTheSameName()
+    {
+        using var doc = Document("""
+            function main(workbook) {
+              const sheet=workbook.getActiveWorksheet(), old=workbook.addNamedItem('Amount',sheet.getRange('A1'));
+              old.delete();const replacement=workbook.addNamedItem('Amount',sheet.getRange('B1'),'Replacement');
+              for(const read of [()=>old.getRange(),()=>old.getName(),()=>old.getScope(),()=>old.getWorksheet()]) {
+                let stale=false;try{read()}catch(e){stale=e.code==='InvalidReference'}if(!stale)throw Error('name identity');
+              }
+              if(replacement.getRange().getAddress()!=='B1')throw Error('replacement range');
+            }
+            """);
+        Run(doc); Assert.Equal("Replacement", Assert.Single(doc.Snapshot.DefinedNames).Comment);
+    }
+
+    [Fact]
+    public void RetainedNameHandleFollowsEditorRenamesBetweenActions()
+    {
+        using var doc = Document("""
+            let remembered;
+            function main(workbook) {
+              if(!remembered){remembered=workbook.getNamedItem('Amount');return;}
+              if(remembered.getName()!=='RenamedAmount')throw Error('stale name');
+              remembered.getRange().setValue(84);
+            }
+            """);
+        doc.Session.Execute(new DefineNameCommand(new("Amount", "=Data!$A$1")));
+        Run(doc);
+        doc.Session.Execute(new RenameDefinedNameCommand("Amount", null, "RenamedAmount"));
+        doc.RunAction("main");
+        Assert.Equal("84", doc.GetCellValue(0, 0, 0));
+    }
+
+    [Fact]
     public void WorksheetManagementAndNamedRangesAreTransactional()
     {
         using var doc = Document("""

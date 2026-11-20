@@ -294,7 +294,8 @@ internal static class TypedWorkbookXml
             package.SetReadContext(workbookPart, (string?)element.Attribute("name"), "definedName");
             budget.Check();
             if (++inspectedNames > 4096) throw new InvalidDataException("名称数量超过 4096。");
-            package.Shape(element, "", (string?)element.Attribute("name") == "_xlnm._FilterDatabase" ? "name localSheetId hidden" : "name localSheetId", workbookPart);
+            package.Shape(element, "", (string?)element.Attribute("name") == "_xlnm._FilterDatabase" ? "name localSheetId hidden" :
+                ((string?)element.Attribute("name"))?.StartsWith("_xlnm.", StringComparison.OrdinalIgnoreCase) == true ? "name localSheetId" : "name localSheetId comment", workbookPart);
             var name = Attr(element, "name");
             var scopeIndex = element.Attribute("localSheetId") is { } local ? Int(local.Value, sheets.Count - 1) : -1;
             if (name == "_xlnm._FilterDatabase")
@@ -319,7 +320,8 @@ internal static class TypedWorkbookXml
                     sheetName: scopeIndex < 0 ? null : sheets[scopeIndex].Name); }
                 continue;
             }
-            var definition = new QuickExcel.Formulas.DefinedName(name, XlsxStructuredFormula.Read("=" + element.Value.TrimStart('=')), scopeIndex < 0 ? null : sheets[scopeIndex].Id);
+            var definition = new QuickExcel.Formulas.DefinedName(name, XlsxStructuredFormula.Read("=" + element.Value.TrimStart('=')), scopeIndex < 0 ? null : sheets[scopeIndex].Id,
+                Decode((string?)element.Attribute("comment") ?? ""));
             try
             {
                 _ = new WorkbookSnapshot(Guid.NewGuid(), 0, dateSystem, sheets, styles: styles, definedNames: [definition]);
@@ -596,6 +598,7 @@ internal static class TypedWorkbookXml
             {
                 var element = new XElement(Main + "definedName", new XAttribute("name", name.Name), XlsxStructuredFormula.Write(name.Formula).TrimStart('='));
                 if (name.Scope is { } scope) element.SetAttributeValue("localSheetId", snapshot.Sheets.IndexOf(snapshot.GetSheet(scope)));
+                if (name.Comment.Length != 0) element.SetAttributeValue("comment", Encode(name.Comment));
                 names.Add(element);
             }
             for (var i = 0; i < snapshot.Sheets.Length; i++) { names.Add(XlsxPrinting.WriteNames(snapshot.Sheets[i], i)); names.Add(XlsxFiltering.WriteName(snapshot.Sheets[i], i)); }

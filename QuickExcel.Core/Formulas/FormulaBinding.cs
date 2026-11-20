@@ -2,7 +2,16 @@ using QuickExcel.Domain;
 
 namespace QuickExcel.Formulas;
 
-public sealed record DefinedName(string Name, string Formula, SheetId? Scope = null);
+public sealed record DefinedName(string Name, string Formula, SheetId? Scope = null, string Comment = "")
+{
+    /// <summary>Session identity survives edits and undo; copied or recreated names receive a new identity.</summary>
+    public Guid ScriptId { get; init; } = Guid.NewGuid();
+
+    // Session handles are deliberately excluded from file-content equality.
+    public bool Equals(DefinedName? other) => other is not null &&
+        Name == other.Name && Formula == other.Formula && Scope == other.Scope && Comment == other.Comment;
+    public override int GetHashCode() => HashCode.Combine(Name, Formula, Scope, Comment);
+}
 
 /// <summary>Binds sheet names and defined names without reading cached cell values.</summary>
 public static class FormulaBinding

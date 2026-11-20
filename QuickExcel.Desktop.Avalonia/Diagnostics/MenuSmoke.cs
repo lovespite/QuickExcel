@@ -118,8 +118,11 @@ public sealed partial class MainWindow
             await History(false); Check(Document.Snapshot.Sheets[0].Rows[1].Height == 44 && Document.Snapshot.Sheets[0].Rows[2].Height == 36, "Multi-row autofit undoes in one step");
             await OpenMenu(true, 1); await Click("隐藏行"); Check(Document.Snapshot.Sheets[0].Rows[1].Hidden, "Row menu hides selected rows");
             await OpenMenu(true, 0); await Click("显示所有行"); Check(!Document.Snapshot.Sheets[0].Rows[1].Hidden, "Row menu restores hidden rows");
-            await OpenMenu(false, 1); AcceptDialog(); await Click("删除列"); Check(Document.GetCellInput(0, 1, 1) == "", "Column menu deletes the selected column"); await History(false);
-            await OpenMenu(true, 1); AcceptDialog(); await Click("删除行"); Check(Document.GetCellInput(0, 1, 0) == "34", "Row menu deletes the selected row"); await History(false);
+            var deleteDialogOpened = false;
+            _dialogDriver = window => { deleteDialogOpened = true; window.Close(false); return Task.CompletedTask; };
+            await OpenMenu(false, 1); await Click("删除列"); Check(!deleteDialogOpened && Document.GetCellInput(0, 1, 1) == "", "Column menu deletes immediately without a confirmation"); await History(false);
+            await OpenMenu(true, 1); await Click("删除行"); Check(!deleteDialogOpened && Document.GetCellInput(0, 1, 0) == "34", "Row menu deletes immediately without a confirmation"); await History(false);
+            _dialogDriver = null;
             _grid.Select(new(1, 1)); await OpenMenu(); await Capture(_grid.ContextMenu!, "cell-menu");
             Check(Item("设置单元格格式…") is not null && Item("排序与筛选").Items.Count == 4 && Item("选择性粘贴").Items.Count == 4, "Cell menu exposes grouped formatting, data and paste commands");
             await Click("清除内容"); Check(Document.GetCellInput(0, 1, 1) == "", "Cell menu clear command executes"); await History(false);
@@ -129,6 +132,8 @@ public sealed partial class MainWindow
             try { await InsertCopiedAxisAsync(SheetAxis.Row); throw new Exception("Clipboard mismatch unexpectedly accepted"); }
             catch (InvalidOperationException) { Check(Document.Snapshot.Revision == revision, "External clipboard replacement rejects insert-copy without an edit"); }
             _grid.ContextMenu!.Close();
+            await CheckDeleteCellsAsync(Check, Capture);
+            await CheckNamesAsync(directory, Check, Capture);
         }
         catch (Exception ex) { failure = ex; }
         await File.WriteAllTextAsync(Path.Combine(directory, "result.json"), JsonSerializer.Serialize(new { passed = failure is null, checks, error = failure?.ToString() }, new JsonSerializerOptions { WriteIndented = true }));
