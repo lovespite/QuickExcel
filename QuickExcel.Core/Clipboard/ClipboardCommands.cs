@@ -23,6 +23,7 @@ public sealed class WorkbookClipboard
             return new CellSnapshot(cell.Content.WithStyle(sheet.GetStyleId(row, column)), cell.Calculation, cell.SpillOwner);
         })).ToImmutableArray();
         MergedCells = sheet.MergedCells.Select(CellRectangle.Parse).Where(m => ValidationSafety.Overlaps(m, range)).ToImmutableArray();
+        IgnoredErrors = IgnoredErrorRanges.Clip(sheet.Data.IgnoredErrors, range);
         HasAnnotations = sheet.Annotations.Links.Keys.Concat(sheet.Annotations.Notes.Keys).Any(p => range.Contains(p.Row, p.Column));
         HasConditionalFormats = sheet.Data.ConditionalFormats.Any(r => r.Ranges.Any(a => ValidationSafety.Overlaps(a, range))) ||
             snapshot.FileState?.CompatibilityDiagnostics.Any(d => d.Feature.Contains("conditionalFormatting", StringComparison.OrdinalIgnoreCase)) == true;
@@ -42,6 +43,7 @@ public sealed class WorkbookClipboard
     public bool HasConditionalFormats { get; }
     public ImmutableArray<CellSnapshot> Cells { get; }
     public ImmutableArray<CellRectangle> MergedCells { get; }
+    public ImmutableArray<WorksheetIgnoredError> IgnoredErrors { get; }
 
     public static WorkbookClipboard Capture(WorkbookSnapshot snapshot, SheetId sheetId, CellRectangle range, bool cut = false)
     {
@@ -176,10 +178,24 @@ public sealed class PasteCellsCommand(WorkbookClipboard clipboard, SheetId sheet
             var merged = draft.Snapshot;
             foreach (var merge in copiedMerges)
                 merged = new MergeCellsCommand(sheetId, merge) { PreserveCoveredContent = true }.Prepare(merged).Snapshot;
-            if (!mergeChanged && draft.Changes.IsEmpty && !draft.StructureChanged)
-                return new(snapshot, [], false, CalculationUnchanged: mode == CellPasteMode.Formats);
             draft = draft with { Snapshot = merged, StructureChanged = draft.StructureChanged || mergeChanged };
         }
+        if (mode == CellPasteMode.All)
+        {
+            var copiedErrors = clipboard.IgnoredErrors.Select(e => e with { Range = fill ? output : transpose
+                ? new CellRectangle(output.Top + e.Range.Left - clipboard.Range.Left, output.Left + e.Range.Top - clipboard.Range.Top,
+                    output.Top + e.Range.Right - clipboard.Range.Left, output.Left + e.Range.Bottom - clipboard.Range.Top)
+                : e.Range.Offset(output.Top - clipboard.Range.Top, output.Left - clipboard.Range.Left) });
+            var currentSheet = draft.Snapshot.GetSheet(sheetId);
+            var ignored = IgnoredErrorRanges.Replace(currentSheet.Data.IgnoredErrors, output, copiedErrors);
+            if (!ignored.SequenceEqual(currentSheet.Data.IgnoredErrors))
+            {
+                var updated = currentSheet.WithData(currentSheet.Data with { IgnoredErrors = ignored });
+                draft = draft with { Snapshot = draft.Snapshot.WithSheets(draft.Snapshot.Sheets.Select(s => s.Id == sheetId ? updated : s)), StructureChanged = true };
+            }
+        }
+        if (copyMergeFormat && !mergeChanged && draft.Changes.IsEmpty && !draft.StructureChanged)
+            return new(snapshot, [], false, CalculationUnchanged: mode == CellPasteMode.Formats);
         return mode == CellPasteMode.Formats ? draft with { CalculationUnchanged = !mergeChanged } : draft;
     }
 

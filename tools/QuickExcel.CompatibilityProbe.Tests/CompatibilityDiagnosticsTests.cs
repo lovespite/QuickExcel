@@ -83,8 +83,29 @@ public sealed partial class CompatibilityProbeTests
         Assert.Equal(1030, snapshot.Sheets[0].Cells.Count);
         Assert.Contains(snapshot.FileState!.CompatibilityDiagnostics, d => d.Code == "report.locations-truncated");
         Assert.Equal(1025, snapshot.FileState.CompatibilityDiagnostics.Length);
+        Assert.Equal(1030, CompatibilityDiagnosticCollector.Summarize(snapshot.FileState.CompatibilityDiagnostics
+            .Where(d => d.TypeFeature == "text/phonetic")).Rows.Count);
         using var session = new DocumentSession(snapshot);
         session.Execute(new SetCellsCommand([new(new(snapshot.Sheets[0].Id, 1029, 0), CellContent.FromLiteral(CellValue.FromText("changed")))]));
         Assert.Throws<WorkbookCompatibilityException>(() => new TypedWorkbookStorage().Save(Path.Combine(directory, "blocked.xlsq"), session.Snapshot));
+    }
+    [Fact]
+    public void UnsupportedFeatureFirstSeenAfterLocationCapRemainsInReportAndSaveGuard()
+    {
+        var parts = ReadParts(Fixture("roster").Bytes);
+        FixtureCatalog.Edit(parts, "xl/worksheets/sheet1.xml", root => root.Element(Main + "sheetData")!.ReplaceNodes(
+            Enumerable.Range(1, 1030).Select(row => new XElement(Main + "row", new XAttribute("r", row),
+                row == 1030 ? new XAttribute("futureRowSetting", "1") : null,
+                new XElement(Main + "c", new XAttribute("r", "A" + row), new XAttribute("t", "inlineStr"),
+                    new XElement(Main + "is", new XElement(Main + "t", "plain"), new XElement(Main + "rPh", new XAttribute("sb", 0), new XAttribute("eb", 1), new XElement(Main + "t", "phonetic"))))))));
+        var folder = NewEvidenceDirectory(); Directory.CreateDirectory(folder);
+        var path = Path.Combine(folder, "late-feature.xlsx"); File.WriteAllBytes(path, Zip(parts));
+        var storage = new TypedWorkbookStorage(); var model = storage.Open(path);
+        var late = Assert.Single(model.FileState!.CompatibilityDiagnostics, d => d.TypeFeature == "row/@futureRowSetting");
+        Assert.Equal(1, late.Summary!.Rows.Count);
+        Assert.Contains(new CompatibilityRowSpan(model.Sheets[0].Name, 1030, 1030), late.Summary.Rows.Spans);
+        using var session = new DocumentSession(model);
+        session.Execute(new RenameSheetCommand(model.Sheets[0].Id, "Changed"));
+        Assert.Throws<WorkbookCompatibilityException>(() => storage.Save(Path.Combine(folder, "blocked.xlsx"), session.Snapshot));
     }
 }

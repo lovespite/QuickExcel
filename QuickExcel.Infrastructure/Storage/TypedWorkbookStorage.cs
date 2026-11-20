@@ -23,6 +23,8 @@ public sealed partial class TypedWorkbookStorage : IWorkbookSaveStateStorage, IW
 {
     private static readonly string[] Features = ["typed-workbook", "stable-sheet-ids", "script-modules"];
     private static bool HasExtendedErrors(WorkbookSnapshot snapshot) => snapshot.Sheets.Any(s => s.Cells.Values.Any(c => c.Value is { Kind: CellValueKind.Error, ErrorCode: CellErrorCode.Calculation or CellErrorCode.Spill }));
+    private static bool HasExcelMetadata(WorkbookSnapshot snapshot) => snapshot.Sheets.Any(s =>
+        s.Data.DefaultRowDescent is not null || s.Data.PhoneticProperties is not null || !s.Data.IgnoredErrors.IsEmpty || s.Rows.Values.Any(r => r.Descent is not null));
     public WorkbookSnapshot Open(string path) => Open(path, CancellationToken.None);
     public WorkbookSnapshot Open(string path, CancellationToken cancellationToken)
     {
@@ -89,7 +91,7 @@ public sealed partial class TypedWorkbookStorage : IWorkbookSaveStateStorage, IW
                     declaredPivots = features.Contains("worksheet-pivots");
                     declaredStrict = features.Contains("strict-ooxml");
                     declaredThreads = features.Contains("preserved-threaded-comments");
-                    if (features.Distinct().Count() != features.Length || Features.Except(features).Any() || features.Except(Features.Concat([ScriptCompilationCache.Feature, "script-storage", "strict-ooxml", "preserved-threaded-comments", "worksheet-pivots", "dynamic-arrays", "typescript-sources", "virtual-files", "script-actions", "script-signatures", "workbook-views", "worksheet-printing", "preserved-formulas", "cell-text-annotations", "worksheet-data", "worksheet-tables", "worksheet-validation", "worksheet-conditional-formatting", "worksheet-outline", "text-compatibility-v2", "extended-cell-errors", "drawing-anchors", "drawing-transforms", "worksheet-protection", "worksheet-charts", "worksheet-charts-v2", "chart-filters", "worksheet-default-width", "extended-capacity"])).Any() ||
+                    if (features.Distinct().Count() != features.Length || Features.Except(features).Any() || features.Except(Features.Concat([ScriptCompilationCache.Feature, "script-storage", "strict-ooxml", "preserved-threaded-comments", "worksheet-pivots", "dynamic-arrays", "typescript-sources", "virtual-files", "script-actions", "script-signatures", "workbook-views", "worksheet-printing", "preserved-formulas", "cell-text-annotations", "worksheet-data", "worksheet-tables", "worksheet-validation", "worksheet-conditional-formatting", "worksheet-outline", "text-compatibility-v2", "extended-cell-errors", "drawing-anchors", "drawing-transforms", "worksheet-protection", "worksheet-charts", "worksheet-charts-v2", "chart-filters", "worksheet-default-width", "worksheet-excel-metadata", "extended-capacity"])).Any() ||
                         features.Contains("script-actions") && scriptApiVersion < 2)
                         throw new InvalidDataException(MessageText.Get("XLSQ 缺少必要能力或包含未知必需能力。"));
                     var referenced = new HashSet<string>(StringComparer.Ordinal) { "manifest.json" };
@@ -372,6 +374,7 @@ public sealed partial class TypedWorkbookStorage : IWorkbookSaveStateStorage, IW
             .Concat(XlsxStrict.SourceIsStrict(snapshot, cancellationToken) ? ["strict-ooxml"] : [])
             .Concat(snapshot.Sheets.Any(s => !s.Data.ThreadComments.IsEmpty) || snapshot.FileState?.PreservedAttachments.Any(a => a.Feature == ExtendedObjectSafety.ThreadedComments) == true ? ["preserved-threaded-comments"] : [])
             .Concat(snapshot.Sheets.Any(s => s.Data.DefaultColumnWidth is not null) ? ["worksheet-default-width"] : [])
+            .Concat(HasExcelMetadata(snapshot) ? ["worksheet-excel-metadata"] : [])
             .Concat(snapshot.Styles.Length > 4096 || snapshot.Sheets.Any(s => s.UsedRowCount > 100_000 || s.UsedColumnCount > 1024 || s.Rows.Keys.Any(r => r >= 100_000) || s.Columns.Keys.Any(c => c >= 1024)) ? ["extended-capacity"] : [])
             .Concat(snapshot.Sheets.Any(s => s.Images.Any(i => i.Anchor.Rotation != 0) || s.Data.Charts.Any(c => c.Anchor.Rotation != 0)) ? ["drawing-transforms"] : [])
             .Concat(snapshot.Sheets.Any(s => s.Data.Charts.Any(c => c.Series.Any(series => series.IsFiltered || !series.HiddenPoints.IsEmpty))) ? ["chart-filters"] : [])
@@ -529,7 +532,7 @@ public sealed partial class TypedWorkbookStorage : IWorkbookSaveStateStorage, IW
             var a = left.Sheets[i]; var b = right.Sheets[i];
             if (a.Name != b.Name || a.View != b.View || a.Visibility != b.Visibility || !a.Printing.ContentEquals(b.Printing) || !a.Annotations.ContentEquals(b.Annotations) || !a.Data.ContentEquals(b.Data, allowRowHeightRounding) || a.ShowGridLines != b.ShowGridLines || !SameHeight(a.DefaultRowHeight ?? 31, b.DefaultRowHeight ?? 31) || a.TabColor != b.TabColor ||
                 !a.MergedCells.SequenceEqual(b.MergedCells) || a.Cells.Count != b.Cells.Count || a.Rows.Count != b.Rows.Count || a.Columns.Count != b.Columns.Count || a.Images.Length != b.Images.Length) return false;
-            if (a.Rows.Any(p => !b.Rows.TryGetValue(p.Key, out var value) || value.Hidden != p.Value.Hidden || value.OutlineLevel != p.Value.OutlineLevel || value.Collapsed != p.Value.Collapsed || value.StyleId != p.Value.StyleId || value.ApplyStyle != p.Value.ApplyStyle ||
+            if (a.Rows.Any(p => !b.Rows.TryGetValue(p.Key, out var value) || value.Hidden != p.Value.Hidden || value.Descent != p.Value.Descent || value.OutlineLevel != p.Value.OutlineLevel || value.Collapsed != p.Value.Collapsed || value.StyleId != p.Value.StyleId || value.ApplyStyle != p.Value.ApplyStyle ||
                     !SameHeight(value.Height, p.Value.Height)) || a.Columns.Any(p => !b.Columns.TryGetValue(p.Key, out var value) || value != p.Value)) return false;
             foreach (var (position, cell) in a.Cells)
                 if (!b.Cells.TryGetValue(position, out var value) || !SameContent(cell.Content, value.Content) ||

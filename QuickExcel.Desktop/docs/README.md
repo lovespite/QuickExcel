@@ -1,5 +1,9 @@
 # QuickExcel 架构与实施文档
 
+2026-11-20：[统一数据导入导出](86-data-import-export.md) 说明 XLSX 工作表选择与重名处理、CSV/TSV、通用 SQL（ODBC）及 SQLite 文件的统一入口、事务和验证边界。
+
+2026-11-20：[GitHub Actions 发布](85-github-actions-release.md) 定义 Windows x64 / macOS arm64 标签触发构建、生产自检、校验和与 GitHub Release 草稿发布流程；Linux 暂不参与。
+
 2026-11-03：[JSC 单引擎替换与 TypeScript 接入方案](70-jsc-typescript-migration-plan.md) 已完成 J0–J6，JSC 已是唯一生产引擎，Windows 默认包已激活为 `0.6.0-preview.8`；同步模块、中断、隔离编译、TS 原文/签名、Source Map 和桌面流程已有实测。**64 MiB 引擎硬限额以 `JSC-MEM-001` 保持开放，用户延期，不阻止后续推进。** 来源、预算和原始证据见 [实施记录](71-jsc-typescript-implementation-log.md)。两平台隔离、恢复、发布和独立性能证据已记录，完整回退包和回退验证见 71 号记录。
 
 2026-11-03：[Avalonia 迁移](61-avalonia-migration-plan.md) **A0–A5 工程完成，A6 实施中**。默认入口已切换 Avalonia，Windows 发布与 WPF 回退见 [66 号记录](66-avalonia-windows-release.md)。实机项目按用户要求延期；Linux 中文输入无候选框仍未解决，非 Windows 完整支持尚未完成。

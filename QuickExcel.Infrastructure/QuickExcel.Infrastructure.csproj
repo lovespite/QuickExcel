@@ -8,6 +8,8 @@
   <ItemGroup>
     <PackageReference Include="AngleSharp" Version="[1.9.1]" />
     <PackageReference Include="OpenMcdf" Version="[3.4.0]" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="[10.0.15]" />
+    <PackageReference Include="System.Data.Odbc" Version="[10.0.15]" />
     <EmbeddedResource Include="Storage/BuiltinTableStyles.xml" />
     <EmbeddedResource Include="Storage/DefaultTableTheme.xml" />
     <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="10.0.0" />

@@ -32,8 +32,8 @@ macOS 沿用已经实现的原始目录分发路径，**没有 Developer ID 签�
 
 ## 构建与校验
 
-- Windows 使用 `windows-2025`，macOS 使用 `macos-26` arm64。SDK 在仓库 `artifacts/tools` 下独立安装为 .NET 10.0.404，避免 runner 自带的新主版本 SDK 参与；Node 22、Python 3.13。原生源版本和哈希继续由 `tools/QuickExcel.JscProbe` 的清单锁定。
-- 只缓存经哈希验证的上游下载归档；不缓存已修改的源目录、原生构建目录或生产包。原生构建默认并行度为 2，以适配标准 runner 内存。首次完整构建可能较慢，构建 job 上限为 350 分钟。
+- Windows 构建使用 `windows-2022`（保留 Visual Studio 2022 / v143 14.44），macOS 使用 `macos-26` arm64。SDK 在仓库 `artifacts/tools` 下独立安装为 .NET 10.0.404，避免 runner 自带的新主版本 SDK 参与；Node 22、Python 3.13。原生源版本和哈希继续由 `tools/QuickExcel.JscProbe` 的清单锁定。
+- 显式安装 CMake 4.2.1 / Ninja 1.13.0，避免 Windows runner 自带 CMake 3.x 的差异。只跨运行缓存经哈希验证的上游下载归档；不缓存已修改的源目录、原生构建目录或生产包。原生构建默认并行度为 2，以适配标准 runner 内存。首次完整构建可能较慢，构建 job 上限为 350 分钟。
 - Windows 使用现有 `build-avalonia-release.ps1 -SkipTests -RunSmoke`，独立发布 Native AOT worker，检查禁入产物及 Web 资源，执行生产自检，并将发布 worker 路径传入定向测试。CI 不修改本机活动包指针。
 - macOS 构建 JSC 和原生 Seatbelt launcher/library，然后使用现有 Unix 发布脚本，执行生产自检和 macOS worker/策略相关测试，最后使用 `archive-unix-package.py` 保留可执行权限并验证归档内容。
 - 两个平台从校验 job 解析出的相同 Git 提交构建。发布 job 再次验证标签、两个压缩包、校验文件及 GitHub 上传摘要。不会因某个平台失败而发布另一个平台的半成品。

@@ -73,13 +73,18 @@ public sealed class CompatibilityReportTests
     }
 
     [Fact]
-    public void FormulaDiagnosticsAreBoundedAndExplicitAboutUninspectedCells()
+    public void FormulaDiagnosticsBoundSamplesButCountAllRowsAndLaterFeatureTypes()
     {
-        var snapshot = Model(Enumerable.Repeat("=UNKNOWN_FN(1)", 1030).ToArray());
+        var snapshot = Model(Enumerable.Repeat("=UNKNOWN_FN(1)", 1030).Append("=SUM(").ToArray());
         var report = TypedWorkbookStorage.InspectCompatibility(snapshot);
-        Assert.Equal(1024, report.Diagnostics.Count(d => d.Code == "formula.unsupported-function"));
-        Assert.Contains(report.Diagnostics, d => d.Code == "report.formulas-truncated");
-        Assert.Contains(report.Diagnostics, d => d.Code == "formula.cache-summary" && d.Message.Contains("1030 个公式"));
+        Assert.True(report.Diagnostics.Count(d => d.Range is not null) <= 1024);
+        Assert.Contains(report.Diagnostics, d => d.Code == "report.locations-truncated");
+        Assert.Contains(report.Diagnostics, d => d.Code == "formula.cache-summary" && d.Message.Contains("1031 个公式"));
+        var group = Assert.Single(CompatibilityReportPresentation.Create(report, false).Groups, g => g.Kind == CompatibilityKind.CannotCalculate);
+        Assert.Equal(2, group.Items.Count);
+        Assert.Equal(1031, group.AffectedRowCount);
+        Assert.Equal(1030, Assert.Single(group.Items, item => item.Code == "formula.unsupported-function").AffectedRowCount);
+        Assert.Equal(1, Assert.Single(group.Items, item => item.Code == "formula.unsupported-syntax").AffectedRowCount);
         using var cancelled = new CancellationTokenSource();
         cancelled.Cancel();
         Assert.Throws<OperationCanceledException>(() => TypedWorkbookStorage.InspectCompatibility(snapshot, cancelled.Token));
@@ -112,7 +117,7 @@ public sealed class CompatibilityReportTests
                 "未建模属性 font/outline", "xl/styles.xml", "模板", "B2")
         });
         var view = CompatibilityReportPresentation.Create(report, saveMode: true);
-        Assert.Contains("2 处内容无法在编辑后保留", view.Headline);
+        Assert.Contains("2 类内容无法在编辑后保留", view.Headline);
         Assert.Contains("原文件不会被修改", view.Summary);
         var group = Assert.Single(view.Groups);
         Assert.Equal(CompatibilityKind.PotentialLoss, group.Kind);
@@ -133,7 +138,7 @@ public sealed class CompatibilityReportTests
             new("text.attachments-preserved", CompatibilityKind.PreservedOnly, "超链接和传统批注", "附件可保存")]);
         var view = CompatibilityReportPresentation.Create(report, saveMode: true);
         Assert.Equal(1, view.LossCount);
-        Assert.Contains("1 处内容无法在编辑后保留", view.Headline);
+        Assert.Contains("1 类内容无法在编辑后保留", view.Headline);
         Assert.Contains("“潜在损失”", view.Summary);
         var preserved = Assert.Single(view.Groups, group => group.Kind == CompatibilityKind.PreservedOnly);
         Assert.Equal(2, preserved.Items.Count);
@@ -162,7 +167,8 @@ public sealed class CompatibilityReportTests
             "未建模属性 font/outline", "xl/styles.xml", "诊断", index == 0 ? "A1" : "B2")).ToArray();
         var item = Assert.Single(Assert.Single(CompatibilityReportPresentation
             .Create(new WorkbookCompatibilityReport(true, diagnostics), saveMode: false).Groups).Items);
-        Assert.Equal(2, item.Count);
+        Assert.Equal(1, item.Count);
+        Assert.Equal(2, item.AffectedRowCount);
         Assert.Contains("诊断 · A1 · xl/styles.xml", item.Location);
         Assert.Contains("诊断 · B2 · xl/styles.xml", item.Location);
         Assert.Contains("不会按原样写入", item.Impact);

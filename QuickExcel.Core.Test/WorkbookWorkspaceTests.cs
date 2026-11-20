@@ -10,6 +10,25 @@ namespace QuickExcel.Core.Test;
 public sealed class WorkbookWorkspaceTests : IDisposable
 {
     [Fact]
+    public async Task ImportedCopyRequiresSaveBeforeFirstEditAndDoesNotBindSource()
+    {
+        using var workspace = Create();
+        var source = FilePath("import-source.xlsx");
+        _storage.Save(source, Book(Sheet("Imported")));
+        var bytes = File.ReadAllBytes(source);
+        var imported = _storage.Open(source);
+        workspace.Import(imported);
+        Assert.True(workspace.Document.IsDirty);
+        Assert.False(workspace.Document.CanUndo);
+        Assert.False(workspace.Document.ScriptsEnabled);
+        Assert.Null(workspace.FilePath);
+        Assert.Null(workspace.Version);
+        await workspace.SaveAsync(new(FilePath("import-copy.xlsx")));
+        Assert.False(workspace.Document.IsDirty);
+        Assert.Equal(bytes, File.ReadAllBytes(source));
+    }
+
+    [Fact]
     public void DefaultMainIsInitializationAndNeverAnAction()
     {
         using var workspace = new WorkbookWorkspace(new(_storage, new WorkbookCalculator(new ScriptWorkerRuntimeFactory()),

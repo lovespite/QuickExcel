@@ -24,6 +24,7 @@ public sealed class TextImportTests
     {
         var rows = TextImportReader.Read(Encoding.UTF8.GetBytes("00123456789012345678,=1+1,\"中文\n文字\",\r\n"), ',', TextFileEncoding.Utf8);
         var result = TextImport.Convert(rows, Enumerable.Repeat(CleaningColumnType.Text, 4).ToArray(), new());
+        Assert.Equal(4, result.Workbook.ScriptModules.ScriptApiVersion);
         var sheet = result.Workbook.Sheets[0];
         Assert.Equal("00123456789012345678", sheet.GetCell(0, 0)!.Value.TextValue);
         Assert.Equal(CellContentKind.Literal, sheet.GetCell(0, 1)!.Content.Kind);

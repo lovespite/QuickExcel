@@ -37,6 +37,7 @@ public static class TextImport
                 { throw new ArgumentException(MessageText.Format($"第 {row + 1} 行，第 {column + 1} 列：{ex.Message}"), ex); }
             }
         }
-        return new(new(Guid.NewGuid(), 0, dates, [new(SheetId.New(), "Sheet1", cells)], styles: styles), notices.ToArray(), rows.Count, columns);
+        return new(new(Guid.NewGuid(), 0, dates, [new(SheetId.New(), "Sheet1", cells)], styles: styles,
+            scriptModules: ScriptModuleSet.Single("", ScriptModuleSet.CurrentApiVersion)), notices.ToArray(), rows.Count, columns);
     }
 }

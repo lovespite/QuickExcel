@@ -64,7 +64,7 @@ public static class SubtotalCommands
             if (priorRows.Values.Any(r => r.OutlineLevel >= 7)) throw new InvalidOperationException(MessageText.Get("追加汇总会超过 7 层大纲。"));
             book = ClearOutline(book, sheet); sheet = book.GetSheet(sheetId);
         }
-        if (!(sheet.Data with { ConditionalFormats = [], Outline = null, DefaultColumnWidth = null }).IsEmpty || WorksheetOutline.HasGroups(sheet) || sheet.Rows.Values.Any(r => r.Hidden) || sheet.Columns.Values.Any(c => c.Hidden) ||
+        if (!(sheet.Data with { ConditionalFormats = [], Outline = null, DefaultColumnWidth = null, DefaultRowDescent = null, PhoneticProperties = null }).IsEmpty || WorksheetOutline.HasGroups(sheet) || sheet.Rows.Values.Any(r => r.Hidden) || sheet.Columns.Values.Any(c => c.Hidden) ||
             book.Sheets.Any(s => !s.Data.Validations.IsEmpty) ||
             SubtotalFunctions.HasUnmodeledFilters(book))
             throw new NotSupportedException(MessageText.Get("分类汇总需要无筛选、表、验证、手动分组、隐藏行列或未建模对象的普通区域；整批操作未应用。"));

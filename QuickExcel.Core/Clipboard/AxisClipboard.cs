@@ -29,8 +29,9 @@ public sealed class AxisClipboard
         if (sheet.Annotations.Links.Keys.Concat(sheet.Annotations.Notes.Keys).Any(p => full.Contains(p.Row, p.Column)) ||
             sheet.Data.Validations.Any(v => v.Ranges.Any(r => ValidationSafety.Overlaps(r, full))) ||
             sheet.Data.ConditionalFormats.Any(v => v.Ranges.Any(r => ValidationSafety.Overlaps(r, full))) ||
+            sheet.Data.IgnoredErrors.Any(e => ValidationSafety.Overlaps(e.Range, full)) ||
             sheet.Data.Tables.Any(t => ValidationSafety.Overlaps(t.Range, full)) || WorksheetOutline.HasGroups(sheet))
-            throw new NotSupportedException(MessageText.Get("复制整行列涉及链接、批注、验证、条件格式、表格或分组，尚不能完整复制其附件；操作未应用。"));
+            throw new NotSupportedException(MessageText.Get("复制整行列涉及链接、批注、验证、条件格式、忽略错误提示、表格或分组，尚不能完整复制其附件；操作未应用。"));
         var extent = 0;
         foreach (var position in sheet.Cells.Keys.Where(p => full.Contains(p.Row, p.Column)))
             extent = Math.Max(extent, row ? position.Column : position.Row);
@@ -76,7 +77,7 @@ public sealed class InsertCopiedAxisCommand(AxisClipboard source, SheetId sheetI
         for (var offset = 0; offset < source.Count; offset++)
         {
             if (row)
-            { var metadata = original.Rows.GetValueOrDefault(source.First + offset) ?? new(); rows[index + offset] = metadata with { Height = metadata.Height ?? original.DefaultRowHeight }; }
+            { var metadata = original.Rows.GetValueOrDefault(source.First + offset) ?? new(); rows[index + offset] = metadata with { Height = metadata.Height ?? original.DefaultRowHeight, Descent = metadata.Descent ?? original.Data.DefaultRowDescent }; }
             else
             { var metadata = original.Columns.GetValueOrDefault(source.First + offset) ?? new(); columns[index + offset] = metadata with { Width = metadata.Width ?? original.Data.DefaultColumnWidth ?? 8.43 }; }
         }

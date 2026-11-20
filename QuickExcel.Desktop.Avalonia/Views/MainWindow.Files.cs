@@ -22,9 +22,9 @@ public sealed partial class MainWindow
         InstallCalendarRefresh();
         InstallFormulaAudit();
         InstallRecovery();
-        var textImport = new MenuItem { Header = UiText.Get("导入 CSV / TSV…") };
-        textImport.Click += async (_, _) => await PerformAsync(ImportTextAsync);
-        ((MenuItem)_menu.Items[0]!).Items.Add(textImport);
+        var transfer = CommandMenu(UiText.Get("数据导入 / 导出…"), DataTransferAsync, requiresWorkbook: false, mutation: false);
+        ((MenuItem)_menu.Items[0]!).Items.Insert(8, transfer);
+        RibbonGroup(UiText.Get("数据"), UiText.Get("导入 / 导出"), RibbonButton(RibbonIcon.ExportValues, UiText.Get("数据导入 / 导出…"), DataTransferAsync, false));
         RibbonGroup(UiText.Get("审阅"), UiText.Get("文件兼容性"), RibbonButton(RibbonIcon.Compatibility, UiText.Get("兼容性报告"), CompatibilityAsync, false), RibbonButton(RibbonIcon.ExportValues, UiText.Get("导出值快照"), () => ExportAsync(false), false), RibbonButton(RibbonIcon.ExportFormulas, UiText.Get("导出可移植公式"), () => ExportAsync(true), false));
     }
     private async Task RecoveryAsync()
@@ -67,14 +67,15 @@ public sealed partial class MainWindow
             var content = new StackPanel { Spacing = 12 }; content.Children.Add(new TextBlock { Text = group.Summary, TextWrapping = TextWrapping.Wrap });
             content.Children.Add(new ListBox { MaxHeight = 260, ItemsSource = group.Items,
                 ItemTemplate = new FuncDataTemplate<CompatibilityIssueView>((item, _) => new TextBlock
-                { Text = item is null ? "" : UiText.Format($"{item.Feature} · {item.Location}\n{item.Detail}\n{item.Impact} · {item.Count} 处"), TextWrapping = TextWrapping.Wrap, Margin = new(0, 4) }) });
-            groups.Children.Add(new Expander { Header = UiText.Format($"{group.Label}（{group.Items.Sum(item => item.Count)} 处）"), IsExpanded = group.ExpandedByDefault, Content = content });
+                { Text = item is null ? "" : UiText.Format($"{item.Feature} · {item.Location}\n{item.Detail}\n{item.Impact}\n{CompatibilityReportPresentation.RowSummary(item.Coverage)}"), TextWrapping = TextWrapping.Wrap, Margin = new(0, 4) }) });
+            groups.Children.Add(new Expander { Header = UiText.Format($"{group.Label}（{group.Items.Count} 类）") + " · " + CompatibilityReportPresentation.RowSummary(group.Coverage), IsExpanded = group.ExpandedByDefault, Content = content });
         }
         root.Children.Add(new ScrollViewer { Content = groups }); window.Content = root; return ShowOwnedAsync<CompatibilitySaveDecision>(window);
     }
     private async Task ExportAsync(bool portable)
     {
         if (!await FlushEditsAsync()) return;
+        var document = Document;
         var snapshot = Document.Snapshot; var formulas = snapshot.Sheets.SelectMany(s => s.Cells.Values).Where(c => c.Content.Kind == CellContentKind.Formula).ToArray();
         var missing = formulas.Count(c => c.Calculation?.Value is null);
         var stale = formulas.Count(c => c.Calculation?.Value is not null && (c.Calculation.InputRevision != snapshot.Revision || c.Calculation.State is not (CalculationState.Fresh or CalculationState.Error)));
@@ -96,6 +97,7 @@ public sealed partial class MainWindow
         var selected = await _files.SaveAsync(new(UiText.Get("导出工作簿副本"), [new(UiText.Get("Excel 工作簿"), ["*.xlsx"])],
             Path.GetFileNameWithoutExtension(_workspace.FilePath ?? UiText.Get("未命名")) + (portable ? UiText.Get("-公式.xlsx") : UiText.Get("-结果.xlsx")), ".xlsx"));
         if (selected is null) return;
+        RequireTransferDocument(document, snapshot.Revision);
         await _workspace.ExportAsync(selected, portable, stale > 0 || stalePivots>0, losses.Length > 0); _status.Text = UiText.Get("已导出 ") + selected.Path;
     }
 }

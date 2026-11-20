@@ -55,6 +55,30 @@ public sealed partial class CompatibilityProbeTests
         Assert.Equal(1025, model.FileState!.CompatibilityDiagnostics.Length);
         Assert.Contains(model.FileState.CompatibilityDiagnostics, d => d.Code == "report.locations-truncated");
         Assert.True(model.FileState.CompatibilityIssues.Length < 10);
+        var summary = CompatibilityDiagnosticCollector.Summarize(model.FileState.CompatibilityDiagnostics
+            .Where(d => d.TypeFeature == "text/phonetic"));
+        Assert.Equal(1030, summary.Rows.Count);
+        Assert.True(summary.LocationsTruncated);
+    }
+    [Fact]
+    public void SharedSourcesBeyondLocationSampleCapStillExpandToEveryAffectedRow()
+    {
+        var parts = ReadParts(SharedDiagnosticFixture(3));
+        FixtureCatalog.Edit(parts, "xl/sharedStrings.xml", root => root.ReplaceNodes(Enumerable.Range(0, 1030)
+            .Select(index => new XElement(Main + "si", new XElement(Main + "t", "shared " + index),
+                new XElement(Main + "rPh", new XAttribute("sb", 0), new XAttribute("eb", 1), new XElement(Main + "t", "phonetic"))))));
+        FixtureCatalog.Edit(parts, "xl/worksheets/sheet1.xml", root =>
+        {
+            foreach (var value in root.Descendants(Main + "v")) value.Value = "1029";
+        });
+        var folder = NewEvidenceDirectory(); Directory.CreateDirectory(folder);
+        var path = Path.Combine(folder, "late-shared-source.xlsx"); File.WriteAllBytes(path, Zip(parts));
+        var model = new TypedWorkbookStorage().Open(path);
+        var summary = CompatibilityDiagnosticCollector.Summarize(model.FileState!.CompatibilityDiagnostics
+            .Where(d => d.TypeFeature == "text/phonetic"));
+        Assert.Equal(3, summary.Rows.Count);
+        Assert.Contains(new CompatibilityRowSpan("数据", 1, 3), summary.Rows.Spans);
+        Assert.True(summary.LocationsTruncated);
     }
     [Fact]
     public void NamedBaseStyleWarningsFollowCellXfAssociations()

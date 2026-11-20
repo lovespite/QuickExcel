@@ -31,7 +31,7 @@ public sealed partial class TypedWorkbookStorage
                 [new("*", "preserve-package", "工作簿内容未变，原 XLSX 整包保留；脚本另由 XLSQ 保存。")];
         var result = new List<WorkbookSavePart>
         {
-            new("xl/workbook.xml; xl/worksheets/*; relationships", "rebuild", "由当前模型重建工作表、公式、名称、行列与关系。"),
+            new("xl/workbook.xml; xl/worksheets/*; relationships", "rebuild", "由当前模型重建工作表、公式、名称、行列与关系；保留已验证的 Excel 版本/标识、行排版、拼音字体和错误提示范围。"),
             new("xl/styles.xml; xl/theme/*", "validated-preserve-or-rebuild", "仅保留已验证的命名样式、XF 与主题；单格修改追加组件。")
         };
         result.AddRange(XlsxMetadata.Plan(snapshot));

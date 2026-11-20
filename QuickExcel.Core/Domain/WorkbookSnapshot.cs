@@ -88,6 +88,8 @@ public sealed record RowMetadata
         this.ApplyStyle = ApplyStyle ?? StyleId != 0;
     }
     public double? Height { get; init; }
+    /// <summary>Excel's inert x14ac:dyDescent layout hint; retained independently of the row height.</summary>
+    public double? Descent { get; init; }
     public bool Hidden { get; init; }
     public int StyleId { get; init; }
     /// <summary>Independent of the index: an active style 0 overrides column formatting.</summary>
@@ -171,6 +173,8 @@ public sealed class WorksheetSnapshot
             ArgumentNullException.ThrowIfNull(metadata);
             ArgumentOutOfRangeException.ThrowIfNegative(metadata.StyleId);
             WorkbookLimits.ValidateDimension(metadata.Height, nameof(rows));
+            if (metadata.Descent is { } descent && (!double.IsFinite(descent) || descent < 0))
+                throw new ArgumentException("Row descent must be finite and nonnegative.", nameof(rows));
             if (metadata.OutlineLevel is < 0 or > 7) throw new ArgumentException(MessageText.Get("行分组最多 7 层。"));
         }
         Columns = columns?.ToImmutableDictionary() ?? ImmutableDictionary<int, ColumnMetadata>.Empty;
@@ -196,6 +200,12 @@ public sealed class WorksheetSnapshot
         Printing = printing ?? new(); Printing.Validate();
         Annotations = annotations ?? new();
         Data = data ?? new();
+        if (Data.DefaultRowDescent is { } defaultDescent && (!double.IsFinite(defaultDescent) || defaultDescent < 0))
+            throw new ArgumentException("Default row descent must be finite and nonnegative.", nameof(data));
+        if (Data.IgnoredErrors.IsDefault || Data.IgnoredErrors.Length > 4096 || Data.IgnoredErrors.Any(e => e is null))
+            throw new ArgumentException("Excel ignored-error ranges exceed the 4096-range budget.", nameof(data));
+        foreach (var ignored in Data.IgnoredErrors) ignored.Validate();
+        Data.PhoneticProperties?.Validate();
         QuickExcel.Core.SetScriptCommentsCommand.Validate(Data.ThreadComments);
         WorkbookLimits.ValidateDimension(Data.DefaultColumnWidth, nameof(data));
         if (Data.ImplicitColumnWidth && Data.DefaultColumnWidth != 8.43) throw new ArgumentException(MessageText.Get("隐式 Excel 默认列宽需要 8.43 字符的布局基准。"), nameof(data));

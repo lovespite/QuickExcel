@@ -15,12 +15,20 @@ public static class CompatibilityReportText
                     : UiText.Get("当前报告未列出格式损失阻止项；保存时仍会执行完整校验。"),
             UiText.Get("文件特性定位对应导入时的部件/工作表/范围；公式诊断对应当前单元格。内置不可计算与保存损失分别报告。")
         };
-        foreach (var group in report.Diagnostics.GroupBy(d => d.Kind).OrderBy(g => g.Key))
+        foreach (var group in report.Diagnostics.Where(d => !d.IsReportNotice).GroupBy(d => d.Kind).OrderBy(g => g.Key))
         {
-            lines.Add(UiText.Format($"【{Label(group.Key)}】{group.Count()} 项"));
-            lines.AddRange(group.Select(d => string.Join(" · ", new[] { d.SheetName, d.Range, d.Part, d.Feature }
-                .Where(s => !string.IsNullOrEmpty(s))) + "：" + d.Message));
+            var types = group.GroupBy(d => (d.TypeCode, d.TypeFeature, d.TypeNamespace)).ToArray();
+            lines.Add(UiText.Format($"【{Label(group.Key)}】{types.Length} 类") + " · " +
+                CompatibilityReportPresentation.RowSummary(CompatibilityDiagnosticCollector.Summarize(group)));
+            foreach (var type in types)
+            {
+                lines.Add(type.Key.TypeFeature + " · " + CompatibilityReportPresentation.RowSummary(CompatibilityDiagnosticCollector.Summarize(type)));
+                lines.AddRange(type.Select(d => string.Join(" · ", new[] { d.SheetName, d.Range, d.Part, d.Feature }
+                    .Where(s => !string.IsNullOrEmpty(s))) + "：" + d.Message));
+            }
         }
+        var notices = report.Diagnostics.Where(d => d.IsReportNotice).Select(d => UiText.Get(d.Message)).Distinct(StringComparer.Ordinal).ToArray();
+        if (notices.Length > 0) lines.Add(UiText.Get("【报告提示】") + "\n" + string.Join("\n", notices));
         return string.Join("\n\n", lines);
     }
 

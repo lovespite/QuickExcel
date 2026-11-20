@@ -1,4 +1,4 @@
-# QuickExcel 4.0.0
+# QuickExcel 4.2.0
 
 QuickExcel 是基于 .NET 10、Avalonia 和 Skia 的桌面电子表格应用，提供自有的类型化 XLSX/XLSQ 存储、增量公式计算，以及在独立沙箱中运行的 JavaScript / TypeScript 脚本。默认交付平台为 Windows x64；Linux x64 与 macOS arm64 的支持范围单独验证。
 
@@ -20,6 +20,12 @@ Windows 发布包自带 .NET 10，运行无需安装 SDK。Monaco 脚本编辑�
 
 开始页或「文件 → 设置」提供文件关联、历史记录、计算、工作表标签位置、脚本禁用选项、脚本 API 浏览器与第三方许可证。
 
+## GitHub Release 自动打包
+
+推送与桌面项目 `Version` 一致的 `vMAJOR.MINOR.PATCH` 标签（例如 `v4.2.0`），[Release Windows and macOS](.github/workflows/release.yml) 会分别构建 Windows x64 ZIP 和 macOS arm64 tar.gz，运行生产包自检与相关 worker 测试，并在两端都成功后自动发布到 GitHub Release，附带 SHA-256 校验文件。也可从 Actions 手动输入已有标签重跑。Linux 暂不参与此发布流程。
+
+macOS 当前交付原始目录压缩包，尚不是 Developer ID 签名、公证的 `.app`。触发方式、产物与失败恢复见 [GitHub Actions 发布说明](QuickExcel.Desktop/docs/85-github-actions-release.md)。
+
 ## 主要功能
 
 以下均指已实现的支持子集，具体参数、容量及文件往返边界以专题文档为准。
@@ -27,6 +33,7 @@ Windows 发布包自带 .NET 10，运行无需安装 SDK。Monaco 脚本编辑�
 | 领域 | 当前能力 |
 | --- | --- |
 | 文件与兼容 | XLSQ v2、XLSX 读写及 Strict OOXML 支持子集；CSV/TSV 导入预览、编码与逐列类型选择、导出；兼容报告、外部文件变更检测和原子保存 |
+| 数据导入导出 | [统一视图](QuickExcel.Desktop/docs/86-data-import-export.md)汇集 XLSX、CSV/TSV、ODBC 数据库和 SQLite 文件；工作表重名预览、当前工作簿导入与撤销、数据库新建/追加及事务写入 |
 | 日常编辑 | 撤销/重做、查找替换、内部复制/剪切、选择性与运算粘贴、可见行复制粘贴、填充/序列、定位条件、工作表与名称管理 |
 | 格式与内容 | 数字格式、样式、合并、冻结/缩放、富文本分段编辑、超链接、传统批注与线程评论、图片和绘图对象 |
 | 数据处理 | 多键排序、颜色/前后 N 项/日期分组筛选、Excel Table 与结构化引用、数据验证、条件格式、分列、去重、快速填充、分组与分类汇总 |

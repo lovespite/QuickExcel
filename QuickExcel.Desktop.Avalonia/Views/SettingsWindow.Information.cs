@@ -170,6 +170,7 @@ internal sealed partial class SettingsWindow
         _page.Children.Add(new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10, Children = { icon, title } });
         _page.Children.Add(Note($"{RuntimeInformation.FrameworkDescription}    ·    {RuntimeInformation.ProcessArchitecture}"));
         _page.Children.Add(Note("Copyright in the original code belongs to its respective authors. QuickExcel has not declared a project-wide open-source license. Third-party components are distributed under their respective licenses."));
+        _page.Children.Add(Note(UiText.Get("数据库导入导出使用 Microsoft.Data.Sqlite、SQLitePCLRaw、SQLite 与 .NET ODBC。许可证及原作者声明收录在下方；ODBC 驱动由用户安装并遵循各自许可。")));
         var files = LicenseFiles(AppContext.BaseDirectory);
         var selector = new ComboBox { Name = "SettingsLicenseSelector", HorizontalAlignment = HorizontalAlignment.Stretch, ItemsSource = files };
         AutomationProperties.SetName(selector, UiText.Get("选择第三方许可证或来源声明"));

@@ -58,6 +58,23 @@ public sealed partial class MainWindow
             var file = Path.Combine(directory, "installation.xlsq");
             await _workspace.SaveAsync(new(file)); await _workspace.OpenAsync(new(file));
             Check(Document.GetCellInput(0, 0, 0) == "安装检查 中文 123", "Typed workbook save/reopen");
+            var database = new DatabaseConnectionOptions(DatabaseProvider.Sqlite, Path.Combine(directory, "installation.sqlite"));
+            var databaseTable = new DatabaseTable("安装检查");
+            var databaseRows = await Task.Run(() => DatabaseTransfer.ExportTable(database, databaseTable,
+                Document.Snapshot, Document.Snapshot.ActiveSheetId, new CellRectangle(0, 0, 0, 0), false));
+            var databaseRead = await Task.Run(() => DatabaseTransfer.ImportTable(database, databaseTable, false));
+            Check(databaseRows == 1 && databaseRead.Workbook.Sheets[0].GetCell(0, 0)?.Value.TextValue == "安装检查 中文 123",
+                "Published SQLite native provider creates, writes and reads Unicode values");
+            using (var metadata = typeof(System.Data.Odbc.OdbcConnection).Assembly.GetManifestResourceStream("System.Data.Odbc.OdbcMetaData.xml")
+                ?? throw new InvalidDataException("Missing ODBC provider metadata"))
+            using (var schema = new System.Data.DataSet())
+            {
+                schema.ReadXml(metadata);
+                Check(schema.Tables["DataSourceInformation"]?.Columns["GroupByBehavior"]?.DataType == typeof(System.Data.Common.GroupByBehavior) &&
+                    schema.Tables["DataSourceInformation"]?.Columns["IdentifierCase"]?.DataType == typeof(System.Data.Common.IdentifierCase) &&
+                    schema.Tables["DataSourceInformation"]?.Columns["SupportedJoinOperators"]?.DataType == typeof(System.Data.Common.SupportedJoinOperators),
+                    "Published ODBC metadata resolves all facade-qualified schema enums without requiring a driver");
+            }
             var exclusive = false;
             try { using var external = File.OpenRead(file); }
             catch (IOException) { exclusive = true; }

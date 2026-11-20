@@ -1,12 +1,49 @@
 """Retain notices and exact corresponding sources/build adjustments for redistribution."""
+import hashlib
 import json
+import urllib.request
 import zipfile
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 REPO = Path(__file__).resolve().parents[2]
 ROOT = REPO / 'artifacts/jsc'
 HERE = Path(__file__).resolve().parent
 OUT = ROOT / 'distribution'
+
+
+def prepare_supplements():
+    """A clean runner has only its own platform's supplemental WebKit files."""
+    pins = json.loads((HERE / 'sources.json').read_text(encoding='utf-8'))
+    source = ROOT / 'source' / ('webkitgtk-' + pins['webkit']['version'])
+    files = []
+    for name in ('windows-sources.json', 'macos-sources.json'):
+        supplement = json.loads((HERE / name).read_text(encoding='utf-8'))
+        if supplement['commit'] != pins['webkit']['commit']:
+            raise ValueError(f'{name} must match the WebKit release commit')
+        for entry in supplement['files']:
+            relative = PurePosixPath(entry['path'])
+            if relative.is_absolute() or '..' in relative.parts or '\\' in entry['path'] or ':' in entry['path']:
+                raise ValueError(f'Invalid supplemental source path: {entry["path"]}')
+            target = source / entry['path']
+            if target.is_symlink() or source.resolve() not in target.resolve().parents:
+                raise ValueError(f'Supplemental source escapes its cache: {target}')
+            if target.exists():
+                data = target.read_bytes()
+            else:
+                url = f"https://raw.githubusercontent.com/WebKit/WebKit/{supplement['commit']}/{entry['path']}"
+                with urllib.request.urlopen(url, timeout=60) as response:
+                    data = response.read()
+            if hashlib.sha256(data).hexdigest() != entry['sha256']:
+                raise ValueError(f'Pinned supplemental source mismatch: {target}')
+            if not target.exists():
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes(data)
+            files.append(target)
+    return files
+
+
+# Fetch and verify both supplements before creating any distributable output.
+supplemental_sources = prepare_supplements()
 OUT.mkdir(exist_ok=True)
 licenses = []
 for origin in (ROOT / 'source/webkitgtk-2.54.2', ROOT / 'source/icu', ROOT / 'typescript/package'):
@@ -25,11 +62,7 @@ with (OUT / 'JSC-THIRD-PARTY-NOTICES.txt').open('w', encoding='utf-8') as target
 with zipfile.ZipFile(OUT / 'JSC-CORRESPONDING-SOURCE.zip', 'w', zipfile.ZIP_DEFLATED) as archive:
     for name in ('webkitgtk-2.54.2.tar.xz', 'icu4c-77_1-src.zip', 'typescript-5.9.3.tgz'):
         archive.write(ROOT / 'downloads' / name, 'archives/' + name, compress_type=zipfile.ZIP_STORED)
-    for entry in json.loads((HERE / 'windows-sources.json').read_text())['files']:
-        path = ROOT / 'source/webkitgtk-2.54.2' / entry['path']
-        archive.write(path, path.relative_to(REPO).as_posix())
-    for entry in json.loads((HERE / 'macos-sources.json').read_text())['files']:
-        path = ROOT / 'source/webkitgtk-2.54.2' / entry['path']
+    for path in supplemental_sources:
         archive.write(path, path.relative_to(REPO).as_posix())
     for path in sorted(HERE.iterdir()):
         if path.suffix in ('.json', '.py', '.ps1', '.sh', '.cmake', '.txt', '.cpp', '.md'):

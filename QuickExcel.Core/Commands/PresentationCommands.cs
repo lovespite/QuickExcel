@@ -63,6 +63,10 @@ public sealed class SortRangeCommand : DocumentCommand
             first = first with { Column = expanded.Left }; last = last with { Column = expanded.Right };
         }
         var dataFirst = first.Row + (_descriptor.HasHeader ? 1 : 0);
+        if (dataFirst <= last.Row && sheet.Data.IgnoredErrors.Any(e =>
+            ValidationSafety.Overlaps(e.Range, new(dataFirst, first.Column, last.Row, last.Column)) &&
+            (e.Range.Top > dataFirst || e.Range.Bottom < last.Row)))
+            throw new NotSupportedException(MessageText.Get("忽略错误提示的区域只覆盖部分待排序行，尚不能安全随排序移动；操作未应用。"));
         if (sheet.Data.ConditionalFormats.Any(r => r.Ranges.Any(a =>
                 ValidationSafety.Overlaps(a, new(dataFirst, first.Column, last.Row, last.Column)) &&
                 (a.Top > dataFirst || a.Bottom < last.Row))) ||

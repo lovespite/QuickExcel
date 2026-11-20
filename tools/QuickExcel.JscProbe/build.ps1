@@ -13,10 +13,37 @@ if ($LASTEXITCODE -ne 0) { throw 'J0 input verification failed.' }
 if ($LASTEXITCODE -ne 0) { throw 'TypeScript payload preparation failed.' }
 if ($PrepareOnly) { return }
 $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'
-$vs = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
-if (-not $vs) { throw 'Visual Studio C++ build tools are required.' }
+# Hosted runners service compiler/redist patch versions independently and may
+# install a newer VS alongside the v143 toolset. Select an installation that
+# actually contains our required 14.44 toolset rather than the newest VS alone.
+$vs = $null
+$vcToolsVersion = $null
+$crt = $null
+$crtNames = @('msvcp140.dll','msvcp140_2.dll','vcruntime140.dll','vcruntime140_1.dll')
+$installations = @(& $vswhere -all -products * -sort -property installationPath)
+if ($LASTEXITCODE -ne 0) { throw 'Visual Studio installation discovery failed.' }
+foreach ($installation in $installations) {
+    $toolsets = @(Get-ChildItem -LiteralPath (Join-Path $installation 'VC/Tools/MSVC') -Directory -ErrorAction SilentlyContinue |
+        Where-Object { $_.Name -match '^14\.44\.\d+$' -and (Test-Path -LiteralPath (Join-Path $_.FullName 'bin/Hostx64/x64/cl.exe')) } |
+        Sort-Object { [version]$_.Name } -Descending)
+    $redistributables = @(Get-ChildItem -LiteralPath (Join-Path $installation 'VC/Redist/MSVC') -Directory -ErrorAction SilentlyContinue |
+        Where-Object { $_.Name -match '^14\.44\.\d+$' } |
+        Sort-Object { [version]$_.Name } -Descending)
+    foreach ($redistributable in $redistributables) {
+        $candidateCrt = Join-Path $redistributable.FullName 'x64/Microsoft.VC143.CRT'
+        if ($toolsets.Count -gt 0 -and @($crtNames | Where-Object { -not (Test-Path -LiteralPath (Join-Path $candidateCrt $_) -PathType Leaf) }).Count -eq 0) {
+            $vs = $installation
+            $vcToolsVersion = $toolsets[0].Name
+            $crt = $candidateCrt
+            break
+        }
+    }
+    if ($vs) { break }
+}
+if (-not $vs) { throw 'Visual Studio with the MSVC v143 14.44 x64 tools and matching 14.44 x64 redistributables is required.' }
 Import-Module (Join-Path $vs 'Common7\Tools\Microsoft.VisualStudio.DevShell.dll')
-Enter-VsDevShell -VsInstallPath $vs -SkipAutomaticLocation -DevCmdArguments '-arch=x64 -host_arch=x64 -vcvars_ver=14.44'
+Enter-VsDevShell -VsInstallPath $vs -SkipAutomaticLocation -DevCmdArguments "-arch=x64 -host_arch=x64 -vcvars_ver=$vcToolsVersion"
+if ($env:VCToolsVersion.TrimEnd('\','/') -ne $vcToolsVersion) { throw 'Visual Studio did not activate the selected MSVC 14.44 toolset.' }
 $env:OS = 'Windows_NT'
 $env:PROCESSOR_ARCHITECTURE = 'AMD64'
 $env:PYTHONUTF8 = '1'
@@ -37,7 +64,7 @@ $icu = Join-Path $root 'source\icu'
 # ICU solution targets share intermediate directories. Build them serially to
 # prevent duplicate dependency nodes racing over tlogs/data; JSC still uses Parallel.
 # makedata builds upstream tool/test dependencies; it does not run regression tests.
-& (Join-Path $vs 'MSBuild\Current\Bin\amd64\MSBuild.exe') (Join-Path $icu 'source\allinone\allinone.sln') /m:1 /p:Configuration=Release /p:Platform=x64 /p:PlatformToolset=v143 /p:VCToolsVersion=14.44.35207 '/t:common;i18n;makedata' /v:minimal /nologo *> (Join-Path $logs 'icu-build.log')
+& (Join-Path $vs 'MSBuild\Current\Bin\amd64\MSBuild.exe') (Join-Path $icu 'source\allinone\allinone.sln') /m:1 /p:Configuration=Release /p:Platform=x64 /p:PlatformToolset=v143 "/p:VCToolsVersion=$vcToolsVersion" '/t:common;i18n;makedata' /v:minimal /nologo *> (Join-Path $logs 'icu-build.log')
 if ($LASTEXITCODE -ne 0) { throw "ICU build failed; see $logs\icu-build.log" }
 if ((Get-Item (Join-Path $icu 'bin64\icudt77.dll')).Length -lt 1MB) { throw 'ICU data DLL is still the empty build stub.' }
 $build = Join-Path $root 'build\win-x64'
@@ -57,8 +84,7 @@ if ($LASTEXITCODE -ne 0) { throw "JSC build failed; see $logs\build.log" }
 foreach ($name in @('icudt77.dll','icuin77.dll','icuuc77.dll')) {
     Copy-Item -LiteralPath (Join-Path $icu "bin64\$name") -Destination (Join-Path $build 'bin') -Force
 }
-$crt = Join-Path $vs 'VC/Redist/MSVC/14.44.35112/x64/Microsoft.VC143.CRT'
-foreach ($name in @('msvcp140.dll','msvcp140_2.dll','vcruntime140.dll','vcruntime140_1.dll')) {
+foreach ($name in $crtNames) {
     Copy-Item -LiteralPath (Join-Path $crt $name) -Destination (Join-Path $build 'bin') -Force
 }
 $identity = [ordered]@{
@@ -68,7 +94,7 @@ $identity = [ordered]@{
     sourceAdjustments = (Get-FileHash (Join-Path $PSScriptRoot 'source-adjustments.json')).Hash
     cmake = (& cmake --version | Select-Object -First 1); compiler = (& "$llvm\clang-cl.exe" --version | Select-Object -First 1)
     compilerSha256 = (Get-FileHash "$llvm\clang-cl.exe").Hash
-    visualStudio = $vs; vcTools = $env:VCToolsVersion; windowsSdk = $env:WindowsSDKVersion
+    visualStudio = $vs; vcTools = $env:VCToolsVersion; vcRedist = $crt; windowsSdk = $env:WindowsSDKVersion
     logs = $logs
     arguments = $arguments
     probeSources = @('probe.cpp','CMakeLists.txt','cmake-hook.cmake','build.ps1','../../QuickExcel.Scripting/native/jsc/bridge.cpp') | ForEach-Object {

@@ -142,7 +142,10 @@ public sealed class MoveCellsCommand(SheetId sourceSheet, CellPosition first, Ce
             }).ToList();
             if (to) merges.AddRange(movedMerges.Select(m => m.Offset(_rows, _columns).ToString()));
             var remaining = sheet.Data.Tables.Where(t => !movedTables.Contains(t.Name));
-            var data = sheet.Data with { Tables = (to ? remaining.Concat(tables) : remaining).ToImmutableArray() };
+            var ignored = from ? IgnoredErrorRanges.Replace(sheet.Data.IgnoredErrors, _source) : sheet.Data.IgnoredErrors;
+            if (to) ignored = IgnoredErrorRanges.Replace(ignored, output,
+                IgnoredErrorRanges.Clip(captured.Data.IgnoredErrors, _source).Select(e => e with { Range = e.Range.Offset(_rows, _columns) }));
+            var data = sheet.Data with { Tables = (to ? remaining.Concat(tables) : remaining).ToImmutableArray(), IgnoredErrors = ignored };
             return new WorksheetSnapshot(sheet.Id, sheet.Name, cells, sheet.Rows, sheet.Columns, merges, sheet.Images, sheet.ShowGridLines,
                 sheet.DefaultRowHeight, sheet.TabColor, sheet.View, sheet.Visibility, sheet.Printing, sheet.Annotations, data);
         }));

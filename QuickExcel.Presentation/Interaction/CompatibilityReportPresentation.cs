@@ -2,21 +2,29 @@ using QuickExcel.Domain;
 
 namespace QuickExcel.Presentation;
 
-/// <summary>One visible row of a compatibility group; identical diagnostics are merged and located together.</summary>
+/// <summary>One semantic feature, with exact row coverage and bounded location/detail samples.</summary>
 public sealed record CompatibilityIssueView(
     string Feature,
     string Location,
     string Detail,
     string Impact,
-    int Count,
-    string Code);
+    string Code,
+    CompatibilityDiagnosticSummary Coverage)
+{
+    public int Count => 1;
+    public long AffectedRowCount => Coverage.Rows.Count;
+}
 
 public sealed record CompatibilityIssueGroup(
     CompatibilityKind Kind,
     string Label,
     string Summary,
     bool ExpandedByDefault,
-    IReadOnlyList<CompatibilityIssueView> Items);
+    IReadOnlyList<CompatibilityIssueView> Items,
+    CompatibilityDiagnosticSummary Coverage)
+{
+    public long AffectedRowCount => Coverage.Rows.Count;
+}
 
 /// <summary>WPF-free description of the compatibility dialog and save prompt.</summary>
 public sealed record CompatibilityReportView(
@@ -30,6 +38,7 @@ public sealed record CompatibilityReportView(
     public int LossCount => Groups.Where(group => group.Kind == CompatibilityKind.PotentialLoss)
         .Sum(group => group.Items.Sum(item => item.Count));
     public bool HasLosses => LossCount > 0;
+    public long AffectedRowCount => CompatibilityRowCoverage.Union(Groups.Select(group => group.Coverage.Rows)).Count;
 }
 
 /// <summary>
@@ -47,7 +56,7 @@ public static class CompatibilityReportPresentation
     {
         // Inspection already classifies actual save losses. Preserved rich text,
         // links and notes must not become losses just because this is a save dialog.
-        var groups = report.Diagnostics.GroupBy(diagnostic => diagnostic.Kind)
+        var groups = report.Diagnostics.Where(diagnostic => !diagnostic.IsReportNotice).GroupBy(diagnostic => diagnostic.Kind)
             .OrderBy(group => Array.IndexOf(Order, group.Key))
             .Select(group => BuildGroup(group.Key, group, saveMode, canOverwrite))
             .Where(group => group.Items.Count > 0)
@@ -56,10 +65,10 @@ public static class CompatibilityReportPresentation
             .Sum(group => group.Items.Sum(item => item.Count));
         var title = saveMode ? UiText.Get("保存兼容性报告") : UiText.Get("兼容性报告");
         var headline = saveMode
-            ? Count(losses, UiText.Get("处内容无法在编辑后保留"))
+            ? Count(losses, UiText.Get("类内容无法在编辑后保留"))
             : report.OriginalPackageUnchanged
                 ? UiText.Get("工作簿与导入时一致，可原样保存")
-                : losses > 0 ? UiText.Get("当前编辑后，") + Count(losses, UiText.Get("处内容无法写入普通保存"))
+                : losses > 0 ? UiText.Get("当前编辑后，") + Count(losses, UiText.Get("类内容无法写入普通保存"))
                 : UiText.Get("未发现会阻止保存的格式损失");
         var summary = saveMode
             ? canOverwrite
@@ -70,7 +79,9 @@ public static class CompatibilityReportPresentation
                 : losses > 0
                     ? UiText.Get("保存时需明确选择如何处理损失；另存受支持副本可保留原文件中的内容。")
                     : UiText.Get("保存时仍会执行完整校验；下方同时列出仅保留、不可计算和已支持的内容。");
-        var extra = (notices ?? []).Where(notice => !string.IsNullOrWhiteSpace(notice)).ToArray();
+        var extra = (notices ?? []).Concat(report.Diagnostics.Where(diagnostic => diagnostic.IsReportNotice)
+            .Select(diagnostic => UiText.Get(diagnostic.Message))).Where(notice => !string.IsNullOrWhiteSpace(notice))
+            .Distinct(StringComparer.Ordinal).ToArray();
         return new(title, headline, summary, groups, extra);
     }
 
@@ -104,32 +115,39 @@ public static class CompatibilityReportPresentation
         };
     }
 
-    /// <summary>Full, unabridged text for copy/support. Keeps the established report format.</summary>
+    /// <summary>Type/row totals and all retained detail samples for copy/support.</summary>
     public static string PlainText(WorkbookCompatibilityReport report, IEnumerable<string>? notices = null)
     {
         var text = CompatibilityReportText.Format(report);
-        var extra = (notices ?? []).Where(notice => !string.IsNullOrWhiteSpace(notice)).ToArray();
+        var reportNotices = report.Diagnostics.Where(diagnostic => diagnostic.IsReportNotice)
+            .Select(diagnostic => UiText.Get(diagnostic.Message)).ToHashSet(StringComparer.Ordinal);
+        var extra = (notices ?? []).Where(notice => !string.IsNullOrWhiteSpace(notice) && !reportNotices.Contains(notice)).ToArray();
         return extra.Length == 0 ? text : text + UiText.Get("\n\n【其他提示】\n") + string.Join("\n", extra);
     }
 
     private static CompatibilityIssueGroup BuildGroup(CompatibilityKind kind,
         IEnumerable<CompatibilityDiagnostic> diagnostics, bool saveMode, bool canOverwrite)
     {
-        var items = diagnostics
-            .GroupBy(diagnostic => (diagnostic.Code, diagnostic.Feature, diagnostic.Message))
+        var all = diagnostics.ToArray();
+        var items = all
+            .GroupBy(diagnostic => (diagnostic.TypeCode, diagnostic.TypeFeature, diagnostic.TypeNamespace))
             .Select(group =>
             {
                 var first = group.First();
                 var locations = group.Select(Location).Where(location => location.Length > 0)
                     .Distinct(StringComparer.Ordinal).ToArray();
-                return new CompatibilityIssueView(first.Feature, Locations(locations), first.Message,
-                    Impact(first, saveMode, canOverwrite), group.Count(), first.Code);
+                var coverage = CompatibilityDiagnosticCollector.Summarize(group);
+                var detail = string.Join("\n", group.Select(diagnostic => diagnostic.Message).Distinct(StringComparer.Ordinal).Take(3));
+                return new CompatibilityIssueView(first.TypeFeature,
+                    locations.Length == 0 && coverage.LocationsTruncated ? UiText.Get("详细位置未保留") : Locations(locations), detail,
+                    Impact(first, saveMode, canOverwrite), first.TypeCode, coverage);
             })
-            .OrderByDescending(item => item.Count)
+            .OrderByDescending(item => item.AffectedRowCount)
             .ThenBy(item => item.Feature, StringComparer.CurrentCulture)
             .ToArray();
         return new(kind, CompatibilityReportText.Label(kind), Summary(kind, saveMode, canOverwrite),
-            kind is CompatibilityKind.PotentialLoss or CompatibilityKind.Rejected, items);
+            kind is CompatibilityKind.PotentialLoss or CompatibilityKind.Rejected, items,
+            CompatibilityDiagnosticCollector.Summarize(all));
     }
 
     private static string Summary(CompatibilityKind kind, bool saveMode, bool canOverwrite) => kind switch
@@ -151,8 +169,13 @@ public static class CompatibilityReportPresentation
     {
         0 => UiText.Get("工作簿"),
         <= 3 => string.Join("；", locations),
-        _ => string.Join("；", locations.Take(2)) + UiText.Format($"；等 {locations.Count} 处")
+        _ => string.Join("；", locations.Take(2)) + UiText.Format($"；等 {locations.Count} 条位置样本")
     };
+
+    public static string RowSummary(CompatibilityDiagnosticSummary coverage) => coverage.HasNonRowLocations
+        ? coverage.Rows.Count > 0 ? UiText.Format($"受影响 {coverage.Rows.Count} 行；另含未按行定位的内容")
+            : UiText.Get("工作簿、部件或列级内容，未按行定位")
+        : UiText.Format($"受影响 {coverage.Rows.Count} 行");
 
     private static string Count(int count, string tail) => count == 1 ? UiText.Get("有 1 ") + tail : UiText.Format($"有 {count} {tail}");
 

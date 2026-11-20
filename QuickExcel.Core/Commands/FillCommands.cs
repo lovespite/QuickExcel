@@ -21,6 +21,8 @@ public sealed class FillCellsCommand(SheetId sheetId, CellRectangle source, Cell
         if (extent == source) return new(snapshot, [], false);
         var sheet = snapshot.GetSheet(sheetId); var captured = WorkbookClipboard.Capture(snapshot, sheetId, source);
         WorkbookClipboard.RequirePlainGeometry(sheet, extent); WorkbookClipboard.RequireVisibleDimensions(sheet, extent);
+        if (!captured.IgnoredErrors.IsEmpty || sheet.Data.IgnoredErrors.Any(e => ValidationSafety.Overlaps(e.Range, extent)))
+            throw new NotSupportedException(MessageText.Get("填充涉及忽略错误提示的区域，尚不能重复映射其规则；可使用完整粘贴或只贴值/公式。"));
         if (captured.HasConditionalFormats || sheet.Data.ConditionalFormats.Any(r => r.Ranges.Any(a => ValidationSafety.Overlaps(a, extent))))
             throw new NotSupportedException(MessageText.Get("填充涉及条件格式，尚不能复制或拆分规则；操作未应用。请使用只贴值/公式或单独设置规则。"));
         if (sheet.Annotations.Links.Keys.Concat(sheet.Annotations.Notes.Keys).Any(p => extent.Contains(p.Row, p.Column)))

@@ -157,7 +157,7 @@ internal sealed class XlsxPackage
         return new RestoreScope(() => _sourceRange = previous);
     }
     private sealed class RestoreScope(Action restore) : IDisposable { public void Dispose() => restore(); }
-    public void PrepareSharedLocations() => _sharedDiagnostics = Issues.Diagnostics.Where(d => d.Part is not null && d.Range is not null)
+    public void PrepareSharedLocations() => _sharedDiagnostics = Issues.SharedSourceDiagnostics.Where(d => d.Part is not null && d.Range is not null)
         .GroupBy(d => (d.Part!, d.Range!)).ToDictionary(g => g.Key, g => g.ToArray());
     public bool HasSharedLocations => _sharedDiagnostics.Count != 0;
     public void RegisterSharedUsage(string? sourcePart, string sourceRange, string sheetPart, string range)
@@ -165,7 +165,7 @@ internal sealed class XlsxPackage
         if (sourcePart is null || !_sharedDiagnostics.TryGetValue((sourcePart, sourceRange), out var diagnostics)) return;
         foreach (var diagnostic in diagnostics)
             Issues.Add(diagnostic with { Code = "xlsx.affected-location", SheetName = _sheetNames.GetValueOrDefault(sheetPart),
-                Range = range, Feature = diagnostic.Feature + " · " + sourceRange });
+                Range = range, Feature = diagnostic.Feature + " · " + sourceRange, Summary = null });
     }
     public void Notice(CompatibilityDiagnostic diagnostic) { if (_notices.Count < 128) _notices.Add(diagnostic); }
     public IReadOnlyList<CompatibilityDiagnostic> Diagnostics => Issues.Diagnostics.Concat(_notices).Select(d => d with {
@@ -173,25 +173,27 @@ internal sealed class XlsxPackage
             part.EndsWith(".rels", StringComparison.Ordinal) ? SourceForRelationships(part) : part) : null)
     }).ToArray();
 
-    public void Loss(string message, string feature, string part, XElement? element = null, string? range = null, string? sheetName = null)
+    public void Loss(string message, string feature, string part, XElement? element = null, string? range = null, string? sheetName = null, string? typeNamespace = null)
     {
         var cell = element?.AncestorsAndSelf(Main + "c").FirstOrDefault();
         range ??= (string?)cell?.Attribute("r") ?? (string?)element?.Attribute("ref");
         if (range is null && element?.Name == Main + "row") range = "row:" + (string?)element.Attribute("r");
         if (range is null && element?.Name == Main + "col") range = "columns:" + (string?)element.Attribute("min") + ":" + (string?)element.Attribute("max");
         if (range is null && _sourceRange is { } source && source.Part == part) range = source.Range;
-        Issues.Add(new CompatibilityDiagnostic("xlsx.unmodeled", CompatibilityKind.PreservedOnly, feature, message, part, sheetName, range));
+        Issues.Add(new CompatibilityDiagnostic("xlsx.unmodeled", CompatibilityKind.PreservedOnly, feature, message, part, sheetName ?? _sheetNames.GetValueOrDefault(part), range, TypeNamespace: typeNamespace));
     }
     public void Shape(XElement element, string children, string attributes, string part)
     {
         var childSet = children.Split(' ', StringSplitOptions.RemoveEmptyEntries).ToHashSet();
         var attributeSet = attributes.Split(' ', StringSplitOptions.RemoveEmptyEntries).ToHashSet();
         foreach (var child in element.Elements())
-            if (child.Name.Namespace != element.Name.Namespace || !childSet.Contains(child.Name.LocalName))
-                Loss($"{part}: 未建模元素 {child.Name}", element.Name.LocalName + "/" + child.Name.LocalName, part, child);
+            if ((child.Name.Namespace != element.Name.Namespace || !childSet.Contains(child.Name.LocalName)) && !XlsxOfficeMetadata.RecognizesChild(element, child))
+                Loss($"{part}: 未建模元素 {child.Name}", element.Name.LocalName + "/" + child.Name.LocalName, part, child,
+                    typeNamespace: child.Name.Namespace == element.Name.Namespace ? null : child.Name.NamespaceName);
         foreach (var attribute in element.Attributes().Where(a => !a.IsNamespaceDeclaration))
-            if (attribute.Name.NamespaceName.Length != 0 || !attributeSet.Contains(attribute.Name.LocalName))
-                Loss($"{part}: 未建模属性 {element.Name.LocalName}/@{attribute.Name}", element.Name.LocalName + "/@" + attribute.Name.LocalName, part, element);
+            if ((attribute.Name.NamespaceName.Length != 0 || !attributeSet.Contains(attribute.Name.LocalName)) && !XlsxOfficeMetadata.RecognizesAttribute(element, attribute))
+                Loss($"{part}: 未建模属性 {element.Name.LocalName}/@{attribute.Name}", element.Name.LocalName + "/@" + attribute.Name.LocalName, part, element,
+                    typeNamespace: attribute.Name.NamespaceName.Length == 0 ? null : attribute.Name.NamespaceName);
     }
     internal static string Attr(XElement element, XName name) =>
         (string?)element.Attribute(name) is { Length: > 0 } text ? text : throw new InvalidDataException($"缺少属性 {name}。");
@@ -208,19 +210,21 @@ internal sealed class XlsxPackage
 internal sealed class CompatibilityIssueCollection : System.Collections.ObjectModel.Collection<string>
 {
     private readonly HashSet<string> _unique = new(StringComparer.Ordinal);
-    private readonly HashSet<CompatibilityDiagnostic> _locations = [];
-    private readonly List<CompatibilityDiagnostic> _diagnostics = [];
-    public IReadOnlyList<CompatibilityDiagnostic> Diagnostics => _diagnostics;
+    private readonly CompatibilityDiagnosticCollector _diagnostics = new();
+    private readonly HashSet<CompatibilityDiagnostic> _sharedSources = [];
+    public IReadOnlyList<CompatibilityDiagnostic> Diagnostics => _diagnostics.Diagnostics;
+    public IEnumerable<CompatibilityDiagnostic> SharedSourceDiagnostics => _sharedSources;
     public void Add(CompatibilityDiagnostic diagnostic)
     {
         Add(diagnostic.Message); // Keep the existing loss guards and unique-message budget.
-        if (_diagnostics.Count < 1024)
+        _diagnostics.Add(diagnostic);
+        if (diagnostic.Range is { } range && (range.StartsWith("cellStyleXfs[", StringComparison.Ordinal) ||
+            range.StartsWith("cellXfs[", StringComparison.Ordinal) || range.StartsWith("sharedStrings[", StringComparison.Ordinal)))
         {
-            if (_locations.Add(diagnostic)) _diagnostics.Add(diagnostic);
+            if (_sharedSources.Count >= 65536 && !_sharedSources.Contains(diagnostic))
+                throw new InvalidDataException("共享兼容性来源超过统计容量，无法可靠统计此文件。");
+            _sharedSources.Add(diagnostic with { Summary = null });
         }
-        else if (_diagnostics.Count == 1024)
-            _diagnostics.Add(new("report.locations-truncated", CompatibilityKind.PreservedOnly, "报告容量",
-                "仅列出前 1024 个兼容位置；其余定位已省略，保存保护仍覆盖全部未支持内容。"));
     }
     protected override void InsertItem(int index, string item)
     {

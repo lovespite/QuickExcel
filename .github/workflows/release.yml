@@ -1,0 +1,177 @@
+name: Release Windows and macOS
+
+on:
+  push:
+    tags: ['v[0-9]*.[0-9]*.[0-9]*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing release tag matching the product Version (for example v4.2.0)'
+        required: true
+        type: string
+
+# Serialize retries for one tag; a different version can build independently.
+concurrency:
+  group: release-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+  DOTNET_NOLOGO: '1'
+  PYTHONUTF8: '1'
+
+jobs:
+  validate:
+    runs-on: windows-2025
+    timeout-minutes: 10
+    outputs:
+      tag: ${{ steps.version.outputs.tag }}
+      version: ${{ steps.version.outputs.version }}
+      sha: ${{ steps.version.outputs.sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.tag && format('refs/tags/{0}', inputs.tag) || github.ref }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.13'
+      - name: Test release validation and publication failure paths
+        run: python scripts/test-github-release.py
+      - name: Validate tag and resolve the immutable build commit
+        id: version
+        shell: pwsh
+        env:
+          RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+          PUSH_SHA: ${{ github.event_name == 'push' && github.sha || '' }}
+        run: |
+          $arguments = @('scripts/github-release.py', 'validate', $env:RELEASE_TAG)
+          if ($env:PUSH_SHA) { $arguments += @('--expected-sha', $env:PUSH_SHA) }
+          python @arguments
+          if ($LASTEXITCODE -ne 0) { throw 'Release tag validation failed.' }
+
+  build:
+    needs: validate
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Keep Visual Studio 2022 / v143 14.44 for the pinned native build.
+          - os: windows-2022
+            rid: win-x64
+            script: scripts/build-github-windows-release.ps1
+          - os: macos-26
+            rid: osx-arm64
+            script: scripts/build-github-macos-release.ps1
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 350
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      QX_BUILD_PARALLEL: '2'
+      # Keep the SDK isolated from newer SDKs preinstalled on hosted runners.
+      DOTNET_INSTALL_DIR: ${{ github.workspace }}/artifacts/tools/dotnet-10.0.404
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.validate.outputs.sha }}
+          persist-credentials: false
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        with:
+          dotnet-version: '10.0.404'
+          skip-lts-prepass: true
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22'
+          package-manager-cache: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.13'
+      - name: Install native build tools
+        run: |
+          python -m pip install --disable-pip-version-check --cache-dir artifacts/pip-cache cmake==4.2.1 ninja==1.13.0
+          if ($LASTEXITCODE -ne 0) { throw 'Native build tool installation failed.' }
+      - name: Cache hash-verified upstream archives
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: artifacts/jsc/downloads
+          key: native-downloads-${{ matrix.rid }}-${{ hashFiles('tools/QuickExcel.JscProbe/sources.json') }}
+      - name: Check native build tools
+        run: |
+          cmake --version
+          if ($LASTEXITCODE -ne 0) { throw 'CMake is required.' }
+          if ($IsMacOS) {
+            if ((uname -m) -ne 'arm64') { throw 'macOS release requires an arm64 runner.' }
+            ninja --version
+            if ($LASTEXITCODE -ne 0) { throw 'Ninja is required.' }
+            xcrun --find clang
+            if ($LASTEXITCODE -ne 0) { throw 'Xcode Command Line Tools are required.' }
+          }
+      - name: Prepare Windows browser runtime
+        if: runner.os == 'Windows'
+        run: ./scripts/prepare-github-windows.ps1
+      - name: Build, verify and archive ${{ matrix.rid }}
+        env:
+          BUILD_SCRIPT: ${{ matrix.script }}
+        run: |
+          & (Join-Path $PWD $env:BUILD_SCRIPT)
+          if (-not $?) { throw 'Release build failed.' }
+      - name: Upload verified downloads
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release-${{ matrix.rid }}
+          path: artifacts/github-release/*
+          if-no-files-found: error
+          compression-level: 0
+          overwrite: true
+          retention-days: 7
+      - name: Retain build and self-check evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: evidence-${{ matrix.rid }}
+          path: |
+            artifacts/github-evidence/
+            artifacts/jsc/logs/
+            artifacts/avalonia/releases/*/evidence/*.log
+            artifacts/avalonia/releases/*/evidence/self-check/result.json
+            artifacts/avalonia/platform-releases/*/publish.log
+          if-no-files-found: warn
+          overwrite: true
+          retention-days: 14
+
+  publish:
+    needs: [validate, build]
+    runs-on: windows-2025
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.validate.outputs.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.13'
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: release-*
+          merge-multiple: true
+          path: artifacts/github-release
+      - name: Verify both platforms and publish GitHub Release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ needs.validate.outputs.tag }}
+          RELEASE_SHA: ${{ needs.validate.outputs.sha }}
+        run: |
+          python scripts/github-release.py publish $env:RELEASE_TAG --expected-sha $env:RELEASE_SHA --directory artifacts/github-release
+          if ($LASTEXITCODE -ne 0) { throw 'GitHub Release publication failed.' }

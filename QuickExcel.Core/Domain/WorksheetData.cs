@@ -143,6 +143,9 @@ public sealed record WorksheetData(WorksheetAutoFilter? Filter = null, Worksheet
     public bool CommentFallback { get; init; }
     public WorksheetProtection? Protection { get; init; }
     public double? DefaultColumnWidth { get; init; }
+    public double? DefaultRowDescent { get; init; }
+    public WorksheetPhoneticProperties? PhoneticProperties { get; init; }
+    public ImmutableArray<WorksheetIgnoredError> IgnoredErrors { get; init; } = [];
     public bool ImplicitColumnWidth { get; init; }
     public ImmutableArray<WorksheetChart> Charts { get; init; } = [];
     public ImmutableArray<WorksheetPivot> Pivots { get; init; } = [];
@@ -151,9 +154,9 @@ public sealed record WorksheetData(WorksheetAutoFilter? Filter = null, Worksheet
     public ImmutableArray<WorksheetValidation> Validations { get; init; } = [];
     public ImmutableArray<ConditionalFormatRule> ConditionalFormats { get; init; } = [];
     public IEnumerable<WorksheetAutoFilter> AllFilters => (Filter is null ? Enumerable.Empty<WorksheetAutoFilter>() : [Filter]).Concat(Tables.Select(t => t.Filter).OfType<WorksheetAutoFilter>());
-    public bool IsEmpty => ThreadComments.IsEmpty && Filter is null && Sort is null && Tables.IsEmpty && Validations.IsEmpty && ConditionalFormats.IsEmpty && Outline is null && Protection is null && Charts.IsEmpty && Pivots.IsEmpty && DefaultColumnWidth is null;
+    public bool IsEmpty => ThreadComments.IsEmpty && Filter is null && Sort is null && Tables.IsEmpty && Validations.IsEmpty && ConditionalFormats.IsEmpty && Outline is null && Protection is null && Charts.IsEmpty && Pivots.IsEmpty && DefaultColumnWidth is null && DefaultRowDescent is null && PhoneticProperties is null && IgnoredErrors.IsEmpty;
     public bool ContentEquals(WorksheetData other, bool equivalentFormulas = false) => (Filter is null ? other.Filter is null : other.Filter is not null && Filter.ContentEquals(other.Filter)) &&
-        ThreadComments.SequenceEqual(other.ThreadComments) && CommentFallback == other.CommentFallback && DefaultColumnWidth == other.DefaultColumnWidth && ImplicitColumnWidth == other.ImplicitColumnWidth && Charts.Length == other.Charts.Length && Charts.Zip(other.Charts).All(p => p.First.ContentEquals(p.Second)) && Protection == other.Protection && Outline == other.Outline && (Sort is null ? other.Sort is null : other.Sort is not null && Sort.ContentEquals(other.Sort)) &&
+        ThreadComments.SequenceEqual(other.ThreadComments) && CommentFallback == other.CommentFallback && DefaultColumnWidth == other.DefaultColumnWidth && DefaultRowDescent == other.DefaultRowDescent && PhoneticProperties == other.PhoneticProperties && IgnoredErrors.SequenceEqual(other.IgnoredErrors) && ImplicitColumnWidth == other.ImplicitColumnWidth && Charts.Length == other.Charts.Length && Charts.Zip(other.Charts).All(p => p.First.ContentEquals(p.Second)) && Protection == other.Protection && Outline == other.Outline && (Sort is null ? other.Sort is null : other.Sort is not null && Sort.ContentEquals(other.Sort)) &&
         Tables.Length == other.Tables.Length && Tables.Zip(other.Tables).All(p => p.First.ContentEquals(p.Second, equivalentFormulas)) &&
         Pivots.Length == other.Pivots.Length && Pivots.Zip(other.Pivots).All(p => p.First.ContentEquals(p.Second)) &&
         Validations.Length == other.Validations.Length && Validations.Zip(other.Validations).All(p => p.First.ContentEquals(p.Second)) &&

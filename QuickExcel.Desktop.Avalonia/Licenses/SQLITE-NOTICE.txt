@@ -1,0 +1,12 @@
+SQLite database engine
+
+SQLite's deliverable source and documentation are dedicated to the public domain
+by their authors. QuickExcel distributes the native engine provided by the
+unmodified SQLitePCLRaw.lib.e_sqlite3 NuGet package; package and wrapper attribution
+is retained in SQLITEPCLRAW-NOTICE.txt and SQLITEPCLRAW-LICENSE.txt.
+
+Source and public-domain dedication: https://www.sqlite.org/copyright.html
+Native package provenance: https://www.nuget.org/packages/SQLitePCLRaw.lib.e_sqlite3/2.1.13
+The repository package lock records the exact NuGet package content hashes.
+
+No upstream SQLite or SQLitePCLRaw source is modified by QuickExcel.

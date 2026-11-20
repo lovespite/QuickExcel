@@ -53,7 +53,11 @@ public sealed class WorkbookWorkspace : IDisposable
     }
     public void Import(WorkbookSnapshot snapshot)
     {
-        RequireIdle(); Replace(new WorkbookDocument(snapshot, _services), null, null);
+        RequireIdle();
+        var document = new WorkbookDocument(snapshot, _services);
+        // An unbound imported copy has never been saved, even before its first edit.
+        document.Session.MarkRecoveredUnsaved();
+        Replace(document, null, null);
     }
     public void Recover(WorkbookSnapshot snapshot)
     {

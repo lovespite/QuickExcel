@@ -60,6 +60,8 @@ internal static class DataStructure
         }
         var conditional = data.ConditionalFormats.Select(r => (Rule: r, Ranges: r.Ranges.Select(Range).OfType<CellRectangle>().ToArray()))
             .Where(p => p.Ranges.Length > 0).Select(p => p.Rule.WithRanges(p.Ranges)).ToImmutableArray();
-        return data with { Filter = filter, Sort = sort, Tables = tables.ToImmutableArray(), ConditionalFormats = conditional };
+        var ignoredErrors = data.IgnoredErrors.Select(e => (Rule: e, Range: Range(e.Range)))
+            .Where(p => p.Range is not null).Select(p => p.Rule with { Range = p.Range!.Value }).ToImmutableArray();
+        return data with { Filter = filter, Sort = sort, Tables = tables.ToImmutableArray(), ConditionalFormats = conditional, IgnoredErrors = ignoredErrors };
     }
 }

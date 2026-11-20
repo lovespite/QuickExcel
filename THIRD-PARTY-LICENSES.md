@@ -13,11 +13,24 @@ QuickExcel includes the following third-party materials. Each license applies to
 | SkiaSharp and HarfBuzzSharp | MIT and the individual native library licenses | SKIA and HARFBUZZ license and third-party notice files | Graphics and fonts. |
 | LibTiff.NET and PdfPig | BSD-3-Clause and Apache-2.0, respectively | LIBTIFF-LICENSE.txt and PDFPIG-LICENSE.txt | Images and PDF. |
 | AngleSharp and OpenMcdf | MIT and MPL-2.0, respectively | Licenses/ANGLESHARP-LICENSE.txt and Licenses/OPENMCDF-LICENSE.txt | HTML and compound document readers. |
+| Microsoft.Data.Sqlite and System.Data.Odbc | MIT | Licenses/MICROSOFT-DATA-SQLITE-LICENSE.txt and Licenses/SYSTEM-DATA-ODBC-LICENSE.txt | Explicit local SQLite and user-configured SQL database data exchange. |
+| SQLitePCLRaw and SQLite | Apache-2.0 and public domain, respectively | Licenses/SQLITEPCLRAW-LICENSE.txt, Licenses/SQLITEPCLRAW-NOTICE.txt and Licenses/SQLITE-NOTICE.txt | SQLite native interop and bundled database engine. |
 | Monaco Editor, PDF.js, esbuild | MIT, Apache-2.0, and MIT, respectively | Web/licenses | Editor, PDF preview, and build tooling. Fonts, character maps, and WebAssembly components include their own licenses. |
 | JavaScriptCore / WebKit, ICU, mimalloc, TypeScript | Individual component licenses | JSC-Licenses | Copyright and license notices and rebuild instructions are included. ClickOnce packages provide the exact corresponding source, including QuickExcel modifications and build scripts, through the address in JSC-SOURCE.txt; other packages include the source archive. Microsoft terms apply to the Windows VC++ runtime. The macOS arm64 package links the OS `libicucore` under Apple's operating-system terms. |
 | .NET runtime, including Native AOT runtime support | MIT and accompanying third-party terms | DOTNET-LICENSE and DOTNET-THIRD-PARTY-NOTICES in the self-contained distribution | Windows 4.0 uses .NET 10.0.15: a partially trimmed desktop runtime and Native AOT isolated worker. Other platforms retain their separately recorded runtime builds. |
 | .NET ClickOnce launcher (Microsoft.DotNet.Mage 10.0.0) | MIT and accompanying third-party terms | Licenses/CLICKONCE-LICENSE.txt and CLICKONCE-THIRD-PARTY-NOTICES.txt | Windows ClickOnce entry point; generated launcher resources identify QuickExcel. |
 | Microsoft Edge WebView2 Runtime; Visual Studio ClickOnce setup engine | Microsoft redistribution terms | Licenses/WINDOWS-INSTALLER-NOTICES.txt | The Windows installer includes the original Microsoft-signed WebView2 Evergreen online bootstrapper and the SDK-generated setup bootstrapper. |
+
+## Database providers
+
+QuickExcel uses unmodified Microsoft.Data.Sqlite 10.0.15 and System.Data.Odbc
+10.0.15, copyright .NET Foundation and contributors, under the MIT license.
+SQLitePCLRaw bundle/core/provider/native packages 2.1.13 are distributed under
+Apache-2.0 with their upstream copyright, license and NOTICE retained. The
+bundled SQLite engine is public domain; its dedication and source provenance
+are included in `Licenses/SQLITE-NOTICE.txt`. These components run only in the
+desktop host's explicit import/export workflow and are not script worker APIs.
+External ODBC drivers are installed by the user and retain their own licenses.
 
 ## Windows ClickOnce distribution
 

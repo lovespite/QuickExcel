@@ -32,6 +32,7 @@ internal static class TypedWorkbookXml
         package.RequireType(workbookPart, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml");
         var root = package.XmlPart(workbookPart).Root!;
         if (root.Name != Main + "workbook") throw new InvalidDataException("无效工作簿。");
+        if (root.Elements(Main + "workbookPr").Count() > 1) throw new InvalidDataException("工作簿属性重复。");
         var textCompatibility = XlsxTextCompatibility.Read(package, root, workbookPart);
         package.Shape(XlsxTextCompatibility.Shape(root), "workbookPr bookViews sheets definedNames calcPr pivotCaches", "conformance", workbookPart);
         if ((string?)root.Attribute("conformance") is { } conformance && conformance != (package.IsStrict ? "strict" : "transitional"))
@@ -92,6 +93,7 @@ internal static class TypedWorkbookXml
             var visibility = XlsxViews.Visibility(definition);
             var sheet = package.XmlPart(path).Root!;
             if (sheet.Name != Main + "worksheet") throw new InvalidDataException("无效工作表部件。");
+            if (sheet.Elements(Main + "sheetFormatPr").Count() > 1) throw new InvalidDataException("工作表默认格式重复。");
             package.Shape(XlsxConditionalFormatting.Shape(XlsxFiltering.Shape(sheet)), "autoFilter sortState tableParts dataValidations conditionalFormatting dimension sheetPr sheetViews sheetFormatPr cols sheetData sheetProtection mergeCells hyperlinks printOptions pageMargins pageSetup headerFooter rowBreaks colBreaks drawing legacyDrawing", "", path);
             var sharedFormulas = new SharedFormulaExpander(sheet);
             var dynamicRanges = new Dictionary<CellPosition, CellRectangle>();
@@ -126,7 +128,7 @@ internal static class TypedWorkbookXml
                 package.Shape(row, "c", "r ht hidden s customHeight customFormat spans outlineLevel collapsed", path);
                 var rowMetadata = new RowMetadata(OptionalDouble(row.Attribute("ht")) / 0.75, Bool((string?)row.Attribute("hidden")),
                     Style(row, "s", styles.Count), Bool((string?)row.Attribute("customFormat")))
-                { OutlineLevel = Int((string?)row.Attribute("outlineLevel") ?? "0", 7), Collapsed = Bool((string?)row.Attribute("collapsed")) };
+                { OutlineLevel = Int((string?)row.Attribute("outlineLevel") ?? "0", 7), Collapsed = Bool((string?)row.Attribute("collapsed")), Descent = XlsxOfficeMetadata.Descent(row) };
                 if (rowMetadata != new RowMetadata() || row.Attribute("s") is not null || row.Attribute("customFormat") is not null) rows.Add(rowIndex, rowMetadata);
                 if (rowMetadata.ApplyStyle) package.RegisterSharedUsage(stylesPart, "cellXfs[" + rowMetadata.StyleId + "]", path, "row:" + (rowIndex + 1));
                 var nextColumn = 0;
@@ -267,7 +269,9 @@ internal static class TypedWorkbookXml
             var images = TypedImages.Read(package, path, sheet, imageGeometry);
             var dataState = XlsxFiltering.Read(package, workbookPart, path, sheet) with
             { DefaultColumnWidth = modeledDefaultWidth, ImplicitColumnWidth = format?.Attribute("defaultColWidth") is null, Charts = XlsxCharts.Read(package, workbookPart, path, sheet, imageGeometry), Protection = XlsxProtection.Read(package, path, sheet), Outline = XlsxOutline.Read(package, path, sheet), Tables = XlsxTables.Read(package, workbookPart, path, sheet, preservedFormulas, Decode(Attr(definition, "name"))),
-                Validations = XlsxValidation.Read(package, path, sheet), ConditionalFormats = XlsxConditionalFormatting.Read(package, workbookPart, path, sheet) };
+                Validations = XlsxValidation.Read(package, path, sheet), ConditionalFormats = XlsxConditionalFormatting.Read(package, workbookPart, path, sheet),
+                DefaultRowDescent = XlsxOfficeMetadata.Descent(format), IgnoredErrors = XlsxOfficeMetadata.ReadIgnoredErrors(sheet),
+                PhoneticProperties = XlsxOfficeMetadata.ReadPhonetic(package, workbookPart, path, sheet) };
             var threads = XlsxThreadedComments.Read(package, workbookPart, path, Decode(Attr(definition, "name")));
             dataState = dataState with { ThreadComments = threads?.Models ?? [], CommentFallback = threads?.Fallback is not null };
             var modeledSheet = new WorksheetSnapshot(SheetId.New(), Decode(Attr(definition, "name")), cells, rows, columns, merges, images,
@@ -485,6 +489,7 @@ internal static class TypedWorkbookXml
         if (allocation > FileReadBudget.MaxParsedBytes || imageBytes > FileReadBudget.MaxFileBytes)
             throw new InvalidDataException("写出 XML/图片预算超限，请缩小工作簿。");
         var parts = new Dictionary<string, byte[]>();
+        var officeMetadata = new XlsxOfficeMetadata.Writer(snapshot, cancellationToken);
         var workbook = new XElement(Main + "workbook", new XAttribute(XNamespace.Xmlns + "r", Rel),
             new XElement(Main + "workbookPr", new XAttribute("date1904", snapshot.DateSystem == ExcelDateSystem.Mac1904 ? 1 : 0)));
         workbook.Add(XlsxViews.WriteWorkbook(snapshot));
@@ -525,7 +530,8 @@ internal static class TypedWorkbookXml
                 root.Add(new XElement(Main + "sheetPr", sheet.Data.AllFilters.Any() ? new XAttribute("filterMode", sheet.Data.AllFilters.Any(f => f.Columns.Count > 0) ? 1 : 0) : null, sheet.TabColor is not null ? new XElement(Main + "tabColor", new XAttribute("rgb", sheet.TabColor)) : null,
                     XlsxOutline.Write(sheet.Data.Outline), XlsxPrinting.WriteProperties(sheet.Printing)));
             root.Add(XlsxViews.WriteSheet(sheet, sheet.Id == snapshot.ActiveSheetId));
-            root.Add(new XElement(Main + "sheetFormatPr", new XAttribute("defaultRowHeight", (sheet.DefaultRowHeight ?? 31) * 0.75), sheet.Data.ImplicitColumnWidth ? null : new XAttribute("defaultColWidth", sheet.Data.DefaultColumnWidth ?? WorkbookLimits.DefaultColumnWidth(1))));
+            root.Add(new XElement(Main + "sheetFormatPr", new XAttribute("defaultRowHeight", (sheet.DefaultRowHeight ?? 31) * 0.75), sheet.Data.ImplicitColumnWidth ? null : new XAttribute("defaultColWidth", sheet.Data.DefaultColumnWidth ?? WorkbookLimits.DefaultColumnWidth(1)),
+                sheet.Data.DefaultRowDescent is { } descent ? new XAttribute(XlsxOfficeMetadata.Ac + "dyDescent", descent) : null));
             var outputColumns = sheet.Columns;
             if (sheet.Data.DefaultColumnWidth is null && !outputColumns.ContainsKey(0)) outputColumns = outputColumns.Add(0, new(WorkbookLimits.DefaultColumnWidth(0)));
             if (outputColumns.Count > 0)
@@ -546,6 +552,7 @@ internal static class TypedWorkbookXml
                         new XAttribute("customFormat", metadata.ApplyStyle ? 1 : 0));
                     if (metadata.OutlineLevel > 0) row.Add(new XAttribute("outlineLevel", metadata.OutlineLevel));
                     if (metadata.Collapsed) row.Add(new XAttribute("collapsed", 1));
+                    if (metadata.Descent is { } rowDescent) row.Add(new XAttribute(XlsxOfficeMetadata.Ac + "dyDescent", rowDescent));
                 }
                 if (filteredRows.Contains(rowIndex)) row.SetAttributeValue("hidden", 1);
                 if (grouped.TryGetValue(rowIndex, out var rowCells))
@@ -564,10 +571,12 @@ internal static class TypedWorkbookXml
                 foreach (var merge in sheet.MergedCells) ValidateRange(merge);
                 root.Add(new XElement(Main + "mergeCells", new XAttribute("count", sheet.MergedCells.Length), sheet.MergedCells.Select(m => new XElement(Main + "mergeCell", new XAttribute("ref", m)))));
             }
+            XlsxOfficeMetadata.WritePhonetic(sheet, root, stylePackage.Styles.Root!);
             root.Add(XlsxConditionalFormatting.Write(sheet, stylePackage.Styles.Root!));
             root.Add(XlsxValidation.Write(sheet));
             XlsxAnnotations.WriteLinks(sheet.Annotations, root);
             XlsxPrinting.WriteSheet(sheet.Printing, root);
+            XlsxOfficeMetadata.WriteIgnoredErrors(sheet, root);
             TypedImages.Write(sheet, i + 1, parts, root, types);
             XlsxCharts.Write(snapshot, sheet, i + 1, parts, root, types);
             XlsxPrinting.WritePrinter(sheet.Printing, i + 1, parts, types);
@@ -575,6 +584,7 @@ internal static class TypedWorkbookXml
             XlsxTables.Write(sheet, i + 1, parts, root, types, stylePackage.Styles.Root!, valuesOnly);
             root.Add(XlsxFiltering.WriteHidden(sheet, filteredRows));
             XlsxConditionalFormatting.WriteExtensions(sheet, root);
+            officeMetadata.WriteSheet(sheet, root);
             parts[path] = XmlBytes(new XDocument(root));
         }
         parts["xl/styles.xml"] = XmlBytes(stylePackage.Styles);
@@ -599,6 +609,7 @@ internal static class TypedWorkbookXml
         if (!valuesOnly) XlsxPivots.Write(snapshot,parts,workbook,rels,types,cancellationToken);
         XlsxThreadedComments.Write(snapshot, parts, rels, types, cancellationToken);
         workbook.Add(XlsxTextCompatibility.Write(snapshot));
+        officeMetadata.WriteWorkbook(workbook);
         parts["xl/workbook.xml"] = XmlBytes(new XDocument(workbook));
         parts["xl/_rels/workbook.xml.rels"] = XmlBytes(new XDocument(rels));
         parts["[Content_Types].xml"] = XmlBytes(new XDocument(types));

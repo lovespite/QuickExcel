@@ -140,6 +140,7 @@ public sealed partial class MainWindow : Window
             if (Program.SmokeDirectory is { } visibleDirectory && Program.SmokeMode == "visible-transfer") { await RunVisibleTransferSmokeAsync(visibleDirectory); return; }
             if (Program.SmokeDirectory is { } specialDirectory && Program.SmokeMode == "special-selection") { await RunSpecialSelectionSmokeAsync(specialDirectory); return; }
             if (Program.SmokeDirectory is { } functionDirectory && Program.SmokeMode == "common-functions") { await RunCommonFunctionsSmokeAsync(functionDirectory); return; }
+            if (Program.SmokeDirectory is { } transferDirectory && Program.SmokeMode == "data-transfer") { await RunDataTransferSmokeAsync(transferDirectory); return; }
             if (Program.SmokeDirectory is { } textDirectory && Program.SmokeMode == "text-exchange") { await RunTextExchangeSmokeAsync(textDirectory); return; }
             if (Program.SmokeDirectory is { } compatibilityDirectory && Program.SmokeMode == "compatibility") { await RunCompatibilitySmokeAsync(compatibilityDirectory); return; }
             if (Program.SmokeDirectory is { } smoke && Program.SmokeMode != "manual") { if (Program.SmokeMode == "grid") await RunGridSmokeAsync(smoke); else if (Program.SmokeMode == "benchmark") await RunGridBenchmarkAsync(smoke); else if (Program.SmokeMode == "web") await RunWebSmokeAsync(smoke); else if (Program.SmokeMode == "web-benchmark") await RunWebBenchmarkAsync(smoke); else await RunWorkspaceSmokeAsync(smoke); return; }

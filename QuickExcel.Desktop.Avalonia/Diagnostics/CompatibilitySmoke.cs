@@ -52,6 +52,8 @@ public sealed partial class MainWindow
                 const string part = "xl/worksheets/sheet1.xml";
                 XDocument xml; using (var input = zip.GetEntry(part)!.Open()) xml = XDocument.Load(input);
                 XNamespace ns = "http://schemas.openxmlformats.org/spreadsheetml/2006/main";
+                foreach (var row in xml.Root!.Element(ns + "sheetData")!.Elements(ns + "row"))
+                    row.SetAttributeValue("futureRowLayout", "row-" + (string?)row.Attribute("r"));
                 xml.Root!.Add(new XElement(ns + "customSheetViews", new XElement(ns + "customSheetView",
                     new XAttribute("guid", "{86A0202C-6747-4F98-BA3B-B964C0800EA5}"), new XAttribute("view", "normal"))));
                 zip.GetEntry(part)!.Delete(); using var output = zip.CreateEntry(part).Open(); xml.Save(output);
@@ -77,11 +79,21 @@ public sealed partial class MainWindow
                 Check(loss.IsExpanded && groups.Length >= 3, "Save report expands losses and separates calculation and preservation notices");
                 var rows = ((StackPanel)loss.Content!).Children.OfType<ListBox>().Single().Items.Cast<CompatibilityIssueView>().ToArray();
                 Check(rows.Any(row => row.Feature.Contains("customSheetViews") && row.Location.Contains("兼容性示例") && row.Location.Contains("xl/worksheets/sheet1.xml") && row.Impact.Contains("不会写入受支持副本")), "Loss rows include feature, worksheet, package location and save impact");
+                var repeated = rows.Where(row => row.Feature == "row/@futureRowLayout").ToArray();
+                Check(repeated.Length == 1 && repeated[0].Count == 1 && repeated[0].AffectedRowCount == 3,
+                    "Three occurrences of the same row attribute form one feature type with three affected rows");
+                Check(loss.Header!.ToString()!.Contains("（2 类）") && loss.Header.ToString()!.Contains("受影响 3 行"),
+                    "Actual report header separates feature-type count from affected-row count");
+                Check(((StackPanel)loss.Content!).GetVisualDescendants().OfType<TextBlock>().Any(text =>
+                        text.Text?.Contains("row/@futureRowLayout") == true && text.Text.Contains("受影响 3 行")),
+                    "Actual report item renders the affected-row count for the repeated row attribute");
                 Check(Document.GetCellInput(0, 0, 0) == "修改后值" && !_grid.IsEditing, "Save report inspects the committed cell draft");
                 beforeReport = Document.Snapshot.Revision;
                 Click(window, "复制报告"); await Layout();
                 var copied = ((MemoryClipboard)_clipboard).Value.Text!;
                 Check(copied.Contains("customSheetViews") && copied.Contains("兼容性示例") && copied.Contains("UNKNOWN_FN") && copied.Contains("富文本"), "Copy includes the full loss, calculation and preserved-content report");
+                Check(copied.Contains("【潜在损失】2 类") && copied.Contains("受影响 3 行"),
+                    "Copied report uses semantic type totals and distinct affected-row totals");
                 using var bitmap = new RenderTargetBitmap(new PixelSize((int)window.Bounds.Width, (int)window.Bounds.Height), new Vector(96, 96));
                 bitmap.Render(window); bitmap.Save(Path.Combine(directory, "save-compatibility-report.png"), PngBitmapEncoderOptions.Default);
                 Click(window, "取消");
