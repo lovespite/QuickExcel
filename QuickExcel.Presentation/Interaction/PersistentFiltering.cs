@@ -7,6 +7,27 @@ namespace QuickExcel.Presentation;
 
 public static class PersistentFiltering
 {
+    /// <summary>
+    /// A single cell uses its current region. A selected header row keeps its columns and
+    /// extends down through connected records; explicit multi-row ranges keep their bounds.
+    /// </summary>
+    public static CellRectangle ResolveRange(WorksheetSnapshot sheet, CellRectangle selection, CellPosition active)
+    {
+        if (SelectionPlanning.IsWholeColumn(selection) || SelectionPlanning.IsWholeRow(selection))
+            return SortPlanning.WholeAxisRegion(sheet, selection, active);
+        if (selection.Count == 1) return SortPlanning.CurrentRegion(sheet, selection.Top, selection.Left);
+        if (selection.Rows != 1) return selection;
+
+        // Any populated cell in the selected columns keeps a record connected, including
+        // formulas with blank results. Formatting and neighboring blocks do not extend it.
+        var rows = sheet.Cells.Where(p => p.Key.Row > selection.Top && p.Key.Column >= selection.Left && p.Key.Column <= selection.Right &&
+                (p.Value.Content.Kind == CellContentKind.Formula || p.Value.Value.Kind != CellValueKind.Blank))
+            .Select(p => p.Key.Row).ToHashSet();
+        var bottom = selection.Bottom;
+        while (bottom < WorkbookLimits.MaxRows - 1 && rows.Contains(bottom + 1)) bottom++;
+        return selection with { Bottom = bottom };
+    }
+
     public static AutoFilterColumn Convert(ColumnFilter filter, ExcelDateSystem system)
     {
         if (filter.Stored is { } stored) return stored;

@@ -222,6 +222,47 @@ public sealed partial class MainWindow
                 Named<TextBox>(panel, "FilterSearch").Text = ""; await Layout(); Click(panel, "FilterCancel");
             };
             await FilterAsync(1);
+            // A selected header row must include the connected data below it, as in a newly created filter.
+            _workspace.New(); ShowBook();
+            _workspace.Editor.SetCells(0, GridClipboard.Prepare("X\ta\tv\tc\n甲\tX\tX\tvv\n乙\tX\tX\tf\n丙\tX\tX\tg\n丁\tX\tX\tg\n戊\tX\tX\tg", new(0, 0, 0, 0), false)); Synchronize();
+            _grid.SelectRange(new(0, 0, 0, 3), new(0, 3)); await EstablishFilterAsync();
+            Check(Document.Snapshot.Sheets[0].Data.Filter!.Range == new CellRectangle(0, 0, 5, 3),
+                "Selecting only the header row creates a filter covering the connected records");
+            _filterDriver = async panel =>
+            {
+                await Layout(); var list = Named<ListBox>(panel, "FilterCandidates");
+                Check(list.ItemCount == 3 && list.GetVisualDescendants().OfType<CheckBox>().Select(c => c.Content?.ToString()).Order().SequenceEqual(new[] { "f", "g", "vv" }),
+                    "A new header-row filter displays all distinct text candidates");
+                await Capture(panel, "header-row-filter"); Click(panel, "FilterAscending");
+            };
+            await FilterAsync(3);
+            Check(Enumerable.Range(1, 5).Select(r => Document.GetCellInput(0, r, 0)).SequenceEqual(new[] { "乙", "丙", "丁", "戊", "甲" }) && Document.GetCellInput(0, 0, 3) == "c",
+                "New filter menu ascending sort moves complete records and keeps the header fixed");
+            await History(false);
+            Check(Document.GetCellInput(0, 1, 3) == "vv" && Document.GetCellInput(0, 2, 3) == "f", "New filter menu sort undoes as one operation");
+            _filterDriver = async panel => { await Layout(); Click(panel, "FilterDescending"); }; await FilterAsync(3);
+            Check(Enumerable.Range(1, 5).Select(r => Document.GetCellInput(0, r, 0)).SequenceEqual(new[] { "甲", "丙", "丁", "戊", "乙" }) && Document.GetCellInput(0, 0, 3) == "c",
+                "New filter menu descending sort keeps equal keys stable and the header fixed");
+            await History(false); await SortAsync(false);
+            Check(Document.GetCellInput(0, 1, 0) == "乙" && Document.GetCellInput(0, 0, 3) == "c", "Ribbon sort uses the newly inferred filter data range");
+            await History(false);
+            _filterDriver = async panel =>
+            {
+                await Layout(); Named<CheckBox>(panel, "FilterSelectAll").IsChecked = false;
+                Named<TextBox>(panel, "FilterSearch").Text = "f"; await Layout();
+                Named<CheckBox>(panel, "FilterSelectAll").IsChecked = true; Click(panel, "FilterApply");
+            };
+            await FilterAsync(3);
+            Check(CurrentView.IsFilteredOut(Document.Snapshot, 0, 1) && !CurrentView.IsFilteredOut(Document.Snapshot, 0, 2) && CurrentView.IsFilteredOut(Document.Snapshot, 0, 3),
+                "Selecting a candidate from a new header-row filter hides only unmatched records");
+            await History(false);
+            await ExecuteAsync(new SetAutoFilterCommand(Document.Snapshot.ActiveSheetId, new(new(0, 0, 0, 3))));
+            before = Document.Snapshot.Revision;
+            _filterDriver = async panel => { await Layout(); Click(panel, "FilterAscending"); };
+            var rejectedEmptySort = false;
+            try { await FilterAsync(3); }
+            catch (ArgumentException ex) when (ex.Message == UiText.Get("请选择包含多行记录的数据区域。")) { rejectedEmptySort = true; }
+            Check(rejectedEmptySort && Document.Snapshot.Revision == before, "An existing header-only filter reports insufficient records instead of silently sorting nothing");
             // A table filter must never move its total row, even through the menu's sort actions.
             var id = SheetId.New();
             var table = new WorksheetTable(1, "Sales", new(0, 0, 3, 1), [new(1, "名称"), new(2, "金额")], totalsRow: true, filter: new(new(0, 0, 2, 1)));

@@ -20,6 +20,7 @@ public sealed partial class MainWindow
         try
         {
             _workspace.New(); ShowBook(); _workspace.Editor.SetCell(0, 0, 0, "Recover 中文"); Synchronize();
+            await CheckStatusMessageLayoutAsync(Check);
             _recoveryTimer.Interval = TimeSpan.FromMilliseconds(50); StartRecovery();
             var deadline = DateTime.UtcNow.AddSeconds(10);
             while (_lastRecovery is null && DateTime.UtcNow < deadline) await Task.Delay(20);
@@ -43,6 +44,36 @@ public sealed partial class MainWindow
         finally { _dialogDriver = null; _discardChoice = null; await ClearRecoveryAsync(); }
         await File.WriteAllTextAsync(Path.Combine(directory, "result.json"), JsonSerializer.Serialize(new { passed = failure is null, checks, error = failure?.ToString() }, new JsonSerializerOptions { WriteIndented = true }));
         _allowClose = true; (Application.Current!.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)!.Shutdown(failure is null ? 0 : 1);
+    }
+    private async Task CheckStatusMessageLayoutAsync(Action<bool, string> check)
+    {
+        await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Background);
+        var status = _status.Text;
+        var recovery = _recoveryStatus.Text;
+        var gridHeight = _grid.Bounds.Height;
+        var footer = (DockPanel)_status.Parent!;
+        var footerHeight = footer.Bounds.Height;
+        var message = "恢复草稿写入失败：此操作会丢失尚未支持的内容。\n" +
+            string.Join("\n", Enumerable.Range(0, 24).Select(i => $"xl/worksheets/sheet1.xml: 未建模元素 {i}；请查看兼容性报告。"));
+        try
+        {
+            _status.Text = message;
+            _recoveryStatus.Text = message;
+            await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Background);
+            check(footer.Bounds.Height <= footerHeight + 1 && _grid.Bounds.Height >= gridHeight - 1,
+                "Multiline errors keep the status bar compact and preserve worksheet height");
+            check(_status.Text == message && _recoveryStatus.Text == message &&
+                Equals(ToolTip.GetTip(_status), message) && Equals(ToolTip.GetTip(_recoveryStatus), message),
+                "Truncated status messages retain every diagnostic line in their tooltips");
+            _status.Text = "就绪"; _recoveryStatus.Text = "恢复草稿：12:00:00";
+            check(Equals(ToolTip.GetTip(_status), _status.Text) && Equals(ToolTip.GetTip(_recoveryStatus), _recoveryStatus.Text),
+                "Status tooltips update after an error clears");
+        }
+        finally
+        {
+            _status.Text = status; _recoveryStatus.Text = recovery;
+            await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Background);
+        }
     }
     private async Task RunRecoveryBenchmarkAsync(string directory)
     {

@@ -67,12 +67,9 @@ public sealed partial class MainWindow
     {
         if (!await FlushEditsAsync()) return;
         if (CurrentTable is not null) throw new InvalidOperationException(UiText.Get("表格已有独立筛选；请使用当前列筛选。"));
-        var range = SelectedRange(); var sheet = Document.Snapshot.Sheets[SheetIndex]; var selected = Rectangle(range);
-        if (range.Count == 1 || SelectionPlanning.IsWholeColumn(selected) || SelectionPlanning.IsWholeRow(selected))
-        {
-            var block = range.Count == 1 ? SortPlanning.CurrentRegion(sheet, range.Top, range.Left) : SortPlanning.WholeAxisRegion(sheet, selected, _grid.Current);
-            range = new(block.Top, block.Left, block.Bottom, block.Right);
-        }
+        var sheet = Document.Snapshot.Sheets[SheetIndex];
+        var block = PersistentFiltering.ResolveRange(sheet, Rectangle(SelectedRange()), _grid.Current);
+        var range = new GridRange(block.Top, block.Left, block.Bottom, block.Right);
         new DataRegion(Guid.NewGuid(), Document.Snapshot.ActiveSheetId, range).Validate();
         await ExecuteAsync(new SetAutoFilterCommand(Document.Snapshot.ActiveSheetId, new(Rectangle(range))));
     }
@@ -120,6 +117,7 @@ public sealed partial class MainWindow
         if (result.Action is "ascending" or "descending")
         {
             var range = table is null ? filter.Range : table.Range with { Bottom = table.Range.Bottom - (table.TotalsRow ? 1 : 0) };
+            if (range.Rows < 2) throw new ArgumentException(UiText.Get("请选择包含多行记录的数据区域。"));
             if (await ExecuteAsync(new SortRangeCommand(new(sheet.Id, new(range.Top, range.Left), new(range.Bottom, range.Right), [new(column, result.Action == "descending")], table?.HeaderRow ?? true, table is null)), snapshot.Revision)) await CalculatePendingAsync();
             return;
         }

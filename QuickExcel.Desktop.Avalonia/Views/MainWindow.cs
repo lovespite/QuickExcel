@@ -191,6 +191,21 @@ public sealed partial class MainWindow : Window
         var content = new global::Avalonia.Controls.Grid(); content.Children.Add(_book); content.Children.Add(_start);
         var root = new DockPanel(); DockPanel.SetDock(_menu, Dock.Top);
         var footer = new DockPanel();
+        foreach (var text in new[] { _status, _noScriptsStatus, _selectionStatistics, _pivotStatus, _recoveryStatus })
+        {
+            // NoWrap alone still displays explicit newlines in storage/calculation errors.
+            text.MaxLines = 1;
+            text.TextWrapping = TextWrapping.NoWrap;
+            text.TextTrimming = TextTrimming.CharacterEllipsis;
+        }
+        foreach (var text in new[] { _status, _recoveryStatus })
+        {
+            ToolTip.SetTip(text, text.Text);
+            text.PropertyChanged += (_, e) =>
+            {
+                if (e.Property == TextBlock.TextProperty) ToolTip.SetTip(text, text.Text);
+            };
+        }
         UpdateScriptExecutionPolicy();
         DockPanel.SetDock(_noScriptsStatus, Dock.Right); footer.Children.Add(_noScriptsStatus);
         DockPanel.SetDock(_selectionStatistics, Dock.Right); footer.Children.Add(_selectionStatistics); DockPanel.SetDock(_pivotStatus,Dock.Right); footer.Children.Add(_pivotStatus); DockPanel.SetDock(_recoveryStatus, Dock.Right); footer.Children.Add(_recoveryStatus); footer.Children.Add(_status);
