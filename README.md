@@ -1,71 +1,139 @@
-# QuickExcel 1.3.0
+# QuickExcel 4.0.0
 
-从开始页或「文件 → 设置」管理文件关联、历史记录、计算和工作表标签位置，或查看脚本 API 支持矩阵与随包许可证。
+QuickExcel 是基于 .NET 10、Avalonia 和 Skia 的桌面电子表格应用，提供自有的类型化 XLSX/XLSQ 存储、增量公式计算，以及在独立沙箱中运行的 JavaScript / TypeScript 脚本。默认交付平台为 Windows x64；Linux x64 与 macOS arm64 的支持范围单独验证。
 
-2026-11-03：JSC / TypeScript 已完成 70 号方案 J0–J6，Windows 默认包已切换为 `0.6.0-preview.8`，Linux 已独立验证；实现、发布与回退证据见 [71 号记录](QuickExcel.Desktop/docs/71-jsc-typescript-implementation-log.md)。64 MiB 引擎硬限额 `JSC-MEM-001` 保持开放，按用户要求延期且不阻止后续工作。
+当前源码版本以 [桌面项目的 Version](QuickExcel.Desktop.Avalonia/QuickExcel.Desktop.Avalonia.csproj) 为准。4.0.0 的 Windows 发布采用 **Native AOT 脚本 worker + 部分裁剪的自包含桌面运行时**，JSC、ICU 与 TypeScript 仅随 worker 分发。实现与交付证据见 [4.0 发布记录](QuickExcel.Desktop/docs/84-native-aot-and-trimming.md)。
 
-Avalonia 迁移：Windows A0–A5 工程切换完成，A7 已移除 WPF 生产入口。Linux 有受测 Ubuntu 候选包；macOS arm64 已实现隔离 worker 并通过本机发布自检，签名/公证和实机验证仍延期，详见 [平台状态](QuickExcel.Desktop/docs/67-avalonia-platforms.md) 与 [收尾记录](QuickExcel.Desktop/docs/68-avalonia-retirement.md)。
+## 快速开始
 
-2026-10-30 进度同步：M1–M3 受支持子集已交付，当前处于 **M5 桌面交互收敛**；M4 严格策略/部署与 M6 恢复/发布验收仍未完成。当前状态与后续顺序统一见 [实施计划](QuickExcel.Desktop/docs/05-implementation-plan.md)。
+在 Windows 上从仓库根目录运行：
 
-**当前重点工程：XLSX 兼容性与 Excel 常用功能对齐。** 按用户要求优先补常见文件保真、日常编辑和公式，再推进 Table/验证/条件格式、报表与高级分析。分阶段清单见 [专项计划](QuickExcel.Desktop/docs/26-excel-compatibility-roadmap.md)；E0–E4 已完成声明范围（保留各项明确限制），E3 [筛选/排序持久化](QuickExcel.Desktop/docs/50-filter-and-sort-persistence.md) 已完成 37 个真实 Excel 案例、333 项往返及相关 WPF 检查，[Table 基础](QuickExcel.Desktop/docs/51-excel-table-basics.md) 已完成 60 种内置样式、60,336 项属性往返和真实 Excel 保存重开；[结构化引用与表编辑](QuickExcel.Desktop/docs/52-structured-references-and-table-editing.md) 已完成十阶段 Excel 对照、20,891 项往返及 170 项相关测试；[数据验证](QuickExcel.Desktop/docs/53-data-validation.md) 已完成两种日期系统共 1,370 个真实 Excel 案例、45,210 项往返和 180 项相关测试，[条件格式基础](QuickExcel.Desktop/docs/54-conditional-formatting.md) 已完成 131,982 项模型/往返、29,489 项 Excel 输出复验、205 项相关及 17/153 项 WPF 检查，[常用清洗命令](QuickExcel.Desktop/docs/55-data-cleaning.md) 已完成两种日期系统 54,786 项往返、18,432 项 Excel 输出复验及 19/153 项 WPF 检查，[分组与分类汇总](QuickExcel.Desktop/docs/56-outline-and-subtotals.md) 已完成 131,545 项往返、37,928 项 Excel 输出复验、202 项相关及 16/153 项 WPF 检查；筛选与分组混合状态保留并报告，E4 [报表、打印与容量](QuickExcel.Desktop/docs/57-e4-reporting-and-capacity.md) 已完成五项声明范围，289 项相关测试、最终 117 项专项、81 项真实 Excel 和 23 项 WPF 通过，三份 PDF/DPI 验证及容量原始数据已归档。[状态栏与格式效率](QuickExcel.Desktop/docs/49-selection-statistics-and-format-efficiency.md) 已通过 104 条真实 Excel 小数位命令、三种可见性统计及 95 项专项。[计算和可移植导出](QuickExcel.Desktop/docs/48-calculation-and-portable-export.md) 已通过 1352 条真实 Excel 公式与 270 个参数边界对照。[文本和类型公式](QuickExcel.Desktop/docs/47-text-and-type-functions.md) 已通过 1900/1904 共 4,658 条真实 Excel 对照。[日期/数学及工作日](QuickExcel.Desktop/docs/46-date-and-math-functions.md) 已通过 1900/1904 共 3,024 条真实 Excel 对照。[查找公式](QuickExcel.Desktop/docs/45-lookup-functions.md) 已通过 604 条真实 Excel 对照。[条件统计公式](QuickExcel.Desktop/docs/44-conditional-functions.md) 已通过 1,706 条真实 Excel 对照。[工作表与名称管理](QuickExcel.Desktop/docs/43-sheet-and-name-management.md) 已通过真实 Excel 对照。[录入和公式辅助](QuickExcel.Desktop/docs/42-formula-entry-and-navigation.md) 已完成真实 Excel 对照。填充和序列的真实 Excel 对照见 [填充记录](QuickExcel.Desktop/docs/41-fill-and-series.md)。内部复制/剪切、选择性粘贴和真实 Excel 对照见 [剪贴板记录](QuickExcel.Desktop/docs/40-internal-clipboard.md)。
+```powershell
+.\Start-QuickExcel.cmd
+# 以禁用脚本模式启动，仍可查看和编辑工作簿及脚本源码：
+.\Start-QuickExcel.cmd --no-scripts
+```
 
-当前主工作区使用 `QuickExcel.Grid.Avalonia`，复用共享几何、编辑控制器与 Skia 渲染；WPF 作为归档回退基线保留。此前 WPF 网格替换时，旧 DataGrid 与试验窗口已移除；编辑、筛选排序、冻结、尺寸拖动/双击自动调整、图片与合并均已接入。**横向拖动导致整桌面停顿已于 2026-10-30 经用户确认解决并标记完成。** 默认 Avalonia 自动选择渲染方式，`Start-QuickExcel-Software.cmd` 仅为本次启动强制 Windows 软件渲染，用于诊断。实现、既有专项证据与缺陷关闭记录见 [主网格迁移](QuickExcel.Desktop/docs/24-main-grid-migration.md)；真实 IME、跨屏 DPI 和完整辅助功能门禁仍待验收。
+启动器读取 `artifacts/avalonia/active-windows.json`，核对发布清单与入口文件身份后启动已验证的活动包；没有活动包时构建 Web 资源并从 Release 源码运行，因此需要下文的开发工具链。当前 Windows 程序入口为 `quickxl.exe`。显示问题可通过启动环境变量 `QUICKEXCEL_SOFTWARE_RENDERING=1` 启用 Windows 软件渲染进行诊断。
 
-Avalonia 版本为 `0.6.0-preview.7`（旧 WPF 为 `0.6.0-preview.3`），已增加正式工作区、脚本专页、模块编辑、查找替换、Ribbon、脚本数字签名、兼容/导出入口及 XLSX 渲染修复；范围见 [正式界面](QuickExcel.Desktop/docs/19-m5-product-workspace.md)、[签名信任](QuickExcel.Desktop/docs/20-script-signatures.md)及[渲染记录](QuickExcel.Desktop/docs/25-xlsx-rendering.md)。版本号相同不代表旧发布目录包含最新源码。
+Windows 发布包自带 .NET 10，运行无需安装 SDK。Monaco 脚本编辑器与 PDF.js 预览需要 WebView2 Evergreen Runtime；ClickOnce 的 `setup.exe` 会检测该组件，缺少时使用随包的在线引导程序下载并安装，届时需要联网。安装、签名及更新方法见 [Windows 发布与 ClickOnce](QuickExcel.Desktop/docs/66-avalonia-windows-release.md)。
 
-默认 Windows x64 桌面表格，Linux 候选范围见平台日志；基于 Avalonia、自有类型化存储/计算引擎与 JavaScriptCore。M4 宿主崩溃后的 profile/payload 回收已实现，本机部署验证五项通过、直接长路径 EXE 启动一项失败；后续环境见 [回收与部署验证](QuickExcel.Desktop/docs/16-m4-recovery-and-deployment.md)。工作簿恢复目前仅支持手动打开副本，自动恢复后端仍属 M6。
+开始页或「文件 → 设置」提供文件关联、历史记录、计算、工作表标签位置、脚本禁用选项、脚本 API 浏览器与第三方许可证。
 
-## 试用
+## 主要功能
 
-`Start-QuickExcel.cmd` 启动经过核验的活动 Avalonia 包；没有活动包时构建 Web 资源并从 Release 源码运行。发布命令与回退方法见 [Windows 发布记录](QuickExcel.Desktop/docs/66-avalonia-windows-release.md)。
+以下均指已实现的支持子集，具体参数、容量及文件往返边界以专题文档为准。
 
-新 Avalonia 包自带 .NET 10 与独立 worker，PDF.js/Monaco 需要 Microsoft WebView2 Evergreen Runtime；离线安装说明随包。旧 `artifacts/QuickExcel/QuickExcel.exe` 是 WPF 快照，仍需要 .NET Windows Desktop Runtime，不能视为最新版本。
+| 领域 | 当前能力 |
+| --- | --- |
+| 文件与兼容 | XLSQ v2、XLSX 读写及 Strict OOXML 支持子集；CSV/TSV 导入预览、编码与逐列类型选择、导出；兼容报告、外部文件变更检测和原子保存 |
+| 日常编辑 | 撤销/重做、查找替换、内部复制/剪切、选择性与运算粘贴、可见行复制粘贴、填充/序列、定位条件、工作表与名称管理 |
+| 格式与内容 | 数字格式、样式、合并、冻结/缩放、富文本分段编辑、超链接、传统批注与线程评论、图片和绘图对象 |
+| 数据处理 | 多键排序、颜色/前后 N 项/日期分组筛选、Excel Table 与结构化引用、数据验证、条件格式、分列、去重、快速填充、分组与分类汇总 |
+| 公式与分析 | 跨表引用、名称、稀疏依赖与增量计算；条件统计、查找、日期/数学/文本函数、LET、动态数组、基础透视表；公式引用/从属追踪、错误定位与逐步求值 |
+| 报表与打印 | 页面设置、分页预览、图表、Skia 共享渲染、PDF 导出及原生打印入口 |
+| 脚本与恢复 | Monaco 编辑、TypeScript 检查、UDF、Actions、Events、初始化入口、调试控制台、脚本数字签名、会话存储与虚拟文件、自动恢复草稿 |
 
-- 新建及保存使用 **XLSQ v2**：数字、文本、布尔、标准错误、空文本、空白和公式缓存分别保存；保留 1900/1904 日期系统、数字格式及稳定工作表身份。
-- v1 打开时迁移，不猜测恢复历史上已丢失的类型；首次保存必须选新路径，保留原文件。
-- 不支持的 XLSX 部件和属性进入兼容报告。工作簿内容未变时保留原 XLSX 字节；编辑后普通保存会阻止不确定的损失，可明确选择另存受支持副本。
-- XLSX 可直接保存已支持内容、公式和文档属性。冻结、每表缩放、活动表/格、滚动位置与 hidden/veryHidden 持久化；普通取消隐藏不暴露 veryHidden。冻结/缩放/可见性可撤销且产生 dirty，导航只随下一次保存记录，范围见 [视图契约](QuickExcel.Desktop/docs/33-xlsx-workbook-views.md)。
-- XLSX 导出可选值快照或可移植公式；脚本与跨表传递依赖冻结为值，独立标准公式可保留。缺失的冻结结果阻止导出，旧结果须明确选择。
-- 存储读取、迁移、保存不执行脚本或恢复授权；桌面打开时可在签名与证书信任验证通过后启用脚本。未签名文件保持停用，恢复副本始终不自动启用，详见[签名信任](QuickExcel.Desktop/docs/20-script-signatures.md)。文件级 API v2 支持包内 ES 模块执行；import 只接受清单声明的逻辑 ID。API v1 保留旧单脚本语义。
+E0–E5 及 E6/E7 已完成各自声明的交付子集；E8/E9 的分析、复杂模板和容量扩展仍在计划中。功能清单与后续范围见 [Excel 对齐路线图](QuickExcel.Desktop/docs/26-excel-compatibility-roadmap.md)、[E5 实施记录](QuickExcel.Desktop/docs/74-e5-implementation-log.md)和 [常用功能计划](QuickExcel.Desktop/docs/82-excel-common-features-plan.md)。
 
-脚本每轮在独立 worker 执行，可随时停止。已绑定的 actions 读取只读工作簿快照，批量写值或公式；宿主校验全部变更后原子提交，可一次撤销，失败不留部分写入。独立 UDF 已按原顺序合批，消息上限为 16 MiB；Windows 公式与 actions worker 已强制使用无能力 AppContainer，回环与 DNS 拒绝已取得本机 WFP 证据。严格执行策略、部署矩阵及 M6 OS 门禁仍待完成。本版仅供可信脚本使用，不等于完整 M4 或 Beta。完整桌面交互与自动恢复属 M5/M6。见 [合批与容量](QuickExcel.Desktop/docs/14-m4-batching.md)、[隔离 ADR](QuickExcel.Desktop/docs/15-m4-os-isolation-adr.md)、[actions 契约与验收](QuickExcel.Desktop/docs/13-m4-actions.md)及[发布说明](QuickExcel.Desktop/RELEASE-NOTES.md)。
+## 文件、保存与恢复
 
-## 仓库边界
+- **XLSQ v2** 是新建工作簿和脚本工作簿的主格式，分别保存数字、文本、布尔、错误、空白、空文本与公式缓存，并保留日期系统和工作表身份。旧 XLSQ v1 数据导入时迁移，首次保存须使用新路径，不猜测恢复历史上已丢失的类型。
+- **XLSX** 可直接保存已支持内容、公式、视图和元数据。不支持的部件或语义进入兼容报告；内容未变时保留原包字节，编辑后若存在不确定损失则阻止普通保存，可明确选择另存受支持副本。未知公式和旧缓存不会被冒充为已支持计算或新鲜结果。
+- **XLSX 导出** 可选值快照或可移植公式。脚本及其依赖按导出策略冻结为值；缺失结果阻止导出，使用旧结果需要明确选择。脚本源码及持久脚本存储使用 XLSQ 保存。
+- **自动恢复** 每 30 秒尝试记录有未保存编辑的工作簿，保留两代完整草稿。启动流程和文件菜单提供恢复列表；恢复为脱离原路径的新会话，保持未保存且脚本停用。草稿包含已提交到文档会话的内容，不包含编辑框尚未提交的输入、`sessionStorage` 或临时虚拟文件。完整契约与故障验证见 [E6/E7 实施记录](QuickExcel.Desktop/docs/83-e6-e7-implementation-log.md)。
 
-QuickExcel 与同级 `../ExcelIO` 是独立 Git 仓库。QuickExcel 已移除 ExcelIO 和 ExcelIO.Formula 依赖，构建、测试与发布无需同级库；不修改、复制或提交其源码。清理范围与兼容验证见 [依赖移除记录](QuickExcel.Desktop/docs/58-excelio-removal.md)。
+当前模型上限为每表 **200,000 行 × 2,048 列**、每簿 **64 张表、1,000,000 个实际存储单元格**；各操作另有内存、历史与时间预算，这些数字不等于全容量性能验收。文件支持与计算边界分别见 [文件和类型](QuickExcel.Desktop/docs/09-m2-files-and-types.md)、[计算契约](QuickExcel.Desktop/docs/10-m3-calculation.md)及后续专题。
+
+## 脚本模型
+
+生产脚本引擎为 JavaScriptCore；TypeScript 5.9.3 在独立隔离编译 worker 中进行完整检查和编译。脚本不能直接访问宿主 CLR、操作系统文件或网络，模块导入只解析工作簿清单声明的逻辑 ID。
+
+新工作簿使用 **文件 API v4、IPC 11**：一个可选初始化主入口，UDF、Actions、Events 各有独立角色，并从模块导出自动发现。v4 不使用 `host.functions.register` 或 `host.events.on`。现有 API v3 文件保留版本隔离的兼容执行；文件 API v1/v2 仅供源码检查，须显式改写为 v3 才能执行，保存前需完成改写或移除全部脚本，不自动迁移源码。文件 API 版本与函数描述符的参数语义版本相互独立。
+
+Actions/Events 通过 `QuickExcel.Workbook` 等对象访问宿主拥有的事务，可以读取本事务先前的写入；工作簿和虚拟文件变更统一校验后原子提交，失败全部回滚，可撤销的变更合为一次历史记录。`localStorage` 随 XLSQ 保存，`sessionStorage` 随文档会话释放；两者的事务及历史规则见 [脚本存储](QuickExcel.Desktop/docs/81-script-storage.md)。`//xlsq/`、`//temp/`、`//mem/` 是逻辑虚拟文件空间，不是本机路径。
+
+Windows/macOS 在每个已授权工作簿会话中分别复用 UDF 与 Actions/Events 的隔离 worker 和上下文；UDF 不共享初始化状态。失败或撤权后丢弃上下文，不自动重放初始化。控制台、编译器及 Linux worker 保持一次性执行；Linux 当前拒绝持久初始化绑定。
+
+存储读取本身不执行脚本。脚本启用受授权、签名信任与执行策略约束；设置中的「禁用脚本」、`--no-scripts` 或 `QUICKEXCEL_NO_SCRIPTS=1` 均可禁止执行和编译，优先于已信任签名。API 浏览器展示当前能力与成员签名，未实现成员或参数组合显式拒绝。
+
+入口示例见 [初始化、自动发现与编辑器](QuickExcel.Desktop/docs/80-script-entrypoints-and-editor.md)，对象支持矩阵见 [脚本 API](QuickExcel.Desktop/docs/79-script-api-redesign.md)，上下文与事务计算见 [UDF 隔离](QuickExcel.Desktop/docs/77-udf-context-isolation-and-transaction-calculation.md)。
+
+## 构建与验证
+
+Windows 开发需要 .NET 10 SDK、Node.js/npm、PowerShell 7，以及原生引擎所需的 C++ 工具链。**Windows 正式发布要求 .NET SDK 10.0.404 或更新版本**，Native AOT 需要 Visual Studio C++ 工具和 Windows SDK；完整原生依赖、固定源码与哈希见 [JSC 构建说明](tools/QuickExcel.JscProbe/README.md)及 [来源记录](QuickExcel.Scripting/native/jsc/SOURCES.md)。首次还原或构建需下载依赖。
+
+从仓库根目录执行：
+
+```powershell
+.\scripts\build-avalonia-web.ps1
+dotnet build .\QuickExcel.slnx -c Release --artifacts-path .\artifacts\build -v minimal
+dotnet run --project .\QuickExcel.Desktop.Avalonia\QuickExcel.Desktop.Avalonia.csproj -c Release --artifacts-path .\artifacts\build
+```
+
+按修改范围选用定向检查；下面是工作区交互和原生桥检查示例，不要求每次全部运行：
+
+```powershell
+dotnet test .\QuickExcel.Core.Test\QuickExcel.Core.Test.csproj -c Release --artifacts-path .\artifacts\build --filter "FullyQualifiedName~WebDraftContractTests|FullyQualifiedName~M5InteractionTests" -v minimal
+.\scripts\test-avalonia-workspace.ps1 -Mode Workspace
+# 网格变更使用 -Mode Grid；性能基准单独运行：
+.\scripts\test-avalonia-grid-benchmark.ps1
+dotnet run --project .\QuickExcel.Scripting\smoke\QuickExcel.Scripting.Smoke.csproj -c Release --artifacts-path .\artifacts\build
+```
+
+所有托管构建、测试、运行和发布命令都须指定 `--artifacts-path`，将输出保留在本仓库 `artifacts` 下。日常功能或修复只运行相关测试，不逐次执行全量回归；性能采样与功能测试分开运行。Windows AOT worker 的集成验证须通过 `QuickExcelPublishedWorkerDirectory` 使用真实发布载荷，普通开发构建不能替代该验证。
+
+相关检查通过后，功能或修复交付必须更新本地启动包：
+
+```powershell
+.\scripts\build-quickexcel.ps1 -SkipTests -RunSmoke
+# 如需同时生成 ZIP 和 SHA-256：
+# .\scripts\build-quickexcel.ps1 -SkipTests -RunSmoke -CreateArchive
+```
+
+发布脚本分别发布 AOT worker 和自包含桌面，在全新目录执行生产自检，成功后才更新 `artifacts/avalonia/active-windows.json`。失败保留之前的活动包；普通源码构建不会更新启动包。`-OutputDirectory` 必须位于本仓库 `artifacts` 下。ClickOnce 使用 `scripts/build-clickonce.ps1 -CertificateThumbprint <thumbprint>`，签名证书准备、构建前置条件和分发验证见 [Windows 发布文档](QuickExcel.Desktop/docs/66-avalonia-windows-release.md)。
+
+## 平台与验收状态
+
+| 平台 | 当前工程范围 | 仍需独立验收的事项 |
+| --- | --- | --- |
+| Windows x64 | 默认 Avalonia 包；Native AOT worker、零能力 AppContainer、签名与 ClickOnce 分发；4.0 包及其启动器/ClickOnce 载荷已通过生产自检 | 干净设备安装、完整部署与最终 OS 安全门禁、物理输入/打印等 |
+| Linux x64 | 受测 Ubuntu 候选包；Landlock/seccomp/systemd 用户 scope 隔离、Secret Service 信任、CUPS 打印；托管 worker | 一次性脚本上下文不支持持久初始化；VM 中文输入候选窗问题及实机验收仍未关闭 |
+| macOS arm64 | 原生 JSC、默认拒绝的 Seatbelt 隔离、持久 UDF/Actions worker、本机发布自检；托管 worker | Developer ID 签名/公证、签名包持久信任和实机验收仍未完成 |
+
+Linux/macOS 通过 `scripts/publish-avalonia-unix.ps1` 发布，分别传入 `-Rid linux-x64` 或 `-Rid osx-arm64`，可加 `-CreateArchive` 归档。需先在目标平台构建原生引擎与 worker 沙箱；具体命令和前置条件见 [AGENTS.md](AGENTS.md)与 [平台实施记录](QuickExcel.Desktop/docs/67-avalonia-platforms.md)。macOS 的 256 MiB 进程限制由 footprint 轮询看门狗实施，允许有界超调，不是 cgroup 等价硬限。平台密钥保护不可用时仅允许明确的一次性授权。
+
+M4/M5/M6 的完整验收尚未关闭，真实 IME、跨屏 DPI、辅助功能、物理打印和干净设备验证仍按既有安排延期。`JSC-MEM-001`（64 MiB 总引擎分配硬限额）保持开放、按用户决定延期；进程限额或 GC 阈值不代表它已实现。自动恢复已交付的子集也不等于全容量、断电设备和全部故障矩阵通过。
+
+## 仓库结构
+
+QuickExcel 与同级 `../ExcelIO` 是独立 Git 仓库。当前项目不依赖 ExcelIO 或 ExcelIO.Formula，构建、测试和发布无需同级库；相关变更留在各自仓库，见 [依赖移除记录](QuickExcel.Desktop/docs/58-excelio-removal.md)。
 
 | 目录 | 职责 |
 | --- | --- |
-| [QuickExcel.Core](QuickExcel.Core/README.md) | 纯 .NET 领域快照、会话、命令、历史和端口；源码按职责分目录 |
-| `QuickExcel.Infrastructure` | 类型化 XLSX/XLSQ v2、v1 导入迁移、计算与运行时适配 |
-| `QuickExcel.Scripting` | JSC 托管桥、隔离 TypeScript 编译和固定来源原生引擎 |
-| `QuickExcel.ScriptContracts` / `QuickExcel.ScriptWorker` | 有界 IPC 协议与独立脚本执行进程 |
-| `QuickExcel.Desktop.Avalonia` / `Grid.Avalonia` | 默认桌面、原生网格、Monaco/PDF.js 与平台组合根 |
-| `QuickExcel.Presentation` / `Grid.Shared` | 无 UI 的共享编辑、工作区和几何规则 |
-| `QuickExcel.Desktop` | 产品/架构文档、发布历史和保留许可证；不再包含 WPF 应用项目 |
-| `QuickExcel.Grid.Wpf` | 旧网格许可证与来源清单归档；生产使用 Grid.Avalonia/Grid.Shared |
-| `QuickExcel.Core.Test` | 领域、会话、存储、计算和格式异常回归 |
+| [QuickExcel.Core](QuickExcel.Core/README.md) | 纯 .NET 领域模型、文档会话、命令、历史、公式与端口 |
+| `QuickExcel.Infrastructure` | XLSX/XLSQ 存储、迁移、计算、恢复及隔离 worker 适配 |
+| `QuickExcel.Scripting` | JSC 托管桥、TypeScript 编译支持、原生源码与运行时冒烟检查 |
+| `QuickExcel.ScriptContracts` / `QuickExcel.ScriptWorker` | BCL-only IPC 契约与独立脚本执行进程 |
+| `QuickExcel.Desktop.Avalonia` / `QuickExcel.Grid.Avalonia` | 默认桌面宿主、原生网格与平台组合根 |
+| `QuickExcel.Presentation` / `QuickExcel.Grid.Shared` | 无 UI 的编辑控制器、工作区规则与稀疏几何算法 |
+| `QuickExcel.Rendering` / `QuickExcel.Rendering.Skia` | 共享渲染契约、Skia 绘制与 PDF 输出 |
+| `QuickExcel.Web` | 本地 Monaco / PDF.js Web 资源与构建入口 |
+| `QuickExcel.Core.Test` / `QuickExcel.Rendering.Test` / `QuickExcel.Rendering.Smoke` | 领域、存储、计算、脚本、恢复与渲染定向验证 |
+| `tools/QuickExcel.ApiGen` | 从固定 Office Scripts 定义生成脚本声明、API 目录与能力清单；生成文件不手工编辑 |
+| `QuickExcel.Desktop` | 产品/架构文档、历史发布记录与许可证 |
+| `scripts` / `tools` / `third_party` | 构建发布、专项验证、开发工具与保留来源的第三方组件 |
 
-## 构建
+`artifacts`、构建缓存、原生下载源码及产物不进入 Git。WorkerFixture、SandboxHostFixture、RecoveryFixture 和平台探针等开发/故障注入工具不得进入正式包。
 
-源码构建需要 Windows x64、.NET 10 SDK 和 Node.js/npm；发布脚本使用 PowerShell 7。首次原生构建还需 CMake、Visual Studio C++ 工具及下载固定源码的网络连接，见[来源说明](QuickExcel.Scripting/native/SOURCES.md)。
+WPF 生产项目已移除，旧源码保留在 `avalonia-wpf-baseline-20261102` 标签，许可证与来源归档保留在 `QuickExcel.Grid.Wpf` 等目录。回退使用已验证的完整归档包和 `scripts/select-quickexcel-package.ps1`，不恢复旧源码构建；详见 [WPF 退役记录](QuickExcel.Desktop/docs/68-avalonia-retirement.md)。
 
-```powershell
-dotnet build .\QuickExcel.slnx -c Release --artifacts-path .\artifacts\build -v minimal
-dotnet test .\QuickExcel.Core.Test\QuickExcel.Core.Test.csproj -c Release --artifacts-path .\artifacts\build --filter "FullyQualifiedName~WebDraftContractTests|FullyQualifiedName~M5InteractionTests" -v minimal
-dotnet run --project .\QuickExcel.Scripting\smoke\QuickExcel.Scripting.Smoke.csproj -c Release --artifacts-path .\artifacts\build
-.\scripts\build-quickexcel.ps1 -RunSmoke -CreateArchive
-```
+## 文档与第三方声明
 
-所有托管命令均须指定 `--artifacts-path`，让引用项目的构建输出也进入本仓库。上面的测试是定向示例；日常变更只运行相关测试和 Avalonia 专项，不逐次执行全量套件。发布脚本生成独立新发布树、ZIP、SHA-256 和 release.json；不把旧 smoke 文件当成本次通过证据。无 SDK 干净机器、安装器和程序/安装包签名验收尚未完成；工作簿脚本签名是另一项已实现能力。
+- [文档索引](QuickExcel.Desktop/docs/README.md)：架构、格式、交互与实现专题；带日期的旧记录保留当时状态。
+- [E6/E7 实施记录](QuickExcel.Desktop/docs/83-e6-e7-implementation-log.md)：数据交换、公式审核、内容编辑与自动恢复。
+- [脚本入口与编辑器](QuickExcel.Desktop/docs/80-script-entrypoints-and-editor.md)、[对象 API 支持矩阵](QuickExcel.Desktop/docs/79-script-api-redesign.md)：当前脚本契约与限制。
+- [Windows 发布](QuickExcel.Desktop/docs/66-avalonia-windows-release.md)、[4.0 AOT 与裁剪](QuickExcel.Desktop/docs/84-native-aot-and-trimming.md)、[平台状态](QuickExcel.Desktop/docs/67-avalonia-platforms.md)：包身份、验证证据与未完成项。
+- [渲染来源](QuickExcel.Rendering.Skia/SOURCES.md)、[JSC 来源](QuickExcel.Scripting/native/jsc/SOURCES.md)、[Office Scripts 定义来源](third_party/office-scripts-docs/README.md)：固定版本、哈希、许可证与修改说明。
 
-- [试用操作](QuickExcel.Desktop/README.md)
-- [实施计划](QuickExcel.Desktop/docs/05-implementation-plan.md)
-- [M2 支持矩阵与证据](QuickExcel.Desktop/docs/09-m2-files-and-types.md)
-
-当前计算范围、脚本描述符与验收见 [M3 支持矩阵](QuickExcel.Desktop/docs/10-m3-calculation.md)。
-
-Linux 发布使用 `scripts/publish-avalonia-unix.ps1 -Rid linux-x64 -CreateArchive`，先在目标平台构建固定来源 native。Linux worker 必须通过 Landlock/seccomp/cgroup 的逐轮核验，Secret Service 不可用时不持久信任。macOS arm64 使用同一脚本的 `-Rid osx-arm64`（需要 PowerShell 7）；worker 使用默认拒绝的 Seatbelt、宿主核对和父进程/资源看门狗，内存上限是轮询看门狗而非 cgroup 硬限。签名/公证与签名包持久信任尚未验证，不能据此声明完整平台支持。
-
-WPF 源码保存在标签 `avalonia-wpf-baseline-20261102`，受测归档包与校验清单在 `artifacts/avalonia/rollback`。回退用 `scripts/select-quickexcel-package.ps1 -PackageDirectory <归档目录>`；不重新编译或在当前宿主中加载 WPF。
+第三方版权与许可证可在设置页及发布包的许可证文件中查看。引入组件时须同步更新设置页、随包 notices 和完整许可证，保留 FastWpfGrid、Office Scripts 定义等上游署名与修改说明。
