@@ -9,12 +9,10 @@ public sealed record CompileRequest(CompilerModule[] Modules, string[] Entries, 
 {
     public int ApiVersion { get; init; } = 3;
     public string SourceMapMode { get; init; } = "full";
-    public string ComputeDigest() => CompilerProtocol.Hash(JsonSerializer.Serialize(new
-    {
-        compiler = CompilerProtocol.Identity, compilerPolicy = CompilerProtocol.Policy, options = CompilerProtocol.Options,
-        engine = WorkerProtocol.Engine, policy = WorkerProtocol.Policy, api = ApiVersion, sourceMapMode = SourceMapMode,
-        modules = Modules.OrderBy(m => m.Id, StringComparer.Ordinal), entries = Entries
-    }, WorkerProtocol.Json));
+    public string ComputeDigest() => CompilerProtocol.Hash(JsonSerializer.Serialize(new CompilationDigest(
+        CompilerProtocol.Identity, CompilerProtocol.Policy, CompilerProtocol.Options,
+        WorkerProtocol.Engine, WorkerProtocol.Policy, ApiVersion, SourceMapMode,
+        Modules.OrderBy(m => m.Id, StringComparer.Ordinal).ToArray(), Entries), DigestJsonContext.Default.CompilationDigest));
 
     public void Validate()
     {
@@ -51,7 +49,7 @@ public static class CompilerProtocol
     public static string Hash(string value) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value)));
     public static bool ValidId(string id) => !string.IsNullOrEmpty(id) && id.Length <= 128 && id is not ("." or "..") &&
         id.All(c => char.IsAsciiLetterOrDigit(c) || c is '_' or '-' or '.');
-    public static string OutputDigest(CompilerResult result) => Hash(JsonSerializer.Serialize(result.Outputs, WorkerProtocol.Json));
+    public static string OutputDigest(CompilerResult result) => Hash(JsonSerializer.Serialize(result.Outputs, WorkerProtocol.TypeInfo<CompilerOutput[]>()));
 
     public static void ValidateReply(CompiledReply reply, CompileRequest request)
     {
@@ -61,7 +59,7 @@ public static class CompilerProtocol
             result.Diagnostics is null || result.Outputs is null || result.Diagnostics.Length > 128 || result.Outputs.Length > 64 ||
             result.Success != (result.Diagnostics.Length == 0) || !result.Success && result.Outputs.Length != 0 ||
             result.Success && result.Outputs.Length != request.Modules.Length ||
-            Encoding.UTF8.GetByteCount(JsonSerializer.Serialize(result.Diagnostics, WorkerProtocol.Json)) > 16 * 1024 ||
+            Encoding.UTF8.GetByteCount(JsonSerializer.Serialize(result.Diagnostics, WorkerProtocol.TypeInfo<CompilerDiagnostic[]>())) > 16 * 1024 ||
             result.Diagnostics.Any(d => d is null || d.Message is null || d.Message.Length > 4200 ||
                 d.Module is not null && !request.Modules.Any(m => m.Id == d.Module) ||
                 d.Line is <= 0 || d.Column is <= 0 || d.Line.HasValue != d.Column.HasValue ||

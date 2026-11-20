@@ -41,10 +41,10 @@ internal sealed partial class ScriptModelAdapter
             if (after is not null && StringComparer.Ordinal.Compare(pair.Key, after) <= 0) continue;
             var size = (long)pair.Key.Length + pair.Value.Length + 32;
             if (items.Count > 0 && (bytes + size > ScriptStorage.MaxEntryBytes || items.Count == 1024))
-                return new { items, next, done = false };
+                return new Dictionary<string, object?> { ["items"] = items, ["next"] = next, ["done"] = false };
             items.Add(operation switch { "keys" => pair.Key, "values" => pair.Value, _ => (object)new[] { pair.Key, pair.Value } });
             bytes += size; next = pair.Key;
         }
-        return new { items, next, done = true };
+        return new Dictionary<string, object?> { ["items"] = items, ["next"] = next, ["done"] = true };
     }
 }

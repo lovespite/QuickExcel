@@ -83,7 +83,8 @@ internal sealed class FilterPanel : Border
                 if (item is null) return null;
                 var box = new CheckBox { Content = item.Candidate.Label, Margin = new(0), MinHeight = 26 };
                 ToolTip.SetTip(box, UiText.Format($"{item.Candidate.Label}（{item.Candidate.Count:N0} 项）"));
-                box.Bind(ToggleButton.IsCheckedProperty, new Binding(nameof(CandidateItem.Selected)) { Source = item, Mode = BindingMode.TwoWay });
+                box.Bind(ToggleButton.IsCheckedProperty,
+                    CompiledBinding.Create((CandidateItem value) => value.Selected, source: item, mode: BindingMode.TwoWay));
                 return box;
             }) };
         ScrollViewer.SetHorizontalScrollBarVisibility(list, ScrollBarVisibility.Disabled); values.Children.Add(list);

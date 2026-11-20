@@ -17,7 +17,7 @@ public sealed class ScriptWorkerActionExecutor(string? executablePath = null) : 
         // The console is one synthetic main(workbook, host) entry. Direct eval runs
         // only inside the zero-capability action worker with this transaction context.
         var text = "export function main(workbook, host) { const result = eval(" +
-            JsonSerializer.Serialize(source) + "); console.log('=>', result); }";
+            JsonSerializer.Serialize(source, WorkerProtocol.TypeInfo<string>()) + "); console.log('=>', result); }";
         return new(new Dictionary<string, ScriptModule> { ["__console__"] = new("scripts/console.js", text) }, ["__console__"],
             scriptApiVersion: 4, bindings: [new("__console__", "actions")]);
     }
@@ -80,7 +80,7 @@ public sealed class ScriptWorkerActionExecutor(string? executablePath = null) : 
 
     private static WireValue ToWire(CellValue value) => value.Kind switch
     {
-        CellValueKind.Error => new("error", JsonSerializer.SerializeToElement(value.ErrorCode.ToString())),
+        CellValueKind.Error => new("error", JsonSerializer.SerializeToElement(value.ErrorCode.ToString(), WorkerProtocol.TypeInfo<string>())),
         CellValueKind.Blank => WireValue.FromObject(null),
         CellValueKind.Number => WireValue.FromObject(value.NumberValue),
         CellValueKind.Text => WireValue.FromObject(value.TextValue),

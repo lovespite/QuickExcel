@@ -1,3 +1,4 @@
+using QuickExcel.Serialization;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -17,8 +18,7 @@ public sealed class ScriptSigningPreferencesStore
 {
     private readonly string _path;
     private readonly TrustDataProtection _protection;
-    private sealed record Envelope(int Version, string Protection, byte[] Data);
-    private static readonly JsonSerializerOptions Json = new() { UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow };
+    internal sealed record Envelope(int Version, string Protection, byte[] Data);
     private const int MaximumBytes = 128 * 1024;
     public ScriptSigningPreferencesStore(string path) : this(path, TrustDataProtection.Create()) { }
     internal ScriptSigningPreferencesStore(string path, TrustDataProtection protection)
@@ -32,14 +32,14 @@ public sealed class ScriptSigningPreferencesStore
         using var file = File.OpenRead(_path);
         if (file.Length > MaximumBytes) throw new InvalidDataException("Signing preferences exceed the local storage limit.");
         using var json = JsonDocument.Parse(file, new JsonDocumentOptions { AllowDuplicateProperties = false });
-        var envelope = json.RootElement.Deserialize<Envelope>(Json);
+        var envelope = json.RootElement.Deserialize(InfrastructureJsonContext.Strict.SigningEnvelope);
         if (envelope is not { Version: 1, Data.Length: > 0 } || envelope.Protection != _protection.Id)
             throw new InvalidDataException("Invalid local signing preferences protection.");
         var plaintext = _protection.Unprotect(envelope.Data, Purpose);
         try
         {
             using var payload = JsonDocument.Parse(plaintext, new JsonDocumentOptions { AllowDuplicateProperties = false });
-            var value = payload.RootElement.Deserialize<ScriptSigningPreferences>(Json) ?? throw new InvalidDataException("Invalid signing preferences.");
+            var value = payload.RootElement.Deserialize(InfrastructureJsonContext.Strict.ScriptSigningPreferences) ?? throw new InvalidDataException("Invalid signing preferences.");
             Validate(value); return value;
         }
         finally { CryptographicOperations.ZeroMemory(plaintext); }
@@ -53,11 +53,11 @@ public sealed class ScriptSigningPreferencesStore
         var value = new ScriptSigningPreferences(rememberKeyFile ? Path.GetFullPath(keyFile) : null,
             rememberPassword ? FileHash(keyFile) : null, rememberPassword ? password : null);
         Validate(value);
-        var plaintext = JsonSerializer.SerializeToUtf8Bytes(value, Json);
+        var plaintext = JsonSerializer.SerializeToUtf8Bytes(value, InfrastructureJsonContext.Strict.ScriptSigningPreferences);
         byte[] data;
         try { data = _protection.Protect(plaintext, Purpose); }
         finally { CryptographicOperations.ZeroMemory(plaintext); }
-        var encoded = JsonSerializer.SerializeToUtf8Bytes(new Envelope(1, _protection.Id, data), Json);
+        var encoded = JsonSerializer.SerializeToUtf8Bytes(new Envelope(1, _protection.Id, data), InfrastructureJsonContext.Strict.SigningEnvelope);
         if (encoded.Length > MaximumBytes) throw new InvalidDataException("Signing preferences exceed the local storage limit.");
         var temporary = _path + "." + Guid.NewGuid().ToString("N") + ".tmp";
         try

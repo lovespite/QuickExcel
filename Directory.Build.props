@@ -1,6 +1,9 @@
 <Project>
   <PropertyGroup>
     <QuickExcelScriptEngine Condition="'$(QuickExcelScriptEngine)' == ''">Jsc</QuickExcelScriptEngine>
+    <!-- Pinned Windows runtime/compiler servicing baseline, including the
+         CVE-2026-111497 fix. Release locks record the exact restored packages. -->
+    <QuickExcelWindowsRuntimeVersion>10.0.15</QuickExcelWindowsRuntimeVersion>
     <QuickExcelPython Condition="'$(QuickExcelPython)' == '' and $([MSBuild]::IsOSPlatform('Windows'))">python</QuickExcelPython>
     <QuickExcelPython Condition="'$(QuickExcelPython)' == ''">python3</QuickExcelPython>
   </PropertyGroup>

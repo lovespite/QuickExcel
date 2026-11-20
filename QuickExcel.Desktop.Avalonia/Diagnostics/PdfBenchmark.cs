@@ -62,7 +62,7 @@ public sealed partial class MainWindow
                             var data = new System.Text.StringBuilder(); var length = 1;
                             while (data.Length < length)
                             {
-                                var snapshot = (await page.Browser.RequestAsync("test", "testResult", new { action = "snapshot", page = number, offset = data.Length })).Payload;
+                                var snapshot = (await page.Browser.RequestAsync("test", "testResult", new Dictionary<string, object?> { ["action"] = "snapshot", ["page"] = number, ["offset"] = data.Length })).Payload;
                                 length = snapshot.GetProperty("length").GetInt32(); if (length > 16 * 1024 * 1024) throw new InvalidDataException("Diagnostic PNG is too large.");
                                 if (data.Length == 0) await File.WriteAllTextAsync(Path.Combine(directory, $"{fixture.Name}-{number}-canvas.json"), JsonSerializer.Serialize(new { width = snapshot.GetProperty("width").GetInt32(), height = snapshot.GetProperty("height").GetInt32(), scaleX = snapshot.GetProperty("scaleX").GetDouble(), scaleY = snapshot.GetProperty("scaleY").GetDouble() }));
                                 data.Append(snapshot.GetProperty("data").GetString());
@@ -74,13 +74,13 @@ public sealed partial class MainWindow
                     if (run == 4 && fixture.Name == "images-64MiB")
                         for (var index = 0; index < 65; index++)
                         {
-                            var measured = await page.Browser.RequestAsync("test", "testResult", new { action = "zoomSample", value = index % 2 == 0 ? "1" : "1.25" });
+                            var measured = await page.Browser.RequestAsync("test", "testResult", new Dictionary<string, object?> { ["action"] = "zoomSample", ["value"] = index % 2 == 0 ? "1" : "1.25" });
                             if (index >= 5) zooms.Add(measured.Payload.GetProperty("elapsedMs").GetDouble());
                         }
                     if (run == 4)
                     {
-                        await page.Browser.RequestAsync("test", "testResult", new { action = "page", page = fixture.Pages }); await Task.Delay(150);
-                        var stats = (await page.Browser.RequestAsync("test", "testResult", new { action = "inspect" })).Payload;
+                        await page.Browser.RequestAsync("test", "testResult", new Dictionary<string, object?> { ["action"] = "page", ["page"] = fixture.Pages }); await Task.Delay(150);
+                        var stats = (await page.Browser.RequestAsync("test", "testResult", new Dictionary<string, object?> { ["action"] = "inspect" })).Payload;
                         check(stats.GetProperty("canvases").GetInt32() <= 8 && stats.GetProperty("canvasBytes").GetInt64() <= 64 * 1024 * 1024 && stats.GetProperty("thumbnails").GetInt32() <= 12, fixture.Name + " canvas/thumbnail budgets");
                     }
                 }

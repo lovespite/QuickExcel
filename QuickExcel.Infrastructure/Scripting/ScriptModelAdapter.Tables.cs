@@ -28,10 +28,10 @@ internal sealed partial class ScriptModelAdapter
             if (member == "getId") return column.Id;
             if (member == "getIndex") return index;
             if (member == "getName") return column.Name;
-            if (member == "getFilter") return Handle("Filter", new { sheetId = sheet.Id.ToString(), tableId = table.Id, columnId });
+            if (member == "getFilter") return Handle("Filter", new Dictionary<string, object?> { ["sheetId"] = sheet.Id.ToString(), ["tableId"] = table.Id, ["columnId"] = columnId });
             range = range with { Left = range.Left + index, Right = range.Left + index };
         }
-        object Column(TableColumn c) => Handle("TableColumn", new { sheetId = sheet.Id.ToString(), tableId = table.Id, columnId = c.Id });
+        object Column(TableColumn c) => Handle("TableColumn", new Dictionary<string, object?> { ["sheetId"] = sheet.Id.ToString(), ["tableId"] = table.Id, ["columnId"] = c.Id });
         switch (member)
         {
             case "getRange": case "getHeaderRowRange": case "getTotalRowRange": case "getRangeBetweenHeaderAndTotal":
@@ -53,9 +53,9 @@ internal sealed partial class ScriptModelAdapter
                     "getShowBandedColumns" => table.Style.ColumnStripes, "getShowBandedRows" => table.Style.RowStripes,
                     "getPredefinedTableStyle" => table.Style.Name ?? "", _ => table.Filter is not null && table.Filter.Columns.Values.All(c => c.ShowButton)
                 };
-            case "getWorksheet": Arity(args, 0); return Handle("Worksheet", new { sheetId = sheet.Id.ToString() });
+            case "getWorksheet": Arity(args, 0); return Handle("Worksheet", new Dictionary<string, object?> { ["sheetId"] = sheet.Id.ToString() });
             case "getSort": case "getAutoFilter":
-                Arity(args, 0); return Handle(member == "getSort" ? "TableSort" : "AutoFilter", new { sheetId = sheet.Id.ToString(), tableId = table.Id });
+                Arity(args, 0); return Handle(member == "getSort" ? "TableSort" : "AutoFilter", new Dictionary<string, object?> { ["sheetId"] = sheet.Id.ToString(), ["tableId"] = table.Id });
             case "getColumns": Arity(args, 0); Spend(1, false); return table.Columns.Select(Column).ToArray();
             case "getColumn": case "getColumnById": case "getColumnByName":
                 Arity(args, 1); Spend(1, false);
@@ -129,7 +129,7 @@ internal sealed partial class ScriptModelAdapter
         Spend(1, false);
         return member switch
         {
-            "getFields" => table.Sort?.Keys.Select(k => new { key = k.Column - table.Range.Left, ascending = !k.Descending, sortOn = (int)k.Basis, color = Rgb(k.PreferredColor) }).ToArray() ?? [],
+            "getFields" => table.Sort?.Keys.Select(k => new Dictionary<string, object?> { ["key"] = k.Column - table.Range.Left, ["ascending"] = !k.Descending, ["sortOn"] = (int)k.Basis, ["color"] = Rgb(k.PreferredColor) }).ToArray() ?? [],
             "getMatchCase" => table.Sort?.Keys.FirstOrDefault()?.CaseSensitive ?? false,
             "getMethod" => table.Sort?.SortMethod == "stroke" ? 1 : 0, _ => throw Unsupported(member)
         };

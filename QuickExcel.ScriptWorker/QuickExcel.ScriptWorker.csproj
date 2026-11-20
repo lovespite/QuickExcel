@@ -5,7 +5,19 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <!-- Windows release workers are independently published native executables.
+         Other platform workers retain their separately validated deployment. -->
+    <PublishAot Condition="'$(RuntimeIdentifier)' == 'win-x64'">true</PublishAot>
+    <RuntimeFrameworkVersion Condition="'$(RuntimeIdentifier)' == 'win-x64'">$(QuickExcelWindowsRuntimeVersion)</RuntimeFrameworkVersion>
+    <JsonSerializerIsReflectionEnabledByDefault>false</JsonSerializerIsReflectionEnabledByDefault>
+    <IlcOptimizationPreference>Size</IlcOptimizationPreference>
+    <TrimmerSingleWarn>false</TrimmerSingleWarn>
   </PropertyGroup>
+  <ItemGroup Condition="'$(RuntimeIdentifier)' == 'win-x64'">
+    <KnownILCompilerPack Update="Microsoft.DotNet.ILCompiler">
+      <ILCompilerPackVersion Condition="'%(KnownILCompilerPack.TargetFramework)' == 'net10.0'">$(QuickExcelWindowsRuntimeVersion)</ILCompilerPackVersion>
+    </KnownILCompilerPack>
+  </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../QuickExcel.ScriptContracts/QuickExcel.ScriptContracts.csproj" />
     <ProjectReference Include="../QuickExcel.Scripting/QuickExcel.Scripting.csproj" />

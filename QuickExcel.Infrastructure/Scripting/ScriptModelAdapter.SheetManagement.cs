@@ -30,7 +30,7 @@ internal sealed partial class ScriptModelAdapter
                 }
                 var command = new AddSheetCommand(name);
                 ExecuteObject(Model.View.ActiveSheetId, command);
-                return Handle("Worksheet", new { sheetId = command.Id.ToString() });
+                return Handle("Worksheet", new Dictionary<string, object?> { ["sheetId"] = command.Id.ToString() });
             }
             case "getFirstWorksheet":
             case "getLastWorksheet":
@@ -41,7 +41,7 @@ internal sealed partial class ScriptModelAdapter
                 var sheets = Model.View.Sheets.Where(s => !visibleOnly || s.Visibility == SheetVisibility.Visible).ToArray();
                 if (sheets.Length == 0) return null;
                 var sheet = member == "getFirstWorksheet" ? sheets[0] : sheets[^1];
-                return Handle("Worksheet", new { sheetId = sheet.Id.ToString() });
+                return Handle("Worksheet", new Dictionary<string, object?> { ["sheetId"] = sheet.Id.ToString() });
             }
             default:
                 throw Unsupported(member);
@@ -129,7 +129,7 @@ internal sealed partial class ScriptModelAdapter
         var sheets = Model.View.Sheets;
         for (var index = SheetPosition(id) + direction; index >= 0 && index < sheets.Length; index += direction)
             if (!visibleOnly || sheets[index].Visibility == SheetVisibility.Visible)
-                return Handle("Worksheet", new { sheetId = sheets[index].Id.ToString() });
+                return Handle("Worksheet", new Dictionary<string, object?> { ["sheetId"] = sheets[index].Id.ToString() });
         return null;
     }
 

@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Reflection;
 using System.Text.RegularExpressions;
@@ -14,7 +15,8 @@ internal static class XlsxPrinting
 {
     private const string PrinterType = "application/vnd.openxmlformats-officedocument.spreadsheetml.printerSettings";
     private static string AttributeName(PropertyInfo property) => char.ToLowerInvariant(property.Name[0]) + property.Name[1..];
-    private static T? Scalars<T>(XlsxPackage package, string path, XElement? element, T value) where T : class
+    private static T? Scalars<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties)] T>(
+        XlsxPackage package, string path, XElement? element, T value) where T : class
     {
         if (element is null) return null;
         var properties = typeof(T).GetProperties();
@@ -28,10 +30,11 @@ internal static class XlsxPrinting
         }
         return value;
     }
-    private static XElement? WriteScalars(string name, object? value)
+    private static XElement? WriteScalars<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties)] T>(
+        string name, T? value) where T : class
     {
         if (value is null) return null;
-        return new(Main + name, value.GetType().GetProperties().Select(p => p.GetValue(value) is { } v ?
+        return new(Main + name, typeof(T).GetProperties().Select(p => p.GetValue(value) is { } v ?
             new XAttribute(AttributeName(p), v is bool boolean ? boolean ? "1" : "0" : v) : null));
     }
     public static WorksheetPrinting Read(XlsxPackage package, string path, XElement root)

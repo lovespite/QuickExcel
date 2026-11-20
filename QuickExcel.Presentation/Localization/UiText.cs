@@ -1,3 +1,4 @@
+using QuickExcel.Serialization;
 using System.Globalization;
 using System.Text.Json;
 using QuickExcel.Core;
@@ -33,7 +34,7 @@ public static class UiText
         {
             using var stream = typeof(UiText).Assembly.GetManifestResourceStream($"QuickExcel.Localization.{Language}.json")
                 ?? throw new InvalidDataException($"Missing UI catalog for {Language}.");
-            catalog = JsonSerializer.Deserialize<Dictionary<string, string>>(stream)
+            catalog = JsonSerializer.Deserialize(stream, PresentationJsonContext.Default.DictionaryStringString)
                 ?? throw new InvalidDataException($"Empty UI catalog for {Language}.");
         }
         MessageText.Configure(catalog);

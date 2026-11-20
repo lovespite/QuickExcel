@@ -9,9 +9,9 @@ internal sealed partial class ScriptModelAdapter
 {
     private ScriptWorkbookModel Model => request.Model!;
     private static readonly CellRectangle ScalarRange = new(0, 0, 0, 0);
-    private static object Handle(string type, object data) => new { type, data, scriptHandle = true };
-    private static object RangeHandle(SheetId sheet, CellRectangle range) => Handle("Range", new { sheetId = sheet.ToString(), address = range.ToString() });
-    private static object TableHandle(SheetId sheet, int table) => Handle("Table", new { sheetId = sheet.ToString(), tableId = table });
+    private static object Handle(string type, object data) => new Dictionary<string, object?> { ["type"] = type, ["data"] = data, ["scriptHandle"] = true };
+    private static object RangeHandle(SheetId sheet, CellRectangle range) => Handle("Range", new Dictionary<string, object?> { ["sheetId"] = sheet.ToString(), ["address"] = range.ToString() });
+    private static object TableHandle(SheetId sheet, int table) => Handle("Table", new Dictionary<string, object?> { ["sheetId"] = sheet.ToString(), ["tableId"] = table });
     private static string Text(JsonElement value) => value.ValueKind == JsonValueKind.String ? value.GetString()! : throw Invalid("需要字符串。");
     private static int Int(JsonElement value) => value.ValueKind == JsonValueKind.Number && value.TryGetInt32(out var n) ? n : throw Invalid("需要整数。");
     private static bool Bool(JsonElement value) => value.ValueKind is JsonValueKind.True or JsonValueKind.False ? value.GetBoolean() : throw Invalid("需要布尔值。");
@@ -98,7 +98,7 @@ internal sealed partial class ScriptModelAdapter
             if (member is "getBorders" or "getRangeBorder")
             {
                 Arity(args, member == "getBorders" ? 0 : 1);
-                object Border(int side) => Handle("RangeBorder", new { sheetId = sheet.Id.ToString(), address = range.ToString(), side });
+                object Border(int side) => Handle("RangeBorder", new Dictionary<string, object?> { ["sheetId"] = sheet.Id.ToString(), ["address"] = range.ToString(), ["side"] = side });
                 if (member == "getBorders") return Enumerable.Range(0, 6).Select(Border).ToArray();
                 var side = Int(args[0]); if (side is < 0 or > 5) throw Unsupported("对角线边框尚未建模。");
                 return Border(side);

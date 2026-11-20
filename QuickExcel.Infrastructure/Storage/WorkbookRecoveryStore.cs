@@ -1,3 +1,4 @@
+using QuickExcel.Serialization;
 using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text.Json;
@@ -17,7 +18,7 @@ public sealed class WorkbookRecoveryStore
     private const long MaxBytes = 256L * 1024 * 1024;
     private readonly string _root;
     private readonly IWorkbookStorage _storage;
-    private sealed record Owner(int Version, Guid SessionId, Guid DocumentId, bool Retired = false);
+    internal sealed record Owner(int Version, Guid SessionId, Guid DocumentId, bool Retired = false);
     private static readonly string[] Slots = ["draft0.qer", "draft1.qer"];
 
     public WorkbookRecoveryStore(string root, IWorkbookStorage? storage = null)
@@ -40,11 +41,11 @@ public sealed class WorkbookRecoveryStore
     private static string Child(string folder, string name) { var path = Path.Combine(folder, name); Regular(path); return path; }
     private static FileStream Lock(string folder, FileMode mode) => new(Child(folder, "lease.json"), mode, FileAccess.ReadWrite, FileShare.None, 4096, FileOptions.WriteThrough);
     private static void WriteOwner(FileStream lease, Owner owner)
-    { lease.Position = 0; lease.SetLength(0); JsonSerializer.Serialize(lease, owner); lease.Flush(true); }
+    { lease.Position = 0; lease.SetLength(0); JsonSerializer.Serialize(lease, owner, InfrastructureJsonContext.Default.Owner); lease.Flush(true); }
     private static Owner ReadOwner(FileStream lease, Guid id)
     {
         if (lease.Length is 0 or > 4096) throw new InvalidDataException("Invalid recovery lease.");
-        lease.Position = 0; var owner = JsonSerializer.Deserialize<Owner>(lease);
+        lease.Position = 0; var owner = JsonSerializer.Deserialize(lease, InfrastructureJsonContext.Default.Owner);
         if (owner is null || owner.Version != 1 || owner.SessionId != id || owner.DocumentId == Guid.Empty) throw new InvalidDataException("Invalid recovery owner.");
         return owner;
     }
@@ -95,7 +96,7 @@ public sealed class WorkbookRecoveryStore
                         {
                             using (var target = zip.CreateEntry("workbook.xlsq", CompressionLevel.NoCompression).Open()) input.CopyTo(target);
                             metadata = new(1, _session, _document, snapshot.Revision, sourcePath, version?.Sha256, capturedUtc, DateTimeOffset.UtcNow, hash);
-                            using var manifest = zip.CreateEntry("metadata.json").Open(); JsonSerializer.Serialize(manifest, metadata);
+                            using var manifest = zip.CreateEntry("metadata.json").Open(); JsonSerializer.Serialize(manifest, metadata, InfrastructureJsonContext.Default.RecoveryMetadata);
                         }
                         output.Flush(true);
                     }
@@ -145,7 +146,7 @@ public sealed class WorkbookRecoveryStore
             throw new InvalidDataException("Invalid recovery bundle entries.");
         using var json = manifest.Open(); var jsonBytes = new byte[(int)manifest.Length]; json.ReadExactly(jsonBytes);
         if (json.ReadByte() != -1) throw new InvalidDataException("Recovery metadata exceeds its limit.");
-        var metadata = JsonSerializer.Deserialize<RecoveryMetadata>(jsonBytes);
+        var metadata = JsonSerializer.Deserialize(jsonBytes, InfrastructureJsonContext.Default.RecoveryMetadata);
         if (metadata is null || metadata.Version != 1 || metadata.SessionId != owner.SessionId || metadata.DocumentId != owner.DocumentId || metadata.Revision < 0 || metadata.CompletedUtc < metadata.CapturedUtc)
             throw new InvalidDataException("Invalid recovery metadata.");
         using var bytes = payload.Open();

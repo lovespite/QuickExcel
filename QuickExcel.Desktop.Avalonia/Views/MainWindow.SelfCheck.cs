@@ -1,6 +1,11 @@
 using System.Text.Json;
 using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Threading;
+using Avalonia.VisualTree;
+using ColorTextBlock.Avalonia;
+using Markdown.Avalonia;
 using QuickExcel.Core;
 using QuickExcel.Domain;
 using QuickExcel.Infrastructure.Web;
@@ -25,6 +30,27 @@ public sealed partial class MainWindow
                 _menu.Items.OfType<global::Avalonia.Controls.MenuItem>().Skip(1).All(item => !item.IsEnabled),
                 "Home disables workbook commands before a document is opened or created");
             _ = new WebAssetCatalog(Path.Combine(AppContext.BaseDirectory, "Web")); Check(true, "Production resource hashes and mode verified");
+            // Exercise the actual license viewer in the trimmed package, including
+            // its compiled styles and rendered Markdown text rather than only the input.
+            var settings = new SettingsWindow(_settings, _recentFiles, SettingsSection.About) { ShowActivated = false };
+            try
+            {
+                settings.Show(this);
+                await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Background);
+                var markdown = settings.GetVisualDescendants().OfType<MarkdownScrollViewer>().Single();
+                Check(markdown.IsEffectivelyVisible && markdown.Bounds.Width > 0 && markdown.Bounds.Height > 0 &&
+                    markdown.Markdown?.StartsWith("# Third-party components and licenses", StringComparison.Ordinal) == true &&
+                    markdown.GetVisualDescendants().OfType<CTextBlock>().Any(text => text.Bounds.Width > 0 && text.Bounds.Height > 0 &&
+                        text.Text.Contains("Third-party components and licenses", StringComparison.Ordinal)),
+                    "Published Settings renders the bundled third-party Markdown notice");
+                var selector = settings.GetVisualDescendants().OfType<ComboBox>().Single(control => control.Name == "SettingsLicenseSelector");
+                selector.SelectedItem = selector.Items.OfType<string>().Single(path => path.EndsWith("OFFICE-SCRIPTS-NOTICE.md", StringComparison.Ordinal));
+                await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Background);
+                Check(markdown.IsEffectivelyVisible && markdown.GetVisualDescendants().OfType<CTextBlock>()
+                    .Any(text => text.Bounds.Width > 0 && text.Bounds.Height > 0 && text.Text.Contains("CC BY 4.0", StringComparison.Ordinal)),
+                    "Published Settings renders the Office Scripts attribution offline");
+            }
+            finally { settings.Close(); }
             WebRuntimePrerequisite.Require(); Check(true, "Platform browser runtime preflight");
             ShowBook(); _workspace.New();
             var cell = new CellAddress(Document.Snapshot.ActiveSheetId, 0, 0);
@@ -168,8 +194,8 @@ public sealed partial class MainWindow
         }
         catch (Exception ex) { failure = ex; }
         finally { try { await CloseScriptWindowAsync(); await ClosePrintPreviewAsync(); } catch (Exception ex) { failure ??= ex; } }
-        await File.WriteAllTextAsync(Path.Combine(directory, "result.json"), JsonSerializer.Serialize(new { passed = failure is null, checks, error = failure?.ToString(), webViewRuntime = WebRuntimePrerequisite.Version,
-            softwareRenderingRequested = Program.SoftwareRendering, operatingSystem = Environment.OSVersion.ToString(), framework = System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription }, new JsonSerializerOptions { WriteIndented = true }));
+        await File.WriteAllTextAsync(Path.Combine(directory, "result.json"), JsonSerializer.Serialize(new SelfCheckResult(failure is null, checks, failure?.ToString(), WebRuntimePrerequisite.Version,
+            Program.SoftwareRendering, Environment.OSVersion.ToString(), System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription), DesktopJsonContext.Indented.SelfCheckResult));
         _allowClose = true; (Application.Current!.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)!.Shutdown(failure is null ? 0 : 1);
     }
 }

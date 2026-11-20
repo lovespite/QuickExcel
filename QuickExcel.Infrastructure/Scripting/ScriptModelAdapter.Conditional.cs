@@ -7,7 +7,7 @@ namespace QuickExcel.Runtime;
 
 internal sealed partial class ScriptModelAdapter
 {
-    private static object ConditionalHandle(SheetId sheet, ConditionalFormatRule rule, string type = "ConditionalFormat") => Handle(type, new { sheetId = sheet.ToString(), conditionalId = rule.ScriptId.ToString() });
+    private static object ConditionalHandle(SheetId sheet, ConditionalFormatRule rule, string type = "ConditionalFormat") => Handle(type, new Dictionary<string, object?> { ["sheetId"] = sheet.ToString(), ["conditionalId"] = rule.ScriptId.ToString() });
     private object? RangeConditional(WorksheetSnapshot sheet, CellRectangle range, string member, JsonElement[] args)
     {
         var rules = sheet.Data.ConditionalFormats.Where(r => r.Ranges.Any(a => Overlap(a, range))).OrderBy(r => r.Priority).ToArray();
@@ -58,7 +58,7 @@ internal sealed partial class ScriptModelAdapter
                 "getPreset" => rule.Kind is ConditionalFormatKind.DuplicateValues or ConditionalFormatKind.UniqueValues ? Child("PresetCriteriaConditionalFormat") : null,
                 "getTextComparison" => rule.Kind is >= ConditionalFormatKind.ContainsText and <= ConditionalFormatKind.EndsWith ? Child("TextConditionalFormat") : null,
                 "getRange" => rule.Ranges.Length == 1 ? RangeHandle(sheet.Id, rule.Ranges[0]) : throw Unsupported("多区域规则请使用 getRanges。"),
-                "getRanges" => Handle("RangeAreas", new { sheetId = sheet.Id.ToString(), addresses = rule.Ranges.Select(r => r.ToString()).ToArray() }), _ => throw Unsupported(member)
+                "getRanges" => Handle("RangeAreas", new Dictionary<string, object?> { ["sheetId"] = sheet.Id.ToString(), ["addresses"] = rule.Ranges.Select(r => r.ToString()).ToArray() }), _ => throw Unsupported(member)
             };
         }
         if ((type is "CustomConditionalFormat" or "ConditionalFormatRule") && rule.Kind != ConditionalFormatKind.Expression || type == "CellValueConditionalFormat" && rule.Kind != ConditionalFormatKind.CellIs || type == "PresetCriteriaConditionalFormat" && rule.Kind is not (ConditionalFormatKind.DuplicateValues or ConditionalFormatKind.UniqueValues) || type == "TextConditionalFormat" && (rule.Kind < ConditionalFormatKind.ContainsText || rule.Kind > ConditionalFormatKind.EndsWith))
@@ -66,7 +66,7 @@ internal sealed partial class ScriptModelAdapter
         if (type == "ConditionalRangeFormat" && (member == "getBorders" || member.StartsWith("getConditionalRangeBorder")))
         {
             Arity(args, member == "getConditionalRangeBorder" ? 1 : 0);
-            object Border(int side) => Handle("ConditionalRangeBorder", new { sheetId = sheet.Id.ToString(), conditionalId = rule.ScriptId.ToString(), side });
+            object Border(int side) => Handle("ConditionalRangeBorder", new Dictionary<string, object?> { ["sheetId"] = sheet.Id.ToString(), ["conditionalId"] = rule.ScriptId.ToString(), ["side"] = side });
             if (member == "getBorders") return Enumerable.Range(0, 4).Select(Border).ToArray();
             var side = member switch { "getConditionalRangeBorderTop" => 0, "getConditionalRangeBorderBottom" => 1, "getConditionalRangeBorderLeft" => 2, "getConditionalRangeBorderRight" => 3, _ => Int(args[0]) };
             if (side is < 0 or > 3) throw Invalid("条件边框方向无效。"); return Border(side);
@@ -95,8 +95,8 @@ internal sealed partial class ScriptModelAdapter
             if (member == "getRule")
             {
                 if (type == "CellValueConditionalFormat") { var result = new Dictionary<string, object> { ["formula1"] = rule.Formula1!, ["operator"] = EnumNumber("ConditionalCellValueOperator", ComparisonName(rule.Comparison)) }; if (rule.Formula2 is not null) result["formula2"] = rule.Formula2; return result; }
-                if (type == "PresetCriteriaConditionalFormat") return new { criterion = EnumNumber("ConditionalFormatPresetCriterion", rule.Kind == ConditionalFormatKind.UniqueValues ? "uniqueValues" : "duplicateValues") };
-                return new { text = rule.Text, @operator = EnumNumber("ConditionalTextOperator", rule.Kind switch { ConditionalFormatKind.ContainsText => "contains", ConditionalFormatKind.NotContainsText => "notContains", ConditionalFormatKind.BeginsWith => "beginsWith", _ => "endsWith" }) };
+                if (type == "PresetCriteriaConditionalFormat") return new Dictionary<string, object?> { ["criterion"] = EnumNumber("ConditionalFormatPresetCriterion", rule.Kind == ConditionalFormatKind.UniqueValues ? "uniqueValues" : "duplicateValues") };
+                return new Dictionary<string, object?> { ["text"] = rule.Text, ["operator"] = EnumNumber("ConditionalTextOperator", rule.Kind switch { ConditionalFormatKind.ContainsText => "contains", ConditionalFormatKind.NotContainsText => "notContains", ConditionalFormatKind.BeginsWith => "beginsWith", _ => "endsWith" }) };
             }
             if (member != "setRule") throw Unsupported(member);
             var v = args[0]; ConditionalFormatRule next;

@@ -68,8 +68,8 @@ public sealed partial class MainWindow
                     var index = 0;
                     while (!cancel.IsCancellationRequested)
                     {
-                        var completed = _scriptPage!.Browser.RequestAsync("test", "testResult", new { action = "completionSample" });
-                        var zoomed = page.Browser.RequestAsync("test", "testResult", new { action = "zoomSample", value = index++ % 2 == 0 ? "1" : "1.25" });
+                        var completed = _scriptPage!.Browser.RequestAsync("test", "testResult", new Dictionary<string, object?> { ["action"] = "completionSample" });
+                        var zoomed = page.Browser.RequestAsync("test", "testResult", new Dictionary<string, object?> { ["action"] = "zoomSample", ["value"] = index++ % 2 == 0 ? "1" : "1.25" });
                         await Task.WhenAll(completed, zoomed);
                         completions.Add((await completed).Payload.GetProperty("elapsedMs").GetDouble());
                         zooms.Add((await zoomed).Payload.GetProperty("elapsedMs").GetDouble());

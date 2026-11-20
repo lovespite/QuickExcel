@@ -70,9 +70,10 @@ $exeBytes = [IO.File]::ReadAllBytes((Join-Path $payload 'quickxl.exe'))
 $peOffset = [BitConverter]::ToInt32($exeBytes, 0x3c)
 if ([BitConverter]::ToUInt16($exeBytes, $peOffset + 4) -ne 0x8664) { throw 'The application must be Windows x64.' }
 if (Test-Path -LiteralPath (Join-Path $payload 'QuickExcel.Avalonia.exe')) { throw 'The old Windows apphost must not enter new packages.' }
-foreach ($relative in @('QuickExcel.Avalonia.dll','QuickExcel.Avalonia.deps.json','QuickExcel.Avalonia.runtimeconfig.json','coreclr.dll','ScriptWorker/coreclr.dll','ScriptWorker/JavaScriptCore.dll','ScriptWorker/vcruntime140.dll','ScriptWorker/msvcp140.dll','Web/manifest.json','Licenses/CLICKONCE-LICENSE.txt','Licenses/WINDOWS-INSTALLER-NOTICES.txt')) {
+foreach ($relative in @('QuickExcel.Avalonia.dll','QuickExcel.Avalonia.deps.json','QuickExcel.Avalonia.runtimeconfig.json','coreclr.dll','ScriptWorker/QuickExcel.ScriptWorker.exe','ScriptWorker/JavaScriptCore.dll','ScriptWorker/vcruntime140.dll','ScriptWorker/msvcp140.dll','Web/manifest.json','Licenses/CLICKONCE-LICENSE.txt','Licenses/WINDOWS-INSTALLER-NOTICES.txt')) {
     if (-not (Test-Path -LiteralPath (Join-Path $payload $relative))) { throw "Missing prerequisite or notice: $relative" }
 }
+& "$PSScriptRoot/test-windows-payload.ps1" -PackageDirectory $payload
 $webview = @(Get-ChildItem -LiteralPath $package -Recurse -Filter MicrosoftEdgeWebview2Setup.exe)
 if ($webview.Count -ne 1) { throw 'Exactly one WebView2 online bootstrapper is required.' }
 Assert-QuickExcelWebView2Bootstrapper $webview[0].FullName

@@ -63,7 +63,7 @@ public sealed partial class MainWindow
         check(!_scriptOutputTabs.IsVisible && _consoleInput.Text == "retained draft", "F12 collapses the console without losing input");
         async Task BrowserF12(bool composing = false, bool repeat = false, bool control = false)
         {
-            await _scriptPage!.Browser.RequestAsync("test", "testResult", new { action = "consoleShortcut", composing, repeat, control });
+            await _scriptPage!.Browser.RequestAsync("test", "testResult", new Dictionary<string, object?> { ["action"] = "consoleShortcut", ["composing"] = composing, ["repeat"] = repeat, ["control"] = control });
             await Layout();
         }
         await BrowserF12(composing: true); await BrowserF12(repeat: true); await BrowserF12(control: true);

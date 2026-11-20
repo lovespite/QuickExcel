@@ -5,7 +5,8 @@ QuickExcel Windows x64 — ClickOnce 安装包
    此步骤需要连接 Internet。已经安装运行库的设备跳过此步骤。
 3. 在 ClickOnce 提示中核对发布者及版本并安装。安装后可从开始菜单启动。
 
-应用和隔离脚本 worker 已各自包含 .NET 10 与原生运行库，无需另装 .NET SDK。
+应用包含部分裁剪的 .NET 10；隔离脚本 worker 使用 Native AOT，原生依赖随包携带。
+JSC、ICU、TypeScript 只保留在 ScriptWorker 目录，无需另装 .NET SDK 或运行时。
 系统要求：受支持的 Windows 10/11 x64，启用系统自带的 .NET Framework 4.8
 和 ClickOnce。包内不再携带 WebView2 完整离线安装器。请勿只复制 setup.exe。
 本包不配置固定发布地址或自动更新；后续可从新版本的完整包手动安装更新。

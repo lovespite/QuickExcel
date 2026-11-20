@@ -7,7 +7,7 @@ public sealed partial class MainWindow
     private async Task CheckScriptIntelligenceAsync(Func<object, Task<JsonElement>> test, Action<bool, string> check, string directory)
     {
         var originals = Document.Snapshot.ScriptModules;
-        async Task<JsonElement> Ui(object? command = null) => await test(command ?? new { action = "assistance" });
+        async Task<JsonElement> Ui(object? command = null) => await test(command ?? new Dictionary<string, object?> { ["action"] = "assistance" });
         async Task<JsonElement> Until(Func<JsonElement, bool> predicate, string description)
         {
             for (var retry = 0; retry < 100; retry++)
@@ -23,8 +23,8 @@ public sealed partial class MainWindow
         async Task Edit(string module, string text)
         {
             foreach (var command in new[] { "hideSuggestWidget", "closeParameterHints", "editor.action.hideHover", "closeMarkersNavigation" })
-                await Ui(new { action = "assistance", command });
-            await test(new { action = "edit", module, text });
+                await Ui(new Dictionary<string, object?> { ["action"] = "assistance", ["command"] = command });
+            await test(new Dictionary<string, object?> { ["action"] = "edit", ["module"] = module, ["text"] = text });
         }
         var state = await Ui();
         await File.WriteAllTextAsync(Path.Combine(directory, "assistance-actions.json"), state.ToString());
@@ -35,7 +35,7 @@ public sealed partial class MainWindow
         await Edit("main", "export const value: number = '类型错误';");
         state = await Until(s => HasMarker(s, "2322") && s.GetProperty("status").GetString()!.Contains("1 个错误"),
             "Live TypeScript semantic markers and the current-module error count update without applying or executing source");
-        await Ui(new { action = "assistance", offset = 0, button = "editor.action.marker.next" });
+        await Ui(new Dictionary<string, object?> { ["action"] = "assistance", ["offset"] = 0, ["button"] = "editor.action.marker.next" });
         state = await Until(s => s.GetProperty("problems").GetString()!.Contains("2322"), "Next-problem control opens the actual diagnostic widget");
         check(state.GetProperty("position").GetProperty("column").GetInt32() > 1, "Diagnostic navigation moves the editor caret to the error");
         await Edit("main", "export const value: number = 42;");
@@ -46,18 +46,18 @@ public sealed partial class MainWindow
 
         const string member = "host.functions";
         await Edit("main", member);
-        await Ui(new { action = "assistance", offset = member.Length, typeText = "." });
+        await Ui(new Dictionary<string, object?> { ["action"] = "assistance", ["offset"] = member.Length, ["typeText"] = "." });
         await Until(s => s.GetProperty("suggestions").GetString()!.Contains("register"),
             "Typing a dot automatically opens the actual host completion list");
-        state = await Ui(new { action = "assistance", command = "acceptSelectedSuggestion" });
+        state = await Ui(new Dictionary<string, object?> { ["action"] = "assistance", ["command"] = "acceptSelectedSuggestion" });
         check(state.GetProperty("source").GetString() == member + ".register", "Accepting a suggestion inserts the selected API member into the draft");
 
         await Edit("main", "host");
-        await Ui(new { action = "assistance", offset = 4, typeText = "." });
+        await Ui(new Dictionary<string, object?> { ["action"] = "assistance", ["offset"] = 4, ["typeText"] = "." });
         await Until(s => new[] { "functions", "events", "files" }.All(name => s.GetProperty("suggestions").GetString()!.Contains(name)),
             "The host extension completes functions, events and files");
         await Edit("main", "host.functions.");
-        await Ui(new { action = "assistance", offset = "host.functions.".Length, button = "editor.action.triggerSuggest" });
+        await Ui(new Dictionary<string, object?> { ["action"] = "assistance", ["offset"] = "host.functions.".Length, ["button"] = "editor.action.triggerSuggest" });
         await Until(s => s.GetProperty("suggestions").GetString()!.Contains("register"), "Host function extension exposes register completion");
         // The generated setValue signature accepts any; setValues constrains each cell's type.
         await Edit("main", "export function main(workbook: QuickExcel.Workbook) {\n  workbook.getActiveWorksheet().getRange('A1').setValues([[{}]]);\n}");
@@ -68,20 +68,20 @@ public sealed partial class MainWindow
 
         const string parameters = "host.files.writeText('//temp/note.txt', 'hello');";
         await Edit("main", parameters);
-        await Ui(new { action = "assistance", offset = parameters.IndexOf("writeText(", StringComparison.Ordinal) + "writeText(".Length, button = "editor.action.triggerParameterHints" });
+        await Ui(new Dictionary<string, object?> { ["action"] = "assistance", ["offset"] = parameters.IndexOf("writeText(", StringComparison.Ordinal) + "writeText(".Length, ["button"] = "editor.action.triggerParameterHints" });
         await Until(s => s.GetProperty("parameters").GetString()!.Contains("path") && s.GetProperty("parameters").GetString()!.Contains("text"),
             "Parameter-hint control renders the host file signature");
 
         const string hover = "host.files.writeText('//temp/note.txt', 'hello');";
         await Edit("main", hover);
-        await Ui(new { action = "assistance", offset = hover.IndexOf("writeText", StringComparison.Ordinal) + 3, button = "editor.action.showHover" });
+        await Ui(new Dictionary<string, object?> { ["action"] = "assistance", ["offset"] = hover.IndexOf("writeText", StringComparison.Ordinal) + 3, ["button"] = "editor.action.showHover" });
         await Until(s => s.GetProperty("hover").GetString()!.Contains("writeText") && s.GetProperty("hover").GetString()!.Contains("string"),
             "Hover control renders declared host member signatures");
 
         await Edit("helpers", "export const tools = { twice: (n: number): number => n * 2 };");
         const string crossModule = "import {tools} from 'helpers';\ntools.";
         await Edit("main", crossModule);
-        await Ui(new { action = "assistance", offset = crossModule.Length, button = "editor.action.triggerSuggest" });
+        await Ui(new Dictionary<string, object?> { ["action"] = "assistance", ["offset"] = crossModule.Length, ["button"] = "editor.action.triggerSuggest" });
         await Until(s => s.GetProperty("suggestions").GetString()!.Contains("twice"),
             "Completion resolves current drafts through declared logical module IDs");
         await Edit("main", "import {tools} from 'helpers';\nexport const result: number = tools.twice('bad');");
@@ -100,7 +100,7 @@ public sealed partial class MainWindow
         check(!Document.ScriptsEnabled && ReferenceEquals(originals, Document.Snapshot.ScriptModules),
             "Language assistance neither executes scripts nor commits per-keystroke document changes");
         await Edit("main", "host.events.");
-        await Ui(new { action = "assistance", offset = "host.events.".Length, button = "editor.action.triggerSuggest" });
+        await Ui(new Dictionary<string, object?> { ["action"] = "assistance", ["offset"] = "host.events.".Length, ["button"] = "editor.action.triggerSuggest" });
         await Until(s => s.GetProperty("suggestions").GetString()!.Contains("on"), "Event registration appears in editor completion");
         await Edit("main", "host.events.on('cell.click', context => {\n  context.workbook.getActiveWorksheet().getRange('A1').setValues([[{}]]);\n  context.host.files.writeText('//temp/note.txt', 42);\n});");
         await Until(s => HasMarker(s, "2322") && HasMarker(s, "2345"), "Event context infers workbook cell types and host file argument types");

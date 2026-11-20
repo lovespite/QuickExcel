@@ -33,7 +33,7 @@ internal sealed partial class ScriptModelAdapter
         switch (member)
         {
             case "getProtection": case "getAutoFilter":
-                Arity(args, 0); return Handle(member == "getProtection" ? "WorksheetProtection" : "AutoFilter", new { sheetId = sheet.Id.ToString() });
+                Arity(args, 0); return Handle(member == "getProtection" ? "WorksheetProtection" : "AutoFilter", new Dictionary<string, object?> { ["sheetId"] = sheet.Id.ToString() });
             case "getUsedRange":
                 Arity(args, 0, 1); var valuesOnly = args.Length == 1 && Bool(args[0]);
                 if (sheet.Cells.Count > MaxReadCells) throw new ModelFailure("BudgetExceeded", "已用区域扫描超过读取预算。");
@@ -57,7 +57,7 @@ internal sealed partial class ScriptModelAdapter
     }
     private object? RangeApi(WorksheetSnapshot sheet, CellRectangle range, string member, JsonElement[] args)
     {
-        if (member == "getDataValidation") { Arity(args, 0); return Handle("DataValidation", new { sheetId = sheet.Id.ToString(), address = range.ToString() }); }
+        if (member == "getDataValidation") { Arity(args, 0); return Handle("DataValidation", new Dictionary<string, object?> { ["sheetId"] = sheet.Id.ToString(), ["address"] = range.ToString() }); }
         if (member.Contains("ConditionalFormat", StringComparison.Ordinal)) return RangeConditional(sheet, range, member, args);
         if (member is "find" or "replaceAll" or "removeDuplicates" or "autoFill" or "flashFill" or "calculate" or
             "getHyperlink" or "setHyperlink" or "copyFrom" or "getSurroundingRegion" or "getRangeEdge" or
@@ -78,7 +78,7 @@ internal sealed partial class ScriptModelAdapter
         {
             Arity(args, 0);
             return member switch { "getRowIndex" => range.Top, "getColumnIndex" => range.Left, "getRowCount" => range.Bottom - range.Top + 1,
-                "getColumnCount" => range.Right - range.Left + 1, "getCellCount" => range.Count, _ => Handle("RangeSort", new { sheetId = sheet.Id.ToString(), address = range.ToString() }) };
+                "getColumnCount" => range.Right - range.Left + 1, "getCellCount" => range.Count, _ => Handle("RangeSort", new Dictionary<string, object?> { ["sheetId"] = sheet.Id.ToString(), ["address"] = range.ToString() }) };
         }
         if (member is "setNumberFormat" or "setNumberFormats")
         {

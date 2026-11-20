@@ -58,7 +58,8 @@ internal sealed class ChartFilterPanel : Border
                     label.Children.Add(new TextBlock { Text = item.Label, TextTrimming = TextTrimming.CharacterEllipsis, MaxWidth = 225, VerticalAlignment = VerticalAlignment.Center });
                     var box = new CheckBox { Content = label, MinHeight = 28, IsThreeState = false, IsEnabled = canEdit };
                     AutomationProperties.SetName(box, item.Label); ToolTip.SetTip(box, categories ? UiText.Format($"第 {item.Index + 1} 项 · {item.Label}") : item.Label);
-                    box.Bind(ToggleButton.IsCheckedProperty, new Binding(nameof(Item.Selected)) { Source = item, Mode = BindingMode.TwoWay }); return box;
+                    box.Bind(ToggleButton.IsCheckedProperty,
+                        CompiledBinding.Create((Item value) => value.Selected, source: item, mode: BindingMode.TwoWay)); return box;
                 }) };
             list.Styles.Add(new Style(s => s.OfType<ListBoxItem>()) { Setters = { new Setter(PaddingProperty, new Thickness(5, 0)), new Setter(MinHeightProperty, 28d) } });
             ScrollViewer.SetHorizontalScrollBarVisibility(list, ScrollBarVisibility.Disabled); return list;

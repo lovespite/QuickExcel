@@ -168,7 +168,7 @@ try
                     WorkerProtocol.ValidateReply(response, request.Identity, "model");
                     var reply = WorkerProtocol.Payload<ModelReply>(response);
                     if (reply.OperationId != action.OperationId || reply.Sequence != modelSequence) throw new ProtocolException("Model reply identity mismatch.");
-                    return JsonSerializer.Serialize(new { ok = reply.Ok, value = reply.Value, error = reply.Error, code = reply.Code }, WorkerProtocol.Json);
+                    return JsonSerializer.Serialize(new ModelBridgeReply(reply.Ok, reply.Value, reply.Error, reply.Code), WorkerBridgeJsonContext.Default.ModelBridgeReply);
                 } : null;
                 var raw = runtime.RunAction(action.Name, WorkerProtocol.EncodePayload(action));
                 var patch = WorkerProtocol.Payload<ActionPatch>(request with { Payload = raw });

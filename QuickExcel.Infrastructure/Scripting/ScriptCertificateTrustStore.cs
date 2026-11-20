@@ -1,3 +1,4 @@
+using QuickExcel.Serialization;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -18,16 +19,14 @@ public sealed class ScriptCertificateTrustStore
     public ScriptCertificateTrustStore(string path) : this(path,TrustDataProtection.Create()) { }
     internal ScriptCertificateTrustStore(string path, TrustDataProtection protection, string? executionPolicy = null)
     { this.path = path; _protection = protection; _executionPolicy = executionPolicy ?? CurrentExecutionPolicy; }
-    private static string CurrentExecutionPolicy => CompilerProtocol.Hash(JsonSerializer.Serialize(new
-    {
-        engine = WorkerProtocol.Engine, policy = WorkerProtocol.Policy, protocol = WorkerProtocol.Version,
-        compiler = CompilerProtocol.Identity, compilerPolicy = CompilerProtocol.Policy, options = CompilerProtocol.Options
-    }));
+    internal sealed record ExecutionPolicyIdentity(string engine, string policy, int protocol, string compiler, string compilerPolicy, string options);
+    private static string CurrentExecutionPolicy => CompilerProtocol.Hash(JsonSerializer.Serialize(new ExecutionPolicyIdentity(
+        WorkerProtocol.Engine, WorkerProtocol.Policy, WorkerProtocol.Version, CompilerProtocol.Identity, CompilerProtocol.Policy, CompilerProtocol.Options),
+        InfrastructureJsonContext.Default.ExecutionPolicyIdentity));
     private const int MaximumFileSize = 1024 * 1024;
-    private sealed record ExecutionConsent(string Fingerprint, string Policy);
-    private sealed record TrustState(TrustedScriptCertificate[] Certificates, ExecutionConsent[] ExecutionConsents);
-    private sealed record ProtectedTrust(int Version, byte[] Data, [property:JsonIgnore(Condition=JsonIgnoreCondition.WhenWritingNull)] string? Protection=null);
-    private static readonly JsonSerializerOptions Format = new() { UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow };
+    internal sealed record ExecutionConsent(string Fingerprint, string Policy);
+    internal sealed record TrustState(TrustedScriptCertificate[] Certificates, ExecutionConsent[] ExecutionConsents);
+    internal sealed record ProtectedTrust(int Version, byte[] Data, [property:JsonIgnore(Condition=JsonIgnoreCondition.WhenWritingNull)] string? Protection=null);
 
     // Bind the DPAPI payload to this purpose and location, including isolated smoke/test stores.
     // This is domain separation, not a secret. DPAPI is not a boundary against code running as this user.
@@ -46,7 +45,7 @@ public sealed class ScriptCertificateTrustStore
         // Old plaintext pins have no evidence of consent. Never import or protect them on read/write.
         if (json.RootElement.ValueKind != JsonValueKind.Object)
             throw new InvalidDataException("旧版或未经验证的证书信任列表不能授予信任；请移除该列表并在应用中重新确认。");
-        var envelope = json.RootElement.Deserialize<ProtectedTrust>(Format);
+        var envelope = json.RootElement.Deserialize(InfrastructureJsonContext.Strict.ProtectedTrust);
         if (envelope is not { Data.Length: > 0 } || (IsDpapi ? envelope.Version!=1 || envelope.Protection is not null : envelope.Version!=2 || envelope.Protection!=_protection.Id))
             throw new InvalidDataException("证书信任列表格式或平台保护方式不匹配；不会跨平台迁移信任。");
         byte[] plaintext;
@@ -58,8 +57,8 @@ public sealed class ScriptCertificateTrustStore
             using var payload = JsonDocument.Parse(plaintext, new JsonDocumentOptions { AllowDuplicateProperties = false });
             // Existing protected pins remain valid certificate trust, but grant no engine-policy consent.
             state = payload.RootElement.ValueKind == JsonValueKind.Array
-                ? new(payload.RootElement.Deserialize<TrustedScriptCertificate[]>(Format)!, [])
-                : payload.RootElement.Deserialize<TrustState>(Format) ?? throw new InvalidDataException("证书信任列表无效。");
+                ? new(payload.RootElement.Deserialize(InfrastructureJsonContext.Strict.TrustedScriptCertificateArray)!, [])
+                : payload.RootElement.Deserialize(InfrastructureJsonContext.Strict.TrustState) ?? throw new InvalidDataException("证书信任列表无效。");
         }
         finally { CryptographicOperations.ZeroMemory(plaintext); }
         var entries = state.Certificates;
@@ -111,11 +110,11 @@ public sealed class ScriptCertificateTrustStore
         using var lease = new FileStream(full + ".lock", FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
         var state = change(ReadState());
         if (state.Certificates.Length > 1024 || state.ExecutionConsents.Length > 1024) throw new InvalidOperationException("最多信任 1024 张证书，请先移除不用的证书。");
-        var plaintext = JsonSerializer.SerializeToUtf8Bytes(state, Format);
+        var plaintext = JsonSerializer.SerializeToUtf8Bytes(state, InfrastructureJsonContext.Strict.TrustState);
         byte[] data;
         try { data = _protection.Protect(plaintext, Entropy); }
         finally { CryptographicOperations.ZeroMemory(plaintext); }
-        var encoded = JsonSerializer.SerializeToUtf8Bytes(new ProtectedTrust(IsDpapi?1:2, data,IsDpapi?null:_protection.Id), Format);
+        var encoded = JsonSerializer.SerializeToUtf8Bytes(new ProtectedTrust(IsDpapi?1:2, data,IsDpapi?null:_protection.Id), InfrastructureJsonContext.Strict.ProtectedTrust);
         if (encoded.Length > MaximumFileSize) throw new InvalidOperationException("证书信任列表超过容量限制，请先移除不用的证书。");
         var temporary = full + "." + Guid.NewGuid().ToString("N") + ".tmp";
         try

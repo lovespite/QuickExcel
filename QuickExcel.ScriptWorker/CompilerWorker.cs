@@ -34,9 +34,9 @@ internal static class CompilerWorker
             {
                 try
                 {
-                    var json = JscCompilerSession.Compile(JsonSerializer.Serialize(new { modules = request.Modules, entries = request.Entries,
-                        apiVersion = request.ApiVersion, sourceMapMode = request.SourceMapMode }, WorkerProtocol.Json), CompilerProtocol.Identity);
-                    result.SetResult(JsonSerializer.Deserialize<CompilerResult>(json, WorkerProtocol.Json) ?? throw new ProtocolException("Missing compiler output."));
+                    var json = JscCompilerSession.Compile(JsonSerializer.Serialize(new CompilerBridgeRequest(request.Modules, request.Entries,
+                        request.ApiVersion, request.SourceMapMode), WorkerBridgeJsonContext.Default.CompilerBridgeRequest), CompilerProtocol.Identity);
+                    result.SetResult(JsonSerializer.Deserialize(json, WorkerProtocol.TypeInfo<CompilerResult>()) ?? throw new ProtocolException("Missing compiler output."));
                 }
                 catch (Exception error) { result.SetException(error); }
             }, 8 * 1024 * 1024) { IsBackground = true, Name = "QuickExcel TypeScript" };

@@ -1,3 +1,4 @@
+using QuickExcel.Serialization;
 using System.Security.Cryptography;
 using System.Text.Json;
 
@@ -6,6 +7,8 @@ namespace QuickExcel.Presentation;
 /// <summary>One-way copy of compatible preferences, never shared writes or automatic trust migration.</summary>
 public static class DesktopSettingsMigration
 {
+    internal sealed record MigrationFile(string name, string sha256);
+    internal sealed record MigrationMarker(int schemaVersion, List<MigrationFile> imported, DateTime createdUtc);
     public static string? ImportOnce(string legacyDirectory, string destinationDirectory)
     {
         var target = Path.GetFullPath(destinationDirectory); var legacy = Path.GetFullPath(legacyDirectory);
@@ -18,7 +21,7 @@ public static class DesktopSettingsMigration
             if (File.Exists(marker)) return null;
             using var lease = new FileStream(Path.Combine(target, "migration.lock"), FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
             if (File.Exists(marker)) return null;
-            var imported = new List<object>();
+            var imported = new List<MigrationFile>();
             var backup = Path.Combine(target, "migration-backup-" + Guid.NewGuid().ToString("N"));
             foreach (var (name, maximum) in new[] { ("settings.json", 4096), ("recent-files.json", 65536) })
             {
@@ -31,15 +34,15 @@ public static class DesktopSettingsMigration
                 using var json = JsonDocument.Parse(bytes);
                 if (name == "settings.json")
                 {
-                    var value = json.Deserialize<DesktopPreferences>();
+                    var value = json.Deserialize(PresentationJsonContext.Default.DesktopPreferences);
                     if (value is null || !value.IsValid) throw new InvalidDataException(UiText.Get("旧界面设置无效。"));
                 }
-                else if (json.Deserialize<string[]>() is not { } paths || paths.Any(p => p is null)) throw new InvalidDataException(UiText.Get("旧最近文件记录无效。"));
+                else if (json.Deserialize(PresentationJsonContext.Default.StringArray) is not { } paths || paths.Any(p => p is null)) throw new InvalidDataException(UiText.Get("旧最近文件记录无效。"));
                 Directory.CreateDirectory(backup); WriteNew(Path.Combine(backup, name), bytes);
                 WriteNew(destination, bytes);
-                imported.Add(new { name, sha256 = Convert.ToHexString(SHA256.HashData(bytes)) });
+                imported.Add(new MigrationFile(name, Convert.ToHexString(SHA256.HashData(bytes))));
             }
-            WriteNew(marker, JsonSerializer.SerializeToUtf8Bytes(new { schemaVersion = 1, imported, createdUtc = DateTime.UtcNow }));
+            WriteNew(marker, JsonSerializer.SerializeToUtf8Bytes(new MigrationMarker(1, imported, DateTime.UtcNow), PresentationJsonContext.Default.MigrationMarker));
             return null;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException or ArgumentException)

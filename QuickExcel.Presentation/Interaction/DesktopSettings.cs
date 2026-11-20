@@ -1,3 +1,4 @@
+using QuickExcel.Serialization;
 using System.IO;
 using System.Text.Json;
 
@@ -23,7 +24,7 @@ public sealed class DesktopSettings(string path)
         {
             if (!File.Exists(path)) return;
             if (new FileInfo(path).Length > 4096) throw new InvalidDataException(UiText.Get("设置文件过大。"));
-            var value = JsonSerializer.Deserialize<DesktopPreferences>(File.ReadAllText(path));
+            var value = JsonSerializer.Deserialize(File.ReadAllText(path), PresentationJsonContext.Default.DesktopPreferences);
             if (value is null || !value.IsValid) throw new InvalidDataException(UiText.Get("无效的界面设置。"));
             Value = value with { Language = UiText.Resolve(value.Language).Tag };
             Error = null;
@@ -38,7 +39,7 @@ public sealed class DesktopSettings(string path)
         try
         {
             Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
-            File.WriteAllText(temp, JsonSerializer.Serialize(value));
+            File.WriteAllText(temp, JsonSerializer.Serialize(value, PresentationJsonContext.Default.DesktopPreferences));
             File.Move(temp, path, true); Value = value; Error = null;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { Error = ex.Message; }

@@ -166,7 +166,7 @@ public sealed partial class JscSession : IDisposable
             .Replace("/*WORKBOOK_MODEL*/", WorkbookModelBootstrap, StringComparison.Ordinal)
             .Replace("/*STORAGE*/", StorageBootstrap, StringComparison.Ordinal)
             .Replace("/*MODULE_CONVENTIONS*/", ModuleConventionsBootstrap, StringComparison.Ordinal)
-            .Replace("/*CAPABILITIES*/", JsonSerializer.Serialize(ScriptCapabilities.Current.Json), StringComparison.Ordinal);
+            .Replace("/*CAPABILITIES*/", JsonSerializer.Serialize(ScriptCapabilities.Current.Json, ScriptingJsonContext.Default.String), StringComparison.Ordinal);
 
     public IReadOnlyList<string> FunctionNames { get; }
     public IReadOnlyList<JsFunctionDescriptor> FunctionDescriptors { get; }
@@ -225,7 +225,7 @@ public sealed partial class JscSession : IDisposable
             if (modules is null) result = Call("load", new object?[] { source });
             else
             {
-                Call("prepareModules", [actions, new { share = roles is not null, automatic }]);
+                Call("prepareModules", [actions, new PrepareModulesOptions(roles is not null, automatic)]);
                 // Each entry module registers its own main(workbook, host) binding
                 // during evaluation; the native loader does not expose exports.
                 var rooted = new Dictionary<string, string>(modules, StringComparer.Ordinal);
@@ -236,26 +236,25 @@ public sealed partial class JscSession : IDisposable
                         var local = "__qxExports";
                         while (rooted[entry].Contains(local, StringComparison.Ordinal)) local += "_";
                         var kind = !actions ? "udf" : initializationEntries?.Contains(entry) == true ? "initialization" : eventEntries?.Contains(entry) == true ? "events" : "actions";
-                        rooted[entry] += "\n;import * as " + local + " from " + JsonSerializer.Serialize(entry) + ";\nglobalThis.__qxBindExports(" +
-                            JsonSerializer.Serialize(entry) + "," + JsonSerializer.Serialize(kind) + "," + local + "," + JsonSerializer.Serialize(FunctionPrefix(entry)) + ");";
+                        rooted[entry] += "\n;import * as " + local + " from " + JsonSerializer.Serialize(entry, ScriptingJsonContext.Default.String) + ";\nglobalThis.__qxBindExports(" +
+                            JsonSerializer.Serialize(entry, ScriptingJsonContext.Default.String) + "," + JsonSerializer.Serialize(kind, ScriptingJsonContext.Default.String) + "," + local + "," + JsonSerializer.Serialize(FunctionPrefix(entry), ScriptingJsonContext.Default.String) + ");";
                     }
                     else rooted[entry] += "\n;globalThis.__qxRegisterMain && globalThis.__qxRegisterMain(" +
-                        JsonSerializer.Serialize(entry) + ", typeof main === 'function' ? main : undefined);";
+                        JsonSerializer.Serialize(entry, ScriptingJsonContext.Default.String) + ", typeof main === 'function' ? main : undefined);";
                 }
                 var actionEntries = actions
                     ? entries!.Where(id => (roles is null || (roles.GetValueOrDefault(id) & 2) != 0) &&
                         initializationEntries?.Contains(id) != true && eventEntries?.Contains(id) != true).ToArray()
                     : [];
-                var json = JsonSerializer.Serialize(new { modules = rooted.Select(m => new { id = m.Key, source = m.Value, roles = roles is null ? 3 : roles.GetValueOrDefault(m.Key) }), entries });
+                var json = JsonSerializer.Serialize(new NativeModuleBundle(rooted.Select(m => new NativeModule(m.Key, m.Value,
+                    roles is null ? 3 : roles.GetValueOrDefault(m.Key))).ToArray(), entries!.ToArray()), ScriptingJsonContext.Default.NativeModuleBundle);
                 if (Encoding.UTF8.GetByteCount(json) > MaxMessageBytes) throw new ArgumentException("Module payload exceeds 16 MiB UTF-8.");
                 if (NativeLoadModules(_session, json, out var moduleError) == 0) throw ReadException(moduleError);
                 result = Call("finishModules", [actionEntries, descriptions is null ? new Dictionary<string, string>() : new Dictionary<string, string>(descriptions, StringComparer.Ordinal)]);
             }
-            FunctionNames = Array.AsReadOnly(JsonSerializer.Deserialize<string[]>(result) ?? []);
-            FunctionDescriptors = Array.AsReadOnly(JsonSerializer.Deserialize<JsFunctionDescriptor[]>(Call("descriptors", []),
-                new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? []);
-            ActionDescriptors = Array.AsReadOnly(JsonSerializer.Deserialize<JsActionDescriptor[]>(Call("actionDescriptors", []),
-                new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? []);
+            FunctionNames = Array.AsReadOnly(JsonSerializer.Deserialize(result, ScriptingJsonContext.Default.StringArray) ?? []);
+            FunctionDescriptors = Array.AsReadOnly(JsonSerializer.Deserialize(Call("descriptors", []), ScriptingJsonContext.Default.JsFunctionDescriptorArray) ?? []);
+            ActionDescriptors = Array.AsReadOnly(JsonSerializer.Deserialize(Call("actionDescriptors", []), ScriptingJsonContext.Default.JsActionDescriptorArray) ?? []);
         }
         catch
         {
@@ -289,12 +288,12 @@ public sealed partial class JscSession : IDisposable
     public IReadOnlyList<string> GetLogs()
     {
         lock (_gate)
-            return JsonSerializer.Deserialize<string[]>(Call("logs", [])) ?? [];
+            return JsonSerializer.Deserialize(Call("logs", []), ScriptingJsonContext.Default.StringArray) ?? [];
     }
 
     public void BeginRound() { lock (_gate) Call("beginRound", []); }
 
-    public JsonElement RunAction(string name, object request)
+    public JsonElement RunAction(string name, JsonElement request)
     {
         lock (_gate)
         {
@@ -306,7 +305,7 @@ public sealed partial class JscSession : IDisposable
     private string Call(string method, object?[] arguments)
     {
         ObjectDisposedException.ThrowIf(_session == IntPtr.Zero, this);
-        var json = JsonSerializer.Serialize(arguments);
+        var json = ScriptJsonValues.Serialize(arguments);
         if (Encoding.UTF8.GetByteCount(json) > MaxMessageBytes)
             throw new InvalidOperationException("JavaScript arguments exceed the 16 MiB UTF-8 input limit.");
         IntPtr result; IntPtr error;
@@ -322,7 +321,8 @@ public sealed partial class JscSession : IDisposable
         // Exceptions must never cross the reverse P/Invoke boundary.
         string response;
         try { response = HostRequest?.Invoke(request) ?? throw new InvalidOperationException("此执行阶段没有工作簿模型。"); }
-        catch (Exception error) { response = JsonSerializer.Serialize(new { ok = false, error = error.Message.Length <= 4000 ? error.Message : "模型请求失败。", code = "TransactionAborted" }); }
+        catch (Exception error) { response = JsonSerializer.Serialize(new HostCallFailure(false,
+            error.Message.Length <= 4000 ? error.Message : "模型请求失败。", "TransactionAborted"), ScriptingJsonContext.Default.HostCallFailure); }
         if (Encoding.UTF8.GetByteCount(response) > MaxMessageBytes) response = "{\"ok\":false,\"error\":\"模型响应超过 16 MiB。\",\"code\":\"BudgetExceeded\"}";
         if (_hostResponse != IntPtr.Zero) Marshal.FreeCoTaskMem(_hostResponse);
         return _hostResponse = Marshal.StringToCoTaskMemUTF8(response);

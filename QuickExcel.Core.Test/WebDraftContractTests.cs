@@ -26,7 +26,7 @@ public sealed class WebDraftContractTests
     [Fact]
     public void ProtocolRejectsOtherViewsDocumentsGenerationsCapabilitiesAndDuplicateFields()
     {
-        var body = WebMessage.Create("view", "doc", 3, "draftAck", "r1", new { versions = new { main = 1 } });
+        var body = WebMessage.Create("view", "doc", 3, "draftAck", "r1", new Dictionary<string, object?> { ["versions"] = new Dictionary<string, object?> { ["main"] = 1 } });
         Assert.Equal("draftAck", WebMessage.Parse(body, "view", "doc", 3, Allowed).Type);
         Assert.Throws<InvalidDataException>(() => WebMessage.Parse(body, "older", "doc", 3, Allowed));
         Assert.Throws<InvalidDataException>(() => WebMessage.Parse(body, "view", "other", 3, Allowed));
@@ -34,7 +34,7 @@ public sealed class WebDraftContractTests
         Assert.Throws<InvalidDataException>(() => WebMessage.Parse(body, "view", "doc", 3, new HashSet<string> { "requestPrint" }));
         Assert.Throws<InvalidDataException>(() => WebMessage.Parse(body.Replace("\"main\":1", "\"main\":1,\"main\":2"), "view", "doc", 3, Allowed));
         Assert.Throws<InvalidDataException>(() => WebMessage.Parse(body.Replace("\"generation\":3,", ""), "view", "doc", 0, Allowed));
-        Assert.Throws<InvalidDataException>(() => WebMessage.Create("view", "doc", 3, "draftAck", "r1", new { text = new string('中', 100_000) }));
+        Assert.Throws<InvalidDataException>(() => WebMessage.Create("view", "doc", 3, "draftAck", "r1", new Dictionary<string, object?> { ["text"] = new string('中', 100_000) }));
     }
     [Fact]
     public void LargeUnicodeDraftRequiresEveryVerifiedChunkAndAFlushBarrier()

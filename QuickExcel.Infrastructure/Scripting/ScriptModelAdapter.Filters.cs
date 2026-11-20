@@ -119,8 +119,8 @@ internal sealed partial class ScriptModelAdapter
         if (column?.Color is not null) throw Unsupported(MessageText.Get("颜色筛选条件尚未暴露给脚本 API。请通过桌面筛选入口编辑。"));
         if (column is { DateGroups.IsEmpty: false }) throw Unsupported(MessageText.Get("日期分组筛选条件尚未暴露给脚本 API。请通过桌面筛选入口编辑。"));
         if (column?.Top is not null) throw Unsupported(MessageText.Get("前后项筛选条件尚未暴露给脚本 API。请通过桌面筛选入口编辑。"));
-        if (column?.Values is { } values) return new { filterOn = 5, values = column.IncludeBlank ? values.Add("").ToArray() : values.ToArray() };
-        if (column?.First is not { } first) return new { };
+        if (column?.Values is { } values) return new Dictionary<string, object?> { ["filterOn"] = 5, ["values"] = column.IncludeBlank ? values.Add("").ToArray() : values.ToArray() };
+        if (column?.First is not { } first) return new Dictionary<string, object?> {  };
         static string Expression(AutoFilterCondition c) => (c.Comparison switch { AutoFilterComparison.Equal => "=", AutoFilterComparison.NotEqual => "<>",
             AutoFilterComparison.LessThan => "<", AutoFilterComparison.LessThanOrEqual => "<=", AutoFilterComparison.GreaterThan => ">", _ => ">=" }) + c.Operand;
         var result = new Dictionary<string, object> { ["filterOn"] = 9, ["criterion1"] = Expression(first), ["operator"] = column.UseAnd ? 0 : 1 };

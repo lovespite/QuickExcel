@@ -48,7 +48,7 @@ internal sealed partial class ScriptModelAdapter
     }
 
     private object NamedHandle(DefinedName definition) =>
-        Handle("NamedItem", new { name = definition.Name, scopeSheetId = definition.Scope?.ToString() });
+        Handle("NamedItem", new Dictionary<string, object?> { ["name"] = definition.Name, ["scopeSheetId"] = definition.Scope?.ToString() });
 
     private string NamedReference(JsonElement reference, SheetId defaultSheet)
     {

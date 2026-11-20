@@ -25,7 +25,7 @@ internal sealed partial class ScriptModelAdapter
             if (member == "getValid") return failures.Count == 0;
             if (failures.Count == 0) return null;
             if (failures.Count > 1024) throw new ModelFailure("BudgetExceeded", "无效区域超过 1024 个，请分块查询。");
-            return Handle("RangeAreas", new { sheetId = sheet.Id.ToString(), addresses = failures.Select(f => new CellRectangle(f.Address.Row, f.Address.Column, f.Address.Row, f.Address.Column).ToString()).ToArray() });
+            return Handle("RangeAreas", new Dictionary<string, object?> { ["sheetId"] = sheet.Id.ToString(), ["addresses"] = failures.Select(f => new CellRectangle(f.Address.Row, f.Address.Column, f.Address.Row, f.Address.Column).ToString()).ToArray() });
         }
         if (member == "clear") { Write(sheet.Id, range, new SetScriptValidationCommand(sheet.Id, range, null)); return null; }
         if (matches.Length != 0 && !exact && member != "setRule") throw Unsupported("混合验证规则请分块读取或使用完整范围替换。");
@@ -36,17 +36,17 @@ internal sealed partial class ScriptModelAdapter
                 dropdown ?? rule.ShowDropDown, showInput ?? rule.ShowInput, showError ?? rule.ShowError, alert ?? rule.Alert,
                 inputTitle ?? rule.InputTitle, inputMessage ?? rule.InputMessage, errorTitle ?? rule.ErrorTitle, errorMessage ?? rule.ErrorMessage);
         if (member == "getIgnoreBlanks") return rule.AllowBlank;
-        if (member == "getPrompt") return new { showPrompt = rule.ShowInput, title = rule.InputTitle ?? "", message = rule.InputMessage ?? "" };
-        if (member == "getErrorAlert") return new { showAlert = rule.ShowError, title = rule.ErrorTitle ?? "", message = rule.ErrorMessage ?? "", style = (int)rule.Alert };
+        if (member == "getPrompt") return new Dictionary<string, object?> { ["showPrompt"] = rule.ShowInput, ["title"] = rule.InputTitle ?? "", ["message"] = rule.InputMessage ?? "" };
+        if (member == "getErrorAlert") return new Dictionary<string, object?> { ["showAlert"] = rule.ShowError, ["title"] = rule.ErrorTitle ?? "", ["message"] = rule.ErrorMessage ?? "", ["style"] = (int)rule.Alert };
         if (member == "getRule")
         {
-            if (rule.Kind == ValidationKind.None) return new { };
+            if (rule.Kind == ValidationKind.None) return new Dictionary<string, object?> {  };
             object value;
-            if (rule.Kind == ValidationKind.Custom) value = new { formula = rule.Formula1 };
+            if (rule.Kind == ValidationKind.Custom) value = new Dictionary<string, object?> { ["formula"] = rule.Formula1 };
             else if (rule.Kind == ValidationKind.List)
             {
                 var source = QuickExcel.Formulas.FormulaSyntax.Parse(rule.Formula1!) is QuickExcel.Formulas.ValueNode { Value.Kind: CellValueKind.Text } literal ? literal.Value.TextValue : rule.Formula1;
-                value = new { source, inCellDropDown = rule.ShowDropDown };
+                value = new Dictionary<string, object?> { ["source"] = source, ["inCellDropDown"] = rule.ShowDropDown };
             }
             else
             {

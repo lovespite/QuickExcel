@@ -1,3 +1,4 @@
+using QuickExcel.Serialization;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
@@ -32,7 +33,7 @@ internal sealed class MacWorkerLease : IDisposable
     internal string ProfileName { get; }
     private readonly FileStream _lease;
     private Record _record;
-    private sealed record Record(int SchemaVersion, string Id, string Profile, int ProcessId, ulong StartTime, Dictionary<string, string> Files);
+    internal sealed record Record(int SchemaVersion, string Id, string Profile, int ProcessId, ulong StartTime, Dictionary<string, string> Files);
     private MacWorkerLease(string directory, string id, FileStream lease)
     {
         DirectoryPath = directory; ProfileName = "macos-seatbelt-" + id; _lease = lease;
@@ -85,7 +86,7 @@ internal sealed class MacWorkerLease : IDisposable
     private void Save()
     {
         var temporary = Path.Combine(DirectoryPath, "record.new");
-        using (var file = new FileStream(temporary, FileMode.Create, FileAccess.Write, FileShare.None)) { JsonSerializer.Serialize(file, _record); file.Flush(true); }
+        using (var file = new FileStream(temporary, FileMode.Create, FileAccess.Write, FileShare.None)) { JsonSerializer.Serialize(file, _record, InfrastructureJsonContext.Default.MacLeaseRecord); file.Flush(true); }
         File.Move(temporary, Path.Combine(DirectoryPath, "record.json"), true);
     }
     internal static ulong ReadStartTime(int pid)
@@ -138,7 +139,7 @@ internal sealed class MacWorkerLease : IDisposable
             using (lease)
             {
                 if (new FileInfo(recordPath).Length > 128 * 1024) throw new IOException("Invalid macOS worker record size.");
-                var record = JsonSerializer.Deserialize<Record>(File.ReadAllText(recordPath)) ?? throw new IOException("Missing macOS ownership record.");
+                var record = JsonSerializer.Deserialize(File.ReadAllText(recordPath), InfrastructureJsonContext.Default.MacLeaseRecord) ?? throw new IOException("Missing macOS ownership record.");
                 if (record.SchemaVersion != 1 || record.Id != id || record.Profile != "macos-seatbelt-" + id) throw new IOException("Invalid macOS ownership record.");
                 if (record.ProcessId > 0)
                 {

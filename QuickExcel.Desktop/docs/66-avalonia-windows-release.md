@@ -2,7 +2,10 @@
 
 ## Windows ClickOnce 发布（2026-11-20）
 
-当前产品版本为 `3.13.0`。Windows 主可执行文件改为 `quickxl.exe`；
+当前产品版本为 `4.0.0`，Windows 发布使用独立 Native AOT Worker、主程序
+部分运行时裁剪和仅一份 JSC/ICU/TypeScript。实现、兼容性与本次验证见
+[84-native-aot-and-trimming.md](84-native-aot-and-trimming.md)。
+以下保留 `3.13.0` 起的安装器合同与历史验证。Windows 主可执行文件为 `quickxl.exe`；
 `QuickExcel.Avalonia.dll`、deps/runtimeconfig、产品显示名、隔离 worker 和
 macOS/Linux 可执行文件名称均保持不变。构建、发布、`dotnet run`、文件关联、
 ClickOnce launcher 及诊断脚本使用新入口；本地启动器仍支持历史已验证包的旧入口。
@@ -40,7 +43,8 @@ setup.exe 检测 HKLM/HKCU 的 WebView2 stable Runtime，缺少时通过
 微软分发说明：<https://learn.microsoft.com/en-us/microsoft-edge/webview2/concepts/distribution>；
 引导程序来源：<https://go.microsoft.com/fwlink/p/?LinkId=2124703>。
 发布与验证脚本检查 Microsoft 签名及引导程序体积，并拒绝混入旧的完整离线安装器。
-主程序和隔离 worker 各自包含 .NET 10，worker 原生 VC++ 依赖随包携带。
+主程序包含部分裁剪的 .NET 10，隔离 worker 使用 Native AOT；worker 原生
+VC++ 依赖随包携带，JSC/ICU/TypeScript 不再重复放入主程序目录。
 受支持的 Windows 10/11 x64 提供 ClickOnce 所需的 .NET Framework；无需安装
 .NET SDK。微软安装器原样保留，来源、SHA-256、安装器文件版本记录在
 `clickonce-release.json`；相关声明及 launcher MIT 全文可在设置的许可证列表查看。
@@ -55,7 +59,14 @@ CERT_E_UNTRUSTEDROOT；损坏文件的 TRUST_E_BAD_DIGEST 仍拒绝。不会通�
 需用户或管理员核对指纹后显式配置证书信任。自动化载荷自检不代表干净设备的
 ClickOnce 安装、缺少 WebView2 时的安装分支或物理输入验收；既有延期门槛保留。
 
-本次 `3.13.0` 验证：API 目录/能力清单/翻译共 10 项定向单元测试通过；
+当前 `4.0.0` 已激活到 `artifacts/avalonia/releases/20261120-024227-929d0d3c/application`，
+正式包、启动器与 ClickOnce 载荷均通过 34 项生产自检；最终 AOT Worker 的
+386 项进程/沙箱/脚本定向测试全部通过。ClickOnce 分发包为
+`artifacts/clickonce/QuickExcel-4.0.0-win-x64-20261120-024702-f2315b6d.zip`，
+完整目录为 234.23 MiB，分发 ZIP 为 138.00 MiB，较 3.13.0 分别减少约 46.0%
+和 37.9%。完整哈希、测试证据和兼容边界见 84 号记录。
+
+历史 `3.13.0` 验证：API 目录/能力清单/翻译共 10 项定向单元测试通过；
 API 生成器 fixture 自测和正式生成物 `--check` 通过；中英文 Menus 模式分别
 通过 136 项 UI 检查（含调用类型的首次显示、切换及文件关联入口），并检查截图。
 中文证据：`artifacts/avalonia/workspace/20261120-020742-728ff60b`；
@@ -87,7 +98,13 @@ ZIP SHA-256：`6E2B86D56271D42FB6375B691EC7D134EEFA9FF7BEFFE55A3F8075B22984E8CB`
 
 ## 发布形态
 
-`build-avalonia-release.ps1` 生成全新 Windows x64 自包含目录。A5 候选版本为 `0.6.0-preview.5`；当前版本由 Avalonia 项目统一提供，为 `0.6.0-preview.7`。主程序和 AppContainer worker 各自包含 .NET 10；worker 不依赖开发机全局 .NET，目录扫描拒绝 UI/WebView/Skia/PDF 载荷。正式构建 `QuickExcelDiagnostics=false`，不编译 Diagnostics 目录、对话框/验证/关闭决策注入，也拒绝测试命令行。运行时依赖清单与文件均排除 Avalonia.DesignerSupport；不使用裁剪、忽略依赖错误或删除必要 BCL 来减小包。
+`build-avalonia-release.ps1` 生成全新 Windows x64 自包含目录，版本由 Avalonia
+项目统一提供。4.0 起主程序使用部分运行时裁剪，AppContainer worker 单独
+Native AOT 发布，均不依赖开发机全局 .NET；worker 目录扫描拒绝
+UI/WebView/Skia/PDF 载荷。正式构建 `QuickExcelDiagnostics=false`，不编译
+Diagnostics 目录、对话框/验证/关闭决策注入，也拒绝测试命令行。运行时依赖
+清单与文件均排除 Avalonia.DesignerSupport；不能忽略依赖错误或手工删除
+必要 BCL。历史 A5 版本不使用裁剪，4.0 的兼容审查与验证见 84 号记录。
 
 构建先生成正式离线 Web 资源，再还原并锁定 RID 依赖。`Directory.Build.props` 仅在显式传入 `QuickExcelReleaseLockDirectory` 时把 RID 锁放在 artifacts；正式包保存这些完整锁与 npm 锁，普通源码锁不被发布重写。逐文件大小/SHA-256、Git HEAD/dirty、SDK、Web 清单与安装自检进入 `release.json`；ZIP 另有 SHA-256。每次新目录，旧包不覆盖。无 Node、测试密钥、probe、fixture、PDB、source map 或 PDF scripting 引擎随包发布。
 

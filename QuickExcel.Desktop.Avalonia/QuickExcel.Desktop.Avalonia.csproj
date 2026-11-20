@@ -5,12 +5,21 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AssemblyName>QuickExcel.Avalonia</AssemblyName>
-    <Version>3.13.0</Version>
+    <Version>4.0.0</Version>
     <QuickExcelDiagnostics Condition="'$(QuickExcelDiagnostics)' == ''">true</QuickExcelDiagnostics>
     <DefineConstants Condition="'$(QuickExcelDiagnostics)' == 'true'">$(DefineConstants);QUICKEXCEL_DIAGNOSTICS</DefineConstants>
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>Assets/QuickExcel.ico</ApplicationIcon>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(RuntimeIdentifier)' == 'win-x64' and '$(QuickExcelDiagnostics)' == 'false'">
+    <!-- Keep application/third-party assemblies that have not opted into trimming.
+         The framework libraries are trimmed using their supported annotations. -->
+    <PublishTrimmed>true</PublishTrimmed>
+    <RuntimeFrameworkVersion>$(QuickExcelWindowsRuntimeVersion)</RuntimeFrameworkVersion>
+    <TrimMode>partial</TrimMode>
+    <TrimmerSingleWarn>false</TrimmerSingleWarn>
+    <JsonSerializerIsReflectionEnabledByDefault>false</JsonSerializerIsReflectionEnabledByDefault>
   </PropertyGroup>
   <ItemGroup>
     <Using Include="QuickExcel.Presentation.UiText" Alias="UiText" />
@@ -73,5 +82,13 @@
   </Target>
   <Target Name="ExcludeReleaseSymbols" AfterTargets="ComputeFilesToPublish" Condition="'$(QuickExcelDiagnostics)' != 'true'">
     <ItemGroup><ResolvedFileToPublish Remove="@(ResolvedFileToPublish)" Condition="'%(Extension)' == '.pdb'" /></ItemGroup>
+  </Target>
+  <!-- Desktop only talks to the isolated worker. Native engines/compiler data
+       flow transitively from Scripting, but must be shipped in ScriptWorker only. -->
+  <Target Name="ExcludeDesktopScriptEnginePayload" AfterTargets="ComputeFilesToPublish" Condition="'$(RuntimeIdentifier)' == 'win-x64'">
+    <ItemGroup>
+      <ResolvedFileToPublish Remove="@(ResolvedFileToPublish)"
+          Condition="'%(RelativePath)' == 'JavaScriptCore.dll' or '%(RelativePath)' == 'icudt77.dll' or '%(RelativePath)' == 'icuuc77.dll' or '%(RelativePath)' == 'icuin77.dll' or '%(RelativePath)' == 'msvcp140.dll' or '%(RelativePath)' == 'msvcp140_2.dll' or '%(RelativePath)' == 'vcruntime140.dll' or '%(RelativePath)' == 'vcruntime140_1.dll' or '%(RelativePath)' == 'typescript.bundle.json' or '%(RelativePath)' == 'JSC-BUILD-IDENTITY.json'" />
+    </ItemGroup>
   </Target>
 </Project>

@@ -8,8 +8,7 @@ namespace QuickExcel.Presentation.Web;
 public sealed record WebMessage(int Protocol, string Instance, string Document, long Generation, string Type, string RequestId, JsonElement Payload)
 {
     public const int Version = 1, MaximumBytes = 256 * 1024;
-    public static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web)
-    { MaxDepth = 24, UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow };
+    public static readonly JsonSerializerOptions Json = WebJsonContext.Default.Options;
     public static WebMessage Parse(string body, string instance, string document, long generation, IReadOnlySet<string> allowed)
     {
         if (body.Length > MaximumBytes || Encoding.UTF8.GetByteCount(body) > MaximumBytes) throw new InvalidDataException(UiText.Get("Web 消息超过 256 KiB。"));
@@ -17,7 +16,7 @@ public sealed record WebMessage(int Protocol, string Instance, string Document, 
         if (parsed.RootElement.ValueKind != JsonValueKind.Object || parsed.RootElement.EnumerateObject().Count() != 7)
             throw new InvalidDataException(UiText.Get("Web 消息缺少必需字段或含额外字段。"));
         RejectDuplicates(parsed.RootElement);
-        var message = parsed.RootElement.Deserialize<WebMessage>(Json) ?? throw new InvalidDataException(UiText.Get("缺少 Web 消息。"));
+        var message = parsed.RootElement.Deserialize(WebJsonContext.Default.WebMessage) ?? throw new InvalidDataException(UiText.Get("缺少 Web 消息。"));
         if (message.Protocol != Version || message.Instance != instance || message.Document != document || message.Generation != generation)
             throw new InvalidDataException(UiText.Get("Web 消息版本、文档或视图代次不匹配。"));
         if (message.Type is null || !allowed.Contains(message.Type) || !ValidId(message.RequestId)) throw new InvalidDataException(UiText.Get("Web 消息类型或请求标识无效。"));
@@ -36,7 +35,7 @@ public sealed record WebMessage(int Protocol, string Instance, string Document, 
     }
     public static string Create(string instance, string document, long generation, string type, string requestId, object payload)
     {
-        var body = JsonSerializer.Serialize(new { protocol = Version, instance, document, generation, type, requestId, payload }, Json);
+        var body = JsonSerializer.Serialize(new WebMessage(Version, instance, document, generation, type, requestId, WebJsonValues.ToElement(payload)), WebJsonContext.Default.WebMessage);
         if (Encoding.UTF8.GetByteCount(body) > MaximumBytes) throw new InvalidDataException(UiText.Get("Web 消息必须分块发送。"));
         return body;
     }

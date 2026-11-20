@@ -40,7 +40,7 @@ public sealed partial class TypedWorkbookStorage
     private static void WriteStorageParts(ScriptStorage storage, Dictionary<string, byte[]> parts, JsonObject manifest, CancellationToken cancellationToken)
     {
         if (storage.Entries.Count == 0) { manifest.Remove("localStorage"); return; }
-        manifest["requiredFeatures"]!.AsArray().Add("script-storage");
+        manifest["requiredFeatures"]!.AsArray().Add((JsonNode?)JsonValue.Create("script-storage"));
         var references = new JsonArray();
         using var output = new MemoryStream();
         using var writer = new BinaryWriter(output, Utf8, true);
@@ -52,7 +52,7 @@ public sealed partial class TypedWorkbookStorage
             var bytes = output.ToArray();
             var path = StoragePrefix + (index++).ToString("D6", System.Globalization.CultureInfo.InvariantCulture) + ".bin";
             parts.Add(path, bytes);
-            references.Add(new JsonObject { ["path"] = path, ["sha256"] = Hash(bytes) });
+            references.Add((JsonNode)new JsonObject { ["path"] = path, ["sha256"] = Hash(bytes) });
         }
         Begin();
         foreach (var (key, value) in storage.Entries)

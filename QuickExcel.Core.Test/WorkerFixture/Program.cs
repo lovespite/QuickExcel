@@ -22,18 +22,18 @@ if (loadEnvelope.Kind is "loadActions" or "loadWorkbook" && !sharedFormula)
     {
         // Stage one valid mutation before injecting a bad callback. No partial edit may escape.
         var sheet = action.Snapshot.Sheets[0].Id;
-        var first = new ModelCall(action.OperationId, 1, WorkerProtocol.EncodePayload(new { method = "setValue", args = new object[] { sheet, "A1", 9 } }));
+        var first = new ModelCall(action.OperationId, 1, System.Text.Json.JsonSerializer.SerializeToElement(new { method = "setValue", args = new object[] { sheet, "A1", 9 } }));
         await WorkerProtocol.WriteAsync(output, WorkerProtocol.Message(envelope.Identity, "model", first));
         var firstReply = WorkerProtocol.Payload<ModelReply>(await WorkerProtocol.ReadAsync(input));
         if (!firstReply.Ok) throw new InvalidOperationException("Fault fixture could not stage its initial write.");
-        var next = new ModelCall(action.OperationId, 2, WorkerProtocol.EncodePayload(new { method = "setValue", args = new object[] { sheet, "A1", 10 } }));
+        var next = new ModelCall(action.OperationId, 2, System.Text.Json.JsonSerializer.SerializeToElement(new { method = "setValue", args = new object[] { sheet, "A1", 10 } }));
         next = fault switch
         {
             "model-operation" => next with { OperationId = Guid.NewGuid() },
             "model-sequence" => next with { Sequence = 1 },
-            "model-method" => next with { Request = WorkerProtocol.EncodePayload(new { method = "setUnknown", args = new object[] { sheet, "A1", 10 } }) },
-            "model-sheet" => next with { Request = WorkerProtocol.EncodePayload(new { method = "setValue", args = new object[] { Guid.NewGuid().ToString(), "A1", 10 } }) },
-            "model-value" => next with { Request = WorkerProtocol.EncodePayload(new { method = "setValue", args = new object[] { sheet, "A1", new { kind = "number", value = "wrong" } } }) },
+            "model-method" => next with { Request = System.Text.Json.JsonSerializer.SerializeToElement(new { method = "setUnknown", args = new object[] { sheet, "A1", 10 } }) },
+            "model-sheet" => next with { Request = System.Text.Json.JsonSerializer.SerializeToElement(new { method = "setValue", args = new object[] { Guid.NewGuid().ToString(), "A1", 10 } }) },
+            "model-value" => next with { Request = System.Text.Json.JsonSerializer.SerializeToElement(new { method = "setValue", args = new object[] { sheet, "A1", new { kind = "number", value = "wrong" } } }) },
             _ => next
         };
         var modelIdentity = fault == "model-round" ? envelope.Identity with { RoundId = Guid.NewGuid() } : envelope.Identity;

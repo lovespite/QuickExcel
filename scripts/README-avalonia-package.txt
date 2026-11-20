@@ -1,6 +1,7 @@
 QuickExcel Avalonia — Windows x64 (version and identity: release.json)
 
-Run quickxl.exe. .NET 10 and the isolated script worker are included.
+Run quickxl.exe. The partially trimmed .NET 10 desktop runtime and the isolated
+Native AOT script worker are included. JSC/ICU/TypeScript live in ScriptWorker only.
 Monaco and PDF.js are bundled locally; Node and an internet connection are not needed.
 
 Microsoft Edge WebView2 Evergreen Runtime is required for script editing and PDF preview.

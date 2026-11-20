@@ -33,7 +33,7 @@ internal sealed class PdfPreviewPage : IAsyncDisposable
         _file = session.RetainPdf();
         _resource = await Browser.Origin.AddPdfAsync(session.PdfPath);
         await Browser.Ready;
-        var response = await Browser.RequestAsync("loadPdf", "pdfLoaded", new { url = _resource.Uri.AbsoluteUri }, TimeSpan.FromSeconds(45));
+        var response = await Browser.RequestAsync("loadPdf", "pdfLoaded", new Dictionary<string, object?> { ["url"] = _resource.Uri.AbsoluteUri }, TimeSpan.FromSeconds(45));
         if (response.Payload.GetProperty("pages").GetInt32() != session.Job.Layout.Pages.Length) throw new InvalidDataException(UiText.Get("浏览器预览页数与冻结打印任务不一致。"));
     }
     public ValueTask DisposeAsync() => new(_dispose ??= DisposeCoreAsync());

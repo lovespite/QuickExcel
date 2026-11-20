@@ -33,7 +33,7 @@ public sealed class ScriptApiAliasTests
         Assert.Equal("main", Assert.Single(session.ActionDescriptors).Name);
         session.HostRequest = json =>
             json.Contains("\"files\"", StringComparison.Ordinal) ? "{\"ok\":true,\"value\":[]}" : "{\"ok\":true,\"value\":null}";
-        session.RunAction("main", new { operationId = Guid.NewGuid(), name = "main", snapshot = new { baseRevision = 0 }, liveModel = true });
+        session.RunAction("main", System.Text.Json.JsonSerializer.SerializeToElement(new { operationId = Guid.NewGuid(), name = "main", snapshot = new { baseRevision = 0 }, liveModel = true }));
         Assert.Contains("ran", session.GetLogs());
     }
 
@@ -51,7 +51,7 @@ public sealed class ScriptApiAliasTests
         Assert.Equal("main", action.Name);
         Assert.Equal("填充示例单元格", action.Description);
         session.HostRequest = json => "{\"ok\":true,\"value\":null}";
-        session.RunAction("main", new { operationId = Guid.NewGuid(), name = "main", snapshot = new { baseRevision = 0 }, liveModel = true });
+        session.RunAction("main", System.Text.Json.JsonSerializer.SerializeToElement(new { operationId = Guid.NewGuid(), name = "main", snapshot = new { baseRevision = 0 }, liveModel = true }));
         Assert.Contains("ran", session.GetLogs());
     }
 }

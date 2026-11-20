@@ -1,3 +1,4 @@
+using QuickExcel.Serialization;
 using System.Collections.Immutable;
 using System.Security.Cryptography;
 using System.Text.Json;
@@ -8,7 +9,7 @@ namespace QuickExcel.Presentation;
 /// <summary>Bounded, atomic local library. An optimistic fingerprint prevents stale windows overwriting newer edits.</summary>
 public sealed class QuickCellStyleStore(string path)
 {
-    private sealed record Library(int Version, QuickCellStyle[] Styles);
+    internal sealed record Library(int Version, QuickCellStyle[] Styles);
     private string? _fingerprint;
     public ImmutableArray<QuickCellStyle> Styles { get; private set; } = [];
     public string? Error { get; private set; }
@@ -27,7 +28,7 @@ public sealed class QuickCellStyleStore(string path)
         try
         {
             var bytes = Read();
-            var library = bytes.Length == 0 ? new Library(1, []) : JsonSerializer.Deserialize<Library>(bytes);
+            var library = bytes.Length == 0 ? new Library(1, []) : JsonSerializer.Deserialize(bytes, PresentationJsonContext.Default.StyleLibrary);
             if (library is not { Version: 1, Styles: not null }) throw new InvalidDataException(UiText.Get("无效的自定义样式文件。"));
             Validate(library.Styles); Styles = library.Styles.ToImmutableArray(); _fingerprint = Fingerprint(bytes); Error = null;
         }
@@ -38,7 +39,7 @@ public sealed class QuickCellStyleStore(string path)
     {
         var entries = styles.Take(MaximumStyles + 1).ToArray(); Validate(entries);
         if (_fingerprint is null) throw new InvalidOperationException(UiText.Get("请先重新加载自定义样式，原文件保持不变。"));
-        var bytes = JsonSerializer.SerializeToUtf8Bytes(new Library(1, entries));
+        var bytes = JsonSerializer.SerializeToUtf8Bytes(new Library(1, entries), PresentationJsonContext.Default.StyleLibrary);
         if (bytes.Length > MaximumBytes) throw new InvalidDataException(UiText.Get("自定义样式文件过大。"));
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
         using var lease = new FileStream(path + ".lock", FileMode.OpenOrCreate, FileAccess.Write, FileShare.None);

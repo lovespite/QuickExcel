@@ -57,7 +57,7 @@ internal sealed class LocalWebView : IAsyncDisposable
         _heartbeat.Tick += async (_, _) =>
         {
             if (!IsReady || _pinging) return; _pinging = true;
-            try { await RequestAsync("ping", "pong", new { }, TimeSpan.FromSeconds(5)); }
+            try { await RequestAsync("ping", "pong", new Dictionary<string, object?>(), TimeSpan.FromSeconds(5)); }
             catch (Exception ex) { if (!_closing) Fail(ex); }
             finally { _pinging = false; }
         };
@@ -114,7 +114,7 @@ internal sealed class LocalWebView : IAsyncDisposable
     private async Task CloseCoreAsync(Action detach)
     {
         _heartbeat.Stop();
-        try { if (IsReady) await RequestAsync("dispose", "disposed", new { }, TimeSpan.FromSeconds(5)); }
+        try { if (IsReady) await RequestAsync("dispose", "disposed", new Dictionary<string, object?>(), TimeSpan.FromSeconds(5)); }
         catch (Exception ex) { Fail(ex); }
         finally
         {

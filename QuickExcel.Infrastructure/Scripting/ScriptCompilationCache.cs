@@ -1,3 +1,4 @@
+using QuickExcel.Serialization;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
@@ -22,10 +23,10 @@ internal static class ScriptCompilationCache
     internal const int LegacyMaximumBytes = 16 * 1024 * 1024;
     private static readonly UTF8Encoding Utf8 = new(false, true);
     private static readonly byte[] Purpose = Encoding.UTF8.GetBytes("QuickExcel.ScriptCompilationCache.v2");
-    private sealed record OutputIndex(string Id, int Offset, int JavascriptBytes, int SourceMapBytes);
-    private sealed record CompilationMetadata(string Compiler, string SourceSha256, string OutputSha256, string SourceMapMode,
+    internal sealed record OutputIndex(string Id, int Offset, int JavascriptBytes, int SourceMapBytes);
+    internal sealed record CompilationMetadata(string Compiler, string SourceSha256, string OutputSha256, string SourceMapMode,
         string Frontend, string Mode, double Milliseconds, OutputIndex[] Outputs);
-    private sealed record Envelope(int Version, string SignatureSha256, CompilationMetadata Compilation,
+    internal sealed record Envelope(int Version, string SignatureSha256, CompilationMetadata Compilation,
         int DataBytes, string DataSha256, string Protection, string Proof);
     internal sealed record PackageParts(byte[] Metadata, byte[] Data);
     private sealed record Stored(PackageParts Parts, bool ProducedHere);
@@ -60,7 +61,7 @@ internal static class ScriptCompilationCache
             // Only the small metadata document is parsed. Check all offsets/lengths and authenticate
             // the binary digest before allocating any executable strings from untrusted data.
             using var json = JsonDocument.Parse(stored.Parts.Metadata, new() { AllowDuplicateProperties = false, MaxDepth = 16 });
-            var cache = json.RootElement.Deserialize<Envelope>(WorkerProtocol.Json);
+            var cache = json.RootElement.Deserialize(InfrastructureJsonContext.Protocol.CompilationEnvelope);
             if (cache is not { Version: 2, Compilation: not null } || cache.SignatureSha256 != SignatureHash(signature) ||
                 !ValidIndex(cache, request, stored.Parts.Data.Length) || !ScriptSignatures.VerifyContent(modules) ||
                 cache.DataSha256 != Convert.ToHexString(SHA256.HashData(stored.Parts.Data))) return false;
@@ -161,15 +162,17 @@ internal static class ScriptCompilationCache
 
     private static void Store(ScriptModuleSet modules, Envelope envelope, byte[] data, CancellationToken token)
     {
-        var metadata = JsonSerializer.SerializeToUtf8Bytes(envelope, WorkerProtocol.Json);
+        var metadata = JsonSerializer.SerializeToUtf8Bytes(envelope, InfrastructureJsonContext.Protocol.CompilationEnvelope);
         if (metadata.Length > MaximumMetadataBytes || data.Length > MaximumDataBytes) throw new InvalidOperationException(QuickExcel.Core.MessageText.Get("脚本编译缓存超过容量限额。"));
         token.ThrowIfCancellationRequested();
         Volatile.Write(ref Entries.GetOrCreateValue(modules.Signature!).Value, new(new(metadata, data), true));
     }
 
-    private static string SignatureHash(ScriptSignature signature) => CompilerProtocol.Hash(JsonSerializer.Serialize(signature, WorkerProtocol.Json));
+    private static string SignatureHash(ScriptSignature signature) => CompilerProtocol.Hash(JsonSerializer.Serialize(signature, InfrastructureJsonContext.Protocol.ScriptSignature));
     // Authenticate metadata and the binary digest. JS and source maps never enter this JSON payload.
-    private static byte[] Payload(Envelope envelope) => SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(new
-    { purpose = "QuickExcel.ScriptCompilationCache", envelope.Version, envelope.SignatureSha256, envelope.Compilation,
-        envelope.DataBytes, envelope.DataSha256, envelope.Protection }, WorkerProtocol.Json));
+    internal sealed record Authentication(string Purpose, int Version, string SignatureSha256, CompilationMetadata Compilation,
+        int DataBytes, string DataSha256, string Protection);
+    private static byte[] Payload(Envelope envelope) => SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(new Authentication(
+        "QuickExcel.ScriptCompilationCache", envelope.Version, envelope.SignatureSha256, envelope.Compilation,
+        envelope.DataBytes, envelope.DataSha256, envelope.Protection), InfrastructureJsonContext.Protocol.Authentication));
 }

@@ -1,3 +1,4 @@
+using QuickExcel.Serialization;
 using QuickExcel.Core;
 using System.Security.Cryptography;
 using System.Text.Json;
@@ -21,7 +22,7 @@ public sealed class WebAssetCatalog
         if (manifest.RootElement.GetProperty("schemaVersion").GetInt32() != 1) throw new InvalidDataException(MessageText.Get("未知 Web 资源清单版本。"));
         if (!allowTestResources && (manifest.RootElement.TryGetProperty("testBuild", out var test) && test.GetBoolean() || manifest.RootElement.TryGetProperty("probeBuild", out var probe) && probe.GetBoolean()))
             throw new InvalidDataException(MessageText.Get("正式工作区不能加载探针或故障注入资源，请重新构建正式 Web 资源。"));
-        Packages = manifest.RootElement.GetProperty("packages").Deserialize<Dictionary<string, string>>()!;
+        Packages = manifest.RootElement.GetProperty("packages").Deserialize(InfrastructureJsonContext.Default.DictionaryStringString)!;
         var files = new Dictionary<string, byte[]>(StringComparer.Ordinal); long total = 0;
         foreach (var item in manifest.RootElement.GetProperty("files").EnumerateArray())
         {

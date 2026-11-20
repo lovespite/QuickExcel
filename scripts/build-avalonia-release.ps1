@@ -6,6 +6,21 @@ param([switch]$SkipTests, [switch]$CreateArchive, [switch]$RunSmoke,
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 $root = [IO.Path]::GetFullPath((Split-Path $PSScriptRoot -Parent))
+$previousBuildPath = $env:PATH
+$previousDotnetRoot = $env:DOTNET_ROOT
+$previousBuildOs = $env:OS
+try {
+# The servicing linker runs on the matching servicing runtime. A repository-local
+# official SDK can be used without replacing the machine's SDK installation.
+$localSdk = Join-Path $root 'artifacts/tools/dotnet-10.0.404'
+if (Test-Path -LiteralPath (Join-Path $localSdk 'dotnet.exe')) {
+    $env:PATH = $localSdk + [IO.Path]::PathSeparator + $env:PATH
+    $env:DOTNET_ROOT = $localSdk
+}
+if ([version](& dotnet --version) -lt [version]'10.0.404') { throw 'Windows releases require .NET SDK 10.0.404 or newer. An official SDK ZIP may be extracted under artifacts/tools/dotnet-10.0.404.' }
+# Some task runners omit this standard Windows variable; Native AOT's targets
+# require it even when MSBuild has already identified the real host platform.
+if ($IsWindows -and -not $env:OS) { $env:OS = 'Windows_NT' }
 $version=([xml](Get-Content -LiteralPath (Join-Path $root 'QuickExcel.Desktop.Avalonia/QuickExcel.Desktop.Avalonia.csproj') -Raw)).SelectSingleNode('/Project/PropertyGroup/Version').InnerText
 $artifacts = Join-Path $root 'artifacts'
 $runId = [DateTime]::UtcNow.ToString('yyyyMMdd-HHmmss') + '-' + [Guid]::NewGuid().ToString('N').Substring(0,8)
@@ -24,8 +39,11 @@ if (Test-Path -LiteralPath $package) { throw 'A release must use a new directory
 $evidence = ArtifactPath "artifacts/avalonia/releases/$runId/evidence"
 $build = ArtifactPath "artifacts/avalonia/release-build-$ScriptEngine"
 $lockDirectory = Join-Path $evidence 'nuget-locks'
+$workerBuild = ArtifactPath "artifacts/avalonia/release-build-$ScriptEngine-worker-aot"
+$workerLockDirectory = Join-Path $evidence 'worker-nuget-locks'
+$workerDirectory = Join-Path $evidence 'worker-native'
 $project = 'QuickExcel.Desktop.Avalonia/QuickExcel.Desktop.Avalonia.csproj'
-New-Item -ItemType Directory -Path $package,$evidence,$lockDirectory -Force | Out-Null
+New-Item -ItemType Directory -Path $package,$evidence,$lockDirectory,$workerLockDirectory -Force | Out-Null
 Push-Location $root
 try {
     & "$PSScriptRoot/build-avalonia-web.ps1"
@@ -38,17 +56,24 @@ try {
         $projects=@(Get-ChildItem -LiteralPath (Split-Path (Join-Path $root $lock) -Parent) -Filter '*.csproj')
         if ($projects.Count -eq 1) { Copy-Item -LiteralPath (Join-Path $root $lock) -Destination (Join-Path $lockDirectory ($projects[0].BaseName+'.packages.lock.json')) }
     }
-    dotnet restore $project -r win-x64 --artifacts-path $build "-p:QuickExcelScriptEngine=$ScriptEngine" -p:SelfContained=true -p:RestoreForceEvaluate=true "-p:QuickExcelReleaseLockDirectory=$lockDirectory" -v minimal
+    dotnet restore $project -r win-x64 -p:RuntimeIdentifier=win-x64 --artifacts-path $build "-p:QuickExcelScriptEngine=$ScriptEngine" -p:QuickExcelDiagnostics=false -p:SelfContained=true -p:RestoreForceEvaluate=true "-p:QuickExcelReleaseLockDirectory=$lockDirectory" -v minimal
     if ($LASTEXITCODE -ne 0) { throw 'RID restore failed.' }
-    dotnet publish $project -c Release -r win-x64 --self-contained true --artifacts-path $build "-p:QuickExcelScriptEngine=$ScriptEngine" -p:QuickExcelDiagnostics=false -p:RestoreLockedMode=true "-p:QuickExcelReleaseLockDirectory=$lockDirectory" -p:DebugType=None -p:DebugSymbols=false -o $package -v minimal 2>&1 | Tee-Object (Join-Path $evidence 'publish.log')
+    # Project-reference restores can drop a referenced executable's RID. Keep
+    # the independent AOT dependency graph/cache/locks separate from the desktop.
+    dotnet restore QuickExcel.ScriptWorker/QuickExcel.ScriptWorker.csproj -r win-x64 -p:RuntimeIdentifier=win-x64 --artifacts-path $workerBuild -p:SelfContained=true -p:RestoreForceEvaluate=true "-p:QuickExcelReleaseLockDirectory=$workerLockDirectory" -v minimal
+    if ($LASTEXITCODE -ne 0) { throw 'Native AOT worker restore failed.' }
+    dotnet publish QuickExcel.ScriptWorker/QuickExcel.ScriptWorker.csproj -c Release -r win-x64 --self-contained true --artifacts-path $workerBuild -p:RestoreLockedMode=true "-p:QuickExcelReleaseLockDirectory=$workerLockDirectory" -p:ILLinkTreatWarningsAsErrors=true -p:DebugType=None -p:DebugSymbols=false -o $workerDirectory -v minimal 2>&1 | Tee-Object (Join-Path $evidence 'worker-publish.log')
+    if ($LASTEXITCODE -ne 0) { throw 'Native AOT worker publish failed.' }
+    dotnet publish $project -c Release -r win-x64 --self-contained true --artifacts-path $build "-p:QuickExcelScriptEngine=$ScriptEngine" -p:QuickExcelDiagnostics=false -p:RestoreLockedMode=true "-p:QuickExcelReleaseLockDirectory=$lockDirectory" "-p:QuickExcelPublishedWorkerDirectory=$workerDirectory" -p:DebugType=None -p:DebugSymbols=false -o $package -v minimal 2>&1 | Tee-Object (Join-Path $evidence 'publish.log')
     if ($LASTEXITCODE -ne 0) { throw 'Avalonia release publish failed.' }
     $engineFiles = @('JavaScriptCore.dll','icudt77.dll','icuuc77.dll','icuin77.dll','msvcp140.dll','msvcp140_2.dll','vcruntime140.dll','vcruntime140_1.dll','typescript.bundle.json','JSC-BUILD-IDENTITY.json')
     foreach ($notice in @('THIRD-PARTY-LICENSES.md','OFFICE-SCRIPTS-NOTICE.md','MARKDOWN-AVALONIA-LICENSE.txt','DOTNET-LICENSE.txt','DOTNET-THIRD-PARTY-NOTICES.txt')) {
         if (-not (Test-Path -LiteralPath (Join-Path $package "Licenses/$notice") -PathType Leaf)) { throw "Missing product license notice: $notice" }
     }
-    foreach ($file in (@('quickxl.exe','QuickExcel.Avalonia.dll','QuickExcel.Avalonia.deps.json','Assets/QuickExcel-XLSQ.ico','coreclr.dll','hostfxr.dll','QuickExcel.Grid.Avalonia.dll','libSkiaSharp.dll','libHarfBuzzSharp.dll','Web/manifest.json','ScriptWorker/QuickExcel.ScriptWorker.exe','ScriptWorker/coreclr.dll') + @($engineFiles | ForEach-Object { 'ScriptWorker/' + $_ }))) {
+    foreach ($file in (@('quickxl.exe','QuickExcel.Avalonia.dll','QuickExcel.Avalonia.deps.json','Assets/QuickExcel-XLSQ.ico','coreclr.dll','hostfxr.dll','QuickExcel.Grid.Avalonia.dll','libSkiaSharp.dll','libHarfBuzzSharp.dll','Web/manifest.json','ScriptWorker/QuickExcel.ScriptWorker.exe') + @($engineFiles | ForEach-Object { 'ScriptWorker/' + $_ }))) {
         if (-not (Test-Path -LiteralPath (Join-Path $package $file) -PathType Leaf)) { throw "Missing release payload: $file" }
     }
+    & "$PSScriptRoot/test-windows-payload.ps1" -PackageDirectory $package
     if (Test-Path -LiteralPath (Join-Path $package 'QuickExcel.Avalonia.exe')) { throw 'The Windows package must contain only the renamed quickxl.exe apphost.' }
     foreach ($file in @('Markdown.Avalonia.dll','ColorDocument.Avalonia.dll','ColorTextBlock.Avalonia.dll')) {
         if (-not (Test-Path -LiteralPath (Join-Path $package $file) -PathType Leaf)) { throw "Missing license viewer dependency: $file" }
@@ -75,13 +100,14 @@ try {
     if (@(Get-ChildItem (Join-Path $package 'Web') -File -Recurse).Count -ne $web.files.Count + 1) { throw 'Unlisted Web resources exist.' }
     $deps = Get-Content -LiteralPath (Join-Path $package 'QuickExcel.Avalonia.deps.json') -Raw
     if ($deps -match 'Avalonia.DesignerSupport|QuickExcel.Desktop/|QuickExcel.Grid.Wpf|Avalonia.Xpf') { throw 'Forbidden production dependency remains in deps.json.' }
-    foreach ($configuration in @('QuickExcel.Avalonia.runtimeconfig.json','ScriptWorker/QuickExcel.ScriptWorker.runtimeconfig.json')) {
+    foreach ($configuration in @('QuickExcel.Avalonia.runtimeconfig.json')) {
         $runtime = Get-Content -LiteralPath (Join-Path $package $configuration) -Raw | ConvertFrom-Json
         if ($runtime.runtimeOptions.PSObject.Properties.Name -contains 'framework') { throw "Payload still needs an installed .NET runtime: $configuration" }
     }
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'README-avalonia-package.txt') -Destination (Join-Path $package 'README.txt')
     $metadata=Join-Path $package 'metadata'; New-Item -ItemType Directory -Path $metadata | Out-Null
     Copy-Item -LiteralPath $lockDirectory -Destination $metadata -Recurse
+    Copy-Item -LiteralPath $workerLockDirectory -Destination $metadata -Recurse
     Copy-Item -LiteralPath (Join-Path $root 'QuickExcel.Web/package-lock.json') -Destination (Join-Path $metadata 'web-package-lock.json')
     if ($CodeSigningCertificateThumbprint) {
         $code = @(Get-ChildItem -LiteralPath $package -Recurse -File | Where-Object { $_.Name -match '^QuickExcel\..*\.(exe|dll)$|^quickxl\.exe$' } | ForEach-Object FullName)
@@ -101,7 +127,7 @@ try {
     }
     $files = @(Get-ChildItem -LiteralPath $package -File -Recurse | Sort-Object FullName | ForEach-Object { [ordered]@{ path = [IO.Path]::GetRelativePath($package,$_.FullName).Replace('\','/'); size=$_.Length; sha256=(Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash } })
     $locks = @(& git ls-files '*packages.lock.json' 'QuickExcel.Web/package-lock.json' | ForEach-Object { [ordered]@{ path=$_; sha256=(Get-FileHash -LiteralPath (Join-Path $root $_) -Algorithm SHA256).Hash } })
-    [ordered]@{ schemaVersion=1; product='QuickExcel Avalonia'; version=$version; rid='win-x64'; selfContained=$true; diagnostics=$false; scriptEngine=$ScriptEngine; openIssues=@('JSC-MEM-001: 64 MiB engine hard limit deferred by user; not a progression gate'); sourceHead=(& git rev-parse HEAD); workingTreeDirty=[bool](& git status --porcelain); sdk=(& dotnet --version); webPackages=$web.packages; webManifestSha256=(Get-FileHash (Join-Path $package 'Web/manifest.json') -Algorithm SHA256).Hash; locks=$locks; checks=$selfCheck; files=$files } | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath (Join-Path $package 'release.json') -Encoding utf8
+    [ordered]@{ schemaVersion=1; product='QuickExcel Avalonia'; version=$version; rid='win-x64'; selfContained=$true; diagnostics=$false; scriptEngine=$ScriptEngine; workerDeployment='NativeAOT'; desktopTrimMode='partial'; openIssues=@('JSC-MEM-001: 64 MiB engine hard limit deferred by user; not a progression gate'); sourceHead=(& git rev-parse HEAD); workingTreeDirty=[bool](& git status --porcelain); sdk=(& dotnet --version); webPackages=$web.packages; webManifestSha256=(Get-FileHash (Join-Path $package 'Web/manifest.json') -Algorithm SHA256).Hash; locks=$locks; checks=$selfCheck; files=$files } | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath (Join-Path $package 'release.json') -Encoding utf8
     if ($CreateArchive) {
         $archive=ArtifactPath "artifacts/avalonia/releases/QuickExcel-Avalonia-$version-win-x64-$runId.zip"
         Compress-Archive -LiteralPath $package -DestinationPath $archive
@@ -114,3 +140,10 @@ try {
     }
     Write-Host "PASS: production package $package; evidence $evidence"
 } finally { Pop-Location }
+} finally {
+    # ClickOnce's pinned Mage targets .NET 8 and must keep using the caller's
+    # runtime installation after this isolated .NET 10 SDK build has finished.
+    $env:PATH = $previousBuildPath
+    $env:DOTNET_ROOT = $previousDotnetRoot
+    $env:OS = $previousBuildOs
+}

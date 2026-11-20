@@ -4,7 +4,6 @@ using Avalonia.Controls;
 using Avalonia.Controls.Templates;
 using Avalonia.Controls.Primitives;
 using Avalonia.Controls.Presenters;
-using Avalonia.Data;
 using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Media;
@@ -108,8 +107,8 @@ public sealed partial class MainWindow
             new Setter(TemplateProperty, new FuncControlTemplate<ListBoxItem>((item, _) =>
             {
                 var content = new ContentPresenter { Margin = new(12, 0), VerticalAlignment = VerticalAlignment.Center };
-                content.Bind(ContentPresenter.ContentProperty, new Binding(nameof(item.Content)) { Source = item });
-                content.Bind(ContentPresenter.ContentTemplateProperty, new Binding(nameof(item.ContentTemplate)) { Source = item });
+                content.Bind(ContentPresenter.ContentProperty, item.GetObservable(ContentControl.ContentProperty));
+                content.Bind(ContentPresenter.ContentTemplateProperty, item.GetObservable(ContentControl.ContentTemplateProperty));
                 var border = new Border { Child = content, Background = item.IsSelected ? Brush.Parse("#37373D") : Brushes.Transparent };
                 item.PropertyChanged += (_, change) => { if (change.Property == ListBoxItem.IsSelectedProperty) border.Background = item.IsSelected ? Brush.Parse("#37373D") : Brushes.Transparent; };
                 return border;

@@ -17,7 +17,7 @@ internal sealed partial class ScriptModelAdapter
     { WorksheetChartKind.Column => "columnClustered", WorksheetChartKind.Line or WorksheetChartKind.SmoothLine => "line", WorksheetChartKind.Pie => "pie", WorksheetChartKind.Scatter => "xyscatter", WorksheetChartKind.Waterfall => "waterfall", _ => "funnel" });
     private static void SeriesBy(JsonElement[] args, int at)
     { if (args.Length > at && args[at].ValueKind != JsonValueKind.Null && EnumName("ChartSeriesBy", args[at]) == "rows") throw Unsupported("图表目前按列组织系列；首行标题、首列分类。"); }
-    private object ChartHandle(WorksheetSnapshot sheet, WorksheetChart chart) => Handle("Chart", new { sheetId = sheet.Id.ToString(), chartId = chart.ScriptId.ToString() });
+    private object ChartHandle(WorksheetSnapshot sheet, WorksheetChart chart) => Handle("Chart", new Dictionary<string, object?> { ["sheetId"] = sheet.Id.ToString(), ["chartId"] = chart.ScriptId.ToString() });
     private object? WorksheetCharts(WorksheetSnapshot sheet, string member, JsonElement[] args)
     {
         if (member == "getCharts") { Arity(args, 0); Spend(Math.Max(1, sheet.Data.Charts.Length), false); return sheet.Data.Charts.Select(c => ChartHandle(sheet, c)).ToArray(); }
@@ -39,7 +39,7 @@ internal sealed partial class ScriptModelAdapter
         var seriesId = data.TryGetProperty("seriesId", out var sid) && sid.ValueKind != JsonValueKind.Null ? Text(sid) : null;
         var series = seriesId is null ? null : chart.Series.FirstOrDefault(s => s.ScriptId.ToString() == seriesId) ?? throw new ModelFailure("InvalidReference", "图表系列句柄已失效。");
         var part = data.TryGetProperty("part", out var p) ? Text(p) : "area";
-        object Child(string t, string? section = null, ChartSeries? s = null) => Handle(t, new { sheetId = sheet.Id.ToString(), chartId = chart.ScriptId.ToString(), part = section ?? part, seriesId = (s ?? series)?.ScriptId.ToString() });
+        object Child(string t, string? section = null, ChartSeries? s = null) => Handle(t, new Dictionary<string, object?> { ["sheetId"] = sheet.Id.ToString(), ["chartId"] = chart.ScriptId.ToString(), ["part"] = section ?? part, ["seriesId"] = (s ?? series)?.ScriptId.ToString() });
         void Save(WorksheetChart next) => Write(sheet.Id, ScalarRange, new SetChartCommand(sheet.Id, index, next));
         if (type == "Chart")
         {
@@ -67,7 +67,7 @@ internal sealed partial class ScriptModelAdapter
             {
                 "getId" => chart.ScriptId.ToString(), "getName" => chart.Name, "getChartType" => ChartType(chart.Kind), "getPlotVisibleOnly" => chart.VisibleOnly,
                 "getLeft" => bounds.X * .75, "getTop" => bounds.Y * .75, "getWidth" => bounds.Width * .75, "getHeight" => bounds.Height * .75,
-                "getWorksheet" => Handle("Worksheet", new { sheetId = sheet.Id.ToString() }), "getTitle" => Child("ChartTitle", "title"), "getLegend" => Child("ChartLegend", "legend"),
+                "getWorksheet" => Handle("Worksheet", new Dictionary<string, object?> { ["sheetId"] = sheet.Id.ToString() }), "getTitle" => Child("ChartTitle", "title"), "getLegend" => Child("ChartLegend", "legend"),
                 "getFormat" => Child("ChartAreaFormat", "area"), "getAxes" => Child("ChartAxes"), "getSeries" => chart.Series.Select(s => Child("ChartSeries", "series", s)).ToArray(), _ => throw Unsupported(member)
             };
             if (member == "setName" && (string.IsNullOrWhiteSpace(Text(args[0])) || sheet.Data.Charts.Any(c => c != chart && c.Name.Equals(Text(args[0]), StringComparison.OrdinalIgnoreCase)))) throw Invalid("图表名称为空或重复。");

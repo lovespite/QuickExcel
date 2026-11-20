@@ -1,3 +1,4 @@
+using QuickExcel.Serialization;
 using System.Collections.Immutable;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -68,16 +69,16 @@ public sealed partial class TypedWorkbookStorage
         state["calculation"]!["scriptSetSha256"] = ScriptHash(modules);
         state["calculation"]!["scriptRevision"] = modules.Revision; state["calculation"]!["bindingRevision"] = modules.BindingRevision;
         state["calculation"]!["state"] = "unknown";
-        parts["state/document.json"] = JsonSerializer.SerializeToUtf8Bytes(state);
+        parts["state/document.json"] = JsonSerializer.SerializeToUtf8Bytes(state, InfrastructureJsonContext.Default.JsonObject);
         Refresh(manifest["state"]!);
         if (manifest["scriptSignature"] is { } signature) Refresh(signature);
         var files = new JsonArray();
         foreach (var pair in parts.Where(p => !system.Contains(p.Key)).OrderBy(p => p.Key, StringComparer.Ordinal))
-            files.Add(new JsonObject { ["path"] = pair.Key.TrimEnd('/'), ["directory"] = pair.Key.EndsWith('/'), ["sha256"] = Hash(pair.Value) });
+            files.Add((JsonNode)new JsonObject { ["path"] = pair.Key.TrimEnd('/'), ["directory"] = pair.Key.EndsWith('/'), ["sha256"] = Hash(pair.Value) });
         var required = manifest["requiredFeatures"]!.AsArray();
         foreach (var node in required.Where(n => n?.GetValue<string>() == "virtual-files").ToArray()) required.Remove(node);
-        if (files.Count > 0) { required.Add("virtual-files"); manifest["files"] = files; } else manifest.Remove("files");
-        parts["manifest.json"] = JsonSerializer.SerializeToUtf8Bytes(manifest);
+        if (files.Count > 0) { required.Add((JsonNode?)JsonValue.Create("virtual-files")); manifest["files"] = files; } else manifest.Remove("files");
+        parts["manifest.json"] = JsonSerializer.SerializeToUtf8Bytes(manifest, InfrastructureJsonContext.Default.JsonObject);
         var imported = OpenBytes(Zip(parts), snapshot.FileState?.SourcePath ?? "virtual.xlsq", true, new(CancellationToken.None));
         if (snapshot.FileState?.RequiresMigration == true)
         {

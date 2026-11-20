@@ -37,36 +37,36 @@ public sealed partial class MainWindow
             _workspace.Editor.Execute(new UpdateScriptModulesCommand(new(new Dictionary<string, ScriptModule>
             { ["main"] = new("scripts/main.js", "import { twice } from 'helpers';\nhost.functions.register('DOUBLE', twice);\n"), ["helpers"] = new("scripts/helpers.js", "export function twice(value) { return value * 2; }\n") }, ["main"], scriptApiVersion: 3)));
             await OpenScriptsAsync(); Check(_scriptPage!.Browser.IsReady && !_scriptPage.Drafts.Failed, "Actual native WebView loads offline Monaco and a real language worker");
-            var inspected = await Test(new { action = "inspect" });
+            var inspected = await Test(new Dictionary<string, object?> { ["action"] = "inspect" });
             Check(inspected.GetProperty("workers").GetInt32() > 0 && inspected.GetProperty("source").GetString()!.Contains("DOUBLE"), "Language worker and initial module source are available");
             Check(inspected.GetProperty("diagnostics").GetArrayLength() == 0, "Declared logical module imports and actual QuickExcel API type-check without DOM or Node libraries");
             await CheckColdJavaScriptDefinitionsAsync(Test, Check);
             var revision = Document.Snapshot.Revision;
             const string changed = "import { twice } from 'helpers';\nhost.functions.register('DOUBLE', value => twice(value) + 1);\n";
-            await Test(new { action = "edit", module = "main", text = changed });
+            await Test(new Dictionary<string, object?> { ["action"] = "edit", ["module"] = "main", ["text"] = changed });
             Check(Document.Snapshot.Revision == revision, "Browser editing does not create per-keystroke workbook history");
-            await SelectModule("helpers"); inspected = await Test(new { action = "inspect" });
+            await SelectModule("helpers"); inspected = await Test(new Dictionary<string, object?> { ["action"] = "inspect" });
             Check(inspected.GetProperty("selected").GetString() == "helpers" && Document.Snapshot.ScriptModules.Modules["main"].Source == changed,
                 "Left file navigation flushes the current draft before switching the actual editor model");
             await SelectModule("main");
             Check(await SaveAsync(false) && Document.Snapshot.ScriptModules.Modules["main"].Source == changed, "Save waits for complete draft versions and commits current source");
             var reopened = _services.Storage.Open(Path.Combine(directory, "script-roundtrip.xlsq"));
             Check(reopened.ScriptModules.Modules["main"].Source == changed, "Saved XLSQ contains the acknowledged source, not the previous source");
-            await SelectModule("helpers"); await SelectModule("main"); await Test(new { action = "undo" });
+            await SelectModule("helpers"); await SelectModule("main"); await Test(new Dictionary<string, object?> { ["action"] = "undo" });
             Check(await CommitScriptsAsync() && Document.Snapshot.ScriptModules.Modules["main"].Source.Contains("'DOUBLE', twice"), "Switching Monaco models preserves each model's undo history");
-            await Test(new { action = "edit", module = "main", text = "/** @type {number} */\nlet value = '中文';\ndocument.querySelector('body');\nprocess.exit(0);\n" });
-            inspected = await Test(new { action = "inspect" });
+            await Test(new Dictionary<string, object?> { ["action"] = "edit", ["module"] = "main", ["text"] = "/** @type {number} */\nlet value = '中文';\ndocument.querySelector('body');\nprocess.exit(0);\n" });
+            inspected = await Test(new Dictionary<string, object?> { ["action"] = "inspect" });
             await File.WriteAllTextAsync(Path.Combine(directory, "language-diagnostics.json"), inspected.ToString());
             Check(inspected.GetProperty("diagnostics").EnumerateArray().Any(d => d.GetProperty("code").GetInt32() == 2322), "JavaScript semantic diagnostics report incorrect annotated types");
             Check(inspected.GetProperty("diagnostics").EnumerateArray().Any(d => d.GetProperty("text").GetString()!.Contains("document")), "DOM globals are absent from the workbook runtime language environment");
-            await Test(new { action = "edit", module = "main", text = "host.functions." });
-            inspected = await Test(new { action = "inspect" });
+            await Test(new Dictionary<string, object?> { ["action"] = "edit", ["module"] = "main", ["text"] = "host.functions." });
+            inspected = await Test(new Dictionary<string, object?> { ["action"] = "inspect" });
             Check(inspected.GetProperty("completions").EnumerateArray().Any(v => v.GetString() == "register"), "QuickExcel completion is provided by the language worker");
-            await Test(new { action = "edit", module = "main", text = "host" });
-            await Test(new { action = "assistance", offset = "host".Length, typeText = "." });
+            await Test(new Dictionary<string, object?> { ["action"] = "edit", ["module"] = "main", ["text"] = "host" });
+            await Test(new Dictionary<string, object?> { ["action"] = "assistance", ["offset"] = "host".Length, ["typeText"] = "." });
             for (var retry = 0; retry < 100; retry++)
             {
-                inspected = await Test(new { action = "assistance" });
+                inspected = await Test(new Dictionary<string, object?> { ["action"] = "assistance" });
                 if (inspected.GetProperty("suggestions").GetString()!.Contains("functions")) break;
                 await Task.Delay(50);
             }
@@ -75,20 +75,20 @@ public sealed partial class MainWindow
             // Each host message remains below 256 KiB; drive the native editor with bounded test edits.
             // A smaller multi-chunk Unicode draft exercises the same checksum and total-source budget path.
             var large = "//" + string.Concat(Enumerable.Repeat("中文😀", 6_000));
-            await Test(new { action = "edit", module = "main", text = large });
+            await Test(new Dictionary<string, object?> { ["action"] = "edit", ["module"] = "main", ["text"] = large });
             Check(await CommitScriptsAsync() && Document.Snapshot.ScriptModules.PrimarySource == large, "Multi-chunk Unicode drafts reassemble and validate before a document command");
-            await Test(new { action = "edit", module = "main", text = changed }); Check(await CommitScriptsAsync(), "Restored valid function source commits");
+            await Test(new Dictionary<string, object?> { ["action"] = "edit", ["module"] = "main", ["text"] = changed }); Check(await CommitScriptsAsync(), "Restored valid function source commits");
             if (DesktopServices.SupportsScripts) { await ApplyScriptsAsync(); Check(Document.ScriptsEnabled, "Explicit application uses the existing isolated worker"); }
             else
             {
                 var blocked = false; try { await ApplyScriptsAsync(); } catch (PlatformNotSupportedException) { blocked = true; }
                 Check(blocked && !Document.ScriptsEnabled, "Unimplemented platform sandbox fails closed without in-process execution");
             }
-            await Test(new { action = "edit", module = "main", text = changed + "// changed\n" });
+            await Test(new Dictionary<string, object?> { ["action"] = "edit", ["module"] = "main", ["text"] = changed + "// changed\n" });
             Check(!Document.ScriptsEnabled, "Typing immediately revokes prior script execution authorization");
             Check(await CommitScriptsAsync(), "Latest script source is confirmed before simulated page failure");
             var confirmed = Document.Snapshot.ScriptModules.PrimarySource;
-            try { await Test(new { action = "crash" }); } catch (Exception) when (_scriptPage.Drafts.Failed) { }
+            try { await Test(new Dictionary<string, object?> { ["action"] = "crash" }); } catch (Exception) when (_scriptPage.Drafts.Failed) { }
             Check(_scriptPage.Drafts.Failed && !await SaveAsync(false), "Page failure blocks save instead of falling back to older text");
             Check(_scriptPage.Drafts.Models["main"].Text == confirmed, "Confirmed source survives failed browser communication");
             _dialogDriver = window => { window.GetVisualDescendants().OfType<Button>().Single(b => Equals(b.Content, "确定")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); return Task.CompletedTask; };
@@ -160,18 +160,18 @@ public sealed partial class MainWindow
             }, ["main"], scriptApiVersion: 3)));
             _workspace.Editor.Execute(new SetCellsCommand([new(new(Document.Snapshot.ActiveSheetId, 0, 0), CellInput.Parse("=DOUBLE()"))]));
             await OpenScriptsAsync();
-            inspected = await Test(new { action = "inspect" });
+            inspected = await Test(new Dictionary<string, object?> { ["action"] = "inspect" });
             Check(inspected.GetProperty("language").GetString() == "typescript", "Monaco creates a TypeScript model with the actual TS language worker");
             await CheckScriptIntelligenceAsync(Test, Check, directory);
             await CheckScriptDefinitionsAsync(Test, Check, directory);
             var beforeCompile = Document.Snapshot.ScriptModules;
-            await Test(new { action = "edit", module = "main", text = "export const value:number='类型错误';" });
+            await Test(new Dictionary<string, object?> { ["action"] = "edit", ["module"] = "main", ["text"] = "export const value:number='类型错误';" });
             Check(!await CommitScriptsAsync(validateTypeScript: true) && ReferenceEquals(beforeCompile, Document.Snapshot.ScriptModules) && _scriptPage!.Drafts.IsDirty,
                 "Failed isolated TS checking preserves the draft and does not replace applied source");
             Check(_scriptOutputTabs!.IsVisible && _scriptOutputTabs.SelectedIndex == 1, "Compiler failures expand runtime diagnostics even when the output pane was collapsed");
             _scriptDiagnostics!.SelectedIndex = 0; await ActivateScriptDiagnosticAsync();
             Check(_scriptPage!.Drafts.IsDirty, "Compiler diagnostic navigation retains failed draft text");
-            await Test(new { action = "edit", module = "main", text = "import {twice} from 'helpers'; enum E { A=6 }; host.functions.register('DOUBLE',()=>twice(E.A));" });
+            await Test(new Dictionary<string, object?> { ["action"] = "edit", ["module"] = "main", ["text"] = "import {twice} from 'helpers'; enum E { A=6 }; host.functions.register('DOUBLE',()=>twice(E.A));" });
             await ApplyScriptsAsync();
             Check(Document.ScriptsEnabled && Document.GetCellValue(0, 0, 0) == "12", "Apply automatically checks TS then runs emitted ESM in a fresh isolated execution worker");
             Check(await SaveAsync(false), "TS original sources save without an external toolchain");
@@ -188,7 +188,7 @@ public sealed partial class MainWindow
             Check(_pdfPage!.Browser.IsReady && _printSession!.Job.Layout.Pages.Length >= 2, "PDF.js loads a fully generated and independently verified multi-page PDF through its private resource lease");
             var previewFile = _printSession!.PdfPath;
             File.Copy(previewFile, Path.Combine(directory, "rendered-preview.pdf"));
-            var pdfState = (await _pdfPage.Browser.RequestAsync("test", "testResult", new { action = "inspect" })).Payload;
+            var pdfState = (await _pdfPage.Browser.RequestAsync("test", "testResult", new Dictionary<string, object?> { ["action"] = "inspect" })).Payload;
             await File.WriteAllTextAsync(Path.Combine(directory, "pdf-first-page.json"), pdfState.ToString());
             Check(pdfState.GetProperty("canvases").GetInt32() is > 0 and <= 8 && pdfState.GetProperty("canvasBytes").GetInt64() <= 64 * 1024 * 1024, "Actual PDF page canvases stay within eight pages and 64 MiB");
             Check(pdfState.GetProperty("toolbarColor").GetString() == "rgb(36, 62, 59)", "PDF.js toolbar retains readable foreground colors with the system dark preference");
@@ -196,27 +196,27 @@ public sealed partial class MainWindow
             Diagnostics.PdfTextFixture.Write(textFixture);
             await using (var fixtureLease = await _pdfPage.Browser.Origin.AddPdfAsync(textFixture))
             {
-                var extraction = (await _pdfPage.Browser.RequestAsync("test", "testResult", new { action = "extractFixture", url = fixtureLease.Uri.AbsoluteUri })).Payload;
+                var extraction = (await _pdfPage.Browser.RequestAsync("test", "testResult", new Dictionary<string, object?> { ["action"] = "extractFixture", ["url"] = fixtureLease.Uri.AbsoluteUri })).Payload;
                 await File.WriteAllTextAsync(Path.Combine(directory, "actualtext-extraction.json"), extraction.ToString());
                 Check(extraction.GetProperty("text").GetString() == Diagnostics.PdfTextFixture.Expected, "Independent PDF ActualText preserves distinct same-glyph characters, ligatures, nested/empty spans and unmarked text");
             }
             string copied = "";
             for (var retry = 0; retry < 50 && !copied.Contains("中文"); retry++)
-            { await Task.Delay(50); copied = (await _pdfPage.Browser.RequestAsync("test", "testResult", new { action = "copyText" })).Payload.GetProperty("copied").GetString()!; }
+            { await Task.Delay(50); copied = (await _pdfPage.Browser.RequestAsync("test", "testResult", new Dictionary<string, object?> { ["action"] = "copyText" })).Payload.GetProperty("copied").GetString()!; }
             await File.WriteAllTextAsync(Path.Combine(directory, "copied-text.txt"), copied);
             Check(copied.Contains("中文"), "PDF.js native text-layer copy handler returns Chinese text (synthetic clipboard, no OS clipboard mutation)");
-            await _pdfPage.Browser.RequestAsync("test", "testResult", new { action = "find", text = "中文" });
+            await _pdfPage.Browser.RequestAsync("test", "testResult", new Dictionary<string, object?> { ["action"] = "find", ["text"] = "中文" });
             for (var retry = 0; retry < 50 && pdfState.GetProperty("matches").GetInt32() == 0; retry++)
-            { await Task.Delay(50); pdfState = (await _pdfPage.Browser.RequestAsync("test", "testResult", new { action = "inspect" })).Payload; }
+            { await Task.Delay(50); pdfState = (await _pdfPage.Browser.RequestAsync("test", "testResult", new Dictionary<string, object?> { ["action"] = "inspect" })).Payload; }
             Check(pdfState.GetProperty("matches").GetInt32() > 0, "PDF.js find controller locates text in the immutable PDF");
-            await _pdfPage.Browser.RequestAsync("test", "testResult", new { action = "zoom", value = "3" });
-            await Task.Delay(150); await _pdfPage.Browser.RequestAsync("test", "testResult", new { action = "page", page = _printSession.Job.Layout.Pages.Length });
-            await Task.Delay(150); pdfState = (await _pdfPage.Browser.RequestAsync("test", "testResult", new { action = "inspect" })).Payload;
+            await _pdfPage.Browser.RequestAsync("test", "testResult", new Dictionary<string, object?> { ["action"] = "zoom", ["value"] = "3" });
+            await Task.Delay(150); await _pdfPage.Browser.RequestAsync("test", "testResult", new Dictionary<string, object?> { ["action"] = "page", ["page"] = _printSession.Job.Layout.Pages.Length });
+            await Task.Delay(150); pdfState = (await _pdfPage.Browser.RequestAsync("test", "testResult", new Dictionary<string, object?> { ["action"] = "inspect" })).Payload;
             Check(pdfState.GetProperty("page").GetInt32() == _printSession.Job.Layout.Pages.Length && pdfState.GetProperty("canvases").GetInt32() <= 8 && pdfState.GetProperty("canvasBytes").GetInt64() <= 64 * 1024 * 1024, "Zoom and page navigation replace old canvases while preserving the fixed cache budget");
             var job = _printSession.Job;
             _workspace.Editor.Execute(new SetCellsCommand([new(new(Document.Snapshot.ActiveSheetId, 0, 0), CellInput.Parse("New workbook content"))])); Synchronize();
             Check(ReferenceEquals(job, _printSession.Job) && _printStatus!.Text!.Contains("工作簿已变化"), "Workbook edits leave the old preview frozen and visibly marked until explicit rebuild");
-            try { await _pdfPage.Browser.RequestAsync("test", "testResult", new { action = "crash" }); } catch (InvalidDataException) { }
+            try { await _pdfPage.Browser.RequestAsync("test", "testResult", new Dictionary<string, object?> { ["action"] = "crash" }); } catch (InvalidDataException) { }
             Check(!_pdfPage.Browser.IsReady && File.Exists(previewFile) && _printWindow!.GetVisualDescendants().OfType<Button>().Any(b => Equals(b.Content, "导出 PDF")), "Failed preview retains its completed PDF and an independent native export control");
             ((SmokeFiles)_files).NextSave = Path.Combine(directory, "preview-export.pdf"); await ExportPreviewPdfAsync();
             Check(File.Exists(((SmokeFiles)_files).NextSave), "Native PDF export uses the same frozen print session");
@@ -252,10 +252,10 @@ public sealed partial class MainWindow
                 zip.GetEntry("xl/worksheets/sheet1.xml")!.Delete(); using var output = zip.CreateEntry("xl/worksheets/sheet1.xml").Open(); xml.Save(output);
             }
             await _workspace.OpenAsync(new(readOnlyFile)); await OpenScriptsAsync();
-            inspected = await Test(new { action = "inspect" }); revision = Document.Snapshot.Revision;
+            inspected = await Test(new Dictionary<string, object?> { ["action"] = "inspect" }); revision = Document.Snapshot.Revision;
             Check(Document.Snapshot.FileState!.FormulaReadOnly && inspected.GetProperty("readOnly").GetBoolean() && await CommitScriptsAsync() && Document.Snapshot.Revision == revision,
                 "Preserved-formula workbooks open Monaco read-only and unchanged flush creates no mutation");
-            inspected = await Test(new { action = "assistance" });
+            inspected = await Test(new Dictionary<string, object?> { ["action"] = "assistance" });
             Check(inspected.GetProperty("suggestDisabled").GetBoolean(), "Read-only workbooks disable the completion insertion control");
             if (DesktopServices.SupportsScripts)
             {

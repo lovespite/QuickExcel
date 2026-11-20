@@ -27,7 +27,7 @@ public sealed class ScriptCompiler(string? executablePath = null)
         {
             if (_cache.TryGetValue(request.Sha256, out var cached))
             {
-                var hit = JsonSerializer.Deserialize<CompiledReply>(cached, WorkerProtocol.Json)!;
+                var hit = JsonSerializer.Deserialize(cached, WorkerProtocol.TypeInfo<CompiledReply>())!;
                 CompilerProtocol.ValidateReply(hit, request);
                 cancellationToken.ThrowIfCancellationRequested();
                 return hit;
@@ -73,7 +73,7 @@ public sealed class ScriptCompiler(string? executablePath = null)
                 lifetime.Token.ThrowIfCancellationRequested();
                 if (reply.Result.Success)
                 {
-                    var bytes = JsonSerializer.SerializeToUtf8Bytes(reply, WorkerProtocol.Json);
+                    var bytes = JsonSerializer.SerializeToUtf8Bytes(reply, WorkerProtocol.TypeInfo<CompiledReply>());
                     lock (_cacheGate)
                     {
                         lifetime.Token.ThrowIfCancellationRequested();

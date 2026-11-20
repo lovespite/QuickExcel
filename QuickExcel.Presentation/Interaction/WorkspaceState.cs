@@ -1,3 +1,4 @@
+using QuickExcel.Serialization;
 using System.IO;
 using System.Text.Json;
 using System.Collections.Immutable;
@@ -142,7 +143,7 @@ public sealed class RecentFileStore(string path)
     public const int MinimumLimit = 1;
     public const int MaximumLimit = 1000;
     private const int MaximumSettingsBytes = 8 * 1024 * 1024;
-    private sealed record Settings(int Version, int Limit, RecentFileEntry[] Entries);
+    internal sealed record Settings(int Version, int Limit, RecentFileEntry[] Entries);
     private static readonly StringComparer PathComparer = OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
     public int Limit { get; private set; } = DefaultLimit;
     public IReadOnlyList<RecentFileEntry> Entries { get; private set; } = [];
@@ -156,10 +157,10 @@ public sealed class RecentFileStore(string path)
             if (new FileInfo(path).Length > MaximumSettingsBytes) throw new InvalidDataException(UiText.Get("最近文件配置过大。"));
             using var json = JsonDocument.Parse(File.ReadAllText(path));
             if (json.RootElement.ValueKind == JsonValueKind.Array)
-                SetState(Normalize((json.Deserialize<string[]>() ?? []).Select(p => new RecentFileEntry(p)), DefaultLimit), DefaultLimit);
+                SetState(Normalize((json.Deserialize(PresentationJsonContext.Default.StringArray) ?? []).Select(p => new RecentFileEntry(p)), DefaultLimit), DefaultLimit);
             else
             {
-                var settings = json.Deserialize<Settings>();
+                var settings = json.Deserialize(PresentationJsonContext.Default.RecentSettings);
                 if (settings is null || settings.Version != 1 || settings.Limit is < MinimumLimit or > MaximumLimit || settings.Entries is null)
                     throw new InvalidDataException(UiText.Get("无效的历史文件设置。"));
                 SetState(Normalize(settings.Entries, settings.Limit), settings.Limit);
@@ -203,7 +204,7 @@ public sealed class RecentFileStore(string path)
             if (Error is not null) return;
             var nextLimit = limit ?? Limit;
             var entries = Normalize(update(Entries), nextLimit);
-            var bytes = JsonSerializer.SerializeToUtf8Bytes(new Settings(1, nextLimit, entries));
+            var bytes = JsonSerializer.SerializeToUtf8Bytes(new Settings(1, nextLimit, entries), PresentationJsonContext.Default.RecentSettings);
             if (bytes.Length > MaximumSettingsBytes) throw new IOException(UiText.Get("最近文件配置过大。"));
             File.WriteAllBytes(temp, bytes);
             File.Move(temp, path, true);

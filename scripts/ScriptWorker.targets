@@ -3,15 +3,20 @@
     <ProjectReference Include="$(MSBuildThisFileDirectory)..\QuickExcel.ScriptWorker\QuickExcel.ScriptWorker.csproj" ReferenceOutputAssembly="false" />
   </ItemGroup>
   <Target Name="CollectScriptWorker" DependsOnTargets="ResolveProjectReferences">
-    <MSBuild Projects="$(MSBuildThisFileDirectory)..\QuickExcel.ScriptWorker\QuickExcel.ScriptWorker.csproj" Targets="GetWorkerPayload" Properties="Configuration=$(Configuration);Platform=AnyCPU;RuntimeIdentifier=$(RuntimeIdentifier)">
+    <MSBuild Projects="$(MSBuildThisFileDirectory)..\QuickExcel.ScriptWorker\QuickExcel.ScriptWorker.csproj" Targets="GetWorkerPayload" Properties="Configuration=$(Configuration);Platform=AnyCPU;RuntimeIdentifier=$(RuntimeIdentifier)" Condition="'$(QuickExcelPublishedWorkerDirectory)' == ''">
       <Output TaskParameter="TargetOutputs" ItemName="ScriptWorkerPayload" />
     </MSBuild>
+    <ItemGroup Condition="'$(QuickExcelPublishedWorkerDirectory)' != ''">
+      <ScriptWorkerPayload Include="$(QuickExcelPublishedWorkerDirectory)/*" Exclude="$(QuickExcelPublishedWorkerDirectory)/*.pdb" />
+    </ItemGroup>
     <Error Condition="'@(ScriptWorkerPayload)' == ''" Text="ScriptWorker output is missing." />
   </Target>
   <Target Name="CopyScriptWorker" AfterTargets="Build" DependsOnTargets="CollectScriptWorker">
     <Copy SourceFiles="@(ScriptWorkerPayload)" DestinationFolder="$(TargetDir)ScriptWorker" SkipUnchangedFiles="true" />
   </Target>
   <Target Name="PublishScriptWorker" BeforeTargets="ComputeFilesToPublish" DependsOnTargets="CollectScriptWorker">
+    <Error Condition="'$(RuntimeIdentifier)' == 'win-x64' and '$(QuickExcelDiagnostics)' == 'false' and '$(QuickExcelPublishedWorkerDirectory)' == ''"
+           Text="Windows production publishing requires an independently published Native AOT worker. Use scripts/build-quickexcel.ps1 or supply QuickExcelPublishedWorkerDirectory." />
     <ItemGroup>
       <ResolvedFileToPublish Include="@(ScriptWorkerPayload)">
         <RelativePath>ScriptWorker\%(Filename)%(Extension)</RelativePath>

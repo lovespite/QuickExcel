@@ -386,7 +386,7 @@ internal sealed partial class TypedEvaluator(WorkbookSnapshot snapshot, IReadOnl
                     if (item.Kind == CellValueKind.Error) return item;
                     values.Add(ObjectValue(item, descriptor.ApiVersion));
                 }
-                bridge.Add(descriptor.ApiVersion == 1 ? values : new { kind = "range", rows, columns, values });
+                bridge.Add(descriptor.ApiVersion == 1 ? values : QuickExcel.ScriptContracts.WorkerProtocol.EncodePayload(new QuickExcel.ScriptContracts.WorkerRangeValue("range", rows, columns, values.ToArray())));
             }
         }
         return new PreparedScriptCall(descriptor, bridge);

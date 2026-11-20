@@ -1,6 +1,7 @@
 using System.Buffers.Binary;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.Json.Serialization.Metadata;
 
 namespace QuickExcel.ScriptContracts;
 
@@ -51,14 +52,11 @@ public static class WorkerProtocol
     public const int MaxFunctions = 4096;
     public const int MaxLogs = 100;
     public const int MaxLogBytes = 4000;
-    public static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web)
-    {
-        MaxDepth = 24,
-        PropertyNameCaseInsensitive = false,
-        UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow,
-        RespectNullableAnnotations = true,
-        RespectRequiredConstructorParameters = true
-    };
+    public static readonly JsonSerializerOptions Json = WorkerJsonContext.Default.Options;
+
+    public static JsonTypeInfo<T> TypeInfo<T>() =>
+        WorkerJsonContext.Default.GetTypeInfo(typeof(T)) as JsonTypeInfo<T>
+        ?? throw new NotSupportedException($"Unregistered worker JSON type: {typeof(T)}.");
 
     public static WorkerEnvelope Message<T>(RequestIdentity identity, string kind, T payload) =>
         new(Version, identity, kind, EncodePayload(payload));
@@ -66,7 +64,7 @@ public static class WorkerProtocol
     public static JsonElement EncodePayload<T>(T value)
     {
         using var buffer = new LimitedBuffer();
-        JsonSerializer.Serialize(buffer, value, Json);
+        JsonSerializer.Serialize(buffer, value, TypeInfo<T>());
         buffer.Position = 0;
         using var document = JsonDocument.Parse(buffer, new() { MaxDepth = 24 });
         return document.RootElement.Clone();
@@ -74,7 +72,7 @@ public static class WorkerProtocol
 
     public static T Payload<T>(WorkerEnvelope message)
     {
-        try { return message.Payload.Deserialize<T>(Json) ?? throw new ProtocolException("Missing payload."); }
+        try { return message.Payload.Deserialize(TypeInfo<T>()) ?? throw new ProtocolException("Missing payload."); }
         catch (JsonException e) { throw new ProtocolException("Invalid payload.", e); }
     }
 
@@ -90,7 +88,7 @@ public static class WorkerProtocol
         Validate(message);
         // Serialize through a capped stream: oversized output never allocates an unbounded byte array.
         using var payload = new LimitedBuffer();
-        await JsonSerializer.SerializeAsync(payload, message, Json, cancellationToken).ConfigureAwait(false);
+        await JsonSerializer.SerializeAsync(payload, message, TypeInfo<WorkerEnvelope>(), cancellationToken).ConfigureAwait(false);
         var header = new byte[4];
         BinaryPrimitives.WriteInt32LittleEndian(header, checked((int)payload.Length));
         await stream.WriteAsync(header, cancellationToken).ConfigureAwait(false);
@@ -111,7 +109,7 @@ public static class WorkerProtocol
         {
             using var document = JsonDocument.Parse(data, new() { MaxDepth = 24 });
             RejectDuplicateKeys(document.RootElement);
-            var message = document.RootElement.Deserialize<WorkerEnvelope>(Json) ?? throw new ProtocolException("Missing message.");
+            var message = document.RootElement.Deserialize(TypeInfo<WorkerEnvelope>()) ?? throw new ProtocolException("Missing message.");
             Validate(message);
             return message;
         }

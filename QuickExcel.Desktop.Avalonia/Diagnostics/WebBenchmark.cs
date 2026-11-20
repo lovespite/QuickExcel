@@ -38,8 +38,8 @@ public sealed partial class MainWindow
             await OpenScriptsAsync(); var input = new List<double>(); var completion = new List<double>();
             for (var index = 0; index < 65; index++)
             {
-                var changed = await _scriptPage!.Browser.RequestAsync("test", "testResult", new { action = "inputSample", character = index % 2 == 0 ? "x" : "y" });
-                var completed = await _scriptPage.Browser.RequestAsync("test", "testResult", new { action = "completionSample" });
+                var changed = await _scriptPage!.Browser.RequestAsync("test", "testResult", new Dictionary<string, object?> { ["action"] = "inputSample", ["character"] = index % 2 == 0 ? "x" : "y" });
+                var completed = await _scriptPage.Browser.RequestAsync("test", "testResult", new Dictionary<string, object?> { ["action"] = "completionSample" });
                 if (!completed.Payload.GetProperty("registered").GetBoolean()) throw new InvalidOperationException("Language completion returned no QuickExcel register API.");
                 if (index >= 5) { input.Add(changed.Payload.GetProperty("elapsedMs").GetDouble()); completion.Add(completed.Payload.GetProperty("elapsedMs").GetDouble()); }
             }

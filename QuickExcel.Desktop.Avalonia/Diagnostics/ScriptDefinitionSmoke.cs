@@ -14,7 +14,7 @@ public sealed partial class MainWindow
             // Opening a declaration must not require an earlier TypeScript module.
             if (!await NavigateScriptAsync(new(null, name)))
                 throw new InvalidOperationException($"Cold JavaScript definition navigation failed ({name}): {_scriptStatus!.Text}");
-            var state = await test(new { action = "assistance" });
+            var state = await test(new Dictionary<string, object?> { ["action"] = "assistance" });
             check(!_scriptPage!.Drafts.Failed && state.GetProperty("definition").GetString() == name &&
                 state.GetProperty("readOnly").GetBoolean() && state.GetProperty("source").GetString()!
                     .Contains(name == "quickexcel.d.ts" ? "declare const host" : "interface Array<T>"),
@@ -22,7 +22,7 @@ public sealed partial class MainWindow
             check(await NavigateScriptAsync(new("main", null)) && await CommitScriptsAsync() &&
                 ReferenceEquals(originals, Document.Snapshot.ScriptModules),
                 "Cold definition browsing returns to the original JavaScript source without changing the workbook");
-            state = await test(new { action = "inspect" });
+            state = await test(new Dictionary<string, object?> { ["action"] = "inspect" });
             check(state.GetProperty("language").GetString() == "javascript" && !state.GetProperty("readOnly").GetBoolean() &&
                 state.GetProperty("source").GetString() == originals.Modules["main"].Source,
                 "The JavaScript editor and language worker remain usable after cold definition navigation");
@@ -34,7 +34,7 @@ public sealed partial class MainWindow
     private async Task CheckScriptDefinitionsAsync(Func<object, Task<JsonElement>> test, Action<bool, string> check, string directory)
     {
         var originals = Document.Snapshot.ScriptModules;
-        async Task<JsonElement> Ui(object? payload = null) => await test(payload ?? new { action = "assistance" });
+        async Task<JsonElement> Ui(object? payload = null) => await test(payload ?? new Dictionary<string, object?> { ["action"] = "assistance" });
         async Task<JsonElement> Until(Func<JsonElement, bool> predicate, string description)
         {
             JsonElement state = default;
@@ -55,8 +55,8 @@ public sealed partial class MainWindow
         }
         async Task Edit(string text)
         {
-            await Ui(new { action = "assistance", command = "editor.action.hideHover" });
-            await test(new { action = "edit", module = "main", text });
+            await Ui(new Dictionary<string, object?> { ["action"] = "assistance", ["command"] = "editor.action.hideHover" });
+            await test(new Dictionary<string, object?> { ["action"] = "edit", ["module"] = "main", ["text"] = text });
         }
 
         _definitionPicker!.SelectedItem = "quickexcel.d.ts";
@@ -65,7 +65,7 @@ public sealed partial class MainWindow
         var declarations = state.GetProperty("source").GetString()!;
         check(declarations.Contains("declare const host") && !Regex.IsMatch(declarations, @"[\u4e00-\u9fff]"),
             "The definition viewer exposes the complete API with English documentation");
-        await Ui(new { action = "assistance", typeText = "THIS MUST NOT BE INSERTED" });
+        await Ui(new Dictionary<string, object?> { ["action"] = "assistance", ["typeText"] = "THIS MUST NOT BE INSERTED" });
         state = await Ui();
         check(state.GetProperty("source").GetString() == declarations && state.GetProperty("suggestDisabled").GetBoolean() &&
             await CommitScriptsAsync() && ReferenceEquals(originals, Document.Snapshot.ScriptModules) && _scriptPage!.Drafts.Models.Count == originals.Modules.Count,
@@ -76,11 +76,11 @@ public sealed partial class MainWindow
         await Edit(invalid);
         await Until(s => s.GetProperty("markers").EnumerateArray().Any(m => m.GetProperty("code").ToString() == "2741"),
             "A missing required API descriptor property produces a diagnostic with declaration information");
-        await Ui(new { action = "assistance", offset = 8, button = "editor.action.showHover" });
+        await Ui(new Dictionary<string, object?> { ["action"] = "assistance", ["offset"] = 8, ["button"] = "editor.action.showHover" });
         state = await Until(s => s.GetProperty("hover").GetString()!.Contains("quickexcel.d.ts("),
             "The actual diagnostic hover contains a clickable quickexcel.d.ts related-information link");
         var location = Regex.Match(state.GetProperty("hover").GetString()!, @"quickexcel\.d\.ts\((\d+),\s*(\d+)\)");
-        await Ui(new { action = "assistance", link = "quickexcel.d.ts(" });
+        await Ui(new Dictionary<string, object?> { ["action"] = "assistance", ["link"] = "quickexcel.d.ts(" });
         state = await Until(s => s.GetProperty("definition").GetString() == "quickexcel.d.ts" && _selectedDefinition == "quickexcel.d.ts",
             "Clicking the diagnostic link opens the definition and synchronizes the native navigation");
         check(state.GetProperty("position").GetProperty("lineNumber").GetInt32() == int.Parse(location.Groups[1].Value) &&
@@ -91,18 +91,18 @@ public sealed partial class MainWindow
         check(!(await Ui()).GetProperty("readOnly").GetBoolean(), "Returning from a definition restores source editability");
         const string api = "export function main(workbook: QuickExcel.Workbook) { workbook.getActiveCell(); }";
         await Edit(api);
-        await Ui(new { action = "assistance", offset = api.IndexOf("getActiveCell", StringComparison.Ordinal) + 2, button = "editor.action.revealDefinition" });
+        await Ui(new Dictionary<string, object?> { ["action"] = "assistance", ["offset"] = api.IndexOf("getActiveCell", StringComparison.Ordinal) + 2, ["button"] = "editor.action.revealDefinition" });
         await Until(s => s.GetProperty("definition").GetString() == "quickexcel.d.ts" && s.GetProperty("position").GetProperty("lineNumber").GetInt32() > 1,
             "Go to Definition resolves QuickExcel API members through the actual Monaco provider");
         await Main();
         const string standard = "const values = [1, 2]; values.map(value => value * 2);";
         await Edit(standard);
-        await Ui(new { action = "assistance", offset = standard.IndexOf(".map", StringComparison.Ordinal) + 2, button = "editor.action.revealDefinition" });
+        await Ui(new Dictionary<string, object?> { ["action"] = "assistance", ["offset"] = standard.IndexOf(".map", StringComparison.Ordinal) + 2, ["button"] = "editor.action.revealDefinition" });
         await Until(s => s.GetProperty("definition").GetString() == "lib.es5.d.ts" && s.GetProperty("readOnly").GetBoolean() &&
             _scriptDefinitionFiles.Contains("lib.es5.d.ts"), "Standard ECMAScript declarations open locally, read-only, and remain available in the file list");
         await Main();
         await Edit(originals.Modules["main"].Source);
-        await Ui(new { action = "assistance", offset = originals.Modules["main"].Source.LastIndexOf("twice", StringComparison.Ordinal) + 2, button = "editor.action.revealDefinition" });
+        await Ui(new Dictionary<string, object?> { ["action"] = "assistance", ["offset"] = originals.Modules["main"].Source.LastIndexOf("twice", StringComparison.Ordinal) + 2, ["button"] = "editor.action.revealDefinition" });
         await Until(s => s.GetProperty("selected").GetString() == "helpers" && s.GetProperty("definition").ValueKind == JsonValueKind.Null &&
             _selectedModule == "helpers" && !s.GetProperty("readOnly").GetBoolean(),
             "Cross-module definition navigation selects the existing editable helper model and updates its native group");

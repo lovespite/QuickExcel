@@ -28,9 +28,9 @@ internal sealed class ScriptEditorPage : IAsyncDisposable
         { if (Interlocked.Exchange(ref _page, null) is { } owner && --owner._holds == 0) await owner.ReleaseAsync(); }
     }
     private async Task ReleaseAsync()
-    { if (_locked && !_closed && Browser.IsReady) { await Browser.RequestAsync("releaseDraft", "released", new { }); _locked = false; } }
-    private sealed record Changed(string Module, long Version);
-    private sealed record Flushed(Dictionary<string, long>? Versions, string? Busy);
+    { if (_locked && !_closed && Browser.IsReady) { await Browser.RequestAsync("releaseDraft", "released", new Dictionary<string, object?> {  }); _locked = false; } }
+    internal sealed record Changed(string Module, long Version);
+    internal sealed record Flushed(Dictionary<string, long>? Versions, string? Busy);
     internal ScriptEditorPage(WebAssetCatalog assets, ScriptDraftSession drafts, string document, long generation, string profileRoot)
     {
         Drafts = drafts;
@@ -47,24 +47,24 @@ internal sealed class ScriptEditorPage : IAsyncDisposable
             switch (message.Type)
             {
                 case "draftChanged":
-                    var changed = message.Payload.Deserialize<Changed>(WebMessage.Json) ?? throw new InvalidDataException(UiText.Get("缺少草稿版本。"));
+                    var changed = message.Payload.Deserialize(DesktopJsonContext.Web.Changed) ?? throw new InvalidDataException(UiText.Get("缺少草稿版本。"));
                     Drafts.Observe(changed.Module, changed.Version); DraftChanged?.Invoke(); break;
                 case "draftChunk":
-                    var chunk = message.Payload.Deserialize<DraftChunk>(WebMessage.Json) ?? throw new InvalidDataException(UiText.Get("缺少草稿分块。"));
+                    var chunk = message.Payload.Deserialize(WebJsonContext.Default.DraftChunk) ?? throw new InvalidDataException(UiText.Get("缺少草稿分块。"));
                     Drafts.Receive(chunk);
-                    await Browser.SendAsync("chunkAck", new { chunk.Transfer, chunk.Index, chunk.Version }, message.RequestId); break;
+                    await Browser.SendAsync("chunkAck", new Dictionary<string, object?> { ["transfer"] = chunk.Transfer, ["index"] = chunk.Index, ["version"] = chunk.Version }, message.RequestId); break;
                 case "save": SaveRequested?.Invoke(); break;
                 case "focusHost": FocusRequested?.Invoke(); break;
                 case "console": ConsoleRequested?.Invoke(); break;
                 case "apply": ApplyRequested?.Invoke(); break;
                 case "navigate":
-                    var target = message.Payload.Deserialize<Navigation>(WebMessage.Json) ?? throw new InvalidDataException(UiText.Get("缺少定义导航目标。"));
+                    var target = message.Payload.Deserialize(DesktopJsonContext.Web.Navigation) ?? throw new InvalidDataException(UiText.Get("缺少定义导航目标。"));
                     if ((target.Module is null) == (target.Definition is null) || target.Line < 1 || target.Column < 1 ||
                         target.Module is { } module && !Drafts.Models.ContainsKey(module) ||
                         target.Definition is { } definition && (definition.Length > 128 || !IsDefinition(definition)))
                         throw new InvalidDataException(UiText.Get("无效的定义导航目标。"));
                     var accepted = NavigateRequested is { } navigate && await navigate(target);
-                    await Browser.SendAsync("navigated", new { accepted }, message.RequestId); break;
+                    await Browser.SendAsync("navigated", new Dictionary<string, object?> { ["accepted"] = accepted }, message.RequestId); break;
                 default: throw new InvalidDataException(UiText.Get("脚本页发送了未请求的响应。"));
             }
         }
@@ -73,12 +73,16 @@ internal sealed class ScriptEditorPage : IAsyncDisposable
     internal async Task LoadAsync(string module)
     {
         await Browser.Ready;
-        await Browser.RequestAsync("initialize", "initialized", new { modules = Drafts.Models.Keys.ToArray(), readOnly = Drafts.IsReadOnly, apiVersion = Drafts.ApiVersion,
-            languages = Drafts.Models.ToDictionary(p => p.Key, p => p.Value.Language == ScriptLanguage.TypeScript ? "typescript" : "javascript") });
+        await Browser.RequestAsync("initialize", "initialized", new Dictionary<string, object?> {
+            ["modules"] = Drafts.Models.Keys.ToArray(),
+            ["readOnly"] = Drafts.IsReadOnly,
+            ["apiVersion"] = Drafts.ApiVersion,
+            ["languages"] = Drafts.Models.ToDictionary(p => p.Key, p => p.Value.Language == ScriptLanguage.TypeScript ? "typescript" : "javascript")
+        });
         foreach (var (id, draft) in Drafts.Models)
         foreach (var chunk in ScriptDraftSession.Split(id, draft.Text, 0, 1))
             await Browser.RequestAsync("loadChunk", "loadAck", chunk);
-        await Browser.RequestAsync("activate", "loaded", new { module }, TimeSpan.FromSeconds(30));
+        await Browser.RequestAsync("activate", "loaded", new Dictionary<string, object?> { ["module"] = module }, TimeSpan.FromSeconds(30));
     }
     internal Task FlushAsync(Func<ScriptModuleSet> current, Func<ScriptModuleSet, Task> commit)
     {
@@ -90,8 +94,8 @@ internal sealed class ScriptEditorPage : IAsyncDisposable
         try
         {
             if (Drafts.Failed) throw new InvalidOperationException(UiText.Get("脚本页面已失败；请恢复已确认草稿后再保存或运行。"));
-            var response = await Browser.RequestAsync("flushDraft", "draftAck", new { });
-            var flushed = response.Payload.Deserialize<Flushed>(WebMessage.Json) ?? throw new InvalidDataException(UiText.Get("缺少草稿确认。"));
+            var response = await Browser.RequestAsync("flushDraft", "draftAck", new Dictionary<string, object?> {  });
+            var flushed = response.Payload.Deserialize(DesktopJsonContext.Web.Flushed) ?? throw new InvalidDataException(UiText.Get("缺少草稿确认。"));
             if (flushed.Busy is { } busy) throw new InvalidOperationException(busy);
             _locked = true;
             Drafts.ConfirmFlush(flushed.Versions ?? throw new InvalidDataException(UiText.Get("缺少模块版本。")));
@@ -104,21 +108,21 @@ internal sealed class ScriptEditorPage : IAsyncDisposable
             finally { _flush = null; }
         }
     }
-    internal Task SelectAsync(string module) => Browser.RequestAsync("select", "selected", new { module });
+    internal Task SelectAsync(string module) => Browser.RequestAsync("select", "selected", new Dictionary<string, object?> { ["module"] = module });
     internal async Task<JsonElement> CaptureInsertionAsync(string module)
     {
-        var reply = await Browser.RequestAsync("captureInsertion", "insertionCaptured", new { module });
+        var reply = await Browser.RequestAsync("captureInsertion", "insertionCaptured", new Dictionary<string, object?> { ["module"] = module });
         if (!reply.Payload.GetProperty("accepted").GetBoolean()) throw new InvalidOperationException(UiText.Get("请先完成输入，并在可编辑的事件脚本中放置光标。"));
         return reply.Payload.GetProperty("anchor").Clone();
     }
     internal async Task InsertTemplateAsync(JsonElement anchor, string text)
     {
-        var reply = await Browser.RequestAsync("insertTemplate", "templateInserted", new { anchor, text });
+        var reply = await Browser.RequestAsync("insertTemplate", "templateInserted", new Dictionary<string, object?> { ["anchor"] = anchor, ["text"] = text });
         if (!reply.Payload.GetProperty("accepted").GetBoolean()) throw new InvalidOperationException(UiText.Get("脚本或光标所属模块已变化，请重新添加事件处理器。"));
     }
-    internal Task ExecuteEditorCommandAsync(string command) => Browser.RequestAsync("editorCommand", "commandExecuted", new { command });
+    internal Task ExecuteEditorCommandAsync(string command) => Browser.RequestAsync("editorCommand", "commandExecuted", new Dictionary<string, object?> { ["command"] = command });
     internal Task OpenDefinitionAsync(string name, int? line = null, int? column = null) => IsDefinition(name) ?
-        Browser.RequestAsync("definition", "definitionSelected", new { name, line, column }) : throw new InvalidDataException(UiText.Get("未知定义文件。"));
-    internal Task LocateAsync(string module, int line, int column) => Browser.RequestAsync("locate", "located", new { module, line, column, version = Drafts.Models[module].Version });
+        Browser.RequestAsync("definition", "definitionSelected", new Dictionary<string, object?> { ["name"] = name, ["line"] = line, ["column"] = column }) : throw new InvalidDataException(UiText.Get("未知定义文件。"));
+    internal Task LocateAsync(string module, int line, int column) => Browser.RequestAsync("locate", "located", new Dictionary<string, object?> { ["module"] = module, ["line"] = line, ["column"] = column, ["version"] = Drafts.Models[module].Version });
     public async ValueTask DisposeAsync() { _closed = true; await Browser.DisposeAsync(); }
 }

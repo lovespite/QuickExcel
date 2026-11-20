@@ -40,25 +40,24 @@ internal sealed partial class ScriptModelAdapter(ScriptActionRequest request, Ca
             {
                 Spend(1, write: false);
                 var sheet = view.GetSheet(view.ActiveSheetId); var cell = sheet.View.ActiveCell;
-                value = new { sheetId = sheet.Id.ToString(), cell = new CellRectangle(cell.Row, cell.Column, cell.Row, cell.Column).ToString(), ranges = model.Selection.Select(r => r.ToString()).ToArray() };
+                value = new Dictionary<string, object?> { ["sheetId"] = sheet.Id.ToString(), ["cell"] = new CellRectangle(cell.Row, cell.Column, cell.Row, cell.Column).ToString(), ["ranges"] = model.Selection.Select(r => r.ToString()).ToArray() };
             }
             else if (method == "sheets")
             {
                 Spend(1, write: false);
-                value = view.Sheets.Select(s => new { id = s.Id.ToString(), name = s.Name }).ToArray();
+                value = view.Sheets.Select(s => new Dictionary<string, object?> { ["id"] = s.Id.ToString(), ["name"] = s.Name }).ToArray();
             }
             else if (method == "sheet")
             {
                 Spend(1, write: false);
                 var name = args[0].GetString() ?? throw new ModelFailure("InvalidArgument", "缺少工作表名称或 ID。");
                 var sheet = view.Sheets.FirstOrDefault(s => s.Id.ToString() == name || string.Equals(s.Name, name, StringComparison.OrdinalIgnoreCase));
-                value = sheet is null ? null : new { id = sheet.Id.ToString(), name = sheet.Name };
+                value = sheet is null ? null : new Dictionary<string, object?> { ["id"] = sheet.Id.ToString(), ["name"] = sheet.Name };
             }
             else if (method == "files")
             {
                 Spend(1, write: false);
-                value = request.Files.Entries.Values.Select(e => new VirtualEntry(e.Path,
-                    e.IsDirectory ? null : Convert.ToBase64String(e.Data.AsSpan()), e.IsDirectory)).ToArray();
+                value = request.Files.Entries.Values.Select(e => new Dictionary<string, object?> { ["path"] = e.Path, ["base64"] = e.IsDirectory ? null : Convert.ToBase64String(e.Data.AsSpan()), ["directory"] = e.IsDirectory }).ToArray();
             }
             else
             {
@@ -129,12 +128,12 @@ internal sealed partial class ScriptModelAdapter(ScriptActionRequest request, Ca
                 }
             }
             cancellation.ThrowIfCancellationRequested();
-            return new(call.OperationId, call.Sequence, true, WorkerProtocol.EncodePayload(value), null);
+            return new(call.OperationId, call.Sequence, true, ScriptJsonValues.ToElement(value), null);
         }
         catch (ModelFailure failure)
         {
             if (IsWrite(method)) model.RejectWrite();
-            return new(call.OperationId, call.Sequence, false, JsonSerializer.SerializeToElement<object?>(null), Bounded(failure.Message)) { Code = failure.Code };
+            return new(call.OperationId, call.Sequence, false, ScriptJsonValues.ToElement(null), Bounded(failure.Message)) { Code = failure.Code };
         }
         catch (Exception error) when (error is ArgumentException or InvalidOperationException or IOException or FormatException or KeyNotFoundException or OverflowException or NotSupportedException)
         {
@@ -147,7 +146,7 @@ internal sealed partial class ScriptModelAdapter(ScriptActionRequest request, Ca
                 ArgumentException or FormatException or OverflowException => "InvalidArgument",
                 _ => "InvalidReference"
             };
-            return new(call.OperationId, call.Sequence, false, JsonSerializer.SerializeToElement<object?>(null), Bounded(error.Message)) { Code = code };
+            return new(call.OperationId, call.Sequence, false, ScriptJsonValues.ToElement(null), Bounded(error.Message)) { Code = code };
         }
     }
 

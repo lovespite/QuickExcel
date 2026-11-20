@@ -24,11 +24,11 @@ public sealed partial class MainWindow
             _scriptApplyButton!.RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); await _operation;
             check(Document.ScriptsEnabled, "The Run button applies scripts through the isolated execution workflow");
             DisableScripts();
-            foreach (var request in new[] { new { action = "applyShortcut", repeat = true, composing = false, control = false },
-                new { action = "applyShortcut", repeat = false, composing = true, control = false },
-                new { action = "applyShortcut", repeat = false, composing = false, control = true } })
+            foreach (var request in new[] { new Dictionary<string, object?> { ["action"] = "applyShortcut", ["repeat"] = true, ["composing"] = false, ["control"] = false },
+                new Dictionary<string, object?> { ["action"] = "applyShortcut", ["repeat"] = false, ["composing"] = true, ["control"] = false },
+                new Dictionary<string, object?> { ["action"] = "applyShortcut", ["repeat"] = false, ["composing"] = false, ["control"] = true } })
             { await test(request); await _operation; check(!Document.ScriptsEnabled, "Modified, repeated or composing F5 does not apply scripts"); }
-            var pressed = await test(new { action = "applyShortcut" }); await _operation;
+            var pressed = await test(new Dictionary<string, object?> { ["action"] = "applyShortcut" }); await _operation;
             check(pressed.GetProperty("prevented").GetBoolean() && Document.ScriptsEnabled, "F5 in Monaco applies scripts without refreshing the WebView");
             DisableScripts();
         }
@@ -36,7 +36,7 @@ public sealed partial class MainWindow
             "The script workspace groups commands into File, Edit, View, Run and Signature menus");
         check(_modulePicker!.Items.Cast<string>().SequenceEqual(["main"]) && _scriptModuleGroups.All(g => g.Picker.Items.Count == 0),
             "The default main.ts stays above all four initially empty script categories");
-        var initial = await test(new { action = "inspect" });
+        var initial = await test(new Dictionary<string, object?> { ["action"] = "inspect" });
         check(initial.GetProperty("language").GetString() == "typescript" &&
             Document.Snapshot.ScriptModules.Modules["main"].Path == "scripts/main.ts" &&
             ScriptModuleProperties(Document.Snapshot.ScriptModules, "main") == "主入口 · TypeScript" &&
@@ -73,7 +73,7 @@ public sealed partial class MainWindow
             };
             await AddScriptModuleAsync();
             var created = Document.Snapshot.ScriptModules.Modules[id];
-            var inspected = await test(new { action = "inspect" });
+            var inspected = await test(new Dictionary<string, object?> { ["action"] = "inspect" });
             check(created.Language == (ScriptLanguage)language && created.Path == $"scripts/{id}.{(language == 0 ? "js" : "ts")}" &&
                 inspected.GetProperty("selected").GetString() == id && inspected.GetProperty("language").GetString() == (language == 0 ? "javascript" : "typescript"),
                 $"Creation fixes {id}'s role/language and opens the corresponding actual Monaco model");
@@ -102,7 +102,7 @@ public sealed partial class MainWindow
         using (var image = new RenderTargetBitmap(new PixelSize((int)Math.Ceiling(navigation.Bounds.Width), (int)Math.Ceiling(navigation.Bounds.Height)), new Vector(96, 96)))
         { image.Render(navigation); image.Save(Path.Combine(directory, "script-navigation-collapsed.png"), PngBitmapEncoderOptions.Default); }
         common.Panel.IsExpanded = true;
-        await test(new { action = "edit", module = "main", text = "// draft before category navigation\n" });
+        await test(new Dictionary<string, object?> { ["action"] = "edit", ["module"] = "main", ["text"] = "// draft before category navigation\n" });
         await select("utility");
         check(Document.Snapshot.ScriptModules.Modules["main"].Source.Contains("draft before category navigation") &&
             _modulePicker.SelectedItem is null && common.Picker.SelectedItem is "utility" && !udf.Panel.IsExpanded && !actions.Panel.IsExpanded,

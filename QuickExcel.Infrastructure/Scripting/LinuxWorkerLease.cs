@@ -1,3 +1,4 @@
+using QuickExcel.Serialization;
 using System.Diagnostics;
 using System.Runtime.Versioning;
 using System.Security.Cryptography;
@@ -25,7 +26,7 @@ internal sealed class LinuxWorkerLease : IDisposable
     internal string ScopeName { get; }
     private readonly FileStream _lease;
     private Record _record;
-    private sealed record Record(int SchemaVersion, string Id, string Scope, int ProcessId, ulong StartTime, Dictionary<string, string> Files);
+    internal sealed record Record(int SchemaVersion, string Id, string Scope, int ProcessId, ulong StartTime, Dictionary<string, string> Files);
     private LinuxWorkerLease(string directory, string id, FileStream lease)
     {
         DirectoryPath = directory; ScopeName = "quickexcel-worker-" + id + ".scope"; _lease = lease;
@@ -77,7 +78,7 @@ internal sealed class LinuxWorkerLease : IDisposable
     private void Save()
     {
         var temporary = Path.Combine(DirectoryPath, "record.new");
-        using (var file = new FileStream(temporary, FileMode.Create, FileAccess.Write, FileShare.None)) { JsonSerializer.Serialize(file, _record); file.Flush(true); }
+        using (var file = new FileStream(temporary, FileMode.Create, FileAccess.Write, FileShare.None)) { JsonSerializer.Serialize(file, _record, InfrastructureJsonContext.Default.LinuxLeaseRecord); file.Flush(true); }
         File.Move(temporary, Path.Combine(DirectoryPath, "record.json"), true);
     }
     internal static ulong ReadStartTime(int pid)
@@ -114,7 +115,7 @@ internal sealed class LinuxWorkerLease : IDisposable
             using (lease)
             {
                 if (new FileInfo(recordPath).Length > 128 * 1024) throw new IOException("Invalid Linux worker record size.");
-                var record = JsonSerializer.Deserialize<Record>(File.ReadAllText(recordPath)) ?? throw new IOException("Missing Linux ownership record.");
+                var record = JsonSerializer.Deserialize(File.ReadAllText(recordPath), InfrastructureJsonContext.Default.LinuxLeaseRecord) ?? throw new IOException("Missing Linux ownership record.");
                 if (record.SchemaVersion != 1 || record.Id != id || record.Scope != "quickexcel-worker-" + id + ".scope") throw new IOException("Invalid Linux ownership record.");
                 if (record.ProcessId > 0)
                 {

@@ -35,13 +35,21 @@ internal sealed partial class ScriptModelAdapter
         }
         throw Unsupported(member);
     }
-    private static object ProtectionOptions(WorksheetProtection p) => new
-    {
-        allowAutoFilter = !p.AutoFilter, allowDeleteColumns = !p.DeleteColumns, allowDeleteRows = !p.DeleteRows,
-        allowEditObjects = !p.Objects, allowEditScenarios = !p.Scenarios, allowFormatCells = !p.FormatCells,
-        allowFormatColumns = !p.FormatColumns, allowFormatRows = !p.FormatRows, allowInsertColumns = !p.InsertColumns,
-        allowInsertHyperlinks = !p.InsertHyperlinks, allowInsertRows = !p.InsertRows, allowPivotTables = !p.PivotTables,
-        allowSort = !p.Sort, selectionMode = p.SelectUnlockedCells ? 2 : p.SelectLockedCells ? 1 : 0
+    private static object ProtectionOptions(WorksheetProtection p) => new Dictionary<string, object?> {
+        ["allowAutoFilter"] = !p.AutoFilter,
+        ["allowDeleteColumns"] = !p.DeleteColumns,
+        ["allowDeleteRows"] = !p.DeleteRows,
+        ["allowEditObjects"] = !p.Objects,
+        ["allowEditScenarios"] = !p.Scenarios,
+        ["allowFormatCells"] = !p.FormatCells,
+        ["allowFormatColumns"] = !p.FormatColumns,
+        ["allowFormatRows"] = !p.FormatRows,
+        ["allowInsertColumns"] = !p.InsertColumns,
+        ["allowInsertHyperlinks"] = !p.InsertHyperlinks,
+        ["allowInsertRows"] = !p.InsertRows,
+        ["allowPivotTables"] = !p.PivotTables,
+        ["allowSort"] = !p.Sort,
+        ["selectionMode"] = p.SelectUnlockedCells ? 2 : p.SelectLockedCells ? 1 : 0
     };
     private static WorksheetProtection ReadProtectionOptions(JsonElement value)
     {

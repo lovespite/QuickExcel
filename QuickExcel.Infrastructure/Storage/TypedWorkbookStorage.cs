@@ -1,3 +1,6 @@
+using QuickExcel.Serialization;
+using QuickExcel.Scripting;
+using System.Text;
 using System.Security.Cryptography;
 using System.Collections.Immutable;
 using System.Text.Json;
@@ -327,30 +330,34 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage, IW
         document["contentRevision"] = snapshot.Revision;
         document["scriptRevision"] = snapshot.ScriptModules.Revision;
         document["bindingRevision"] = snapshot.ScriptModules.BindingRevision;
-        document["sheets"] = MergeByKey(document["sheets"], JsonSerializer.SerializeToNode(snapshot.Sheets.Select((s, i) => new { id = s.Id.ToString(), workbookSheetId = sheetParts[i].WorkbookSheetId, part = sheetParts[i].Part }))!.AsArray(), "id");
+        document["sheets"] = MergeByKey(document["sheets"], JsonTree(snapshot.Sheets.Select((s, i) => new Dictionary<string, object?> { ["id"] = s.Id.ToString(), ["workbookSheetId"] = sheetParts[i].WorkbookSheetId, ["part"] = sheetParts[i].Part }))!.AsArray(), "id");
         var savedBindings = new JsonArray();
         foreach (var binding in snapshot.ScriptModules.Bindings)
         {
             var prior = (document["scriptBindings"] as JsonArray)?.FirstOrDefault(b => b?["module"]?.GetValue<string>() == binding.Module && b?["kind"]?.GetValue<string>() == binding.Kind);
-            savedBindings.Add(Merge(prior, JsonSerializer.SerializeToNode(new { module = binding.Module, scope = "workbook", kind = binding.Kind })!));
+            savedBindings.Add(Merge(prior, JsonTree(new Dictionary<string, object?> { ["module"] = binding.Module, ["scope"] = "workbook", ["kind"] = binding.Kind })!));
         }
         document["scriptBindings"] = savedBindings;
-        document["calculation"] = Merge(document["calculation"], JsonSerializer.SerializeToNode(new { state = CacheState(snapshot), contentRevision = snapshot.Revision,
-            scriptRevision = snapshot.ScriptModules.Revision, bindingRevision = snapshot.ScriptModules.BindingRevision,
-            engineVersion = "QuickExcel-M3", scriptSetSha256 = ScriptHash(snapshot.ScriptModules) })!);
+        document["calculation"] = Merge(document["calculation"], JsonTree(new Dictionary<string, object?> {
+            ["state"] = CacheState(snapshot),
+            ["contentRevision"] = snapshot.Revision,
+            ["scriptRevision"] = snapshot.ScriptModules.Revision,
+            ["bindingRevision"] = snapshot.ScriptModules.BindingRevision,
+            ["engineVersion"] = "QuickExcel-M3",
+            ["scriptSetSha256"] = ScriptHash(snapshot.ScriptModules)
+        })!);
         var activeView = snapshot.GetSheet(snapshot.ActiveSheetId).View;
         if (HasWorkbookViews(snapshot))
-            document["view"] = Merge(document["view"], JsonSerializer.SerializeToNode(new { activeSheetId = snapshot.ActiveSheetId.ToString(),
-                selection = TypedWorkbookXml.Reference(activeView.ActiveCell), zoom = activeView.Zoom / 100d })!);
+            document["view"] = Merge(document["view"], JsonTree(new Dictionary<string, object?> { ["activeSheetId"] = snapshot.ActiveSheetId.ToString(), ["selection"] = TypedWorkbookXml.Reference(activeView.ActiveCell), ["zoom"] = activeView.Zoom / 100d })!);
         else if (document["view"] is JsonObject optionalView)
         {
             optionalView.Remove("activeSheetId"); optionalView.Remove("selection"); optionalView.Remove("zoom");
             if (optionalView.Count == 0) document.Remove("view");
         }
-        parts["state/document.json"] = JsonSerializer.SerializeToUtf8Bytes(document);
+        parts["state/document.json"] = JsonSerializer.SerializeToUtf8Bytes(document, InfrastructureJsonContext.Default.JsonObject);
         var manifest = Object(snapshot.FileState?.ManifestJson);
         manifest["format"] = "QuickExcel"; manifest["formatVersion"] = 2; manifest["minReaderVersion"] = 2; manifest["scriptApiVersion"] = snapshot.ScriptModules.ScriptApiVersion;
-        manifest["requiredFeatures"] = JsonSerializer.SerializeToNode(Features
+        manifest["requiredFeatures"] = JsonTree(Features
             .Concat(XlsxDynamicArrays.Present(snapshot) ? ["dynamic-arrays"] : [])
             .Concat(XlsxPivots.Present(snapshot) ? ["worksheet-pivots"] : [])
             .Concat(XlsxStrict.SourceIsStrict(snapshot, cancellationToken) ? ["strict-ooxml"] : [])
@@ -376,11 +383,10 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage, IW
             .Concat(snapshot.ScriptModules.HasActions ? ["script-actions"] : [])
             .Concat(snapshot.ScriptModules.HasTypeScript ? ["typescript-sources"] : [])
             .Concat(snapshot.ScriptModules.Signature is not null ? ["script-signatures"] : []));
-        JsonNode Reference(string name) => JsonSerializer.SerializeToNode(new { path = name, sha256 = Hash(parts[name]) })!;
+        JsonNode Reference(string name) => JsonTree(new Dictionary<string, object?> { ["path"] = name, ["sha256"] = Hash(parts[name]) })!;
         if (snapshot.ScriptModules.Signature is { } signature)
         {
-            parts["security/script-signature.json"] = JsonSerializer.SerializeToUtf8Bytes(new {
-                version = signature.Version, algorithm = signature.Algorithm, certificate = signature.Certificate, value = signature.Value });
+            parts["security/script-signature.json"] = JsonBytes(new Dictionary<string, object?> { ["version"] = signature.Version, ["algorithm"] = signature.Algorithm, ["certificate"] = signature.Certificate, ["value"] = signature.Value });
             manifest["scriptSignature"] = Reference("security/script-signature.json");
         }
         else manifest.Remove("scriptSignature");
@@ -390,7 +396,7 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage, IW
             parts[ScriptCompilationCache.DataPart] = compilation.Data;
             manifest["scriptCompilation"] = Reference(ScriptCompilationCache.Part);
             manifest["scriptCompilationData"] = Reference(ScriptCompilationCache.DataPart);
-            manifest["requiredFeatures"]!.AsArray().Add(ScriptCompilationCache.Feature);
+            manifest["requiredFeatures"]!.AsArray().Add((JsonNode?)JsonValue.Create(ScriptCompilationCache.Feature));
         }
         else { manifest.Remove("scriptCompilation"); manifest.Remove("scriptCompilationData"); }
         manifest["workbook"] = Merge(manifest["workbook"], Reference("workbook.xlsx")); manifest["state"] = Merge(manifest["state"], Reference("state/document.json"));
@@ -405,14 +411,14 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage, IW
             else item.AsObject().Remove("language");
             modules.Add(id, item);
         }
-        manifest["scripts"] = Merge(manifest["scripts"], new JsonObject { ["entryModules"] = JsonSerializer.SerializeToNode(snapshot.ScriptModules.EntryModules), ["modules"] = modules });
+        manifest["scripts"] = Merge(manifest["scripts"], new JsonObject { ["entryModules"] = JsonTree(snapshot.ScriptModules.EntryModules), ["modules"] = modules });
         manifest["scripts"]!["modules"] = modules.DeepClone();
         if (snapshot.ScriptModules.HasTypeScript) manifest["scripts"]!["compilerOptions"] = ScriptModuleSet.TypeScriptOptions;
         else manifest["scripts"]!.AsObject().Remove("compilerOptions");
         WriteStorageParts(snapshot.LocalStorage, parts, manifest, cancellationToken);
         if (snapshot.PackageFiles.Entries.Count > 0)
         {
-            manifest["requiredFeatures"]!.AsArray().Add("virtual-files");
+            manifest["requiredFeatures"]!.AsArray().Add((JsonNode?)JsonValue.Create("virtual-files"));
             var files = new JsonArray();
             foreach (var entry in snapshot.PackageFiles.Entries.Values.OrderBy(e => e.Path, StringComparer.Ordinal))
             {
@@ -420,12 +426,12 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage, IW
                 var zipName = name + (entry.IsDirectory ? "/" : "");
                 if (IsStoragePath(name) || IsCompilationCachePath(name, entry.IsDirectory) || name == "manifest.json" || parts.ContainsKey(name) || !parts.TryAdd(zipName, entry.Data.ToArray())) throw new InvalidDataException(MessageText.Get("虚拟文件覆盖了系统条目。"));
                 var reference = entry.IsDirectory ? new JsonObject { ["path"] = name } : Reference(name).AsObject();
-                reference["directory"] = entry.IsDirectory; files.Add(reference);
+                reference["directory"] = entry.IsDirectory; files.Add((JsonNode)reference);
             }
             manifest["files"] = files;
         }
         else manifest.Remove("files");
-        parts["manifest.json"] = JsonSerializer.SerializeToUtf8Bytes(manifest);
+        parts["manifest.json"] = JsonSerializer.SerializeToUtf8Bytes(manifest, InfrastructureJsonContext.Default.JsonObject);
         return parts;
     }
 
@@ -548,23 +554,29 @@ public sealed partial class TypedWorkbookStorage : IVersionedWorkbookStorage, IW
         }
         return result;
     }
+    private static byte[] JsonBytes(object value) => Encoding.UTF8.GetBytes(ScriptJsonValues.Serialize(value, int.MaxValue));
+    private static JsonNode JsonTree(object value) => JsonNode.Parse(JsonBytes(value))!;
     private static string Hash(byte[] content) => Convert.ToHexStringLower(SHA256.HashData(content));
     private static string ScriptHash(ScriptModuleSet modules)
     {
-        if (modules.HasTypeScript) return Hash(JsonSerializer.SerializeToUtf8Bytes(new
-        {
-            scriptApiVersion = modules.ScriptApiVersion, compilerOptions = ScriptModuleSet.TypeScriptOptions, entries = modules.EntryModules,
-            modules = modules.Modules.OrderBy(m => m.Key, StringComparer.Ordinal).Select(m => new { id = m.Key, path = m.Value.Path,
-                language = m.Value.Language == ScriptLanguage.TypeScript ? "typescript" : "javascript", sha256 = Hash(Utf8.GetBytes(m.Value.Source)) }),
-            bindings = modules.Bindings.OrderBy(b => b.Module, StringComparer.Ordinal).ThenBy(b => b.Kind, StringComparer.Ordinal)
+        if (modules.HasTypeScript) return Hash(JsonBytes(new Dictionary<string, object?> {
+            ["scriptApiVersion"] = modules.ScriptApiVersion,
+            ["compilerOptions"] = ScriptModuleSet.TypeScriptOptions,
+            ["entries"] = modules.EntryModules,
+            ["modules"] = modules.Modules.OrderBy(m => m.Key, StringComparer.Ordinal).Select(m => new Dictionary<string, object?> { ["id"] = m.Key, ["path"] = m.Value.Path, ["language"] = m.Value.Language == ScriptLanguage.TypeScript ? "typescript" : "javascript", ["sha256"] = Hash(Utf8.GetBytes(m.Value.Source)) }),
+            ["bindings"] = modules.Bindings.OrderBy(b => b.Module, StringComparer.Ordinal).ThenBy(b => b.Kind, StringComparer.Ordinal).Select(b => new Dictionary<string, object?> { ["Module"] = b.Module, ["Kind"] = b.Kind })
         }));
-        var sources = modules.Modules.OrderBy(m => m.Key, StringComparer.Ordinal).Select(m => new { id = m.Key, path = m.Value.Path, sha256 = Hash(Utf8.GetBytes(m.Value.Source)) });
-        if (modules.HasActions) return Hash(JsonSerializer.SerializeToUtf8Bytes(new { scriptApiVersion = modules.ScriptApiVersion, entries = modules.EntryModules, modules = sources,
-            bindings = modules.Bindings.OrderBy(b => b.Module, StringComparer.Ordinal).ThenBy(b => b.Kind, StringComparer.Ordinal).Select(b => new { module = b.Module, kind = b.Kind }) }));
+        var sources = modules.Modules.OrderBy(m => m.Key, StringComparer.Ordinal).Select(m => new Dictionary<string, object?> { ["id"] = m.Key, ["path"] = m.Value.Path, ["sha256"] = Hash(Utf8.GetBytes(m.Value.Source)) });
+        if (modules.HasActions) return Hash(JsonBytes(new Dictionary<string, object?> {
+            ["scriptApiVersion"] = modules.ScriptApiVersion,
+            ["entries"] = modules.EntryModules,
+            ["modules"] = sources,
+            ["bindings"] = modules.Bindings.OrderBy(b => b.Module, StringComparer.Ordinal).ThenBy(b => b.Kind, StringComparer.Ordinal).Select(b => new Dictionary<string, object?> { ["module"] = b.Module, ["kind"] = b.Kind })
+        }));
         // Preserve existing API v1 digests; module-mode digests also bind the execution semantics.
         return modules.ScriptApiVersion == 1
-            ? Hash(JsonSerializer.SerializeToUtf8Bytes(new { entries = modules.EntryModules, modules = sources }))
-            : Hash(JsonSerializer.SerializeToUtf8Bytes(new { scriptApiVersion = modules.ScriptApiVersion, entries = modules.EntryModules, modules = sources }));
+            ? Hash(JsonBytes(new Dictionary<string, object?> { ["entries"] = modules.EntryModules, ["modules"] = sources }))
+            : Hash(JsonBytes(new Dictionary<string, object?> { ["scriptApiVersion"] = modules.ScriptApiVersion, ["entries"] = modules.EntryModules, ["modules"] = sources }));
     }
     private static ScriptLanguage ReadScriptLanguage(string? value) => value switch
     {

@@ -19,13 +19,11 @@ public sealed record LoadModules(ModuleSource[] Modules, string[] EntryModules, 
     public string ComputeDigest()
     {
         ValidateMapping();
-        return Convert.ToHexString(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(new
-        {
-            apiVersion = ApiVersion, entries = EntryModules, functionEntries = FunctionEntries, actionEntries = ActionEntries,
-            eventEntries = EventEntries, initializationEntries = InitializationEntries,
-            modules = Modules.OrderBy(m => m.Id, StringComparer.Ordinal).Select(m => new
-            { id = m.Id, path = m.Path, sha256 = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(m.Source))), description = m.Description })
-        })));
+        return Convert.ToHexString(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(new ModuleSetDigest(
+            ApiVersion, EntryModules, FunctionEntries, ActionEntries, EventEntries, InitializationEntries,
+            Modules.OrderBy(m => m.Id, StringComparer.Ordinal).Select(m => new ModuleDigest(
+                m.Id, m.Path, Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(m.Source))), m.Description)).ToArray()),
+            DigestJsonContext.Default.ModuleSetDigest)));
     }
 
     public void Validate()

@@ -31,7 +31,7 @@ internal sealed partial class ScriptModelAdapter
     }
     private static string Reference(WorksheetSnapshot sheet, CellRectangle range) => FormulaSyntax.Print(new ReferenceNode(sheet.Name,
         range.Top, range.Left, range.Bottom, range.Right, true, true, true, true, IsRange: range.Count != 1));
-    private object CommentHandle(WorksheetSnapshot sheet, WorksheetComment c) => Handle(c.ParentId is null ? "Comment" : "CommentReply", new { sheetId = sheet.Id.ToString(), commentId = c.Id.ToString() });
+    private object CommentHandle(WorksheetSnapshot sheet, WorksheetComment c) => Handle(c.ParentId is null ? "Comment" : "CommentReply", new Dictionary<string, object?> { ["sheetId"] = sheet.Id.ToString(), ["commentId"] = c.Id.ToString() });
     private object? Comments(WorksheetSnapshot? target, string member, JsonElement[] args)
     {
         var sheets = target is null ? Model.View.Sheets : [target];

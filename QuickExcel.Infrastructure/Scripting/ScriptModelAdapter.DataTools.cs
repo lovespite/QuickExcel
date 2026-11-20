@@ -220,11 +220,7 @@ internal sealed partial class ScriptModelAdapter
         var edits = preview.Changes.Select(change => new CellEdit(change.Address, change.After)).ToArray();
         if (edits.Length > 0) ExecuteObject(sheet.Id, new SetCellsCommand(edits), Math.Max(1, edits.Length));
         var removed = preview.RemovedRows.Length;
-        return Handle("RemoveDuplicatesResult", new
-        {
-            removed,
-            uniqueRemaining = range.Rows - (Bool(args[1]) ? 1 : 0) - removed
-        });
+        return Handle("RemoveDuplicatesResult", new Dictionary<string, object?> { ["removed"] = removed, ["uniqueRemaining"] = range.Rows - (Bool(args[1]) ? 1 : 0) - removed });
     }
 
     private void AutoFill(WorksheetSnapshot sheet, CellRectangle range, JsonElement[] args)

@@ -30,11 +30,7 @@ internal sealed partial class ScriptModelAdapter
                 Arity(args, 0);
                 var merges = sheet.MergedCells.Select(CellRectangle.Parse).Where(item => Overlap(range, item)).ToArray();
                 Spend(Math.Max(1, merges.Length), false);
-                return Handle("RangeAreas", new
-                {
-                    sheetId = sheet.Id.ToString(),
-                    addresses = merges.Select(item => item.ToString()).ToArray()
-                });
+                return Handle("RangeAreas", new Dictionary<string, object?> { ["sheetId"] = sheet.Id.ToString(), ["addresses"] = merges.Select(item => item.ToString()).ToArray() });
             }
             case "getTables":
             {
