@@ -137,3 +137,43 @@ WPF 生产项目已移除，旧源码保留在 `avalonia-wpf-baseline-20261102` 
 - [渲染来源](QuickExcel.Rendering.Skia/SOURCES.md)、[JSC 来源](QuickExcel.Scripting/native/jsc/SOURCES.md)、[Office Scripts 定义来源](third_party/office-scripts-docs/README.md)：固定版本、哈希、许可证与修改说明。
 
 第三方版权与许可证可在设置页及发布包的许可证文件中查看。引入组件时须同步更新设置页、随包 notices 和完整许可证，保留 FastWpfGrid、Office Scripts 定义等上游署名与修改说明。
+
+## 相关开源仓库
+
+下表汇总主要第三方组件、定义来源及构建/测试依赖，历史组件在用途栏注明。固定版本、许可证和本地修改以 [第三方声明](THIRD-PARTY-LICENSES.md)、各组件的来源记录及随包许可证为准。
+
+| 项目 / 组件 | 在 QuickExcel 中的用途 | 开源仓库 |
+| --- | --- | --- |
+| .NET Runtime | 桌面运行时、基础类库与 Native AOT worker 运行时支持 | [dotnet/runtime](https://github.com/dotnet/runtime) |
+| Avalonia | 跨平台桌面界面、控件与主题 | [AvaloniaUI/Avalonia](https://github.com/AvaloniaUI/Avalonia) |
+| Avalonia.Controls.WebView | 嵌入 Monaco 编辑器与 PDF.js 预览的原生 WebView 控件 | [AvaloniaUI/Avalonia.Controls.WebView](https://github.com/AvaloniaUI/Avalonia.Controls.WebView) |
+| Avalonia.BuildServices | Avalonia 构建期依赖 | [AvaloniaUI/Avalonia.BuildServices](https://github.com/AvaloniaUI/Avalonia.BuildServices) |
+| MicroCom | Avalonia 原生 COM 互操作依赖 | [kekekeks/MicroCom](https://github.com/kekekeks/MicroCom) |
+| Tmds.DBus | Linux D-Bus 平台集成依赖 | [tmds/Tmds.DBus](https://github.com/tmds/Tmds.DBus) |
+| ANGLE（Avalonia 分支） | Windows 图形后端 | [AvaloniaUI/angle](https://github.com/AvaloniaUI/angle) |
+| SkiaSharp / HarfBuzzSharp | 图形与文字塑形的 .NET 绑定 | [mono/SkiaSharp](https://github.com/mono/SkiaSharp) |
+| Skia | 网格、图片与 PDF 输出使用的底层绘图引擎 | [google/skia](https://github.com/google/skia) |
+| HarfBuzz | 底层文字塑形引擎 | [harfbuzz/harfbuzz](https://github.com/harfbuzz/harfbuzz) |
+| RichTextKit | 经本地适配的富文本布局、换行与文字塑形集成 | [toptensoftware/RichTextKit](https://github.com/toptensoftware/RichTextKit) |
+| FastWpfGrid | 共享网格几何与算法的来源，保留上游署名 | [janproch/fastwpfgrid](https://github.com/janproch/fastwpfgrid) |
+| LibTiff.NET | TIFF 图片读取 | [BitMiracle/libtiff.net](https://github.com/BitMiracle/libtiff.net) |
+| PdfPig | PDF 读取与内容检查 | [UglyToad/PdfPig](https://github.com/UglyToad/PdfPig) |
+| Markdown.Avalonia | Tight、ColorDocument、ColorTextBlock 组件，用于许可证页原生 Markdown 渲染 | [whistyun/Markdown.Avalonia](https://github.com/whistyun/Markdown.Avalonia) |
+| Fluent UI System Icons | Ribbon 等界面的图标来源 | [microsoft/fluentui-system-icons](https://github.com/microsoft/fluentui-system-icons) |
+| AngleSharp | HTML 内容解析 | [AngleSharp/AngleSharp](https://github.com/AngleSharp/AngleSharp) |
+| OpenMcdf | 复合文档格式读取 | [openmcdf/openmcdf](https://github.com/openmcdf/openmcdf) |
+| JavaScriptCore / WebKit | 独立隔离 worker 中的 JavaScript 引擎 | [WebKit/WebKit](https://github.com/WebKit/WebKit) |
+| ICU | JSC 使用的 Unicode 与国际化支持；macOS 链接系统 ICU | [unicode-org/icu](https://github.com/unicode-org/icu) |
+| mimalloc | 原生引擎构建中的内存分配器 | [microsoft/mimalloc](https://github.com/microsoft/mimalloc) |
+| TypeScript | 隔离编译器的类型检查与编译，以及 API 声明生成工具 | [microsoft/TypeScript](https://github.com/microsoft/TypeScript) |
+| Office Scripts API Reference | 脚本类型声明的固定定义来源，行为由 QuickExcel 独立实现 | [OfficeDev/office-scripts-docs-reference](https://github.com/OfficeDev/office-scripts-docs-reference) |
+| Monaco Editor | 脚本编辑器 | [microsoft/monaco-editor](https://github.com/microsoft/monaco-editor) |
+| PDF.js | PDF 预览 | [mozilla/pdf.js](https://github.com/mozilla/pdf.js) |
+| esbuild | 本地 Web 资源构建工具 | [evanw/esbuild](https://github.com/evanw/esbuild) |
+| .NET Deployment Tools | Microsoft.DotNet.Mage 与 ClickOnce launcher | [dotnet/deployment-tools](https://github.com/dotnet/deployment-tools) |
+| Open XML SDK | 开发工具中的 XLSX / OOXML 兼容性校验 | [dotnet/Open-XML-SDK](https://github.com/dotnet/Open-XML-SDK) |
+| xUnit.net | 领域、存储、计算、脚本与渲染测试框架 | [xunit/xunit](https://github.com/xunit/xunit) |
+| xUnit Visual Studio Runner | xUnit 的 Visual Studio / `dotnet test` 适配器 | [xunit/visualstudio.xunit](https://github.com/xunit/visualstudio.xunit) |
+| Visual Studio Test Platform | Microsoft.NET.Test.Sdk 与测试执行基础设施 | [microsoft/vstest](https://github.com/microsoft/vstest) |
+| QuickJS-NG | 历史脚本引擎，已由 JSC 替代，仅保留来源与回退记录 | [quickjs-ng/quickjs](https://github.com/quickjs-ng/quickjs) |
+| WriteableBitmapEx | 历史 WPF 网格绘图依赖，仅保留许可证与来源归档 | [reneschulte/WriteableBitmapEx](https://github.com/reneschulte/WriteableBitmapEx) |
