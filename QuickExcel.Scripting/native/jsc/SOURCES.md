@@ -88,6 +88,8 @@ equivalent implementation. IPC policy names and release manifests disclose this.
 JSC/WTF contains LGPL/BSD and other third-party terms. Original copyright and
 license headers remain in the source archives. Release packages carry
 `JSC-Licenses/` with notices, exact corresponding sources, bridge/build scripts
-and rebuilding/dynamic replacement instructions; the worker itself carries only
+and rebuilding/dynamic replacement instructions. ClickOnce packages replace the
+source archive with one public exact-source address in `JSC-SOURCE.txt`, retaining
+the notices and rebuild instructions; the worker itself carries only
 its required runtime files. Microsoft VC runtimes retain Microsoft terms.
 Historical QuickJS sources/notices and complete rollback packages are preserved.

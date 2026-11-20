@@ -21,4 +21,6 @@ QuickExcel-CodeSigning.cer 的指纹（记录于 clickonce-release.json）。
 发布版本自动来自项目内部版本；ClickOnce 使用等价的四段数字版本。
 clickonce-release.json 记录版本、证书、组件来源及逐文件 SHA-256。
 应用“设置 → 关于”中可查看第三方声明及完整开源许可证。
+ClickOnce 不内置 JSC 源码压缩包；JSC-Licenses/JSC-SOURCE.txt 提供实际使用的
+完整源码地址（含 QuickExcel 修改和构建脚本），也可在设置的许可证列表中查看。
 Windows 主程序文件为 quickxl.exe；产品、托管程序集和隔离 worker 名称保持不变。

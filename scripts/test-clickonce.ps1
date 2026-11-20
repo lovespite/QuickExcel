@@ -1,7 +1,8 @@
 [CmdletBinding()]
 param([Parameter(Mandatory)][string]$PackageDirectory,
       [Parameter(Mandatory)][string]$CertificateThumbprint,
-      [Parameter(Mandatory)][string]$EvidenceDirectory)
+      [Parameter(Mandatory)][string]$EvidenceDirectory,
+      [string]$ExpectedJscSourceUrl = '')
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 . "$PSScriptRoot/windows-signing.ps1"
@@ -59,10 +60,20 @@ foreach ($file in Get-ChildItem -LiteralPath $payload -File -Recurse) {
     if ($file.FullName -ne $appPath -and -not $seen.Contains($file.FullName)) { throw "Unlisted payload file: $($file.FullName)" }
 }
 foreach ($file in Get-ChildItem -LiteralPath $package -File -Recurse) {
+    if ($file.Name -eq 'JSC-CORRESPONDING-SOURCE.zip') { throw 'JSC source archives must not enter the ClickOnce package.' }
     if ($file.Name -match '\.(pfx|pdb|map)$|password|WorkerFixture|RecoveryFixture|HostFixture|SandboxProbe|PlatformSmoke|TestProbe') { throw "Forbidden installer file: $($file.Name)" }
     if ($file.Name -match '^QuickExcel\..*\.(exe|dll)$|^(quickxl|Launcher|setup)\.exe$') {
         Assert-QuickExcelCodeSignature $file.FullName $CertificateThumbprint
     }
+}
+$sourceUrl = (Get-Content -LiteralPath (Join-Path $payload 'JSC-Licenses/JSC-SOURCE.txt') -Raw).Trim()
+$sourceUri = $null
+if (-not [Uri]::TryCreate($sourceUrl, [UriKind]::Absolute, [ref]$sourceUri) -or
+    $sourceUri.Scheme -ne 'https' -or $sourceUri.UserInfo -or $sourceUrl -match '\s') { throw 'JSC-SOURCE.txt must contain one public HTTPS source address.' }
+if ($ExpectedJscSourceUrl -and $sourceUrl -cne $ExpectedJscSourceUrl) { throw 'JSC source address differs from the requested release source.' }
+foreach ($name in @('JSC-REBUILD.txt','JSC-THIRD-PARTY-NOTICES.txt')) {
+    $notice = Get-Content -LiteralPath (Join-Path $payload "JSC-Licenses/$name") -Raw
+    if (-not $notice.Contains('JSC-SOURCE.txt') -or $notice.Contains('JSC-CORRESPONDING-SOURCE.zip') -or $notice.Contains('accompanying source archives')) { throw "Missing or stale source reference: $name" }
 }
 $fileVersion = [Diagnostics.FileVersionInfo]::GetVersionInfo((Join-Path $payload 'quickxl.exe')).FileVersion
 if ($fileVersion -ne $version) { throw "Internal and published versions differ: $fileVersion / $version" }
@@ -87,5 +98,5 @@ try {
     $result = Get-Content -LiteralPath (Join-Path $check 'result.json') -Raw | ConvertFrom-Json
     if ($process.ExitCode -ne 0 -or -not $result.passed) { throw "ClickOnce payload self-check failed: $($result.error)" }
 } finally { if (-not $process.HasExited) { $process.Kill(); [void]$process.WaitForExit(5000) }; $process.Dispose() }
-[ordered]@{ passed=$true; version=$version; manifestFileCount=$seen.Count; xmlSignaturesVerified=$true; fileHashesVerified=$true; codeSignaturesVerified=$true; certificateTrust='Self-signed; no trust store changes'; selfCheck=$result; installedThroughClickOnce=$false } | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath (Join-Path $evidence 'result.json') -Encoding utf8
+[ordered]@{ passed=$true; version=$version; manifestFileCount=$seen.Count; xmlSignaturesVerified=$true; fileHashesVerified=$true; codeSignaturesVerified=$true; jscSourceUrl=$sourceUrl; jscSourceArchiveIncluded=$false; certificateTrust='Self-signed; no trust store changes'; selfCheck=$result; installedThroughClickOnce=$false } | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath (Join-Path $evidence 'result.json') -Encoding utf8
 Write-Host "PASS: ClickOnce signatures, $($seen.Count) file hashes, versions, prerequisites and production self-check."

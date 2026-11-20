@@ -2,7 +2,7 @@
 
 ## Windows ClickOnce 发布（2026-11-20）
 
-当前产品版本为 `4.0.0`，Windows 发布使用独立 Native AOT Worker、主程序
+当前产品版本为 `4.1.0`，Windows 发布使用独立 Native AOT Worker、主程序
 部分运行时裁剪和仅一份 JSC/ICU/TypeScript。实现、兼容性与本次验证见
 [84-native-aot-and-trimming.md](84-native-aot-and-trimming.md)。
 以下保留 `3.13.0` 起的安装器合同与历史验证。Windows 主可执行文件为 `quickxl.exe`；
@@ -28,6 +28,44 @@ ClickOnce 脚本默认调用 `build-quickexcel.ps1 -SkipTests -RunSmoke`，在�
 自检及逐文件身份记录前签名 QuickExcel 的 EXE/DLL，再更新本地启动指针。
 `-UseActivePackage` 仅可复用同一内部版本、通过正式自检、文件哈希一致且已由
 指定证书签名的活动包。所有输出都位于本仓库 artifacts；已有包不覆盖。
+
+`4.1.0` 起 ClickOnce 排除 `JSC-CORRESPONDING-SOURCE.zip`，仅在
+`JSC-Licenses/JSC-SOURCE.txt` 保留一个源码地址；许可证、版权声明和重建说明
+继续随包提供，也可在设置的许可证列表读取。默认源码入口按用户指定为
+`https://github.com/lovespite/QuickExcel`，可用 `-JscSourceUrl` 覆盖。
+重建说明记录原包的源码提交，便于从入口定位所用版本。源码入口应公开提供
+与二进制对应的完整源码（包含 QuickExcel 桥接、修改、补充源码及构建脚本），
+不能只用 WebKit 首页或未修改的上游源码代替。分发者应在安装包下载位置提供同等
+源码获取入口，见 [WebKit 许可第 4 条](https://webkit.org/licensing-webkit/)。
+本地活动包仍保留源码归档；ClickOnce 使用自己的签名文件清单，并在
+`clickonce-release.json` 记录原包清单哈希和源码地址，不携带描述原包的 `release.json`。
+验证脚本拒绝混入源码 ZIP、多个/无效地址或仍宣称源码 ZIP 随包提供的说明。
+
+本次定向验证检查了实际打包转换：427 个其余文件哈希不变、原始第三方许可证
+正文不变、源码 ZIP 和原包清单均未进入载荷。证据位于
+`artifacts/clickonce-tests/source-link-4ab42608be8b454c9329bb33d5c18dad/result.json`
+（仅测试载荷，使用保留的 `.invalid` 测试地址，未生成或签名 ClickOnce 分发包）。
+`build-quickexcel.ps1 -SkipTests -RunSmoke` 已将通过 34 项生产自检的 `4.1.0`
+激活到 `artifacts/avalonia/releases/20261120-030658-e3a2c84b/application`，
+`active-windows.json` 的清单哈希已核对。未运行全量回归。
+完整源码候选及 SHA-256 保存在
+`artifacts/jsc/source-releases/4.1.0-20261120-030658-e3a2c84b/`。
+用户已指定 GitHub 仓库地址，`4.1.0.0` ClickOnce 已完成打包。2026-11-20
+直接匿名 HTTP/API 访问确认仓库已公开；提交
+`c4e3a3daa267997502dd139b045e1826fa33db9b` 中的 8 项 JSC 构建输入
+（来源锁定、Windows 补充来源、修改记录、桥接及构建文件）与本地 Git 对象一致，
+且本地文件 SHA-256 与已发布原生库的构建身份记录一致。证据：
+`artifacts/clickonce-tests/public-source-4.1.0-20261120.json`。
+
+新分发包为
+`artifacts/clickonce/QuickExcel-4.1.0-win-x64-20261120-031254-6297957a.zip`，
+63,212,084 字节（60.28 MiB），SHA-256：
+`E48CE4B3478A35A5A702406786AE044C88F18472514EEABFA94A0964F7540A6F`。
+两个清单签名、代码签名、432 项应用清单哈希和实际载荷的 34 项生产自检通过；
+另对最终 ZIP 内的 438 项发布文件逐一校验大小和 SHA-256，确认没有源码 ZIP，
+`JSC-SOURCE.txt` 仅包含用户指定地址。完整证据位于
+`artifacts/clickonce/work/20261120-031254-6297957a/verification/`。
+复用已验证的 `4.1.0` 活动包，未重复编译或运行全量回归；旧包保留。
 
 产品版本来自 Avalonia csproj 的 `Version`，不独立递增 ClickOnce revision。
 例如内部 `3.13.0` 对应 ClickOnce / EXE 文件版本 `3.13.0.0`。
@@ -59,7 +97,7 @@ CERT_E_UNTRUSTEDROOT；损坏文件的 TRUST_E_BAD_DIGEST 仍拒绝。不会通�
 需用户或管理员核对指纹后显式配置证书信任。自动化载荷自检不代表干净设备的
 ClickOnce 安装、缺少 WebView2 时的安装分支或物理输入验收；既有延期门槛保留。
 
-当前 `4.0.0` 已激活到 `artifacts/avalonia/releases/20261120-024227-929d0d3c/application`，
+历史 `4.0.0` 已激活到 `artifacts/avalonia/releases/20261120-024227-929d0d3c/application`，
 正式包、启动器与 ClickOnce 载荷均通过 34 项生产自检；最终 AOT Worker 的
 386 项进程/沙箱/脚本定向测试全部通过。ClickOnce 分发包为
 `artifacts/clickonce/QuickExcel-4.0.0-win-x64-20261120-024702-f2315b6d.zip`，

@@ -1,10 +1,20 @@
 [CmdletBinding()]
 param([Parameter(Mandatory)][string]$CertificateThumbprint,
-      [string]$OutputDirectory = '', [switch]$UseActivePackage)
+      [string]$OutputDirectory = '', [switch]$UseActivePackage,
+      [string]$JscSourceUrl = 'https://github.com/lovespite/QuickExcel')
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 . "$PSScriptRoot/windows-signing.ps1"
 if (-not $IsWindows) { throw 'ClickOnce publishing requires Windows.' }
+# A ClickOnce package carries one source address instead of the large archive.
+# The repository address is the publisher-selected source entry point. The
+# rebuild notice records the source revision used by the verified local package.
+$JscSourceUrl = $JscSourceUrl.Trim()
+$sourceUri = $null
+if (-not [Uri]::TryCreate($JscSourceUrl, [UriKind]::Absolute, [ref]$sourceUri) -or
+    $sourceUri.Scheme -ne 'https' -or $sourceUri.UserInfo -or $JscSourceUrl -match '\s') {
+    throw 'Supply -JscSourceUrl with the public HTTPS address of the exact corresponding source, including QuickExcel modifications and build scripts.'
+}
 $root = [IO.Path]::GetFullPath((Split-Path $PSScriptRoot -Parent))
 $artifacts = Join-Path $root 'artifacts'
 function ArtifactPath([string]$value) {
@@ -68,7 +78,27 @@ foreach ($file in $release.files) {
 $folder = 'Application Files/QuickExcel_' + $deploymentVersion.Replace('.','_')
 $payload = Join-Path $output $folder
 New-Item -ItemType Directory -Path $payload -Force | Out-Null
-Get-ChildItem -LiteralPath $source -Force | Copy-Item -Destination $payload -Recurse
+# Copy only verified release files. The original release.json describes the
+# local package (including its source ZIP); ClickOnce has its own signed file
+# manifest and records the original manifest hash in clickonce-release.json.
+foreach ($file in $release.files) {
+    if ($file.path -eq 'JSC-Licenses/JSC-CORRESPONDING-SOURCE.zip') { continue }
+    $destination = Join-Path $payload $file.path
+    New-Item -ItemType Directory -Path (Split-Path $destination -Parent) -Force | Out-Null
+    Copy-Item -LiteralPath (Join-Path $source $file.path) -Destination $destination
+}
+Set-Content -LiteralPath (Join-Path $payload 'JSC-Licenses/JSC-SOURCE.txt') -Value $JscSourceUrl -Encoding utf8
+$rebuildPath = Join-Path $payload 'JSC-Licenses/JSC-REBUILD.txt'
+$rebuild = Get-Content -LiteralPath $rebuildPath -Raw
+$rebuild = $rebuild.Replace('Corresponding source and QuickExcel bridge/build adjustments are supplied in JSC-CORRESPONDING-SOURCE.zip.',
+    'Download the corresponding source, including QuickExcel bridge/build adjustments, from the address in JSC-SOURCE.txt.')
+$rebuild = "QuickExcel source revision: $($release.sourceHead)`n" + $rebuild
+Set-Content -LiteralPath $rebuildPath -Value $rebuild -NoNewline -Encoding utf8
+$noticesPath = Join-Path $payload 'JSC-Licenses/JSC-THIRD-PARTY-NOTICES.txt'
+$notices = Get-Content -LiteralPath $noticesPath -Raw
+$notices = $notices.Replace('Original source headers and additional notices are retained in the accompanying source archives.',
+    'Original source headers and additional notices are available with the corresponding source; see JSC-SOURCE.txt.')
+Set-Content -LiteralPath $noticesPath -Value $notices -NoNewline -Encoding utf8
 foreach ($file in @(Get-ChildItem -LiteralPath $payload -Recurse -File | Where-Object { $_.Name -match '^QuickExcel\..*\.(exe|dll)$|^quickxl\.exe$' })) {
     Assert-QuickExcelCodeSignature $file.FullName $CertificateThumbprint
 }
@@ -101,9 +131,9 @@ if ($LASTEXITCODE -ne 0) { throw 'Creating setup.exe failed.' }
 & "$PSScriptRoot/sign-windows-code.ps1" -CertificateThumbprint $CertificateThumbprint -Path (Join-Path $output 'setup.exe')
 Export-Certificate -Cert $certificate -FilePath (Join-Path $output 'QuickExcel-CodeSigning.cer') | Out-Null
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'clickonce/README.txt') -Destination (Join-Path $output 'README.txt')
-& "$PSScriptRoot/test-clickonce.ps1" -PackageDirectory $output -CertificateThumbprint $CertificateThumbprint -EvidenceDirectory (Join-Path $work 'verification')
+& "$PSScriptRoot/test-clickonce.ps1" -PackageDirectory $output -CertificateThumbprint $CertificateThumbprint -EvidenceDirectory (Join-Path $work 'verification') -ExpectedJscSourceUrl $JscSourceUrl
 $files = @(Get-ChildItem -LiteralPath $output -File -Recurse | Sort-Object FullName | ForEach-Object { [ordered]@{ path=[IO.Path]::GetRelativePath($output,$_.FullName).Replace('\','/'); size=$_.Length; sha256=(Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash } })
-[ordered]@{ schemaVersion=1; productVersion=$version; deploymentVersion=$deploymentVersion; rid='win-x64'; offline=$false; automaticUpdates=$false; certificateThumbprint=$CertificateThumbprint; certificateNotAfter=$certificate.NotAfter.ToString('o'); sourcePackage=$source; sourceManifestSha256=$pointer.manifestSha256; mageVersion='10.0.0'; webView2=[ordered]@{ distribution='EvergreenBootstrapper'; internetRequiredWhenMissing=$true; url=$downloadUrl; size=(Get-Item -LiteralPath $download).Length; version=(Get-Item -LiteralPath $download).VersionInfo.ProductVersion; sha256=(Get-FileHash -LiteralPath $download -Algorithm SHA256).Hash; signer=$webviewSignature.SignerCertificate.Subject }; evidence=(Join-Path $work 'verification'); files=$files } | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $output 'clickonce-release.json') -Encoding utf8
+[ordered]@{ schemaVersion=1; productVersion=$version; deploymentVersion=$deploymentVersion; rid='win-x64'; offline=$false; automaticUpdates=$false; certificateThumbprint=$CertificateThumbprint; certificateNotAfter=$certificate.NotAfter.ToString('o'); sourcePackage=$source; sourceManifestSha256=$pointer.manifestSha256; jscSourceUrl=$JscSourceUrl; mageVersion='10.0.0'; webView2=[ordered]@{ distribution='EvergreenBootstrapper'; internetRequiredWhenMissing=$true; url=$downloadUrl; size=(Get-Item -LiteralPath $download).Length; version=(Get-Item -LiteralPath $download).VersionInfo.ProductVersion; sha256=(Get-FileHash -LiteralPath $download -Algorithm SHA256).Hash; signer=$webviewSignature.SignerCertificate.Subject }; evidence=(Join-Path $work 'verification'); files=$files } | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $output 'clickonce-release.json') -Encoding utf8
 $archive = $output + '.zip'
 [IO.Compression.ZipFile]::CreateFromDirectory($output,$archive,[IO.Compression.CompressionLevel]::Optimal,$false)
 (Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash + '  ' + [IO.Path]::GetFileName($archive) | Set-Content -LiteralPath ($archive+'.sha256') -Encoding ascii
