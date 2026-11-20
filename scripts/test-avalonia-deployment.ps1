@@ -15,7 +15,7 @@ function Copy-Package([string]$name) {
 }
 function Check-Package([string]$directory,[string]$name,[bool]$expected) {
     $evidence=Join-Path $run ('evidence-'+$name)
-    $start=[Diagnostics.ProcessStartInfo]::new((Join-Path $directory 'QuickExcel.Avalonia.exe'))
+    $start=[Diagnostics.ProcessStartInfo]::new((Join-Path $directory 'quickxl.exe'))
     $start.UseShellExecute=$false; $start.CreateNoWindow=$true; $start.WindowStyle=[Diagnostics.ProcessWindowStyle]::Hidden; $start.WorkingDirectory=$run
     $start.ArgumentList.Add('--self-check'); $start.ArgumentList.Add($evidence)
     $process=[Diagnostics.Process]::Start($start)

@@ -50,7 +50,7 @@ try {
     if($ImportFormat -eq 'Html'){$formats=[byte[][]]::new(1);$formats[0]=$payload['HTML Format'];[ClipboardNative]::Write(@('HTML Format'),$formats)}
     if(-not $ProbeOnly) {
         @{operation='import';mode=$(if($ImportFormat -eq 'Html'){'formats'}else{'all'})}|ConvertTo-Json|Set-Content (Join-Path $run 'request.json') -Encoding utf8
-        $exe=Join-Path $root 'artifacts/build/bin/QuickExcel.Desktop.Avalonia/release/QuickExcel.Avalonia.exe'
+        $exe=Join-Path $root 'artifacts/build/bin/QuickExcel.Desktop.Avalonia/release/quickxl.exe'
         $process=Start-Process -FilePath $exe -ArgumentList @('--clipboard-exchange',('"{0}"' -f $run)) -WorkingDirectory $root -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $run 'stdout.log') -RedirectStandardError (Join-Path $run 'stderr.log')
         if(-not $process.WaitForExit(60000)){throw 'Style exchange timed out'}
         $result=Get-Content (Join-Path $run 'result.json') -Raw|ConvertFrom-Json

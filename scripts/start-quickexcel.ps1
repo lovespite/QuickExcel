@@ -20,7 +20,10 @@ if (Test-Path -LiteralPath $pointer) {
     if ((Get-FileHash -LiteralPath $manifest -Algorithm SHA256).Hash -ne $active.manifestSha256) { throw 'Selected package identity changed; select a verified package again.' }
     $identity=Get-Content -LiteralPath $manifest -Raw|ConvertFrom-Json
     if ($identity.product -eq 'QuickExcel WPF rollback' -and $env:QUICKEXCEL_SOFTWARE_RENDERING -eq '1') { $ApplicationArguments = @('--software-rendering') + $ApplicationArguments }
-    $executable=if ($identity.product -eq 'QuickExcel WPF rollback') { 'QuickExcel.exe' } else { 'QuickExcel.Avalonia.exe' }
+    # Retained, verified packages still use their original entry point.
+    $executable=if ($identity.product -eq 'QuickExcel WPF rollback') { 'QuickExcel.exe' }
+        elseif (@($identity.files | Where-Object { $_.path -eq 'quickxl.exe' }).Count -eq 1) { 'quickxl.exe' }
+        else { 'QuickExcel.Avalonia.exe' }
     $entry=@($identity.files|Where-Object {$_.path -eq $executable})
     if ($entry.Count -ne 1 -or (Get-FileHash -LiteralPath (Join-Path $package $executable) -Algorithm SHA256).Hash -ne $entry[0].sha256) { throw 'Selected executable identity mismatch.' }
     function Quote-Argument([string]$value) {

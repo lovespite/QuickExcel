@@ -10,7 +10,7 @@ function Release-Com($value) { if($null -ne $value -and [Runtime.InteropServices
 function Run-QuickExcel([string]$name,[string]$operation,[string]$mode='all') {
     $dir=Join-Path $run $name;[void](New-Item -ItemType Directory -Path $dir)
     @{operation=$operation;mode=$mode}|ConvertTo-Json|Set-Content (Join-Path $dir 'request.json') -Encoding utf8
-    $exe=Join-Path $root 'artifacts/build/bin/QuickExcel.Desktop.Avalonia/release/QuickExcel.Avalonia.exe'
+    $exe=Join-Path $root 'artifacts/build/bin/QuickExcel.Desktop.Avalonia/release/quickxl.exe'
     $process=Start-Process -FilePath $exe -ArgumentList @('--clipboard-exchange',('"{0}"' -f $dir)) -WorkingDirectory $root -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $dir 'stdout.log') -RedirectStandardError (Join-Path $dir 'stderr.log')
     try {
         if(-not $process.WaitForExit(60000)){throw "Clipboard exchange timed out: $dir"}

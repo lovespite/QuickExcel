@@ -13,7 +13,7 @@ try {
         dotnet build QuickExcel.Desktop.Avalonia/QuickExcel.Desktop.Avalonia.csproj -c Release --artifacts-path artifacts/build -p:RestoreLockedMode=true -v minimal 2>&1 | Tee-Object -FilePath (Join-Path $run 'build.log')
         if ($LASTEXITCODE -ne 0) { throw 'Avalonia Web host build failed.' }
     }
-    $exe = Join-Path $root 'artifacts/build/bin/QuickExcel.Desktop.Avalonia/release/QuickExcel.Avalonia.exe'
+    $exe = Join-Path $root 'artifacts/build/bin/QuickExcel.Desktop.Avalonia/release/quickxl.exe'
     $arguments = @('--web-smoke', ('"{0}"' -f $run))
     if ($ModulesOnly) { $arguments += '--modules-only' }
     elseif ($ScriptsOnly) { $arguments += '--scripts-only' }

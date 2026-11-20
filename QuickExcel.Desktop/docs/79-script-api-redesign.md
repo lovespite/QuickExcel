@@ -162,7 +162,7 @@ function makeHandle(type, data) {
 | 产物 | 位置 | 用途 |
 | --- | --- | --- |
 | `quickexcel.d.ts` | `QuickExcel.Web/src/` | Monaco 提示、段落导航、编译 worker 的唯一声明 |
-| `capabilities.json` | `QuickExcel.Scripting/` 内嵌资源（`ScriptCapabilities`） | 运行时代理与宿主白名单的共同数据源 |
+| `capabilities.json` | `QuickExcel.Scripting/` 内嵌资源（`ScriptCapabilities`） | 运行时代理与宿主白名单的共同数据源；每个已实现成员附带无注释的 `signature`，供设置页 API 浏览器显示签名，可选 `summary` 由产品自行维护 |
 | 宿主白名单 | `QuickExcel.Infrastructure/Scripting/ScriptModelAdapter` 直接读取同一内嵌清单 | 方法名、参数个数与单次上限校验，避免生成第二份手写白名单 |
 | 能力覆盖报告 | `artifacts/`，不入库 | 已实现/未实现成员统计与差异 |
 

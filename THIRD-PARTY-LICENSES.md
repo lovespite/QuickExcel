@@ -16,6 +16,19 @@ QuickExcel includes the following third-party materials. Each license applies to
 | Monaco Editor, PDF.js, esbuild | MIT, Apache-2.0, and MIT, respectively | Web/licenses | Editor, PDF preview, and build tooling. Fonts, character maps, and WebAssembly components include their own licenses. |
 | JavaScriptCore / WebKit, ICU, mimalloc, TypeScript | Individual component licenses | JSC-Licenses | The scripting package includes copyright and license notices, corresponding source, and rebuild instructions. Microsoft terms apply to the Windows VC++ runtime. The macOS arm64 package links the OS `libicucore` under Apple's operating-system terms; its JSC/mimalloc/TypeScript notices and corresponding source are still recorded in JSC-Licenses. |
 | .NET runtime | MIT and accompanying third-party terms | DOTNET-LICENSE and DOTNET-THIRD-PARTY-NOTICES in the self-contained distribution | Desktop application and isolated processes. |
+| .NET ClickOnce launcher (Microsoft.DotNet.Mage 10.0.0) | MIT and accompanying third-party terms | Licenses/CLICKONCE-LICENSE.txt and CLICKONCE-THIRD-PARTY-NOTICES.txt | Windows ClickOnce entry point; generated launcher resources identify QuickExcel. |
+| Microsoft Edge WebView2 Runtime; Visual Studio ClickOnce setup engine | Microsoft redistribution terms | Licenses/WINDOWS-INSTALLER-NOTICES.txt | The Windows installer includes the original Microsoft-signed WebView2 Evergreen online bootstrapper and the SDK-generated setup bootstrapper. |
+
+## Windows ClickOnce distribution
+
+The ClickOnce launcher comes from Microsoft.DotNet.Mage 10.0.0, upstream
+`dotnet/deployment-tools` revision `c7242c203f7d302a24714497964510cdccccac3d`.
+QuickExcel configures its launch target and signs the resulting launcher; upstream
+copyright and MIT notices are retained. The Visual Studio bootstrapper engine is
+redistributed under the installed Visual Studio SDK's redistribution terms.
+WebView2 is a separate Microsoft component, not covered by QuickExcel's or
+Avalonia's licenses. Its original installer is unmodified. See
+`Licenses/WINDOWS-INSTALLER-NOTICES.txt` for official terms and sources.
 
 ## Markdown.Avalonia
 

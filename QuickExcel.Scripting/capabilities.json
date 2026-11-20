@@ -16,859 +16,1014 @@
           "kind": "host",
           "host": "active",
           "arity": 0,
-          "cost": 1
+          "cost": 1,
+          "signature": "getActiveCell(): Range"
         },
         "getActiveWorksheet": {
           "kind": "host",
           "host": "active",
           "arity": 0,
-          "cost": 1
+          "cost": 1,
+          "signature": "getActiveWorksheet(): Worksheet"
         },
         "getWorksheet": {
           "kind": "host",
           "host": "sheet",
           "arity": 1,
-          "cost": 1
+          "cost": 1,
+          "signature": "getWorksheet(key: string): Worksheet | undefined"
         },
         "getWorksheets": {
           "kind": "host",
           "host": "sheets",
           "arity": 0,
-          "cost": 1
+          "cost": 1,
+          "signature": "getWorksheets(): Worksheet[]"
         },
         "getSelectedRange": {
           "kind": "host",
           "host": "active",
           "arity": 0,
-          "cost": 1
+          "cost": 1,
+          "signature": "getSelectedRange(): Range"
         },
         "getSelectedRanges": {
           "kind": "host",
           "host": "active",
           "arity": 0,
-          "cost": 1
+          "cost": 1,
+          "signature": "getSelectedRanges(): RangeAreas"
         },
         "getTables": {
           "kind": "host",
           "host": "getApi:Workbook.getTables",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getTables(): Table[]"
         },
         "getTable": {
           "kind": "host",
           "host": "getApi:Workbook.getTable",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getTable(key: string): Table | undefined"
         },
         "getComments": {
           "kind": "host",
           "host": "getApi:Workbook.getComments",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getComments(): Comment[]"
         },
         "addComment": {
           "kind": "host",
           "host": "setApi:Workbook.addComment",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "addComment( cellAddress: Range | string, content: CommentRichContent | string, contentType?: ContentType ): Comment"
         },
         "getCommentByCell": {
           "kind": "host",
           "host": "getApi:Workbook.getCommentByCell",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getCommentByCell(cellAddress: Range | string): Comment"
         },
         "getCommentByReplyId": {
           "kind": "host",
           "host": "getApi:Workbook.getCommentByReplyId",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getCommentByReplyId(replyId: string): Comment"
         },
         "getComment": {
           "kind": "host",
           "host": "getApi:Workbook.getComment",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getComment(commentId: string): Comment | undefined"
         },
         "addWorksheet": {
           "kind": "host",
           "host": "setApi:Workbook.addWorksheet",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "addWorksheet(name?: string): Worksheet"
         },
         "getFirstWorksheet": {
           "kind": "host",
           "host": "getApi:Workbook.getFirstWorksheet",
           "arity": 2,
-          "cost": 1
+          "cost": 1,
+          "signature": "getFirstWorksheet(visibleOnly?: boolean): Worksheet"
         },
         "getLastWorksheet": {
           "kind": "host",
           "host": "getApi:Workbook.getLastWorksheet",
           "arity": 2,
-          "cost": 1
+          "cost": 1,
+          "signature": "getLastWorksheet(visibleOnly?: boolean): Worksheet"
         },
         "getNames": {
           "kind": "host",
           "host": "getApi:Workbook.getNames",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getNames(): NamedItem[]"
         },
         "getNamedItem": {
           "kind": "host",
           "host": "getApi:Workbook.getNamedItem",
           "arity": 2,
-          "cost": 1
+          "cost": 1,
+          "signature": "getNamedItem(name: string): NamedItem | undefined"
         },
         "addNamedItem": {
           "kind": "host",
           "host": "setApi:Workbook.addNamedItem",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "addNamedItem( name: string, reference: Range | string, comment?: string ): NamedItem"
         }
       }
     },
     "Worksheet": {
       "members": {
         "getId": {
-          "kind": "local"
+          "kind": "local",
+          "signature": "getId(): string"
         },
         "getName": {
           "kind": "host",
           "host": "sheet",
           "arity": 1,
-          "cost": 1
+          "cost": 1,
+          "signature": "getName(): string"
         },
         "getCell": {
-          "kind": "local"
+          "kind": "local",
+          "signature": "getCell(row: number, column: number): Range"
         },
         "getRange": {
-          "kind": "local"
+          "kind": "local",
+          "signature": "getRange(address?: string): Range"
         },
         "getUsedRange": {
           "kind": "host",
           "host": "getApi:Worksheet.getUsedRange",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getUsedRange(valuesOnly?: boolean): Range"
         },
         "getProtection": {
           "kind": "host",
           "host": "getApi:Worksheet.getProtection",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getProtection(): WorksheetProtection"
         },
         "getAutoFilter": {
           "kind": "host",
           "host": "getApi:Worksheet.getAutoFilter",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getAutoFilter(): AutoFilter"
         },
         "getTables": {
           "kind": "host",
           "host": "getApi:Worksheet.getTables",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getTables(): Table[]"
         },
         "getTable": {
           "kind": "host",
           "host": "getApi:Worksheet.getTable",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getTable(key: string): Table | undefined"
         },
         "addTable": {
           "kind": "host",
           "host": "setApi:Worksheet.addTable",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "addTable(address: Range | string, hasHeaders: boolean): Table"
         },
         "getCharts": {
           "kind": "host",
           "host": "getApi:Worksheet.getCharts",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getCharts(): Chart[]"
         },
         "getChart": {
           "kind": "host",
           "host": "getApi:Worksheet.getChart",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getChart(name: string): Chart | undefined"
         },
         "addChart": {
           "kind": "host",
           "host": "setApi:Worksheet.addChart",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "addChart( type: ChartType, sourceData: Range, seriesBy?: ChartSeriesBy ): Chart"
         },
         "getComments": {
           "kind": "host",
           "host": "getApi:Worksheet.getComments",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getComments(): Comment[]"
         },
         "addComment": {
           "kind": "host",
           "host": "setApi:Worksheet.addComment",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "addComment( cellAddress: Range | string, content: CommentRichContent | string, contentType?: ContentType ): Comment"
         },
         "getCommentByCell": {
           "kind": "host",
           "host": "getApi:Worksheet.getCommentByCell",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getCommentByCell(cellAddress: Range | string): Comment"
         },
         "getCommentByReplyId": {
           "kind": "host",
           "host": "getApi:Worksheet.getCommentByReplyId",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getCommentByReplyId(replyId: string): Comment"
         },
         "getComment": {
           "kind": "host",
           "host": "getApi:Worksheet.getComment",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getComment(commentId: string): Comment | undefined"
         },
         "setName": {
           "kind": "host",
           "host": "setApi:Worksheet.setName",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "setName(name: string): void"
         },
         "getPosition": {
           "kind": "host",
           "host": "getApi:Worksheet.getPosition",
           "arity": 2,
-          "cost": 1
+          "cost": 1,
+          "signature": "getPosition(): number"
         },
         "setPosition": {
           "kind": "host",
           "host": "setApi:Worksheet.setPosition",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "setPosition(position: number): void"
         },
         "getVisibility": {
           "kind": "host",
           "host": "getApi:Worksheet.getVisibility",
           "arity": 2,
-          "cost": 1
+          "cost": 1,
+          "signature": "getVisibility(): SheetVisibility"
         },
         "setVisibility": {
           "kind": "host",
           "host": "setApi:Worksheet.setVisibility",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "setVisibility(visibility: SheetVisibility): void"
         },
         "getTabColor": {
           "kind": "host",
           "host": "getApi:Worksheet.getTabColor",
           "arity": 2,
-          "cost": 1
+          "cost": 1,
+          "signature": "getTabColor(): string"
         },
         "setTabColor": {
           "kind": "host",
           "host": "setApi:Worksheet.setTabColor",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "setTabColor(tabColor: string): void"
         },
         "getShowGridlines": {
           "kind": "host",
           "host": "getApi:Worksheet.getShowGridlines",
           "arity": 2,
-          "cost": 1
+          "cost": 1,
+          "signature": "getShowGridlines(): boolean"
         },
         "setShowGridlines": {
           "kind": "host",
           "host": "setApi:Worksheet.setShowGridlines",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "setShowGridlines(showGridlines: boolean): void"
         },
         "getFreezePanes": {
-          "kind": "local"
+          "kind": "local",
+          "signature": "getFreezePanes(): WorksheetFreezePanes"
         },
         "getRangeByIndexes": {
-          "kind": "local"
+          "kind": "local",
+          "signature": "getRangeByIndexes( startRow: number, startColumn: number, rowCount: number, columnCount: number ): Range"
         },
         "getRanges": {
-          "kind": "local"
+          "kind": "local",
+          "signature": "getRanges(address?: string): RangeAreas"
         },
         "getNext": {
           "kind": "host",
           "host": "getApi:Worksheet.getNext",
           "arity": 2,
-          "cost": 1
+          "cost": 1,
+          "signature": "getNext(visibleOnly?: boolean): Worksheet"
         },
         "getPrevious": {
           "kind": "host",
           "host": "getApi:Worksheet.getPrevious",
           "arity": 2,
-          "cost": 1
+          "cost": 1,
+          "signature": "getPrevious(visibleOnly?: boolean): Worksheet"
         },
         "getNames": {
           "kind": "host",
           "host": "getApi:Worksheet.getNames",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getNames(): NamedItem[]"
         },
         "getNamedItem": {
           "kind": "host",
           "host": "getApi:Worksheet.getNamedItem",
           "arity": 2,
-          "cost": 1
+          "cost": 1,
+          "signature": "getNamedItem(name: string): NamedItem | undefined"
         },
         "addNamedItem": {
           "kind": "host",
           "host": "setApi:Worksheet.addNamedItem",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "addNamedItem( name: string, reference: Range | string, comment?: string ): NamedItem"
         },
         "delete": {
           "kind": "host",
           "host": "setApi:Worksheet.delete",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "delete(): void"
         },
         "activate": {
           "kind": "host",
           "host": "setApi:Worksheet.activate",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "activate(): void"
         }
       }
     },
     "Range": {
       "members": {
         "getAddress": {
-          "kind": "local"
+          "kind": "local",
+          "signature": "getAddress(): string"
         },
         "getWorksheet": {
-          "kind": "local"
+          "kind": "local",
+          "signature": "getWorksheet(): Worksheet"
         },
         "getFormat": {
-          "kind": "local"
+          "kind": "local",
+          "signature": "getFormat(): RangeFormat"
         },
         "getValue": {
           "kind": "host",
           "host": "getCell",
           "arity": 2,
-          "cost": 1
+          "cost": 1,
+          "signature": "getValue(): string | number | boolean"
         },
         "getValues": {
           "kind": "host",
           "host": "getValues",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getValues(): (string | number | boolean)[][]"
         },
         "setValue": {
           "kind": "host",
           "host": "setValue",
           "arity": 3,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "setValue(value: any): void"
         },
         "setValues": {
           "kind": "host",
           "host": "setValues",
           "arity": 3,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "setValues(values: (string | number | boolean)[][]): void"
         },
         "getFormula": {
           "kind": "host",
           "host": "getFormula",
           "arity": 2,
-          "cost": 1
+          "cost": 1,
+          "signature": "getFormula(): string"
         },
         "setFormula": {
           "kind": "host",
           "host": "setFormula",
           "arity": 3,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "setFormula(formula: string): void"
         },
         "setFormulas": {
           "kind": "host",
           "host": "setFormulas",
           "arity": 3,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "setFormulas(formulas: string[][]): void"
         },
         "clear": {
           "arity": 2,
           "cost": 20000,
           "host": "setApi:Range.clear",
-          "kind": "host"
+          "kind": "host",
+          "signature": "clear(applyTo?: ClearApplyTo): void"
         },
         "getRowIndex": {
           "kind": "host",
           "host": "getApi:Range.getRowIndex",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getRowIndex(): number"
         },
         "getColumnIndex": {
           "kind": "host",
           "host": "getApi:Range.getColumnIndex",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getColumnIndex(): number"
         },
         "getRowCount": {
           "kind": "host",
           "host": "getApi:Range.getRowCount",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getRowCount(): number"
         },
         "getColumnCount": {
           "kind": "host",
           "host": "getApi:Range.getColumnCount",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getColumnCount(): number"
         },
         "getCellCount": {
           "kind": "host",
           "host": "getApi:Range.getCellCount",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getCellCount(): number"
         },
         "getSort": {
           "kind": "host",
           "host": "getApi:Range.getSort",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getSort(): RangeSort"
         },
         "getNumberFormat": {
           "kind": "host",
           "host": "getApi:Range.getNumberFormat",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getNumberFormat(): string"
         },
         "getNumberFormats": {
           "kind": "host",
           "host": "getApi:Range.getNumberFormats",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getNumberFormats(): string[][]"
         },
         "getFormulas": {
           "kind": "host",
           "host": "getApi:Range.getFormulas",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getFormulas(): string[][]"
         },
         "getValueType": {
           "kind": "host",
           "host": "getApi:Range.getValueType",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getValueType(): RangeValueType"
         },
         "getValueTypes": {
           "kind": "host",
           "host": "getApi:Range.getValueTypes",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getValueTypes(): RangeValueType[][]"
         },
         "getText": {
           "kind": "host",
           "host": "getApi:Range.getText",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getText(): string"
         },
         "getTexts": {
           "kind": "host",
           "host": "getApi:Range.getTexts",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getTexts(): string[][]"
         },
         "setNumberFormat": {
           "kind": "host",
           "host": "setApi:Range.setNumberFormat",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "setNumberFormat(numberFormat: string): void"
         },
         "setNumberFormats": {
           "kind": "host",
           "host": "setApi:Range.setNumberFormats",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "setNumberFormats(numberFormats: string[][]): void"
         },
         "getNumberFormatCategory": {
           "arity": 2,
           "cost": 100000,
           "host": "getApi:Range.getNumberFormatCategory",
-          "kind": "host"
+          "kind": "host",
+          "signature": "getNumberFormatCategory(): NumberFormatCategory"
         },
         "getNumberFormatCategories": {
           "arity": 2,
           "cost": 100000,
           "host": "getApi:Range.getNumberFormatCategories",
-          "kind": "host"
+          "kind": "host",
+          "signature": "getNumberFormatCategories(): NumberFormatCategory[][]"
         },
         "getDataValidation": {
           "kind": "host",
           "host": "getApi:Range.getDataValidation",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getDataValidation(): DataValidation"
         },
         "getConditionalFormats": {
           "kind": "host",
           "host": "getApi:Range.getConditionalFormats",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getConditionalFormats(): ConditionalFormat[]"
         },
         "getConditionalFormat": {
           "kind": "host",
           "host": "getApi:Range.getConditionalFormat",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getConditionalFormat(id: string): ConditionalFormat | undefined"
         },
         "addConditionalFormat": {
           "kind": "host",
           "host": "setApi:Range.addConditionalFormat",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "addConditionalFormat(type: ConditionalFormatType): ConditionalFormat"
         },
         "clearAllConditionalFormats": {
           "kind": "host",
           "host": "setApi:Range.clearAllConditionalFormats",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "clearAllConditionalFormats(): void"
         },
         "getAddressLocal": {
-          "kind": "local"
+          "kind": "local",
+          "signature": "getAddressLocal(): string"
         },
         "getCell": {
-          "kind": "local"
+          "kind": "local",
+          "signature": "getCell(row: number, column: number): Range"
         },
         "getRow": {
-          "kind": "local"
+          "kind": "local",
+          "signature": "getRow(row: number): Range"
         },
         "getColumn": {
-          "kind": "local"
+          "kind": "local",
+          "signature": "getColumn(column: number): Range"
         },
         "getEntireRow": {
-          "kind": "local"
+          "kind": "local",
+          "signature": "getEntireRow(): Range"
         },
         "getEntireColumn": {
-          "kind": "local"
+          "kind": "local",
+          "signature": "getEntireColumn(): Range"
         },
         "getOffsetRange": {
-          "kind": "local"
+          "kind": "local",
+          "signature": "getOffsetRange(rowOffset: number, columnOffset: number): Range"
         },
         "getResizedRange": {
-          "kind": "local"
+          "kind": "local",
+          "signature": "getResizedRange(deltaRows: number, deltaColumns: number): Range"
         },
         "getAbsoluteResizedRange": {
-          "kind": "local"
+          "kind": "local",
+          "signature": "getAbsoluteResizedRange(numRows: number, numColumns: number): Range"
         },
         "getBoundingRect": {
-          "kind": "local"
+          "kind": "local",
+          "signature": "getBoundingRect(anotherRange: Range | string): Range"
         },
         "getIntersection": {
-          "kind": "local"
+          "kind": "local",
+          "signature": "getIntersection(anotherRange: Range | string): Range"
         },
         "getLastCell": {
-          "kind": "local"
+          "kind": "local",
+          "signature": "getLastCell(): Range"
         },
         "getLastRow": {
-          "kind": "local"
+          "kind": "local",
+          "signature": "getLastRow(): Range"
         },
         "getLastColumn": {
-          "kind": "local"
+          "kind": "local",
+          "signature": "getLastColumn(): Range"
         },
         "getRowsAbove": {
-          "kind": "local"
+          "kind": "local",
+          "signature": "getRowsAbove(count?: number): Range"
         },
         "getRowsBelow": {
-          "kind": "local"
+          "kind": "local",
+          "signature": "getRowsBelow(count?: number): Range"
         },
         "getColumnsBefore": {
-          "kind": "local"
+          "kind": "local",
+          "signature": "getColumnsBefore(count?: number): Range"
         },
         "getColumnsAfter": {
-          "kind": "local"
+          "kind": "local",
+          "signature": "getColumnsAfter(count?: number): Range"
         },
         "getUsedRange": {
           "kind": "host",
           "host": "getApi:Range.getUsedRange",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getUsedRange(valuesOnly?: boolean): Range"
         },
         "getMergedAreas": {
           "kind": "host",
           "host": "getApi:Range.getMergedAreas",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getMergedAreas(): RangeAreas"
         },
         "getTables": {
           "kind": "host",
           "host": "getApi:Range.getTables",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getTables(fullyContained?: boolean): Table[]"
         },
         "getRowHidden": {
           "kind": "host",
           "host": "getApi:Range.getRowHidden",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getRowHidden(): boolean"
         },
         "setRowHidden": {
           "kind": "host",
           "host": "setApi:Range.setRowHidden",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "setRowHidden(rowHidden: boolean): void"
         },
         "getColumnHidden": {
           "kind": "host",
           "host": "getApi:Range.getColumnHidden",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getColumnHidden(): boolean"
         },
         "setColumnHidden": {
           "kind": "host",
           "host": "setApi:Range.setColumnHidden",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "setColumnHidden(columnHidden: boolean): void"
         },
         "merge": {
           "kind": "host",
           "host": "setApi:Range.merge",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "merge(across?: boolean): void"
         },
         "unmerge": {
           "kind": "host",
           "host": "setApi:Range.unmerge",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "unmerge(): void"
         },
         "insert": {
           "kind": "host",
           "host": "setApi:Range.insert",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "insert(shift: InsertShiftDirection): Range"
         },
         "delete": {
           "kind": "host",
           "host": "setApi:Range.delete",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "delete(shift: DeleteShiftDirection): void"
         },
         "find": {
           "kind": "host",
           "host": "getApi:Range.find",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "find(text: string, criteria: SearchCriteria): Range"
         },
         "replaceAll": {
           "kind": "host",
           "host": "setApi:Range.replaceAll",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "replaceAll( text: string, replacement: string, criteria: ReplaceCriteria ): number"
         },
         "removeDuplicates": {
           "kind": "host",
           "host": "setApi:Range.removeDuplicates",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "removeDuplicates( columns: number[], includesHeader: boolean ): RemoveDuplicatesResult"
         },
         "autoFill": {
           "kind": "host",
           "host": "setApi:Range.autoFill",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "autoFill( destinationRange?: Range | string, autoFillType?: AutoFillType ): void"
         },
         "flashFill": {
           "kind": "host",
           "host": "setApi:Range.flashFill",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "flashFill(): void"
         },
         "calculate": {
           "kind": "host",
           "host": "getApi:Range.calculate",
           "arity": 2,
-          "cost": 1
+          "cost": 1,
+          "signature": "calculate(): void"
         },
         "getHyperlink": {
           "kind": "host",
           "host": "getApi:Range.getHyperlink",
           "arity": 2,
-          "cost": 1
+          "cost": 1,
+          "signature": "getHyperlink(): RangeHyperlink"
         },
         "setHyperlink": {
           "kind": "host",
           "host": "setApi:Range.setHyperlink",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "setHyperlink(hyperlink: RangeHyperlink): void"
         },
         "copyFrom": {
           "kind": "host",
           "host": "setApi:Range.copyFrom",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "copyFrom( sourceRange: Range | RangeAreas | string, copyType?: RangeCopyType, skipBlanks?: boolean, transpose?: boolean ): void"
         },
         "getSurroundingRegion": {
           "kind": "host",
           "host": "getApi:Range.getSurroundingRegion",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getSurroundingRegion(): Range"
         },
         "getRangeEdge": {
           "kind": "host",
           "host": "getApi:Range.getRangeEdge",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getRangeEdge( direction: KeyboardDirection, activeCell?: Range | string ): Range"
         },
         "group": {
           "kind": "host",
           "host": "setApi:Range.group",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "group(groupOption: GroupOption): void"
         },
         "ungroup": {
           "kind": "host",
           "host": "setApi:Range.ungroup",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "ungroup(groupOption: GroupOption): void"
         },
         "hideGroupDetails": {
           "kind": "host",
           "host": "setApi:Range.hideGroupDetails",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "hideGroupDetails(groupOption: GroupOption): void"
         },
         "showGroupDetails": {
           "kind": "host",
           "host": "setApi:Range.showGroupDetails",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "showGroupDetails(groupOption: GroupOption): void"
         },
         "clearOrResetContents": {
           "kind": "host",
           "host": "setApi:Range.clearOrResetContents",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "clearOrResetContents(): void"
         }
       }
     },
     "RangeFormat": {
       "members": {
         "getFill": {
-          "kind": "local"
+          "kind": "local",
+          "signature": "getFill(): RangeFill"
         },
         "getFont": {
           "kind": "host",
           "host": "getApi:RangeFormat.getFont",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getFont(): RangeFont"
         },
         "getProtection": {
           "kind": "host",
           "host": "getApi:RangeFormat.getProtection",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getProtection(): FormatProtection"
         },
         "getBorders": {
           "kind": "host",
           "host": "getApi:RangeFormat.getBorders",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getBorders(): RangeBorder[]"
         },
         "getRangeBorder": {
           "kind": "host",
           "host": "getApi:RangeFormat.getRangeBorder",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getRangeBorder(index: BorderIndex): RangeBorder"
         },
         "getHorizontalAlignment": {
           "kind": "host",
           "host": "getApi:RangeFormat.getHorizontalAlignment",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getHorizontalAlignment(): HorizontalAlignment"
         },
         "getVerticalAlignment": {
           "kind": "host",
           "host": "getApi:RangeFormat.getVerticalAlignment",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getVerticalAlignment(): VerticalAlignment"
         },
         "getWrapText": {
           "kind": "host",
           "host": "getApi:RangeFormat.getWrapText",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getWrapText(): boolean"
         },
         "getShrinkToFit": {
           "kind": "host",
           "host": "getApi:RangeFormat.getShrinkToFit",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getShrinkToFit(): boolean"
         },
         "getIndentLevel": {
           "kind": "host",
           "host": "getApi:RangeFormat.getIndentLevel",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getIndentLevel(): number"
         },
         "getTextOrientation": {
           "kind": "host",
           "host": "getApi:RangeFormat.getTextOrientation",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getTextOrientation(): number"
         },
         "getRowHeight": {
           "kind": "host",
           "host": "getApi:RangeFormat.getRowHeight",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getRowHeight(): number"
         },
         "getColumnWidth": {
           "kind": "host",
           "host": "getApi:RangeFormat.getColumnWidth",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getColumnWidth(): number"
         },
         "setHorizontalAlignment": {
           "kind": "host",
           "host": "setApi:RangeFormat.setHorizontalAlignment",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "setHorizontalAlignment(horizontalAlignment: HorizontalAlignment): void"
         },
         "setVerticalAlignment": {
           "kind": "host",
           "host": "setApi:RangeFormat.setVerticalAlignment",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "setVerticalAlignment(verticalAlignment: VerticalAlignment): void"
         },
         "setWrapText": {
           "kind": "host",
           "host": "setApi:RangeFormat.setWrapText",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "setWrapText(wrapText: boolean): void"
         },
         "setShrinkToFit": {
           "kind": "host",
           "host": "setApi:RangeFormat.setShrinkToFit",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "setShrinkToFit(shrinkToFit: boolean): void"
         },
         "setIndentLevel": {
           "kind": "host",
           "host": "setApi:RangeFormat.setIndentLevel",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "setIndentLevel(indentLevel: number): void"
         },
         "setTextOrientation": {
           "kind": "host",
           "host": "setApi:RangeFormat.setTextOrientation",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "setTextOrientation(textOrientation: number): void"
         },
         "setRowHeight": {
           "kind": "host",
           "host": "setApi:RangeFormat.setRowHeight",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "setRowHeight(rowHeight: number): void"
         },
         "setColumnWidth": {
           "kind": "host",
           "host": "setApi:RangeFormat.setColumnWidth",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "setColumnWidth(columnWidth: number): void"
         }
       }
     },
@@ -878,38 +1033,46 @@
           "kind": "host",
           "host": "getFill",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getColor(): string"
         },
         "setColor": {
           "kind": "host",
           "host": "setFill",
           "arity": 3,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "setColor(color: string): void"
         },
         "clear": {
           "kind": "host",
           "host": "setFill",
           "arity": 3,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "clear(): void"
         }
       }
     },
     "RangeAreas": {
       "members": {
         "getAddress": {
-          "kind": "local"
+          "kind": "local",
+          "signature": "getAddress(): string"
         },
         "getAreaCount": {
-          "kind": "local"
+          "kind": "local",
+          "signature": "getAreaCount(): number"
         },
         "getCellCount": {
-          "kind": "local"
+          "kind": "local",
+          "signature": "getCellCount(): number"
         },
         "getAreas": {
-          "kind": "local"
+          "kind": "local",
+          "signature": "getAreas(): Range[]"
         },
         "getWorksheet": {
-          "kind": "local"
+          "kind": "local",
+          "signature": "getWorksheet(): Worksheet"
         }
       }
     },
@@ -919,85 +1082,99 @@
           "kind": "host",
           "host": "getApi:RangeFont.getBold",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getBold(): boolean"
         },
         "getItalic": {
           "kind": "host",
           "host": "getApi:RangeFont.getItalic",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getItalic(): boolean"
         },
         "getColor": {
           "kind": "host",
           "host": "getApi:RangeFont.getColor",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getColor(): string"
         },
         "getName": {
           "kind": "host",
           "host": "getApi:RangeFont.getName",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getName(): string"
         },
         "getSize": {
           "kind": "host",
           "host": "getApi:RangeFont.getSize",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getSize(): number"
         },
         "getStrikethrough": {
           "kind": "host",
           "host": "getApi:RangeFont.getStrikethrough",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getStrikethrough(): boolean"
         },
         "getUnderline": {
           "kind": "host",
           "host": "getApi:RangeFont.getUnderline",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getUnderline(): RangeUnderlineStyle"
         },
         "setBold": {
           "kind": "host",
           "host": "setApi:RangeFont.setBold",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "setBold(bold: boolean): void"
         },
         "setItalic": {
           "kind": "host",
           "host": "setApi:RangeFont.setItalic",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "setItalic(italic: boolean): void"
         },
         "setColor": {
           "kind": "host",
           "host": "setApi:RangeFont.setColor",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "setColor(color: string): void"
         },
         "setName": {
           "kind": "host",
           "host": "setApi:RangeFont.setName",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "setName(name: string): void"
         },
         "setSize": {
           "kind": "host",
           "host": "setApi:RangeFont.setSize",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "setSize(size: number): void"
         },
         "setStrikethrough": {
           "kind": "host",
           "host": "setApi:RangeFont.setStrikethrough",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "setStrikethrough(strikethrough: boolean): void"
         },
         "setUnderline": {
           "kind": "host",
           "host": "setApi:RangeFont.setUnderline",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "setUnderline(underline: RangeUnderlineStyle): void"
         }
       }
     },
@@ -1007,43 +1184,50 @@
           "kind": "host",
           "host": "getApi:RangeBorder.getColor",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getColor(): string"
         },
         "getSideIndex": {
           "kind": "host",
           "host": "getApi:RangeBorder.getSideIndex",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getSideIndex(): BorderIndex"
         },
         "getStyle": {
           "kind": "host",
           "host": "getApi:RangeBorder.getStyle",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getStyle(): BorderLineStyle"
         },
         "getWeight": {
           "kind": "host",
           "host": "getApi:RangeBorder.getWeight",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getWeight(): BorderWeight"
         },
         "setColor": {
           "kind": "host",
           "host": "setApi:RangeBorder.setColor",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "setColor(color: string): void"
         },
         "setStyle": {
           "kind": "host",
           "host": "setApi:RangeBorder.setStyle",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "setStyle(style: BorderLineStyle): void"
         },
         "setWeight": {
           "kind": "host",
           "host": "setApi:RangeBorder.setWeight",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "setWeight(weight: BorderWeight): void"
         }
       }
     },
@@ -1053,25 +1237,29 @@
           "kind": "host",
           "host": "getApi:FormatProtection.getLocked",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getLocked(): boolean"
         },
         "getFormulaHidden": {
           "kind": "host",
           "host": "getApi:FormatProtection.getFormulaHidden",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getFormulaHidden(): boolean"
         },
         "setLocked": {
           "kind": "host",
           "host": "setApi:FormatProtection.setLocked",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "setLocked(locked: boolean): void"
         },
         "setFormulaHidden": {
           "kind": "host",
           "host": "setApi:FormatProtection.setFormulaHidden",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "setFormulaHidden(formulaHidden: boolean): void"
         }
       }
     },
@@ -1081,49 +1269,57 @@
           "kind": "host",
           "host": "getApi:WorksheetProtection.getProtected",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getProtected(): boolean"
         },
         "getIsPasswordProtected": {
           "kind": "host",
           "host": "getApi:WorksheetProtection.getIsPasswordProtected",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getIsPasswordProtected(): boolean"
         },
         "getCanPauseProtection": {
           "kind": "host",
           "host": "getApi:WorksheetProtection.getCanPauseProtection",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getCanPauseProtection(): boolean"
         },
         "getIsPaused": {
           "kind": "host",
           "host": "getApi:WorksheetProtection.getIsPaused",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getIsPaused(): boolean"
         },
         "getOptions": {
           "kind": "host",
           "host": "getApi:WorksheetProtection.getOptions",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getOptions(): WorksheetProtectionOptions"
         },
         "getSavedOptions": {
           "kind": "host",
           "host": "getApi:WorksheetProtection.getSavedOptions",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getSavedOptions(): WorksheetProtectionOptions"
         },
         "protect": {
           "kind": "host",
           "host": "setApi:WorksheetProtection.protect",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "protect(options?: WorksheetProtectionOptions, password?: string): void"
         },
         "unprotect": {
           "kind": "host",
           "host": "setApi:WorksheetProtection.unprotect",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "unprotect(password?: string): void"
         }
       }
     },
@@ -1133,217 +1329,253 @@
           "kind": "host",
           "host": "getApi:Table.getId",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getId(): string"
         },
         "getLegacyId": {
           "kind": "host",
           "host": "getApi:Table.getLegacyId",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getLegacyId(): string"
         },
         "getName": {
           "kind": "host",
           "host": "getApi:Table.getName",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getName(): string"
         },
         "getRowCount": {
           "kind": "host",
           "host": "getApi:Table.getRowCount",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getRowCount(): number"
         },
         "getShowHeaders": {
           "kind": "host",
           "host": "getApi:Table.getShowHeaders",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getShowHeaders(): boolean"
         },
         "getShowTotals": {
           "kind": "host",
           "host": "getApi:Table.getShowTotals",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getShowTotals(): boolean"
         },
         "getHighlightFirstColumn": {
           "kind": "host",
           "host": "getApi:Table.getHighlightFirstColumn",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getHighlightFirstColumn(): boolean"
         },
         "getHighlightLastColumn": {
           "kind": "host",
           "host": "getApi:Table.getHighlightLastColumn",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getHighlightLastColumn(): boolean"
         },
         "getShowBandedColumns": {
           "kind": "host",
           "host": "getApi:Table.getShowBandedColumns",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getShowBandedColumns(): boolean"
         },
         "getShowBandedRows": {
           "kind": "host",
           "host": "getApi:Table.getShowBandedRows",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getShowBandedRows(): boolean"
         },
         "getPredefinedTableStyle": {
           "kind": "host",
           "host": "getApi:Table.getPredefinedTableStyle",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getPredefinedTableStyle(): string"
         },
         "getShowFilterButton": {
           "kind": "host",
           "host": "getApi:Table.getShowFilterButton",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getShowFilterButton(): boolean"
         },
         "getWorksheet": {
           "kind": "host",
           "host": "getApi:Table.getWorksheet",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getWorksheet(): Worksheet"
         },
         "getSort": {
           "kind": "host",
           "host": "getApi:Table.getSort",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getSort(): TableSort"
         },
         "getAutoFilter": {
           "kind": "host",
           "host": "getApi:Table.getAutoFilter",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getAutoFilter(): AutoFilter"
         },
         "getColumns": {
           "kind": "host",
           "host": "getApi:Table.getColumns",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getColumns(): TableColumn[]"
         },
         "getColumn": {
           "kind": "host",
           "host": "getApi:Table.getColumn",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getColumn(key: number | string): TableColumn | undefined"
         },
         "getColumnById": {
           "kind": "host",
           "host": "getApi:Table.getColumnById",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getColumnById(key: number): TableColumn | undefined"
         },
         "getColumnByName": {
           "kind": "host",
           "host": "getApi:Table.getColumnByName",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getColumnByName(key: string): TableColumn | undefined"
         },
         "getRange": {
           "kind": "host",
           "host": "getApi:Table.getRange",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getRange(): Range"
         },
         "getHeaderRowRange": {
           "kind": "host",
           "host": "getApi:Table.getHeaderRowRange",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getHeaderRowRange(): Range"
         },
         "getTotalRowRange": {
           "kind": "host",
           "host": "getApi:Table.getTotalRowRange",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getTotalRowRange(): Range"
         },
         "getRangeBetweenHeaderAndTotal": {
           "kind": "host",
           "host": "getApi:Table.getRangeBetweenHeaderAndTotal",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getRangeBetweenHeaderAndTotal(): Range"
         },
         "setName": {
           "kind": "host",
           "host": "setApi:Table.setName",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "setName(name: string): void"
         },
         "setPredefinedTableStyle": {
           "kind": "host",
           "host": "setApi:Table.setPredefinedTableStyle",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "setPredefinedTableStyle(predefinedTableStyle: string): void"
         },
         "setHighlightFirstColumn": {
           "kind": "host",
           "host": "setApi:Table.setHighlightFirstColumn",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "setHighlightFirstColumn(highlightFirstColumn: boolean): void"
         },
         "setHighlightLastColumn": {
           "kind": "host",
           "host": "setApi:Table.setHighlightLastColumn",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "setHighlightLastColumn(highlightLastColumn: boolean): void"
         },
         "setShowBandedColumns": {
           "kind": "host",
           "host": "setApi:Table.setShowBandedColumns",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "setShowBandedColumns(showBandedColumns: boolean): void"
         },
         "setShowBandedRows": {
           "kind": "host",
           "host": "setApi:Table.setShowBandedRows",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "setShowBandedRows(showBandedRows: boolean): void"
         },
         "resize": {
           "kind": "host",
           "host": "setApi:Table.resize",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "resize(newRange: Range | string): void"
         },
         "clearFilters": {
           "kind": "host",
           "host": "setApi:Table.clearFilters",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "clearFilters(): void"
         },
         "reapplyFilters": {
           "kind": "host",
           "host": "setApi:Table.reapplyFilters",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "reapplyFilters(): void"
         },
         "convertToRange": {
           "kind": "host",
           "host": "setApi:Table.convertToRange",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "convertToRange(): Range"
         },
         "delete": {
           "kind": "host",
           "host": "setApi:Table.delete",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "delete(): void"
         },
         "addRow": {
           "host": "setApi:Table.addRow",
           "arity": 2,
           "kind": "host",
-          "cost": 20000
+          "cost": 20000,
+          "signature": "addRow(index?: number, values?: (boolean | string | number)[]): void"
         },
         "addRows": {
           "host": "setApi:Table.addRows",
           "arity": 2,
           "kind": "host",
-          "cost": 20000
+          "cost": 20000,
+          "signature": "addRows(index?: number, values?: (boolean | string | number)[][]): void"
         }
       }
     },
@@ -1353,55 +1585,64 @@
           "kind": "host",
           "host": "getApi:TableColumn.getId",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getId(): number"
         },
         "getIndex": {
           "kind": "host",
           "host": "getApi:TableColumn.getIndex",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getIndex(): number"
         },
         "getName": {
           "kind": "host",
           "host": "getApi:TableColumn.getName",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getName(): string"
         },
         "getFilter": {
           "kind": "host",
           "host": "getApi:TableColumn.getFilter",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getFilter(): Filter"
         },
         "getRange": {
           "kind": "host",
           "host": "getApi:TableColumn.getRange",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getRange(): Range"
         },
         "getHeaderRowRange": {
           "kind": "host",
           "host": "getApi:TableColumn.getHeaderRowRange",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getHeaderRowRange(): Range"
         },
         "getTotalRowRange": {
           "kind": "host",
           "host": "getApi:TableColumn.getTotalRowRange",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getTotalRowRange(): Range"
         },
         "getRangeBetweenHeaderAndTotal": {
           "kind": "host",
           "host": "getApi:TableColumn.getRangeBetweenHeaderAndTotal",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getRangeBetweenHeaderAndTotal(): Range"
         },
         "setName": {
           "kind": "host",
           "host": "setApi:TableColumn.setName",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "setName(name: string): void"
         }
       }
     },
@@ -1411,7 +1652,8 @@
           "kind": "host",
           "host": "setApi:RangeSort.apply",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "apply( fields: SortField[], matchCase?: boolean, hasHeaders?: boolean, orientation?: SortOrientation, method?: SortMethod ): void"
         }
       }
     },
@@ -1421,37 +1663,43 @@
           "kind": "host",
           "host": "getApi:TableSort.getFields",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getFields(): SortField[]"
         },
         "getMatchCase": {
           "kind": "host",
           "host": "getApi:TableSort.getMatchCase",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getMatchCase(): boolean"
         },
         "getMethod": {
           "kind": "host",
           "host": "getApi:TableSort.getMethod",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getMethod(): SortMethod"
         },
         "apply": {
           "kind": "host",
           "host": "setApi:TableSort.apply",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "apply( fields: SortField[], matchCase?: boolean, method?: SortMethod ): void"
         },
         "clear": {
           "kind": "host",
           "host": "setApi:TableSort.clear",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "clear(): void"
         },
         "reapply": {
           "kind": "host",
           "host": "setApi:TableSort.reapply",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "reapply(): void"
         }
       }
     },
@@ -1461,55 +1709,64 @@
           "kind": "host",
           "host": "getApi:AutoFilter.getCriteria",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getCriteria(): FilterCriteria[]"
         },
         "getEnabled": {
           "kind": "host",
           "host": "getApi:AutoFilter.getEnabled",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getEnabled(): boolean"
         },
         "getIsDataFiltered": {
           "kind": "host",
           "host": "getApi:AutoFilter.getIsDataFiltered",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getIsDataFiltered(): boolean"
         },
         "getRange": {
           "kind": "host",
           "host": "getApi:AutoFilter.getRange",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getRange(): Range"
         },
         "apply": {
           "kind": "host",
           "host": "setApi:AutoFilter.apply",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "apply( range: Range | string, columnIndex?: number, criteria?: FilterCriteria ): void"
         },
         "clearColumnCriteria": {
           "kind": "host",
           "host": "setApi:AutoFilter.clearColumnCriteria",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "clearColumnCriteria(columnIndex: number): void"
         },
         "clearCriteria": {
           "kind": "host",
           "host": "setApi:AutoFilter.clearCriteria",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "clearCriteria(): void"
         },
         "reapply": {
           "kind": "host",
           "host": "setApi:AutoFilter.reapply",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "reapply(): void"
         },
         "remove": {
           "kind": "host",
           "host": "setApi:AutoFilter.remove",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "remove(): void"
         }
       }
     },
@@ -1519,31 +1776,36 @@
           "kind": "host",
           "host": "getApi:Filter.getCriteria",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getCriteria(): FilterCriteria"
         },
         "apply": {
           "kind": "host",
           "host": "setApi:Filter.apply",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "apply(criteria: FilterCriteria): void"
         },
         "applyValuesFilter": {
           "kind": "host",
           "host": "setApi:Filter.applyValuesFilter",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "applyValuesFilter(values: Array<string | FilterDatetime>): void"
         },
         "applyCustomFilter": {
           "kind": "host",
           "host": "setApi:Filter.applyCustomFilter",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "applyCustomFilter( criteria1: string, criteria2?: string, oper?: FilterOperator ): void"
         },
         "clear": {
           "kind": "host",
           "host": "setApi:Filter.clear",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "clear(): void"
         }
       }
     },
@@ -1553,73 +1815,85 @@
           "kind": "host",
           "host": "getApi:DataValidation.getErrorAlert",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getErrorAlert(): DataValidationErrorAlert"
         },
         "setErrorAlert": {
           "kind": "host",
           "host": "setApi:DataValidation.setErrorAlert",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "setErrorAlert(errorAlert: DataValidationErrorAlert): void"
         },
         "getIgnoreBlanks": {
           "kind": "host",
           "host": "getApi:DataValidation.getIgnoreBlanks",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getIgnoreBlanks(): boolean"
         },
         "setIgnoreBlanks": {
           "kind": "host",
           "host": "setApi:DataValidation.setIgnoreBlanks",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "setIgnoreBlanks(ignoreBlanks: boolean): void"
         },
         "getPrompt": {
           "kind": "host",
           "host": "getApi:DataValidation.getPrompt",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getPrompt(): DataValidationPrompt"
         },
         "setPrompt": {
           "kind": "host",
           "host": "setApi:DataValidation.setPrompt",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "setPrompt(prompt: DataValidationPrompt): void"
         },
         "getRule": {
           "kind": "host",
           "host": "getApi:DataValidation.getRule",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getRule(): DataValidationRule"
         },
         "setRule": {
           "kind": "host",
           "host": "setApi:DataValidation.setRule",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "setRule(rule: DataValidationRule): void"
         },
         "getType": {
           "kind": "host",
           "host": "getApi:DataValidation.getType",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getType(): DataValidationType"
         },
         "getValid": {
           "kind": "host",
           "host": "getApi:DataValidation.getValid",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getValid(): boolean"
         },
         "clear": {
           "kind": "host",
           "host": "setApi:DataValidation.clear",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "clear(): void"
         },
         "getInvalidCells": {
           "kind": "host",
           "host": "getApi:DataValidation.getInvalidCells",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getInvalidCells(): RangeAreas"
         }
       }
     },
@@ -1629,145 +1903,169 @@
           "kind": "host",
           "host": "getApi:Chart.getChartType",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getChartType(): ChartType"
         },
         "setChartType": {
           "kind": "host",
           "host": "setApi:Chart.setChartType",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "setChartType(chartType: ChartType): void"
         },
         "getHeight": {
           "kind": "host",
           "host": "getApi:Chart.getHeight",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getHeight(): number"
         },
         "setHeight": {
           "kind": "host",
           "host": "setApi:Chart.setHeight",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "setHeight(height: number): void"
         },
         "getId": {
           "kind": "host",
           "host": "getApi:Chart.getId",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getId(): string"
         },
         "getLeft": {
           "kind": "host",
           "host": "getApi:Chart.getLeft",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getLeft(): number"
         },
         "setLeft": {
           "kind": "host",
           "host": "setApi:Chart.setLeft",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "setLeft(left: number): void"
         },
         "getName": {
           "kind": "host",
           "host": "getApi:Chart.getName",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getName(): string"
         },
         "setName": {
           "kind": "host",
           "host": "setApi:Chart.setName",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "setName(name: string): void"
         },
         "getPlotVisibleOnly": {
           "kind": "host",
           "host": "getApi:Chart.getPlotVisibleOnly",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getPlotVisibleOnly(): boolean"
         },
         "setPlotVisibleOnly": {
           "kind": "host",
           "host": "setApi:Chart.setPlotVisibleOnly",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "setPlotVisibleOnly(plotVisibleOnly: boolean): void"
         },
         "getTitle": {
           "kind": "host",
           "host": "getApi:Chart.getTitle",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getTitle(): ChartTitle"
         },
         "getTop": {
           "kind": "host",
           "host": "getApi:Chart.getTop",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getTop(): number"
         },
         "setTop": {
           "kind": "host",
           "host": "setApi:Chart.setTop",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "setTop(top: number): void"
         },
         "getWidth": {
           "kind": "host",
           "host": "getApi:Chart.getWidth",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getWidth(): number"
         },
         "setWidth": {
           "kind": "host",
           "host": "setApi:Chart.setWidth",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "setWidth(width: number): void"
         },
         "getWorksheet": {
           "kind": "host",
           "host": "getApi:Chart.getWorksheet",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getWorksheet(): Worksheet"
         },
         "delete": {
           "kind": "host",
           "host": "setApi:Chart.delete",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "delete(): void"
         },
         "setData": {
           "kind": "host",
           "host": "setApi:Chart.setData",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "setData(sourceData: Range, seriesBy?: ChartSeriesBy): void"
         },
         "setPosition": {
           "kind": "host",
           "host": "setApi:Chart.setPosition",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "setPosition(startCell: Range | string, endCell?: Range | string): void"
         },
         "getSeries": {
           "kind": "host",
           "host": "getApi:Chart.getSeries",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getSeries(): ChartSeries[]"
         },
         "getLegend": {
           "kind": "host",
           "host": "getApi:Chart.getLegend",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getLegend(): ChartLegend"
         },
         "getFormat": {
           "kind": "host",
           "host": "getApi:Chart.getFormat",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getFormat(): ChartAreaFormat"
         },
         "getAxes": {
           "arity": 2,
           "cost": 100000,
           "kind": "host",
-          "host": "getApi:Chart.getAxes"
+          "host": "getApi:Chart.getAxes",
+          "signature": "getAxes(): ChartAxes"
         }
       }
     },
@@ -1777,25 +2075,29 @@
           "kind": "host",
           "host": "getApi:ChartTitle.getText",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getText(): string"
         },
         "setText": {
           "kind": "host",
           "host": "setApi:ChartTitle.setText",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "setText(text: string): void"
         },
         "getVisible": {
           "kind": "host",
           "host": "getApi:ChartTitle.getVisible",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getVisible(): boolean"
         },
         "getFormat": {
           "kind": "host",
           "host": "getApi:ChartTitle.getFormat",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getFormat(): ChartTitleFormat"
         }
       }
     },
@@ -1805,31 +2107,36 @@
           "kind": "host",
           "host": "getApi:ChartLegend.getPosition",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getPosition(): ChartLegendPosition"
         },
         "setPosition": {
           "kind": "host",
           "host": "setApi:ChartLegend.setPosition",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "setPosition(position: ChartLegendPosition): void"
         },
         "getVisible": {
           "kind": "host",
           "host": "getApi:ChartLegend.getVisible",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getVisible(): boolean"
         },
         "setVisible": {
           "kind": "host",
           "host": "setApi:ChartLegend.setVisible",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "setVisible(visible: boolean): void"
         },
         "getFormat": {
           "kind": "host",
           "host": "getApi:ChartLegend.getFormat",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getFormat(): ChartLegendFormat"
         }
       }
     },
@@ -1839,73 +2146,85 @@
           "kind": "host",
           "host": "getApi:ChartSeries.getName",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getName(): string"
         },
         "setName": {
           "kind": "host",
           "host": "setApi:ChartSeries.setName",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "setName(name: string): void"
         },
         "getFiltered": {
           "kind": "host",
           "host": "getApi:ChartSeries.getFiltered",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getFiltered(): boolean"
         },
         "setFiltered": {
           "kind": "host",
           "host": "setApi:ChartSeries.setFiltered",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "setFiltered(filtered: boolean): void"
         },
         "getSmooth": {
           "kind": "host",
           "host": "getApi:ChartSeries.getSmooth",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getSmooth(): boolean"
         },
         "setSmooth": {
           "kind": "host",
           "host": "setApi:ChartSeries.setSmooth",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "setSmooth(smooth: boolean): void"
         },
         "getMarkerSize": {
           "kind": "host",
           "host": "getApi:ChartSeries.getMarkerSize",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getMarkerSize(): number"
         },
         "setMarkerSize": {
           "kind": "host",
           "host": "setApi:ChartSeries.setMarkerSize",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "setMarkerSize(markerSize: number): void"
         },
         "getChartType": {
           "kind": "host",
           "host": "getApi:ChartSeries.getChartType",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getChartType(): ChartType"
         },
         "getFormat": {
           "kind": "host",
           "host": "getApi:ChartSeries.getFormat",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getFormat(): ChartSeriesFormat"
         },
         "setValues": {
           "arity": 2,
           "cost": 20000,
           "kind": "host",
-          "host": "setApi:ChartSeries.setValues"
+          "host": "setApi:ChartSeries.setValues",
+          "signature": "setValues(sourceData: Range): void"
         },
         "setXAxisValues": {
           "arity": 2,
           "cost": 20000,
           "kind": "host",
-          "host": "setApi:ChartSeries.setXAxisValues"
+          "host": "setApi:ChartSeries.setXAxisValues",
+          "signature": "setXAxisValues(sourceData: Range): void"
         }
       }
     },
@@ -1915,7 +2234,8 @@
           "kind": "host",
           "host": "getApi:ChartAreaFormat.getFill",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getFill(): ChartFill"
         }
       }
     },
@@ -1925,7 +2245,8 @@
           "kind": "host",
           "host": "getApi:ChartSeriesFormat.getFill",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getFill(): ChartFill"
         }
       }
     },
@@ -1935,7 +2256,8 @@
           "kind": "host",
           "host": "getApi:ChartTitleFormat.getFont",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getFont(): ChartFont"
         }
       }
     },
@@ -1945,7 +2267,8 @@
           "kind": "host",
           "host": "getApi:ChartLegendFormat.getFont",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getFont(): ChartFont"
         }
       }
     },
@@ -1955,13 +2278,15 @@
           "kind": "host",
           "host": "getApi:ChartFill.getSolidColor",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getSolidColor(): string"
         },
         "setSolidColor": {
           "kind": "host",
           "host": "setApi:ChartFill.setSolidColor",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "setSolidColor(color: string): void"
         }
       }
     },
@@ -1971,61 +2296,71 @@
           "kind": "host",
           "host": "getApi:ChartFont.getBold",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getBold(): boolean"
         },
         "setBold": {
           "kind": "host",
           "host": "setApi:ChartFont.setBold",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "setBold(bold: boolean): void"
         },
         "getItalic": {
           "kind": "host",
           "host": "getApi:ChartFont.getItalic",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getItalic(): boolean"
         },
         "setItalic": {
           "kind": "host",
           "host": "setApi:ChartFont.setItalic",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "setItalic(italic: boolean): void"
         },
         "getName": {
           "kind": "host",
           "host": "getApi:ChartFont.getName",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getName(): string"
         },
         "setName": {
           "kind": "host",
           "host": "setApi:ChartFont.setName",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "setName(name: string): void"
         },
         "getSize": {
           "kind": "host",
           "host": "getApi:ChartFont.getSize",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getSize(): number"
         },
         "setSize": {
           "kind": "host",
           "host": "setApi:ChartFont.setSize",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "setSize(size: number): void"
         },
         "getColor": {
           "kind": "host",
           "host": "getApi:ChartFont.getColor",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getColor(): string"
         },
         "setColor": {
           "kind": "host",
           "host": "setApi:ChartFont.setColor",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "setColor(color: string): void"
         }
       }
     },
@@ -2035,85 +2370,99 @@
           "kind": "host",
           "host": "getApi:ConditionalFormat.getCellValue",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getCellValue(): CellValueConditionalFormat | undefined"
         },
         "getCustom": {
           "kind": "host",
           "host": "getApi:ConditionalFormat.getCustom",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getCustom(): CustomConditionalFormat | undefined"
         },
         "getId": {
           "kind": "host",
           "host": "getApi:ConditionalFormat.getId",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getId(): string"
         },
         "getPreset": {
           "kind": "host",
           "host": "getApi:ConditionalFormat.getPreset",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getPreset(): PresetCriteriaConditionalFormat | undefined"
         },
         "getPriority": {
           "kind": "host",
           "host": "getApi:ConditionalFormat.getPriority",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getPriority(): number"
         },
         "setPriority": {
           "kind": "host",
           "host": "setApi:ConditionalFormat.setPriority",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "setPriority(priority: number): void"
         },
         "getStopIfTrue": {
           "kind": "host",
           "host": "getApi:ConditionalFormat.getStopIfTrue",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getStopIfTrue(): boolean"
         },
         "setStopIfTrue": {
           "kind": "host",
           "host": "setApi:ConditionalFormat.setStopIfTrue",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "setStopIfTrue(stopIfTrue: boolean): void"
         },
         "getTextComparison": {
           "kind": "host",
           "host": "getApi:ConditionalFormat.getTextComparison",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getTextComparison(): TextConditionalFormat | undefined"
         },
         "getType": {
           "kind": "host",
           "host": "getApi:ConditionalFormat.getType",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getType(): ConditionalFormatType"
         },
         "delete": {
           "kind": "host",
           "host": "setApi:ConditionalFormat.delete",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "delete(): void"
         },
         "getRange": {
           "kind": "host",
           "host": "getApi:ConditionalFormat.getRange",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getRange(): Range"
         },
         "getRanges": {
           "kind": "host",
           "host": "getApi:ConditionalFormat.getRanges",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getRanges(): RangeAreas"
         },
         "setRanges": {
           "kind": "host",
           "host": "setApi:ConditionalFormat.setRanges",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "setRanges(ranges: Range | RangeAreas | string): void"
         }
       }
     },
@@ -2123,13 +2472,15 @@
           "kind": "host",
           "host": "getApi:CustomConditionalFormat.getFormat",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getFormat(): ConditionalRangeFormat"
         },
         "getRule": {
           "kind": "host",
           "host": "getApi:CustomConditionalFormat.getRule",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getRule(): ConditionalFormatRule"
         }
       }
     },
@@ -2139,13 +2490,15 @@
           "kind": "host",
           "host": "getApi:ConditionalFormatRule.getFormula",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getFormula(): string"
         },
         "setFormula": {
           "kind": "host",
           "host": "setApi:ConditionalFormatRule.setFormula",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "setFormula(formula: string): void"
         }
       }
     },
@@ -2155,19 +2508,22 @@
           "kind": "host",
           "host": "getApi:CellValueConditionalFormat.getFormat",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getFormat(): ConditionalRangeFormat"
         },
         "getRule": {
           "kind": "host",
           "host": "getApi:CellValueConditionalFormat.getRule",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getRule(): ConditionalCellValueRule"
         },
         "setRule": {
           "kind": "host",
           "host": "setApi:CellValueConditionalFormat.setRule",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "setRule(rule: ConditionalCellValueRule): void"
         }
       }
     },
@@ -2177,19 +2533,22 @@
           "kind": "host",
           "host": "getApi:TextConditionalFormat.getFormat",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getFormat(): ConditionalRangeFormat"
         },
         "getRule": {
           "kind": "host",
           "host": "getApi:TextConditionalFormat.getRule",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getRule(): ConditionalTextComparisonRule"
         },
         "setRule": {
           "kind": "host",
           "host": "setApi:TextConditionalFormat.setRule",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "setRule(rule: ConditionalTextComparisonRule): void"
         }
       }
     },
@@ -2199,19 +2558,22 @@
           "kind": "host",
           "host": "getApi:PresetCriteriaConditionalFormat.getFormat",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getFormat(): ConditionalRangeFormat"
         },
         "getRule": {
           "kind": "host",
           "host": "getApi:PresetCriteriaConditionalFormat.getRule",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getRule(): ConditionalPresetCriteriaRule"
         },
         "setRule": {
           "kind": "host",
           "host": "setApi:PresetCriteriaConditionalFormat.setRule",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "setRule(rule: ConditionalPresetCriteriaRule): void"
         }
       }
     },
@@ -2221,67 +2583,78 @@
           "kind": "host",
           "host": "getApi:ConditionalRangeFormat.getFill",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getFill(): ConditionalRangeFill"
         },
         "getFont": {
           "kind": "host",
           "host": "getApi:ConditionalRangeFormat.getFont",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getFont(): ConditionalRangeFont"
         },
         "getNumberFormat": {
           "kind": "host",
           "host": "getApi:ConditionalRangeFormat.getNumberFormat",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getNumberFormat(): string"
         },
         "setNumberFormat": {
           "kind": "host",
           "host": "setApi:ConditionalRangeFormat.setNumberFormat",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "setNumberFormat(numberFormat: string): void"
         },
         "clearFormat": {
           "kind": "host",
           "host": "setApi:ConditionalRangeFormat.clearFormat",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "clearFormat(): void"
         },
         "getBorders": {
           "arity": 2,
           "cost": 100000,
           "kind": "host",
-          "host": "getApi:ConditionalRangeFormat.getBorders"
+          "host": "getApi:ConditionalRangeFormat.getBorders",
+          "signature": "getBorders(): ConditionalRangeBorder[]"
         },
         "getConditionalRangeBorderTop": {
           "arity": 2,
           "cost": 100000,
           "kind": "host",
-          "host": "getApi:ConditionalRangeFormat.getConditionalRangeBorderTop"
+          "host": "getApi:ConditionalRangeFormat.getConditionalRangeBorderTop",
+          "signature": "getConditionalRangeBorderTop(): ConditionalRangeBorder"
         },
         "getConditionalRangeBorderBottom": {
           "arity": 2,
           "cost": 100000,
           "kind": "host",
-          "host": "getApi:ConditionalRangeFormat.getConditionalRangeBorderBottom"
+          "host": "getApi:ConditionalRangeFormat.getConditionalRangeBorderBottom",
+          "signature": "getConditionalRangeBorderBottom(): ConditionalRangeBorder"
         },
         "getConditionalRangeBorderLeft": {
           "arity": 2,
           "cost": 100000,
           "kind": "host",
-          "host": "getApi:ConditionalRangeFormat.getConditionalRangeBorderLeft"
+          "host": "getApi:ConditionalRangeFormat.getConditionalRangeBorderLeft",
+          "signature": "getConditionalRangeBorderLeft(): ConditionalRangeBorder"
         },
         "getConditionalRangeBorderRight": {
           "arity": 2,
           "cost": 100000,
           "kind": "host",
-          "host": "getApi:ConditionalRangeFormat.getConditionalRangeBorderRight"
+          "host": "getApi:ConditionalRangeFormat.getConditionalRangeBorderRight",
+          "signature": "getConditionalRangeBorderRight(): ConditionalRangeBorder"
         },
         "getConditionalRangeBorder": {
           "arity": 2,
           "cost": 100000,
           "kind": "host",
-          "host": "getApi:ConditionalRangeFormat.getConditionalRangeBorder"
+          "host": "getApi:ConditionalRangeFormat.getConditionalRangeBorder",
+          "signature": "getConditionalRangeBorder( index: ConditionalRangeBorderIndex ): ConditionalRangeBorder"
         }
       }
     },
@@ -2291,67 +2664,78 @@
           "kind": "host",
           "host": "getApi:ConditionalRangeFont.getBold",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getBold(): boolean"
         },
         "setBold": {
           "kind": "host",
           "host": "setApi:ConditionalRangeFont.setBold",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "setBold(bold: boolean): void"
         },
         "getColor": {
           "kind": "host",
           "host": "getApi:ConditionalRangeFont.getColor",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getColor(): string"
         },
         "setColor": {
           "kind": "host",
           "host": "setApi:ConditionalRangeFont.setColor",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "setColor(color: string): void"
         },
         "getItalic": {
           "kind": "host",
           "host": "getApi:ConditionalRangeFont.getItalic",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getItalic(): boolean"
         },
         "setItalic": {
           "kind": "host",
           "host": "setApi:ConditionalRangeFont.setItalic",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "setItalic(italic: boolean): void"
         },
         "getStrikethrough": {
           "kind": "host",
           "host": "getApi:ConditionalRangeFont.getStrikethrough",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getStrikethrough(): boolean"
         },
         "setStrikethrough": {
           "kind": "host",
           "host": "setApi:ConditionalRangeFont.setStrikethrough",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "setStrikethrough(strikethrough: boolean): void"
         },
         "getUnderline": {
           "kind": "host",
           "host": "getApi:ConditionalRangeFont.getUnderline",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getUnderline(): ConditionalRangeFontUnderlineStyle"
         },
         "setUnderline": {
           "kind": "host",
           "host": "setApi:ConditionalRangeFont.setUnderline",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "setUnderline(underline: ConditionalRangeFontUnderlineStyle): void"
         },
         "clear": {
           "kind": "host",
           "host": "setApi:ConditionalRangeFont.clear",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "clear(): void"
         }
       }
     },
@@ -2361,19 +2745,22 @@
           "kind": "host",
           "host": "getApi:ConditionalRangeFill.getColor",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getColor(): string"
         },
         "setColor": {
           "kind": "host",
           "host": "setApi:ConditionalRangeFill.setColor",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "setColor(color: string): void"
         },
         "clear": {
           "kind": "host",
           "host": "setApi:ConditionalRangeFill.clear",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "clear(): void"
         }
       }
     },
@@ -2383,79 +2770,92 @@
           "kind": "host",
           "host": "getApi:Comment.getAuthorName",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getAuthorName(): string"
         },
         "getContent": {
           "kind": "host",
           "host": "getApi:Comment.getContent",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getContent(): string"
         },
         "setContent": {
           "kind": "host",
           "host": "setApi:Comment.setContent",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "setContent(content: string): void"
         },
         "getContentType": {
           "kind": "host",
           "host": "getApi:Comment.getContentType",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getContentType(): ContentType"
         },
         "getCreationDate": {
           "kind": "host",
           "host": "getApi:Comment.getCreationDate",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getCreationDate(): Date"
         },
         "getId": {
           "kind": "host",
           "host": "getApi:Comment.getId",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getId(): string"
         },
         "getResolved": {
           "kind": "host",
           "host": "getApi:Comment.getResolved",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getResolved(): boolean"
         },
         "setResolved": {
           "kind": "host",
           "host": "setApi:Comment.setResolved",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "setResolved(resolved: boolean): void"
         },
         "delete": {
           "kind": "host",
           "host": "setApi:Comment.delete",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "delete(): void"
         },
         "getLocation": {
           "kind": "host",
           "host": "getApi:Comment.getLocation",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getLocation(): Range"
         },
         "getReplies": {
           "kind": "host",
           "host": "getApi:Comment.getReplies",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getReplies(): CommentReply[]"
         },
         "addCommentReply": {
           "kind": "host",
           "host": "setApi:Comment.addCommentReply",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "addCommentReply( content: CommentRichContent | string, contentType?: ContentType ): CommentReply"
         },
         "getCommentReply": {
           "kind": "host",
           "host": "getApi:Comment.getCommentReply",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getCommentReply(commentReplyId: string): CommentReply | undefined"
         }
       }
     },
@@ -2465,61 +2865,71 @@
           "kind": "host",
           "host": "getApi:CommentReply.getAuthorName",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getAuthorName(): string"
         },
         "getContent": {
           "kind": "host",
           "host": "getApi:CommentReply.getContent",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getContent(): string"
         },
         "setContent": {
           "kind": "host",
           "host": "setApi:CommentReply.setContent",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "setContent(content: string): void"
         },
         "getContentType": {
           "kind": "host",
           "host": "getApi:CommentReply.getContentType",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getContentType(): ContentType"
         },
         "getCreationDate": {
           "kind": "host",
           "host": "getApi:CommentReply.getCreationDate",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getCreationDate(): Date"
         },
         "getId": {
           "kind": "host",
           "host": "getApi:CommentReply.getId",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getId(): string"
         },
         "getResolved": {
           "kind": "host",
           "host": "getApi:CommentReply.getResolved",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getResolved(): boolean"
         },
         "delete": {
           "kind": "host",
           "host": "setApi:CommentReply.delete",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "delete(): void"
         },
         "getLocation": {
           "kind": "host",
           "host": "getApi:CommentReply.getLocation",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getLocation(): Range"
         },
         "getParentComment": {
           "kind": "host",
           "host": "getApi:CommentReply.getParentComment",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getParentComment(): Comment"
         }
       }
     },
@@ -2529,31 +2939,36 @@
           "arity": 2,
           "cost": 100000,
           "kind": "host",
-          "host": "getApi:ConditionalRangeBorder.getColor"
+          "host": "getApi:ConditionalRangeBorder.getColor",
+          "signature": "getColor(): string"
         },
         "getSideIndex": {
           "arity": 2,
           "cost": 100000,
           "kind": "host",
-          "host": "getApi:ConditionalRangeBorder.getSideIndex"
+          "host": "getApi:ConditionalRangeBorder.getSideIndex",
+          "signature": "getSideIndex(): ConditionalRangeBorderIndex"
         },
         "setColor": {
           "arity": 2,
           "cost": 20000,
           "kind": "host",
-          "host": "setApi:ConditionalRangeBorder.setColor"
+          "host": "setApi:ConditionalRangeBorder.setColor",
+          "signature": "setColor(color: string): void"
         },
         "getStyle": {
           "arity": 2,
           "cost": 100000,
           "kind": "host",
-          "host": "getApi:ConditionalRangeBorder.getStyle"
+          "host": "getApi:ConditionalRangeBorder.getStyle",
+          "signature": "getStyle(): ConditionalRangeBorderLineStyle"
         },
         "setStyle": {
           "arity": 2,
           "cost": 20000,
           "kind": "host",
-          "host": "setApi:ConditionalRangeBorder.setStyle"
+          "host": "setApi:ConditionalRangeBorder.setStyle",
+          "signature": "setStyle(style: ConditionalRangeBorderLineStyle): void"
         }
       }
     },
@@ -2563,13 +2978,15 @@
           "arity": 2,
           "cost": 100000,
           "kind": "host",
-          "host": "getApi:ChartAxes.getValueAxis"
+          "host": "getApi:ChartAxes.getValueAxis",
+          "signature": "getValueAxis(): ChartAxis"
         },
         "getCategoryAxis": {
           "arity": 2,
           "cost": 100000,
           "kind": "host",
-          "host": "getApi:ChartAxes.getCategoryAxis"
+          "host": "getApi:ChartAxes.getCategoryAxis",
+          "signature": "getCategoryAxis(): ChartAxis"
         }
       }
     },
@@ -2579,96 +2996,113 @@
           "arity": 2,
           "cost": 100000,
           "kind": "host",
-          "host": "getApi:ChartAxis.getNumberFormat"
+          "host": "getApi:ChartAxis.getNumberFormat",
+          "signature": "getNumberFormat(): string"
         },
         "getMaximum": {
           "arity": 2,
           "cost": 100000,
           "kind": "host",
-          "host": "getApi:ChartAxis.getMaximum"
+          "host": "getApi:ChartAxis.getMaximum",
+          "signature": "getMaximum(): number"
         },
         "setMinimum": {
           "arity": 2,
           "cost": 20000,
           "kind": "host",
-          "host": "setApi:ChartAxis.setMinimum"
+          "host": "setApi:ChartAxis.setMinimum",
+          "signature": "setMinimum(minimum: number): void"
         },
         "setNumberFormat": {
           "arity": 2,
           "cost": 20000,
           "kind": "host",
-          "host": "setApi:ChartAxis.setNumberFormat"
+          "host": "setApi:ChartAxis.setNumberFormat",
+          "signature": "setNumberFormat(numberFormat: string): void"
         },
         "setMaximum": {
           "arity": 2,
           "cost": 20000,
           "kind": "host",
-          "host": "setApi:ChartAxis.setMaximum"
+          "host": "setApi:ChartAxis.setMaximum",
+          "signature": "setMaximum(maximum: number): void"
         },
         "getMinimum": {
           "arity": 2,
           "cost": 100000,
           "kind": "host",
-          "host": "getApi:ChartAxis.getMinimum"
+          "host": "getApi:ChartAxis.getMinimum",
+          "signature": "getMinimum(): number"
         }
       }
     },
     "RemoveDuplicatesResult": {
       "members": {
         "getRemoved": {
-          "kind": "local"
+          "kind": "local",
+          "signature": "getRemoved(): number"
         },
         "getUniqueRemaining": {
-          "kind": "local"
+          "kind": "local",
+          "signature": "getUniqueRemaining(): number"
         }
       }
     },
     "NamedItem": {
       "members": {
         "getName": {
-          "kind": "local"
+          "kind": "local",
+          "signature": "getName(): string"
         },
         "getFormula": {
           "kind": "host",
           "host": "getApi:NamedItem.getFormula",
           "arity": 2,
-          "cost": 1
+          "cost": 1,
+          "signature": "getFormula(): string"
         },
         "setFormula": {
           "kind": "host",
           "host": "setApi:NamedItem.setFormula",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "setFormula(formula: string): void"
         },
         "getValue": {
           "kind": "host",
           "host": "getApi:NamedItem.getValue",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getValue(): string | number"
         },
         "getType": {
           "kind": "host",
           "host": "getApi:NamedItem.getType",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getType(): NamedItemType"
         },
         "getScope": {
-          "kind": "local"
+          "kind": "local",
+          "signature": "getScope(): NamedItemScope"
         },
         "getWorksheet": {
-          "kind": "local"
+          "kind": "local",
+          "signature": "getWorksheet(): Worksheet | undefined"
         },
         "getRange": {
           "kind": "host",
           "host": "getApi:NamedItem.getRange",
           "arity": 2,
-          "cost": 100000
+          "cost": 100000,
+          "signature": "getRange(): Range"
         },
         "delete": {
           "kind": "host",
           "host": "setApi:NamedItem.delete",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "delete(): void"
         }
       }
     },
@@ -2678,31 +3112,36 @@
           "kind": "host",
           "host": "setApi:WorksheetFreezePanes.freezeAt",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "freezeAt(frozenRange: Range | string): void"
         },
         "freezeColumns": {
           "kind": "host",
           "host": "setApi:WorksheetFreezePanes.freezeColumns",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "freezeColumns(count?: number): void"
         },
         "freezeRows": {
           "kind": "host",
           "host": "setApi:WorksheetFreezePanes.freezeRows",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "freezeRows(count?: number): void"
         },
         "getLocation": {
           "kind": "host",
           "host": "getApi:WorksheetFreezePanes.getLocation",
           "arity": 2,
-          "cost": 1
+          "cost": 1,
+          "signature": "getLocation(): Range"
         },
         "unfreeze": {
           "kind": "host",
           "host": "setApi:WorksheetFreezePanes.unfreeze",
           "arity": 2,
-          "cost": 20000
+          "cost": 20000,
+          "signature": "unfreeze(): void"
         }
       }
     }

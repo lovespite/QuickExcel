@@ -1,0 +1,9 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003" DefaultTargets="Build">
+  <ItemGroup><Bootstrapper Include="QuickExcel.WebView2.x64"><Install>true</Install></Bootstrapper></ItemGroup>
+  <Target Name="Build">
+    <GenerateBootstrapper ApplicationFile="QuickExcel.application" ApplicationName="QuickExcel"
+      BootstrapperItems="@(Bootstrapper)" ComponentsLocation="Relative" CopyComponents="true"
+      Culture="zh-Hans" FallbackCulture="en" OutputPath="$(InstallerOutput)" Path="$(BootstrapperRoot)"
+      Validate="true" />
+  </Target>
+</Project>

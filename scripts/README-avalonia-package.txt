@@ -1,6 +1,6 @@
 QuickExcel Avalonia — Windows x64 (version and identity: release.json)
 
-Run QuickExcel.Avalonia.exe. .NET 10 and the isolated script worker are included.
+Run quickxl.exe. .NET 10 and the isolated script worker are included.
 Monaco and PDF.js are bundled locally; Node and an internet connection are not needed.
 
 Microsoft Edge WebView2 Evergreen Runtime is required for script editing and PDF preview.
@@ -12,12 +12,12 @@ QuickExcel does not silently download/install software or use Edge preview chann
 Existing file/grid work remains available if the WebView Runtime is missing.
 
 Self-check (writes only new diagnostic files; use a new empty destination):
-  QuickExcel.Avalonia.exe --self-check C:\Users\YOUR_NAME\Desktop\QuickExcel-check
+  quickxl.exe --self-check C:\Users\YOUR_NAME\Desktop\QuickExcel-check
 Custom isolated settings:
-  QuickExcel.Avalonia.exe --user-data C:\Users\YOUR_NAME\QuickExcel-settings [workbook.xlsq]
+  quickxl.exe --user-data C:\Users\YOUR_NAME\QuickExcel-settings [workbook.xlsq]
 
 Disable all workbook scripts and execution/compiler workers:
-  QuickExcel.Avalonia.exe --no-scripts [workbook.xlsq]
+  quickxl.exe --no-scripts [workbook.xlsq]
 Or set QUICKEXCEL_NO_SCRIPTS=1 in the process, Windows user or machine environment.
 The Scripts & API settings page also has a Disable scripts checkbox (immediate).
 Any active source overrides signatures and trust; the status bar lists every source.

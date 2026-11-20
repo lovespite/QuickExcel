@@ -58,7 +58,7 @@ internal static class WindowsFileAssociations
 
     internal static void ApplyAndOpenDefaults(IReadOnlyCollection<string> selected)
     {
-        var executable = Path.Combine(AppContext.BaseDirectory, "QuickExcel.Avalonia.exe");
+        var executable = Path.Combine(AppContext.BaseDirectory, "quickxl.exe");
         if (!File.Exists(executable)) throw new FileNotFoundException(UiText.Get("找不到 QuickExcel 启动程序。"), executable);
         Register(Registry.CurrentUser, executable, selected);
         SHChangeNotify(0x08000000, 0, IntPtr.Zero, IntPtr.Zero); // SHCNE_ASSOCCHANGED

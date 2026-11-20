@@ -1,6 +1,5 @@
 using System.Reflection;
 using System.Runtime.InteropServices;
-using System.Text.Json;
 using Avalonia;
 using Avalonia.Automation;
 using Avalonia.Controls;
@@ -49,28 +48,113 @@ internal sealed partial class SettingsWindow
             ? UiText.Format($"JSC 内核    {WorkerProtocol.Engine}\nWorker 协议    {WorkerProtocol.Version}")
             : UiText.Get("当前平台的脚本执行已停用。")));
         _page.Children.Add(Heading(UiText.Get("API 支持矩阵"), 16));
-        _page.Children.Add(Note(UiText.Get("下表列出运行时支持的对象成员和枚举值。未列出的 Office Scripts 成员尚未实现。")));
-        using var manifest = JsonDocument.Parse(ScriptCapabilities.Current.Json);
-        var rows = new List<string>();
-        foreach (var type in manifest.RootElement.GetProperty("types").EnumerateObject())
-            foreach (var member in type.Value.GetProperty("members").EnumerateObject())
-                rows.Add($"{type.Name}.{member.Name}    ·    " + (member.Value.GetProperty("kind").GetString() == "host" ? UiText.Get("宿主调用") : UiText.Get("本地成员")));
-        foreach (var type in manifest.RootElement.GetProperty("enums").EnumerateObject())
-            foreach (var member in type.Value.EnumerateObject())
-                rows.Add(UiText.Format($"{type.Name}.{member.Name}    ·    枚举值 {member.Value.GetInt32()}"));
-        rows.Sort(StringComparer.OrdinalIgnoreCase);
+        _page.Children.Add(Note(UiText.Get("左侧按类型列出运行时支持的对象成员和枚举值；展开类型并选择一项可查看签名与调用方式。未列出的 Office Scripts 成员尚未实现。")));
+        var entries = ScriptApiCatalog.Parse(ScriptCapabilities.Current.Json);
         var filter = new TextBox { Name = "SettingsApiSearch", PlaceholderText = UiText.Get("搜索对象或成员，如 Range.getValues") };
-        var list = new ListBox { Name = "SettingsApiMatrix", Height = 230 };
+        var tree = new TreeView { Name = "SettingsApiTree" };
         var summary = Note("");
-        AutomationProperties.SetName(filter, UiText.Get("搜索 API 支持矩阵")); AutomationProperties.SetName(list, UiText.Get("支持的对象成员和枚举值"));
-        void Filter()
+        AutomationProperties.SetName(filter, UiText.Get("搜索 API 支持矩阵")); AutomationProperties.SetName(tree, UiText.Get("支持的对象成员和枚举值"));
+        var detailTitle = new TextBlock { Name = "SettingsApiDetailTitle", FontSize = 15, FontWeight = FontWeight.SemiBold, TextWrapping = TextWrapping.Wrap };
+        var detailKind = Note("");
+        detailKind.Name = "SettingsApiDetailKind";
+        var detailSignature = new TextBox
         {
-            var visible = rows.Where(row => row.Contains(filter.Text?.Trim() ?? "", StringComparison.OrdinalIgnoreCase)).ToArray();
-            list.ItemsSource = visible;
-            summary.Text = visible.Length == 0 ? UiText.Get("没有匹配的已支持成员。") : UiText.Format($"显示 {visible.Length} / {rows.Count} 项");
+            Name = "SettingsApiSignature", IsReadOnly = true, AcceptsReturn = true, TextWrapping = TextWrapping.Wrap,
+            FontFamily = new FontFamily("Cascadia Mono, Consolas, monospace"), FontSize = 12.5,
+            Background = Brushes.Transparent, BorderThickness = new Thickness(0), Padding = default, IsTabStop = false
+        };
+        var detailMeta = Note("");
+        var detailNote = Note("");
+        var detailPanel = new StackPanel { Spacing = 6, Children = { detailTitle, detailKind, detailSignature, detailMeta, detailNote } };
+        var detailView = new ScrollViewer { Content = detailPanel, HorizontalScrollBarVisibility = global::Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled };
+        var detail = new Border
+        {
+            Name = "SettingsApiDetail", Background = Brush.Parse("#F5F8F6"), CornerRadius = new CornerRadius(6),
+            Padding = new Thickness(12), Child = detailView
+        };
+        AutomationProperties.SetName(detail, UiText.Get("成员签名和说明"));
+        var browser = new LayoutGrid { Height = 320, ColumnDefinitions = new("3*,2*"), ColumnSpacing = 12 };
+        browser.Children.Add(tree); LayoutGrid.SetColumn(detail, 1); browser.Children.Add(detail);
+        void Show(ScriptApiEntry? entry)
+        {
+            if (entry is null)
+            {
+                detailTitle.Text = UiText.Get("选择一个成员或枚举值查看详情。");
+                detailKind.Text = detailMeta.Text = detailSignature.Text = "";
+                detailKind.IsVisible = detailMeta.IsVisible = detailSignature.IsVisible = false;
+                detailNote.Text = UiText.Get("展开类型并选择成员查看签名、调用方式和预算权重。");
+                return;
+            }
+            detailTitle.Text = entry.Path;
+            detailKind.IsVisible = true;
+            detailKind.Text = entry.Kind switch
+            {
+                ScriptApiKind.Host => UiText.Get("宿主调用"),
+                ScriptApiKind.EnumValue => UiText.Get("枚举值"),
+                _ => UiText.Get("本地成员")
+            };
+            detailSignature.Text = entry.Signature ?? "";
+            detailSignature.IsVisible = !string.IsNullOrWhiteSpace(entry.Signature);
+            detailMeta.Text = entry.Kind switch
+            {
+                ScriptApiKind.Host => UiText.Format($"宿主方法 {entry.HostMethod} · 参数个数 {entry.Arity} · 预算权重 {entry.Cost}"),
+                ScriptApiKind.EnumValue => UiText.Format($"数值 {entry.Value}"),
+                _ => ""
+            };
+            detailMeta.IsVisible = detailMeta.Text.Length > 0;
+            detailNote.Text = entry.Summary ?? entry.Kind switch
+            {
+                ScriptApiKind.Host => UiText.Get("由宿主在隔离 worker 中执行；参数个数包含句柄上下文，调用预算按能力清单校验。"),
+                ScriptApiKind.EnumValue => UiText.Format($"运行时注入的只读枚举值：QuickExcel.{entry.TypeName}.{entry.Name}。"),
+                _ => UiText.Get("在 JavaScript 内完成句柄运算，不产生宿主调用。")
+            };
+            if (entry.Kind != ScriptApiKind.EnumValue && entry.Signature?.Contains('?') == true)
+                detailNote.Text += "\n" + UiText.Get("参数签名中的 ? 表示可选参数。");
         }
-        filter.TextChanged += (_, _) => Filter();
-        _page.Children.Add(filter); _page.Children.Add(summary); _page.Children.Add(list); Filter();
+        static StackPanel Header(string name, string? hint, bool group)
+        {
+            var line = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+            line.Children.Add(new TextBlock { Text = name, FontWeight = group ? FontWeight.SemiBold : FontWeight.Normal, VerticalAlignment = VerticalAlignment.Center });
+            if (hint is not null)
+                line.Children.Add(new TextBlock { Text = hint, Foreground = Brush.Parse("#7A8B83"), FontSize = 11, VerticalAlignment = VerticalAlignment.Center });
+            return line;
+        }
+        void Build()
+        {
+            var visible = ScriptApiCatalog.Filter(entries, filter.Text);
+            var expand = !string.IsNullOrWhiteSpace(filter.Text);
+            var roots = new List<TreeViewItem>();
+            foreach (var (title, isEnum) in new[] { (UiText.Get("对象成员"), false), (UiText.Get("枚举值"), true) })
+            {
+                var types = visible.Where(entry => (entry.Kind == ScriptApiKind.EnumValue) == isEnum)
+                    .GroupBy(entry => entry.TypeName).OrderBy(group => group.Key, StringComparer.OrdinalIgnoreCase).ToArray();
+                if (types.Length == 0) continue;
+                var group = new TreeViewItem { Header = Header(title, types.Sum(type => type.Count()).ToString(), true), IsExpanded = true };
+                foreach (var type in types)
+                {
+                    var item = new TreeViewItem { Header = Header(type.Key, type.Count().ToString(), false), IsExpanded = expand };
+                    foreach (var entry in type)
+                    {
+                        var hint = entry.Kind switch
+                        {
+                            ScriptApiKind.Host => UiText.Get("宿主调用"),
+                            ScriptApiKind.EnumValue => "= " + entry.Value,
+                            _ => UiText.Get("本地成员")
+                        };
+                        item.Items.Add(new TreeViewItem { Header = Header(entry.Name, hint, false), Tag = entry });
+                    }
+                    group.Items.Add(item);
+                }
+                roots.Add(group);
+            }
+            tree.Items.Clear();
+            foreach (var root in roots) tree.Items.Add(root);
+            summary.Text = visible.Count == 0 ? UiText.Get("没有匹配的已支持成员。") : UiText.Format($"显示 {visible.Count} / {entries.Count} 项");
+        }
+        filter.TextChanged += (_, _) => Build();
+        tree.SelectionChanged += (_, _) => Show((tree.SelectedItem as TreeViewItem)?.Tag as ScriptApiEntry);
+        _page.Children.Add(filter); _page.Children.Add(summary); _page.Children.Add(browser);
+        Build(); Show(null);
         _page.Children.Add(Note(UiText.Get("脚本按模块角色自动发现导出的自定义函数、操作和事件处理器；主入口用于初始化。")));
     }
 

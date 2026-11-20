@@ -5,7 +5,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AssemblyName>QuickExcel.Avalonia</AssemblyName>
-    <Version>3.11.0</Version>
+    <Version>3.13.0</Version>
     <QuickExcelDiagnostics Condition="'$(QuickExcelDiagnostics)' == ''">true</QuickExcelDiagnostics>
     <DefineConstants Condition="'$(QuickExcelDiagnostics)' == 'true'">$(DefineConstants);QUICKEXCEL_DIAGNOSTICS</DefineConstants>
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
@@ -48,6 +48,21 @@
     <ItemGroup>
       <RuntimeCopyLocalItems Remove="@(RuntimeCopyLocalItems)" Condition="'%(Filename)' == 'Avalonia.DesignerSupport'" />
     </ItemGroup>
+  </Target>
+  <!-- Rename only the Windows apphost. The managed assembly, resource URIs and
+       Unix executables retain their existing names. Apply before target paths
+       are assigned so build, publish and clean all track the same output. -->
+  <Target Name="NameWindowsLauncher" AfterTargets="_ComputeNETCoreBuildOutputFiles"
+          Condition="'$(UseAppHost)' == 'true' and '$(_NativeExecutableExtension)' == '.exe'">
+    <ItemGroup>
+      <None Condition="'%(None.Identity)' == '$(AppHostIntermediatePath)'">
+        <Link>quickxl.exe</Link>
+      </None>
+    </ItemGroup>
+  </Target>
+  <Target Name="RunWindowsLauncher" BeforeTargets="ComputeRunArguments"
+          Condition="'$(UseAppHost)' == 'true' and '$(_NativeExecutableExtension)' == '.exe' and '$(StartAction)' != 'Program'">
+    <PropertyGroup><RunCommand>$(TargetDir)quickxl.exe</RunCommand></PropertyGroup>
   </Target>
   <Target Name="IncludeDotNetRuntimeNotices" AfterTargets="ComputeFilesToPublish" Condition="'$(SelfContained)' == 'true'">
     <ItemGroup>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Package xmlns="http://schemas.microsoft.com/developer/2004/01/bootstrapper" Name="DisplayName" Culture="Culture">
+  <Strings>
+    <String Name="DisplayName">Microsoft Edge WebView2 Runtime (x64)</String>
+    <String Name="Culture">zh-Hans</String>
+    <String Name="InvalidArchitecture">QuickExcel 需要 Windows x64。</String>
+    <String Name="InvalidWindows">QuickExcel 需要受支持的 Windows 10/11 x64。</String>
+    <String Name="InstallFailed">WebView2 Runtime 在线安装失败。请确认网络可连接 Microsoft 下载服务，并查看安装日志后重试。</String>
+  </Strings>
+</Package>

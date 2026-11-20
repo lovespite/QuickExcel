@@ -1,7 +1,8 @@
 [CmdletBinding()]
 param([switch]$SkipTests, [switch]$CreateArchive, [switch]$RunSmoke,
       [string]$OutputDirectory = '', [switch]$Activate,
-      [ValidateSet('Jsc')][string]$ScriptEngine = 'Jsc')
+      [ValidateSet('Jsc')][string]$ScriptEngine = 'Jsc',
+      [string]$CodeSigningCertificateThumbprint = '')
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 $root = [IO.Path]::GetFullPath((Split-Path $PSScriptRoot -Parent))
@@ -45,9 +46,10 @@ try {
     foreach ($notice in @('THIRD-PARTY-LICENSES.md','OFFICE-SCRIPTS-NOTICE.md','MARKDOWN-AVALONIA-LICENSE.txt','DOTNET-LICENSE.txt','DOTNET-THIRD-PARTY-NOTICES.txt')) {
         if (-not (Test-Path -LiteralPath (Join-Path $package "Licenses/$notice") -PathType Leaf)) { throw "Missing product license notice: $notice" }
     }
-    foreach ($file in (@('QuickExcel.Avalonia.exe','QuickExcel.Avalonia.dll','QuickExcel.Avalonia.deps.json','Assets/QuickExcel-XLSQ.ico','coreclr.dll','hostfxr.dll','QuickExcel.Grid.Avalonia.dll','libSkiaSharp.dll','libHarfBuzzSharp.dll','Web/manifest.json','ScriptWorker/QuickExcel.ScriptWorker.exe','ScriptWorker/coreclr.dll') + @($engineFiles | ForEach-Object { 'ScriptWorker/' + $_ }))) {
+    foreach ($file in (@('quickxl.exe','QuickExcel.Avalonia.dll','QuickExcel.Avalonia.deps.json','Assets/QuickExcel-XLSQ.ico','coreclr.dll','hostfxr.dll','QuickExcel.Grid.Avalonia.dll','libSkiaSharp.dll','libHarfBuzzSharp.dll','Web/manifest.json','ScriptWorker/QuickExcel.ScriptWorker.exe','ScriptWorker/coreclr.dll') + @($engineFiles | ForEach-Object { 'ScriptWorker/' + $_ }))) {
         if (-not (Test-Path -LiteralPath (Join-Path $package $file) -PathType Leaf)) { throw "Missing release payload: $file" }
     }
+    if (Test-Path -LiteralPath (Join-Path $package 'QuickExcel.Avalonia.exe')) { throw 'The Windows package must contain only the renamed quickxl.exe apphost.' }
     foreach ($file in @('Markdown.Avalonia.dll','ColorDocument.Avalonia.dll','ColorTextBlock.Avalonia.dll')) {
         if (-not (Test-Path -LiteralPath (Join-Path $package $file) -PathType Leaf)) { throw "Missing license viewer dependency: $file" }
     }
@@ -81,10 +83,14 @@ try {
     $metadata=Join-Path $package 'metadata'; New-Item -ItemType Directory -Path $metadata | Out-Null
     Copy-Item -LiteralPath $lockDirectory -Destination $metadata -Recurse
     Copy-Item -LiteralPath (Join-Path $root 'QuickExcel.Web/package-lock.json') -Destination (Join-Path $metadata 'web-package-lock.json')
+    if ($CodeSigningCertificateThumbprint) {
+        $code = @(Get-ChildItem -LiteralPath $package -Recurse -File | Where-Object { $_.Name -match '^QuickExcel\..*\.(exe|dll)$|^quickxl\.exe$' } | ForEach-Object FullName)
+        & "$PSScriptRoot/sign-windows-code.ps1" -CertificateThumbprint $CodeSigningCertificateThumbprint -Path $code
+    }
     $selfCheck = 'not-run'
     if ($RunSmoke -or $CreateArchive -or $Activate) {
         $checkDirectory = Join-Path $evidence 'self-check'
-        $process = Start-Process -FilePath (Join-Path $package 'QuickExcel.Avalonia.exe') -ArgumentList @('--self-check', ('"{0}"' -f $checkDirectory)) -WorkingDirectory $package -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $evidence 'stdout.log') -RedirectStandardError (Join-Path $evidence 'stderr.log')
+        $process = Start-Process -FilePath (Join-Path $package 'quickxl.exe') -ArgumentList @('--self-check', ('"{0}"' -f $checkDirectory)) -WorkingDirectory $package -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $evidence 'stdout.log') -RedirectStandardError (Join-Path $evidence 'stderr.log')
         try {
             if (-not $process.WaitForExit(90000)) { throw 'Published self-check exceeded 90 seconds.' }
             $process.WaitForExit()

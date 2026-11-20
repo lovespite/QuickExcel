@@ -11,7 +11,7 @@ try {
         dotnet build QuickExcel.Desktop.Avalonia/QuickExcel.Desktop.Avalonia.csproj -c Release --artifacts-path artifacts/build -p:RestoreLockedMode=true -v minimal 2>&1 | Tee-Object -FilePath (Join-Path $run 'build.log')
         if ($LASTEXITCODE -ne 0) { throw 'Avalonia workspace build failed.' }
     }
-    $exe = Join-Path $root 'artifacts/build/bin/QuickExcel.Desktop.Avalonia/release/QuickExcel.Avalonia.exe'
+    $exe = Join-Path $root 'artifacts/build/bin/QuickExcel.Desktop.Avalonia/release/quickxl.exe'
     $argument = switch ($Mode) { 'Recovery' { '--recovery-smoke' }; 'CellContent' { '--cell-content-smoke' }; 'FormulaAudit' { '--formula-audit-smoke' }; 'ArithmeticPaste' { '--arithmetic-paste-smoke' }; 'AdvancedFilters' { '--advanced-filters-smoke' }; 'VisibleTransfer' { '--visible-transfer-smoke' }; 'SpecialSelection' { '--special-selection-smoke' }; 'CommonFunctions' { '--common-functions-smoke' }; 'TextExchange' { '--text-exchange-smoke' }; 'PasteOptions' { '--paste-options-smoke' }; 'Sheets' { '--sheets-smoke' }; 'DataTools' { '--data-tools-smoke' }; 'Borders' { '--borders-smoke' }; 'TextRotation' { '--text-rotation-smoke' }; 'NumberFormat' { '--number-format-smoke' }; 'Menus' { '--menus-smoke' }; 'ConditionalFormat' { '--conditional-format-smoke' }; 'Colors' { '--colors-smoke' }; 'Drawing' { '--drawing-smoke' }; 'Grid' { '--grid-smoke' }; 'PageBreak' { '--page-break-smoke' }; 'Compatibility' { '--compatibility-smoke' }; 'RibbonFilter' { '--ribbon-filter-smoke' }; 'Automation' { '--automation-smoke' }; 'Execution' { '--execution-smoke' }; default { '--workspace-smoke' } }
     if ($Mode -eq 'CellStyles') { $argument = '--cell-styles-smoke' }
     if ($Mode -eq 'Closing') { $argument = '--closing-smoke' }

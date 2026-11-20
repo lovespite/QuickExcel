@@ -22,7 +22,7 @@ try {
         Write-Host "PASS: all independent Web benchmarks. Evidence: $run"
         return
     }
-    $exe = Join-Path $root 'artifacts/build/bin/QuickExcel.Desktop.Avalonia/release/QuickExcel.Avalonia.exe'
+    $exe = Join-Path $root 'artifacts/build/bin/QuickExcel.Desktop.Avalonia/release/quickxl.exe'
     $process = Start-Process -FilePath $exe -ArgumentList @('--web-benchmark', ('"{0}"' -f $run), $Mode) -WorkingDirectory $root -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $run 'stdout.log') -RedirectStandardError (Join-Path $run 'stderr.log')
     try {
         if (-not $process.WaitForExit(600000)) { throw "Web benchmark exceeded ten minutes: $run" }

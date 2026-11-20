@@ -30,7 +30,7 @@ node .\tools\QuickExcel.ApiGen\test\generate.test.mjs
 ## 生成内容
 
 - `quickexcel.d.ts`：全量类型骨架，命名空间改为 `QuickExcel`，移除 Microsoft 的注释与 `OfficeScript` 命名空间，追加手写扩展。
-- `capabilities.json`：只列已实现成员，供 worker 代理与宿主白名单使用；同时生成所选枚举的数值与工作表边界。
+- `capabilities.json`：只列已实现成员，供 worker 代理、宿主白名单和设置页 API 浏览器使用；每个成员附带来自固定声明的 `signature`（不含 Microsoft 文档注释），同时生成所选枚举的数值与工作表边界。
 - `coverage.json`：已实现类型/成员与全量类型/成员的覆盖统计，用于评估"类型全量、实现少量"的差距。
 
 ## 维护能力清单
@@ -42,6 +42,7 @@ node .\tools\QuickExcel.ApiGen\test\generate.test.mjs
 - `kind` 为 `host` 时，`host` 必须是 `ScriptModelAdapter` 的方法名；
 - `arity` 是宿主调用参数个数，包含 `sheetId`、地址等句柄上下文；
 - `cost` 映射到 76 号文档的单元格预算。
+- 可选的 `summary` 是产品自己维护的成员说明；设置页优先显示它，未提供时显示调用方式。生成器不会写入 Microsoft 文档注释。
 - `enums` 从固定声明 AST 生成运行时数值，注入只读 `QuickExcel` 对象；不手写第二套枚举。
 - `limits` 必须与 Core 的 `WorkbookLimits` 一致。单次调用与累计预算仍由宿主强制验证。
 - `--overrides` 只用于选择其他手写输入（例如合成 fixture），产品默认使用上述文件。固定产品来源每次生成和 `--check` 都校验 SHA-256 与 git blob SHA-1，缺失或不匹配即失败。

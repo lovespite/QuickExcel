@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Product xmlns="http://schemas.microsoft.com/developer/2004/01/bootstrapper" ProductCode="QuickExcel.WebView2.x64">
+  <PackageFiles CopyAllPackageFiles="false">
+    <PackageFile Name="MicrosoftEdgeWebview2Setup.exe" />
+  </PackageFiles>
+  <InstallChecks>
+    <RegistryCheck Property="WebViewMachine" Key="HKLM\SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}" Value="pv" />
+    <RegistryCheck Property="WebViewUser" Key="HKCU\Software\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}" Value="pv" />
+  </InstallChecks>
+  <Commands Reboot="Defer">
+    <Command PackageFile="MicrosoftEdgeWebview2Setup.exe" Arguments="/silent /install">
+      <InstallConditions>
+        <FailIf Property="ProcessorArchitecture" Compare="ValueNotEqualTo" Value="AMD64" String="InvalidArchitecture" />
+        <FailIf Property="VersionNT" Compare="VersionLessThan" Value="10.0" String="InvalidWindows" />
+        <BypassIf Property="WebViewMachine" Compare="VersionGreaterThan" Value="0.0.0.0" />
+        <BypassIf Property="WebViewUser" Compare="VersionGreaterThan" Value="0.0.0.0" />
+      </InstallConditions>
+      <ExitCodes>
+        <ExitCode Value="0" Result="Success" />
+        <ExitCode Value="3010" Result="SuccessReboot" />
+        <DefaultExitCode Result="Fail" FormatMessageFromSystem="true" String="InstallFailed" />
+      </ExitCodes>
+    </Command>
+  </Commands>
+</Product>

@@ -1,5 +1,88 @@
 # A5：Windows 发布、切换与回退
 
+## Windows ClickOnce 发布（2026-11-20）
+
+当前产品版本为 `3.13.0`。Windows 主可执行文件改为 `quickxl.exe`；
+`QuickExcel.Avalonia.dll`、deps/runtimeconfig、产品显示名、隔离 worker 和
+macOS/Linux 可执行文件名称均保持不变。构建、发布、`dotnet run`、文件关联、
+ClickOnce launcher 及诊断脚本使用新入口；本地启动器仍支持历史已验证包的旧入口。
+设置页 API 浏览器在首次选择成员、切换类型或筛选后会恢复显示调用类型标签；
+设置冒烟检查覆盖宿主调用、本地成员和枚举值。
+
+`scripts/new-code-signing-certificate.ps1` 创建 RSA 3072 / SHA-256 的代码签名
+自签证书，有效期精确为创建时间起 10 年。私钥保留在当前用户 `My` 证书存储，
+并将加密 PFX、公钥 CER、证书元数据和 DPAPI 保护的随机 PFX 密码写入新的
+`artifacts/signing/` 目录。该目录仅当前用户可访问；不自动信任证书，不把私钥
+或密码放入发布包。迁移机器前按目录内 README 导出使用自选密码的便携备份。
+
+```powershell
+pwsh -File scripts/new-code-signing-certificate.ps1
+# 使用上一步返回的 thumbprint；后续版本继续使用同一证书：
+pwsh -File scripts/build-clickonce.ps1 -CertificateThumbprint <thumbprint>
+```
+
+ClickOnce 脚本默认调用 `build-quickexcel.ps1 -SkipTests -RunSmoke`，在正式包
+自检及逐文件身份记录前签名 QuickExcel 的 EXE/DLL，再更新本地启动指针。
+`-UseActivePackage` 仅可复用同一内部版本、通过正式自检、文件哈希一致且已由
+指定证书签名的活动包。所有输出都位于本仓库 artifacts；已有包不覆盖。
+
+产品版本来自 Avalonia csproj 的 `Version`，不独立递增 ClickOnce revision。
+例如内部 `3.13.0` 对应 ClickOnce / EXE 文件版本 `3.13.0.0`。
+Microsoft.DotNet.Mage 固定为 10.0.0；现代 .NET 使用
+其 Launcher.exe 启动 `quickxl.exe`，应用和部署清单使用 SHA-256 签名。安装包不带 provider URL
+或 subscription 自动更新配置，可从后续完整包手动更新。
+
+发布目录包含 `setup.exe`、`QuickExcel.application`、完整 Application Files、
+微软签名的 WebView2 Evergreen **在线引导程序**、公钥证书和中文安装说明。
+setup.exe 检测 HKLM/HKCU 的 WebView2 stable Runtime，缺少时通过
+`MicrosoftEdgeWebview2Setup.exe /silent /install` 联网下载并安装对应架构的运行库；
+已安装时跳过。此步骤需要连接 Internet，包内不再包含完整离线运行库。
+微软分发说明：<https://learn.microsoft.com/en-us/microsoft-edge/webview2/concepts/distribution>；
+引导程序来源：<https://go.microsoft.com/fwlink/p/?LinkId=2124703>。
+发布与验证脚本检查 Microsoft 签名及引导程序体积，并拒绝混入旧的完整离线安装器。
+主程序和隔离 worker 各自包含 .NET 10，worker 原生 VC++ 依赖随包携带。
+受支持的 Windows 10/11 x64 提供 ClickOnce 所需的 .NET Framework；无需安装
+.NET SDK。微软安装器原样保留，来源、SHA-256、安装器文件版本记录在
+`clickonce-release.json`；相关声明及 launcher MIT 全文可在设置的许可证列表查看。
+
+`test-clickonce.ps1` 独立验证两个 XML 签名、SHA-256 文件清单的完整覆盖、发布
+和 EXE 版本、现代 .NET launcher 入口、程序签名、必要组件，并对 ClickOnce
+实际载荷重新运行生产自检。WinVerifyTrust 只允许成功或自签证书的
+CERT_E_UNTRUSTEDROOT；损坏文件的 TRUST_E_BAD_DIGEST 仍拒绝。不会通过修改
+信任存储让校验通过。发布另生成完整 ZIP 和 SHA-256 文件。
+
+自签证书不会自动获得 Windows/SmartScreen 信任。目标设备如要求受信任发布者，
+需用户或管理员核对指纹后显式配置证书信任。自动化载荷自检不代表干净设备的
+ClickOnce 安装、缺少 WebView2 时的安装分支或物理输入验收；既有延期门槛保留。
+
+本次 `3.13.0` 验证：API 目录/能力清单/翻译共 10 项定向单元测试通过；
+API 生成器 fixture 自测和正式生成物 `--check` 通过；中英文 Menus 模式分别
+通过 136 项 UI 检查（含调用类型的首次显示、切换及文件关联入口），并检查截图。
+中文证据：`artifacts/avalonia/workspace/20261120-020742-728ff60b`；
+英文证据：`artifacts/avalonia/workspace/menus-en-20261120-020850`（通过 `dotnet run` 启动）。
+Windows 发布已运行 `build-quickexcel.ps1 -SkipTests -RunSmoke` 并签名，
+`active-windows.json` 指向 `artifacts/avalonia/releases/20261120-020817-5493b6da/application`；
+正式包 32 项生产自检通过，`Start-QuickExcel.cmd` 启动同一包的 32 项自检也通过，
+启动器证据：`artifacts/avalonia/launcher-self-check-20261120-020929`。
+ClickOnce `3.13.0.0` 的 756 项文件哈希、两个清单签名、代码签名和实际载荷的
+32 项生产自检通过，证据：`artifacts/clickonce/work/20261120-020930-437bb740/verification`。
+新分发包：`artifacts/clickonce/QuickExcel-3.13.0-win-x64-20261120-020930-437bb740.zip`，
+232,914,231 字节；ZIP 的 763 个条目逐项核对大小和 SHA-256 通过。
+ZIP SHA-256：`4ED9FC1BD8E98A9455FD546D2AB15B61D45ECBA2C65797A19E1B5C556FC8EC6A`。
+WebView2 分发组件由 294,099,168 字节的完整离线安装器改为 1,897,688 字节的
+在线引导程序，Microsoft 签名校验通过，旧离线安装器被新的引导程序检查拒绝。
+未运行全量回归；未执行干净设备 ClickOnce 安装或卸载本机 WebView2。
+
+历史离线包交付记录：内部版本 `3.12.0` / ClickOnce `3.12.0.0`，证书有效期
+2026-11-20 至 2036-11-20，指纹 `4D4195DD8C41C2F6A10AFFF8DE0F0A9674FC3C01`。
+当时活动包为 `artifacts/avalonia/releases/20261120-015011-7ffdc1eb/application`；
+ClickOnce ZIP 为 `artifacts/clickonce/QuickExcel-3.12.0-win-x64-20261120-015312-b0b1b23a.zip`。
+756 项应用文件哈希、两个清单签名、EXE/DLL 签名、32 项生产自检通过；
+ZIP 的 763 个条目逐项复核通过，PFX 可用 DPAPI 密码解密并匹配签名证书。
+校验证据在 `artifacts/clickonce/work/20261120-015312-b0b1b23a/verification`；
+修改 XML 或已签名 PE 的负向检查均拒绝，未运行全量回归。
+ZIP SHA-256：`6E2B86D56271D42FB6375B691EC7D134EEFA9FF7BEFFE55A3F8075B22984E8CB`。
+
 2026-11-03。A5 工程切换完成；A4 提交 `ea396e5`。用户已要求实机项目记入日志后统一验收，Windows 干净设备、IME、物理打印、跨屏 DPI 与辅助技术仍延期，不据此宣称 Beta 或关闭既有 M4/M6 门槛。
 
 ## 发布形态
@@ -24,7 +107,7 @@ WebView 选择开源控件的 WebView2 adapter，要求注册的 **Evergreen sta
 .\scripts\build-quickexcel.ps1 -RunSmoke -CreateArchive
 .\scripts\select-quickexcel-package.ps1 -PackageDirectory <artifacts 内的已验包>
 # 包内安装诊断，目标必须为新目录：
-.\QuickExcel.Avalonia.exe --self-check <新诊断目录>
+.\quickxl.exe --self-check <新诊断目录>
 ```
 
 `--self-check` 是正式包安装诊断，不开放故障 RPC：验证资源清单、运行环境、文件往返、真正 Monaco/语言 worker/草稿确认、AppContainer 原生 worker、PDF.js/生成/导出与关闭。设置和输出只写显式诊断目录；缺少 worker 时无同权限或进程内后备。`--user-data <目录> [文件]` 提供隔离人工验收配置。

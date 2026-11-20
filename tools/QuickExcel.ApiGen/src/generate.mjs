@@ -149,6 +149,8 @@ for (const [typeName, typeSpec] of Object.entries(typesOverrides)) {
       if (!Number.isInteger(spec.arity) || spec.arity < 0) fail(`Capability ${typeName}.${memberName} needs a non-negative arity.`);
       if (!Number.isFinite(spec.cost) || spec.cost <= 0) fail(`Capability ${typeName}.${memberName} needs a positive cost.`);
     }
+    if (spec.summary !== undefined && (typeof spec.summary !== 'string' || !spec.summary.trim()))
+      fail(`Capability ${typeName}.${memberName} has an empty summary.`);
   }
 }
 
@@ -166,11 +168,30 @@ for (const name of overrides.enums ?? []) {
     enums[name][declarationName(member)] = next++;
   }
 }
+
+// The manifest drives the settings browser as well as the runtime whitelist, so
+// each implemented member carries its declaration signature. Signatures are
+// generated from the pinned source and contain no documentation comments.
+function signatureOf(node) {
+  return node.getText(sourceFile).replace(/\s+/g, ' ').trim().replace(/;$/, '');
+}
+
+const manifestTypes = {};
+for (const [typeName, typeSpec] of Object.entries(typesOverrides)) {
+  const entry = types.get(typeName);
+  const nodes = new Map(entry.node.members.map((member) => [declarationName(member), member]));
+  const members = {};
+  for (const [memberName, memberSpec] of Object.entries(typeSpec.members ?? {})) {
+    members[memberName] = { ...memberSpec, signature: signatureOf(nodes.get(memberName)) };
+  }
+  manifestTypes[typeName] = { ...typeSpec, members };
+}
+
 const manifest = {
   apiVersion: overrides.apiVersion ?? 3,
   source: identity,
   typeCount: types.size,
-  types: typesOverrides,
+  types: manifestTypes,
   enums,
   limits: overrides.limits ?? { rows: 100000, columns: 1024 },
 };

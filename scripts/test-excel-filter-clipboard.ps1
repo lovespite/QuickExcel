@@ -57,7 +57,7 @@ try {
             if ($scenario -eq 'filter-note') { $request.expectedPasteNotice = '支持的部分' }
             $request | ConvertTo-Json | Set-Content (Join-Path $dir 'request.json') -Encoding utf8
             $copy = $sheet.Range('C4:F' + $lastRow); [void]$copy.Copy()
-            $exe = Join-Path $root 'artifacts/build/bin/QuickExcel.Desktop.Avalonia/release/QuickExcel.Avalonia.exe'
+            $exe = Join-Path $root 'artifacts/build/bin/QuickExcel.Desktop.Avalonia/release/quickxl.exe'
             $process = Start-Process -FilePath $exe -ArgumentList @('--clipboard-exchange', ('"{0}"' -f $dir)) -WorkingDirectory $root -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $dir 'stdout.log') -RedirectStandardError (Join-Path $dir 'stderr.log')
             if (-not $process.WaitForExit(60000)) { throw 'Clipboard exchange exceeded 60 seconds.' }
             $result = Get-Content (Join-Path $dir 'result.json') -Raw | ConvertFrom-Json

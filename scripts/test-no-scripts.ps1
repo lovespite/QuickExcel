@@ -12,7 +12,7 @@ try {
         dotnet build QuickExcel.Desktop.Avalonia/QuickExcel.Desktop.Avalonia.csproj -c Release --artifacts-path artifacts/build -v minimal
         if ($LASTEXITCODE -ne 0) { throw 'No-scripts smoke build failed.' }
     }
-    $exe = Join-Path $root 'artifacts/build/bin/QuickExcel.Desktop.Avalonia/release/QuickExcel.Avalonia.exe'
+    $exe = Join-Path $root 'artifacts/build/bin/QuickExcel.Desktop.Avalonia/release/quickxl.exe'
     foreach ($case in @('setting', 'command-first', 'command-last', 'environment', 'combined', 'saved-setting')) {
         $directory = Join-Path $run $case
         New-Item -ItemType Directory -Path $directory | Out-Null

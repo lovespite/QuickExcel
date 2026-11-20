@@ -39,8 +39,30 @@ public sealed partial class MainWindow
             await capture(window, "settings-calculation");
             nav.SelectedItem = UiText.Get("脚本与 API"); await Layout();
             var search = window.GetVisualDescendants().OfType<TextBox>().Single(t => t.Name == "SettingsApiSearch"); search.Text = "Range.getValues"; await Layout();
-            var matrix = window.GetVisualDescendants().OfType<ListBox>().Single(l => l.Name == "SettingsApiMatrix");
-            check(matrix.ItemCount == 1, "Manifest-backed matrix filters by object and member");
+            var tree = window.GetVisualDescendants().OfType<TreeView>().Single(t => t.Name == "SettingsApiTree");
+            var kind = window.GetVisualDescendants().OfType<TextBlock>().Single(t => t.Name == "SettingsApiDetailKind");
+            check(!kind.IsVisible, "The member kind stays hidden until a member is selected");
+            check(tree.ItemCount == 1, "Manifest-backed tree filters to the matching object group");
+            var group = (TreeViewItem)tree.Items[0]!;
+            var type = (TreeViewItem)group.Items[0]!;
+            var member = (TreeViewItem)type.Items[0]!;
+            check(tree.ItemCount == 1 && group.Items.Count == 1 && type.Items.Count == 1, "Filtered tree keeps only the matching member");
+            tree.SelectedItem = member; await Layout();
+            var signature = window.GetVisualDescendants().OfType<TextBox>().Single(t => t.Name == "SettingsApiSignature");
+            check(signature.Text == "getValues(): (string | number | boolean)[][]", "Selecting a member shows its declared signature");
+            check(window.GetVisualDescendants().OfType<TextBlock>().Single(t => t.Name == "SettingsApiDetailTitle").Text == "Range.getValues",
+                "The details pane identifies the selected member");
+            check(kind.IsEffectivelyVisible && kind.Text == UiText.Get("宿主调用"), "Selecting a host member reveals its call type");
+            tree.SelectedItem = type; await Layout();
+            check(!kind.IsVisible, "Selecting a type hides member details");
+            foreach (var (query, label) in new[] { ("Worksheet.getRange", "本地成员"), ("BorderIndex.edgeTop", "枚举值"), ("Range.getValues", "宿主调用") })
+            {
+                search.Text = query; await Layout();
+                var matchingGroup = (TreeViewItem)tree.Items[0]!;
+                var matchingType = (TreeViewItem)matchingGroup.Items[0]!;
+                tree.SelectedItem = matchingType.Items[0]; await Layout();
+                check(kind.IsEffectivelyVisible && kind.Text == UiText.Get(label), "Changing selection reveals the correct kind: " + query);
+            }
             await capture(window, "settings-scripts");
             nav.SelectedItem = UiText.Get("关于与许可"); await Layout();
             var icon = window.GetVisualDescendants().OfType<Image>().Single(i => i.Name == "AboutProductIcon");
@@ -94,7 +116,8 @@ public sealed partial class MainWindow
         {
             using var root = Registry.CurrentUser.CreateSubKey(name);
             check(WindowsFileAssociations.ReadSelection(root).SequenceEqual([".xlsq"]), "Initial association selection defaults to XLSQ");
-            var executable = Path.Combine(AppContext.BaseDirectory, "QuickExcel.Avalonia.exe");
+            var executable = Path.Combine(AppContext.BaseDirectory, "quickxl.exe");
+            check(File.Exists(executable), "File associations target the packaged quickxl.exe launcher");
             WindowsFileAssociations.Register(root, executable, [".xlsq", ".csv"]);
             var iconPath = Path.Combine(AppContext.BaseDirectory, "Assets", "QuickExcel-XLSQ.ico");
             using var icon = root.OpenSubKey(@"Software\Classes\QuickExcel.xlsq\DefaultIcon");
