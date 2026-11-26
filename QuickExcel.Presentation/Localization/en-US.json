@@ -1,4 +1,10 @@
 {
+  "脚本网络访问授权": "Script network access",
+  "此工作簿的 Actions 脚本可能访问以下域名或 IP 地址：": "Actions in this workbook may access the following domains or IP addresses.",
+  "请求授权的网络地址": "Requested network addresses",
+  "授权仅限本次会话。脚本可向上述地址发送工作簿数据。": "Permission applies only to this session. Scripts can send workbook data to the listed addresses.",
+  "拒绝访问": "Deny",
+  "允许本次会话": "Allow for this session",
   "脚本网络与诊断限额": "Script network and diagnostic limits",
   "允许访问网络": "Allow network access",
   "关闭后立即禁止所有脚本网络请求，网络权限申请也会直接拒绝。重新打开后需重新授权。": "Turning this off immediately blocks all script network requests and denies network permission requests. Enabling it again requires new consent.",

@@ -18,20 +18,43 @@ public sealed partial class MainWindow
         static async Task Layout() => await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Background);
         var network = Document.Session.Network;
         network.Revoke();
-        _dialogDriver = async window =>
+        async Task CheckConsent(Window window)
         {
             await Layout();
+            var english = UiText.Language == UiText.English;
             var addresses = window.GetVisualDescendants().OfType<ListBox>().Single();
             check(addresses.Items.Cast<string>().SequenceEqual(new[] { "127.0.0.1", "::1", "api.example.com" }),
                 "Network consent shows the complete sorted domain and IP list");
+            var captions = ((Panel)window.Content!).Children.OfType<TextBlock>().Select(block => block.Text);
+            check(window.Title == (english ? "Script network access" : "脚本网络访问授权") &&
+                AutomationProperties.GetName(addresses) == (english ? "Requested network addresses" : "请求授权的网络地址") &&
+                captions.SequenceEqual(english
+                    ? new[] { "Actions in this workbook may access the following domains or IP addresses.", "Permission applies only to this session. Scripts can send workbook data to the listed addresses." }
+                    : new[] { "此工作簿的 Actions 脚本可能访问以下域名或 IP 地址：", "授权仅限本次会话。脚本可向上述地址发送工作簿数据。" }),
+                $"Network consent title, address list label and explanation use {UiText.Language}");
+            var buttons = window.GetVisualDescendants().OfType<Button>().ToArray();
+            var deny = buttons.Single(button => button.IsCancel);
+            check(Equals(deny.Content, english ? "Deny" : "拒绝访问") &&
+                buttons.Any(button => Equals(button.Content, english ? "Allow for this session" : "允许本次会话")),
+                $"Network consent buttons use {UiText.Language}");
             using (var bitmap = new RenderTargetBitmap(new PixelSize((int)Math.Ceiling(window.Bounds.Width), (int)Math.Ceiling(window.Bounds.Height)), new Vector(96, 96)))
-            { bitmap.Render(window); bitmap.Save(Path.Combine(directory, "script-network-consent.png"), PngBitmapEncoderOptions.Default); }
-            window.GetVisualDescendants().OfType<Button>().Single(b => b.Content as string == "拒绝").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
-        };
-        var denied = false;
-        try { await Task.Run(() => network.EnsureAuthorized(["api.example.com", "127.0.0.1", "::1"], default)); }
-        catch (InvalidOperationException error) when (error.Message.Contains("未授权")) { denied = true; }
-        check(denied, "Rejecting the actual network consent dialog prevents execution authorization");
+            { bitmap.Render(window); bitmap.Save(Path.Combine(directory, english ? "script-network-consent-en.png" : "script-network-consent.png"), PngBitmapEncoderOptions.Default); }
+            deny.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+        }
+        var priorLanguage = UiText.Language;
+        try
+        {
+            foreach (var language in new[] { UiText.Chinese, UiText.English })
+            {
+                UiText.Initialize(language);
+                _dialogDriver = CheckConsent;
+                var denied = false;
+                try { await Task.Run(() => network.EnsureAuthorized(["api.example.com", "127.0.0.1", "::1"], default)); }
+                catch (InvalidOperationException error) when (error.Message.Contains("未授权")) { denied = true; }
+                check(denied, $"Rejecting the {language} network consent dialog prevents execution authorization");
+            }
+        }
+        finally { UiText.Initialize(priorLanguage); }
         await CloseScriptWindowAsync();
         const string initialization = "host.permissions.network.request('api.example.com'); export function main(w) { const cell = w.getActiveWorksheet().getRange('D1'); cell.setValue((Number(cell.getValue()) || 0) + 1); }";
         _workspace.Editor.Execute(new UpdateScriptModulesCommand(new(new Dictionary<string, ScriptModule>
