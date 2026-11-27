@@ -47,7 +47,8 @@ for (const defaults of [typescript.javascriptDefaults, typescript.typescriptDefa
   // reflected when returning to its importer. Do not check 64 hidden editors.
   defaults.setDiagnosticsOptions({ noSemanticValidation: false, noSyntaxValidation: false, onlyVisible: true });
 }
-let extraLibs = [typescript.javascriptDefaults, typescript.typescriptDefaults].map(d => d.addExtraLib(declarations, baseUri + 'quickexcel.d.ts'));
+let workbookDeclarations: string;
+const extraLibs: monaco.IDisposable[] = [];
 const builtinExtraLibs = [typescript.javascriptDefaults, typescript.typescriptDefaults].flatMap(d =>
   Object.entries(builtinDeclarations.files).map(([name, source]) => d.addExtraLib(source, 'file://' + name)));
 editor = monaco.editor.create(document.getElementById('editor')!, { model: null, automaticLayout: true, readOnly: true, theme: 'vs-dark',
@@ -119,7 +120,7 @@ async function openDefinition(name: string) {
     const uri = name === 'quickexcel.d.ts' ? declarationUri : monaco.Uri.parse('file://' + (name.startsWith('/') ? name : '/' + name));
     let model = monaco.editor.getModel(uri);
     if (!model) {
-      let text: string | undefined = declarations;
+      let text: string | undefined = workbookDeclarations;
       if (Object.hasOwn(builtinDeclarations.files, name)) text = (builtinDeclarations.files as Record<string,string>)[name];
       else if (name !== 'quickexcel.d.ts') {
         // Monaco registers each language service lazily. A JavaScript-only book
@@ -294,11 +295,11 @@ async function handle(message: Message) {
     case 'initialize': {
       if (models.size || !Array.isArray(p.modules) || p.modules.length < 1 || p.modules.length > 64) throw new Error('Invalid model initialization');
       readOnly = p.readOnly === true;
-      if (p.apiVersion !== 4) {
-        for (const lib of extraLibs) lib.dispose();
-        extraLibs = [typescript.javascriptDefaults, typescript.typescriptDefaults].map(d => d.addExtraLib(
-          declarations.replace('interface Host {', 'interface Host extends LegacyRegistration {'), baseUri + 'quickexcel.d.ts'));
-      }
+      workbookDeclarations = p.apiVersion === 4 ? declarations :
+        declarations.replace('interface Host extends V4HostExtensions {', 'interface Host extends LegacyRegistration {')
+          .replace('interface Workbook extends WorkbookSaveAs {', 'interface Workbook {');
+      for (const defaults of [typescript.javascriptDefaults, typescript.typescriptDefaults])
+        extraLibs.push(defaults.addExtraLib(workbookDeclarations, declarationUri.toString()));
       const paths: Record<string, string[]> = Object.assign(Object.create(null), Object.fromEntries(Object.entries(builtinDeclarations.paths).map(([id,name])=>[id,['file://'+name]])));
       let hasTypeScript = false;
       for (const id of p.modules) {

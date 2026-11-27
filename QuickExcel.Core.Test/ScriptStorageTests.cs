@@ -83,7 +83,7 @@ public sealed class ScriptStorageTests
     public void LocalCellAndFileWritesUndoTogetherWhileSessionSurvivesUndoAndScriptReset()
     {
         using var doc = Document();
-        doc.RunConsole("localStorage.set('saved','one'); sessionStorage.set('live','one'); workbook.getActiveCell().setValue(42); host.files.writeText('//xlsq/data','ok');");
+        doc.RunConsole("localStorage.set('saved','one'); sessionStorage.set('live','one'); workbook.getActiveCell().setValue(42); workbook.files.writeText('//xlsq/data','ok');");
         Assert.True(doc.IsDirty); Assert.True(doc.Undo());
         Assert.Empty(doc.Snapshot.LocalStorage.Entries); Assert.Empty(doc.Snapshot.PackageFiles.Entries); Assert.Equal("", doc.GetCellValue(0, 0, 0));
         Assert.Equal("one", doc.Session.SessionStorage.Get("live"));
@@ -162,9 +162,9 @@ public sealed class ScriptStorageTests
         doc.RunConsole("localStorage.set('keep','yes'); workbook.getActiveCell().getFormat().getFont().setBold(true);");
         doc.Session.Execute(new ShiftAxisCommand(doc.Snapshot.ActiveSheetId, SheetAxis.Row, 0, 1));
         Assert.Equal("yes", doc.Snapshot.LocalStorage.Get("keep"));
-        doc.RunConsole("const manifest=host.files.readJson('//xlsq/manifest.json'); host.files.writeJson('//xlsq/manifest.json',manifest);");
+        doc.RunConsole("const manifest=workbook.files.readJson('//xlsq/manifest.json'); workbook.files.writeJson('//xlsq/manifest.json',manifest);");
         Assert.Equal("yes", doc.Snapshot.LocalStorage.Get("keep"));
-        Assert.ThrowsAny<Exception>(() => doc.RunConsole("host.files.writeText('//xlsq/state/local-storage/000000.bin','bad');"));
+        Assert.ThrowsAny<Exception>(() => doc.RunConsole("workbook.files.writeText('//xlsq/state/local-storage/000000.bin','bad');"));
         Assert.Equal("yes", doc.Snapshot.LocalStorage.Get("keep"));
         var emptyScripts = ScriptModuleSet.Single("", 3);
         var snapshot = doc.Snapshot.WithScriptModules(emptyScripts);

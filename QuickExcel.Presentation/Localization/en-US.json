@@ -1,4 +1,11 @@
 {
+  "允许读取": "Allow reading",
+  "允许写入和覆盖": "Allow writing and overwriting",
+  "允许读取、写入和覆盖": "Allow reading, writing and overwriting",
+  "文件夹及其全部子项": "Folder and all descendants",
+  "所选文件": "Selected files",
+  "允许删除子项": "Allow deleting entries",
+  "替换文件内容": "Replace file contents",
   "脚本网络访问授权": "Script network access",
   "此工作簿的 Actions 脚本可能访问以下域名或 IP 地址：": "Actions in this workbook may access the following domains or IP addresses.",
   "请求授权的网络地址": "Requested network addresses",

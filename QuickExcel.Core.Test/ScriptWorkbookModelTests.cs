@@ -63,7 +63,7 @@ public sealed class ScriptWorkbookModelTests
               if(sheet.getCell('B1').getValue()!==8) throw Error('patch order');
               sheet.getRange('B1:C2').setValues([[9,10],[11,12]]);
               if(sheet.getCell('B1').getValue()!==9 || sheet.getRange('B1:C2').getValues()[1][1]!==12) throw Error('matrix');
-              host.files.writeText('//mem/seen','yes');
+              workbook.files.writeText('//mem/seen','yes');
             }
             """, storage: storage);
         doc.EnableScriptsAndCalculate(); doc.RunAction("main");
@@ -125,8 +125,8 @@ public sealed class ScriptWorkbookModelTests
                 console.log(result);
                 if(result!==12 || sheet.getRange('A1:A2').getValues()[1][0]!==12) throw Error('not current');
                 sheet.getCell('B1').setValue(result);
-                host.files.writeText('//xlsq/result.txt',String(result));
-                host.files.writeText('//mem/result',String(result));
+                workbook.files.writeText('//xlsq/result.txt',String(result));
+                workbook.files.writeText('//mem/result',String(result));
             """ + (fail ? "throw Error('after calculation');" : "") + "}";
         using var doc = new WorkbookDocument(Book(Sheet("Data", (0, 0, N(5)), (1, 0, F(udf ? "=TWICE(A1)" : "=A1*2"))))
             .WithScriptModules(M4ActionTests.Actions(source, udf)),

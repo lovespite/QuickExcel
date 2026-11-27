@@ -1,5 +1,7 @@
 # QuickExcel 架构与实施文档
 
+2026-11-27：[工作簿虚拟文件与用户选择的本机文件](88-script-user-selected-files.md) 记录 `workbook.files` 迁移、v4 `host.fs` 编辑器补全，以及 9.0.0 在 Windows 上的系统选择器、目录授权和文件流。
+
 2026-11-20：[删除单元格与名称管理器](87-delete-cells-and-name-manager.md) 说明直接删除行列、选区左移/上移删除、集中管理名称与批注、右键创建命名区域和脚本访问。
 
 2026-11-20：[统一数据导入导出](86-data-import-export.md) 说明 XLSX 工作表选择与重名处理、CSV/TSV、通用 SQL（ODBC）及 SQLite 文件的统一入口、事务和验证边界。

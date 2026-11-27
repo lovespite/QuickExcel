@@ -96,7 +96,7 @@ public sealed class ScriptP1Tests
     [InlineData("s.getRange('A1').getSort().apply([{key:2}])")]
     public void CaughtWriteFailuresRollbackWorkbookAndVirtualFiles(string failure)
     {
-        using var doc = Document("function main(workbook,host){const s=workbook.getActiveWorksheet();s.getRange('B1').setValue(7);host.files.writeText('//mem/test','x');try{"+failure+";}catch{}}");
+        using var doc = Document("function main(workbook,host){const s=workbook.getActiveWorksheet();s.getRange('B1').setValue(7);workbook.files.writeText('//mem/test','x');try{"+failure+";}catch{}}");
         doc.EnableScriptsAndCalculate(); Assert.NotNull(Record.Exception(() => doc.RunAction("main")));
         Assert.Null(doc.Snapshot.Sheets[0].GetCell(0, 1)); Assert.Null(doc.Snapshot.Sheets[0].Data.Protection); Assert.False(doc.CanUndo);
     }
@@ -170,7 +170,7 @@ public sealed class ScriptP1Tests
               const table=s.addTable('B1:C3',true);s.getProtection().protect({allowAutoFilter:true});
               table.getColumnByName('Value').getFilter().applyCustomFilter('>2');
               if(!table.getAutoFilter().getIsDataFiltered())throw Error('filter');
-              host.files.writeText('//xlsq/protected.txt','success');
+              workbook.files.writeText('//xlsq/protected.txt','success');
             }
             """);
         Run(doc); Assert.True(doc.Snapshot.Sheets[0].Data.Protection!.Sheet);

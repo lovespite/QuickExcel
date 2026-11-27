@@ -31,9 +31,16 @@ public sealed partial class MainWindow
     }
     private void ObserveDocument()
     {
-        if (ReferenceEquals(_observedSession, Document.Session)) return;
-        if (_observedSession is not null) _observedSession.Changed -= OnDocumentChanged;
-        _observedSession = Document.Session; _observedSession.Changed += OnDocumentChanged;
+        var session = Document.Session;
+        if (ReferenceEquals(_observedSession, session)) return;
+        if (_observedSession is not null)
+        {
+            _observedSession.Changed -= OnDocumentChanged;
+            _observedSession.UserFilePicker = null;
+        }
+        _observedSession = session;
+        session.Changed += OnDocumentChanged;
+        session.UserFilePicker = (request, begin, token) => SelectScriptFilesAsync(session, request, begin, token);
         _calculationTimer.Stop(); _calculationPending = false; _calculationFailure = null;
         _dataTables.Clear(); _tablesPending = false;
     }

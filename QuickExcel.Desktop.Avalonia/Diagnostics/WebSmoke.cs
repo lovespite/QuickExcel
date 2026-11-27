@@ -30,7 +30,23 @@ public sealed partial class MainWindow
         try
         {
             ShowBook();
-            if (Program.WebNetworkOnly)
+            if (Program.WebFilePickerOnly)
+            {
+                _workspace.New();
+                _workspace.Editor.Execute(new UpdateScriptModulesCommand(new(new Dictionary<string, ScriptModule>
+                {
+                    ["main"] = new("scripts/main.js", "export function main() {}"),
+                    ["picker"] = new("scripts/picker.js", "export async function main(w,h) { const dir = await h.fs.getUserSelectedDirectory({title:'QuickExcel picker check'}); w.getActiveCell().setValue(dir ? dir.name : 'cancelled'); }")
+                }, ["main", "picker"], scriptApiVersion: 4, bindings: [new("main", "initialization"), new("picker", "actions")])));
+                ObserveDocument();
+                _calculationTimer.Stop();
+                using var pickerCancellation = new CancellationTokenSource();
+                using var pickerFeedback = BeginExecution("正在验证目录选择器…", pickerCancellation);
+                var pickerDocument = Document;
+                await Task.Run(() => { pickerDocument.EnableScriptsAndCalculate(pickerCancellation.Token); pickerDocument.RunAction("picker", pickerCancellation.Token); });
+                Check(Document.GetCellValue(0,0,0) == "cancelled", "A native folder picker cancellation resumes the isolated v4 Action");
+            }
+            else if (Program.WebNetworkOnly)
             {
                 _workspace.New(); await OpenScriptsAsync();
                 await CheckScriptNetworkPanelAsync(Check, directory);

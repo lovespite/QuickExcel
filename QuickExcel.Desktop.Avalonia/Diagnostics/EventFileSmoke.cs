@@ -20,13 +20,13 @@ public sealed partial class MainWindow
         var source = """
             const names=['workbook.open','workbook.activate','workbook.deactivate','sheet.added','sheet.deleted','sheet.activate','sheet.deactivate','cell.click','cell.edit','cell.commit','selection.changed','workbook.saved'];
             for(const name of names) host.events.on(name,context=>{
-                const fs=context.host.files;
+                const fs=context.workbook.files;
                 const entries=fs.exists('//mem/events')?fs.readJson('//mem/events'):[];
                 entries.push(context.event.name); fs.writeJson('//mem/events',entries);
             });
             host.events.on('cell.commit',context=>context.workbook.getActiveWorksheet().getRange('B1').setValue('event result'));
-            host.events.on('workbook.beforeSave',context=>context.host.files.writeText('//xlsq/data/saved.txt','保存事件'));
-            host.events.on('workbook.beforeClose',context=>context.host.files.writeText('//xlsq/data/closing.txt','关闭前'));
+            host.events.on('workbook.beforeSave',context=>context.workbook.files.writeText('//xlsq/data/saved.txt','保存事件'));
+            host.events.on('workbook.beforeClose',context=>context.workbook.files.writeText('//xlsq/data/closing.txt','关闭前'));
             host.events.on('workbook.close',context=>console.log(context.event.name));
             """;
         _workspace.Editor.Execute(new UpdateScriptModulesCommand(new(new Dictionary<string, ScriptModule> { ["main"] = new("scripts/main.js", source) },
@@ -59,7 +59,7 @@ public sealed partial class MainWindow
         _workspace.New();
         check(retiring.Session.IsClosed && retiring.ScriptErrors.Contains("workbook.close"), "Accepted replacement delivers read-only close event before session cleanup");
         _discardChoice = null;
-        var rewrite = "function main(workbook, host){host.files.writeText('//xlsq/scripts/main.js','// 文件 API 更新后的源码');}";
+        var rewrite = "function main(workbook){workbook.files.writeText('//xlsq/scripts/main.js','// 文件 API 更新后的源码');}";
         _workspace.Editor.Execute(new UpdateScriptModulesCommand(new(new Dictionary<string, ScriptModule> { ["main"] = new("scripts/main.js", rewrite) },
             ["main"], scriptApiVersion: 3, bindings: [new("main", "actions")])));
         await OpenScriptsAsync(); await ApplyScriptsAsync();

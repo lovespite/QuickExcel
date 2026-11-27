@@ -463,13 +463,18 @@ public sealed partial class TypedWorkbookStorage : IWorkbookSaveStateStorage, IW
         WorkbookFileState? state = null;
         PackageIO.AtomicWrite(path, bytes, temp =>
         {
-            var checkedSnapshot = OpenBytes(ReadFile(temp, new(cancellationToken)), path, true, new(cancellationToken));
-            if (!ContentEquals(snapshot, checkedSnapshot, allowRowHeightRounding: true) || snapshot.DocumentId != checkedSnapshot.DocumentId || snapshot.Revision != checkedSnapshot.Revision ||
-                !snapshot.Sheets.Select(s => s.Id).SequenceEqual(checkedSnapshot.Sheets.Select(s => s.Id)) || snapshot.ScriptModules.Signature != checkedSnapshot.ScriptModules.Signature || snapshot.ScriptModules.ScriptApiVersion != checkedSnapshot.ScriptModules.ScriptApiVersion || ScriptHash(snapshot.ScriptModules) != ScriptHash(checkedSnapshot.ScriptModules) || !snapshot.PackageFiles.ContentEquals(checkedSnapshot.PackageFiles) || !snapshot.LocalStorage.ContentEquals(checkedSnapshot.LocalStorage))
-                throw new InvalidDataException(MessageText.Get("保存后重开校验未能还原完整快照。"));
-            state = SavedFileState(snapshot, checkedSnapshot.FileState!);
+            state = SavedFileState(snapshot, VerifyPackage(path, snapshot, ReadFile(temp, new(cancellationToken)), cancellationToken));
         }, cancellationToken, expected, OwnedFile(path) is { } lease ? lease.Commit : null);
         return new(new(Convert.ToHexString(SHA256.HashData(bytes))), state!);
+    }
+
+    private static WorkbookFileState VerifyPackage(string path, WorkbookSnapshot snapshot, byte[] saved, CancellationToken cancellationToken)
+    {
+        var checkedSnapshot = OpenBytes(saved, path, true, new(cancellationToken));
+        if (!ContentEquals(snapshot, checkedSnapshot, allowRowHeightRounding: true) || snapshot.DocumentId != checkedSnapshot.DocumentId || snapshot.Revision != checkedSnapshot.Revision ||
+            !snapshot.Sheets.Select(s => s.Id).SequenceEqual(checkedSnapshot.Sheets.Select(s => s.Id)) || snapshot.ScriptModules.Signature != checkedSnapshot.ScriptModules.Signature || snapshot.ScriptModules.ScriptApiVersion != checkedSnapshot.ScriptModules.ScriptApiVersion || ScriptHash(snapshot.ScriptModules) != ScriptHash(checkedSnapshot.ScriptModules) || !snapshot.PackageFiles.ContentEquals(checkedSnapshot.PackageFiles) || !snapshot.LocalStorage.ContentEquals(checkedSnapshot.LocalStorage))
+            throw new InvalidDataException(MessageText.Get("保存后重开校验未能还原完整快照。"));
+        return checkedSnapshot.FileState!;
     }
 
     public void Export(string path, WorkbookSnapshot snapshot) => Export(path, snapshot, false, false);

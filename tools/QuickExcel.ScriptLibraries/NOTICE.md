@@ -43,7 +43,7 @@ is a pinned build input. Full package and declaration licenses are distributed i
   LocalizedFormat, LocaleData, MinMax and RelativeTime; English remains the
   default locale and Chinese (zh-cn) is bundled.
 - Papa Parse accepts strings; direct file, download and browser-worker modes
-  are explicitly rejected. Use logical host files or permission-gated Action
+  are explicitly rejected. Use `workbook.files` or permission-gated Action
   fetch, then parse the text. Upstream declaration overloads for unavailable
   file/stream/worker paths are removed; other declaration bodies retain attribution.
 - Two upstream declaration defects are repaired only in generated copies:

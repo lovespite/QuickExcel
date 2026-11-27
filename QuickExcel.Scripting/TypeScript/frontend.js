@@ -66,7 +66,8 @@ globalThis.qxCompile = function qxCompile(request) {
         files.set('/lib/' + name, source);
     }
     files.set('/lib/quickexcel.d.ts', request.apiVersion === 4 ? request.declarations :
-        request.declarations.replace('interface Host {', 'interface Host extends LegacyRegistration {'));
+        request.declarations.replace('interface Host extends V4HostExtensions {', 'interface Host extends LegacyRegistration {')
+          .replace('interface Workbook extends WorkbookSaveAs {', 'interface Workbook {'));
     for (const [name, source] of Object.entries(request.builtins?.files ?? {})) files.set(name, source);
     const options = {
         target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext,

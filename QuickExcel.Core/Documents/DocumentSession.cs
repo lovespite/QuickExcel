@@ -44,6 +44,7 @@ public sealed partial class DocumentSession : IDisposable
 
     public Guid SessionId { get; } = Guid.NewGuid();
     public ScriptNetworkSession Network { get; } = new();
+    public ScriptFilePicker? UserFilePicker { get; set; }
     public const string ReadOnlyMessage = "工作簿以只读模式打开。请另存为可编辑副本后再修改。";
     public bool IsReadOnly { get; }
     public void RequireWritable()
@@ -269,7 +270,7 @@ public sealed partial class DocumentSession : IDisposable
             _activeConsoleSource = consoleSource;
             if (consoleSource is not null) AppendConsole([consoleSource], "input");
             request = new(new(SessionId, _snapshot.Revision, _calculationGeneration, _scriptGeneration), _activeActionId, name, _snapshot, _activeCalculation.Token)
-            { Files = _transientFiles, Event = scriptEvent, ConsoleSource = consoleSource, Network = Network,
+            { Owner = this, Files = _transientFiles, Event = scriptEvent, ConsoleSource = consoleSource, Network = Network, UserFilePicker = UserFilePicker,
                 RuntimeLifetime = consoleSource is null ? _runtimeLifetime.Token : default };
             if (name is not null) request = request with { Model = CreateScriptModel(request) };
         }
@@ -300,6 +301,20 @@ public sealed partial class DocumentSession : IDisposable
             AdvanceCalculationGeneration();
             return true;
         }
+    }
+
+    // Validate and stamp the same draft a commit would produce, without publishing a change
+    // to this session, replaying script code or marking the open document as saved.
+    internal WorkbookSnapshot CaptureActionCopy(ScriptActionRequest request, ImmutableArray<VirtualFileEdit> packageEdits, CancellationToken cancellation)
+    {
+        if (request.Model is null || request.Name is null || request.Event is not null || request.ConsoleSource is not null ||
+            !request.Snapshot.ScriptModules.EntriesFor("actions").Contains(request.Name))
+            throw new InvalidOperationException("A live user Action is required to save a workbook copy.");
+        var result = new ScriptActionResult(request.OperationId, request.Stamp.InputRevision, request.Name, [], []) { FileEdits = packageEdits };
+        if (!packageEdits.IsEmpty) _ = request.Files.Apply(packageEdits);
+        using var preview = new DocumentSession(request.Snapshot, HistoryBudgetBytes, _validation);
+        preview.ExecuteCore(new ApplyActionPatchCommand(request, result, _virtualFiles), request.Stamp.InputRevision, cancellationToken: cancellation);
+        return preview.Snapshot;
     }
 
     public CommandResult CommitAction(ScriptActionRequest request, ScriptActionResult result, CancellationToken cancellationToken = default)

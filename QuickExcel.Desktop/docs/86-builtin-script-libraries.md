@@ -14,7 +14,7 @@ QuickExcel 7.0.0 内置以下九个固定版本的 JavaScript 库。脚本使用
 | Lodash 4.18.1 | 分组、排序、去重、链式操作、Unicode 分词、模板、命名导出 | 将完整 CommonJS 构建封装成 ESM，保留默认 `_` 与命名导出 | `delay`、`defer`、`debounce`、`throttle` 等依赖后台定时器的调用不支持；没有伪造定时器 |
 | decimal.js 10.6.0 | 十进制精度、舍入、超安全整数、独立精度配置 | 无需运行时补丁 | 大数对象不能直接作为单元格值，需转字符串或数值；转 Number 仍可能损失精度 |
 | Day.js 1.11.23 | 闰年、无效日期、UTC、时区、严格格式解析、Duration | 预装 15 个常用插件与 `zh-cn`，修复仅基础包时缺少 UTC/tz/duration、严格解析无效的问题 | 只有打包插件可用，不支持任意插件子路径导入；默认 locale 仍为英文；无时区日期沿用运行环境本地时区 |
-| Papa Parse 5.7.1 | 引号/逗号/跨行 CSV、表头、自动类型转换、导出 CSV、逐行回调 | 提供默认与命名导出；将不支持的浏览器模式改为明确报错，并收窄类型声明 | 不支持 `worker:true`、`download:true`、FileReader/Node stream；用 `host.files` 或 Action 中的授权 fetch 取得文本后再解析；Blob 可先 `await blob.text()` |
+| Papa Parse 5.7.1 | 引号/逗号/跨行 CSV、表头、自动类型转换、导出 CSV、逐行回调 | 提供默认与命名导出；将不支持的浏览器模式改为明确报错，并收窄类型声明 | 不支持 `worker:true`、`download:true`、FileReader/Node stream；用 `workbook.files` 或 Action 中的授权 fetch 取得文本后再解析；Blob 可先 `await blob.text()` |
 | simple-statistics 8.0.0 | 均值、标准差、分位数、回归、相关性、聚类 | 无需运行时补丁 | 统计前应清理空值、字符串和无效数值；未验证每个统计函数 |
 | Zod 4.6.7 | 对象验证、失败结果、转换、JSON Schema、URL、File | 增加纯数据 URL 实现和内存 File，使合法 URL 不再被错误拒绝，File schema 可以执行 | File 只是内存 Blob，不代表磁盘权限；异步 refinement 应在支持 Promise 的 Action 中等待 |
 | Fuse.js 7.5.0 | 模糊搜索、序列化索引重建、扩展搜索 | 无需运行时补丁 | 搜索索引和工作集仍受 worker 内存与操作时限约束 |

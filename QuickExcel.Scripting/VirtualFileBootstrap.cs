@@ -3,10 +3,13 @@ namespace QuickExcel.Scripting;
 public sealed partial class JscSession
 {
     private const string VirtualFileBootstrap = """
-        function createFs(input, checkActive, reject) {
-            const entries = new Map(), edits = [];
+        function createFs(input, reject) {
+            let entries = new Map(), edits = [];
             const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
             const maxBytes = 8388608;
+            function checkActive() {
+                if (!activeModel || !entries) throw new ScriptError('InvalidReference', '文件上下文已失效。');
+            }
             function path(p, root = false) {
                 checkActive();
                 if (typeof p !== 'string' || p.length > 248 || !p.startsWith('//') || /[\\:%?#\x00-\x1f\x7f-\x9f]/.test(p)) throw new TypeError('Invalid virtual path.');
@@ -44,6 +47,7 @@ public sealed partial class JscSession
                 return entry;
             }
             function mutate(operation,p,base64=null) {
+                checkActive();
                 try {
                     path(p);
                     if (edits.length >= 4096) throw new TypeError('File operation quota exceeded.');
@@ -85,6 +89,7 @@ public sealed partial class JscSession
                 remove(p) { mutate('remove',p); },
                 readBytes(p) { return decode(get(p).base64); },
                 writeBytes(p,bytes) {
+                    checkActive();
                     try {
                         if (!(bytes instanceof Uint8Array) || bytes.length>maxBytes) throw new TypeError('Expected a bounded Uint8Array.');
                         mutate('write',p,encode(bytes));
@@ -96,6 +101,7 @@ public sealed partial class JscSession
                     return decodeURIComponent(escaped);
                 },
                 writeText(p,text) {
+                    checkActive();
                     try {
                         if(typeof text!=='string' || text.length>maxBytes) throw new TypeError('Expected bounded text.');
                         const encoded=encodeURIComponent(text), bytes=[];
@@ -104,11 +110,11 @@ public sealed partial class JscSession
                     } catch(error) { reject(); throw error; }
                 },
                 readJson(p) { return JSON.parse(fs.readText(p)); },
-                writeJson(p,value) { try { fs.writeText(p,JSON.stringify(value)); } catch(error) { reject(); throw error; } },
+                writeJson(p,value) { checkActive(); try { fs.writeText(p,JSON.stringify(value)); } catch(error) { reject(); throw error; } },
                 copy(from,to) { fs.writeBytes(to,fs.readBytes(from)); },
                 move(from,to) { if(from===to) { get(from); return; } fs.copy(from,to); fs.remove(from); }
             });
-            return {fs,edits};
+            return { fs, edits, release() { entries = null; edits = null; } };
         }
         """;
 }

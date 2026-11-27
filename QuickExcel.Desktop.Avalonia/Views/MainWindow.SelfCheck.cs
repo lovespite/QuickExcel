@@ -135,6 +135,8 @@ public sealed partial class MainWindow
                 var action = new ScriptModuleSet(new Dictionary<string, ScriptModule>
                 { ["main"] = new("scripts/main.ts", """
                     function main(workbook: QuickExcel.Workbook) {
+                      if ('files' in host) throw Error('Unexpected host file API');
+                      workbook.files.writeText('//xlsq/install-check.txt', 'verified');
                       const sheet=workbook.getActiveWorksheet(), range=sheet.getRange('B1:C3');
                       range.setValues([['Name','Value'],['b',2],['a',1]]);
                       range.getFormat().getFont().setBold(true);
@@ -168,9 +170,71 @@ public sealed partial class MainWindow
                 var reopened = await Task.Run(() => { var storage = new TypedWorkbookStorage(); storage.Save(objectFile, objectSnapshot); return storage.Open(objectFile); });
                 Check(reopened.Sheets[0].Data.ThreadComments.Length == 2 && reopened.Sheets[0].Data.Charts[0].Name == "InstallChart",
                     "Published P2 object save/reopen");
-                Check(Document.Undo(), "Published API v3 action undo");
+                Check(reopened.PackageFiles.Entries.ContainsKey("//xlsq/install-check.txt") && Document.Undo() &&
+                    !Document.Snapshot.PackageFiles.Entries.ContainsKey("//xlsq/install-check.txt"),
+                    "Published API v3 workbook.files saves and reopens virtual files and undoes the action");
             }
             var visualSheet = Document.Snapshot.ActiveSheetId;
+            if (OperatingSystem.IsWindows())
+            {
+                var folder = Directory.CreateDirectory(Path.Combine(directory, "script-files")).FullName;
+                var modules = new ScriptModuleSet(new Dictionary<string, ScriptModule>
+                {
+                    ["main"] = new("scripts/main.js", "export function main() {}"),
+                    ["files"] = new("scripts/files.js", """
+                        export async function main(w,h) {
+                          const dir = await h.fs.getUserSelectedDirectory({fileAccess:'rw'});
+                          const file = await dir.getFile('runtime.txt',{fileMode:'create'});
+                          const output = await file.open();
+                          output.writeLine('QuickExcel 文件');
+                          await output.close();
+                          let found = false;
+                          for await (const child of dir.entries()) if (child.name === file.name && child.type === 'file') found = true;
+                          if (!found) throw Error('Selected directory entry missing');
+                          const input = await file.open({buffering:'stream'});
+                          w.getWorksheets()[0].getRange('A1').setValue(await input.readLine());
+                          await input.close();
+                          for (const extension of ['xlsx','xlsq']) {
+                            const [target] = await h.fs.getUserSelectedFiles({mode:'save', fileMode:'create',
+                              fileAccess:'rw', suggestedName:'selected.' + extension});
+                            const book = await target.openWorkbook();
+                            await book.setValues('Sheet1','A1:B1',[[6,7]]);
+                            await book.setFormulas('Sheet1','C1',[['=A1*B1']]);
+                            await book.close();
+                            const saved = await target.openWorkbook();
+                            if ((await saved.getValues('Sheet1','C1'))[0][0] !== 42) throw Error('Selected workbook round trip');
+                            if (extension === 'xlsx') {
+                              const copy = await dir.getFile('report-copy.xlsq',{fileMode:'create'});
+                              await saved.saveAs(copy,'xlsq');
+                            }
+                            await saved.close();
+                          }
+                          await w.saveAs(await dir.getFile('active-copy.xlsx',{fileMode:'create'}),'xlsx');
+                        }
+                        """)
+                }, ["main", "files"], scriptApiVersion: 4, bindings: [new("main", "initialization"), new("files", "actions")]);
+                using var files = new WorkbookDocument(Document.Snapshot.WithScriptModules(modules), _services);
+                files.Session.UserFilePicker = (request, begin, _) =>
+                {
+                    using var interaction = begin();
+                    var selected = request.Directory ? folder : request.SuggestedName switch
+                    {
+                        "selected.xlsx" or "selected.xlsq" => Path.Combine(folder, request.SuggestedName),
+                        _ => throw new InvalidOperationException("Unexpected self-check file selection.")
+                    };
+                    return Task.FromResult(new ScriptFileSelection([selected], file));
+                };
+                await Task.Run(() => { files.EnableScriptsAndCalculate(); files.RunAction("files"); });
+                Check(File.ReadAllText(Path.Combine(folder, "runtime.txt")) == "QuickExcel 文件\n" &&
+                    files.GetCellValue(0, 0, 0) == "QuickExcel 文件",
+                    "Published v4 host.fs writes a selected file and streams it back through the isolated worker");
+                Check(new[] { "selected.xlsx", "selected.xlsq" }.All(name =>
+                    _services.Storage.Open(Path.Combine(folder, name)).Sheets[0].GetCell(0, 2)?.Content.FormulaText == "=A1*B1"),
+                    "Published v4 FileHandle.openWorkbook writes and reopens selected XLSX and XLSQ formulas");
+                Check(_services.Storage.Open(Path.Combine(folder, "report-copy.xlsq")).Sheets[0].GetCell(0, 2)?.Content.FormulaText == "=A1*B1" &&
+                    _services.Storage.Open(Path.Combine(folder, "active-copy.xlsx")).Sheets[0].GetCell(0, 0)?.Value.TextValue == "QuickExcel 文件",
+                    "Published v4 saveAs exports a selected workbook and the live Action draft");
+            }
             if (OperatingSystem.IsWindows() || OperatingSystem.IsMacOS())
             {
                 var startup = new ScriptModuleSet(new Dictionary<string, ScriptModule>

@@ -222,6 +222,9 @@ public sealed class ScriptWorkerRuntime : IScriptBatchRuntime
         _ = Exchange<BeginWorkerRound, EmptyPayload>("beginRound", new());
     }
 
+    internal CancellationToken RoundCancellation => _lifetime.Token;
+    internal void SetRoundTimeout(TimeSpan remaining) => _deadline.CancelAfter(remaining);
+
     private TimeSpan RoundTimeLimit(ScriptRuntimeRequest request)
     {
         // Formula/compiler and Linux's OS-enforced one-shot limits remain independent.

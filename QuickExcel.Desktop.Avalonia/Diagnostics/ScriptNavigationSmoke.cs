@@ -43,6 +43,15 @@ public sealed partial class MainWindow
             _scriptStatus!.Text!.Contains("主入口 · TypeScript"),
             "New workbooks open a TypeScript main entry and show its entry role in the status and file properties");
         var originalMain = initial.GetProperty("source").GetString()!;
+        check(await NavigateScriptAsync(new(null, "quickexcel.d.ts")), "The v4 workbook opens its QuickExcel definition file");
+        var apiDefinition = await test(new Dictionary<string, object?> { ["action"] = "assistance" });
+        var declarations = apiDefinition.GetProperty("source").GetString()!;
+        check(apiDefinition.GetProperty("readOnly").GetBoolean() &&
+            declarations.Contains("interface Host extends V4HostExtensions") && declarations.Contains("getUserSelectedFiles(") &&
+            declarations.Contains("openWorkbook(): Promise<SelectedWorkbook>") && declarations.Contains("interface SelectedWorkbook extends WorkbookSaveAs") &&
+            declarations.Contains("interface Workbook extends WorkbookSaveAs") && declarations.Contains("saveAs(file: FileHandle"),
+            "The v4 definition viewer includes host.fs, FileHandle.openWorkbook and saveAs on both workbooks");
+        await NavigateScriptAsync(new("main", null));
         foreach (var (id,source) in new (string,string)[] {
             ("lodash", "import {sumBy} from 'lodash'; const n:number=sumBy([{n:1}],'n');"),
             ("decimal.js", "import Decimal from 'decimal.js'; const n:string=new Decimal('0.1').plus('0.2').toString();"),
@@ -110,6 +119,7 @@ public sealed partial class MainWindow
             common.Label == "Common" && ScriptModuleProperties(Document.Snapshot.ScriptModules, "utility") == "Common · JavaScript",
             "Created modules appear only in their selected category; Common has consistent labels and main stays ungrouped");
         var modules = Document.Snapshot.ScriptModules;
+        await CheckFileSystemCompletionsAsync(test, check, modules.Modules["action"].Source, originalMain);
         check(modules.EntryModules.SequenceEqual(["main", "formula", "action", "events"]) && modules.Bindings.ToHashSet().SetEquals(
             [new("main", "initialization"), new("formula", "formula-functions"), new("action", "actions"), new("events", "events")]),
             "Creation persists exclusive UDF or Actions bindings without turning Common modules into execution entries");

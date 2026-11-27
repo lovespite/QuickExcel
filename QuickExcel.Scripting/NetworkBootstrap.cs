@@ -405,6 +405,7 @@ public sealed partial class JscSession
             } catch (error) { return promiseReject(error); }
         }
         function settleFetch(id, reply) {
+            if (id < 0) return settleFileRequest(id, reply);
             const waiter = fetchWaiters.get(id);
             if (!waiter || !actionProgress) throw new TypeError('Unknown fetch response.');
             fetchWaiters.delete(id); waiter.signal.removeEventListener('abort', waiter.abort);
@@ -421,7 +422,8 @@ public sealed partial class JscSession
             fetchAllowed = request.allowNetwork === true && name !== '@initialize'; fetchSequence = 0; fetchWaiters.clear();
             actionProgress = { pending: true, requests: [], patch: null, error: null };
             const progress = actionProgress;
-            const cleanup = () => { activeModel = false; fetchAllowed = false; runFiles = null; };
+            startUserFiles(automatic && request.allowUserFiles === true && name !== '@initialize');
+            const cleanup = () => { activeModel = false; fetchAllowed = false; endUserFiles(); releaseFileContext(); };
             const fail = error => {
                 let message = 'Action Promise rejected.';
                 try {
@@ -451,6 +453,7 @@ public sealed partial class JscSession
                 promise.then(() => {
                     if (hostWriteFailed || fileFailed) throw new ScriptError('TransactionAborted', '有一次写入失败，本次变更未提交。');
                     if (fetchWaiters.size) throw new TypeError('The action must await or return every fetch request.');
+                    if (fileWaiters.size) throw new TypeError('The action must await every file operation.');
                     if (name === '@initialize') initialized = true;
                     progress.patch = { operationId: request.operationId, baseRevision: request.snapshot.baseRevision, name, edits: [], fileEdits: runFiles ? runFiles.edits : [] };
                     progress.pending = false; cleanup();

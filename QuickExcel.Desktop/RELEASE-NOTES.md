@@ -1,3 +1,27 @@
+# 9.2.0 · 脚本工作簿另存为
+
+Windows v4 Action 可通过 `workbook.saveAs(file, "xlsx" | "xlsq")` 保存当前工作簿的副本，`file.openWorkbook()` 打开的外部工作簿也支持相同方法。两种对象的类型定义和编辑器补全已同步更新。[用法与保存范围](docs/88-script-user-selected-files.md#将工作簿另存为副本)
+
+# 9.1.0 · 脚本读写用户选择的工作簿
+
+Windows v4 Action 可用 `await file.openWorkbook()` 打开所选 XLSX、XLSQ，按工作表和区域读写值或公式，也可生成新工作簿。`await book.close()` 校验并发布修改，`await book.abort()` 放弃草稿。[接口与示例](docs/88-script-user-selected-files.md#读写-xlsx-和-xlsq-工作簿)
+
+# 9.0.1 · 文件选择器扩展名筛选
+
+Windows 脚本文件选择器现支持 `extensions: [".xlsq"]` 和 `extensions: ["xlsq"]` 两种写法，均用于筛选 QuickExcel 工作簿。[文件筛选器用法](docs/88-script-user-selected-files.md#选择器与授权)
+
+# 9.0.0 · Windows 脚本本机文件访问
+
+用户运行的 v4 Action 可通过 `host.fs` 打开系统文件和目录选择器。Windows 目录选择采用带地址栏和搜索框的资源管理器对话框。脚本通过本次 Action 专用的句柄读写二进制和文本、读取元数据、遍历所选目录，并可单独申请删除子项。可写流在 `await stream.close()` 时发布，已写入磁盘的内容独立于工作簿撤销。[接口、示例与平台范围](docs/88-script-user-selected-files.md)
+
+# 8.0.1 · 脚本编辑器文件 API 补全
+
+v4 编辑器和隔离 TypeScript 编译器现已载入 `host.fs` 的预览声明。在 Action 中输入 `host.fs.` 可查看文件和目录选择方法，继续编写时可获得选项、句柄和流方法的提示。新建 JavaScript Action 的入口参数附带 JSDoc 类型。本机选择与文件读写仍待运行时接入。[用法与接口状态](docs/88-script-user-selected-files.md)
+
+# 8.0.0 · 工作簿虚拟文件入口迁移
+
+脚本 API v3、v4 通过 `workbook.files` 访问 `//xlsq/`、`//temp/` 和 `//mem/`。原入口 `host.files` 已移除。已有脚本请把 `host.files` 改为 `workbook.files`，使用事件上下文的代码请把 `context.host.files` 改为 `context.workbook.files`。源码由作者修改后，签名工作簿需按原流程重新签名。[文件接口与迁移说明](docs/88-script-user-selected-files.md)
+
 # Avalonia 0.6.0-preview.7
 
 Windows 默认入口及发布已切换 Avalonia，旧 WPF 项目与发布脚本已移除。工作区、网格、Monaco 与 PDF.js 经过定向验证；共享编辑/保存/撤销、文件格式及脚本 API/协议保持。Linux 增加原生桥、Landlock/seccomp/cgroup worker、Secret Service 信任与 CUPS 打印，并提供独立包。macOS 为预备实现，worker 未实现、执行关闭。

@@ -28,12 +28,12 @@
 function main(workbook: QuickExcel.Workbook, host: QuickExcel.Host) {
     const sheet = workbook.getActiveWorksheet();
     sheet.getRange("A1:B2").setValues([[1, 2], [3, 4]]);
-    host.files.writeText("//temp/report.txt", "done");
+    workbook.files.writeText("//temp/report.txt", "done");
 }
 ```
 
 - `main(workbook, host)` 是唯一动作入口；每个声明 `actions` 绑定的入口模块的 `main` 就是一个动作，动作名取模块 ID。多动作必须拆成多个入口模块。新建模块时可选填单行描述（最多 200 字符），保存在 manifest 的 `scripts.modules[id].description`，仅显示在操作列表/提示中，不参与执行、缓存摘要或模块哈希；签名载荷覆盖描述，防止签名包被改写为误导性文案。
-- 模块初始化阶段存在一个只用于注册的全局 `host`；它提供 `functions.register` 与 `events.on`，`files` 在该阶段访问会报 `InvalidReference`。运行阶段同一个 `host` 对象也会作为 `main` 的第二个参数传入。
+- v3 的模块顶层通过全局 `host` 的 `functions.register` 与 `events.on` 注册。运行阶段同一个 `host` 对象也会作为 `main` 的第二个参数传入。自产品 8.0.0 起，工作簿虚拟文件由事务内的 `workbook.files` 提供，事件处理器使用 `context.workbook.files`。
 - 不提供 `actions.register`、`QxEventNames` 或事件属性处理器。
 - 控制台请求获得同样的 `workbook` 与 `host` 作用域。
 - 事件处理器签名为 `(context: QuickExcel.EventContext) => void`，`context` 含 `workbook`、`host`、`event`。

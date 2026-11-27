@@ -49,7 +49,8 @@ public sealed class ScriptEventFileTests
         {
             ["write"] = new("scripts/write.js", """
                 function main(workbook, host) {
-                  const fs=host.files;
+                  if ('files' in host) throw Error('host exposes files');
+                  const fs=workbook.files;
                   fs.mkdir('//xlsq/data'); fs.mkdir('//xlsq/empty');
                   fs.writeText('//xlsq/data/中文.txt','汉字 😀\nline');
                   fs.writeJson('//temp/session.json',{count:7});
@@ -66,7 +67,7 @@ public sealed class ScriptEventFileTests
                 """),
             ["next"] = new("scripts/next.js", """
                 function main(workbook, host) {
-                  const fs=host.files;
+                  const fs=workbook.files;
                   workbook.getActiveWorksheet().getRange('A2').setValue(fs.readJson('//temp/session.json').count);
                 }
                 """)
@@ -107,7 +108,7 @@ public sealed class ScriptEventFileTests
     [InlineData("return Promise.reject(new Error('async failure'))")]
     public void FailedWorkerNeverCommitsAnyVolumeOrCell(string tail)
     {
-        using var doc = Document("function main(workbook, host){const fs=host.files;fs.writeText('//mem/a','memory');fs.writeText('//temp/a','temp');fs.writeText('//xlsq/a','package');workbook.getActiveWorksheet().getRange('A1').setValue(42);" + tail + ";}");
+        using var doc = Document("function main(workbook, host){const fs=workbook.files;fs.writeText('//mem/a','memory');fs.writeText('//temp/a','temp');fs.writeText('//xlsq/a','package');workbook.getActiveWorksheet().getRange('A1').setValue(42);" + tail + ";}");
         doc.EnableScriptsAndCalculate(); var before = doc.Snapshot;
         Assert.NotNull(Record.Exception(() => doc.RunAction("A")));
         Assert.Equal(before.Revision, doc.Snapshot.Revision); Assert.Empty(doc.Snapshot.PackageFiles.Entries); Assert.Empty(doc.Snapshot.Sheets[0].Cells); Assert.Empty(doc.Session.TransientFiles.Entries); Assert.False(doc.CanUndo);
@@ -116,7 +117,7 @@ public sealed class ScriptEventFileTests
     [Fact]
     public void MemoryOnlyTransactionsDoNotDirtyOrEnterHistoryAndRejectStaleReplies()
     {
-        using var doc = Document("function main(workbook, host){host.files.writeText('//mem/cache','cached');}");
+        using var doc = Document("function main(workbook, host){workbook.files.writeText('//mem/cache','cached');}");
         doc.EnableScriptsAndCalculate(); var revision = doc.Session.Revision;
         Assert.False(doc.RunAction("A").Changed); Assert.Equal(revision, doc.Session.Revision); Assert.False(doc.IsDirty); Assert.False(doc.CanUndo);
         var request = doc.Session.BeginAction("A");
@@ -129,7 +130,7 @@ public sealed class ScriptEventFileTests
     [Fact]
     public void SystemSourceEditsRefreshHashesRevokeTrustAndPersist()
     {
-        using var doc = Document("function main(workbook, host){host.files.writeText('//xlsq/scripts/main.js','function main(){ return 1; }');}");
+        using var doc = Document("function main(workbook, host){workbook.files.writeText('//xlsq/scripts/main.js','function main(){ return 1; }');}");
         doc.EnableScriptsAndCalculate(); var revision = doc.Snapshot.ScriptModules.Revision;
         doc.RunAction("A"); Assert.False(doc.ScriptsEnabled);
         Assert.Contains("return 1", doc.ScriptSource); Assert.True(doc.Snapshot.ScriptModules.Revision > revision);
@@ -175,7 +176,7 @@ public sealed class ScriptEventFileTests
     {
         using var doc = Document("""
             function log(context) {
-              const fs=context.host.files;
+              const fs=context.workbook.files;
               const entries=fs.exists('//mem/events')?fs.readJson('//mem/events'):[];
               entries.push(context.event.name); fs.writeJson('//mem/events',entries);
             }
@@ -203,7 +204,7 @@ public sealed class ScriptEventFileTests
     [InlineData("workbook.saved")][InlineData("workbook.calculated")][InlineData("workbook.close")]
     public void CompletionNotificationsCannotDirtyTheWorkbook(string name)
     {
-        using var doc = Document($"host.events.on('{name}',context=>context.host.files.writeText('//xlsq/late','no')); ");
+        using var doc = Document($"host.events.on('{name}',context=>context.workbook.files.writeText('//xlsq/late','no')); ");
         doc.EnableScriptsAndCalculate(); doc.ListActions();
         while (doc.Session.TakeScriptEvent() is not null) { }
         doc.Session.RaiseScriptEvent(name);
@@ -215,9 +216,9 @@ public sealed class ScriptEventFileTests
     public void MultipleHandlersShareFilesAndRollbackTogether()
     {
         using var doc = Document("""
-            host.events.on('cell.click',context=>context.host.files.writeText('//mem/a','first'));
+            host.events.on('cell.click',context=>context.workbook.files.writeText('//mem/a','first'));
             host.events.on('cell.click',context=>{
-              const fs=context.host.files;
+              const fs=context.workbook.files;
               if(fs.readText('//mem/a')!=='first') throw Error('missing');
               fs.writeText('//xlsq/a','second'); throw Error('rollback');
             });
@@ -231,7 +232,7 @@ public sealed class ScriptEventFileTests
     [Fact]
     public async Task CancelledFileWorkerAndHistoryOverflowNeverCommitTransientData()
     {
-        using var doc = Document("function main(workbook, host){const fs=host.files;fs.writeText('//mem/a','no');fs.writeText('//xlsq/a','no');while(true){}}");
+        using var doc = Document("function main(workbook, host){const fs=workbook.files;fs.writeText('//mem/a','no');fs.writeText('//xlsq/a','no');while(true){}}");
         doc.EnableScriptsAndCalculate(); using var cancellation = new CancellationTokenSource();
         var run = Task.Run(() => doc.RunAction("A", cancellation.Token));
         cancellation.CancelAfter(150);
@@ -247,7 +248,7 @@ public sealed class ScriptEventFileTests
     [Fact]
     public void TamperedPersistentFileHashAndNamespaceCollisionsAreRejectedOnOpen()
     {
-        using var doc = Document("function main(workbook, host){const fs=host.files;fs.mkdir('//xlsq/data');fs.writeText('//xlsq/data/a','good');}");
+        using var doc = Document("function main(workbook, host){const fs=workbook.files;fs.mkdir('//xlsq/data');fs.writeText('//xlsq/data/a','good');}");
         doc.EnableScriptsAndCalculate(); doc.RunAction("A");
         var path = Path.Combine(Directory.GetCurrentDirectory(), "artifacts", "event-files", Guid.NewGuid() + ".xlsq");
         Directory.CreateDirectory(Path.GetDirectoryName(path)!); doc.Save(path);
@@ -262,7 +263,7 @@ public sealed class ScriptEventFileTests
     [Fact]
     public void SourceChangesCannotHideNonUndoableCellOrDataChanges()
     {
-        using var doc = Document("function main(workbook, host){host.files.writeText('//xlsq/scripts/main.js','// changed');workbook.getActiveWorksheet().getRange('A1').setValue(1);}");
+        using var doc = Document("function main(workbook, host){workbook.files.writeText('//xlsq/scripts/main.js','// changed');workbook.getActiveWorksheet().getRange('A1').setValue(1);}");
         doc.EnableScriptsAndCalculate(); var source = doc.ScriptSource;
         Assert.Throws<InvalidOperationException>(() => doc.RunAction("A"));
         Assert.Equal(source, doc.ScriptSource); Assert.Empty(doc.Snapshot.Sheets[0].Cells); Assert.False(doc.CanUndo);
@@ -271,7 +272,7 @@ public sealed class ScriptEventFileTests
     [Fact]
     public void VirtualSystemEditsPreserveV1MigrationOverwriteGuard()
     {
-        const string source = "function main(workbook, host){host.files.writeText('//xlsq/scripts/main.js','// replacement');}";
+        const string source = "function main(workbook, host){workbook.files.writeText('//xlsq/scripts/main.js','// replacement');}";
         using var seed = Document(source);
         var path = Path.Combine(Directory.GetCurrentDirectory(), "artifacts", "event-files", Guid.NewGuid() + ".xlsq");
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);

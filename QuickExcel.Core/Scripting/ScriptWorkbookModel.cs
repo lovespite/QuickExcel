@@ -14,7 +14,7 @@ public sealed partial class ScriptWorkbookModel
     private readonly Func<WorkbookSnapshot, CancellationToken, CalculationResult>? _calculate;
     private WorkbookSnapshot? _calculatedView;
     private bool? _initialResultsPending;
-    private readonly List<DocumentCommand> _commands = [];
+    private ImmutableList<DocumentCommand> _commands = [];
     private long _writes;
     private long _reads;
     private bool _invalid;
@@ -200,13 +200,22 @@ public sealed partial class ScriptWorkbookModel
                 // private values without recalculating or publishing the draft.
                 _calculatedView = command.Prepare(_calculatedView).Snapshot;
             }
-            _commands.Add(command); _working = draft.Snapshot;
+            _commands = _commands.Add(command); _working = draft.Snapshot;
         }
         catch { _invalid = true; throw; }
     }
 
     /// <summary>Transport validation failures are also fatal to the transaction, even if JS catches them.</summary>
     public void RejectWrite() => _invalid = true;
+
+    // Prepare() replays the immutable command list and local storage as of this call.
+    // The clone stays private to saveAs and still checks the live Action's authorization.
+    internal ScriptWorkbookModel CaptureForSaveAs()
+    {
+        _check();
+        if (_invalid) throw new InvalidOperationException("本次脚本包含无效写入，不能另存。");
+        return (ScriptWorkbookModel)MemberwiseClone();
+    }
 
     internal CommandDraft Prepare(WorkbookSnapshot snapshot)
     {

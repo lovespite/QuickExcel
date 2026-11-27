@@ -10,8 +10,10 @@ public static class ScriptModuleTemplates
     public static string CreateConventional(string id, ScriptLanguage language, string? role)
     {
         var typed = language == ScriptLanguage.TypeScript;
+        var mainSignature = typed ? "export function main(workbook: QuickExcel.Workbook, host: QuickExcel.Host)" :
+            "/**\n * @param {QuickExcel.Workbook} workbook\n * @param {QuickExcel.Host} host\n */\nexport function main(workbook, host)";
         if (role == "events") return "// Use Add Event Handler to insert a synchronous exported handler.\n// Handlers are discovered automatically when scripts are applied.\n";
-        if (role == "initialization") return "export function main(" + (typed ? "workbook: QuickExcel.Workbook, host: QuickExcel.Host" : "workbook, host") + ") {\n    // Initialize shared Actions / Events state here.\n}\n";
+        if (role == "initialization") return mainSignature + " {\n    // Initialize shared Actions / Events state here.\n}\n";
         if (role == "formula-functions")
         {
             var stem = CompactName(string.Concat(id.Select(c => char.IsAsciiLetterLower(c) || char.IsAsciiDigit(c) ? c.ToString() : $"_{(int)c:X2}")));
@@ -27,9 +29,8 @@ public static class ScriptModuleTemplates
                 """;
         }
         return role == "actions"
-            ? "// One exported main defines this action; writes form one undoable transaction.\nexport function main(" +
-                (typed ? "workbook: QuickExcel.Workbook, host: QuickExcel.Host" : "workbook, host") +
-                ") {\n    workbook.getActiveCell().setValue(42);\n}\n"
+            ? "// One exported main defines this action; writes form one undoable transaction.\n" +
+                mainSignature + " {\n    workbook.getActiveCell().setValue(42);\n}\n"
             : "// Import this Common module by its logical ID: '" + id + "'.\nexport function example(value" +
                 (typed ? ": number" : "") + ") {\n    return value;\n}\n";
     }

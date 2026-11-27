@@ -51,7 +51,7 @@ public sealed class ScriptEventApiTests
             host.events.on('sheet.activate', context => context.workbook.getActiveWorksheet().getRange('A1').setValue(context.event.sheetName));
             host.events.on('sheet.activate', context => context.workbook.getActiveWorksheet().getRange('B1').setValue('listener'));
             host.events.on('cell.click', context => context.workbook.getActiveWorksheet().getRange('C1').setValue('retained'));
-            host.events.on('workbook.beforeSave', context => context.host.files.writeText('//xlsq/saved.txt',context.event.name));
+            host.events.on('workbook.beforeSave', context => context.workbook.files.writeText('//xlsq/saved.txt',context.event.name));
             """;
         using var doc = new WorkbookDocument(Book(Sheet("Data")).WithScriptModules(Modules(source, language)),
             new(new TypedWorkbookStorage(), new WorkbookCalculator(new ScriptWorkerRuntimeFactory()), new ScriptWorkerActionExecutor()));

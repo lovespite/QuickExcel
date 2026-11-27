@@ -16,6 +16,7 @@ public sealed record RunAction(Guid OperationId, string Name, ActionSnapshot Sna
     public ActionEvent? Event { get; init; }
     public bool LiveModel { get; init; }
     public bool AllowNetwork { get; init; }
+    public bool AllowUserFiles { get; init; }
     public int MaxNetworkBodyBytes { get; init; } = ActionProtocol.DefaultNetworkBodyBytes;
 }
 public sealed record ActionWrite(string SheetId, int Row, int Column, WireValue? Value, string? Formula);

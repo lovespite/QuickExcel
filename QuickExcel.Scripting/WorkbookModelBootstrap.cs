@@ -155,6 +155,7 @@ public sealed partial class JscSession
 
         function makeHandle(type, data) {
             const target = Object.create(prototypeFor(type));
+            if (type === 'Workbook' && automatic) Object.defineProperty(target, 'saveAs', { value: saveActiveWorkbookAs });
             const proxy = new Proxy(target, {
                 get(value, key) {
                     if (typeof key === 'symbol') {
@@ -417,6 +418,8 @@ public sealed partial class JscSession
                     throw new ScriptError('InvalidReference', '能力清单成员缺少实现：' + type + '.' + name);
                 Object.defineProperty(proto, name, { value: implementation, writable: false, enumerable: false, configurable: false });
             }
+            // QuickExcel's workbook extension is a transaction-bound property.
+            if (type === 'Workbook') Object.defineProperty(proto, 'files', { get: fileContext });
             return prototypes[type] = freeze(proto);
         }
 
@@ -460,13 +463,17 @@ public sealed partial class JscSession
         let fileFailed = false;
         function fileContext() {
             if (!activeModel) throw new ScriptError('InvalidReference', '虚拟文件只在该事务内可用。');
-            if (!runFiles) runFiles = createFs(model('files'),
-                () => { if (!activeModel) throw new ScriptError('InvalidReference', '文件上下文已失效。'); },
-                () => { fileFailed = true; });
+            if (!runFiles) runFiles = createFs(model('files'), () => { fileFailed = true; });
             return runFiles.fs;
         }
+        function releaseFileContext() {
+            if (runFiles) {
+                runFiles.release();
+                runFiles = null;
+            }
+        }
 
-        const workbook = makeHandle('Workbook', {});
+        let workbook = makeHandle('Workbook', {});
         let host = freeze({
             get permissions() { return permissions; },
             get localStorage() { return localStorage; },
@@ -477,8 +484,7 @@ public sealed partial class JscSession
                 if (typeof data.address !== 'string' || typeof data.sheetId !== 'string') throw new ScriptError('InvalidArgument', '需要 Range。');
                 return model('errorCode', data.sheetId, data.address);
             } }),
-            events,
-            get files() { return fileContext(); }
+            events
         });
 
         function runAction(name, request) {
@@ -520,7 +526,7 @@ public sealed partial class JscSession
                 return { operationId: request.operationId, baseRevision, name, edits: [], fileEdits: runFiles ? runFiles.edits : [] };
             } finally {
                 activeModel = false;
-                runFiles = null;
+                releaseFileContext();
             }
         }
         """;

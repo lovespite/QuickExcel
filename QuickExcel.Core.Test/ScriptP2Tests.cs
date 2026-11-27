@@ -114,7 +114,7 @@ public sealed class ScriptP2Tests
     public void InvalidObjectWritesRollbackCellsFilesAndAllObjectsEvenWhenCaught()
     {
         using var doc = Document("""
-            function main(workbook,host){const s=workbook.getActiveWorksheet();s.getRange('B1').setValue(7);host.files.writeText('//xlsq/p2.txt','staged');
+            function main(workbook,host){const s=workbook.getActiveWorksheet();s.getRange('B1').setValue(7);workbook.files.writeText('//xlsq/p2.txt','staged');
               s.addComment('C1','staged');try{s.getRange('B1').getDataValidation().setRule({wholeNumber:{formula1:1,operator:999}});}catch(e){}
             }
             """);

@@ -11,8 +11,16 @@ public sealed record ScriptActionRequest(CalculationStamp Stamp, Guid OperationI
     internal Lazy<VirtualFileSet>? DeferredFiles { get; init; }
     public VirtualFileSet Files { get => DeferredFiles?.Value ?? _files; init => _files = value; }
     public ScriptWorkbookModel? Model { get; internal init; }
+    internal DocumentSession? Owner { get; init; }
+    public Func<ImmutableArray<VirtualFileEdit>, WorkbookSnapshot> BeginSaveAs(CancellationToken cancellation)
+    {
+        if (Owner is null || Model is null) throw new InvalidOperationException("A live Action is required to save a workbook copy.");
+        var captured = this with { Model = Model.CaptureForSaveAs() };
+        return edits => Owner.CaptureActionCopy(captured, edits, cancellation);
+    }
     public CancellationToken RuntimeLifetime { get; internal init; }
     public ScriptNetworkSession Network { get; internal init; } = new();
+    public ScriptFilePicker? UserFilePicker { get; internal init; }
     public ScriptEvent? Event { get; init; }
     /// <summary>Only an explicit session console request sets this; workbook modules are never loaded for it.</summary>
     public string? ConsoleSource { get; internal init; }

@@ -34,12 +34,12 @@ public sealed class TypeScriptCompilerTests
             function main(workbook: QuickExcel.Workbook, host: QuickExcel.Host) {
               const n:number=Amount.Value;
               workbook.getActiveWorksheet().getRange('A1').setValue(n);
-              host.files.writeText('//xlsq/value.txt',String(n));
+              workbook.files.writeText('//xlsq/value.txt',String(n));
             }
             host.events.on('cell.click',context=>{
-              const message:string=context.host.files.readText('//xlsq/value.txt');
+              const message:string=context.workbook.files.readText('//xlsq/value.txt');
               context.workbook.getActiveWorksheet().getRange('B1').setValue(message);
-              context.host.files.writeText('//xlsq/event.txt',message);
+              context.workbook.files.writeText('//xlsq/event.txt',message);
             });
             """;
         var modules = new ScriptModuleSet(new Dictionary<string, ScriptModule>
@@ -100,6 +100,98 @@ public sealed class TypeScriptCompilerTests
         return request with { Sha256 = request.ComputeDigest() };
     }
     private static CalculationStamp Stamp => new(Guid.NewGuid(), 1, 1, 1);
+
+    [Theory]
+    [InlineData(3)]
+    [InlineData(4)]
+    public async Task FileDeclarationsAllowWorkbookAndRejectHost(int apiVersion)
+    {
+        const string source = """
+            export function main(workbook: QuickExcel.Workbook, host: QuickExcel.Host) {
+              const files: QuickExcel.VirtualFiles = workbook.files;
+              files.writeText('//mem/probe', 'ok');
+              host.files.readText('//mem/probe');
+            }
+            """;
+        var request = new CompileRequest([new("main", "typescript", source)], ["main"], "") { ApiVersion = apiVersion };
+        var reply = await new ScriptCompiler().CompileAsync(request with { Sha256 = request.ComputeDigest() }, Stamp);
+        Assert.False(reply.Result.Success);
+        var error = Assert.Single(reply.Result.Diagnostics);
+        Assert.Equal("main", error.Module);
+        Assert.Equal(4, error.Line);
+        Assert.Contains("files", error.Message);
+        Assert.Empty(reply.Result.Outputs);
+    }
+
+    [Fact]
+    public async Task UserFileSystemDeclarationsCheckV4PickerOptionsAndStreamOverloads()
+    {
+        const string source = """
+            export async function main(workbook: QuickExcel.Workbook, host: QuickExcel.Host) {
+              const [file] = await host.fs.getUserSelectedFiles({
+                mode: 'open', fileMode: 'open', fileAccess: 'r', multiSelect: true
+              });
+              const directory: QuickExcel.DirectoryHandle | null = await host.fs.getUserSelectedDirectory();
+              const directories: readonly QuickExcel.DirectoryHandle[] =
+                await host.fs.getUserSelectedDirectory({ multiSelect: true, fileAccess: 'rw', allowDelete: true });
+              if (directory) {
+                for await (const entry of directory.entries()) {
+                  if (entry.type === 'directory') await directory.getDirectory(entry.name);
+                }
+              }
+              if (!file) return;
+              const buffered = await file.open();
+              const line: string | null = buffered.readLine('utf-8');
+              await buffered.close();
+              const stream = await file.open({ buffering: 'stream' });
+              const bytes = new Uint8Array(32);
+              const pending: Promise<number> = stream.read(bytes, 0, bytes.length);
+              workbook.files.writeBytes('//mem/header', bytes.subarray(0, await pending));
+              await stream.close();
+              const selected: QuickExcel.SelectedWorkbook = await file.openWorkbook();
+              const copy: Promise<void> = workbook.saveAs(file, "xlsx");
+              await copy;
+              await selected.saveAs(file, "xlsq");
+              // @ts-expect-error Only XLSX and XLSQ are available.
+              await workbook.saveAs(file, "csv");
+              // @ts-expect-error A destination must be a FileHandle.
+              await selected.saveAs("copy.xlsq", "xlsq");
+              const names = await selected.getWorksheetNames();
+              const cells = await selected.getValues(names[0], 'A1:B1');
+              await selected.setValues(names[0], 'A2:B2', cells);
+              await selected.setFormulas(names[0], 'C2', [['=B2+1']]);
+              // @ts-expect-error Formulas are text.
+              await selected.setFormulas(names[0], 'C2', [[123]]);
+              await selected.close();
+              // @ts-expect-error Save selects only one file.
+              await host.fs.getUserSelectedFiles({ mode: 'save', fileMode: 'create', fileAccess: 'w', multiSelect: true });
+              // @ts-expect-error A create draft requires write access.
+              await host.fs.getUserSelectedFiles({ mode: 'save', fileMode: 'create', fileAccess: 'r' });
+            }
+            """;
+        var request = new CompileRequest([new("main", "typescript", source)], ["main"], "") { ApiVersion = 4 };
+        var reply = await new ScriptCompiler().CompileAsync(request with { Sha256 = request.ComputeDigest() }, Stamp);
+        Assert.True(reply.Result.Success, string.Join("\n", reply.Result.Diagnostics.Select(d => d.Message)));
+        Assert.Single(reply.Result.Outputs);
+    }
+
+    [Fact]
+    public async Task UserFileSystemIsAbsentFromTheV3HostDeclaration()
+    {
+        const string source = """
+            export async function main(workbook: QuickExcel.Workbook, host: QuickExcel.Host) {
+              await host.fs.getUserSelectedDirectory();
+              // @ts-expect-error API v3 has no user-selected workbook destination.
+              await workbook.saveAs(null, "xlsx");
+            }
+            """;
+        var reply = await new ScriptCompiler().CompileAsync(Request(new CompilerModule("main", "typescript", source)), Stamp);
+        Assert.False(reply.Result.Success);
+        var error = Assert.Single(reply.Result.Diagnostics);
+        Assert.Equal(2339, error.Code.GetInt32());
+        Assert.Contains("'fs'", error.Message);
+        Assert.Empty(reply.Result.Outputs);
+    }
 
     [Fact]
     public async Task CrossModuleTypesAreCheckedBeforeAnySourceIsExecuted()

@@ -111,7 +111,7 @@
       "error": "TypeError: Use the permission-gated fetch in an Action, then parse the response text."
     },
     "blob": {
-      "error": "TypeError: Papa Parse accepts text in QuickExcel. Read logical files with host.files, or await Blob.text() in an Action."
+      "error": "TypeError: Papa Parse accepts text in QuickExcel. Read logical files with workbook.files, or await Blob.text() in an Action."
     }
   },
   "simple-statistics": {

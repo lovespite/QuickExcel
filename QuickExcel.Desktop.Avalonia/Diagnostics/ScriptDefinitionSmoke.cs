@@ -63,8 +63,9 @@ public sealed partial class MainWindow
         var state = await Until(s => s.GetProperty("definition").GetString() == "quickexcel.d.ts" && s.GetProperty("readOnly").GetBoolean(),
             "The native definitions list opens the actual bundled QuickExcel declarations read-only");
         var declarations = state.GetProperty("source").GetString()!;
-        check(declarations.Contains("declare const host") && !Regex.IsMatch(declarations, @"[\u4e00-\u9fff]"),
-            "The definition viewer exposes the complete API with English documentation");
+        check(declarations.Contains("declare const host") && declarations.Contains("interface Host extends LegacyRegistration") &&
+            !Regex.IsMatch(declarations, @"[\u4e00-\u9fff]"),
+            "The definition viewer exposes the workbook's v3 Host API with English documentation");
         await Ui(new Dictionary<string, object?> { ["action"] = "assistance", ["typeText"] = "THIS MUST NOT BE INSERTED" });
         state = await Ui();
         check(state.GetProperty("source").GetString() == declarations && state.GetProperty("suggestDisabled").GetBoolean() &&

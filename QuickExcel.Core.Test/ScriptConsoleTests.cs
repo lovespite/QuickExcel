@@ -31,11 +31,11 @@ public sealed class ScriptConsoleTests
     public void ConsolePatchesAndVirtualFilesCommitTogetherAndUndoWithoutChangingSource()
     {
         using var doc = Document(); var source = doc.ScriptSource;
-        Assert.True(doc.RunConsole("workbook.getActiveWorksheet().getCell('A1').setValue(42); host.files.writeText('//xlsq/console.txt','ok'); host.files.writeText('//mem/session','one');").Changed);
+        Assert.True(doc.RunConsole("if ('files' in host) throw Error('host exposes files'); workbook.getActiveWorksheet().getCell('A1').setValue(42); workbook.files.writeText('//xlsq/console.txt','ok'); workbook.files.writeText('//mem/session','one');").Changed);
         Assert.Equal("42", doc.GetCellValue(0, 0, 0)); Assert.True(doc.Snapshot.PackageFiles.Entries.ContainsKey("//xlsq/console.txt"));
         Assert.True(doc.Undo()); Assert.Equal("", doc.GetCellValue(0, 0, 0)); Assert.Empty(doc.Snapshot.PackageFiles.Entries);
         Assert.True(doc.Redo()); Assert.Equal("42", doc.GetCellValue(0, 0, 0)); Assert.Equal(source, doc.ScriptSource);
-        doc.RunConsole("host.files.readText('//mem/session')"); Assert.Contains(doc.Session.ConsoleEntries, e => e.Text == "=> one");
+        doc.RunConsole("workbook.files.readText('//mem/session')"); Assert.Contains(doc.Session.ConsoleEntries, e => e.Text == "=> one");
         Assert.False(doc.ScriptsEnabled);
     }
 
@@ -43,7 +43,7 @@ public sealed class ScriptConsoleTests
     public void ExceptionKeepsPriorLogsButRollsBackEveryPatch()
     {
         using var doc = Document();
-        var error = Assert.Throws<ScriptRuntimeFailureException>(() => doc.RunConsole("console.log('before failure'); workbook.getActiveWorksheet().getCell('A1').setValue(42); host.files.writeText('//mem/lost','x'); throw Error('STOP');"));
+        var error = Assert.Throws<ScriptRuntimeFailureException>(() => doc.RunConsole("console.log('before failure'); workbook.getActiveWorksheet().getCell('A1').setValue(42); workbook.files.writeText('//mem/lost','x'); throw Error('STOP');"));
         Assert.Contains("before failure", error.Logs);
         Assert.Contains(doc.Session.ConsoleEntries, e => e.Text == "before failure");
         Assert.Contains(doc.Session.ConsoleEntries, e => e.Kind == "output" && e.Level == ScriptConsoleLevel.Error && e.Text.Contains("STOP"));
@@ -87,7 +87,7 @@ public sealed class ScriptConsoleTests
     public void ConsoleCannotRewriteScriptsOutsideUndoableDataHistory()
     {
         using var doc = Document(); var source = doc.ScriptSource;
-        Assert.Throws<InvalidOperationException>(() => doc.RunConsole("host.files.writeText('//xlsq/scripts/main.js', '// overwritten');"));
+        Assert.Throws<InvalidOperationException>(() => doc.RunConsole("workbook.files.writeText('//xlsq/scripts/main.js', '// overwritten');"));
         Assert.Equal(source, doc.ScriptSource); Assert.False(doc.CanUndo);
     }
 
@@ -95,7 +95,7 @@ public sealed class ScriptConsoleTests
     public void HostRejectionRemainsVisibleAfterTheLogBudgetIsFull()
     {
         using var doc = Document();
-        Assert.Throws<InvalidOperationException>(() => doc.RunConsole("for(let i=0;i<100;i++) console.log('line'); host.files.writeText('//xlsq/scripts/main.js','// changed');"));
+        Assert.Throws<InvalidOperationException>(() => doc.RunConsole("for(let i=0;i<100;i++) console.log('line'); workbook.files.writeText('//xlsq/scripts/main.js','// changed');"));
         Assert.Contains("控制台不能改写", doc.Session.ConsoleEntries[^1].Text);
         Assert.Equal(ScriptConsoleLevel.Error, doc.Session.ConsoleEntries[^1].Level);
         Assert.False(doc.CanUndo);
@@ -125,7 +125,7 @@ public sealed class ScriptConsoleTests
         var write = session.BeginConsole("workbook.getActiveWorksheet().getCell('A1').setValue(42)");
         Assert.Throws<InvalidOperationException>(() => session.CommitAction(write, new(write.OperationId, write.Stamp.InputRevision, write.Name!,
             [new(new(original.ActiveSheetId, 0, 0), CellValue.FromNumber(42), null)], [])));
-        var file = session.BeginConsole("host.files.writeText('//mem/data','x')");
+        var file = session.BeginConsole("workbook.files.writeText('//mem/data','x')");
         Assert.Throws<InvalidOperationException>(() => session.CommitAction(file, new(file.OperationId, file.Stamp.InputRevision, file.Name!, [], [])
             { FileEdits = [new("write", "//mem/data", System.Collections.Immutable.ImmutableArray.Create<byte>(1))] }));
         Assert.False(session.IsDirty); Assert.False(session.CanUndo); Assert.Empty(session.TransientFiles.Entries);

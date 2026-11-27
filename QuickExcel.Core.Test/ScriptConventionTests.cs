@@ -45,11 +45,57 @@ public sealed class ScriptConventionTests
     [Fact]
     public void InitializationFailureRollsBackCellsFilesAndAuthorization()
     {
-        using var document = Document(Modules(("main", "initialization", "export function main(w,h) { w.getActiveCell().setValue(42); h.files.writeText('//xlsq/start.txt','bad'); throw Error('startup failed'); }")));
+        using var document = Document(Modules(("main", "initialization", "export function main(w) { w.getActiveCell().setValue(42); w.files.writeText('//xlsq/start.txt','bad'); throw Error('startup failed'); }")));
         Assert.ThrowsAny<Exception>(() => document.EnableScriptsAndCalculate());
         Assert.Equal("", document.GetCellValue(0, 0, 0));
         Assert.Empty(document.Snapshot.PackageFiles.Entries);
         Assert.False(document.ScriptsEnabled);
+    }
+
+    [Fact]
+    public void WorkbookFilesBelongToTheCurrentTransactionAcrossInitializationActionsAndEvents()
+    {
+        using var document = Document(Modules(
+            ("main", "initialization", """
+                export function main(workbook, host) {
+                  if ('files' in host) throw Error('host exposes files');
+                  const files = workbook.files;
+                  files.writeText('//mem/state', 'initialized');
+                  globalThis.initialFiles = files;
+                }
+                """),
+            ("action", "actions", """
+                export function main(workbook, host) {
+                  if ('files' in host) throw Error('host exposes files');
+                  const { readText, writeText } = globalThis.initialFiles;
+                  for (const access of [() => readText('//mem/state'), () => writeText('//mem/state', 'stale')]) {
+                    try {
+                      access();
+                      throw Error('stale file access succeeded');
+                    } catch (error) {
+                      if (error.code !== 'InvalidReference') throw error;
+                    }
+                  }
+                  const files = workbook.files;
+                  files.writeText('//mem/state', files.readText('//mem/state') + '/action');
+                }
+                """),
+            ("events", "events", """
+                export function onCellClick(context) {
+                  if ('files' in context.host) throw Error('event host exposes files');
+                  context.workbook.getActiveCell().setValue(context.workbook.files.readText('//mem/state'));
+                }
+                """),
+            ("udf", "formula-functions", """
+                export function CHECK() { return typeof workbook === 'undefined' && !('files' in host); }
+                """)),
+            Sheet("Data", (0, 1, F("=JS.udf.CHECK()"))));
+        document.EnableScriptsAndCalculate();
+        Assert.Equal("TRUE", document.GetCellValue(0, 0, 1));
+        document.RunAction("action");
+        document.Session.RaiseScriptEvent("cell.click", document.Snapshot.ActiveSheetId);
+        document.DispatchScriptEvents();
+        Assert.Equal("initialized/action", document.GetCellValue(0, 0, 0));
     }
 
     [Fact]

@@ -129,7 +129,7 @@ public sealed class ScriptValueWriteTests
     {
         using var doc = Document("""
             host.events.on('sheet.activate', context => {
-              const fs=context.host.files;
+              const fs=context.workbook.files;
               fs.writeText('//mem/test','memory'); fs.writeText('//temp/test','temporary'); fs.writeText('//xlsq/test','persistent');
               const s=context.workbook.getActiveWorksheet(); s.getCell('A1').setValue(7);
               try { s.getCell('B1').setValue(9); } catch {}

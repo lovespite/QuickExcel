@@ -13,7 +13,7 @@ declare namespace QuickExcel {
 
   type ScriptErrorCode =
     | 'UnsupportedApi' | 'InvalidArgument' | 'ItemNotFound' | 'InvalidReference'
-    | 'BudgetExceeded' | 'Locked' | 'TransactionAborted';
+    | 'BudgetExceeded' | 'Locked' | 'TransactionAborted' | 'PermissionDenied' | 'Conflict' | 'InvalidEncoding' | 'FileError';
 
   /** Every error thrown by the QuickExcel object model carries a stable code. */
   interface ScriptError extends Error {
@@ -36,7 +36,7 @@ declare namespace QuickExcel {
     entries(): Array<[string, string]>;
   }
 
-  interface Host {
+  interface Host extends V4HostExtensions {
     /** Declare exact domains or IPv4/IPv6 addresses at the top level of main.js/main.ts.
      * The host asks for consent before initialization. Only Actions may call fetch.
      * Turning off "Allow network access" in Settings rejects permission requests and revokes prior grants. */
@@ -46,8 +46,159 @@ declare namespace QuickExcel {
     /** Session memory only. 1 MiB per entry, 100 MiB total. */
     readonly sessionStorage: IStorage;
     readonly values: ValueUtilities;
-    /** Available only inside an action, event or console transaction. */
+  }
+
+  interface Workbook extends WorkbookSaveAs {
+    /** Virtual files in //xlsq/, //temp/ and //mem/ for the current initialization, action, event or console transaction. */
     readonly files: VirtualFiles;
+  }
+
+  interface V4HostExtensions {
+    /** User-selected local files and directories in a Windows v4 Action. Handles expire when the Action ends. */
+    readonly fs: UserFileSystem;
+  }
+
+  type FileMode = 'open' | 'create' | 'open_or_create';
+  type FileAccess = 'r' | 'w' | 'rw';
+  type Encoding = 'utf-8' | 'utf-16le' | 'utf-16be';
+
+  interface FileFilter {
+    readonly name: string;
+    /** Each extension accepts 1–24 ASCII letters or digits with an optional leading dot, for example 'xlsq' or '.xlsq'. */
+    readonly extensions: readonly string[];
+  }
+
+  type FileSelectOptions = {
+    title?: string;
+    filters?: readonly FileFilter[];
+  } & (
+    | { mode: 'open'; multiSelect?: boolean }
+    | { mode: 'save'; multiSelect?: false; suggestedName?: string }
+  ) & (
+    | { fileMode: 'open' | 'open_or_create'; fileAccess: FileAccess }
+    | { fileMode: 'create'; fileAccess: 'w' | 'rw' }
+  );
+
+  interface DirectorySelectOptions {
+    title?: string;
+    /** Access requested for the selected directory and its descendants. Defaults to 'r'. */
+    fileAccess?: FileAccess;
+    /** Request permission to delete descendants. Defaults to false. */
+    allowDelete?: boolean;
+    multiSelect?: boolean;
+  }
+
+  interface UserFileSystem {
+    /** Open the system file picker. Cancellation gives an empty array. */
+    getUserSelectedFiles(options: FileSelectOptions): Promise<readonly FileHandle[]>;
+    /** Select multiple directories. Cancellation gives an empty array. */
+    getUserSelectedDirectory(options: DirectorySelectOptions & { multiSelect: true }): Promise<readonly DirectoryHandle[]>;
+    /** Select a directory. Cancellation gives null. */
+    getUserSelectedDirectory(options?: DirectorySelectOptions & { multiSelect?: false }): Promise<DirectoryHandle | null>;
+    /** Select directories. The result follows multiSelect. */
+    getUserSelectedDirectory(options: DirectorySelectOptions): Promise<DirectoryHandle | readonly DirectoryHandle[] | null>;
+  }
+
+  interface FsEntryInfo {
+    readonly type: 'file' | 'directory';
+    readonly name: string;
+    readonly exists: boolean;
+    /** File size in bytes, or null for a directory or a pending save target. */
+    readonly size: number | null;
+    /** ISO 8601 UTC timestamp, or null when unavailable. */
+    readonly createdAt: string | null;
+    /** ISO 8601 UTC timestamp, or null when unavailable. */
+    readonly modifiedAt: string | null;
+  }
+
+  interface FsHandle {
+    /** A single display name. */
+    readonly name: string;
+    stat(): Promise<FsEntryInfo>;
+    release(): Promise<void>;
+  }
+
+  interface FileHandle extends FsHandle {
+    readonly type: 'file';
+    /** Open a bounded buffer with synchronous byte and text operations. */
+    open(): Promise<BufferedFileStream>;
+    /** Open a host-backed stream with asynchronous byte and text operations. */
+    open(options: { buffering: 'stream' }): Promise<StreamingFileStream>;
+    /** Open the selected XLSX or XLSQ as a private workbook draft. */
+    openWorkbook(): Promise<SelectedWorkbook>;
+  }
+
+  type SelectedCellValue = string | number | boolean | null;
+
+  interface WorkbookSaveAs {
+    /** Publish a copy to a writable file selected for this Action. XLSQ includes scripts, package files and localStorage.
+     * XLSX contains the Excel workbook and its formulas. The source stays open at its original location. */
+    saveAs(file: FileHandle, type: "xlsx" | "xlsq"): Promise<void>;
+  }
+
+  interface SelectedWorkbook extends WorkbookSaveAs {
+    getWorksheetNames(): Promise<string[]>;
+    addWorksheet(name: string): Promise<void>;
+    /** Bounding A1 address of stored cells, including formatted cells. Empty sheets return null. */
+    getUsedRange(sheet: string): Promise<string | null>;
+    /** Read typed values. Empty cells return null. Workbook scripts remain disabled. */
+    getValues(sheet: string, address: string): Promise<SelectedCellValue[][]>;
+    /** Return formula text or null for each non-formula cell. */
+    getFormulas(sheet: string, address: string): Promise<(string | null)[][]>;
+    /** Write a rectangular matrix. Strings are literal and null clears a cell. */
+    setValues(sheet: string, address: string, values: readonly (readonly SelectedCellValue[])[]): Promise<void>;
+    setFormulas(sheet: string, address: string, formulas: readonly (readonly string[])[]): Promise<void>;
+    /** Atomically publish a writable draft and close it. */
+    close(): Promise<void>;
+    /** Close and discard unpublished changes. */
+    abort(): Promise<void>;
+  }
+
+  interface DirectoryHandle extends FsHandle {
+    readonly type: 'directory';
+    /** Enumerate direct children. Use a child directory handle to traverse further. */
+    entries(): AsyncIterable<FsEntryInfo>;
+    getFile(name: string, options?: { fileMode?: FileMode; fileAccess?: FileAccess }): Promise<FileHandle>;
+    getDirectory(name: string, options?: { create?: boolean }): Promise<DirectoryHandle>;
+    /** Requires allowDelete. Removing a nonempty directory also requires recursive: true. */
+    removeEntry(name: string, options?: { recursive?: boolean }): Promise<void>;
+  }
+
+  interface FileStreamLifetime {
+    /** Current byte offset. */
+    readonly position: number;
+    /** Current byte length, including writes to the draft. */
+    readonly length: number;
+    /** Publish a writable draft and close the stream. */
+    close(): Promise<void>;
+    /** Discard an unpublished draft and release the stream. */
+    abort(): Promise<void>;
+  }
+
+  interface BufferedFileStream extends FileStreamLifetime {
+    /** Read into the specified range of the view and return the byte count. At EOF the count is zero. */
+    read(buffer: Uint8Array, offset: number, len: number): number;
+    write(buffer: Uint8Array, offset: number, len: number): number;
+    /** Read a line without its terminator, or null at EOF. The default encoding is UTF-8. */
+    readLine(encoding?: Encoding): string | null;
+    readAllText(encoding?: Encoding): string;
+    writeText(text: string, encoding?: Encoding): void;
+    /** Write text followed by LF. */
+    writeLine(text: string, encoding?: Encoding): void;
+    seek(position: number): void;
+  }
+
+  interface StreamingFileStream extends FileStreamLifetime {
+    /** Read into the specified range of the view and return the byte count. At EOF the count is zero. */
+    read(buffer: Uint8Array, offset: number, len: number): Promise<number>;
+    write(buffer: Uint8Array, offset: number, len: number): Promise<number>;
+    /** Read a line without its terminator, or null at EOF. The default encoding is UTF-8. */
+    readLine(encoding?: Encoding): Promise<string | null>;
+    readAllText(encoding?: Encoding): Promise<string>;
+    writeText(text: string, encoding?: Encoding): Promise<void>;
+    /** Write text followed by LF. */
+    writeLine(text: string, encoding?: Encoding): Promise<void>;
+    seek(position: number): Promise<void>;
   }
 
   /** Legacy API v3 compatibility. API v4 has no registration methods. */

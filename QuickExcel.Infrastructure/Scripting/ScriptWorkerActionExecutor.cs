@@ -54,6 +54,7 @@ public sealed class ScriptWorkerActionExecutor(string? executablePath = null) : 
             using (var discovery = Create(request, linked.Token)) authorizedHosts = discovery.Runtime.NetworkHosts.ToArray();
             request.Network.EnsureAuthorized(authorizedHosts, linked.Token);
         }
+        var elapsed = System.Diagnostics.Stopwatch.StartNew();
         linked.CancelAfter(timeLimit);
         linked.Token.ThrowIfCancellationRequested();
         if (request.Name is null) throw new InvalidOperationException("Missing action name.");
@@ -87,9 +88,20 @@ public sealed class ScriptWorkerActionExecutor(string? executablePath = null) : 
             throw new InvalidOperationException("找不到已绑定的操作脚本。");
         }
         var adapter = request.Model is null ? null : new ScriptModelAdapter(request, linked.Token);
+        using var deadlines = new ScriptPickerDeadline(linked, runtime, elapsed, timeLimit);
+        var allowFiles = isAction && request.Snapshot.ScriptModules.ScriptApiVersion == 4 && request.UserFilePicker is not null;
+        using var files = allowFiles ? new ScriptUserFiles(request, deadlines.Begin, runtime.RoundCancellation) : null;
         var networkRequests = 0;
         ModelReply HostCall(ModelCall call)
         {
+            if (call.Request.ValueKind == JsonValueKind.Object && call.Request.TryGetProperty("method", out var fsMethod) &&
+                fsMethod.GetString() == "fs.call")
+            {
+                if (call.OperationId != request.OperationId) throw new ProtocolException("Unexpected file request identity.");
+                if (files is not null) return files.Call(call);
+                return new(call.OperationId, call.Sequence, false, WorkerProtocol.EncodePayload<string?>(null), "File access requires a v4 user Action.")
+                    { Code = "PermissionDenied" };
+            }
             if (call.Request.ValueKind != JsonValueKind.Object ||
                 !call.Request.TryGetProperty("method", out var method) || method.GetString() != "network.fetch")
                 return adapter?.Call(call) ?? throw new ProtocolException("No live model for this request.");
@@ -119,6 +131,7 @@ public sealed class ScriptWorkerActionExecutor(string? executablePath = null) : 
         var patch = runtime.RunAction(new(request.OperationId, request.Name, snapshot)
         {
             LiveModel = request.Model is not null,
+            AllowUserFiles = allowFiles,
             MaxNetworkBodyBytes = networkOptions.BodyLimitBytes,
             AllowNetwork = request.ConsoleSource is null && request.Event is null && !request.Name.StartsWith('@') &&
                 request.Snapshot.ScriptModules.EntriesFor("actions").Contains(request.Name),
@@ -129,8 +142,11 @@ public sealed class ScriptWorkerActionExecutor(string? executablePath = null) : 
         linked.Token.ThrowIfCancellationRequested();
         return new(patch.OperationId, patch.BaseRevision, patch.Name, patch.Edits.Select(e => new ScriptActionEdit(
             new(new SheetId(Guid.Parse(e.SheetId)), e.Row, e.Column), e.Value is null ? null : FromWire(e.Value), e.Formula)).ToImmutableArray(), logs)
-        { FileEdits = patch.FileEdits.Select(e => new VirtualFileEdit(e.Operation, e.Path, e.Base64 is null ? [] : VirtualFileProtocol.Bytes(e.Base64).ToImmutableArray())).ToImmutableArray() };
+        { FileEdits = DecodeFileEdits(patch.FileEdits) };
     }
+
+    internal static ImmutableArray<VirtualFileEdit> DecodeFileEdits(VirtualEdit[] edits) =>
+        edits.Select(e => new VirtualFileEdit(e.Operation, e.Path, e.Base64 is null ? [] : VirtualFileProtocol.Bytes(e.Base64).ToImmutableArray())).ToImmutableArray();
 
     private static WireValue ToWire(CellValue value) => value.Kind switch
     {

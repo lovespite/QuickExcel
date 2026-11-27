@@ -42,13 +42,25 @@ public sealed partial class TypedWorkbookStorage
     private static WorkbookSaveResult SaveXlsx(string path, WorkbookSnapshot snapshot, bool discardUnsupported,
         CancellationToken cancellationToken, FileVersion? expected)
     {
-        if (snapshot.LocalStorage.Entries.Count > 0) throw new InvalidOperationException(
+        var bytes = BuildXlsx(snapshot, discardUnsupported, cancellationToken, out var preserve);
+        WorkbookFileState? state = null;
+        PackageIO.AtomicWrite(path, bytes, temp =>
+        {
+            var saved = PackageIO.ReadFile(temp, new(cancellationToken));
+            state = SavedFileState(snapshot, VerifyXlsx(path, snapshot, saved, preserve, cancellationToken));
+        }, cancellationToken, expected);
+        return new(new(Convert.ToHexString(SHA256.HashData(bytes))), state!);
+    }
+
+    private static byte[] BuildXlsx(WorkbookSnapshot snapshot, bool discardUnsupported, CancellationToken cancellationToken, out bool preserve, bool workbookPartOnly = false)
+    {
+        if (!workbookPartOnly && snapshot.LocalStorage.Entries.Count > 0) throw new InvalidOperationException(
             MessageText.Get("此工作簿含 localStorage 数据，主文件必须保存为 XLSQ。导出的 XLSX 副本不包含脚本存储。"));
-        if (RequiresScriptContainer(snapshot)) throw new InvalidOperationException(
+        if (!workbookPartOnly && RequiresScriptContainer(snapshot)) throw new InvalidOperationException(
             MessageText.Get("此工作簿含 JavaScript、模块或签名，主文件必须保存为 XLSQ。交付 Excel 请使用明确的 XLSX 导出副本；导出不会标记主文件已保存。"));
         var issues = SaveIssues(snapshot);
         if (!discardUnsupported && issues.Count > 0) throw new WorkbookCompatibilityException(issues);
-        var preserve = !discardUnsupported && snapshot.FileState is { } source && ContentEquals(snapshot, source.OriginalModel);
+        preserve = !discardUnsupported && snapshot.FileState is { } source && ContentEquals(snapshot, source.OriginalModel);
         if (!preserve)
         {
             void ValidateArity(string formula, string location)
@@ -68,17 +80,15 @@ public sealed partial class TypedWorkbookStorage
                 ValidateArity(cell.Content.FormulaText, sheet.Name + "!" + TypedWorkbookXml.Reference(position));
             }
         }
-        var bytes = preserve ? XlsxCharts.RepairPreservedExtendedCharts(snapshot.FileState!.OriginalWorkbook.ToArray(), snapshot, cancellationToken) : TypedWorkbookXml.Write(snapshot, false, cancellationToken);
-        WorkbookFileState? state = null;
-        PackageIO.AtomicWrite(path, bytes, temp =>
-        {
-            var saved = PackageIO.ReadFile(temp, new(cancellationToken));
-            var reopened = OpenBytes(saved, path, false, new(cancellationToken));
-            if (!ContentEquals(snapshot, reopened, allowRowHeightRounding: true))
-                throw new InvalidDataException(MessageText.Get("XLSX 保存后重开校验未能还原单元格、公式、样式与工作表配置。"));
-            if (!preserve) XlsxMetadata.VerifyWritten(snapshot, saved, cancellationToken);
-            state = SavedFileState(snapshot, reopened.FileState!);
-        }, cancellationToken, expected);
-        return new(new(Convert.ToHexString(SHA256.HashData(bytes))), state!);
+        return preserve ? XlsxCharts.RepairPreservedExtendedCharts(snapshot.FileState!.OriginalWorkbook.ToArray(), snapshot, cancellationToken) : TypedWorkbookXml.Write(snapshot, false, cancellationToken);
+    }
+
+    private static WorkbookFileState VerifyXlsx(string path, WorkbookSnapshot snapshot, byte[] saved, bool preserve, CancellationToken cancellationToken)
+    {
+        var reopened = OpenBytes(saved, path, false, new(cancellationToken));
+        if (!ContentEquals(snapshot, reopened, allowRowHeightRounding: true))
+            throw new InvalidDataException(MessageText.Get("XLSX 保存后重开校验未能还原单元格、公式、样式与工作表配置。"));
+        if (!preserve) XlsxMetadata.VerifyWritten(snapshot, saved, cancellationToken);
+        return reopened.FileState!;
     }
 }

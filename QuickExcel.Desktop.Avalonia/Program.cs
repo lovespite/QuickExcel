@@ -27,6 +27,9 @@ internal static class Program
     internal static bool WebScriptsOnly;
     internal static bool WebModulesOnly;
     internal static bool WebNetworkOnly;
+#if QUICKEXCEL_DIAGNOSTICS
+    internal static bool WebFilePickerOnly;
+#endif
     [STAThread]
     public static int Main(string[] args)
     {
@@ -56,6 +59,7 @@ internal static class Program
         {
             WebScriptsOnly = args.ElementAtOrDefault(2) == "--scripts-only";
             WebNetworkOnly = args.ElementAtOrDefault(2) == "--network-only";
+            WebFilePickerOnly = args.ElementAtOrDefault(2) == "--file-picker-only";
             WebModulesOnly = args.ElementAtOrDefault(2) == "--modules-only";
         }
 #else

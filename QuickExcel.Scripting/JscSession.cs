@@ -95,6 +95,7 @@ public sealed partial class JscSession : IDisposable
             /*WORKBOOK_MODEL*/
             /*STORAGE*/
             /*NETWORK*/
+            /*USER_FILES*/
             /*LIBRARY_SUPPORT*/
             /*MODULE_CONVENTIONS*/
             return freeze({
@@ -109,7 +110,10 @@ public sealed partial class JscSession : IDisposable
                     actionMode = useActions === true;
                     sharedMode = options.share === true;
                     automatic = options.automatic === true;
-                    if (automatic) host = freeze({ localStorage, sessionStorage, values: host.values, permissions, get files() { return fileContext(); } });
+                    if (automatic) {
+                        workbook = makeHandle('Workbook', {});
+                        host = freeze({ localStorage, sessionStorage, values: host.values, permissions, fs: userFileSystem });
+                    }
                     Object.defineProperty(globalThis, 'host', { value: host });
                     Object.defineProperty(globalThis, 'console', { value: console });
                     Object.defineProperty(globalThis, '__qxRegisterMain', {
@@ -162,7 +166,7 @@ public sealed partial class JscSession : IDisposable
                     for (const name of ownKeys(eventHandlers)) result.push({ name: '@event/' + name, description: '' });
                     return result;
                 },
-                beginRound() { logs.length = 0; actionInvoked = false; activeModel = false; hostWriteFailed = false; hostWrote = false; },
+                beginRound() { logs.length = 0; actionInvoked = false; activeModel = false; endUserFiles(); releaseFileContext(); hostWriteFailed = false; hostWrote = false; },
                 runAction,
                 runAsyncAction,
                 settleFetch,
@@ -175,6 +179,7 @@ public sealed partial class JscSession : IDisposable
             .Replace("/*WORKBOOK_MODEL*/", WorkbookModelBootstrap, StringComparison.Ordinal)
             .Replace("/*STORAGE*/", StorageBootstrap, StringComparison.Ordinal)
             .Replace("/*NETWORK*/", NetworkBootstrap, StringComparison.Ordinal)
+            .Replace("/*USER_FILES*/", UserFileBootstrap, StringComparison.Ordinal)
             .Replace("/*LIBRARY_SUPPORT*/", BuiltInLibraries.Support, StringComparison.Ordinal)
             .Replace("/*MODULE_CONVENTIONS*/", ModuleConventionsBootstrap, StringComparison.Ordinal)
             .Replace("/*CAPABILITIES*/", JsonSerializer.Serialize(ScriptCapabilities.Current.Json, ScriptingJsonContext.Default.String), StringComparison.Ordinal);
@@ -322,7 +327,7 @@ public sealed partial class JscSession : IDisposable
                 return json.RootElement.Clone();
             }
             string? progress = Call("runAsyncAction", [name, request]);
-            for (var turn = 0; turn <= 16; turn++)
+            for (var turn = 0; turn <= 4096; turn++)
             {
                 var largePayload = progress!.Length > 1024 * 1024;
                 using var state = JsonDocument.Parse(progress!);
@@ -335,6 +340,14 @@ public sealed partial class JscSession : IDisposable
                 if (requests.GetArrayLength() == 0)
                     throw new InvalidOperationException("Action Promise is pending with no supported asynchronous operation.");
                 var next = requests[0];
+                if (next.TryGetProperty("fs", out _))
+                {
+                    var responseJson = HostRequest?.Invoke("{\"method\":\"fs.call\",\"args\":[" + next.GetRawText() + "]}")
+                        ?? throw new InvalidOperationException("File broker is unavailable.");
+                    using var fileReply = JsonDocument.Parse(responseJson);
+                    progress = Call("settleFetch", [next.GetProperty("id").GetInt32(), fileReply.RootElement]);
+                    continue;
+                }
                 if (NetworkRequest is { } network)
                 {
                     // CLR and JSC share the worker's process bound. Return dead
@@ -355,7 +368,7 @@ public sealed partial class JscSession : IDisposable
                 using var reply = JsonDocument.Parse(response);
                 progress = Call("settleFetch", [next.GetProperty("id").GetInt32(), reply.RootElement]);
             }
-            throw new InvalidOperationException("Action exceeds its fetch turn limit.");
+            throw new InvalidOperationException("Action exceeds its host operation limit.");
         }
     }
 

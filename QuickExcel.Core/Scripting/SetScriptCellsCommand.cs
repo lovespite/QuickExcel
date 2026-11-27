@@ -3,7 +3,7 @@ using QuickExcel.Domain;
 namespace QuickExcel.Core;
 
 /// <summary>Shared by live model writes and legacy patches, including final transaction replay.</summary>
-internal sealed class SetScriptCellsCommand(IEnumerable<CellEdit> edits) : DocumentCommand
+public sealed class SetScriptCellsCommand(IEnumerable<CellEdit> edits) : DocumentCommand
 {
     private readonly SetCellsCommand _command = new(edits);
 
