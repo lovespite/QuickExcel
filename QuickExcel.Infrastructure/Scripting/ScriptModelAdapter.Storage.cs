@@ -14,7 +14,7 @@ internal sealed partial class ScriptModelAdapter
             "local" => false, "session" => true, _ => throw new ArgumentException("未知存储类型。")
         };
         var operation = args[1].GetString();
-        var model = request.Model!;
+        var model = Model;
         if (method == "setStorage")
         {
             if (operation == "set" && args[2].ValueKind == JsonValueKind.Array && args[2].GetArrayLength() == 2)

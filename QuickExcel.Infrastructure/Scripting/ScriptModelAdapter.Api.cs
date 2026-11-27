@@ -7,7 +7,6 @@ namespace QuickExcel.Runtime;
 
 internal sealed partial class ScriptModelAdapter
 {
-    private ScriptWorkbookModel Model => request.Model!;
     private static readonly CellRectangle ScalarRange = new(0, 0, 0, 0);
     private static object Handle(string type, object data) => new Dictionary<string, object?> { ["type"] = type, ["data"] = data, ["scriptHandle"] = true };
     private static object RangeHandle(SheetId sheet, CellRectangle range) => Handle("Range", new Dictionary<string, object?> { ["sheetId"] = sheet.ToString(), ["address"] = range.ToString() });
@@ -73,6 +72,8 @@ internal sealed partial class ScriptModelAdapter
             throw Invalid("对象调用参数无效。");
         var data = transport[0]; var args = transport[1].EnumerateArray().ToArray();
         if (args.Length > 8) throw Invalid("对象调用参数过多。");
+        if (fileDraft is null && args.Any(arg => arg.ValueKind == JsonValueKind.Object && arg.TryGetProperty("selectedWorkbook", out _)))
+            throw new ModelFailure("InvalidReference", "区域属于另一个工作簿。");
         if (name.StartsWith("Workbook.", StringComparison.Ordinal)) return WorkbookApi(name[9..], args);
         if (name.StartsWith("NamedItem.", StringComparison.Ordinal)) return NamedItemApi(data, name[10..], args);
         if (!Guid.TryParse(Text(data.GetProperty("sheetId")), out var id)) throw Invalid("工作表 ID 无效。");

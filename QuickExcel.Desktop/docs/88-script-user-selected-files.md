@@ -125,17 +125,15 @@ declare namespace QuickExcel {
 
 从 9.1.0 起，Windows 上的 v4 Action 可对选择器返回的文件调用 `await file.openWorkbook()`。已有工作簿用 `fileMode: "open"`，导入申请 `"r"`，原地编辑申请 `"rw"`。导出新工作簿或覆盖用户确认的目标时用 `fileMode: "create"` 和 `fileAccess: "w"`。新工作簿有一张名为 `Sheet1` 的工作表，格式由文件名的 `.xlsx` 或 `.xlsq` 扩展名决定。保留已有内容的打开方式需要读权限。
 
-在脚本编辑器中输入 `file.` 可补全 `openWorkbook`。写下 `const book = await file.openWorkbook()` 后，输入 `book.` 即可查看工作簿方法。JavaScript Action 模板和 TypeScript 都支持这条调用链，编辑器的 `quickexcel.d.ts` 定义文件可查看 `SelectedWorkbook` 的完整签名。
+从 10.0.0 起，`const book = await file.openWorkbook()` 返回外部文件草稿。`book.workbook` 提供同步的工作表、区域和格式对象。`book` 自身提供异步的 `saveAs`、`close` 和 `abort`。JavaScript 和 TypeScript 编辑器都支持沿这条对象链补全。类型 `QuickExcel.Selected.Worksheet` 等由宿主方法的同一份声明生成，可用作同时处理活动工作簿和外部草稿的函数参数。
 
 | 方法 | 结果 |
 | --- | --- |
-| `await book.getWorksheetNames()` | 返回按工作簿顺序排列的表名。 |
-| `await book.getUsedRange(sheet)` | 返回包含已存储单元格（含格式）的最小 A1 矩形，空表返回 `null`。 |
-| `await book.getValues(sheet, address)` | 返回二维数组。数值、文本和布尔值保持类型，空单元格返回 `null`，单元格错误返回其显示文本。内置公式可重算，不能取得当前结果的公式会报错。 |
-| `await book.getFormulas(sheet, address)` | 返回同形状的二维数组，公式单元格返回以 `=` 开头的源文本，其余返回 `null`。 |
-| `await book.setValues(sheet, address, values)` | 将矩阵写入同尺寸的区域。`null` 清空单元格内容，以 `=` 开头的文本保留为文本。 |
-| `await book.setFormulas(sheet, address, formulas)` | 将等尺寸的公式字符串矩阵写入区域。 |
-| `await book.addWorksheet(name)` | 在末尾新增工作表。 |
+| `book.workbook.getWorksheets()`、`book.workbook.addWorksheet(name)` | 按顺序取得工作表对象，或新建工作表并取得其对象。 |
+| `sheet.getUsedRange()`、`sheet.getRange("A1:B2")` | 取得已用区域或指定矩形的区域对象。空表的已用区域为 `undefined`。 |
+| `range.getValues()`、`range.setValues(matrix)` | 读取或写入二维值矩阵。空白读为 `""`。清空内容用 `range.clear(QuickExcel.ClearApplyTo.contents)`。 |
+| `range.getFormulas()`、`range.setFormula("=A2*B2")` | 读取矩阵中的公式文本及非公式单元格的值，或写入公式。内置公式按草稿当前内容重算。 |
+| `range.getFormat().getFont().setBold(true)`、`range.setNumberFormat("0.00")` | 设置字体和数字格式。填充、边框、对齐与行高列宽沿用宿主对象方法。 |
 | `await book.saveAs(file, type)` | 将当前草稿保存到另一个可写文件，`type` 为 `"xlsx"` 或 `"xlsq"`。 |
 | `await book.close()`、`await book.abort()` | 分别发布并关闭、放弃并关闭。只读工作簿关闭时释放资源。 |
 
@@ -150,13 +148,15 @@ export async function main(workbook: QuickExcel.Workbook, host: QuickExcel.Host)
   if (!file) return;
   const book = await file.openWorkbook();
   try {
-    const [sheet] = await book.getWorksheetNames();
-    const [[price, quantity]] = await book.getValues(sheet, "A2:B2");
+    const [sheet] = book.workbook.getWorksheets();
+    const [[price, quantity]] = sheet.getRange("A2:B2").getValues();
     if (typeof price !== "number" || typeof quantity !== "number") {
       throw new Error("A2 和 B2 需要填写数值。");
     }
-    await book.setFormulas(sheet, "C2", [["=A2*B2"]]);
-    const [[amount]] = await book.getValues(sheet, "C2");
+    const total = sheet.getRange("C2");
+    total.setFormula("=A2*B2");
+    total.setNumberFormat("0.00");
+    const amount = total.getValue();
     if (typeof amount !== "number") throw new Error("金额计算失败。");
     await book.close();
     workbook.getActiveCell().setValue(amount);
@@ -169,7 +169,9 @@ export async function main(workbook: QuickExcel.Workbook, host: QuickExcel.Host)
 
 读取外部 XLSQ 时，其脚本保持禁用。保存沿用桌面的格式兼容性和工作表保护检查，保留支持的工作簿内容及 XLSQ 的脚本、虚拟文件和持久存储。宿主在发布前重新打开编码结果进行校验，再检查用户所选文件的身份和版本。错误写入、放弃及 Action 结束时仍打开的草稿均不会发布。成功关闭后的外部修改独立于当前工作簿的撤销历史。
 
-区域操作使用单个工作表名称和 A1 矩形。每个 Action 对所选工作簿合计最多读 100,000 格、写 20,000 格。查找已用区域按扫描的已存储单元格计数。文件读写继续使用现有的包解析、草稿容量、IPC 和 Action 时限。
+从 9.x 迁移时，先用 `const sheet = book.workbook.getWorksheet(sheetName)` 查找工作表。确认 `sheet` 存在后，用 `sheet.getRange(address).getValues()` 替换原先的 `await book.getValues(sheetName, address)`，并检查原先用 `null` 判断空白、清除单元格或识别公式的代码。
+
+每个草稿独立拥有其工作表、区域和格式对象。打开两份内容相同的文件时，对象仍绑定到各自的草稿。跨工作簿传递数据可将 `source.getValues()` 的结果传给 `target.setValues()`；接受区域句柄的方法要求句柄属于同一工作簿。草稿关闭、放弃或 Action 结束后，其全部对象失效。每个 Action 对所选工作簿合计最多读 100,000 格、写 20,000 格。文件读写继续使用现有的包解析、草稿容量、IPC 和 Action 时限。
 
 ### 将工作簿另存为副本
 
@@ -308,6 +310,8 @@ export async function main(workbook: QuickExcel.Workbook, host: QuickExcel.Host)
 | 隔离与集成 | 真正的隔离 worker 验证角色、帧/累计预算、异步续接、看门狗、过期选择和清理。桌面验证文件/目录选择器及权限说明；各平台独立记录适配器证据。 |
 
 ## Windows 验证
+
+对象模型回归用例将活动工作簿保存为 XLSQ，并逐字节复制为第二份文件。在同一个 Action 中同时打开两份副本，交错修改三本工作簿同一工作表的 `A1` 和字体，关闭后从磁盘重新读取并分别断言。用例还检查同一文件的写锁以及跨草稿和关闭后的句柄。[工作簿隔离回归测试](../../QuickExcel.Core.Test/ScriptUserFileTests.cs)
 
 13 项文件运行时测试使用实际的隔离 Native AOT worker。测试覆盖了带点和不带点的扩展名过滤、文件和目录多选、初始化阶段的权限限制、取消与迟到结果、句柄失效、跨块文本解码、写入冲突、保护活动工作簿，以及目录联接和硬链接的处理。[运行时测试](../../QuickExcel.Core.Test/ScriptUserFileTests.cs)
 

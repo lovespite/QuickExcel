@@ -45,6 +45,7 @@ node .\tools\QuickExcel.ApiGen\test\generate.test.mjs
 - 可选的 `summary` 是产品自己维护的成员说明；设置页优先显示它，未提供时显示调用方式。生成器不会写入 Microsoft 文档注释。
 - `enums` 从固定声明 AST 生成运行时数值，注入只读 `QuickExcel` 对象；不手写第二套枚举。
 - `limits` 必须与 Core 的 `WorkbookLimits` 一致。单次调用与累计预算仍由宿主强制验证。
+- `selectedModel` 按类型列出外部工作簿可用的已实现成员，同时生成 worker 和宿主共用的清单以及 `QuickExcel.Selected` 声明。引用工作表、区域或格式的参数和返回类型均在该命名空间解析。
 - `--overrides` 只用于选择其他手写输入（例如合成 fixture），产品默认使用上述文件。固定产品来源每次生成和 `--check` 都校验 SHA-256 与 git blob SHA-1，缺失或不匹配即失败。
 
 未列出的成员保留在类型骨架中，运行时抛 `UnsupportedApi`。

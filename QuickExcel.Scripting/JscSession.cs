@@ -55,13 +55,16 @@ public sealed partial class JscSession : IDisposable
             let initialized = true;
             const initializers = [];
             class ScriptError extends Error {
-                constructor(code, message, member) {
+                constructor(code, message, member, activeWorkbook = true) {
                     super(message);
-                    if (code === 'InvalidArgument' && hostWrote || code === 'BudgetExceeded' || code === 'Locked') hostWriteFailed = true;
+                    if (activeWorkbook && (code === 'InvalidArgument' && hostWrote || code === 'BudgetExceeded' || code === 'Locked')) hostWriteFailed = true;
                     Object.defineProperty(this, 'name', { value: 'ScriptError', configurable: true });
                     Object.defineProperty(this, 'code', { value: code, enumerable: true });
                     if (member !== undefined) Object.defineProperty(this, 'member', { value: member, enumerable: true });
                 }
+            }
+            class SelectedWorkbookError extends ScriptError {
+                constructor(code, message, member) { super(code, message, member, false); }
             }
             const deepFreeze = value => {
                 if (value && typeof value === 'object') { for (const key of ownKeys(value)) deepFreeze(value[key]); freeze(value); }
@@ -111,7 +114,7 @@ public sealed partial class JscSession : IDisposable
                     sharedMode = options.share === true;
                     automatic = options.automatic === true;
                     if (automatic) {
-                        workbook = makeHandle('Workbook', {});
+                        workbook = activeWorkbookModel.makeWorkbook();
                         host = freeze({ localStorage, sessionStorage, values: host.values, permissions, fs: userFileSystem });
                     }
                     Object.defineProperty(globalThis, 'host', { value: host });

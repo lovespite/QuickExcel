@@ -198,11 +198,15 @@ public sealed partial class MainWindow
                             const [target] = await h.fs.getUserSelectedFiles({mode:'save', fileMode:'create',
                               fileAccess:'rw', suggestedName:'selected.' + extension});
                             const book = await target.openWorkbook();
-                            await book.setValues('Sheet1','A1:B1',[[6,7]]);
-                            await book.setFormulas('Sheet1','C1',[['=A1*B1']]);
+                            const sheet = book.workbook.getWorksheet('Sheet1');
+                            sheet.getRange('A1:B1').setValues([[6,7]]);
+                            sheet.getRange('C1').setFormula('=A1*B1');
+                            sheet.getRange('C1').getFormat().getFont().setBold(true);
                             await book.close();
                             const saved = await target.openWorkbook();
-                            if ((await saved.getValues('Sheet1','C1'))[0][0] !== 42) throw Error('Selected workbook round trip');
+                            const result = saved.workbook.getWorksheet('Sheet1').getRange('C1');
+                            if (result.getValue() !== 42 || !result.getFormat().getFont().getBold())
+                              throw Error('Selected workbook formula or format did not round trip');
                             if (extension === 'xlsx') {
                               const copy = await dir.getFile('report-copy.xlsq',{fileMode:'create'});
                               await saved.saveAs(copy,'xlsq');

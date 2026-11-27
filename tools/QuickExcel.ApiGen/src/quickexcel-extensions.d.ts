@@ -128,8 +128,6 @@ declare namespace QuickExcel {
     openWorkbook(): Promise<SelectedWorkbook>;
   }
 
-  type SelectedCellValue = string | number | boolean | null;
-
   interface WorkbookSaveAs {
     /** Publish a copy to a writable file selected for this Action. XLSQ includes scripts, package files and localStorage.
      * XLSX contains the Excel workbook and its formulas. The source stays open at its original location. */
@@ -137,17 +135,9 @@ declare namespace QuickExcel {
   }
 
   interface SelectedWorkbook extends WorkbookSaveAs {
-    getWorksheetNames(): Promise<string[]>;
-    addWorksheet(name: string): Promise<void>;
-    /** Bounding A1 address of stored cells, including formatted cells. Empty sheets return null. */
-    getUsedRange(sheet: string): Promise<string | null>;
-    /** Read typed values. Empty cells return null. Workbook scripts remain disabled. */
-    getValues(sheet: string, address: string): Promise<SelectedCellValue[][]>;
-    /** Return formula text or null for each non-formula cell. */
-    getFormulas(sheet: string, address: string): Promise<(string | null)[][]>;
-    /** Write a rectangular matrix. Strings are literal and null clears a cell. */
-    setValues(sheet: string, address: string, values: readonly (readonly SelectedCellValue[])[]): Promise<void>;
-    setFormulas(sheet: string, address: string, formulas: readonly (readonly string[])[]): Promise<void>;
+    /** Synchronous worksheet, range and formatting operations on this private draft.
+     * All derived handles expire when it closes or the Action ends. Workbook scripts stay disabled. */
+    readonly workbook: Selected.Workbook;
     /** Atomically publish a writable draft and close it. */
     close(): Promise<void>;
     /** Close and discard unpublished changes. */

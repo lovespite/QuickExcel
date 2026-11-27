@@ -49,8 +49,9 @@ public sealed partial class MainWindow
         check(apiDefinition.GetProperty("readOnly").GetBoolean() &&
             declarations.Contains("interface Host extends V4HostExtensions") && declarations.Contains("getUserSelectedFiles(") &&
             declarations.Contains("openWorkbook(): Promise<SelectedWorkbook>") && declarations.Contains("interface SelectedWorkbook extends WorkbookSaveAs") &&
+            declarations.Contains("readonly workbook: Selected.Workbook") && declarations.Contains("namespace Selected") &&
             declarations.Contains("interface Workbook extends WorkbookSaveAs") && declarations.Contains("saveAs(file: FileHandle"),
-            "The v4 definition viewer includes host.fs, FileHandle.openWorkbook and saveAs on both workbooks");
+            "The v4 definition viewer includes selected.workbook and the file lifecycle methods");
         await NavigateScriptAsync(new("main", null));
         foreach (var (id,source) in new (string,string)[] {
             ("lodash", "import {sumBy} from 'lodash'; const n:number=sumBy([{n:1}],'n');"),

@@ -16,11 +16,12 @@ internal sealed partial class ScriptModelAdapter
                 var valuesOnly = args.Length == 1 && Bool(args[0]);
                 if (sheet.Cells.Count > MaxReadCells)
                     throw new ModelFailure("BudgetExceeded", "已用区域扫描超过读取预算。");
+                if (fileDraft is not null) Spend(Math.Max(1, sheet.Cells.Count), false);
                 var positions = sheet.Cells
                     .Where(p => range.Contains(p.Key.Row, p.Key.Column) &&
                         (!valuesOnly || p.Value.Content.Kind == CellContentKind.Formula || p.Value.Content.LiteralValue.Kind != CellValueKind.Blank))
                     .Select(p => p.Key).ToArray();
-                Spend(Math.Max(1, positions.Length), false);
+                if (fileDraft is null) Spend(Math.Max(1, positions.Length), false);
                 return positions.Length == 0 ? null : RangeHandle(sheet.Id, new(
                     positions.Min(p => p.Row), positions.Min(p => p.Column),
                     positions.Max(p => p.Row), positions.Max(p => p.Column)));
@@ -46,7 +47,7 @@ internal sealed partial class ScriptModelAdapter
             case "getRowHidden":
             {
                 Arity(args, 0);
-                Spend(1, false);
+                Spend(fileDraft is null ? 1 : range.Rows, false);
                 return Enumerable.Range(range.Top, range.Rows).All(row => sheet.Rows.GetValueOrDefault(row)?.Hidden == true);
             }
             case "setRowHidden":
@@ -56,7 +57,7 @@ internal sealed partial class ScriptModelAdapter
             case "getColumnHidden":
             {
                 Arity(args, 0);
-                Spend(1, false);
+                Spend(fileDraft is null ? 1 : range.Columns, false);
                 return Enumerable.Range(range.Left, range.Columns).All(column => sheet.Columns.GetValueOrDefault(column)?.Hidden == true);
             }
             case "setColumnHidden":

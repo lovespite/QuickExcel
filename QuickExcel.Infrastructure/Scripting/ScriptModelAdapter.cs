@@ -6,16 +6,16 @@ using QuickExcel.Scripting;
 
 namespace QuickExcel.Runtime;
 
-internal sealed partial class ScriptModelAdapter(ScriptActionRequest request, CancellationToken cancellation)
+internal sealed partial class ScriptModelAdapter(ScriptActionRequest request, CancellationToken cancellation,
+    ScriptWorkbookModel? fileDraft = null, ScriptModelAdapter.CellBudget? sharedBudget = null)
 {
     private const int MaxReadCells = 100_000;
     private const int MaxWriteCells = 20_000;
-    private int _readCells;
-    private int _writeCells;
+    private ScriptWorkbookModel Model { get; } = fileDraft ?? request.Model ?? throw new ProtocolException("No live model for this request.");
+    private readonly CellBudget _budget = sharedBudget ?? new();
 
     internal ModelReply Call(ModelCall call)
     {
-        var model = request.Model ?? throw new ProtocolException("No live model for this request.");
         string? method = null;
         try
         {
@@ -31,6 +31,7 @@ internal sealed partial class ScriptModelAdapter(ScriptActionRequest request, Ca
             // arities; Office object-model calls use the generated capability whitelist.
             if (!(method == "files" && args.Length == 0 || method == "errorCode" && args.Length == 2 || StorageCall(method, args.Length)) && !ScriptCapabilities.Current.AllowsHost(method, args.Length))
                 throw new ModelFailure("InvalidArgument", "未知的工作簿模型方法或参数个数。");
+            var model = Model;
             var view = model.View;
             object? value;
             if (StorageCall(method, args.Length)) value = CallStorage(method, args);
@@ -40,7 +41,9 @@ internal sealed partial class ScriptModelAdapter(ScriptActionRequest request, Ca
             {
                 Spend(1, write: false);
                 var sheet = view.GetSheet(view.ActiveSheetId); var cell = sheet.View.ActiveCell;
-                value = new Dictionary<string, object?> { ["sheetId"] = sheet.Id.ToString(), ["cell"] = new CellRectangle(cell.Row, cell.Column, cell.Row, cell.Column).ToString(), ["ranges"] = model.Selection.Select(r => r.ToString()).ToArray() };
+                var active = new CellRectangle(cell.Row, cell.Column, cell.Row, cell.Column);
+                var selection = fileDraft is null ? model.Selection : [sheet.View.Selection?.Range ?? active];
+                value = new Dictionary<string, object?> { ["sheetId"] = sheet.Id.ToString(), ["cell"] = active.ToString(), ["ranges"] = selection.Select(r => r.ToString()).ToArray() };
             }
             else if (method == "sheets")
             {
@@ -70,9 +73,9 @@ internal sealed partial class ScriptModelAdapter(ScriptActionRequest request, Ca
                 var range = CellRectangle.Parse(address);
                 WorkbookLimits.ValidatePosition(range.Top, range.Left); WorkbookLimits.ValidatePosition(range.Bottom, range.Right);
                 var rows = range.Bottom - range.Top + 1; var columns = range.Right - range.Left + 1;
-                var cells = rows * columns;
-                if (rows <= 0 || columns <= 0 || (long)cells > (method.StartsWith("set", StringComparison.Ordinal) ? MaxWriteCells : MaxReadCells))
+                if (rows <= 0 || columns <= 0 || range.Count > (method.StartsWith("set", StringComparison.Ordinal) ? MaxWriteCells : MaxReadCells))
                     throw new ModelFailure("BudgetExceeded", "单次模型请求超过单元格预算。");
+                var cells = (int)range.Count;
                 switch (method)
                 {
                     case "getFormula":
@@ -132,15 +135,15 @@ internal sealed partial class ScriptModelAdapter(ScriptActionRequest request, Ca
         }
         catch (ModelFailure failure)
         {
-            if (IsWrite(method)) model.RejectWrite();
+            if (IsWrite(method)) Model.RejectWrite();
             return new(call.OperationId, call.Sequence, false, ScriptJsonValues.ToElement(null), Bounded(failure.Message)) { Code = failure.Code };
         }
         catch (Exception error) when (error is ArgumentException or InvalidOperationException or IOException or FormatException or KeyNotFoundException or OverflowException or NotSupportedException)
         {
-            if (IsWrite(method)) model.RejectWrite();
+            if (IsWrite(method)) Model.RejectWrite();
             var code = error switch
             {
-                ScriptStorageQuotaException => "BudgetExceeded",
+                ScriptStorageQuotaException or ScriptMessageLimitException => "BudgetExceeded",
                 KeyNotFoundException => "ItemNotFound",
                 NotSupportedException => "UnsupportedApi",
                 ArgumentException or FormatException or OverflowException => "InvalidArgument",
@@ -150,20 +153,28 @@ internal sealed partial class ScriptModelAdapter(ScriptActionRequest request, Ca
         }
     }
 
-    private static bool IsWrite(string? method) =>
+    internal static bool IsWrite(string? method) =>
         method is not null && (method.StartsWith("set", StringComparison.Ordinal) || method == "clear");
 
-    private void Spend(int cells, bool write)
+    private void Spend(int cells, bool write) => _budget.Spend(cells, write);
+
+    // The active workbook has its own budget. All user-selected workbooks in an Action share one.
+    internal sealed class CellBudget
     {
-        if (write)
+        private long _readCells, _writeCells;
+
+        internal void Spend(int cells, bool write)
         {
-            _writeCells = checked(_writeCells + cells);
-            if (_writeCells > MaxWriteCells) throw new ModelFailure("BudgetExceeded", "一次操作最多写入 20000 个单元格。");
-        }
-        else
-        {
-            _readCells = checked(_readCells + cells);
-            if (_readCells > MaxReadCells) throw new ModelFailure("BudgetExceeded", "一次操作最多读取 100000 个单元格。");
+            if (write)
+            {
+                _writeCells += cells;
+                if (_writeCells > MaxWriteCells) throw new ModelFailure("BudgetExceeded", "一次操作最多写入 20000 个单元格。");
+            }
+            else
+            {
+                _readCells += cells;
+                if (_readCells > MaxReadCells) throw new ModelFailure("BudgetExceeded", "一次操作最多读取 100000 个单元格。");
+            }
         }
     }
 

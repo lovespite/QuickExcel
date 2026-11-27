@@ -31,6 +31,16 @@ public sealed class ScriptingJsonTests
     }
 
     [Fact]
+    public void OversizedRangeResultStopsBeforeSerializingTheRemainingCells()
+    {
+        var cell = new string('a', 32_767);
+        var visited = 0;
+        var values = Enumerable.Range(0, 1_024).Select(_ => { visited++; return cell; });
+        Assert.Throws<ScriptMessageLimitException>(() => ScriptJsonValues.ToElement(values));
+        Assert.InRange(visited, 1, 1_023);
+    }
+
+    [Fact]
     public void UnknownObjectsCannotFallBackToReflection()
     {
         Assert.Throws<InvalidOperationException>(() => ScriptJsonValues.Serialize(new { hidden = 1 }));

@@ -19,12 +19,13 @@ public sealed partial class JscSession
             if (!round || round !== fileRound || !activeModel)
                 throw fsError('InvalidReference', 'File access requires the current user Action.');
         }
-        function fileCall(round, fs, ...args) {
+        function fileCall(round, fs, ...args) { return queueFileCall(round, ScriptError, fs, args); }
+        function queueFileCall(round, ErrorType, fs, args) {
             requireFileRound(round);
-            if (++fileSequence > 4096) throw fsError('BudgetExceeded', 'Too many file operations.');
+            if (++fileSequence > 4096) throw new ErrorType('BudgetExceeded', 'Too many file operations.');
             const id = -fileSequence;
             return new NativePromise((resolve, reject) => {
-                fileWaiters.set(id, { resolve, reject });
+                fileWaiters.set(id, { resolve, reject, ErrorType });
                 actionProgress.requests.push({ id, fs, args });
             });
         }
@@ -34,7 +35,7 @@ public sealed partial class JscSession
             fileWaiters.delete(id);
             actionProgress.requests = actionProgress.requests.filter(r => r.id !== id);
             if (reply.ok) waiter.resolve(reply.value);
-            else waiter.reject(fsError(reply.code || 'FileError', reply.error || 'File operation failed.'));
+            else waiter.reject(new waiter.ErrorType(reply.code || 'FileError', reply.error || 'File operation failed.'));
             return actionProgress;
         }
         const userFileSystem = freeze({
@@ -53,7 +54,10 @@ public sealed partial class JscSession
             const base = { type: entry.type, name: entry.name, stat: async () => freeze(await call('stat')), release: () => call('release') };
             if (entry.type === 'file') {
                 const file = freeze({ ...base,
-                    async openWorkbook() { return makeSelectedWorkbook(round, (await call('openWorkbook')).id); },
+                    async openWorkbook() {
+                        const opened = await queueFileCall(round, SelectedWorkbookError, 'openWorkbook', [entry.id]);
+                        return makeSelectedWorkbook(round, opened.id);
+                    },
                     async open(options) {
                         const buffered = options === undefined;
                         if (!buffered && options?.buffering !== 'stream') throw fsError('InvalidArgument', 'Unknown buffering option.');
@@ -80,14 +84,14 @@ public sealed partial class JscSession
             });
         }
 
-        function saveWorkbookCopy(round, file, type, source, edits) {
+        function saveWorkbookCopy(round, file, type, source, edits, ErrorType = ScriptError) {
             requireFileRound(round);
             const target = round.files.get(file);
-            if (!target) throw fsError('InvalidReference', 'Expected a file handle from the current Action.');
-            if (type !== 'xlsx' && type !== 'xlsq') throw fsError('InvalidArgument', 'Expected xlsx or xlsq.');
+            if (!target) throw new ErrorType('InvalidReference', 'Expected a file handle from the current Action.');
+            if (type !== 'xlsx' && type !== 'xlsq') throw new ErrorType('InvalidArgument', 'Expected xlsx or xlsq.');
             // Pin host model inputs at invocation, before later synchronous JS edits can run.
             if (source === null) source = model('fs.call', { fs: 'beginSaveAs', args: [] });
-            return fileCall(round, 'saveAs', target, type, source, edits);
+            return queueFileCall(round, ErrorType, 'saveAs', [target, type, source, edits]);
         }
         async function saveActiveWorkbookAs(file, type) {
             if (hostWriteFailed || fileFailed) throw fsError('TransactionAborted', 'The workbook transaction has a failed write.');
@@ -96,58 +100,39 @@ public sealed partial class JscSession
         }
 
         function makeSelectedWorkbook(round, id) {
-            let closed = false, busy = false, failed = false;
+            let closed = false, busy = false, failed = false, modelDepth = 0;
             const clear = () => { closed = true; round.streams.delete(clear); };
             round.streams.add(clear);
-            async function operation(method, args, write = false) {
+            function check() {
                 requireFileRound(round);
-                if (closed) throw fsError('InvalidReference', 'Workbook closed.');
-                if (busy) throw fsError('Locked', 'Another workbook operation is pending.');
-                if (failed) throw fsError('TransactionAborted', 'Workbook draft was discarded.');
+                if (closed) throw new SelectedWorkbookError('InvalidReference', 'Workbook closed.');
+                if (busy) throw new SelectedWorkbookError('Locked', 'Another workbook operation is pending.');
+                if (failed) throw new SelectedWorkbookError('TransactionAborted', 'Workbook draft was discarded.');
+            }
+            const scope = { id, check, fail() { failed = true; }, enter() { modelDepth++; }, leave() { modelDepth--; } };
+            const workbook = createWorkbookModel(scope).makeWorkbook();
+            function requireIdle() {
+                // Script-provided argument getters may re-enter while a synchronous edit is being validated.
+                if (busy || modelDepth) throw new SelectedWorkbookError('Locked', 'Another workbook operation is pending.');
+            }
+            async function saveAs(file, type) {
+                check();
+                requireIdle();
                 busy = true;
-                try {
-                    if (method === 'saveAs') return await saveWorkbookCopy(round, args[0], args[1], id, []);
-                    if (method === 'setValues' || method === 'setFormulas') {
-                        // Snapshot the matrix before yielding. JSON would otherwise turn NaN or undefined into blanks.
-                        const matrix = args[2];
-                        if (!isArray(matrix)) throw fsError('InvalidArgument', 'Expected a cell matrix.');
-                        let cells = 0;
-                        args[2] = Array.from(matrix, row => {
-                            if (!isArray(row)) throw fsError('InvalidArgument', 'Expected a cell row.');
-                            if ((cells += row.length) > 20000) throw fsError('BudgetExceeded', 'Cell matrix is too large.');
-                            return Array.from(row, value => {
-                                if (method === 'setFormulas' ? typeof value !== 'string' :
-                                    value !== null && typeof value !== 'boolean' && typeof value !== 'string' && !isFiniteNumber(value))
-                                    throw fsError('InvalidArgument', 'Invalid cell value.');
-                                return value;
-                            });
-                        });
-                    }
-                    return await fileCall(round, 'workbook', id, method, ...args);
-                } catch (error) { if (write) failed = true; throw error; }
+                try { await saveWorkbookCopy(round, file, type, id, [], SelectedWorkbookError); }
                 finally { busy = false; }
             }
             async function finish(save) {
                 if (closed) return;
                 requireFileRound(round);
-                if (busy) throw fsError('Locked', 'Another workbook operation is pending.');
+                requireIdle();
                 busy = true;
                 try {
-                    await fileCall(round, save && !failed ? 'close' : 'abort', id);
-                    if (save && failed) throw fsError('TransactionAborted', 'Workbook draft was discarded.');
+                    await queueFileCall(round, SelectedWorkbookError, save && !failed ? 'close' : 'abort', [id]);
+                    if (save && failed) throw new SelectedWorkbookError('TransactionAborted', 'Workbook draft was discarded.');
                 } finally { clear(); }
             }
-            return freeze({
-                getWorksheetNames: () => operation('getWorksheetNames', []),
-                addWorksheet: name => operation('addWorksheet', [name], true),
-                getUsedRange: sheet => operation('getUsedRange', [sheet]),
-                getValues: (sheet, address) => operation('getValues', [sheet, address]),
-                getFormulas: (sheet, address) => operation('getFormulas', [sheet, address]),
-                setValues: (sheet, address, values) => operation('setValues', [sheet, address, values], true),
-                setFormulas: (sheet, address, formulas) => operation('setFormulas', [sheet, address, formulas], true),
-                saveAs: (file, type) => operation('saveAs', [file, type]),
-                close: () => finish(true), abort: () => finish(false)
-            });
+            return freeze({ workbook, saveAs, close: () => finish(true), abort: () => finish(false) });
         }
 
         function fileEncoding(name) {

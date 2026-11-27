@@ -1,5 +1,41 @@
 {
   "apiVersion": 3,
+  "selectedModel": {
+    "Workbook": [
+      "getActiveCell", "getActiveWorksheet", "getWorksheet", "getWorksheets", "getSelectedRange", "getSelectedRanges",
+      "addWorksheet", "getFirstWorksheet", "getLastWorksheet"
+    ],
+    "Worksheet": [
+      "getId", "getName", "setName", "getPosition", "setPosition", "getVisibility", "setVisibility",
+      "getTabColor", "setTabColor", "getShowGridlines", "setShowGridlines", "getNext", "getPrevious", "delete", "activate",
+      "getCell", "getRange", "getUsedRange", "getRangeByIndexes", "getRanges"
+    ],
+    "Range": [
+      "getAddress", "getAddressLocal", "getWorksheet", "getFormat", "getValue", "getValues", "setValue", "setValues",
+      "getFormula", "getFormulas", "setFormula", "setFormulas", "getText", "getTexts", "getValueType", "getValueTypes",
+      "clear", "clearOrResetContents", "copyFrom", "calculate", "getRowIndex", "getColumnIndex", "getRowCount",
+      "getColumnCount", "getCellCount", "getNumberFormat", "getNumberFormats", "setNumberFormat", "setNumberFormats",
+      "getNumberFormatCategory", "getNumberFormatCategories", "getCell", "getRow", "getColumn", "getEntireRow", "getEntireColumn",
+      "getOffsetRange", "getResizedRange", "getAbsoluteResizedRange", "getBoundingRect", "getIntersection", "getLastCell",
+      "getLastRow", "getLastColumn", "getRowsAbove", "getRowsBelow", "getColumnsBefore", "getColumnsAfter", "getUsedRange",
+      "getSurroundingRegion", "getRangeEdge", "getMergedAreas", "merge", "unmerge", "getRowHidden", "setRowHidden",
+      "getColumnHidden", "setColumnHidden"
+    ],
+    "RangeAreas": ["getAddress", "getAreaCount", "getCellCount", "getAreas", "getWorksheet"],
+    "RangeFormat": [
+      "getFill", "getFont", "getProtection", "getBorders", "getRangeBorder", "getHorizontalAlignment", "getVerticalAlignment",
+      "getWrapText", "getShrinkToFit", "getIndentLevel", "getTextOrientation", "getRowHeight", "getColumnWidth",
+      "setHorizontalAlignment", "setVerticalAlignment", "setWrapText", "setShrinkToFit", "setIndentLevel", "setTextOrientation",
+      "setRowHeight", "setColumnWidth"
+    ],
+    "RangeFill": ["getColor", "setColor", "clear"],
+    "RangeFont": [
+      "getBold", "getItalic", "getColor", "getName", "getSize", "getStrikethrough", "getUnderline",
+      "setBold", "setItalic", "setColor", "setName", "setSize", "setStrikethrough", "setUnderline"
+    ],
+    "RangeBorder": ["getColor", "getSideIndex", "getStyle", "getWeight", "setColor", "setStyle", "setWeight"],
+    "FormatProtection": ["getLocked", "getFormulaHidden", "setLocked", "setFormulaHidden"]
+  },
   "types": {
     "Workbook": {
       "members": {

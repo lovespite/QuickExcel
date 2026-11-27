@@ -107,6 +107,23 @@ function emitDeclaration(node) {
 const declarations = [];
 for (const entry of types.values()) declarations.push(emitDeclaration(entry.node));
 
+// Reuse the host signatures. Inside Selected, Worksheet/Range return types and
+// handle arguments resolve to the corresponding file-scoped interfaces.
+const overrides = JSON.parse(fs.readFileSync(overridesPath, 'utf8'));
+const selectedModel = overrides.selectedModel ?? { Workbook: [] };
+const selectedDeclarations = [];
+for (const [type, members] of Object.entries(selectedModel)) {
+  const entry = types.get(type);
+  if (entry?.kind !== 'interface') fail(`Unknown selected model interface ${type}.`);
+  if (!Array.isArray(members) || new Set(members).size !== members.length) fail(`Invalid selected model list for ${type}.`);
+  for (const member of members) {
+    if (!overrides.types[type]?.members[member]) fail(`Unknown selected model capability ${type}.${member}.`);
+  }
+  const lines = entry.node.members.filter(method => members.includes(declarationName(method)))
+    .map(method => '    ' + emitDeclaration(method));
+  selectedDeclarations.push(`    interface ${type} {\n${lines.join('\n')}\n    }`);
+}
+
 const extensions = fs.existsSync(extensionsPath) ? fs.readFileSync(extensionsPath, 'utf8').trim() : '';
 const sourceReference = identity.commit
   ? ` * https://github.com/${identity.repository}/blob/${identity.commit}/${identity.file}`
@@ -130,12 +147,15 @@ ${sourceReference}
 
 declare namespace QuickExcel {
 ${declarations.join('\n\n')}
+
+  namespace Selected {
+${selectedDeclarations.join('\n\n')}
+  }
 }
 
 ${extensions}
 `;
 
-const overrides = JSON.parse(fs.readFileSync(overridesPath, 'utf8'));
 const typesOverrides = overrides.types ?? {};
 for (const [typeName, typeSpec] of Object.entries(typesOverrides)) {
   const entry = types.get(typeName);
@@ -192,6 +212,7 @@ const manifest = {
   source: identity,
   typeCount: types.size,
   types: manifestTypes,
+  selectedModel,
   enums,
   limits: overrides.limits ?? { rows: 100000, columns: 1024 },
 };

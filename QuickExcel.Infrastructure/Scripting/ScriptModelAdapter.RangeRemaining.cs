@@ -23,6 +23,8 @@ internal sealed partial class ScriptModelAdapter
             _ => throw Unsupported("copyFrom 暂不支持 link 复制；请使用 setHyperlink。")
         };
         var (sourceSheet, source) = SourceRange(args[0], target.Id);
+        if (source.Count > MaxWriteCells) throw new ModelFailure("BudgetExceeded", "复制范围超过写入预算。");
+        if (fileDraft is not null) Spend((int)source.Count, false);
         var rows = transpose ? source.Columns : source.Rows;
         var columns = transpose ? source.Rows : source.Columns;
         var single = destination.Count == 1;
@@ -73,7 +75,7 @@ internal sealed partial class ScriptModelAdapter
 
     private object? GetSurroundingRegion(WorksheetSnapshot sheet, CellRectangle range, JsonElement[] args)
     {
-        Arity(args, 0); Spend(1, false);
+        Arity(args, 0); Spend(fileDraft is null ? 1 : Math.Max(1, sheet.Cells.Count), false);
         return RangeHandle(sheet.Id, CurrentRegion(sheet, range.Top, range.Left));
     }
 
@@ -126,7 +128,11 @@ internal sealed partial class ScriptModelAdapter
             _ => throw Invalid("方向无效。")
         };
         bool InBounds(int row, int column) => row >= 0 && row < WorkbookLimits.MaxRows && column >= 0 && column < WorkbookLimits.MaxColumns;
-        bool Content(int row, int column) => HasRecordCell(sheet.GetCell(row, column));
+        bool Content(int row, int column)
+        {
+            if (fileDraft is not null) Spend(1, false);
+            return HasRecordCell(sheet.GetCell(row, column));
+        }
         var currentRow = active.Row; var currentColumn = active.Column;
         var nextRow = currentRow + dr; var nextColumn = currentColumn + dc;
         if (Content(currentRow, currentColumn) && InBounds(nextRow, nextColumn) && Content(nextRow, nextColumn))
@@ -143,7 +149,7 @@ internal sealed partial class ScriptModelAdapter
                 nextColumn = direction switch { "left" => 0, "right" => WorkbookLimits.MaxColumns - 1, _ => active.Column };
             }
         }
-        Spend(1, false);
+        if (fileDraft is null) Spend(1, false);
         return RangeHandle(sheet.Id, new(nextRow, nextColumn, nextRow, nextColumn));
     }
 

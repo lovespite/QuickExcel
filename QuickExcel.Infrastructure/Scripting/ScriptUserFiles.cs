@@ -29,7 +29,7 @@ internal sealed partial class ScriptUserFiles(ScriptActionRequest request, Func<
         internal readonly bool Buffered = buffered;
         internal bool Dirty = dirty, Failed;
         internal WorkbookDocument? Workbook;
-        internal long CalculatedRevision = -1;
+        internal ScriptModelAdapter? WorkbookModel;
         public void Dispose() { Workbook?.Dispose(); Data.Dispose(); }
     }
 
@@ -46,7 +46,10 @@ internal sealed partial class ScriptUserFiles(ScriptActionRequest request, Func<
         {
             cancellation.ThrowIfCancellationRequested();
             var packet = call.Request.GetProperty("args")[0];
-            var data = Dispatch(packet.GetProperty("fs").GetString()!, packet.GetProperty("args"));
+            var method = packet.GetProperty("fs").GetString()!;
+            var arguments = packet.GetProperty("args");
+            if (method == "workbookModel") return WorkbookModelCall(call, arguments);
+            var data = Dispatch(method, arguments);
             using var json = JsonDocument.Parse(data?.ToJsonString() ?? "null");
             return new(call.OperationId, call.Sequence, true, json.RootElement.Clone(), null);
         }
@@ -76,7 +79,6 @@ internal sealed partial class ScriptUserFiles(ScriptActionRequest request, Func<
         if (method == "endEntries") { if (_cursors.Remove(id, out var c)) c.Dispose(); return null; }
         if (method == "abort") { if (_streams.Remove(id, out var s)) s.Dispose(); return null; }
         if (method is "read" or "write" or "close") return StreamCall(method, id, a);
-        if (method == "workbook") return WorkbookCall(id, a);
         if (method == "saveAs") { SaveAs(id, a); return null; }
         if (!_entries.TryGetValue(id, out var entry)) throw new UserFileError("InvalidReference", "File handle expired.");
         if (method == "release") { _entries.Remove(id); return null; }
@@ -359,7 +361,16 @@ internal sealed partial class ScriptUserFiles(ScriptActionRequest request, Func<
         var opened = new OpenFile(entry, data, entry.CanWrite && !keep, buffered);
         try
         {
-            if (workbook) opened.Workbook = LoadWorkbook(opened, keep);
+            if (workbook)
+            {
+                opened.Workbook = LoadWorkbook(opened, keep);
+                var model = ScriptWorkbookModel.ForFileDraft(opened.Workbook, () =>
+                {
+                    cancellation.ThrowIfCancellationRequested();
+                    _ = request.Model!.View; // The owning Action must still be authorized.
+                });
+                opened.WorkbookModel = new ScriptModelAdapter(request, cancellation, model, _workbookCellBudget);
+            }
             _streams.Add(id, opened);
         }
         catch { opened.Dispose(); throw; }

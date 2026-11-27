@@ -114,8 +114,11 @@ internal sealed partial class ScriptModelAdapter
         }
     }
 
-    private void ExecuteObject(SheetId sheet, DocumentCommand command, int cost = 1) =>
+    private void ExecuteObject(SheetId sheet, DocumentCommand command, int cost = 1)
+    {
+        if (fileDraft is not null) Spend(cost, true);
         Model.ExecuteObjectCommand(sheet, cost, command);
+    }
 
     private int SheetPosition(SheetId id)
     {

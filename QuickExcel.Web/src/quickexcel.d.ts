@@ -4067,6 +4067,176 @@ declare namespace QuickExcel {
   }
 
   type CellControl = UnknownCellControl | EmptyCellControl | MixedCellControl | CheckboxCellControl;
+
+  namespace Selected {
+    interface Workbook {
+      getActiveCell(): Range;
+      getSelectedRange(): Range;
+      getSelectedRanges(): RangeAreas;
+      getWorksheets(): Worksheet[];
+      addWorksheet(name?: string): Worksheet;
+      getActiveWorksheet(): Worksheet;
+      getFirstWorksheet(visibleOnly?: boolean): Worksheet;
+      getWorksheet(key: string): Worksheet | undefined;
+      getLastWorksheet(visibleOnly?: boolean): Worksheet;
+    }
+
+    interface Worksheet {
+      getId(): string;
+      getName(): string;
+      setName(name: string): void;
+      getPosition(): number;
+      setPosition(position: number): void;
+      getShowGridlines(): boolean;
+      setShowGridlines(showGridlines: boolean): void;
+      getTabColor(): string;
+      setTabColor(tabColor: string): void;
+      getVisibility(): SheetVisibility;
+      setVisibility(visibility: SheetVisibility): void;
+      activate(): void;
+      delete(): void;
+      getCell(row: number, column: number): Range;
+      getNext(visibleOnly?: boolean): Worksheet;
+      getPrevious(visibleOnly?: boolean): Worksheet;
+      getRange(address?: string): Range;
+      getRangeByIndexes(startRow: number, startColumn: number, rowCount: number, columnCount: number): Range;
+      getRanges(address?: string): RangeAreas;
+      getUsedRange(valuesOnly?: boolean): Range;
+    }
+
+    interface Range {
+      getAddress(): string;
+      getAddressLocal(): string;
+      getCellCount(): number;
+      getColumnCount(): number;
+      getColumnHidden(): boolean;
+      setColumnHidden(columnHidden: boolean): void;
+      getColumnIndex(): number;
+      getFormat(): RangeFormat;
+      getFormulas(): string[][];
+      setFormulas(formulas: string[][]): void;
+      getNumberFormats(): string[][];
+      setNumberFormats(numberFormats: string[][]): void;
+      getNumberFormatCategories(): NumberFormatCategory[][];
+      getRowCount(): number;
+      getRowHidden(): boolean;
+      setRowHidden(rowHidden: boolean): void;
+      getRowIndex(): number;
+      getTexts(): string[][];
+      getValueTypes(): RangeValueType[][];
+      getValues(): (string | number | boolean)[][];
+      setValues(values: (string | number | boolean)[][]): void;
+      getWorksheet(): Worksheet;
+      calculate(): void;
+      clear(applyTo?: ClearApplyTo): void;
+      clearOrResetContents(): void;
+      copyFrom(sourceRange: Range | RangeAreas | string, copyType?: RangeCopyType, skipBlanks?: boolean, transpose?: boolean): void;
+      getAbsoluteResizedRange(numRows: number, numColumns: number): Range;
+      getBoundingRect(anotherRange: Range | string): Range;
+      getCell(row: number, column: number): Range;
+      getColumn(column: number): Range;
+      getColumnsAfter(count?: number): Range;
+      getColumnsBefore(count?: number): Range;
+      getEntireColumn(): Range;
+      getEntireRow(): Range;
+      getIntersection(anotherRange: Range | string): Range;
+      getLastCell(): Range;
+      getLastColumn(): Range;
+      getLastRow(): Range;
+      getMergedAreas(): RangeAreas;
+      getOffsetRange(rowOffset: number, columnOffset: number): Range;
+      getRangeEdge(direction: KeyboardDirection, activeCell?: Range | string): Range;
+      getResizedRange(deltaRows: number, deltaColumns: number): Range;
+      getRow(row: number): Range;
+      getRowsAbove(count?: number): Range;
+      getRowsBelow(count?: number): Range;
+      getSurroundingRegion(): Range;
+      getUsedRange(valuesOnly?: boolean): Range;
+      merge(across?: boolean): void;
+      unmerge(): void;
+      getFormula(): string;
+      setFormula(formula: string): void;
+      getNumberFormat(): string;
+      setNumberFormat(numberFormat: string): void;
+      getNumberFormatCategory(): NumberFormatCategory;
+      getText(): string;
+      getValueType(): RangeValueType;
+      getValue(): string | number | boolean;
+      setValue(value: any): void;
+    }
+
+    interface RangeAreas {
+      getAddress(): string;
+      getAreaCount(): number;
+      getCellCount(): number;
+      getWorksheet(): Worksheet;
+      getAreas(): Range[];
+    }
+
+    interface RangeFormat {
+      getColumnWidth(): number;
+      setColumnWidth(columnWidth: number): void;
+      getFill(): RangeFill;
+      getFont(): RangeFont;
+      getHorizontalAlignment(): HorizontalAlignment;
+      setHorizontalAlignment(horizontalAlignment: HorizontalAlignment): void;
+      getIndentLevel(): number;
+      setIndentLevel(indentLevel: number): void;
+      getProtection(): FormatProtection;
+      getRowHeight(): number;
+      setRowHeight(rowHeight: number): void;
+      getShrinkToFit(): boolean;
+      setShrinkToFit(shrinkToFit: boolean): void;
+      getTextOrientation(): number;
+      setTextOrientation(textOrientation: number): void;
+      getVerticalAlignment(): VerticalAlignment;
+      setVerticalAlignment(verticalAlignment: VerticalAlignment): void;
+      getWrapText(): boolean;
+      setWrapText(wrapText: boolean): void;
+      getBorders(): RangeBorder[];
+      getRangeBorder(index: BorderIndex): RangeBorder;
+    }
+
+    interface RangeFill {
+      getColor(): string;
+      setColor(color: string): void;
+      clear(): void;
+    }
+
+    interface RangeFont {
+      getBold(): boolean;
+      setBold(bold: boolean): void;
+      getColor(): string;
+      setColor(color: string): void;
+      getItalic(): boolean;
+      setItalic(italic: boolean): void;
+      getName(): string;
+      setName(name: string): void;
+      getSize(): number;
+      setSize(size: number): void;
+      getStrikethrough(): boolean;
+      setStrikethrough(strikethrough: boolean): void;
+      getUnderline(): RangeUnderlineStyle;
+      setUnderline(underline: RangeUnderlineStyle): void;
+    }
+
+    interface RangeBorder {
+      getColor(): string;
+      setColor(color: string): void;
+      getSideIndex(): BorderIndex;
+      getStyle(): BorderLineStyle;
+      setStyle(style: BorderLineStyle): void;
+      getWeight(): BorderWeight;
+      setWeight(weight: BorderWeight): void;
+    }
+
+    interface FormatProtection {
+      getFormulaHidden(): boolean;
+      setFormulaHidden(formulaHidden: boolean): void;
+      getLocked(): boolean;
+      setLocked(locked: boolean): void;
+    }
+  }
 }
 
 // QuickExcel host extensions. Hand-written; not part of the Office Scripts API.
@@ -4199,8 +4369,6 @@ declare namespace QuickExcel {
     openWorkbook(): Promise<SelectedWorkbook>;
   }
 
-  type SelectedCellValue = string | number | boolean | null;
-
   interface WorkbookSaveAs {
     /** Publish a copy to a writable file selected for this Action. XLSQ includes scripts, package files and localStorage.
      * XLSX contains the Excel workbook and its formulas. The source stays open at its original location. */
@@ -4208,17 +4376,9 @@ declare namespace QuickExcel {
   }
 
   interface SelectedWorkbook extends WorkbookSaveAs {
-    getWorksheetNames(): Promise<string[]>;
-    addWorksheet(name: string): Promise<void>;
-    /** Bounding A1 address of stored cells, including formatted cells. Empty sheets return null. */
-    getUsedRange(sheet: string): Promise<string | null>;
-    /** Read typed values. Empty cells return null. Workbook scripts remain disabled. */
-    getValues(sheet: string, address: string): Promise<SelectedCellValue[][]>;
-    /** Return formula text or null for each non-formula cell. */
-    getFormulas(sheet: string, address: string): Promise<(string | null)[][]>;
-    /** Write a rectangular matrix. Strings are literal and null clears a cell. */
-    setValues(sheet: string, address: string, values: readonly (readonly SelectedCellValue[])[]): Promise<void>;
-    setFormulas(sheet: string, address: string, formulas: readonly (readonly string[])[]): Promise<void>;
+    /** Synchronous worksheet, range and formatting operations on this private draft.
+     * All derived handles expire when it closes or the Action ends. Workbook scripts stay disabled. */
+    readonly workbook: Selected.Workbook;
     /** Atomically publish a writable draft and close it. */
     close(): Promise<void>;
     /** Close and discard unpublished changes. */

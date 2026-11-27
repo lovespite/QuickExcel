@@ -35,6 +35,9 @@ public static class ScriptJsonValues
 
     private static void Write(Utf8JsonWriter writer, object? value)
     {
+        // Enforce the stream bound while emitting large range results. A writer backed
+        // by a stream can otherwise retain the complete, escaped result until disposal.
+        if (writer.BytesPending >= 64 * 1024) writer.Flush();
         switch (value)
         {
             case null: writer.WriteNullValue(); break;
@@ -85,9 +88,9 @@ public static class ScriptJsonValues
         private void Check(int count)
         {
             if (Position + count > maxBytes)
-                throw new InvalidOperationException(maxBytes == JscSession.MaxMessageBytes
-                    ? "JavaScript JSON exceeds the 16 MiB UTF-8 input limit."
-                    : "JavaScript JSON exceeds its UTF-8 byte limit.");
+                throw maxBytes == JscSession.MaxMessageBytes
+                    ? new ScriptMessageLimitException()
+                    : new InvalidOperationException("JavaScript JSON exceeds its UTF-8 byte limit.");
             if (Capacity < Position + count)
                 Capacity = (int)Math.Min(maxBytes, Math.Max((long)Capacity * 2, Position + count));
         }
@@ -97,3 +100,5 @@ public static class ScriptJsonValues
         public override void WriteByte(byte value) { Check(1); base.WriteByte(value); }
     }
 }
+
+public sealed class ScriptMessageLimitException() : InvalidOperationException("JavaScript JSON exceeds the 16 MiB UTF-8 input limit.");

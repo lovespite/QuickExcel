@@ -16,15 +16,18 @@ public sealed class ScriptCapabilities
 
     private readonly Dictionary<string, HashSet<int>> _hostArities;
     private readonly Dictionary<string, int> _costs;
+    private readonly HashSet<(string Method, int Arity)> _selectedHost;
 
     public static ScriptCapabilities Current { get; } = Load();
 
-    private ScriptCapabilities(string json, string sourceSha256, Dictionary<string, HashSet<int>> hostArities, Dictionary<string, int> costs)
+    private ScriptCapabilities(string json, string sourceSha256, Dictionary<string, HashSet<int>> hostArities, Dictionary<string, int> costs,
+        HashSet<(string Method, int Arity)> selectedHost)
     {
         Json = json;
         SourceSha256 = sourceSha256;
         _hostArities = hostArities;
         _costs = costs;
+        _selectedHost = selectedHost;
     }
 
     /// <summary>The exact manifest JSON embedded for the script proxy.</summary>
@@ -36,6 +39,8 @@ public sealed class ScriptCapabilities
     /// <summary>True when <paramref name="method"/> is an implemented host method with this argument count.</summary>
     public bool AllowsHost(string method, int arity) =>
         _hostArities.TryGetValue(method, out var arities) && arities.Contains(arity);
+
+    public bool AllowsSelectedHost(string method, int arity) => _selectedHost.Contains((method, arity));
 
     /// <summary>Per-call weight declared for a host method, or 0 when it is not implemented.</summary>
     public int MaxCost(string method) => _costs.TryGetValue(method, out var cost) ? cost : 0;
@@ -96,6 +101,17 @@ public sealed class ScriptCapabilities
             }
         }
         if (arities.Count == 0) throw new InvalidOperationException("脚本能力清单没有宿主成员。");
-        return new ScriptCapabilities(json, hash.GetString()!, arities, costs);
+        var selectedHost = new HashSet<(string, int)>();
+        foreach (var type in root.GetProperty("selectedModel").EnumerateObject())
+        {
+            var members = types.GetProperty(type.Name).GetProperty("members");
+            foreach (var item in type.Value.EnumerateArray())
+            {
+                var member = members.GetProperty(item.GetString()!);
+                if (member.GetProperty("kind").GetString() == "host")
+                    selectedHost.Add((member.GetProperty("host").GetString()!, member.GetProperty("arity").GetInt32()));
+            }
+        }
+        return new ScriptCapabilities(json, hash.GetString()!, arities, costs, selectedHost);
     }
 }

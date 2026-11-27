@@ -47,6 +47,11 @@ assert.ok(dts.includes('getWorksheet(key: string): Worksheet;'), 'Workbook.getWo
 assert.ok(dts.includes('getPivotTables(): PivotTable[];'), 'unsupported members must remain in the skeleton');
 assert.ok(dts.includes('getValueTypes(): RangeValueType[][];'), 'RangeValueType members are missing');
 assert.ok(dts.includes('interface VirtualFiles'), 'host extensions were not appended');
+const selected = dts.split('namespace Selected {')[1].split('// QuickExcel host extensions')[0];
+assert.ok(selected.includes('getWorksheet(key: string): Worksheet;'));
+assert.ok(selected.includes('getRange('));
+assert.ok(!selected.includes('getPivotTables') && !selected.includes('getFormat'));
+assert.deepEqual(manifest.selectedModel.Workbook, ['getWorksheet']);
 assert.ok(dts.includes('Source SHA-256:'), 'source identity header is missing');
 
 assert.equal(manifest.apiVersion, 3);

@@ -1,11 +1,10 @@
 using System.Collections.Immutable;
 using System.Text.Json;
-using System.Text.Json.Nodes;
 using QuickExcel.Calculation;
 using QuickExcel.Core;
 using QuickExcel.Domain;
-using QuickExcel.Formulas;
 using QuickExcel.ScriptContracts;
+using QuickExcel.Scripting;
 using QuickExcel.Storage;
 using static QuickExcel.Runtime.SelectedFileSystem;
 
@@ -14,7 +13,7 @@ namespace QuickExcel.Runtime;
 internal sealed partial class ScriptUserFiles
 {
     private readonly FileReadBudget _workbookReadBudget = new(cancellation);
-    private long _readCells, _writtenCells;
+    private readonly ScriptModelAdapter.CellBudget _workbookCellBudget = new();
 
     private WorkbookDocument LoadWorkbook(OpenFile file, bool keep)
     {
@@ -24,7 +23,8 @@ internal sealed partial class ScriptUserFiles
             : new WorkbookSnapshot(Guid.NewGuid(), 0, ExcelDateSystem.Windows1900,
                 [new WorksheetSnapshot(SheetId.New(), "Sheet1")], textCompatibilityVersion: 2,
                 scriptModules: TypedWorkbookStorage.IsXlsq(path) ? ScriptModuleSet.Single("", ScriptModuleSet.CurrentApiVersion) : null);
-        // This private document never enables scripts. Its calculator can evaluate standard formulas.
+        // Even a read grant needs private calculation commits. The broker gates every write
+        // using the selected entry, and this private document never enables workbook scripts.
         return new WorkbookDocument(snapshot, new(new TypedWorkbookStorage(), new WorkbookCalculator(new ScriptWorkerRuntimeFactory())));
     }
 
@@ -79,136 +79,52 @@ internal sealed partial class ScriptUserFiles
         PublishDraft(target, chain, encoded);
     }
 
-    private JsonNode? WorkbookCall(string id, JsonElement args)
+    private ModelReply WorkbookModelCall(ModelCall call, JsonElement args)
     {
-        if (!_streams.TryGetValue(id, out var file) || file.Workbook is not { } book)
+        if (args.ValueKind != JsonValueKind.Array || args.GetArrayLength() != 2) throw UserFileError.Invalid();
+        var id = args[0].GetString() ?? throw UserFileError.Invalid();
+        if (!_streams.TryGetValue(id, out var file) || file.WorkbookModel is null || file.Workbook is null)
             throw new UserFileError("InvalidReference", "Workbook handle expired.");
         if (file.Failed) throw new UserFileError("TransactionAborted", "Workbook draft was discarded.");
-        var method = args[1].GetString();
-        var write = method is "setValues" or "setFormulas" or "addWorksheet";
-        if (write ? !file.Entry.CanWrite : !file.Entry.CanRead) throw UserFileError.Denied();
+        var operation = args[1];
+        if (operation.ValueKind != JsonValueKind.Object || operation.EnumerateObject().Count() != 2 ||
+            !operation.TryGetProperty("method", out var name) || name.ValueKind != JsonValueKind.String ||
+            !operation.TryGetProperty("args", out var arguments) || arguments.ValueKind != JsonValueKind.Array)
+            throw UserFileError.Invalid();
+        var method = name.GetString()!;
+        if (!ScriptCapabilities.Current.AllowsSelectedHost(method, arguments.GetArrayLength()))
+            throw new UserFileError("UnsupportedApi", "This operation is unavailable on a selected workbook.");
+        var write = ScriptModelAdapter.IsWrite(method);
         try
         {
-            if (method == "getWorksheetNames")
-            {
-                var names = new JsonArray();
-                foreach (var item in book.Snapshot.Sheets) names.Add(item.Name);
-                return names;
-            }
-            var name = args[2].GetString() ?? throw UserFileError.Invalid();
-            if (method == "addWorksheet")
-            {
-                book.Session.Execute(new AddSheetCommand(name));
-                file.Dirty = true;
-                return null;
-            }
-            var sheet = book.Snapshot.Sheets.FirstOrDefault(s => s.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
-                ?? throw new UserFileError("ItemNotFound", "Worksheet does not exist.");
-            if (method == "getUsedRange")
-            {
-                if (sheet.Cells.IsEmpty) return null;
-                SpendWorkbookCells(sheet.Cells.Count, false);
-                var cells = sheet.Cells.Keys;
-                return new CellRectangle(cells.Min(p => p.Row), cells.Min(p => p.Column),
-                    cells.Max(p => p.Row), cells.Max(p => p.Column)).ToString();
-            }
-            if (args[3].GetString() is not { Length: > 0 and <= 40 } address) throw UserFileError.Invalid();
-            var range = CellRectangle.Parse(address);
-            SpendWorkbookCells(range.Count, write);
-            if (method is "getValues" or "getFormulas")
-            {
-                if (method == "getValues" && file.CalculatedRevision != book.Snapshot.Revision)
-                {
-                    if (!book.Calculate(cancellation)) throw new UserFileError("InvalidReference", "Calculation was superseded.");
-                    file.CalculatedRevision = book.Snapshot.Revision;
-                    sheet = book.Snapshot.GetSheet(sheet.Id);
-                }
-                return ReadRange(sheet, range, method == "getFormulas");
-            }
-            if (method is not ("setValues" or "setFormulas")) throw UserFileError.Invalid();
-            var command = RangeEdit(sheet, range, args[4], method == "setFormulas");
-            file.Dirty |= book.Session.Execute(command).Changed;
-            return null;
+            var readsData = write ? method == "setApi:Range.copyFrom" : !IsWriteOnlyNavigation(method);
+            if (write && !file.Entry.CanWrite || readsData && !file.Entry.CanRead)
+                throw UserFileError.Denied();
+            if (method.StartsWith("getApi:", StringComparison.Ordinal) || method.StartsWith("setApi:", StringComparison.Ordinal))
+                Keys(arguments[0], "sheetId", "address", "side");
+            var operandIndex = method switch { "setApi:Range.copyFrom" => 0, "getApi:Range.getRangeEdge" => 1, _ => -1 };
+            if (operandIndex >= 0 && arguments[1].GetArrayLength() > operandIndex &&
+                arguments[1][operandIndex] is { ValueKind: JsonValueKind.Object } operand &&
+                (!operand.TryGetProperty("selectedWorkbook", out var owner) || owner.ValueKind != JsonValueKind.String || owner.GetString() != id))
+                throw new UserFileError("InvalidReference", "Range belongs to another workbook.");
+            var revision = file.Workbook.Session.Revision;
+            var reply = file.WorkbookModel.Call(call with { Request = operation });
+            if (!reply.Ok && write) file.Failed = true;
+            file.Dirty |= file.Workbook.Session.Revision != revision;
+            return reply;
         }
-        catch { if (write) file.Failed = true; throw; }
-    }
-
-    private void SpendWorkbookCells(long count, bool write)
-    {
-        if (write ? (_writtenCells += count) > 20_000 : (_readCells += count) > 100_000)
-            throw UserFileError.Limit();
-    }
-
-    private JsonArray ReadRange(WorksheetSnapshot sheet, CellRectangle range, bool formulas)
-    {
-        var rows = new JsonArray();
-        long size = 2;
-        for (var row = range.Top; row <= range.Bottom; row++)
+        catch
         {
-            cancellation.ThrowIfCancellationRequested();
-            var items = new JsonArray();
-            size += 3;
-            for (var column = range.Left; column <= range.Right; column++)
-            {
-                var cell = sheet.GetCell(row, column);
-                if (!formulas && (cell?.Content.Kind == CellContentKind.Formula || cell?.SpillOwner is not null) &&
-                    (cell.Calculation?.State is not (CalculationState.Fresh or CalculationState.Error) || cell.Calculation.Value is null))
-                    throw new UserFileError("InvalidReference", "A formula has no current result with workbook scripts disabled.");
-                var value = cell?.Value ?? CellValue.Blank;
-                JsonNode? item = formulas ? (JsonNode?)(cell?.Content.Kind == CellContentKind.Formula ? cell.Content.FormulaText : null)
-                    : value.Kind switch
-                    {
-                        CellValueKind.Blank => null,
-                        CellValueKind.Boolean => value.BooleanValue,
-                        CellValueKind.Number => value.NumberValue,
-                        _ => CellInput.DisplayText(value)
-                    };
-                size += item is JsonValue scalar && scalar.TryGetValue<string>(out var text)
-                    ? JsonEncodedText.Encode(text).EncodedUtf8Bytes.Length + 3 : 32;
-                if (size > WorkerProtocol.MaxFrameBytes) throw UserFileError.Limit();
-                items.Add(item);
-            }
-            rows.Add(items);
+            if (write) file.Failed = true;
+            throw;
         }
-        return rows;
     }
 
-    private SetScriptCellsCommand RangeEdit(WorksheetSnapshot sheet, CellRectangle range, JsonElement matrix, bool formulas)
-    {
-        if (matrix.GetArrayLength() != range.Rows) throw UserFileError.Invalid();
-        var edits = new List<CellEdit>((int)range.Count);
-        var row = range.Top;
-        foreach (var values in matrix.EnumerateArray())
-        {
-            cancellation.ThrowIfCancellationRequested();
-            if (values.GetArrayLength() != range.Columns) throw UserFileError.Invalid();
-            var column = range.Left;
-            foreach (var item in values.EnumerateArray())
-            {
-                var style = sheet.GetStyleId(row, column);
-                CellContent content;
-                if (formulas)
-                {
-                    if (item.GetString() is not { Length: >= 2 and <= 8192 } formula || formula[0] != '=') throw UserFileError.Invalid();
-                    _ = FormulaSyntax.Parse(formula);
-                    content = CellContent.FromFormula(formula, style);
-                }
-                else
-                {
-                    var value = item.ValueKind switch
-                    {
-                        JsonValueKind.Null => CellValue.Blank,
-                        JsonValueKind.True or JsonValueKind.False => CellValue.FromBoolean(item.GetBoolean()),
-                        JsonValueKind.Number when double.IsFinite(item.GetDouble()) => CellValue.FromNumber(item.GetDouble()),
-                        JsonValueKind.String => CellValue.FromText(item.GetString()!),
-                        _ => throw UserFileError.Invalid()
-                    };
-                    content = CellContent.FromLiteral(value, style);
-                }
-                edits.Add(new(new(sheet.Id, row, column++), content));
-            }
-            row++;
-        }
-        return new SetScriptCellsCommand(edits);
-    }
+    // Write-only opens start with a new document. Return only navigation and format
+    // descriptors needed to reach write methods, never a previously stored cell or style.
+    private static bool IsWriteOnlyNavigation(string method) => method is
+        "sheet" or "sheets" or "active" or "getApi:Workbook.getFirstWorksheet" or "getApi:Workbook.getLastWorksheet" or
+        "getApi:Worksheet.getNext" or "getApi:Worksheet.getPrevious" or
+        "getApi:RangeFormat.getFont" or "getApi:RangeFormat.getProtection" or
+        "getApi:RangeFormat.getBorders" or "getApi:RangeFormat.getRangeBorder";
 }

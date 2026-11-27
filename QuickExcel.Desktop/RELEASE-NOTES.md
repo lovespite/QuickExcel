@@ -1,3 +1,7 @@
+# 10.0.0 · 外部工作簿的工作表、区域与格式
+
+Windows v4 Action 可通过 `selected.workbook` 使用和当前工作簿相同的工作表、区域及格式操作。原先直接在 `selected` 上调用的工作表和区域方法已移除。打开、另存、关闭和放弃仍为异步操作。[迁移示例与空值语义](docs/88-script-user-selected-files.md#读写-xlsx-和-xlsq-工作簿)
+
 # 9.2.0 · 脚本工作簿另存为
 
 Windows v4 Action 可通过 `workbook.saveAs(file, "xlsx" | "xlsq")` 保存当前工作簿的副本，`file.openWorkbook()` 打开的外部工作簿也支持相同方法。两种对象的类型定义和编辑器补全已同步更新。[用法与保存范围](docs/88-script-user-selected-files.md#将工作簿另存为副本)

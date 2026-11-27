@@ -143,7 +143,8 @@ public sealed partial class MainWindow
         var picker = "    const [file] = await host.fs.getUserSelectedFiles({mode:'open',fileMode:'open',fileAccess:'rw'});\n";
         foreach (var (before, expected) in new[] {
             (picker + "    file", new[] { "openWorkbook" }),
-            (picker + "    const book = await file.openWorkbook();\n    book", new[] { "getValues", "saveAs", "setFormulas" }) })
+            (picker + "    const book = await file.openWorkbook();\n    book", new[] { "workbook", "saveAs", "close" }),
+            (picker + "    const book = await file.openWorkbook();\n    book.workbook", new[] { "getWorksheet", "addWorksheet" }) })
         {
             var at = asyncJs.LastIndexOf('}');
             await Edit("action", asyncJs.Insert(at, before + "\n"));
@@ -158,12 +159,13 @@ public sealed partial class MainWindow
             "const file = await dir.getFile('report'); const stream = await file.open(); " +
             "const n: number = stream.read(new Uint8Array(16), 0, 16); await stream.close(); " +
             "const [selected] = await host.fs.getUserSelectedFiles({mode:'open',fileMode:'open',fileAccess:'rw'}); " +
-            "const book = await selected.openWorkbook(); await book.setValues('Sheet1','A1',[[42]]); " +
+            "const book = await selected.openWorkbook(); const sheet = book.workbook.getWorksheet('Sheet1'); if (!sheet) { await book.abort(); return; } " +
+            "const range = sheet.getRange('A1'); range.setValues([[42]]); range.getFormat().getFont().setBold(true); " +
             "await workbook.saveAs(file,'xlsx'); await book.saveAs(file,'xlsq'); await book.close(); }";
         await Edit("main", ts);
         foreach (var (expression, member) in new[] { ("host.", "fs"), ("dir.", "getDirectory"), ("stream.", "readLine"),
-            ("selected.", "openWorkbook"), ("await book.", "getWorksheetNames"), ("await book.", "getUsedRange"),
-            ("await book.", "getValues"), ("await book.", "setValues"), ("await book.", "getFormulas"), ("await book.", "setFormulas"),
+            ("selected.", "openWorkbook"), ("book.", "workbook"), ("book.workbook.", "getWorksheet"), ("sheet.", "getUsedRange"),
+            ("range.", "getValues"), ("range.", "setValues"), ("range.", "getFormulas"), ("range.", "getFormat"),
             ("await workbook.", "saveAs"), ("await book.", "saveAs") })
         {
             var state = await test(new Dictionary<string, object?> { ["action"] = "inspect", ["offset"] = ts.IndexOf(expression, StringComparison.Ordinal) + expression.Length });

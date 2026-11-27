@@ -91,11 +91,13 @@ public class ScriptUserFileTests : IDisposable
             export async function main(w,h) {
               const [file] = await h.fs.getUserSelectedFiles({mode:'open',fileMode:'open',fileAccess:'{{access}}'});
               const book = await file.openWorkbook();
+              const sheet = book.workbook.getWorksheet('Items');
+              if (sheet.getRange('B1').getValue() !== 6) throw Error('cannot calculate the selected source');
               const [dest] = await h.fs.getUserSelectedFiles({mode:'save',fileMode:'open_or_create',fileAccess:'w'});
               await book.saveAs(dest,'{{to}}');
-              if ('{{access}}' === 'rw') await book.setValues('Items','A1',[[5]]);
+              if ('{{access}}' === 'rw') sheet.getRange('A1').setValue(5);
               await book.saveAs(dest,'{{to}}');
-              if ((await book.getFormulas('Items','B1'))[0][0] !== '=A1*2') throw Error('closed source');
+              if (sheet.getRange('B1').getFormula() !== '=A1*2') throw Error('closed source');
               await book.abort();
             }
             """, (request, _, _) => Task.FromResult(new ScriptFileSelection([request.Save ? copy : path])));
@@ -161,20 +163,24 @@ public class ScriptUserFileTests : IDisposable
             export async function main(w, host) {
               const [file] = await host.fs.getUserSelectedFiles({ mode:'open', fileMode:'open', fileAccess:'rw' });
               const book = await file.openWorkbook();
-              if ((await book.getWorksheetNames()).join() !== 'Data,Keep' || await book.getUsedRange('data') !== 'A1:B1')
+              const data = book.workbook.getWorksheet('data');
+              if (book.workbook.getWorksheets().map(s => s.getName()).join() !== 'Data,Keep' ||
+                  data.getUsedRange().getAddress() !== 'A1:B1')
                 throw Error('sheet metadata');
-              const values = await book.getValues('Data','A1:C1');
-              if (JSON.stringify(values) !== '[[2,3,null]]') throw Error('input ' + JSON.stringify(values));
-              await book.setValues('Data','A1:A1',[[8]]);
-              if ((await book.getValues('Data','B1'))[0][0] !== 9) throw Error('dependent formula');
-              await book.addWorksheet('Results');
-              await book.setValues('Results','A1:D1',[[true, '=literal', 12.5, null]]);
-              await book.setFormulas('Results','C2',[['=C1*2']]);
-              if (JSON.stringify(await book.getFormulas('Results','B2:C2')) !== '[[null,"=C1*2"]]') throw Error('formula text');
-              w.getActiveCell().setValue((await book.getValues('Results','C2'))[0][0]);
+              const values = data.getRange('A1:C1').getValues();
+              if (JSON.stringify(values) !== '[[2,3,""]]') throw Error('input ' + JSON.stringify(values));
+              data.getRange('A1:A1').setValues([[8]]);
+              if (data.getRange('B1').getValue() !== 9) throw Error('dependent formula');
+              const results = book.workbook.addWorksheet('Results');
+              results.getRange('A1:D1').setValues([[true, '=literal', 12.5, 'cleared']]);
+              results.getRange('D1').clear(QuickExcel.ClearApplyTo.contents);
+              if (results.getRange('D1').getValue() !== '') throw Error('clear');
+              results.getRange('C2').setFormulas([['=C1*2']]);
+              if (JSON.stringify(results.getRange('B2:C2').getFormulas()) !== '[["","=C1*2"]]') throw Error('formula text');
+              w.getActiveCell().setValue(results.getRange('C2').getValue());
               await book.close();
               const again = await file.openWorkbook();
-              if ((await again.getValues('Results','B1'))[0][0] !== '=literal') throw Error('reopen');
+              if (again.workbook.getWorksheet('Results').getRange('B1').getValue() !== '=literal') throw Error('reopen');
               await again.close();
             }
             """, Select(path));
@@ -195,6 +201,112 @@ public class ScriptUserFileTests : IDisposable
         }
     }
 
+    [Fact]
+    public void SelectedWorkbookHandlesKeepIdenticalCopiesAndActiveWorkbookIndependent()
+    {
+        if (!OperatingSystem.IsWindows()) return;
+        var first = Path.Combine(_dir, "first.xlsq");
+        var second = Path.Combine(_dir, "second.xlsq");
+        using var doc = Open("""
+            export async function main(w, host) {
+              const [one, two] = await host.fs.getUserSelectedFiles({mode:'open', fileMode:'open', fileAccess:'rw', multiSelect:true});
+              const left = await one.openWorkbook();
+              const right = await two.openWorkbook();
+              try { await one.openWorkbook(); throw Error('two writers to the same file'); }
+              catch (e) { if (e.code !== 'Locked') throw e; }
+              const activeSheet = w.getWorksheet('Data');
+              const leftSheet = left.workbook.getWorksheet('Data');
+              const rightSheet = right.workbook.getWorksheet('Data');
+              if (leftSheet.getId() !== rightSheet.getId() || leftSheet.getId() !== activeSheet.getId())
+                throw Error('sheet IDs must match for this test');
+              const activeCell = activeSheet.getRange('A1');
+              const leftCell = leftSheet.getRange('A1');
+              const rightCell = rightSheet.getRange('A1');
+              const leftFont = leftCell.getFormat().getFont();
+              const rightFont = rightCell.getFormat().getFont();
+              function expectInvalidReference(call) {
+                try { call(); } catch (e) { if (e.code === 'InvalidReference') return; throw e; }
+                throw Error('expected InvalidReference');
+              }
+              expectInvalidReference(() => leftCell.getIntersection(rightCell));
+              expectInvalidReference(() => activeCell.getBoundingRect(leftCell));
+              expectInvalidReference(() => rightCell.getBoundingRect(activeCell));
+              leftCell.setValue(11);
+              rightCell.setValue(22);
+              leftSheet.getRange('B1').copyFrom(leftCell);
+              rightSheet.getRange('B1').copyFrom(rightCell);
+              leftFont.setBold(true);
+              activeCell.setValue(33);
+              rightFont.setItalic(true);
+              if (leftCell.getValue() !== 11 || rightCell.getValue() !== 22 || activeCell.getValue() !== 33 ||
+                  !leftFont.getBold() || rightFont.getBold() || leftFont.getItalic() || !rightFont.getItalic())
+                throw Error('edits crossed documents');
+              await left.close();
+              expectInvalidReference(() => leftCell.getAddress());
+              expectInvalidReference(() => leftFont.getBold());
+              const rejected = await one.openWorkbook();
+              const target = rejected.workbook.getWorksheet('Data').getRange('A1');
+              target.setValue(99);
+              expectInvalidReference(() => target.copyFrom(rightCell));
+              try { await rejected.close(); throw Error('published draft with invalid cross-workbook write'); }
+              catch (e) { if (e.code !== 'TransactionAborted') throw e; }
+              rightCell.setValue(44);
+              await right.close();
+              if (activeCell.getValue() !== 33) throw Error('active workbook changed');
+            }
+            """, Select(first, second));
+        var storage = new TypedWorkbookStorage();
+        storage.Save(first, doc.Snapshot);
+        File.Copy(first, second);
+        doc.RunAction("action");
+        void AssertCell(WorkbookSnapshot snapshot, int value, int? copied, bool bold, bool italic)
+        {
+            var sheet = snapshot.Sheets.Single();
+            Assert.Equal(doc.Snapshot.Sheets[0].Id, sheet.Id);
+            Assert.Equal(value, sheet.GetCell(0, 0)!.Value.NumberValue);
+            if (copied is { } expected) Assert.Equal(expected, sheet.GetCell(0, 1)!.Value.NumberValue);
+            else Assert.Null(sheet.GetCell(0, 1));
+            var style = TablePresentation.GetStyle(snapshot, sheet, 0, 0);
+            Assert.Equal(bold, style.Bold);
+            Assert.Equal(italic, style.Italic);
+        }
+        AssertCell(storage.Open(first), 11, 11, true, false);
+        AssertCell(storage.Open(second), 44, 22, false, true);
+        AssertCell(doc.Snapshot, 33, null, false, false);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void SelectedWorkbookCellBudgetsAreCumulativeAcrossOpenFiles(bool write)
+    {
+        if (!OperatingSystem.IsWindows()) return;
+        var first = Path.Combine(_dir, "one.xlsx");
+        var second = Path.Combine(_dir, "two.xlsx");
+        var storage = new TypedWorkbookStorage();
+        storage.Save(first, Book(Sheet("Data", (0, 0, N(7)))));
+        File.Copy(first, second);
+        using var doc = Open($$"""
+            export async function main(w, host) {
+              const [one, two] = await host.fs.getUserSelectedFiles({mode:'open', fileMode:'open', fileAccess:'rw', multiSelect:true});
+              const left = await one.openWorkbook();
+              const right = await two.openWorkbook();
+              function operate(book) {
+                const sheet = book.workbook.getWorksheet('Data');
+                {{(write ? "sheet.getRange('A1:A10001').clear(QuickExcel.ClearApplyTo.contents);" : "sheet.getRange('A1:A50001').getFormat().getRowHeight();")}}
+              }
+              operate(left);
+              try { operate(right); throw Error('fresh budget for second workbook'); }
+              catch (e) { if (e.code !== 'BudgetExceeded') throw e; }
+              await right.abort();
+              await left.abort();
+            }
+            """, Select(first, second));
+        doc.RunAction("action");
+        Assert.Equal(7, storage.Open(first).Sheets[0].GetCell(0, 0)!.Value.NumberValue);
+        Assert.Equal(7, storage.Open(second).Sheets[0].GetCell(0, 0)!.Value.NumberValue);
+    }
+
     [Theory]
     [InlineData(".xlsx")]
     [InlineData(".xlsq")]
@@ -206,14 +318,17 @@ public class ScriptUserFileTests : IDisposable
             export async function main(w, host) {
               const [file] = await host.fs.getUserSelectedFiles({mode:'save',fileMode:'create',fileAccess:'w'});
               const draft = await file.openWorkbook();
-              await draft.setValues('Sheet1','A1',[[1]]);
-              try { await draft.setValues('Sheet1','A1:B1',[[2]]); throw Error('accepted invalid write'); }
+              const sheet = draft.workbook.getWorksheet('Sheet1');
+              sheet.getRange('A1').setValue(1);
+              try { sheet.getRange('A1').getValue(); throw Error('read with write-only grant'); }
+              catch (e) { if (e.code !== 'PermissionDenied') throw e; }
+              try { sheet.getRange('A1:B1').setValues([[2]]); throw Error('accepted invalid write'); }
               catch (e) { if (e.code !== 'InvalidArgument') throw e; }
               try { await draft.close(); throw Error('saved partial workbook'); }
               catch (e) { if (e.code !== 'TransactionAborted') throw e; }
               if ((await file.stat()).exists) throw Error('created too soon');
               const second = await file.openWorkbook();
-              await second.setValues('Sheet1','A1',[[true]]);
+              second.workbook.getWorksheet('Sheet1').getRange('A1').setValue(true);
               await second.close();
               try { await file.openWorkbook(); throw Error('read existing content with write-only grant'); }
               catch (e) { if (e.code !== 'PermissionDenied') throw e; }
@@ -240,17 +355,17 @@ public class ScriptUserFileTests : IDisposable
             export async function main(w, h) {
               const [good, malformed, other] = await h.fs.getUserSelectedFiles({mode:'open',fileMode:'open',fileAccess:'r',multiSelect:true});
               const reader = await good.openWorkbook();
-              try { await reader.addWorksheet('Bad'); throw Error('read-only write'); } catch(e) { if(e.code !== 'PermissionDenied') throw e; }
+              try { reader.workbook.addWorksheet('Bad'); throw Error('read-only write'); } catch(e) { if(e.code !== 'PermissionDenied') throw e; }
               await reader.abort();
               for (const [file,code] of [[malformed,'FileError'],[other,'UnsupportedApi']]) {
                 try { await file.openWorkbook(); throw Error('opened invalid workbook'); } catch(e) { if(e.code !== code) throw e; }
               }
               const [out] = await h.fs.getUserSelectedFiles({mode:'save',fileMode:'create',fileAccess:'rw'});
               const draft = await out.openWorkbook();
-              await draft.addWorksheet('Discarded');
+              draft.workbook.addWorksheet('Discarded');
               await draft.abort();
               const abandoned = await out.openWorkbook();
-              await abandoned.setValues('Sheet1','A1',[[2]]);
+              abandoned.workbook.getWorksheet('Sheet1').getRange('A1').setValue(2);
             }
             """, (request, _, _) => Task.FromResult(new ScriptFileSelection(request.Multiple ? [path, malformed, unsupported] : [path])));
         doc.RunAction("action");
@@ -275,8 +390,9 @@ public class ScriptUserFileTests : IDisposable
             export async function main(w, h) {
               const [file] = await h.fs.getUserSelectedFiles({mode:'open', fileMode:'open', fileAccess:'rw'});
               const book = await file.openWorkbook();
-              if ((await book.getValues('Sheet1','A1'))[0][0] !== 7) throw Error('original value');
-              await book.setValues('Sheet1','A1',[[8]]);
+              const cell = book.workbook.getWorksheet('Sheet1').getRange('A1');
+              if (cell.getValue() !== 7) throw Error('original value');
+              cell.setValue(8);
               try { await book.close(); throw Error('discarded custom views'); }
               catch (e) { if (e.code !== 'UnsupportedApi') throw e; }
             }
@@ -296,7 +412,7 @@ public class ScriptUserFileTests : IDisposable
             export async function main(w,h) {
               const [file] = await h.fs.getUserSelectedFiles({mode:'open',fileMode:'open',fileAccess:'rw'});
               const book = await file.openWorkbook();
-              await book.setValues('Original','A1',[[1]]);
+              book.workbook.getWorksheet('Original').getRange('A1').setValue(1);
               await h.fs.getUserSelectedDirectory();
               try { await book.close(); throw Error('overwrote external edit'); } catch(e) { if(e.code !== 'Conflict') throw e; }
             }

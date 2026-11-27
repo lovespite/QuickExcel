@@ -18,10 +18,24 @@ public sealed partial class ScriptWorkbookModel
     private long _writes;
     private long _reads;
     private bool _invalid;
+    private WorkbookDocument? _fileDraft;
     private readonly HashSet<int> _reservedTableIds;
     internal ScriptWorkbookModel(WorkbookSnapshot snapshot, Action check, ImmutableArray<CellRectangle> selection,
         Func<WorkbookSnapshot, CancellationToken, CalculationResult>? calculate, HashSet<int> reservedTableIds)
     { _original = _working = snapshot; _check = check; Selection = selection; _calculate = calculate; _reservedTableIds = reservedTableIds; }
+
+    /// <summary>Expose the ordinary script model over an isolated, script-disabled file draft.
+    /// Each command goes through the private document session's validation and revision tracking.</summary>
+    public static ScriptWorkbookModel ForFileDraft(WorkbookDocument document, Action check)
+    {
+        void Check()
+        {
+            check();
+            if (document.ScriptsEnabled) throw new InvalidOperationException("Selected workbook scripts must be disabled.");
+        }
+        Check();
+        return new ScriptWorkbookModel(document.Snapshot, Check, [], null, []) { _fileDraft = document };
+    }
     public int ReserveTableId()
     {
         _check();
@@ -53,6 +67,14 @@ public sealed partial class ScriptWorkbookModel
         WorkbookLimits.ValidatePosition(range.Top, range.Left); WorkbookLimits.ValidatePosition(range.Bottom, range.Right);
         if (range.Bottom < range.Top || range.Right < range.Left || range.Count > 100_000 - _reads)
             throw new InvalidOperationException("每次脚本最多读取 100000 个单元格。");
+        if (_fileDraft is not null)
+        {
+            // Imported caches (including XLSQ caches marked fresh by a previous session)
+            // cannot establish a value in a file opened with scripts disabled.
+            if (!_fileDraft.Calculate(cancellationToken)) throw new InvalidOperationException("Selected workbook calculation was superseded.");
+            _working = _calculatedView = _fileDraft.Snapshot;
+            return;
+        }
         var sheet = _working.GetSheet(sheetId);
         var needed = false;
         foreach (var address in Addresses(sheetId, range))
@@ -183,6 +205,15 @@ public sealed partial class ScriptWorkbookModel
             if (_writes > 20_000) throw new InvalidOperationException("每次脚本累计最多修改 20000 格（重复写入也计数）。");
             if (_working.FileState?.FormulaReadOnly == true) throw new InvalidOperationException(MessageText.Get(WorkbookFileState.FormulaReadOnlyMessage));
             var command = create();
+            if (_fileDraft is not null)
+            {
+                if (_fileDraft.Session.Execute(command, _working.Revision).Changed)
+                {
+                    _working = _fileDraft.Snapshot;
+                    _calculatedView = null;
+                }
+                return;
+            }
             var draft = command.Prepare(_working);
             ExtendedObjectSafety.ValidateEdit(_working, draft.Snapshot, command, draft.StructureChanged);
             PivotSafety.ValidateEdit(_working, draft.Snapshot, command, draft.StructureChanged);

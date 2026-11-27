@@ -156,12 +156,24 @@ public sealed class TypeScriptCompilerTests
               await workbook.saveAs(file, "csv");
               // @ts-expect-error A destination must be a FileHandle.
               await selected.saveAs("copy.xlsq", "xlsq");
-              const names = await selected.getWorksheetNames();
-              const cells = await selected.getValues(names[0], 'A1:B1');
-              await selected.setValues(names[0], 'A2:B2', cells);
-              await selected.setFormulas(names[0], 'C2', [['=B2+1']]);
+              const first = selected.workbook.getWorksheets()[0];
+              const cells: (string | number | boolean)[][] = first.getRange('A1:B1').getValues();
+              const target = selected.workbook.addWorksheet('Results');
+              target.getRange('A2:B2').setValues(cells);
+              target.getRange('C2').setFormulas([['=B2+1']]);
+              function formatHeading(sheet: QuickExcel.Selected.Worksheet) {
+                sheet.getRange('A1').getFormat().getFont().setBold(true);
+              }
+              formatHeading(target);
+              formatHeading(workbook.getActiveWorksheet());
               // @ts-expect-error Formulas are text.
-              await selected.setFormulas(names[0], 'C2', [[123]]);
+              target.getRange('C2').setFormulas([[123]]);
+              // @ts-expect-error SelectedWorkbook exposes its object model through workbook.
+              selected.getWorksheetNames();
+              // @ts-expect-error Virtual files belong to the active host workbook.
+              selected.workbook.files;
+              // @ts-expect-error External worksheet views support sheets, ranges and formatting.
+              first.getCharts();
               await selected.close();
               // @ts-expect-error Save selects only one file.
               await host.fs.getUserSelectedFiles({ mode: 'save', fileMode: 'create', fileAccess: 'w', multiSelect: true });
